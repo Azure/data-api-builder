@@ -115,6 +115,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         }
 
         /// <summary>
+        /// Tests that the put updates can only update the rows which are accessible after applying the
+        /// security policy which uses data from session context.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public virtual Task PutOneUpdateTestOnTableWithSecurityPolicy()
+        {
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
         /// Tests the PutOne functionality with a REST PUT request using
         /// headers that include as a key "If-Match" with an item that does exist,
         /// resulting in an update occuring. We then verify that the update occurred.

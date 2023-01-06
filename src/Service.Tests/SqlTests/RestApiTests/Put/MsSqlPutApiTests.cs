@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using System.Net;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
@@ -171,6 +173,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 $"WHERE id = 7 AND [title] = 'value; DROP TABLE authors;' " +
                 $"AND [publisher_id] = 1234" +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PutOneUpdateAccessibleRowWithSecPolicy",
+                $"SELECT [id], [revenue], [category], [accessible_role] FROM { _tableWithSecurityPolicy } " +
+                $"WHERE [id] = 1 AND [revenue] = 2000 AND [category] = 'anime' AND [accessible_role] = 'Anonymous' " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             }
         };
         #region Test Fixture Setup
@@ -226,6 +234,26 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                    $"table '{DatabaseName}.dbo.stocks'; column does not allow nulls. UPDATE fails.";
         }
 
+        [TestMethod]
+        public override async Task PutOneUpdateTestOnTableWithSecurityPolicy()
+        {
+            string requestBody = @"
+            {
+                ""revenue"": ""2000"",
+                ""category"" : ""anime"",
+                ""accessible_role"": ""Anonymous""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/1",
+                    queryString: null,
+                    entityNameOrPath: _entityWithSecurityPolicy,
+                    sqlQuery: GetQuery("PutOneUpdateAccessibleRowWithSecPolicy"),
+                    operationType: Config.Operation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+        }
         #endregion
     }
 }

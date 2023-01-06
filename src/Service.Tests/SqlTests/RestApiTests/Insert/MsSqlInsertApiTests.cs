@@ -155,6 +155,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 $"JOIN (SELECT id FROM publishers WHERE name = 'The First Publisher') AS table1 " +
                 $"ON table0.[publisher_id] = table1.[id] " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "InsertOneAndReturnMultipleRowsWithStoredProcedureTest",
+                // This query attempts retrieval of the stored procedure insert operation result,
+                // and is explicitly not representative of the engine generated insert statement.
+                $"SELECT table0.[id], table0.[title], table0.[publisher_id] FROM books AS table0 " +
+                $"JOIN (SELECT id FROM publishers WHERE name = 'Big Company') AS table1 " +
+                $"ON table0.[publisher_id] = table1.[id] "
             }
         };
 
@@ -221,29 +229,36 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         }
 
         /// <summary>
-        /// Tests the Insert one and return single row functionality with a REST POST request
+        /// Tests the Insert one and return single/multiple rows functionality with a REST POST request
         /// using stored procedure.
         /// The request executes a stored procedure which attempts to insert a book for a given publisher
         /// and then returns all books under that publisher.
         /// </summary>
-        [TestMethod]
-        public async Task InsertOneAndReturnSingleRowWithStoredProcedureTest()
+        [DataRow("The First Publisher", "InsertOneAndReturnSingleRowWithStoredProcedureTest", true, DisplayName = "Test Single row result")]
+        [DataRow("Big Company", "InsertOneAndReturnMultipleRowsWithStoredProcedureTest", false, DisplayName = "Test multiple row result")]
+        [DataTestMethod]
+        public async Task InsertOneAndVerifyReturnedRowsWithStoredProcedureTest(
+            string publisherName,
+            string queryName,
+            bool expectJson
+        )
         {
             string requestBody = @"
             {
                 ""title"": ""Happy New Year"",
-                ""publisher_name"": ""The First Publisher""
-            }";
+                ""publisher_name"": """ + $"{publisherName}" + @"""" +
+            "}";
 
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: null,
                 queryString: null,
                 entityNameOrPath: _integrationProcedureInsertOneAndDisplay_EntityName,
-                sqlQuery: GetQuery(nameof(InsertOneAndReturnSingleRowWithStoredProcedureTest)),
+                sqlQuery: GetQuery(queryName),
                 operationType: Config.Operation.Insert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
-                expectedLocationHeader: _integrationProcedureInsertOneAndDisplay_EntityName
+                expectedLocationHeader: _integrationProcedureInsertOneAndDisplay_EntityName,
+                expectJson: expectJson
             );
         }
 

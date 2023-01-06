@@ -524,7 +524,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                 {
                     return GetODataCompliantClaimValue(claim);
                 }
-                catch {
+                catch{
                     throw new DataApiBuilderException(
                         message: INVALID_POLICY_CLAIM_MESSAGE,
                         statusCode: HttpStatusCode.Forbidden,

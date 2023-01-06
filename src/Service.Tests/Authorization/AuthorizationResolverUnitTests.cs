@@ -1197,6 +1197,44 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 Assert.AreEqual(actual: parsedPolicy, expected: string.Empty, message: errorMessage);
             }
         }
+
+        /// <summary>
+        /// Test to validate that the role claim corresponding to the X-MS-API-ROLE header is added to the claimsInRequestContext.
+        /// The role claim can either be added by DAB in case when the user is absent in a system role(authenticated/anonymous),
+        /// or the user can already have the claim by virtue of the identity provider.
+        /// </summary>
+        /// <param name="claimType"></param>
+        [DataTestMethod]
+        [DataRow(ClaimTypes.Role, DisplayName = "Validate that role claim added by DAB for clientRoleHeader is honored")]
+        [DataRow(AuthenticationConfig.ROLE_CLAIM_TYPE, DisplayName = "Validate that already existing role claim for clientRoleHeader is honored")]
+        public void ValidateClientRoleHeaderClaimIsAddedToClaimsInRequestContext(string claimType)
+        {
+            Mock<HttpContext> context = new();
+
+            //Add identity object to the Mock context object.
+            ClaimsIdentity identityWithClientRoleHeaderClaim = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationConfig.ROLE_CLAIM_TYPE);
+            Claim clientRoleHeaderClaim = new(claimType, TEST_ROLE);
+            identityWithClientRoleHeaderClaim.AddClaim(clientRoleHeaderClaim);
+
+            // Add identity object with role claim which is not equal to the clientRoleHeader.
+            ClaimsIdentity identityWithoutClientRoleHeaderClaim = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationConfig.ROLE_CLAIM_TYPE);
+            Claim readerRoleClaim = new(claimType, "Reader");
+            identityWithClientRoleHeaderClaim.AddClaim(readerRoleClaim);
+
+            ClaimsPrincipal principal = new();
+            principal.AddIdentity(identityWithoutClientRoleHeaderClaim);
+            principal.AddIdentity(identityWithClientRoleHeaderClaim);
+
+            context.Setup(x => x.User).Returns(principal);
+            context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
+
+            Dictionary<string, Claim> claimsInRequestContext = AuthorizationResolver.GetAllUserClaims(context.Object);
+
+            // Assert that only the role claim corresponding to clientRoleHeader is added to the claims dictionary.
+            Assert.IsTrue(claimsInRequestContext.Count == 1);
+            Assert.IsTrue(claimsInRequestContext.ContainsKey(AuthenticationConfig.ROLE_CLAIM_TYPE));
+            Assert.IsTrue(TEST_ROLE.Equals(claimsInRequestContext[AuthenticationConfig.ROLE_CLAIM_TYPE].Value));
+        }
         #endregion
 
         #region Helpers

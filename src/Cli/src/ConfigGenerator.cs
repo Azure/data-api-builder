@@ -97,8 +97,10 @@ namespace Cli
                 dataSource.ConnectionString = options.ConnectionString;
             }
 
+            string dabSchemaLink = RuntimeConfig.GetPublishedDraftSchemaLink();
+
             RuntimeConfig runtimeConfig = new(
-                Schema: RuntimeConfig.SCHEMA,
+                Schema: dabSchemaLink,
                 DataSource: dataSource,
                 RuntimeSettings: GetDefaultGlobalSettings(
                     options.HostMode,
@@ -184,7 +186,7 @@ namespace Cli
             PermissionSetting[]? permissionSettings = ParsePermission(options.Permissions, policy, field, options.SourceType);
             if (permissionSettings is null)
             {
-                Console.Error.WriteLine("Please add permission in the following format. --permissions \"<<role>>:<<actions>>\"");
+                _logger.LogError("Please add permission in the following format. --permissions \"<<role>>:<<actions>>\"");
                 return false;
             }
 

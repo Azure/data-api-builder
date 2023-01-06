@@ -41,20 +41,6 @@ steps:
     echo "##vso[task.setvariable variable=dabVersion]$dabVersion"
   displayName: Set dab version
 
-- task: FileTransform@1.206.0
-  displayName: 'Version stamp dab.draft.schema.json'
-  inputs:
-    folderPath: '$(System.DefaultWorkingDirectory)'
-    fileType: 'json'
-    targetFiles: 'schemas/dab.draft.schema.json'
- 
-- task: CopyFiles@2
-  displayName: 'Copy dab.draft.schema.json'
-  inputs:
-    sourceFolder: '$(Build.SourcesDirectory)/schemas'
-    contents: 'dab.draft.schema.json'
-    targetFolder: '$(Build.ArtifactStagingDirectory)'
-
 - task: UseDotNet@2
   displayName: Setup .NET SDK v6.0.x
   inputs:
@@ -95,6 +81,20 @@ steps:
     command: test
     projects: '**/*Tests*.csproj'
     arguments: '--filter "TestCategory!=CosmosDb_NoSql&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
+
+- task: FileTransform@1.206.0
+  displayName: 'Version stamp dab.draft.schema.json'
+  inputs:
+    folderPath: '$(System.DefaultWorkingDirectory)'
+    fileType: 'json'
+    targetFiles: 'schemas/dab.draft.schema.json'
+ 
+- task: CopyFiles@2
+  displayName: 'Copy dab.draft.schema.json'
+  inputs:
+    sourceFolder: '$(Build.SourcesDirectory)/schemas'
+    contents: 'dab.draft.schema.json'
+    targetFolder: '$(Build.ArtifactStagingDirectory)'
 
 - template: templates/code-signing.yml
   parameters:

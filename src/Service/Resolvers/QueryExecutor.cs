@@ -130,9 +130,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             await conn.OpenAsync();
             DbCommand cmd = conn.CreateCommand();
             cmd.CommandType = CommandType.Text;
+
+            // Add query to send user data from DAB to the underlying database to enable additional security the user might have configured
+            // at the database level.
             string sessionMapQuery = GetSessionMapQuery(claimsDictionary);
+
             cmd.CommandText = sessionMapQuery + sqltext;
-            if (parameters != null)
+            if (parameters is not null)
             {
                 foreach (KeyValuePair<string, object?> parameterEntry in parameters)
                 {

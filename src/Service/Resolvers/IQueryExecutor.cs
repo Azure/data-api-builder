@@ -102,6 +102,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn);
 
+        /// <summary>
+        /// Method to generate the query to send user data to the underlying database which might be used
+        /// for additional security at the database level.
+        /// </summary>
+        /// <param name="claimsDictionary">Dictionary containing all the claims belonging to the user.</param>
+        /// <returns></returns>
         public string GetSessionMapQuery(Dictionary<string, Claim> claimsDictionary);
     }
 }

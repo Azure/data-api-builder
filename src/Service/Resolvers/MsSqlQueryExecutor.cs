@@ -4,6 +4,7 @@ using System.Net;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Azure.Core;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -48,7 +49,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ILogger<QueryExecutor<SqlConnection>> logger)
             : base(runtimeConfigProvider, dbExceptionParser, logger)
         {
-            _isSessionContextEnabled = runtimeConfigProvider.GetRuntimeConfiguration().DataSource.MsSql!.SetSessionContext;
+            MsSqlOptions? msSqlOptions = runtimeConfigProvider.GetRuntimeConfiguration().DataSource.MsSql;
+            _isSessionContextEnabled = msSqlOptions is null? false : msSqlOptions.SetSessionContext;
             _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
             _attemptToSetAccessToken =
                 ShouldManagedIdentityAccessBeAttempted(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString);

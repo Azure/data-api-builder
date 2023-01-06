@@ -248,7 +248,7 @@ ALTER TABLE sales
 ADD total AS (subtotal + tax) PERSISTED;
 
 SET IDENTITY_INSERT publishers ON
-INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd'), (1940, 'Policy Publisher 01'), (1941, 'Policy Publisher 02');
+INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd'), (1940, 'Policy Publisher 01'), (1941, 'Policy Publisher 02'), (1156, 'The First Publisher');
 SET IDENTITY_INSERT publishers OFF
 
 SET IDENTITY_INSERT authors ON

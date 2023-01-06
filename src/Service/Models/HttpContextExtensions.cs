@@ -22,7 +22,7 @@ namespace Azure.DataApiBuilder.Service.Models
 
             if (context.Items.TryGetValue(HttpHeaders.CORRELATION_ID, out object? correlationIdItem))
             {
-                Guid.TryParse(correlationIdItem as string, out correlationId);
+                Guid.TryParse(correlationIdItem?.ToString(), out correlationId);
                 return correlationId;
             }
 

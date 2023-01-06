@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Net;
+using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.Core;
@@ -129,6 +130,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 It.IsAny<string>(),
                 It.IsAny<IDictionary<string, object>>(),
                 It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
+                It.IsAny<Dictionary<string, Claim>>(),
                 It.IsAny<List<string>>()))
             .Throws(SqlTestHelper.CreateSqlException(ERRORCODE_SEMAPHORE_TIMEOUT));
 
@@ -137,6 +139,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 It.IsAny<string>(),
                 It.IsAny<IDictionary<string, object>>(),
                 It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
+                It.IsAny<Dictionary<string, Claim>>(),
                 It.IsAny<List<string>>())).CallBase();
 
             DataApiBuilderException ex = await Assert.ThrowsExceptionAsync<DataApiBuilderException>(async () =>
@@ -145,6 +148,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     sqltext: string.Empty,
                     parameters: new Dictionary<string, object>(),
                     dataReaderHandler: null,
+                    claimsDictionary: null,
                     args: null);
             });
 
@@ -173,6 +177,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 It.IsAny<string>(),
                 It.IsAny<IDictionary<string, object>>(),
                 It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
+                It.IsAny<Dictionary<string, Claim>>(),
                 It.IsAny<List<string>>()))
             .Throws(SqlTestHelper.CreateSqlException(ERRORCODE_SEMAPHORE_TIMEOUT))
             .Throws(SqlTestHelper.CreateSqlException(ERRORCODE_SEMAPHORE_TIMEOUT))
@@ -183,6 +188,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 It.IsAny<string>(),
                 It.IsAny<IDictionary<string, object>>(),
                 It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
+                It.IsAny<Dictionary<string, Claim>>(),
                 It.IsAny<List<string>>())).CallBase();
 
             string sqltext = "SELECT * from books";

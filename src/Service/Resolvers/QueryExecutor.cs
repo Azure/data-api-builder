@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
-using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Security.Claims;
 using System.Text;
@@ -10,10 +9,8 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Retry;
@@ -33,8 +30,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         // The maximum number of attempts that can be made to execute the query successfully in addition to the first attempt.
         // So to say in case of transient exceptions, the query will be executed (_maxRetryCount + 1) times at max.
         private static int _maxRetryCount = 5;
-
-        private static int _p;
 
         private AsyncRetryPolicy _retryPolicy;
 
@@ -64,8 +59,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string sqltext,
             IDictionary<string, object?> parameters,
             Func<DbDataReader, List<string>?, Task<TResult?>>? dataReaderHandler,
-            List<string>? args = null,
-            HttpContext? httpContext = null)
+            Dictionary<string, Claim>? claimsDictionary = null,
+            List<string>? args = null)
         {
             int retryAttempt = 0;
             using TConnection conn = new()
@@ -74,7 +69,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             };
 
             await SetManagedIdentityAccessTokenIfAnyAsync(conn);
-            Dictionary<string, Claim> claimsDictionary = AuthorizationResolver.GetAllUserClaims(httpContext);
 
             return await _retryPolicy.ExecuteAsync(async () =>
             {
@@ -86,8 +80,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             sqltext,
                             parameters,
                             dataReaderHandler,
-                            args,
-                            claimsDictionary);
+                            claimsDictionary,
+                            args);
                     if (retryAttempt > 1)
                     {
                         // This implies that the request got successfully executed during one of retry attempts.
@@ -130,8 +124,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string sqltext,
             IDictionary<string, object?> parameters,
             Func<DbDataReader, List<string>?, Task<TResult?>>? dataReaderHandler,
-            List<string>? args = null,
-            Dictionary<string, Claim> claimsDictionary = null)
+            Dictionary<string, Claim>? claimsDictionary,
+            List<string>? args = null)
         {
             await conn.OpenAsync();
             DbCommand cmd = conn.CreateCommand();
@@ -169,19 +163,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
         }
 
-        private static string GetSessionMapQuery(Dictionary<string, Claim> claimsDictionary)
+        public virtual string GetSessionMapQuery(Dictionary<string, Claim>? claimsDictionary)
         {
-            string sessionMapQuery = string.Empty;
-
-            foreach ((string claimType, Claim claim) in claimsDictionary)
-            {
-                sessionMapQuery = sessionMapQuery + "EXEC sp_set_session_context " + $"'{claimType}'," + GetClaimValue(claim) + ";";
-            }
-
-            return sessionMapQuery;
+            return string.Empty;
         }
 
-        private static string GetClaimValue(Claim claim)
+        protected static string GetClaimValue(Claim claim)
         {
             switch (claim.ValueType)
             {

@@ -432,7 +432,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// </summary>
         /// <param name="context">HttpContext object used to extract the authenticated user's claims.</param>
         /// <returns>Dictionary with claimType -> claim mappings.</returns>
-        public static Dictionary<string, Claim> GetAllUserClaims(HttpContext context)
+        public static Dictionary<string, Claim> GetAllUserClaims(HttpContext? context)
         {
             Dictionary<string, Claim> claimsInRequestContext = new();
             if (context is null)

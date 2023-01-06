@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.Common;
 using System.Linq;
 using System.Net;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -166,7 +167,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 await _queryExecutor.ExecuteQueryAsync(
                     queryText,
                     executeQueryStructure.Parameters,
-                    _queryExecutor.ExtractRowFromDbDataReader);
+                    _queryExecutor.ExtractRowFromDbDataReader,
+                    AuthorizationResolver.GetAllUserClaims(_httpContextAccessor.HttpContext!));
 
             // A note on returning stored procedure results:
             // We can't infer what the stored procedure actually did beyond the HasRows and RecordsAffected attributes
@@ -368,6 +370,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             string queryString;
             Dictionary<string, object?> queryParameters;
+            Dictionary<string, Claim> claimsDictionary = AuthorizationResolver.GetAllUserClaims(_httpContextAccessor.HttpContext!);
             switch (operationType)
             {
                 case Config.Operation.Insert:
@@ -454,8 +457,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         queryString,
                         queryParameters,
                         _queryExecutor.ExtractRowFromDbDataReader,
-                        sourceDefinition.PrimaryKey,
-                        _httpContextAccessor.HttpContext!);
+                        claimsDictionary,
+                        sourceDefinition.PrimaryKey);
 
                 if (resultRecord is not null && resultRecord.Item1 is null)
                 {
@@ -474,7 +477,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     await _queryExecutor.ExecuteQueryAsync(
                         queryString,
                         queryParameters,
-                        _queryExecutor.ExtractRowFromDbDataReader);
+                        _queryExecutor.ExtractRowFromDbDataReader,
+                        claimsDictionary);
             }
 
             return resultRecord;
@@ -515,7 +519,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 resultProperties = await _queryExecutor.ExecuteQueryAsync(
                     queryString,
                     queryParameters,
-                    _queryExecutor.GetResultProperties);
+                    _queryExecutor.GetResultProperties,
+                    AuthorizationResolver.GetAllUserClaims(_httpContextAccessor.HttpContext!));
 
             return resultProperties;
         }
@@ -573,6 +578,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                        queryString,
                        queryParameters,
                        _queryExecutor.GetMultipleResultSetsIfAnyAsync,
+                       AuthorizationResolver.GetAllUserClaims(_httpContextAccessor.HttpContext!),
                        new List<string> { prettyPrintPk, entityName });
         }
 

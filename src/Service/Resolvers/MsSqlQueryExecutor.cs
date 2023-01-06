@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.Data.Common;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using Azure.Core;
 using Azure.DataApiBuilder.Service.Configurations;
@@ -125,6 +127,23 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             return _defaultAccessToken?.Token;
+        }
+
+        public override string GetSessionMapQuery(Dictionary<string, Claim>? claimsDictionary)
+        {
+            if (claimsDictionary is null)
+            {
+                return string.Empty;
+            }
+
+            string sessionMapQuery = string.Empty;
+
+            foreach ((string claimType, Claim claim) in claimsDictionary)
+            {
+                sessionMapQuery = sessionMapQuery + "EXEC sp_set_session_context " + $"'{claimType}'," + GetClaimValue(claim) + ";";
+            }
+
+            return sessionMapQuery;
         }
     }
 }

@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Security.Claims;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
@@ -27,8 +27,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string sqltext,
             IDictionary<string, object?> parameters,
             Func<DbDataReader, List<string>?, Task<TResult?>>? dataReaderHandler,
-            List<string>? args = null,
-            HttpContext? httpContext = null);
+            Dictionary<string, Claim>? claimsDictionary = null,
+            List<string>? args = null);
 
         /// <summary>
         /// Extracts the rows from the given DbDataReader to populate
@@ -101,5 +101,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Modified the properties of the supplied connection to support managed identity access.
         /// </summary>
         public Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn);
+
+        public string GetSessionMapQuery(Dictionary<string, Claim> claimsDictionary);
     }
 }

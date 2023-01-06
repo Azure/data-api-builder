@@ -296,6 +296,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         /// <summary>
+        /// Tests that the PATCH updates can only update the rows which are accessible after applying the
+        /// security policy which uses data from session context.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public virtual Task PatchOneUpdateTestOnTableWithSecurityPolicy()
+        {
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
         /// Tests successful execution of PATCH update requests on views
         /// when requests try to modify fields belonging to one base table
         /// in the view.

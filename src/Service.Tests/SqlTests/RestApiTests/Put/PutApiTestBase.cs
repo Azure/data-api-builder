@@ -115,7 +115,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         }
 
         /// <summary>
-        /// Tests that the put updates can only update the rows which are accessible after applying the
+        /// Tests that the PUT updates can only update the rows which are accessible after applying the
         /// security policy which uses data from session context.
         /// </summary>
         /// <returns></returns>

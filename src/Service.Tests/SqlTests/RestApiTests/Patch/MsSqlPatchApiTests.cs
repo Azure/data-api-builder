@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Net;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -128,6 +129,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 $"INSERT INTO { _integrationTableName } " +
                 $"(id, title, publisher_id)" +
                 $"VALUES (1000,'The Hobbit Returns to The Shire',1234)"
+            },
+            {
+                "PatchOneUpdateAccessibleRowWithSecPolicy",
+                $"SELECT [id], [revenue], [category], [accessible_role] FROM { _tableWithSecurityPolicy } " +
+                $"WHERE [id] = 1 AND [revenue] = 2000 AND [category] = 'Book' AND [accessible_role] = 'Anonymous' " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             }
         };
         #region Test Fixture Setup
@@ -168,6 +175,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         public override string GetQuery(string key)
         {
             return _queryMap[key];
+        }
+
+        [TestMethod]
+        public override async Task PatchOneUpdateTestOnTableWithSecurityPolicy()
+        {
+            string requestBody = @"
+            {
+                ""revenue"": ""2000""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/1",
+                    queryString: null,
+                    entityNameOrPath: _entityWithSecurityPolicy,
+                    sqlQuery: GetQuery("PatchOneUpdateAccessibleRowWithSecPolicy"),
+                    operationType: Config.Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
         }
 
         #endregion

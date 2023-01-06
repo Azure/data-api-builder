@@ -409,6 +409,24 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"WHERE [trees].[treeId] < 2 " +
                 $"ORDER BY [trees].[species] asc, [trees].[treeId] asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindAllOnTableWithSecPolicy",
+                $"SELECT [id], [category], [revenue], [accessible_role] FROM { _tableWithSecurityPolicy } " +
+                $"WHERE [id] <= 2 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindOneOnTableWithSecPolicy",
+                $"SELECT [id], [category], [revenue], [accessible_role] FROM { _tableWithSecurityPolicy } " +
+                $"WHERE [id] = 2 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "FindOneOnTableWithSecPolicyWithNoAccessibleRow",
+                $"SELECT [id], [category], [revenue], [accessible_role] FROM { _tableWithSecurityPolicy } " +
+                $"WHERE [id] = 3 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             }
         };
         #region Test Fixture Setup
@@ -461,6 +479,30 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             return _queryMap[key];
         }
 
+        [TestMethod]
+        public override async Task FindTestOnTableWithSecurityPolicy()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entityNameOrPath: _entityWithSecurityPolicy,
+                sqlQuery: GetQuery("FindAllOnTableWithSecPolicy")
+            );
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/2",
+                queryString: string.Empty,
+                entityNameOrPath: _entityWithSecurityPolicy,
+                sqlQuery: GetQuery("FindOneOnTableWithSecPolicy")
+            );
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/3",
+                queryString: string.Empty,
+                entityNameOrPath: _entityWithSecurityPolicy,
+                sqlQuery: GetQuery("FindOneOnTableWithSecPolicyWithNoAccessibleRow")
+            );
+        }
         #endregion
     }
 }

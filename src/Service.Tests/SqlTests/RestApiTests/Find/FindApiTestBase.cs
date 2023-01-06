@@ -992,6 +992,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 sqlQuery: GetQuery(nameof(FindTestWithDifferentMappingAfterSingleKeyPaginationAndOrderBy))
             );
         }
+
+        [TestMethod]
+        public virtual Task FindTestOnTableWithSecurityPolicy()
+        {
+            return Task.CompletedTask;
+        }
+
         #endregion
 
         #region Negative Tests

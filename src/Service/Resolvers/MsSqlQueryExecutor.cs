@@ -50,7 +50,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             : base(runtimeConfigProvider, dbExceptionParser, logger)
         {
             MsSqlOptions? msSqlOptions = runtimeConfigProvider.GetRuntimeConfiguration().DataSource.MsSql;
-            _isSessionContextEnabled = msSqlOptions is null? false : msSqlOptions.SetSessionContext;
+            _isSessionContextEnabled = msSqlOptions is null ? false : msSqlOptions.SetSessionContext;
             _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
             _attemptToSetAccessToken =
                 ShouldManagedIdentityAccessBeAttempted(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString);

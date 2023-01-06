@@ -40,12 +40,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         private bool _attemptToSetAccessToken;
 
+        private bool _isSessionContextEnabled;
+
         public MsSqlQueryExecutor(
             RuntimeConfigProvider runtimeConfigProvider,
             DbExceptionParser dbExceptionParser,
             ILogger<QueryExecutor<SqlConnection>> logger)
             : base(runtimeConfigProvider, dbExceptionParser, logger)
         {
+            _isSessionContextEnabled = runtimeConfigProvider.GetRuntimeConfiguration().DataSource.MsSql!.SetSessionContext;
             _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
             _attemptToSetAccessToken =
                 ShouldManagedIdentityAccessBeAttempted(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString);
@@ -134,7 +137,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         public override string GetSessionMapQuery(Dictionary<string, Claim>? claimsDictionary)
         {
-            if (claimsDictionary is null)
+            if (claimsDictionary is null || !_isSessionContextEnabled)
             {
                 return string.Empty;
             }

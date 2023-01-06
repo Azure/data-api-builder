@@ -936,13 +936,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// <param name="expectedParsedPolicy">The policy which is expected to be generated after parsing.</param>
         [DataTestMethod]
         [DataRow("@claims.user_email ne @item.col1 and @claims.contact_no eq @item.col2 and not(@claims.name eq @item.col3)",
-            "('xyz@microsoft.com') ne col1 and (1234) eq col2 and not(('Aaron') eq col3)", DisplayName = "Valid policy parsing test 1")]
+            "'xyz@microsoft.com' ne col1 and 1234 eq col2 and not('Aaron' eq col3)", DisplayName = "Valid policy parsing test 1")]
         [DataRow("(@claims.isemployee eq @item.col1 and @item.col2 ne @claims.user_email) or" +
-            " ('David' ne @item.col3 and @claims.contact_no ne @item.col3)", "((true) eq col1 and col2 ne ('xyz@microsoft.com')) or" +
-            " ('David' ne col3 and (1234) ne col3)", DisplayName = "Valid policy parsing test 2")]
+            " ('David' ne @item.col3 and @claims.contact_no ne @item.col3)", "(true eq col1 and col2 ne 'xyz@microsoft.com') or" +
+            " ('David' ne col3 and 1234 ne col3)", DisplayName = "Valid policy parsing test 2")]
         [DataRow("(@item.rating gt @claims.emprating) and (@claims.isemployee eq true)",
-            "(rating gt (4.2)) and ((true) eq true)", DisplayName = "Valid policy parsing test 3")]
-        [DataRow("@item.rating eq @claims.emprating)", "rating eq (4.2))", DisplayName = "Valid policy parsing test 4")]
+            "(rating gt 4.2) and (true eq true)", DisplayName = "Valid policy parsing test 3")]
+        [DataRow("@item.rating eq @claims.emprating)", "rating eq 4.2)", DisplayName = "Valid policy parsing test 4")]
         public void ParseValidDbPolicy(string policy, string expectedParsedPolicy)
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
@@ -1003,7 +1003,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             // - Primitive string literals in URLS must be enclosed within single quotes.
             // - http://docs.oasis-open.org/odata/odata/v4.01/cs01/abnf/odata-abnf-construction-rules.txt
             string odataClaimValue = (claimValueType == ClaimValueTypes.String) ? "'" + claimValue + "'" : claimValue;
-            string expectedPolicy = "(" + odataClaimValue + ") eq col1";
+            string expectedPolicy = odataClaimValue + " eq col1";
             string policyDefinition = "@claims.testClaim eq @item.col1";
 
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
@@ -1135,7 +1135,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             else
             {
                 // If the role claim was the only duplicate, simply verify policy parsed as expected
-                string expectedPolicy = $"('{defaultClaimValue}') eq 1";
+                string expectedPolicy = $"'{defaultClaimValue}' eq 1";
                 string parsedPolicy = authZResolver.ProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
                 Assert.AreEqual(expected: expectedPolicy, actual: parsedPolicy);
             }

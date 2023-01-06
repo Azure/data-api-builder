@@ -168,25 +168,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return string.Empty;
         }
 
-        protected static string GetClaimValue(Claim claim)
-        {
-            switch (claim.ValueType)
-            {
-                case ClaimValueTypes.String:
-                    return $"'{claim.Value}'";
-                case ClaimValueTypes.Boolean:
-                case ClaimValueTypes.Integer:
-                case ClaimValueTypes.Integer32:
-                case ClaimValueTypes.Integer64:
-                case ClaimValueTypes.UInteger32:
-                case ClaimValueTypes.UInteger64:
-                case ClaimValueTypes.Double:
-                    return $"{claim.Value}";
-                default:
-                    return "null";
-            }
-        }
-
         /// <inheritdoc />
         public virtual async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn)
         {

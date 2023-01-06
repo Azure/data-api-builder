@@ -1,9 +1,12 @@
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Net;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Azure.Core;
+using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.Identity;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
@@ -140,7 +143,20 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             foreach ((string claimType, Claim claim) in claimsDictionary)
             {
-                sessionMapQuery = sessionMapQuery + "EXEC sp_set_session_context " + $"'{claimType}'," + GetClaimValue(claim) + ";";
+                string claimValue = string.Empty;
+                try
+                {
+                    claimValue = AuthorizationResolver.GetODataCompliantClaimValue(claim);
+                    sessionMapQuery = sessionMapQuery + "EXEC sp_set_session_context " + $"'{claimType}'," + claimValue + ";";
+                }
+                catch
+                {
+                    throw new DataApiBuilderException(
+                        message: "One or more user claims have unsupported data type.",
+                        statusCode: HttpStatusCode.Forbidden,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported
+                        );
+                }
             }
 
             return sessionMapQuery;

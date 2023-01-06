@@ -20,6 +20,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
     public class ClientRoleHeaderAuthenticationMiddleware
     {
         private readonly RequestDelegate _nextMiddleware;
+        private const string IDENTITY_PROVIDER_DAB = "DAB-VERIFIED";
 
         public ClientRoleHeaderAuthenticationMiddleware(RequestDelegate next)
         {
@@ -96,8 +97,8 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
             {
                 Claim claim = new(ClaimTypes.Role, clientDefinedRole, ClaimValueTypes.String);
 
-                // To set the IsAuthenticated value as false, omit the authenticationType.
-                ClaimsIdentity identity = new("DAB-VERIFIED");
+                // To set the IsAuthenticated value as true, set the authenticationType.
+                ClaimsIdentity identity = new(authenticationType: IDENTITY_PROVIDER_DAB);
                 identity.AddClaim(claim);
                 httpContext.User.AddIdentity(identity);
             }

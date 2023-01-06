@@ -444,7 +444,8 @@ namespace Azure.DataApiBuilder.Service.Authorization
             {
                 ClaimsIdentity? identity = iidentity as ClaimsIdentity;
 
-                if(identity is null || identity.IsAuthenticated is false)
+                // Continue if identity is null or, is not authenticated.
+                if (identity is null || !identity.IsAuthenticated)
                 {
                     continue;
                 }
@@ -458,7 +459,8 @@ namespace Azure.DataApiBuilder.Service.Authorization
                      * claim.ValueType: "string"
                      */
                     // At this point, only add non-role claims to the collection and only throw an exception for duplicate non-role claims.
-                    if (claim.Type is not AuthenticationConfig.ROLE_CLAIM_TYPE && !claimsInRequestContext.TryAdd(claim.Type, claim))
+                    if (claim.Type is not AuthenticationConfig.ROLE_CLAIM_TYPE && claim.Type is not ClaimTypes.Role &&
+                        !claimsInRequestContext.TryAdd(claim.Type, claim))
                     {
                         // If there are duplicate claims present in the request, return an exception.
                         throw new DataApiBuilderException(
@@ -472,7 +474,8 @@ namespace Azure.DataApiBuilder.Service.Authorization
                 // Only add a role claim which represents the role context evaluated for the request.
                 string clientRoleHeader = context.Request.Headers[CLIENT_ROLE_HEADER].ToString();
                 if (!claimsInRequestContext.ContainsKey(AuthenticationConfig.ROLE_CLAIM_TYPE) &&
-                    identity.HasClaim(type: AuthenticationConfig.ROLE_CLAIM_TYPE, value: clientRoleHeader))
+                    (identity.HasClaim(type: AuthenticationConfig.ROLE_CLAIM_TYPE, value: clientRoleHeader) ||
+                    identity.HasClaim(type: ClaimTypes.Role, value: clientRoleHeader)))
                 {
                     claimsInRequestContext.Add(AuthenticationConfig.ROLE_CLAIM_TYPE, new Claim(AuthenticationConfig.ROLE_CLAIM_TYPE, clientRoleHeader, ClaimValueTypes.String));
                 }
@@ -517,7 +520,17 @@ namespace Azure.DataApiBuilder.Service.Authorization
             string claimType = claimTypeMatch.Value.ToString().Substring(CLAIM_PREFIX.Length);
             if (claimsInRequestContext.TryGetValue(claimType, out Claim? claim))
             {
-                return GetODataCompliantClaimValue(claim);
+                try
+                {
+                    return GetODataCompliantClaimValue(claim);
+                }
+                catch {
+                    throw new DataApiBuilderException(
+                        message: INVALID_POLICY_CLAIM_MESSAGE,
+                        statusCode: HttpStatusCode.Forbidden,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
+                    );
+                }
             }
             else
             {
@@ -550,7 +563,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// <seealso cref="https://www.iana.org/assignments/jwt/jwt.xhtml#claims"/>
         /// <seealso cref="https://www.rfc-editor.org/rfc/rfc7519.html#section-4"/>
         /// <seealso cref="https://github.com/microsoft/referencesource/blob/dae14279dd0672adead5de00ac8f117dcf74c184/mscorlib/system/security/claims/Claim.cs#L107"/>
-        private static string GetODataCompliantClaimValue(Claim claim)
+        public static string GetODataCompliantClaimValue(Claim claim)
         {
             /* An example Claim object:
              * claim.Type: "user_email"
@@ -561,7 +574,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
             switch (claim.ValueType)
             {
                 case ClaimValueTypes.String:
-                    return $"('{claim.Value}')";
+                    return $"'{claim.Value}'";
                 case ClaimValueTypes.Boolean:
                 case ClaimValueTypes.Integer:
                 case ClaimValueTypes.Integer32:
@@ -569,16 +582,12 @@ namespace Azure.DataApiBuilder.Service.Authorization
                 case ClaimValueTypes.UInteger32:
                 case ClaimValueTypes.UInteger64:
                 case ClaimValueTypes.Double:
-                    return $"({claim.Value})";
+                    return $"{claim.Value}";
                 case JsonClaimValueTypes.JsonNull:
-                    return $"(null)";
+                    return $"null";
                 default:
                     // One of the claims in the request had unsupported data type.
-                    throw new DataApiBuilderException(
-                        message: INVALID_POLICY_CLAIM_MESSAGE,
-                        statusCode: HttpStatusCode.Forbidden,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
-                    );
+                    throw new Exception();
             }
         }
 

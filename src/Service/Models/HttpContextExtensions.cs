@@ -7,7 +7,7 @@ namespace Azure.DataApiBuilder.Service.Models
     public static class HttpContextExtensions
     {
         /// <summary>
-        /// Retrieving correaltion id from http context
+        /// Retrieving correlation id from http context
         /// </summary>
         /// <param name="context">http context for current request</param>
         /// <returns></returns>

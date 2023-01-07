@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
+using HotChocolate.Execution;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
@@ -1074,6 +1075,93 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
+        /// <summary>
+        /// Validates the presence of a resolved __typename in a GraphQL query result payload.
+        /// __typename should not be resolved as a database field and should not result in a database error.
+        /// </summary>
+        [TestMethod]
+        public async Task SingleItemQueryWithIntrospectionFields()
+        {
+
+            string graphQLQueryName = "book_by_pk";
+            string graphQLQuery = @"query {
+                book_by_pk(id: 1) {
+                  id,
+                  __typename
+                }
+            }";
+
+            string expected = @"
+            {
+                ""id"": 1,
+                ""__typename"": ""book""
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Validates the presence of a resolved __typename in a GraphQL query result payload where there
+        /// are nested fields. This query returns the __typename of publishers (PublisherConnection) and the
+        /// __typename of the items collection (Publisher).
+        /// Including the __typename field for items should not result in a database error because __typename
+        /// should not be resolved as a field for the Publisher table.
+        /// </summary>
+        [TestMethod]
+        public async Task ListQueryWithIntrospectionFields()
+        {
+
+            string graphQLQueryName = "publishers";
+            string graphQLQuery = @"query {
+                publishers {
+                  __typename,
+                  items{
+                    __typename,
+                    name
+                  }
+                }
+            }";
+
+            string expected = @"
+            {
+              ""__typename"": ""PublisherConnection"",
+              ""items"": [
+                {
+                  ""__typename"": ""Publisher"",
+                  ""name"": ""The First Publisher""
+                },
+                {
+                  ""__typename"": ""Publisher"",
+                  ""name"": ""Big Company""
+                },
+                {
+                  ""__typename"": ""Publisher"",
+                  ""name"": ""Policy Publisher 01""
+                },
+                {
+                  ""__typename"": ""Publisher"",
+                  ""name"": ""Policy Publisher 02""
+                },
+                {
+                  ""__typename"": ""Publisher"",
+                  ""name"": ""TBD Publishing One""
+                },
+                {
+                  ""__typename"": ""Publisher"",
+                  ""name"": ""TBD Publishing Two Ltd""
+                },
+                {
+                  ""__typename"": ""Publisher"",
+                  ""name"": ""Small Town Publisher""
+                }
+              ]
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
 
         #endregion

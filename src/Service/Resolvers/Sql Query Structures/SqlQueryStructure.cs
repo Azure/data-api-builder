@@ -15,6 +15,7 @@ using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
+using HotChocolate.Types.Introspection;
 using Microsoft.AspNetCore.Http;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
@@ -602,7 +603,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 FieldNode field = (FieldNode)node;
                 string fieldName = field.Name.Value;
 
-                if (field.SelectionSet == null)
+                // Do not add the reserved introspection field "__typename" to the SqlQueryStructure because it is handled by HotChocolate
+                bool isIntrospectionField = field.Name.Value == IntrospectionFields.TypeName ? true : false;
+                if (isIntrospectionField)
+                {
+                    continue;
+                }
+                else if (field.SelectionSet == null)
                 {
                     AddColumn(fieldName);
                 }

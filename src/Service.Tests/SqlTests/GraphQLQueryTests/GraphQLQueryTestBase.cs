@@ -2,7 +2,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
-using HotChocolate.Execution;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
@@ -1118,7 +1117,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             string graphQLQuery = @"query {
                 publishers {
                   __typename,
-                  items{
+                  items {
                     __typename,
                     name
                   }

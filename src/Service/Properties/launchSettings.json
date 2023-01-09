@@ -67,12 +67,12 @@
       "dotnetRunMessages": "true",
       "applicationUrl": "https://localhost:5001;http://localhost:5000"
     },
-    "Cosmos": {
+    "CosmosDb_NoSql": {
       "commandName": "Project",
       "launchBrowser": true,
       "launchUrl": "graphql",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Cosmos"
+        "ASPNETCORE_ENVIRONMENT": "CosmosDb_NoSql"
       },
       "applicationUrl": "https://localhost:5001;http://localhost:5000"
     }

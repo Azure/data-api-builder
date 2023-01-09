@@ -7,7 +7,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
     {
         public static readonly string DB_NAME = "graphqlTestDb";
         private static Lazy<RuntimeConfigPath>
-            _runtimeConfigPath = new(() => TestHelper.GetRuntimeConfigPath(TestCategory.COSMOS));
+            _runtimeConfigPath = new(() => TestHelper.GetRuntimeConfigPath(TestCategory.COSMOSDBNOSQL));
 
         public static RuntimeConfigPath ConfigPath
         {

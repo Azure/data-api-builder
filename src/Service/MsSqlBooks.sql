@@ -12,6 +12,7 @@ DROP PROCEDURE IF EXISTS count_books;
 DROP PROCEDURE IF EXISTS delete_last_inserted_book;
 DROP PROCEDURE IF EXISTS update_book_title;
 DROP PROCEDURE IF EXISTS get_authors_history_by_first_name;
+DROP PROCEDURE IF EXISTS insert_and_display_all_books_for_given_publisher;
 DROP TABLE IF EXISTS book_author_link;
 DROP TABLE IF EXISTS reviews;
 DROP TABLE IF EXISTS authors;
@@ -247,7 +248,7 @@ ALTER TABLE sales
 ADD total AS (subtotal + tax) PERSISTED;
 
 SET IDENTITY_INSERT publishers ON
-INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd'), (1940, 'Policy Publisher 01'), (1941, 'Policy Publisher 02');
+INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd'), (1940, 'Policy Publisher 01'), (1941, 'Policy Publisher 02'), (1156, 'The First Publisher');
 SET IDENTITY_INSERT publishers OFF
 
 SET IDENTITY_INSERT authors ON
@@ -378,4 +379,13 @@ EXEC('CREATE PROCEDURE get_authors_history_by_first_name @firstName varchar(100)
           first_name=@firstName
         GROUP BY
           concat(first_name, '' '', (middle_name + '' ''), last_name)
+      END');
+EXEC('CREATE PROCEDURE insert_and_display_all_books_for_given_publisher @title varchar(max), @publisher_name varchar(max) AS
+      BEGIN
+        DECLARE @publisher_id AS INT;
+        SET @publisher_id = (SELECT id FROM dbo.publishers WHERE name = @publisher_name);
+        INSERT INTO dbo.books(title, publisher_id)
+        VALUES(@title, @publisher_id);
+
+        SELECT * FROM dbo.books WHERE publisher_id = @publisher_id;
       END');

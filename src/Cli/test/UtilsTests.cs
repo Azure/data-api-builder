@@ -7,6 +7,16 @@ namespace Cli.Tests
     public class UtilsTests
     {
         /// <summary>
+        /// Setup the logger for CLI
+        /// </summary>
+        [TestInitialize]
+        public void SetupLoggerForCLI()
+        {
+            Mock<ILogger<Utils>> utilsLogger = new();
+            Utils.SetCliUtilsLogger(utilsLogger.Object);
+        }
+
+        /// <summary>
         /// Test to check if it successfully creates the rest object
         /// which can be either a boolean value
         /// or a RestEntitySettings object
@@ -125,6 +135,48 @@ namespace Cli.Tests
             Assert.AreEqual(sourceParameters.GetValueOrDefault("param3"), 220.12);
             Assert.AreEqual(sourceParameters.GetValueOrDefault("param4"), true);
             Assert.AreEqual(sourceParameters.GetValueOrDefault("param5"), "dab");
+        }
+
+        /// <summary>
+        /// Test to verify that stored-procedures contain only 1 CRUD operation.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(new string[] { "*" }, SourceType.StoredProcedure, false, DisplayName = "FAIL: Stored-Procedure with wildcard CRUD operation.")]
+        [DataRow(new string[] { "create" }, SourceType.StoredProcedure, true, DisplayName = "PASS: Stored-Procedure with 1 CRUD operation.")]
+        [DataRow(new string[] { "create", "read" }, SourceType.StoredProcedure, false, DisplayName = "FAIL: Stored-Procedure with more than 1 CRUD operation.")]
+        [DataRow(new string[] { "*" }, SourceType.Table, true, DisplayName = "PASS: Table with wildcard CRUD operation.")]
+        [DataRow(new string[] { "create" }, SourceType.Table, true, DisplayName = "PASS: Table with 1 CRUD operation.")]
+        [DataRow(new string[] { "create", "read" }, SourceType.Table, true, DisplayName = "PASS: Table with more than 1 CRUD operation.")]
+        [DataRow(new string[] { "*" }, SourceType.View, true, DisplayName = "PASS: View with wildcard CRUD operation.")]
+        [DataRow(new string[] { "create" }, SourceType.View, true, DisplayName = "PASS: View with 1 CRUD operation.")]
+        [DataRow(new string[] { "create", "read" }, SourceType.View, true, DisplayName = "PASS: View with more than 1 CRUD operation.")]
+
+        public void TestStoredProcedurePermissions(
+            string[] operations,
+            SourceType sourceType,
+            bool isSuccess)
+        {
+            Assert.AreEqual(isSuccess, Utils.VerifyOperations(operations, sourceType));
+        }
+
+        /// <summary>
+        /// Test to verify correct conversion of operation string name to operation type name.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("*", Operation.All, true, DisplayName = "PASS: Correct conversion of wildcard operation")]
+        [DataRow("create", Operation.Create, true, DisplayName = "PASS: Correct conversion of CRUD operation")]
+        [DataRow(null, Operation.None, false, DisplayName = "FAIL: Invalid operation null.")]
+
+        public void TestConversionOfOperationStringNameToOperationTypeName(
+            string? operationStringName,
+            Operation expectedOperationTypeName,
+            bool isSuccess)
+        {
+            Assert.AreEqual(isSuccess, Utils.TryConvertOperationNameToOperation(operationStringName, out Operation operationTypeName));
+            if (isSuccess)
+            {
+                Assert.AreEqual(operationTypeName, expectedOperationTypeName);
+            }
         }
 
         [ClassCleanup]

@@ -61,7 +61,7 @@ type Foo @model(name:""Foo"") {
                     roles);
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
-                DatabaseType.cosmos,
+                DatabaseType.cosmosdb_nosql,
                 new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
                 inputTypes: new(),
                 entityPermissionsMap: entityPermissionsMap
@@ -91,7 +91,7 @@ type Foo @model(name:""Foo"") {
 
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
-                DatabaseType.cosmos,
+                DatabaseType.cosmosdb_nosql,
                 new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
                 inputTypes: new(),
                 entityPermissionsMap: _entityPermissions
@@ -136,7 +136,7 @@ type foo @model(name:""foo"") {
                     roles);
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
-                DatabaseType.cosmos,
+                DatabaseType.cosmosdb_nosql,
                 new Dictionary<string, Entity> { { "foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
                 inputTypes: new(),
                 entityPermissionsMap: entityPermissionsMap
@@ -166,7 +166,7 @@ type Foo @model(name:""Foo"") {
 
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
-                DatabaseType.cosmos,
+                DatabaseType.cosmosdb_nosql,
                 new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
                 inputTypes: new(),
                 entityPermissionsMap: _entityPermissions
@@ -223,7 +223,7 @@ type Foo @model(name:""Foo"") {
 
             DocumentNode queryRoot = QueryBuilder.Build(
                             root,
-                            DatabaseType.cosmos,
+                            DatabaseType.cosmosdb_nosql,
                             new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
                             inputTypes: new(),
                             entityPermissionsMap: _entityPermissions
@@ -343,7 +343,7 @@ type Table @model(name: ""table"") {
 
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
-                DatabaseType.cosmos,
+                DatabaseType.cosmosdb_nosql,
                 new Dictionary<string, Entity> { { entityName, entity } },
                 inputTypes: new(),
                 entityPermissionsMap: entityPermissionsMap

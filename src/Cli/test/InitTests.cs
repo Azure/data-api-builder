@@ -9,6 +9,15 @@ namespace Cli.Tests
         private string _basicRuntimeConfig = string.Empty;
 
         /// <summary>
+        /// Setup the logger for CLI
+        /// </summary>
+        [TestInitialize]
+        public void SetupLoggerForCLI()
+        {
+            TestHelper.SetupTestLoggerForCLI();
+        }
+
+        /// <summary>
         /// Test the simple init config for mssql database. PG and MySQL should be similar.
         /// There is no need for a separate test.
         /// </summary>
@@ -23,13 +32,12 @@ namespace Cli.Tests
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                config: _testRuntimeConfig,
-                devModeDefaultAuth: "true");
+                config: _testRuntimeConfig);
 
             _basicRuntimeConfig =
-            @"{
-                ""$schema"": ""dab.draft.schema.json"",
-                ""data-source"": {
+            @"{" +
+                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                @"""data-source"": {
                     ""database-type"": ""mssql"",
                     ""connection-string"": ""testconnectionstring""
                 },
@@ -41,8 +49,7 @@ namespace Cli.Tests
                 _basicRuntimeConfig,
                 GetDefaultTestRuntimeSettingString(
                     HostModeType.Development,
-                    new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                    authenticateDevModeRequest: true)
+                    new List<string>() { "http://localhost:3000", "http://nolocalhost:80" })
             );
 
             RunTest(options, expectedRuntimeConfig);
@@ -62,13 +69,12 @@ namespace Cli.Tests
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                config: _testRuntimeConfig,
-                devModeDefaultAuth: "true");
+                config: _testRuntimeConfig);
 
             _basicRuntimeConfig =
-            @"{
-                ""$schema"": ""dab.draft.schema.json"",
-                ""data-source"": {
+            @"{" +
+                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                @"""data-source"": {
                     ""database-type"": ""cosmosdb_postgresql"",
                     ""connection-string"": ""testconnectionstring""
                 },
@@ -80,8 +86,7 @@ namespace Cli.Tests
                 _basicRuntimeConfig,
                 GetDefaultTestRuntimeSettingString(
                     HostModeType.Development,
-                    new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                    authenticateDevModeRequest: true)
+                    new List<string>() { "http://localhost:3000", "http://nolocalhost:80" })
             );
             RunTest(options, expectedRuntimeConfig);
         }
@@ -101,13 +106,12 @@ namespace Cli.Tests
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                config: _testRuntimeConfig,
-                devModeDefaultAuth: "false");
+                config: _testRuntimeConfig);
 
             _basicRuntimeConfig =
-            @"{
-                ""$schema"": ""dab.draft.schema.json"",
-                ""data-source"": {
+            @"{" +
+                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                @"""data-source"": {
                     ""database-type"": ""mssql"",
                     ""connection-string"": """"
                 },
@@ -119,8 +123,7 @@ namespace Cli.Tests
                 _basicRuntimeConfig,
                 GetDefaultTestRuntimeSettingString(
                     HostModeType.Development,
-                    new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                    authenticateDevModeRequest: false)
+                    new List<string>() { "http://localhost:3000", "http://nolocalhost:80" })
             );
             RunTest(options, expectedRuntimeConfig);
         }
@@ -139,12 +142,12 @@ namespace Cli.Tests
                 graphQLSchemaPath: "schemafile",
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
-                config: _testRuntimeConfig,
-                devModeDefaultAuth: null);
+                config: _testRuntimeConfig);
 
-            _basicRuntimeConfig = @"{
-                ""$schema"": ""dab.draft.schema.json"",
-                ""data-source"": {
+            _basicRuntimeConfig =
+            @"{" +
+                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                @"""data-source"": {
                     ""database-type"": ""cosmosdb_nosql"",
                     ""connection-string"": ""testconnectionstring"",
                     ""options"": {
@@ -186,9 +189,7 @@ namespace Cli.Tests
                 graphQLSchemaPath: graphQLSchema,
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
-                config: _testRuntimeConfig,
-                devModeDefaultAuth: null
-                );
+                config: _testRuntimeConfig);
 
             Assert.AreEqual(expectedResult, ConfigGenerator.TryCreateRuntimeConfig(options, out _));
         }
@@ -208,8 +209,7 @@ namespace Cli.Tests
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { },
-                config: _testRuntimeConfig,
-                devModeDefaultAuth: null);
+                config: _testRuntimeConfig);
 
             // Config generated successfully for the first time.
             Assert.AreEqual(true, ConfigGenerator.TryGenerateConfig(options));
@@ -272,8 +272,7 @@ namespace Cli.Tests
                 graphQLSchemaPath: null,
                 hostMode: HostModeType.Production,
                 corsOrigin: new List<string>() { },
-                config: fileName,
-                devModeDefaultAuth: null);
+                config: fileName);
 
             return options;
         }

@@ -6,6 +6,15 @@ namespace Cli.Tests
     [TestClass]
     public class UpdateEntityTests
     {
+        /// <summary>
+        /// Setup the logger for CLI
+        /// </summary>
+        [TestInitialize]
+        public void SetupLoggerForCLI()
+        {
+            TestHelper.SetupTestLoggerForCLI();
+        }
+
         #region  Positive Tests
         /// <summary>
         /// Simple test to update an entity permission by adding a new action.
@@ -1160,6 +1169,54 @@ namespace Cli.Tests
         }
 
         /// <summary>
+        /// Test to verify updating permissions for stored-procedure.
+        /// Checks: 
+        /// 1. Updating with WILDCARD/multiple CRUD action should fail.
+        /// 2. Adding a new role should have the same single CRUD operation as the existing one.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("anonymous", "*", false, DisplayName = "FAIL: Stored-Procedure incorrectly updated with wildcard CRUD operation for an existing role.")]
+        [DataRow("anonymous", "create", true, DisplayName = "PASS: Stored-Procedure with 1 CRUD operation for an existing role.")]
+        [DataRow("anonymous", "create,read", false, DisplayName = "FAIL: Stored-Procedure with more than 1 CRUD operation for an existing role.")]
+        [DataRow("authenticated", "*", false, DisplayName = "FAIL: Stored-Procedure with wildcard CRUD operation for a new role.")]
+        [DataRow("authenticated", "create", true, DisplayName = "PASS: Stored-Procedure with 1 CRUD operation for a new role.")]
+        [DataRow("authenticated", "read", true, DisplayName = "PASS: Stored-Procedure with same single CRUD operation for a new role as that of existing one.")]
+        [DataRow("authenticated", "create,read", false, DisplayName = "FAIL: Stored-Procedure with more than 1 CRUD operation for a new role.")]
+        public void TestUpdatePermissionsForStoredProcedure(
+            string role,
+            string operations,
+            bool isSuccess
+        )
+        {
+            UpdateOptions options = new(
+                source: "my_sp",
+                permissions: new string[] { role, operations },
+                entity: "MyEntity",
+                sourceType: "stored-procedure",
+                sourceParameters: null,
+                sourceKeyFields: null,
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: null,
+                fieldsToExclude: null,
+                relationship: null,
+                cardinality: null,
+                targetEntity: null,
+                linkingObject: null,
+                linkingSourceFields: new string[] { },
+                linkingTargetFields: new string[] { },
+                relationshipFields: new string[] { },
+                policyRequest: null,
+                policyDatabase: null,
+                map: new string[] { },
+                config: _testRuntimeConfig);
+
+            string runtimeConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
+
+            Assert.AreEqual(isSuccess, ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
+        }
+
+        /// <summary>
         /// Test to Update Entity with New mappings
         /// </summary>
         [TestMethod]
@@ -1216,6 +1273,89 @@ namespace Cli.Tests
                                     ""id"": ""Identity"",
                                     ""name"": ""Company Name""
                                 }
+                            }
+                        }
+                    }";
+
+            Assert.IsTrue(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
+            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfig), JObject.Parse(runtimeConfig)));
+        }
+
+        /// <summary>
+        /// Test to Update stored procedure action
+        /// </summary>
+        [TestMethod]
+        public void TestUpdateActionOfStoredProcedureRole()
+        {
+            UpdateOptions options = new(
+                source: null,
+                permissions: new string[] { "authenticated", "create" },
+                entity: "MyEntity",
+                sourceType: null,
+                sourceParameters: null,
+                sourceKeyFields: null,
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: new string[] { },
+                fieldsToExclude: new string[] { },
+                policyRequest: null,
+                policyDatabase: null,
+                relationship: null,
+                cardinality: null,
+                targetEntity: null,
+                linkingObject: null,
+                linkingSourceFields: new string[] { },
+                linkingTargetFields: new string[] { },
+                relationshipFields: new string[] { },
+                map: null,
+                config: _testRuntimeConfig);
+
+            string runtimeConfig = GetInitialConfigString() + "," + @"
+                    ""entities"": {
+                            ""MyEntity"": {
+                                ""source"": {
+                                    ""object"": ""MySp"",
+                                    ""type"": ""stored-procedure""
+                                },
+                                ""permissions"": [
+                                    {
+                                    ""role"": ""anonymous"",
+                                    ""actions"": [
+                                            ""read""
+                                        ]
+                                    },
+                                    {
+                                    ""role"": ""authenticated"",
+                                    ""actions"": [
+                                            ""read""
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    }";
+
+            string expectedConfig = GetInitialConfigString() + "," + @"
+                    ""entities"": {
+                            ""MyEntity"": {
+                                ""source"": {
+                                    ""object"": ""MySp"",
+                                    ""type"": ""stored-procedure""
+                                },
+                                ""permissions"": [
+                                    {
+                                    ""role"": ""anonymous"",
+                                    ""actions"": [
+                                            ""read""
+                                        ]
+                                    },
+                                    {
+                                    ""role"": ""authenticated"",
+                                    ""actions"": [
+                                            ""create""
+                                        ]
+                                    }
+                                ]
                             }
                         }
                     }";
@@ -1404,31 +1544,32 @@ namespace Cli.Tests
         /// Simple test to verify failure on updating source of an entity with invalid fields.
         /// </summary>
         [DataTestMethod]
-        [DataRow(null, new string[] { "param1:value1" }, new string[] { "col1", "col2" }, "*", DisplayName = "Both KeyFields and Parameters provided for source")]
-        [DataRow("stored-procedure", null, new string[] { "col1", "col2" }, "create", DisplayName = "KeyFields incorrectly used with stored procedure")]
-        [DataRow("stored-procedure", new string[] { "param1:value1,param1:223" }, null, "read", DisplayName = "Parameters with duplicate keys for stored procedure")]
-        [DataRow("stored-procedure", new string[] { "param1:value1,param2:223" }, null, "create,read", DisplayName = "Stored procedure with more than 1 CRUD operation")]
-        [DataRow("stored-procedure", new string[] { "param1:value1,param2:223" }, null, "*", DisplayName = "Stored procedure with wildcard CRUD operation")]
-        [DataRow("view", new string[] { "param1:value1" }, null, "*", DisplayName = "Source Parameters incorrectly used with View")]
-        [DataRow("table", new string[] { "param1:value1" }, null, "*", DisplayName = "Source Parameters incorrectly used with Table")]
-        [DataRow("table-view", new string[] { "param1:value1" }, null, "*", DisplayName = "Invalid Source Type")]
+        [DataRow(null, new string[] { "param1:value1" }, new string[] { "col1", "col2" }, "anonymous", "*", DisplayName = "Both KeyFields and Parameters provided for source")]
+        [DataRow("stored-procedure", null, new string[] { "col1", "col2" }, "anonymous", "create", DisplayName = "KeyFields incorrectly used with stored procedure")]
+        [DataRow("stored-procedure", new string[] { "param1:value1,param1:223" }, null, "anonymous", "read", DisplayName = "Parameters with duplicate keys for stored procedure")]
+        [DataRow("stored-procedure", new string[] { "param1:value1,param2:223" }, null, "anonymous", "create,read", DisplayName = "Stored procedure with more than 1 CRUD operation")]
+        [DataRow("stored-procedure", new string[] { "param1:value1,param2:223" }, null, "anonymous", "*", DisplayName = "Stored procedure with wildcard CRUD operation")]
+        [DataRow("view", new string[] { "param1:value1" }, null, "anonymous", "*", DisplayName = "Source Parameters incorrectly used with View")]
+        [DataRow("table", new string[] { "param1:value1" }, null, "anonymous", "*", DisplayName = "Source Parameters incorrectly used with Table")]
+        [DataRow("table-view", new string[] { "param1:value1" }, null, "anonymous", "*", DisplayName = "Invalid Source Type")]
         public void TestUpdateSourceObjectWithInvalidFields(
             string? sourceType,
             IEnumerable<string>? parameters,
             IEnumerable<string>? keyFields,
+            string role,
             string operations)
         {
             UpdateOptions options = new(
                 source: "MyTable",
-                permissions: new string[] { "anonymous", operations },
+                permissions: new string[] { role, operations },
                 entity: "MyEntity",
                 sourceType: sourceType,
                 sourceParameters: parameters,
                 sourceKeyFields: keyFields,
                 restRoute: null,
                 graphQLType: null,
-                fieldsToInclude: new string[] { "id", "rating" },
-                fieldsToExclude: new string[] { "level" },
+                fieldsToInclude: null,
+                fieldsToExclude: null,
                 relationship: null,
                 cardinality: null,
                 targetEntity: null,
@@ -1660,10 +1801,9 @@ namespace Cli.Tests
 
         private static string GetInitialConfigString()
         {
-            return @"
-                        {
-                        ""$schema"": ""dab.draft-01.schema.json"",
-                        ""data-source"": {
+            return @"{" +
+                        @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                        @"""data-source"": {
                             ""database-type"": ""mssql"",
                             ""connection-string"": ""testconnectionstring""
                         },

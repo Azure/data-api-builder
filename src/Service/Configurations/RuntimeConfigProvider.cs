@@ -318,24 +318,5 @@ namespace Azure.DataApiBuilder.Service.Configurations
         {
             return RuntimeConfiguration is not null && RuntimeConfiguration.GraphQLGlobalSettings.AllowIntrospection;
         }
-
-        /// <summary>
-        /// When in development mode, honor the authenticate-devmode-requests
-        /// feature switch value specified in the config file. This gives us the ability to
-        /// simulate a request's authenticated/anonymous authentication state in development mode.
-        /// Requires:
-        /// - HostGlobalSettings.Mode is Development
-        /// </summary>
-        /// <returns>True when authenticate-devmode-requests is enabled</returns>
-        public virtual bool IsAuthenticatedDevModeRequest()
-        {
-            if (RuntimeConfiguration?.AuthNConfig == null)
-            {
-                return false;
-            }
-
-            return IsDeveloperMode() &&
-                RuntimeConfiguration.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated is true;
-        }
     }
 }

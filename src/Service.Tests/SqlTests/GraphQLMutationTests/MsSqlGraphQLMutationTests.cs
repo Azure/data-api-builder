@@ -171,6 +171,30 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
+        /// <code>Do: </code>insert a new book and return all the books with same publisher
+        /// <code>Check: </code>the intended book is inserted and all the books with same publisher
+        /// are returned as response.
+        /// </summary>
+        [TestMethod]
+        public async Task TestStoredProcedureMutationNonEmptyResponse()
+        {
+            string dbQuery = @"
+                SELECT [table0].id, [table0].title
+                FROM [books] AS [table0]
+                JOIN (
+                    SELECT id
+                    FROM [publishers]
+                    WHERE name = 'Big Company') AS [table1]
+                ON [table0].publisher_id = [table1].id
+                ORDER BY [table0].id
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES
+            ";
+
+            await TestStoredProcedureMutationNonEmptyResponse(dbQuery);
+        }
+
+        /// <summary>
         /// <code>Do: </code>Book title updation and return the updated row
         /// <code>Check: </code>if the result returned from the mutation is correct
         /// </summary>

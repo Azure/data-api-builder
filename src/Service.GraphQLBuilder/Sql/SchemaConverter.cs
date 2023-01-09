@@ -93,7 +93,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 if (rolesAllowedForFields.TryGetValue(key: columnName, out IEnumerable<string>? roles))
                 {
                     // Roles will not be null here if TryGetValue evaluates to true, so here we check if there are any roles to process.
-                    if (roles.Count() > 0)
+                    // Since Stored-procedures only support 1 CRUD action, it's possible that stored-procedures might return some values
+                    // during mutation operation (i.e, containing one of create/update/delete permission).
+                    // Hence, this check is bypassed for stored-procedures.
+                    if (roles.Count() > 0 || databaseObject.SourceType is SourceType.StoredProcedure)
                     {
                         if (GraphQLUtils.CreateAuthorizationDirectiveIfNecessary(
                                 roles,
@@ -112,17 +115,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                             directives);
 
                         fields.Add(columnName, field);
-                    }
-                    else if (databaseObject.SourceType is SourceType.StoredProcedure)
-                    {
-                        // When no roles have permission to access the columns
-                        // we create a default result set with no data. i.e, the stored-procedure is
-                        // executed but user see empty results because it is trying to query the DB without read permission.
-                        if (databaseObject.SourceType is SourceType.StoredProcedure)
-                        {
-                            FieldDefinitionNode field = GetDefaultResultFieldForStoredProcedure();
-                            fields.TryAdd("result", field);
-                        }
                     }
                 }
             }

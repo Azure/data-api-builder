@@ -281,6 +281,30 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual(HttpStatusCode.BadRequest, postResult.StatusCode);
         }
 
+        [TestMethod("Validates that the configuration endpoint doesn't return until all configuration loaded handlers have executed."), TestCategory(TestCategory.COSMOSDBNOSQL)]
+        public async Task TestLongRunningConfigUpdatedHandlerConfigurations()
+        {
+            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
+            HttpClient httpClient = server.CreateClient();
+
+            ConfigurationPostParameters config = GetCosmosConfigurationParameters();
+
+            RuntimeConfigProvider runtimeConfigProvider = server.Services.GetService<RuntimeConfigProvider>();
+            bool taskHasCompleted = false;
+            runtimeConfigProvider.RuntimeConfigLoadedHandlers.Add(async (_, _) =>
+            {
+                await Task.Delay(1000);
+                taskHasCompleted = true;
+                return true;
+            });
+
+            HttpResponseMessage postResult =
+                await httpClient.PostAsync("/configuration", JsonContent.Create(config));
+
+            Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
+            Assert.IsTrue(taskHasCompleted);
+        }
+
         /// <summary>
         /// Tests that sending configuration to the DAB engine post-startup will properly hydrate
         /// the AuthorizationResolver by:

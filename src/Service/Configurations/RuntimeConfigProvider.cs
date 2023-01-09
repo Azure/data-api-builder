@@ -267,7 +267,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             ManagedIdentityAccessToken = accessToken;
 
             List<Task<bool>> configLoadedTasks = new();
-            if (RuntimeConfiguration != null)
+            if (RuntimeConfiguration is not null)
             {
                 foreach (RuntimeConfigLoadedHandler configLoadedHandler in RuntimeConfigLoadedHandlers)
                 {

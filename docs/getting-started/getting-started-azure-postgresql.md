@@ -1,4 +1,4 @@
-# Getting started with Data API builder for Azure SQL Database
+# Getting started with Data API builder for Azure Database PostgreSQL
 
 Make sure you have read the [Getting Started](getting-started.md) document.
 
@@ -11,7 +11,7 @@ There are several ways to get an Azure Database for PostgreSQL database connecti
 If you are connecting to Azure Database for PostgreSQL Flexible Server, the connection string look like:
 
 ```text 
-`Server={your_server}.postgres.database.azure.com;Database={your_database};Port=5432;User Id={your_username}@{your_server};Password={your_password};Ssl Mode=Require;`
+`Server={your_server}.postgres.database.azure.com;Database={your_database};Port=5432;User Id={your_username};Password={your_password};Ssl Mode=Require;`
 ```
 
 If you are connecting to Azure Database for PostgreSQL Single Server, the connection string look like:

@@ -29,16 +29,16 @@
 
   <ItemGroup>
         <Content Include="schema.gql">
-            <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </Content>
         <Content Include="MsSqlBooks.sql">
-            <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </Content>
         <Content Include="PostgreSqlBooks.sql">
-            <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </Content>
         <Content Include="MySqlBooks.sql">
-            <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </Content>
     </ItemGroup>
 

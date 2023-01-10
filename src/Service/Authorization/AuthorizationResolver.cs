@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
         public const string ROLE_ANONYMOUS = "anonymous";
         public const string ROLE_AUTHENTICATED = "authenticated";
-        public const string INVALID_POLICY_CLAIM_MESSAGE = "One or more claims referenced in an authorization policy have value types which are not supported.";
+        public const string UNSUPPORTED_CLAIM_DATATYPE_MESSAGE = "One or more claims belonging to the user have value types which are not supported.";
 
         public Dictionary<string, EntityMetadata> EntityPermissionsMap { get; private set; } = new();
 
@@ -520,18 +520,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
             string claimType = claimTypeMatch.Value.ToString().Substring(CLAIM_PREFIX.Length);
             if (claimsInRequestContext.TryGetValue(claimType, out Claim? claim))
             {
-                try
-                {
-                    return GetODataCompliantClaimValue(claim);
-                }
-                catch
-                {
-                    throw new DataApiBuilderException(
-                        message: INVALID_POLICY_CLAIM_MESSAGE,
-                        statusCode: HttpStatusCode.Forbidden,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
-                    );
-                }
+                return GetClaimValue(claim);
             }
             else
             {
@@ -546,9 +535,9 @@ namespace Azure.DataApiBuilder.Service.Authorization
 
         /// <summary>
         /// Using the input parameter claim, returns the primitive literal from claim.Value enclosed within parentheses:
-        /// e.g. @claims.idp (string) resolves as ('azuread')
-        /// e.g. @claims.iat (int) resolves as (1537231048)
-        /// e.g. @claims.email_verified (boolean) resolves as (true)
+        /// e.g. @claims.idp (string) resolves as 'azuread'
+        /// e.g. @claims.iat (int) resolves as 1537231048
+        /// e.g. @claims.email_verified (boolean) resolves as true
         /// To adhere with OData 4.01 ABNF construction rules (Section 7: Literal Data Values)
         /// - Primitive string literals in URLS must be enclosed within single quotes.
         /// - Other primitive types are represented as plain values and do not require single quotes.
@@ -564,7 +553,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// <seealso cref="https://www.iana.org/assignments/jwt/jwt.xhtml#claims"/>
         /// <seealso cref="https://www.rfc-editor.org/rfc/rfc7519.html#section-4"/>
         /// <seealso cref="https://github.com/microsoft/referencesource/blob/dae14279dd0672adead5de00ac8f117dcf74c184/mscorlib/system/security/claims/Claim.cs#L107"/>
-        public static string GetODataCompliantClaimValue(Claim claim)
+        public static string GetClaimValue(Claim claim)
         {
             /* An example Claim object:
              * claim.Type: "user_email"
@@ -588,7 +577,11 @@ namespace Azure.DataApiBuilder.Service.Authorization
                     return $"null";
                 default:
                     // One of the claims in the request had unsupported data type.
-                    throw new Exception();
+                    throw new DataApiBuilderException(
+                        message: UNSUPPORTED_CLAIM_DATATYPE_MESSAGE,
+                        statusCode: HttpStatusCode.Forbidden,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.UnsupportedClaimType
+                    );
             }
         }
 

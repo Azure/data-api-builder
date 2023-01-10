@@ -66,7 +66,11 @@ namespace Azure.DataApiBuilder.Service.Exceptions
             /// <summary>
             /// Provided EasyAuth header is non-existent or malformed.
             /// </summary>
-            ErrorProcessingEasyAuthHeader
+            ErrorProcessingEasyAuthHeader,
+            /// <summary>
+            /// One of the claim belonging to the user has unsupported data type.
+            /// </summary>
+            UnsupportedClaimType
         }
 
         public HttpStatusCode StatusCode { get; }

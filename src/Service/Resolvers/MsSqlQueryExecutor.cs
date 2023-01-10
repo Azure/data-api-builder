@@ -149,20 +149,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             foreach ((string claimType, Claim claim) in claimsDictionary)
             {
-                string claimValue = string.Empty;
-                try
-                {
-                    claimValue = AuthorizationResolver.GetODataCompliantClaimValue(claim);
-                    sessionMapQuery = sessionMapQuery + "EXEC sp_set_session_context " + $"'{claimType}'," + claimValue + ";";
-                }
-                catch
-                {
-                    throw new DataApiBuilderException(
-                        message: "One or more user claims have unsupported data type.",
-                        statusCode: HttpStatusCode.Forbidden,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported
-                        );
-                }
+                string claimValue = AuthorizationResolver.GetClaimValue(claim);
+                sessionMapQuery = sessionMapQuery + "EXEC sp_set_session_context " + $"'{claimType}'," + claimValue + ";";
             }
 
             return sessionMapQuery;

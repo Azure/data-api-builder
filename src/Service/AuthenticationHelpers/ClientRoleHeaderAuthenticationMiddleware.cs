@@ -20,6 +20,8 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
     public class ClientRoleHeaderAuthenticationMiddleware
     {
         private readonly RequestDelegate _nextMiddleware;
+
+        // Identity provider used for identities added to the ClaimsPrincipal object for the current user by DAB.
         private const string INTERNAL_DAB_IDENTITY_PROVIDER = "DAB-VERIFIED";
 
         public ClientRoleHeaderAuthenticationMiddleware(RequestDelegate next)

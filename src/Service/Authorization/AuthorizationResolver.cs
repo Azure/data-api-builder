@@ -6,6 +6,7 @@ using System.Net;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
@@ -52,8 +53,11 @@ namespace Azure.DataApiBuilder.Service.Authorization
             }
             else
             {
-                runtimeConfigProvider.RuntimeConfigLoaded +=
-                    (object? sender, RuntimeConfig config) => SetEntityPermissionMap(config);
+                runtimeConfigProvider.RuntimeConfigLoadedHandlers.Add((RuntimeConfigProvider sender, RuntimeConfig config) =>
+                {
+                    SetEntityPermissionMap(config);
+                    return Task.FromResult(true);
+                });
             }
         }
 

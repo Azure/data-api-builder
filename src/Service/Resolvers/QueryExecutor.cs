@@ -41,7 +41,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ConnectionString = runtimeConfig.ConnectionString;
             DbExceptionParser = dbExceptionParser;
             QueryExecutorLogger = logger;
-
             _retryPolicy = Polly.Policy
             .Handle<DbException>(DbExceptionParser.IsTransientException)
             .WaitAndRetryAsync(
@@ -167,6 +166,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
         }
 
+        /// <inheritdoc />
         public virtual string GetSessionMapQuery(Dictionary<string, Claim>? claimsDictionary)
         {
             return string.Empty;

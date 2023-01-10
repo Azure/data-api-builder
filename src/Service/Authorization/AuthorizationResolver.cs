@@ -440,12 +440,10 @@ namespace Azure.DataApiBuilder.Service.Authorization
                 return claimsInRequestContext;
             }
 
-            foreach (IIdentity iidentity in context.User.Identities)
+            foreach (ClaimsIdentity identity in context.User.Identities)
             {
-                ClaimsIdentity? identity = iidentity as ClaimsIdentity;
-
                 // Continue if identity is null or, is not authenticated.
-                if (identity is null || !identity.IsAuthenticated)
+                if (!identity.IsAuthenticated)
                 {
                     continue;
                 }

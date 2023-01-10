@@ -137,6 +137,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return _defaultAccessToken?.Token;
         }
 
+        /// <inheritdoc />
         public override string GetSessionMapQuery(Dictionary<string, Claim>? claimsDictionary)
         {
             if (claimsDictionary is null || !_isSessionContextEnabled)

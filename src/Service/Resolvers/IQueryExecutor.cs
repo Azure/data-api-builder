@@ -21,8 +21,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="parameters">The parameters used to execute the SQL text.</param>
         /// <param name="dataReaderHandler">The function to invoke to handle the results
         /// in the DbDataReader obtained after executing the query.</param>
+        /// <param name="claimsDictionary">Dictionary containing all the claims belonging to the user.</param>
         /// <param name="args">List of string arguments to the DbDataReader handler.</param>
-        ///<returns>An object formed using the results of the query as returned by the given handler.</returns>
+        /// <returns>An object formed using the results of the query as returned by the given handler.</returns>
         public Task<TResult?> ExecuteQueryAsync<TResult>(
             string sqltext,
             IDictionary<string, object?> parameters,

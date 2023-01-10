@@ -1,13 +1,11 @@
 using System.Collections.Generic;
 using System.Data.Common;
-using System.Net;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Azure.Core;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
-using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.Identity;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;

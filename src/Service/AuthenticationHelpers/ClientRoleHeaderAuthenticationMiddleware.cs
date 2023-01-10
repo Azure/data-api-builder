@@ -102,7 +102,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
                 // To set the IsAuthenticated value as true, set the authenticationType.
                 ClaimsIdentity identity = new(
                     authenticationType: INTERNAL_DAB_IDENTITY_PROVIDER,
-                    nameType: "name",
+                    nameType: AuthenticationConfig.NAME_CLAIM_TYPE,
                     roleType: AuthenticationConfig.ROLE_CLAIM_TYPE);
                 identity.AddClaim(claim);
                 httpContext.User.AddIdentity(identity);

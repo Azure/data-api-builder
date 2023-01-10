@@ -9,6 +9,15 @@ namespace Cli.Tests
         private string _basicRuntimeConfig = string.Empty;
 
         /// <summary>
+        /// Setup the logger for CLI
+        /// </summary>
+        [TestInitialize]
+        public void SetupLoggerForCLI()
+        {
+            TestHelper.SetupTestLoggerForCLI();
+        }
+
+        /// <summary>
         /// Test the simple init config for mssql database. PG and MySQL should be similar.
         /// There is no need for a separate test.
         /// </summary>
@@ -21,16 +30,20 @@ namespace Cli.Tests
                 cosmosNoSqlDatabase: null,
                 cosmosNoSqlContainer: null,
                 graphQLSchemaPath: null,
+                setSessionContext: true,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                 config: _testRuntimeConfig);
 
             _basicRuntimeConfig =
-            @"{
-                ""$schema"": ""dab.draft.schema.json"",
-                ""data-source"": {
+            @"{" +
+                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                @"""data-source"": {
                     ""database-type"": ""mssql"",
-                    ""connection-string"": ""testconnectionstring""
+                    ""connection-string"": ""testconnectionstring"",
+                    ""options"":{
+                        ""set-session-context"": true
+                    }
                 },
                 ""entities"": {}
             }";
@@ -58,14 +71,15 @@ namespace Cli.Tests
                 cosmosNoSqlDatabase: null,
                 cosmosNoSqlContainer: null,
                 graphQLSchemaPath: null,
+                setSessionContext: false,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                 config: _testRuntimeConfig);
 
             _basicRuntimeConfig =
-            @"{
-                ""$schema"": ""dab.draft.schema.json"",
-                ""data-source"": {
+            @"{" +
+                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                @"""data-source"": {
                     ""database-type"": ""cosmosdb_postgresql"",
                     ""connection-string"": ""testconnectionstring""
                 },
@@ -95,16 +109,20 @@ namespace Cli.Tests
                 cosmosNoSqlDatabase: null,
                 cosmosNoSqlContainer: null,
                 graphQLSchemaPath: null,
+                setSessionContext: false,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                 config: _testRuntimeConfig);
 
             _basicRuntimeConfig =
-            @"{
-                ""$schema"": ""dab.draft.schema.json"",
-                ""data-source"": {
+            @"{" +
+                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                @"""data-source"": {
                     ""database-type"": ""mssql"",
-                    ""connection-string"": """"
+                    ""connection-string"": """",
+                    ""options"":{
+                        ""set-session-context"": false
+                    }
                 },
                 ""entities"": {}
             }";
@@ -131,13 +149,15 @@ namespace Cli.Tests
                 cosmosNoSqlDatabase: "testdb",
                 cosmosNoSqlContainer: "testcontainer",
                 graphQLSchemaPath: "schemafile",
+                setSessionContext: false,
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
                 config: _testRuntimeConfig);
 
-            _basicRuntimeConfig = @"{
-                ""$schema"": ""dab.draft.schema.json"",
-                ""data-source"": {
+            _basicRuntimeConfig =
+            @"{" +
+                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                @"""data-source"": {
                     ""database-type"": ""cosmosdb_nosql"",
                     ""connection-string"": ""testconnectionstring"",
                     ""options"": {
@@ -177,6 +197,7 @@ namespace Cli.Tests
                 cosmosNoSqlDatabase: cosmosDatabase,
                 cosmosNoSqlContainer: cosmosContainer,
                 graphQLSchemaPath: graphQLSchema,
+                setSessionContext: false,
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
                 config: _testRuntimeConfig);
@@ -197,6 +218,7 @@ namespace Cli.Tests
                 cosmosNoSqlDatabase: null,
                 cosmosNoSqlContainer: null,
                 graphQLSchemaPath: null,
+                setSessionContext: false,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { },
                 config: _testRuntimeConfig);
@@ -260,6 +282,7 @@ namespace Cli.Tests
                 cosmosNoSqlDatabase: null,
                 cosmosNoSqlContainer: null,
                 graphQLSchemaPath: null,
+                setSessionContext: false,
                 hostMode: HostModeType.Production,
                 corsOrigin: new List<string>() { },
                 config: fileName);

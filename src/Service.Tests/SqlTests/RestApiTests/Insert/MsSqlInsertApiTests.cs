@@ -146,6 +146,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 $"AND [title] = ' '' UNION SELECT * FROM books/*' " +
                 $"AND [publisher_id] = 1234 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "InsertOneAndReturnSingleRowWithStoredProcedureTest",
+                // This query attempts retrieval of the stored procedure insert operation result,
+                // and is explicitly not representative of the engine generated insert statement.
+                $"SELECT table0.[id], table0.[title], table0.[publisher_id] FROM books AS table0 " +
+                $"JOIN (SELECT id FROM publishers WHERE name = 'The First Publisher') AS table1 " +
+                $"ON table0.[publisher_id] = table1.[id] " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             }
         };
 
@@ -209,6 +218,33 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         {
             _ = $"View or function '{_defaultSchemaName}.{_composite_subset_bookPub}' is not updatable " +
                                           $"because the modification affects multiple base tables.";
+        }
+
+        /// <summary>
+        /// Tests the Insert one and return single row functionality with a REST POST request
+        /// using stored procedure.
+        /// The request executes a stored procedure which attempts to insert a book for a given publisher
+        /// and then returns all books under that publisher.
+        /// </summary>
+        [TestMethod]
+        public async Task InsertOneAndReturnSingleRowWithStoredProcedureTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""Happy New Year"",
+                ""publisher_name"": ""The First Publisher""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _integrationProcedureInsertOneAndDisplay_EntityName,
+                sqlQuery: GetQuery(nameof(InsertOneAndReturnSingleRowWithStoredProcedureTest)),
+                operationType: Config.Operation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: _integrationProcedureInsertOneAndDisplay_EntityName
+            );
         }
 
         #region RestApiTestBase Overrides

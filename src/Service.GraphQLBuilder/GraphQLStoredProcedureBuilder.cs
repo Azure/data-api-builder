@@ -2,6 +2,7 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using HotChocolate.Language;
 using HotChocolate.Types;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLUtils;
 
 namespace Azure.DataApiBuilder.Service.GraphQLBuilder
@@ -47,7 +48,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
 
             return new(
                 location: null,
-                new NameNode(name.Value),
+                new NameNode(GenerateStoredProcedureQueryName(name.Value, entity)),
                 new StringValueNode($"Execute Stored-Procedure {name.Value} and get results from the database"),
                 inputValues,
                 new NonNullTypeNode(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(name)))),
@@ -62,9 +63,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// returns an empty list in case of no result 
         /// or stored-procedure is trying to read from DB without READ permission.
         /// </summary>
-        public static List<JsonDocument> FormatStoredProcedureResultAsJsonList(bool IsReadAllowed, JsonDocument jsonDocument)
+        public static List<JsonDocument> FormatStoredProcedureResultAsJsonList(JsonDocument jsonDocument)
         {
-            if (jsonDocument is null || !IsReadAllowed)
+            if (jsonDocument is null)
             {
                 return new List<JsonDocument>();
             }

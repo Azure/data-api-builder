@@ -4,6 +4,7 @@ namespace Cli.Tests
     {
         // Config file name for tests
         public static string _testRuntimeConfig = "dab-config-test.json";
+        public const string DAB_DRAFT_SCHEMA_TEST_PATH = "https://dataapibuilder.azureedge.net/schemas/vmajor.minor.patch-alpha/dab.draft.schema.json";
 
         /// <summary>
         /// Adds the entity properties to the configuration and returns the updated configuration json as a string.
@@ -53,7 +54,7 @@ namespace Cli.Tests
         /// for unit tests
         /// </summary>
         public const string SCHEMA_PROPERTY = @"
-          ""$schema"": """ + Azure.DataApiBuilder.Config.RuntimeConfig.SCHEMA + @"""";
+          ""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""";
 
         /// <summary>
         /// Data source property of the config json. This is used for constructing the required config json strings
@@ -62,7 +63,10 @@ namespace Cli.Tests
         public const string SAMPLE_SCHEMA_DATA_SOURCE = SCHEMA_PROPERTY + "," + @"
             ""data-source"": {
               ""database-type"": ""mssql"",
-              ""connection-string"": ""testconnectionstring""
+              ""connection-string"": ""testconnectionstring"",
+              ""options"":{
+                ""set-session-context"": true
+                }
             }
         ";
 
@@ -357,12 +361,15 @@ namespace Cli.Tests
             }
         }";
 
-        public const string CONFIG_WITH_SINGLE_ENTITY = @"
-          {
-        ""$schema"": ""dab.draft.schema.json"",
-        ""data-source"": {
+        public const string CONFIG_WITH_SINGLE_ENTITY =
+        @"{" +
+          @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+          @"""data-source"": {
           ""database-type"": ""mssql"",
-          ""connection-string"": ""localhost:5000""
+          ""connection-string"": ""localhost:5000"",
+          ""options"":{
+            ""set-session-context"": true
+          }
         },
         ""runtime"": {
           ""rest"": {
@@ -414,6 +421,18 @@ namespace Cli.Tests
             runtimeSettingDict.Add("runtime", defaultGlobalSetting);
 
             return JsonSerializer.Serialize(runtimeSettingDict, GetSerializationOptions());
+        }
+
+        /// <summary>
+        /// Helper method to setup Logger factory
+        /// for CLI related classes.
+        /// </summary>
+        public static void SetupTestLoggerForCLI()
+        {
+            Mock<ILogger<ConfigGenerator>> configGeneratorLogger = new();
+            Mock<ILogger<Utils>> utilsLogger = new();
+            ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger.Object);
+            Utils.SetCliUtilsLogger(utilsLogger.Object);
         }
     }
 }

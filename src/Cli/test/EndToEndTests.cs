@@ -1,6 +1,3 @@
-using Microsoft.Extensions.Logging;
-using Moq;
-
 namespace Cli.Tests;
 
 /// <summary>
@@ -9,6 +6,15 @@ namespace Cli.Tests;
 [TestClass]
 public class EndToEndTests
 {
+    /// <summary>
+    /// Setup the logger for CLI
+    /// </summary>
+    [TestInitialize]
+    public void SetupLoggerForCLI()
+    {
+        TestHelper.SetupTestLoggerForCLI();
+    }
+
     /// <summary>
     /// Initializing config for cosmosdb_nosql.
     /// </summary>
@@ -157,7 +163,6 @@ public class EndToEndTests
         Assert.AreEqual(1, runtimeConfig.Entities.Count()); // 1 new entity added
         Assert.IsTrue(runtimeConfig.Entities.ContainsKey("book"));
         Entity entity = runtimeConfig.Entities["book"];
-        Console.WriteLine(JsonSerializer.Serialize(entity));
         Assert.IsNull(entity.Rest);
         Assert.IsNull(entity.GraphQL);
         Assert.AreEqual(1, entity.Permissions.Length);
@@ -174,7 +179,8 @@ public class EndToEndTests
     [TestMethod]
     public void TestConfigGeneratedAfterAddingEntityWithoutIEnumerables()
     {
-        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql", "--connection-string", "localhost:5000" };
+        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql", "--connection-string", "localhost:5000",
+            "--set-session-context", "true" };
         Program.Main(initArgs);
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
         Assert.IsNotNull(runtimeConfig);
@@ -190,7 +196,8 @@ public class EndToEndTests
     [TestMethod]
     public void TestConfigGeneratedAfterAddingEntityWithSourceAsStoredProcedure()
     {
-        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql", "--host-mode", "Development", "--connection-string", "testconnectionstring" };
+        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql",
+            "--host-mode", "Development", "--connection-string", "testconnectionstring", "--set-session-context", "true" };
         Program.Main(initArgs);
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
         Assert.IsNotNull(runtimeConfig);
@@ -250,7 +257,8 @@ public class EndToEndTests
     [TestMethod]
     public void TestConfigGeneratedAfterAddingEntityWithSourceWithDefaultType()
     {
-        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql", "--host-mode", "Development", "--connection-string", "testconnectionstring" };
+        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql", "--host-mode", "Development",
+            "--connection-string", "testconnectionstring", "--set-session-context", "true"  };
         Program.Main(initArgs);
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
         Assert.IsNotNull(runtimeConfig);
@@ -438,17 +446,17 @@ public class EndToEndTests
         Assert.IsNotNull(output);
         Assert.IsTrue(output.Contains($"User provided config file: {_testRuntimeConfig}"));
         output = process.StandardOutput.ReadLine();
+        Assert.IsNotNull(output);
         if (expectSuccess)
         {
-            Assert.IsNotNull(output);
             Assert.IsTrue(output.Contains("Starting the runtime engine..."));
         }
         else
         {
-            Assert.IsNull(output);
-            string? err = process.StandardError.ReadToEnd();
-            Assert.IsTrue(err.Contains($"Deserialization of the configuration file failed."));
-            Assert.IsTrue(err.Contains("Failed to start the engine."));
+            Assert.IsTrue(output.Contains($"Failed to parse the config file: {_testRuntimeConfig}."));
+            output = process.StandardOutput.ReadLine();
+            Assert.IsNotNull(output);
+            Assert.IsTrue(output.Contains($"Failed to start the engine."));
         }
 
         process.Kill();

@@ -1053,7 +1053,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             string cosmosFile = $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}";
             return new(
                 File.ReadAllText(cosmosFile),
-                File.ReadAllText("../schema.gql"),
+                File.ReadAllText("schema.gql"),
                 "AccountEndpoint=https://localhost:8081/;",
                 AccessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoxMjMzNDQ1Nn0.1cdRZfqwndt67f-sHKgOfEgTfO9xDyGFl6_d-RRyf4U");
         }

@@ -20,9 +20,9 @@ namespace Azure.DataApiBuilder.Service.Models
                 return correlationId;
             }
 
-            if (context.Items.TryGetValue(HttpHeaders.CORRELATION_ID, out object? correlationIdItem))
+            if (context.Items.TryGetValue(HttpHeaders.CORRELATION_ID, out object? correlationIdItem)
+                && Guid.TryParse(correlationIdItem?.ToString(), out correlationId))
             {
-                Guid.TryParse(correlationIdItem?.ToString(), out correlationId);
                 return correlationId;
             }
 

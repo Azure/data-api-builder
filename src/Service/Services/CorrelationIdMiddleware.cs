@@ -28,7 +28,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
         /// <summary>
         /// For a request, check the request headers for correlation id,
-        /// if none exsits, create a new GUID, and store it in context items.
+        /// if none exists, create a new GUID, and store it in httpContext.items.
         /// For a response, first getting the correlation id value from either http context request or items,
         /// then add it to the response header.
         /// </summary>

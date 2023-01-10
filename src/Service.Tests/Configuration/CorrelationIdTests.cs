@@ -26,18 +26,18 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestMethod("Response header returns correlation Id if request headers pass in one.")]
         public async Task TestResponseReturnsCorrelationIdFromRequest()
         {
-            Guid guid = Guid.NewGuid();
+            Guid exptectedCorrelationId = Guid.NewGuid();
             IHost host = await CreateCorrelationIdConfiguredWebHost();
             TestServer server = host.GetTestServer();
             HttpContext returnContext = await server.SendAsync(context =>
             {
-                KeyValuePair<string, StringValues> correlationIdHeader = new(HttpHeaders.CORRELATION_ID, guid.ToString());
+                KeyValuePair<string, StringValues> correlationIdHeader = new(HttpHeaders.CORRELATION_ID, exptectedCorrelationId.ToString());
                 context.Request.Headers.Add(correlationIdHeader);
             });
 
             string actualCorrelationId = returnContext.Response.Headers[HttpHeaders.CORRELATION_ID];
             Assert.IsFalse(string.IsNullOrEmpty(actualCorrelationId));
-            Assert.AreEqual<string>(expected: guid.ToString(), actual: actualCorrelationId);
+            Assert.AreEqual<string>(expected: exptectedCorrelationId.ToString(), actual: actualCorrelationId);
         }
 
         /// <summary>
@@ -76,7 +76,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             });
 
             Assert.IsNotNull(returnContext.Response.Headers[HttpHeaders.CORRELATION_ID]);
-            Assert.IsTrue(Guid.TryParse(returnContext.Response.Headers[HttpHeaders.CORRELATION_ID], out _), message: "Response headers contain correlation id in a valid Guid format.");
+            Assert.IsTrue(Guid.TryParse(returnContext.Response.Headers[HttpHeaders.CORRELATION_ID], out _), message: "Response headers generated a new valid correlation id if user passed one invalid.");
         }
 
         #endregion

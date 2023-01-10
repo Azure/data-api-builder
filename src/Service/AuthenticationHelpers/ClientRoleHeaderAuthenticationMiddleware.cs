@@ -95,10 +95,13 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
             // role name as a role claim to the ClaimsIdentity.
             if (!httpContext.User.IsInRole(clientDefinedRole) && IsSystemRole(clientDefinedRole))
             {
-                Claim claim = new(ClaimTypes.Role, clientDefinedRole, ClaimValueTypes.String);
+                Claim claim = new(AuthenticationConfig.ROLE_CLAIM_TYPE, clientDefinedRole, ClaimValueTypes.String);
 
                 // To set the IsAuthenticated value as true, set the authenticationType.
-                ClaimsIdentity identity = new(authenticationType: INTERNAL_DAB_IDENTITY_PROVIDER);
+                ClaimsIdentity identity = new(
+                    authenticationType: INTERNAL_DAB_IDENTITY_PROVIDER,
+                    nameType: "name",
+                    roleType: AuthenticationConfig.ROLE_CLAIM_TYPE);
                 identity.AddClaim(claim);
                 httpContext.User.AddIdentity(identity);
             }

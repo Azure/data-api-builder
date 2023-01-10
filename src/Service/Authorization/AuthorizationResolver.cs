@@ -4,7 +4,6 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Net;
 using System.Security.Claims;
-using System.Security.Principal;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Auth;
@@ -472,8 +471,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                 // Only add a role claim which represents the role context evaluated for the request.
                 string clientRoleHeader = context.Request.Headers[CLIENT_ROLE_HEADER].ToString();
                 if (!claimsInRequestContext.ContainsKey(AuthenticationConfig.ROLE_CLAIM_TYPE) &&
-                    (identity.HasClaim(type: AuthenticationConfig.ROLE_CLAIM_TYPE, value: clientRoleHeader) ||
-                    identity.HasClaim(type: ClaimTypes.Role, value: clientRoleHeader)))
+                    identity.HasClaim(type: AuthenticationConfig.ROLE_CLAIM_TYPE, value: clientRoleHeader))
                 {
                     claimsInRequestContext.Add(AuthenticationConfig.ROLE_CLAIM_TYPE, new Claim(AuthenticationConfig.ROLE_CLAIM_TYPE, clientRoleHeader, ClaimValueTypes.String));
                 }

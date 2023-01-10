@@ -1204,21 +1204,19 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// or the user can already have the claim by virtue of the identity provider.
         /// </summary>
         /// <param name="claimType"></param>
-        [DataTestMethod]
-        [DataRow(ClaimTypes.Role, DisplayName = "Validate that role claim added by DAB for clientRoleHeader is honored")]
-        [DataRow(AuthenticationConfig.ROLE_CLAIM_TYPE, DisplayName = "Validate that already existing role claim for clientRoleHeader is honored")]
-        public void ValidateClientRoleHeaderClaimIsAddedToClaimsInRequestContext(string claimType)
+        [TestMethod]
+        public void ValidateClientRoleHeaderClaimIsAddedToClaimsInRequestContext()
         {
             Mock<HttpContext> context = new();
 
             //Add identity object to the Mock context object.
             ClaimsIdentity identityWithClientRoleHeaderClaim = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationConfig.ROLE_CLAIM_TYPE);
-            Claim clientRoleHeaderClaim = new(claimType, TEST_ROLE);
+            Claim clientRoleHeaderClaim = new(AuthenticationConfig.ROLE_CLAIM_TYPE, TEST_ROLE);
             identityWithClientRoleHeaderClaim.AddClaim(clientRoleHeaderClaim);
 
             // Add identity object with role claim which is not equal to the clientRoleHeader.
             ClaimsIdentity identityWithoutClientRoleHeaderClaim = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationConfig.ROLE_CLAIM_TYPE);
-            Claim readerRoleClaim = new(claimType, "Reader");
+            Claim readerRoleClaim = new(AuthenticationConfig.ROLE_CLAIM_TYPE, "Reader");
             identityWithClientRoleHeaderClaim.AddClaim(readerRoleClaim);
 
             ClaimsPrincipal principal = new();

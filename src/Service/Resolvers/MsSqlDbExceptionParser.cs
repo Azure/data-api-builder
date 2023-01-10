@@ -17,7 +17,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 "157", "158", "169", "404", "412", "414", "415",
                 "489", "513", "515", "544", "545", "547", "548",
-                "550", "611", "681", "1060", "2627", "4005", "4006",
+                "550", "611", "681", "1060", "4005", "4006",
                 "4007", "4403", "4405", "4406", "4417", "4418", "4420",
                 "4421", "4423", "4426", "4431", "4432", "4433", "4434",
                 "4435", "4436", "4437", "4438", "4439", "4440", "4441",
@@ -26,7 +26,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 "4457", "4933", "4934", "4936", "4988", "8102"
             })
         {
-            TransientErrorCodes = new(){
+            TransientExceptionCodes = new(){
                 // Transient error codes compiled from:
                 // https://github.com/dotnet/efcore/blob/main/src/EFCore.SqlServer/Storage/Internal/SqlServerTransientExceptionDetector.cs
                 "20", "64", "121", "233", "601", "617", "669", "921", "997", "1203", "1204", "1205", "1221", "1807", "3935", "3960",
@@ -49,24 +49,32 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 // https://docs.microsoft.com/en-us/sql/relational-databases/errors-events/database-engine-events-and-errors?view=sql-server-ver16
                 "18456"
             };
+
+            ConflictExceptionCodes = new() { "2627" };
         }
 
-        /// <summary>
-        /// Helper method to get the HttpStatusCode for the exception based on the 'Number' of the exception.
-        /// </summary>
-        /// <param name="e">The exception thrown as a result of execution of the request.</param>
-        /// <returns>status code to be returned in the response.</returns>
+        /// <inheritdoc/>
         public override HttpStatusCode GetHttpStatusCodeForException(DbException e)
         {
-            string errorNumber = ((SqlException)e).Number.ToString();
-            return BadRequestErrorCodes.Contains(errorNumber) ? HttpStatusCode.BadRequest : HttpStatusCode.InternalServerError;
+            string exceptionNumber = ((SqlException)e).Number.ToString();
+            if (BadRequestExceptionCodes.Contains(exceptionNumber))
+            {
+                return HttpStatusCode.BadRequest;
+            }
+
+            if (ConflictExceptionCodes!.Contains(exceptionNumber))
+            {
+                return HttpStatusCode.Conflict;
+            }
+
+            return HttpStatusCode.InternalServerError;
         }
 
         /// <inheritdoc/>
         public override bool IsTransientException(DbException e)
         {
             string errorNumber = ((SqlException)e).Number.ToString();
-            return TransientErrorCodes!.Contains(errorNumber);
+            return TransientExceptionCodes!.Contains(errorNumber);
         }
     }
 }

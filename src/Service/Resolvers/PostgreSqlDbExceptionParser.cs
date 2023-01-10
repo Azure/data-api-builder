@@ -1,4 +1,5 @@
 using System.Data.Common;
+using System.Net;
 using Azure.DataApiBuilder.Service.Configurations;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
@@ -24,9 +25,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     // foreign_key_violation, occurs when an insertion violates foreign key constraint.
                     "23503",
 
-                    // unique_violation, occurs when an insertion on a table tries to insert a duplicate value for a unique field.
-                    "23505",
-
                     // check_violation,The CHECK constraint ensures that all values in a column satisfy certain conditions.
                     // Check violation occurs when a check constraint fails. e.g. name like '.dab' when name = 'DAB' fails the check.
                     "23514",
@@ -39,7 +37,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     "55000"
                 })
         {
-            TransientErrorCodes = new()
+            TransientExceptionCodes = new()
             {
                 // insufficient_resources
                 "53000",
@@ -86,12 +84,39 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 // transaction_resolution_unknown
                 "08007"
             };
+
+            ConflictExceptionCodes = new()
+            {
+                // unique_violation, occurs when an insertion on a table tries to insert a duplicate value for a unique field.
+                "23505",
+            };
         }
 
         /// <inheritdoc/>
         public override bool IsTransientException(DbException e)
         {
-            return e.SqlState is not null && TransientErrorCodes!.Contains(e.SqlState);
+            return e.SqlState is not null && TransientExceptionCodes!.Contains(e.SqlState);
+        }
+
+        /// <inheritdoc/>
+        public override HttpStatusCode GetHttpStatusCodeForException(DbException e)
+        {
+            if (e.SqlState is null)
+            {
+                return HttpStatusCode.InternalServerError;
+            }
+
+            if (BadRequestExceptionCodes.Contains(e.SqlState))
+            {
+                return HttpStatusCode.BadRequest;
+            }
+
+            if (ConflictExceptionCodes!.Contains(e.SqlState))
+            {
+                return HttpStatusCode.Conflict;
+            }
+
+            return HttpStatusCode.InternalServerError;
         }
     }
 }

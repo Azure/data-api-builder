@@ -107,8 +107,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="httpMethod">The http method specified in the request.</param>
         /// <param name="expectedLocationHeader">The expected location header in the response(if any).</param>
         /// <param name="verifyNumRecords"></param>
-        /// <param name="lookForSubstrInActualErrorMsg">When set to true, will look for a substring expectedErrorMessage
-        /// in the actual exception message to verify the test result.</param>
+        /// <param name="isExpectedErrorMsgSubstr">When set to true, will look for a substring 'expectedErrorMessage'
+        /// in the actual exception message to verify the test result. This is helpful when the actual error message is dynamic and changes
+        /// on every single run of the test.</param>
         /// <returns></returns>
         public static async Task VerifyResultAsync(
             string expected,
@@ -118,7 +119,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             HttpMethod httpMethod,
             string expectedLocationHeader,
             int verifyNumRecords,
-            bool lookForSubstrInActualErrorMsg = false)
+            bool isExpectedErrorMsgSubstr = false)
         {
             string responseBody = await response.Content.ReadAsStringAsync();
             if (!exceptionExpected)
@@ -168,7 +169,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 // or the expectedErrorMessage is present as a substring in the actual error message.
                 string actualErrorMsg = actualErrorObj[PARENT_PROPERTY_ERROR][PROPERTY_MESSAGE].ToString();
                 string expectedErrorMsg = expectedErrorObj[PARENT_PROPERTY_ERROR][PROPERTY_MESSAGE].ToString();
-                if (lookForSubstrInActualErrorMsg)
+                if (isExpectedErrorMsgSubstr)
                 {
                     Assert.IsTrue(actualErrorMsg.Contains(expectedErrorMsg, StringComparison.OrdinalIgnoreCase));
                 }

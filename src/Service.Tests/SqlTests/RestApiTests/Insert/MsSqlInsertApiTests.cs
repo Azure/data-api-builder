@@ -211,7 +211,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 expectedErrorMessage: expectedErrorMessage,
                 expectedStatusCode: HttpStatusCode.Conflict,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString(),
-                lookForSubstrInActualErrorMsg: true
+                isExpectedErrorMsgSubstr: true
             );
         }
         #endregion

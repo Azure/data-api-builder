@@ -113,7 +113,7 @@ Start by adding the `Book` entity:
 }
 ```
 
-within the `entities` object you can create any entity with any name (as long as it is valid for REST and GraphQL). The name `books`, in this case, will be used to build the REST path and the GraphQL type. Within the entity you have the `source` element that specifies which table contains the entity data. In our case is `books`. You can add other entities for `authors` table and `books_authors` table using `dab add`` CLI command. 
+within the `entities` object you can create any entity with any name (as long as it is valid for REST and GraphQL). The name `books`, in this case, will be used to build the REST path and the GraphQL type. Within the entity you have the `source` element that specifies which table contains the entity data. In our case is `books`. You can add other entities for `authors` table and `books_authors` table using `dab add` CLI command. 
 
 > **NOTE**: Entities names are case sensitive, and they will be exposed via REST and GraphQL as you have typed them.
 

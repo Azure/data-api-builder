@@ -76,7 +76,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             });
 
             Assert.IsNotNull(returnContext.Response.Headers[HttpHeaders.CORRELATION_ID]);
-            Assert.IsTrue(Guid.TryParse(returnContext.Response.Headers[HttpHeaders.CORRELATION_ID], out _), message: "Response headers generated a new valid correlation id if user passed one invalid.");
+            Assert.IsTrue(Guid.TryParse(returnContext.Response.Headers[HttpHeaders.CORRELATION_ID], out _), message: "Response headers didn't generated a new valid correlation id if user passed one invalid.");
         }
 
         #endregion

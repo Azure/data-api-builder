@@ -10,8 +10,8 @@ namespace Azure.DataApiBuilder.Service.Services
 {
     /// <summary>
     /// Middleware for tracking correlation id for each request and response.
-    /// If none correlation id is passed in through request,
-    /// it will generate a new one.
+    /// If no correlation id is passed in through request,
+    /// this middleware will generate a new correlation id.
     /// </summary>
     public class CorrelationIdMiddleware
     {

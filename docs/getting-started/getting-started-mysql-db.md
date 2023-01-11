@@ -258,7 +258,7 @@ The `Author` entity should now look like the following:
 as we also want to enable querying a book and getting its authors, we also need to make a similar change to the `Book` entity:
 
 ```json
-"book": {
+"Book": {
     "source": "books",
     "permissions": [
         {

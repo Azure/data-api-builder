@@ -21,7 +21,7 @@ For Data API Builder, the format used for a MySQL connection is shown below base
 
 ## Create the database objects
 
-Create the database `booksdb` with tables to represent Authors, Books and the many-to-many relationship between Authors and Books. Execute this [sample script for books schema and data](../../samples/getting-started/azure-sql-db/exercise/exercise-library.azure-mysql.sql) in the Azure MySQL Database you decided to use.
+Create the database `booksdb` with tables to represent Authors, Books and the many-to-many relationship between Authors and Books. Execute this [sample script for books schema and data](../samples/getting-started/azure-mysql-db/exercise/exercise-library.azure-mysql.sql) in the Azure MySQL Database you decided to use.
 
 - `authors`: Table containing authors
 - `books`: Table containing books

@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Microsoft.Extensions.Logging;
@@ -673,12 +674,11 @@ namespace Azure.DataApiBuilder.Service.Services
 
         /// <summary>
         /// Helper function will parse the schema and database object name
-        /// from the provided and string and sort out if a default schema
-        /// should be used. It then returns the appropriate schema and
-        /// db object name as a tuple of strings.
+        /// from the provided source string and sort out if a default schema
+        /// should be used.
         /// </summary>
         /// <param name="source">source string to parse</param>
-        /// <returns></returns>
+        /// <returns>The appropriate schema and db object name as a tuple of strings.</returns>
         /// <exception cref="DataApiBuilderException"></exception>
         public (string, string) ParseSchemaAndDbTableName(string source)
         {
@@ -909,9 +909,16 @@ namespace Azure.DataApiBuilder.Service.Services
 
             using DataTableReader reader = new(dataTable);
             DataTable schemaTable = reader.GetSchemaTable();
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
             foreach (DataRow columnInfoFromAdapter in schemaTable.Rows)
             {
                 string columnName = columnInfoFromAdapter["ColumnName"].ToString()!;
+
+                if (runtimeConfig.GraphQLGlobalSettings.Enabled)
+                {
+                    FieldMeetsGraphQLNameRequirements(entityName, columnName);
+                }
+
                 ColumnDefinition column = new()
                 {
                     IsNullable = (bool)columnInfoFromAdapter["AllowDBNull"],
@@ -933,6 +940,42 @@ namespace Azure.DataApiBuilder.Service.Services
                 columnsInTable);
         }
 
+        /// <summary>
+        /// Determine whether the provided field of a GraphQL enabled entity meets GraphQL naming requirements.
+        /// Criteria:
+        /// - Is GraphQL Enabled for entity
+        /// - If field has an alias/mapped value, then use the alias to evaluate name violation.
+        /// - If field does not have an alias/mapped value, then use the provided field name to
+        /// check for naming violations.
+        /// </summary>
+        /// <param name="entityName">Entity to check </param>
+        /// <param name="fieldName">Name to evaluate against GraphQL naming requirements</param>
+        /// <exception cref="DataApiBuilderException>
+        /// <returns>True/False</returns>
+        public bool FieldMeetsGraphQLNameRequirements(string entityName, string fieldName)
+        {
+            if (_entities.TryGetValue(entityName, out Entity? entity))
+            {
+                if (entity.GraphQL is bool enabled && enabled)
+                {
+                    if (entity.Mappings!.TryGetValue(fieldName, out string? fieldAlias))
+                    {
+                        fieldName = fieldAlias;
+                    }
+
+                    return !GraphQLNaming.IsIntrospectionField(fieldName);
+                }
+            }
+            else
+            {
+                throw new DataApiBuilderException(
+                    message: "Entity not found in entities collection.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            return true;
+        }
         /// <summary>
         /// Gets the DataTable from the EntitiesDataSet if already present.
         /// If not present, fills it first and returns the same.
@@ -1117,8 +1160,6 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Fills the table definition with information of the foreign keys
         /// for all the tables.
         /// </summary>
-        /// <param name="schemaName">Name of the default schema.</param>
-        /// <param name="tables">Dictionary of all tables.</param>
         private async Task PopulateForeignKeyDefinitionAsync()
         {
             // For each database object, that has a relationship metadata,
@@ -1159,16 +1200,14 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Helper method to find all the entities whose foreign key information is
-        /// to be retrieved.
+        /// Helper method to find all the entities whose foreign key information is to be retrieved.
         /// </summary>
         /// <param name="schemaNames">List of names of the schemas to which entities belong.</param>
         /// <param name="tableNames">List of names of the entities(tables)</param>
-        /// <returns></returns>
-        private IEnumerable<SourceDefinition>
-            FindAllEntitiesWhoseForeignKeyIsToBeRetrieved(
-                List<string> schemaNames,
-                List<string> tableNames)
+        /// <returns>A collection of entity names</returns>
+        private IEnumerable<SourceDefinition> FindAllEntitiesWhoseForeignKeyIsToBeRetrieved(
+            List<string> schemaNames,
+            List<string> tableNames)
         {
             Dictionary<string, SourceDefinition> sourceNameToSourceDefinition = new();
             foreach ((string entityName, DatabaseObject dbObject) in EntityToDatabaseObject)

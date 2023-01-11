@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -115,10 +116,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         public async Task TestStoredProcedureMutationForInsertion(string dbQuery)
         {
-            string graphQLMutationName = "InsertBook";
+            string graphQLMutationName = "insertBook";
             string graphQLMutation = @"
                 mutation {
-                    InsertBook(title: ""Random Book"", publisher_id: 1234 ) {
+                    insertBook(title: ""Random Book"", publisher_id: 1234 ) {
                         result
                     }
                 }
@@ -145,10 +146,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         public async Task TestStoredProcedureMutationForDeletion(string dbQueryToVerifyDeletion)
         {
-            string graphQLMutationName = "DeleteLastInsertedBook";
+            string graphQLMutationName = "deleteLastInsertedBook";
             string graphQLMutation = @"
                 mutation {
-                    DeleteLastInsertedBook {
+                    deleteLastInsertedBook {
                         result
                     }
                 }
@@ -169,6 +170,30 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
+        /// <code>Do: </code> Insert a new book with a given title and publisher name.
+        /// and returns all the books under the given publisher.
+        /// <code>Check: </code> If the intended book is inserted into the DB and
+        /// verifies the non-empty response.
+        /// </summary>
+        public async Task TestStoredProcedureMutationNonEmptyResponse(string dbQuery)
+        {
+            string graphQLMutationName = "insertAndDisplayAllBooksUnderGivenPublisher";
+            string graphQLMutation = @"
+                mutation{
+                    insertAndDisplayAllBooksUnderGivenPublisher(title: ""Orange Tomato"" publisher_name: ""Big Company""){
+                        id
+                        title
+                    }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
         /// <code>Do: </code> updates a book title from the books table with given id
         /// and new title.
         /// <code>Check: </code> The book title should be updated with the given id
@@ -176,11 +201,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         public async Task TestStoredProcedureMutationForUpdate(string dbQuery)
         {
-            string graphQLMutationName = "UpdateBookTitle";
+            string graphQLMutationName = "updateBookTitle";
             string graphQLMutation = @"
                 mutation {
-                    UpdateBookTitle(id: 14, title: ""Before Midnight"") {
-                        result
+                    updateBookTitle(id: 14, title: ""Before Midnight"") {
+                        id
+                        title
+                        publisher_id
                     }
                 }
             ";
@@ -188,9 +215,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             string beforeUpdate = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings("{\"id\":14,\"title\":\"Before Sunset\",\"publisher_id\":1234}", beforeUpdate);
             JsonElement graphQLResponse = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
-            SqlTestHelper.PerformTestEqualJsonStrings("[]", graphQLResponse.ToString());
             string afterUpdate = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings("{\"id\":14,\"title\":\"Before Midnight\",\"publisher_id\":1234}", afterUpdate);
+            SqlTestHelper.PerformTestEqualJsonStrings(afterUpdate.ToString(), graphQLResponse.EnumerateArray().First().ToString());
         }
 
         /// <summary>

@@ -6,6 +6,15 @@ namespace Cli.Tests
     [TestClass]
     public class UpdateEntityTests
     {
+        /// <summary>
+        /// Setup the logger for CLI
+        /// </summary>
+        [TestInitialize]
+        public void SetupLoggerForCLI()
+        {
+            TestHelper.SetupTestLoggerForCLI();
+        }
+
         #region  Positive Tests
         /// <summary>
         /// Simple test to update an entity permission by adding a new action.
@@ -814,14 +823,15 @@ namespace Cli.Tests
         /// Simple test to verify success on updating a source from string to source object for valid fields.
         /// </summary>
         [DataTestMethod]
-        [DataRow("s001.book", null, null, null, "UpdateSourceName", DisplayName = "Both KeyFields and Parameters provided for source.")]
-        [DataRow(null, "stored-procedure", new string[] { "param1:123", "param2:hello", "param3:true" }, null, "ConvertToStoredProcedure", DisplayName = "SourceParameters with stored procedure.")]
-        [DataRow(null, "view", null, new string[] { "col1", "col2" }, "ConvertToView", DisplayName = "Source KeyFields with View")]
-        [DataRow(null, "table", null, new string[] { "id", "name" }, "ConvertToTable", DisplayName = "Source KeyFields with Table")]
-        [DataRow(null, null, null, new string[] { "id", "name" }, "ConvertToDefaultType", DisplayName = "Source KeyFields with SourceType not provided")]
+        [DataRow("s001.book", null, new string[] { "anonymous", "*" }, null, null, "UpdateSourceName", DisplayName = "Updating sourceName with no change in parameters or keyfields.")]
+        [DataRow(null, "stored-procedure", null, new string[] { "param1:123", "param2:hello", "param3:true" }, null, "ConvertToStoredProcedure", DisplayName = "SourceParameters with stored procedure.")]
+        [DataRow(null, "view", null, null, new string[] { "col1", "col2" }, "ConvertToView", DisplayName = "Source KeyFields with View")]
+        [DataRow(null, "table", null, null, new string[] { "id", "name" }, "ConvertToTable", DisplayName = "Source KeyFields with Table")]
+        [DataRow(null, null, null, null, new string[] { "id", "name" }, "ConvertToDefaultType", DisplayName = "Source KeyFields with SourceType not provided")]
         public void TestUpdateSourceStringToDatabaseSourceObject(
             string? source,
             string? sourceType,
+            string[]? permissions,
             IEnumerable<string>? parameters,
             IEnumerable<string>? keyFields,
             string task)
@@ -829,7 +839,7 @@ namespace Cli.Tests
 
             UpdateOptions options = new(
                 source: source,
-                permissions: new string[] { "anonymous", "*" },
+                permissions: permissions,
                 entity: "MyEntity",
                 sourceType: sourceType,
                 sourceParameters: parameters,
@@ -860,6 +870,7 @@ namespace Cli.Tests
                     expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, BASIC_ENTITY_WITH_ANONYMOUS_ROLE);
                     break;
                 case "ConvertToStoredProcedure":
+                    actualConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_ONLY_READ_PERMISSION);
                     expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
                     break;
                 case "ConvertToView":
@@ -889,7 +900,7 @@ namespace Cli.Tests
         {
             UpdateOptions options = new(
                 source: source,
-                permissions: new string[] { "anonymous", "*" },
+                permissions: new string[] { "anonymous", "read" },
                 entity: "MyEntity",
                 sourceType: null,
                 sourceParameters: parameters,
@@ -967,40 +978,49 @@ namespace Cli.Tests
 
         /// <summary>
         /// Converts one source object type to another.
-        /// Also testing automatic update for parameter and keyfield to null in case
+        /// Also testing automatic update for parameter and keyfields to null in case
         /// of table/view, and stored-procedure respectively.
+        /// Updating Table with all supported CRUD action to Stored-Procedure should fail.
         /// </summary>
         [DataTestMethod]
-        [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "stored-procedure", new string[] { "param1:123", "param2:hello", "param3:true" },
-            null, SINGLE_ENTITY_WITH_STORED_PROCEDURE, false, true)]
+        [DataRow(SINGLE_ENTITY_WITH_ONLY_READ_PERMISSION, "stored-procedure", new string[] { "param1:123", "param2:hello", "param3:true" },
+            null, SINGLE_ENTITY_WITH_STORED_PROCEDURE, null, false, true,
+            DisplayName = "PASS:Convert table to stored-procedure with valid parameters.")]
         [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "stored-procedure", null, new string[] { "col1", "col2" },
-            SINGLE_ENTITY_WITH_STORED_PROCEDURE, false, false)]
-        [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "stored-procedure", null, null, SINGLE_ENTITY_WITH_STORED_PROCEDURE,
-            true, true)]
+            SINGLE_ENTITY_WITH_STORED_PROCEDURE, new string[] { "anonymous", "read" }, false, false,
+            DisplayName = "FAIL:Convert table to stored-procedure with invalid KeyFields.")]
+        [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "stored-procedure", null, null, SINGLE_ENTITY_WITH_STORED_PROCEDURE, null,
+            true, false, DisplayName = "FAIL:Convert table with wildcard CRUD operation to stored-procedure.")]
         [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "table", null, new string[] { "id", "name" },
-            SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, false, true)]
+            SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, new string[] { "anonymous", "*" }, false, true,
+            DisplayName = "PASS:Convert stored-procedure to table with valid KeyFields.")]
         [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "view", null, new string[] { "col1", "col2" },
-            SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, false, true)]
+            SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, new string[] { "anonymous", "*" }, false, true,
+            DisplayName = "PASS:Convert stored-procedure to view with valid KeyFields.")]
         [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "table", new string[] { "param1:kind", "param2:true" },
-            null, SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, false, false)]
-        [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "table", null, null, SINGLE_ENTITY_WITH_SOURCE_AS_TABLE,
-            true, true)]
+            null, SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, null, false, false,
+            DisplayName = "FAIL:Convert stored-procedure to table with parameters is not allowed.")]
+        [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "table", null, null, SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, null,
+            true, true, DisplayName = "PASS:Convert stored-procedure to table with no parameters or KeyFields.")]
         [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "view", null, new string[] { "col1", "col2" },
-            SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, false, true)]
+            SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, null, false, true,
+            DisplayName = "PASS:Convert table to view with KeyFields.")]
         [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "view", new string[] { "param1:kind", "param2:true" }, null,
-            SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, false, false)]
+            SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, null, false, false,
+            DisplayName = "FAIL:Convert table to view with parameters is not allowed.")]
         public void TestConversionOfSourceObject(
             string initialSourceObjectEntity,
             string sourceType,
             IEnumerable<string>? parameters,
             string[]? keyFields,
             string updatedSourceObjectEntity,
+            string[]? permissions,
             bool expectNoKeyFieldsAndParameters,
             bool expectSuccess)
         {
             UpdateOptions options = new(
                 source: "s001.book",
-                permissions: new string[] { "anonymous", "*" },
+                permissions: permissions,
                 entity: "MyEntity",
                 sourceType: sourceType,
                 sourceParameters: parameters,
@@ -1149,6 +1169,54 @@ namespace Cli.Tests
         }
 
         /// <summary>
+        /// Test to verify updating permissions for stored-procedure.
+        /// Checks: 
+        /// 1. Updating with WILDCARD/multiple CRUD action should fail.
+        /// 2. Adding a new role should have the same single CRUD operation as the existing one.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("anonymous", "*", false, DisplayName = "FAIL: Stored-Procedure incorrectly updated with wildcard CRUD operation for an existing role.")]
+        [DataRow("anonymous", "create", true, DisplayName = "PASS: Stored-Procedure with 1 CRUD operation for an existing role.")]
+        [DataRow("anonymous", "create,read", false, DisplayName = "FAIL: Stored-Procedure with more than 1 CRUD operation for an existing role.")]
+        [DataRow("authenticated", "*", false, DisplayName = "FAIL: Stored-Procedure with wildcard CRUD operation for a new role.")]
+        [DataRow("authenticated", "create", true, DisplayName = "PASS: Stored-Procedure with 1 CRUD operation for a new role.")]
+        [DataRow("authenticated", "read", true, DisplayName = "PASS: Stored-Procedure with same single CRUD operation for a new role as that of existing one.")]
+        [DataRow("authenticated", "create,read", false, DisplayName = "FAIL: Stored-Procedure with more than 1 CRUD operation for a new role.")]
+        public void TestUpdatePermissionsForStoredProcedure(
+            string role,
+            string operations,
+            bool isSuccess
+        )
+        {
+            UpdateOptions options = new(
+                source: "my_sp",
+                permissions: new string[] { role, operations },
+                entity: "MyEntity",
+                sourceType: "stored-procedure",
+                sourceParameters: null,
+                sourceKeyFields: null,
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: null,
+                fieldsToExclude: null,
+                relationship: null,
+                cardinality: null,
+                targetEntity: null,
+                linkingObject: null,
+                linkingSourceFields: new string[] { },
+                linkingTargetFields: new string[] { },
+                relationshipFields: new string[] { },
+                policyRequest: null,
+                policyDatabase: null,
+                map: new string[] { },
+                config: _testRuntimeConfig);
+
+            string runtimeConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
+
+            Assert.AreEqual(isSuccess, ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
+        }
+
+        /// <summary>
         /// Test to Update Entity with New mappings
         /// </summary>
         [TestMethod]
@@ -1205,6 +1273,89 @@ namespace Cli.Tests
                                     ""id"": ""Identity"",
                                     ""name"": ""Company Name""
                                 }
+                            }
+                        }
+                    }";
+
+            Assert.IsTrue(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
+            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfig), JObject.Parse(runtimeConfig)));
+        }
+
+        /// <summary>
+        /// Test to Update stored procedure action
+        /// </summary>
+        [TestMethod]
+        public void TestUpdateActionOfStoredProcedureRole()
+        {
+            UpdateOptions options = new(
+                source: null,
+                permissions: new string[] { "authenticated", "create" },
+                entity: "MyEntity",
+                sourceType: null,
+                sourceParameters: null,
+                sourceKeyFields: null,
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: new string[] { },
+                fieldsToExclude: new string[] { },
+                policyRequest: null,
+                policyDatabase: null,
+                relationship: null,
+                cardinality: null,
+                targetEntity: null,
+                linkingObject: null,
+                linkingSourceFields: new string[] { },
+                linkingTargetFields: new string[] { },
+                relationshipFields: new string[] { },
+                map: null,
+                config: _testRuntimeConfig);
+
+            string runtimeConfig = GetInitialConfigString() + "," + @"
+                    ""entities"": {
+                            ""MyEntity"": {
+                                ""source"": {
+                                    ""object"": ""MySp"",
+                                    ""type"": ""stored-procedure""
+                                },
+                                ""permissions"": [
+                                    {
+                                    ""role"": ""anonymous"",
+                                    ""actions"": [
+                                            ""read""
+                                        ]
+                                    },
+                                    {
+                                    ""role"": ""authenticated"",
+                                    ""actions"": [
+                                            ""read""
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    }";
+
+            string expectedConfig = GetInitialConfigString() + "," + @"
+                    ""entities"": {
+                            ""MyEntity"": {
+                                ""source"": {
+                                    ""object"": ""MySp"",
+                                    ""type"": ""stored-procedure""
+                                },
+                                ""permissions"": [
+                                    {
+                                    ""role"": ""anonymous"",
+                                    ""actions"": [
+                                            ""read""
+                                        ]
+                                    },
+                                    {
+                                    ""role"": ""authenticated"",
+                                    ""actions"": [
+                                            ""create""
+                                        ]
+                                    }
+                                ]
                             }
                         }
                     }";
@@ -1393,28 +1544,32 @@ namespace Cli.Tests
         /// Simple test to verify failure on updating source of an entity with invalid fields.
         /// </summary>
         [DataTestMethod]
-        [DataRow(null, new string[] { "param1:value1" }, new string[] { "col1", "col2" }, DisplayName = "Both KeyFields and Parameters provided for source.")]
-        [DataRow("stored-procedure", null, new string[] { "col1", "col2" }, DisplayName = "KeyFields with stored procedure.")]
-        [DataRow("stored-procedure", new string[] { "param1:value1,param1:223" }, null, DisplayName = "Parameters with duplicate keys for stored procedure.")]
-        [DataRow("view", new string[] { "param1:value1" }, null, DisplayName = "Source Parameters with View")]
-        [DataRow("table", new string[] { "param1:value1" }, null, DisplayName = "Source Parameters with Table")]
-        [DataRow("table-view", new string[] { "param1:value1" }, null, DisplayName = "Invalid Source Type.")]
+        [DataRow(null, new string[] { "param1:value1" }, new string[] { "col1", "col2" }, "anonymous", "*", DisplayName = "Both KeyFields and Parameters provided for source")]
+        [DataRow("stored-procedure", null, new string[] { "col1", "col2" }, "anonymous", "create", DisplayName = "KeyFields incorrectly used with stored procedure")]
+        [DataRow("stored-procedure", new string[] { "param1:value1,param1:223" }, null, "anonymous", "read", DisplayName = "Parameters with duplicate keys for stored procedure")]
+        [DataRow("stored-procedure", new string[] { "param1:value1,param2:223" }, null, "anonymous", "create,read", DisplayName = "Stored procedure with more than 1 CRUD operation")]
+        [DataRow("stored-procedure", new string[] { "param1:value1,param2:223" }, null, "anonymous", "*", DisplayName = "Stored procedure with wildcard CRUD operation")]
+        [DataRow("view", new string[] { "param1:value1" }, null, "anonymous", "*", DisplayName = "Source Parameters incorrectly used with View")]
+        [DataRow("table", new string[] { "param1:value1" }, null, "anonymous", "*", DisplayName = "Source Parameters incorrectly used with Table")]
+        [DataRow("table-view", new string[] { "param1:value1" }, null, "anonymous", "*", DisplayName = "Invalid Source Type")]
         public void TestUpdateSourceObjectWithInvalidFields(
             string? sourceType,
             IEnumerable<string>? parameters,
-            IEnumerable<string>? keyFields)
+            IEnumerable<string>? keyFields,
+            string role,
+            string operations)
         {
             UpdateOptions options = new(
                 source: "MyTable",
-                permissions: new string[] { "anonymous", "*,create,read" },
+                permissions: new string[] { role, operations },
                 entity: "MyEntity",
                 sourceType: sourceType,
                 sourceParameters: parameters,
                 sourceKeyFields: keyFields,
                 restRoute: null,
                 graphQLType: null,
-                fieldsToInclude: new string[] { "id", "rating" },
-                fieldsToExclude: new string[] { "level" },
+                fieldsToInclude: null,
+                fieldsToExclude: null,
                 relationship: null,
                 cardinality: null,
                 targetEntity: null,
@@ -1575,7 +1730,7 @@ namespace Cli.Tests
         /// Test to verify Invalid inputs to create a relationship
         /// </summary>
         [DataTestMethod]
-        [DataRow("cosmos", "one", "MyEntity", DisplayName = "CosmosDb does not support relationships")]
+        [DataRow("cosmosdb_nosql", "one", "MyEntity", DisplayName = "CosmosDb does not support relationships")]
         [DataRow("mssql", null, "MyEntity", DisplayName = "Cardinality should not be null")]
         [DataRow("mssql", "manyx", "MyEntity", DisplayName = "Cardinality should be one/many")]
         [DataRow("mssql", "one", null, DisplayName = "Target entity should not be null")]
@@ -1646,10 +1801,9 @@ namespace Cli.Tests
 
         private static string GetInitialConfigString()
         {
-            return @"
-                        {
-                        ""$schema"": ""dab.draft-01.schema.json"",
-                        ""data-source"": {
+            return @"{" +
+                        @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                        @"""data-source"": {
                             ""database-type"": ""mssql"",
                             ""connection-string"": ""testconnectionstring""
                         },

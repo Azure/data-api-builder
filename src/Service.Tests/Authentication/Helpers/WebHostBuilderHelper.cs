@@ -29,12 +29,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication.Helpers
         /// Creates customized webhost
         /// </summary>
         /// <param name="provider">Runtime configured identity provider name.</param>
-        /// <param name="treatAsAuthenticatedRequest">Sets authenticate-devmode-requests flag.</param>
         /// <param name="useAuthorizationMiddleware">Whether to include authorization middleware in request pipeline.</param>
         /// <returns>IHost</returns>
         public static async Task<IHost> CreateWebHost(
             string provider,
-            bool treatAsAuthenticatedRequest,
             bool useAuthorizationMiddleware)
         {
             // Setup RuntimeConfigProvider object for the pipeline.
@@ -42,8 +40,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication.Helpers
             Mock<RuntimeConfigPath> runtimeConfigPath = new();
             Mock<RuntimeConfigProvider> runtimeConfigProvider = new(runtimeConfigPath.Object,
                 configProviderLogger.Object);
-            runtimeConfigProvider.Setup(x => x.IsAuthenticatedDevModeRequest()).
-                Returns(treatAsAuthenticatedRequest);
 
             return await new HostBuilder()
                 .ConfigureWebHost(webBuilder =>

@@ -47,14 +47,14 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         /// <param name="operations">Actions performed on entity to resolve authorization permissions.</param>
         /// <param name="roles">Collection of role names allowed to perform action on entity.</param>
         /// <returns>EntityPermissionsMap Key/Value collection.</returns>
-        public static Dictionary<string, EntityMetadata> CreateStubEntityPermissionsMap(string[] entityNames, IEnumerable<Operation> operations, IEnumerable<string> roles)
+        public static Dictionary<string, EntityMetadata> CreateStubEntityPermissionsMap(string[] entityNames, IEnumerable<Config.Operation> operations, IEnumerable<string> roles)
         {
             EntityMetadata entityMetadata = new()
             {
-                OperationToRolesMap = new Dictionary<Operation, List<string>>()
+                OperationToRolesMap = new Dictionary<Config.Operation, List<string>>()
             };
 
-            foreach (Operation operation in operations)
+            foreach (Config.Operation operation in operations)
             {
                 entityMetadata.OperationToRolesMap.Add(operation, roles.ToList());
             }
@@ -69,9 +69,18 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
             return entityPermissionsMap;
         }
 
-        public static Entity GenerateEmptyEntity()
+        /// <summary>
+        /// Creates an empty entity with no permissions or exposed rest/graphQL endpoints.
+        /// </summary>
+        /// <param name="sourceType">type of source object. Default is Table.</param>
+        public static Entity GenerateEmptyEntity(SourceType sourceType = SourceType.Table)
         {
-            return new Entity("foo", Rest: null, GraphQL: null, Array.Empty<PermissionSetting>(), Relationships: new(), Mappings: new());
+            return new Entity(Source: new DatabaseObjectSource(sourceType, Name: "foo", Parameters: null, KeyFields: null),
+                              Rest: null,
+                              GraphQL: null,
+                              Array.Empty<PermissionSetting>(),
+                              Relationships: new(),
+                              Mappings: new());
         }
 
         /// <summary>
@@ -79,9 +88,10 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         /// </summary>
         /// <param name="singularNameForEntity"> Singular name defined by user in the config.</param>
         /// <param name="pluralNameForEntity"> Plural name defined by user in the config.</param>
-        public static Entity GenerateEntityWithSingularPlural(string singularNameForEntity, string pluralNameForEntity)
+        /// <param name="sourceType">type of source object. Default is Table.</param>
+        public static Entity GenerateEntityWithSingularPlural(string singularNameForEntity, string pluralNameForEntity, SourceType sourceType = SourceType.Table)
         {
-            return new Entity(Source: "foo",
+            return new Entity(Source: new DatabaseObjectSource(sourceType, Name: "foo", Parameters: null, KeyFields: null),
                               Rest: null,
                               GraphQL: new GraphQLEntitySettings(new SingularPlural(singularNameForEntity, pluralNameForEntity)),
                               Permissions: Array.Empty<PermissionSetting>(),
@@ -93,10 +103,11 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         /// Creates an entity with a string GraphQL type.
         /// </summary>
         /// <param name="type"></param>
+        /// <param name="sourceType">type of source object. Default is Table.</param>
         /// <returns></returns>
-        public static Entity GenerateEntityWithStringType(string type)
+        public static Entity GenerateEntityWithStringType(string type, SourceType sourceType = SourceType.Table)
         {
-            return new Entity(Source: "foo",
+            return new Entity(Source: new DatabaseObjectSource(sourceType, Name: "foo", Parameters: null, KeyFields: null),
                               Rest: null,
                               GraphQL: new GraphQLEntitySettings(type),
                               Permissions: Array.Empty<PermissionSetting>(),

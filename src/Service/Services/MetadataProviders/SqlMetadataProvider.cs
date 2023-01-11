@@ -15,6 +15,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Microsoft.Extensions.Logging;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 
 namespace Azure.DataApiBuilder.Service.Services
 {
@@ -35,6 +36,10 @@ namespace Azure.DataApiBuilder.Service.Services
 
         // Dictionary mapping singular graphql types to entity name keys in the configuration
         private readonly Dictionary<string, string> _graphQLSingularTypeToEntityNameMap = new();
+
+        // Dictionary containing mapping of graphQL stored procedure exposed query/mutation name
+        // to their corresponding entity names defined in the config.
+        public Dictionary<string, string> GraphQLStoredProcedureExposedNameToEntityNameMap { get; set; } = new();
 
         // Contains all the referencing and referenced columns for each pair
         // of referencing and referenced tables.
@@ -231,8 +236,9 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         private async Task FillSchemaForStoredProcedureAsync(
             Entity procedureEntity,
+            string entityName,
             string schemaName,
-            string storedProcedureName,
+            string storedProcedureSourceName,
             StoredProcedureDefinition storedProcedureDefinition)
         {
             using ConnectionT conn = new();
@@ -247,7 +253,7 @@ namespace Azure.DataApiBuilder.Service.Services
             // To restrict the parameters for the current stored procedure, specify its name
             procedureRestrictions[0] = conn.Database;
             procedureRestrictions[1] = schemaName;
-            procedureRestrictions[2] = storedProcedureName;
+            procedureRestrictions[2] = storedProcedureSourceName;
 
             DataTable procedureMetadata = await conn.GetSchemaAsync(collectionName: "Procedures", restrictionValues: procedureRestrictions);
 
@@ -255,7 +261,7 @@ namespace Azure.DataApiBuilder.Service.Services
             if (procedureMetadata.Rows.Count == 0)
             {
                 throw new DataApiBuilderException(
-                    message: $"No stored procedure definition found for the given database object {storedProcedureName}",
+                    message: $"No stored procedure definition found for the given database object {storedProcedureSourceName}",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
@@ -286,7 +292,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     if (!storedProcedureDefinition.Parameters.TryGetValue(configParamKey, out ParameterDefinition? parameterDefinition))
                     {
                         throw new DataApiBuilderException(
-                            message: $"Could not find parameter \"{configParamKey}\" specified in config for procedure \"{schemaName}.{storedProcedureName}\"",
+                            message: $"Could not find parameter \"{configParamKey}\" specified in config for procedure \"{schemaName}.{storedProcedureSourceName}\"",
                             statusCode: HttpStatusCode.ServiceUnavailable,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                     }
@@ -297,6 +303,9 @@ namespace Azure.DataApiBuilder.Service.Services
                     }
                 }
             }
+
+            // Generating exposed stored-procedure query/mutation name and adding to the dictionary mapping it to its entity name.
+            GraphQLStoredProcedureExposedNameToEntityNameMap.TryAdd(GenerateStoredProcedureQueryName(entityName, procedureEntity), entityName);
         }
 
         /// <summary>
@@ -317,7 +326,7 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 Entity entity = _entities[entityName];
                 string path = GetEntityPath(entity, entityName).TrimStart('/');
-                ValidateEntityandGraphQLPathUniqueness(path, graphQLGlobalPath);
+                ValidateEntityAndGraphQLPathUniqueness(path, graphQLGlobalPath);
 
                 if (!string.IsNullOrEmpty(path))
                 {
@@ -333,7 +342,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <param name="path">Entity's calculated REST path.</param>
         /// <param name="graphQLGlobalPath">Developer configured GraphQL Path</param>
         /// <exception cref="DataApiBuilderException"></exception>
-        public static void ValidateEntityandGraphQLPathUniqueness(string path, string graphQLGlobalPath)
+        public static void ValidateEntityAndGraphQLPathUniqueness(string path, string graphQLGlobalPath)
         {
             // Handle case when path does not have forward slash (/) prefix
             // by adding one if not present or ignoring an existing slash.
@@ -719,6 +728,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 {
                     await FillSchemaForStoredProcedureAsync(
                         entity,
+                        entityName,
                         GetSchemaName(entityName),
                         GetDatabaseObjectName(entityName),
                         GetStoredProcedureDefinition(entityName));
@@ -783,10 +793,11 @@ namespace Azure.DataApiBuilder.Service.Services
             foreach (JsonElement element in sqlResult.RootElement.EnumerateArray())
             {
                 string resultFieldName = element.GetProperty("result_field_name").ToString();
-                Type resultFieldType = SqlToCLRType(element.GetProperty("system_type_name").ToString());
+                Type resultFieldType = SqlToCLRType(element.GetProperty("result_type").ToString());
+                bool isResultFieldNullable = element.GetProperty("is_nullable").GetBoolean();
 
-                // Store the dictionary containing result set field with it's type as Columns
-                storedProcedureDefinition.Columns.TryAdd(resultFieldName, new(resultFieldType));
+                // Store the dictionary containing result set field with its type as Columns
+                storedProcedureDefinition.Columns.TryAdd(resultFieldName, new(resultFieldType) { IsNullable = isResultFieldNullable });
             }
         }
 
@@ -1358,13 +1369,13 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Retrieving the partition key path, for Cosmos only
+        /// Retrieving the partition key path, for cosmosdb_nosql only
         /// </summary>
         public string? GetPartitionKeyPath(string database, string container)
             => throw new NotImplementedException();
 
         /// <summary>
-        /// Setting the partition key path, for Cosmos only
+        /// Setting the partition key path, for cosmosdb_nosql only
         /// </summary>
         public void SetPartitionKeyPath(string database, string container, string partitionKeyPath)
             => throw new NotImplementedException();

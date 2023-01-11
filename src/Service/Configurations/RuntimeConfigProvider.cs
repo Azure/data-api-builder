@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Linq;
 using System.Net;
+using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
@@ -14,7 +17,9 @@ namespace Azure.DataApiBuilder.Service.Configurations
     /// </summary>
     public class RuntimeConfigProvider
     {
-        public event EventHandler<RuntimeConfig>? RuntimeConfigLoaded;
+        public delegate Task<bool> RuntimeConfigLoadedHandler(RuntimeConfigProvider sender, RuntimeConfig config);
+
+        public List<RuntimeConfigLoadedHandler> RuntimeConfigLoadedHandlers { get; } = new List<RuntimeConfigLoadedHandler>();
 
         /// <summary>
         /// The config provider logger is a static member because we use it in static methods
@@ -124,14 +129,13 @@ namespace Azure.DataApiBuilder.Service.Configurations
         {
             string? configFileName = configPath?.ConfigFileName;
             string? runtimeConfigJson = GetRuntimeConfigJsonString(configFileName);
-
             if (!string.IsNullOrEmpty(runtimeConfigJson) &&
                 RuntimeConfig.TryGetDeserializedRuntimeConfig(
                     runtimeConfigJson,
                     out runtimeConfig,
                     ConfigProviderLogger))
             {
-                runtimeConfig!.MapGraphQLSingularTypeToEntityName();
+                runtimeConfig!.MapGraphQLSingularTypeToEntityName(ConfigProviderLogger);
                 if (!string.IsNullOrWhiteSpace(configPath?.CONNSTRING))
                 {
                     runtimeConfig!.ConnectionString = configPath.CONNSTRING;
@@ -215,7 +219,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <param name="accessToken">The string representation of a managed identity access token
         /// <param name="Database"> The name of the database to be used for Cosmos</param>
         /// useful to connect to the database.</param>
-        public void Initialize(
+        public async Task<bool> Initialize(
             string configuration,
             string? schema,
             string connectionString,
@@ -238,17 +242,17 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     ConfigProviderLogger!))
             {
                 RuntimeConfiguration = runtimeConfig;
-                RuntimeConfiguration!.MapGraphQLSingularTypeToEntityName();
+                RuntimeConfiguration!.MapGraphQLSingularTypeToEntityName(ConfigProviderLogger);
                 RuntimeConfiguration!.ConnectionString = connectionString;
 
-                if (RuntimeConfiguration!.DatabaseType == DatabaseType.cosmos)
+                if (RuntimeConfiguration!.DatabaseType == DatabaseType.cosmosdb_nosql)
                 {
                     if (string.IsNullOrEmpty(schema))
                     {
                         throw new ArgumentException($"'{nameof(schema)}' cannot be null or empty.", nameof(schema));
                     }
 
-                    CosmosDbOptions? cosmosDb = RuntimeConfiguration.DataSource.CosmosDbNoSql! with { GraphQLSchema = schema };
+                    CosmosDbNoSqlOptions? cosmosDb = RuntimeConfiguration.DataSource.CosmosDbNoSql! with { GraphQLSchema = schema };
 
                     if (!string.IsNullOrEmpty(database))
                     {
@@ -262,11 +266,19 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
             ManagedIdentityAccessToken = accessToken;
 
-            EventHandler<RuntimeConfig>? handlers = RuntimeConfigLoaded;
-            if (handlers is not null && RuntimeConfiguration is not null)
+            List<Task<bool>> configLoadedTasks = new();
+            if (RuntimeConfiguration is not null)
             {
-                handlers(this, RuntimeConfiguration);
+                foreach (RuntimeConfigLoadedHandler configLoadedHandler in RuntimeConfigLoadedHandlers)
+                {
+                    configLoadedTasks.Add(configLoadedHandler(this, RuntimeConfiguration));
+                }
             }
+
+            await Task.WhenAll(configLoadedTasks);
+
+            // Verify that all tasks succeeded. 
+            return configLoadedTasks.All(x => x.Result);
         }
 
         public virtual RuntimeConfig GetRuntimeConfiguration()
@@ -305,25 +317,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
         public virtual bool IsIntrospectionAllowed()
         {
             return RuntimeConfiguration is not null && RuntimeConfiguration.GraphQLGlobalSettings.AllowIntrospection;
-        }
-
-        /// <summary>
-        /// When in development mode, honor the authenticate-devmode-requests
-        /// feature switch value specified in the config file. This gives us the ability to
-        /// simulate a request's authenticated/anonymous authentication state in development mode.
-        /// Requires:
-        /// - HostGlobalSettings.Mode is Development
-        /// </summary>
-        /// <returns>True when authenticate-devmode-requests is enabled</returns>
-        public virtual bool IsAuthenticatedDevModeRequest()
-        {
-            if (RuntimeConfiguration?.AuthNConfig == null)
-            {
-                return false;
-            }
-
-            return IsDeveloperMode() &&
-                RuntimeConfiguration.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated is true;
         }
     }
 }

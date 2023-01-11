@@ -32,10 +32,10 @@ namespace Cli
             string? cosmosNoSqlDatabase,
             string? cosmosNoSqlContainer,
             string? graphQLSchemaPath,
+            bool setSessionContext,
             HostModeType hostMode,
             IEnumerable<string>? corsOrigin,
-            string config,
-            string? devModeDefaultAuth)
+            string config)
             : base(config)
         {
             DatabaseType = databaseType;
@@ -43,35 +43,34 @@ namespace Cli
             CosmosNoSqlDatabase = cosmosNoSqlDatabase;
             CosmosNoSqlContainer = cosmosNoSqlContainer;
             GraphQLSchemaPath = graphQLSchemaPath;
+            SetSessionContext = setSessionContext;
             HostMode = hostMode;
             CorsOrigin = corsOrigin;
-            DevModeDefaultAuth = devModeDefaultAuth;
         }
 
-        [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmos, mysql, postgresql")]
+        [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmosdb_nosql, cosmosdb_postgresql, mysql, postgresql")]
         public DatabaseType DatabaseType { get; }
 
         [Option("connection-string", Required = false, HelpText = "(Default: '') Connection details to connect to the database.")]
         public string? ConnectionString { get; }
 
-        [Option("cosmosdb_nosql-database", Required = false, HelpText = "Database name for Cosmos DB.")]
+        [Option("cosmosdb_nosql-database", Required = false, HelpText = "Database name for Cosmos DB for NoSql.")]
         public string? CosmosNoSqlDatabase { get; }
 
-        [Option("cosmosdb_nosql-container", Required = false, HelpText = "Container name for Cosmos DB.")]
+        [Option("cosmosdb_nosql-container", Required = false, HelpText = "Container name for Cosmos DB for NoSql.")]
         public string? CosmosNoSqlContainer { get; }
 
         [Option("graphql-schema", Required = false, HelpText = "GraphQL schema Path.")]
         public string? GraphQLSchemaPath { get; }
+
+        [Option("set-session-context", Default = false, Required = false, HelpText = "Enable sending data to MsSql using session context.")]
+        public bool SetSessionContext { get; }
 
         [Option("host-mode", Default = HostModeType.Production, Required = false, HelpText = "Specify the Host mode - Development or Production")]
         public HostModeType HostMode { get; }
 
         [Option("cors-origin", Separator = ',', Required = false, HelpText = "Specify the list of allowed origins.")]
         public IEnumerable<string>? CorsOrigin { get; }
-
-        [Option("authenticate-devmode-requests", Default = null, Required = false,
-            HelpText = "boolean. Optional. Use when host-mode = Development. Treats all requests as authenticated in devmode when set to true.")]
-        public string? DevModeDefaultAuth { get; }
     }
 
     /// <summary>

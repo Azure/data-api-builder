@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-Latest version of Data API builder is  **0.3.7** (aka **Oct2022** release) [What's new?](./docs/whats-new.md#version-037)
+Latest version of Data API builder is  **0.4.11** [What's new?](./docs/whats-new.md#version-0411)
 
 ## About
 
@@ -14,27 +14,18 @@ With Data API builder, database objects can be exposed via REST or GraphQL endpo
 
 ## Features
 
-- Allow collections, tables and views to be accessed via REST and GraphQL
+- Allow collections, tables, views and stored procedures to be accessed via REST and GraphQL
 - Support authentication via JWT and EasyAuth
 - Role-based authorization using received claims
 - Item-level security via policy expressions
-- REST 
+- REST
   - CRUD operations via POST, GET, PUT, PATCH, DELETE
   - filtering, sorting and pagination
-- GraphQL 
+- GraphQL
   - queries and mutations
   - filtering, sorting and pagination
   - relationship navigation
 - Easy development via dedicated CLI
-
-## Limitations
-
-- JWT only supports Azure AD
-- MySQL, MariaDB and PostgreSQL are not yet fully supported
-
-## Known Issues
-
-List of known issues and possible workarounds, where applicable and possible, is available here: [Known Issues](./docs/known-issues.md).
 
 ## Getting Started
 
@@ -43,6 +34,14 @@ To get started quickly with Data API builder for Azure Databases, you can use th
 ## Documentation
 
 Documentation is available in the [`docs`](./docs) folder.
+
+## Limitations
+
+- JWT only supports Azure AD
+
+## Known Issues
+
+List of known issues and possible workarounds, where applicable and possible, is available here: [Known Issues](./docs/known-issues.md).
 
 ## How to Contribute
 

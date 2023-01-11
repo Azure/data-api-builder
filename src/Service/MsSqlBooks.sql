@@ -11,6 +11,8 @@ DROP PROCEDURE IF EXISTS insert_book;
 DROP PROCEDURE IF EXISTS count_books;
 DROP PROCEDURE IF EXISTS delete_last_inserted_book;
 DROP PROCEDURE IF EXISTS update_book_title;
+DROP PROCEDURE IF EXISTS get_authors_history_by_first_name;
+DROP PROCEDURE IF EXISTS insert_and_display_all_books_for_given_publisher;
 DROP TABLE IF EXISTS book_author_link;
 DROP TABLE IF EXISTS reviews;
 DROP TABLE IF EXISTS authors;
@@ -32,6 +34,7 @@ DROP TABLE IF EXISTS journals;
 DROP TABLE IF EXISTS aow;
 DROP TABLE IF EXISTS series;
 DROP TABLE IF EXISTS sales;
+DROP TABLE IF EXISTS authors_history;
 DROP SCHEMA IF EXISTS [foo];
 COMMIT;
 
@@ -184,6 +187,15 @@ CREATE TABLE sales (
     tax decimal(18,2) NOT NULL
 );
 
+CREATE TABLE authors_history (
+    id int NOT NULL IDENTITY(5001,1) PRIMARY KEY,
+    first_name varchar(100) NOT NULL,
+    middle_name varchar(100),
+    last_name varchar(100) NOT NULL,
+    year_of_publish int,
+    books_published int
+);
+
 ALTER TABLE books
 ADD CONSTRAINT book_publisher_fk
 FOREIGN KEY (publisher_id)
@@ -236,7 +248,7 @@ ALTER TABLE sales
 ADD total AS (subtotal + tax) PERSISTED;
 
 SET IDENTITY_INSERT publishers ON
-INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd'), (1940, 'Policy Publisher 01'), (1941, 'Policy Publisher 02');
+INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd'), (1940, 'Policy Publisher 01'), (1941, 'Policy Publisher 02'), (1156, 'The First Publisher');
 SET IDENTITY_INSERT publishers OFF
 
 SET IDENTITY_INSERT authors ON
@@ -304,6 +316,21 @@ INSERT INTO trees(treeId, species, region, height) VALUES (1, 'Tsuga terophylla'
 INSERT INTO aow(NoteNum, DetailAssessmentAndPlanning, WagingWar, StrategicAttack) VALUES (1, 'chapter one notes: ', 'chapter two notes: ', 'chapter three notes: ');
 INSERT INTO fungi(speciesid, region) VALUES (1, 'northeast'), (2, 'southwest');
 
+SET IDENTITY_INSERT authors_history ON
+INSERT INTO authors_history(id, first_name, middle_name, last_name, year_of_publish, books_published)
+VALUES
+(1, 'Isaac', null, 'Asimov', 1993, 6),
+(2, 'Robert', 'A.', 'Heinlein', 1886, null),
+(3, 'Robert', null, 'Silvenberg', null, null),
+(4, 'Dan', null, 'Simmons', 1759, 3),
+(5, 'Isaac', null, 'Asimov', 2000, null),
+(6, 'Robert', 'A.', 'Heinlein', 1899, 2),
+(7, 'Isaac', null, 'Silvenberg', 1664, null),
+(8, 'Dan', null, 'Simmons', 1799, 3),
+(9, 'Aaron', null, 'Mitchells', 2001, 1),
+(10, 'Aaron', 'F.', 'Burtle', null, null)
+SET IDENTITY_INSERT authors_history OFF
+
 EXEC('CREATE VIEW books_view_all AS SELECT * FROM dbo.books');
 EXEC('CREATE VIEW books_view_with_mapping AS SELECT * FROM dbo.books');
 EXEC('CREATE VIEW stocks_view_selected AS SELECT
@@ -339,4 +366,26 @@ EXEC('CREATE PROCEDURE update_book_title @id int, @title varchar(max) AS
       BEGIN
         UPDATE dbo.books SET title = @title WHERE id = @id
         SELECT * from dbo.books WHERE id = @id
+      END');
+EXEC('CREATE PROCEDURE get_authors_history_by_first_name @firstName varchar(100) AS
+      BEGIN
+        SELECT
+          concat(first_name, '' '', (middle_name + '' ''), last_name) as author_name,
+          min(year_of_publish) as first_publish_year,
+          sum(books_published) as total_books_published
+        FROM
+          authors_history
+        WHERE
+          first_name=@firstName
+        GROUP BY
+          concat(first_name, '' '', (middle_name + '' ''), last_name)
+      END');
+EXEC('CREATE PROCEDURE insert_and_display_all_books_for_given_publisher @title varchar(max), @publisher_name varchar(max) AS
+      BEGIN
+        DECLARE @publisher_id AS INT;
+        SET @publisher_id = (SELECT id FROM dbo.publishers WHERE name = @publisher_name);
+        INSERT INTO dbo.books(title, publisher_id)
+        VALUES(@title, @publisher_id);
+
+        SELECT * FROM dbo.books WHERE publisher_id = @publisher_id;
       END');

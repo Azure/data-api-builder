@@ -147,22 +147,22 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
             authorizationResolver.Setup(x => x.AreRoleAndOperationDefinedForEntity(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Operation.Create
+                Config.Operation.Create
                 )).Returns(isValidCreateRoleOperation);
             authorizationResolver.Setup(x => x.AreRoleAndOperationDefinedForEntity(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Operation.Read
+                Config.Operation.Read
                 )).Returns(isValidReadRoleOperation);
             authorizationResolver.Setup(x => x.AreRoleAndOperationDefinedForEntity(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Operation.Update
+                Config.Operation.Update
                 )).Returns(isValidUpdateRoleOperation);
             authorizationResolver.Setup(x => x.AreRoleAndOperationDefinedForEntity(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Operation.Delete
+                Config.Operation.Delete
                 )).Returns(isValidDeleteRoleOperation);
 
             HttpContext httpContext = CreateHttpContext(httpMethod);
@@ -257,13 +257,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
             authorizationResolver.Setup(x => x.AreColumnsAllowedForOperation(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Operation.Read,
+                Config.Operation.Read,
                 It.IsAny<IEnumerable<string>>() // Can be any IEnumerable<string>, as find request result field list is depedent on AllowedColumns.
                 )).Returns(areColumnsAllowed);
             authorizationResolver.Setup(x => x.GetAllowedExposedColumns(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Operation.Read
+                Config.Operation.Read
                 )).Returns(allowedColumns);
 
             string httpMethod = HttpConstants.GET;
@@ -365,7 +365,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
                 roleName: "admin",
-                operation: Operation.All);
+                operation: Config.Operation.All);
 
             // Override the operation to be a list of string for wildcard instead of a list of object created by InitRuntimeConfig()
             //

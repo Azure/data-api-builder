@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using System.Text.Unicode;
 using Azure.DataApiBuilder.Config;
 using Humanizer;
+using Microsoft.Extensions.Logging;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
 /// <summary>
@@ -16,6 +17,13 @@ namespace Cli
     {
         public const string WILDCARD = "*";
         public static readonly string SEPARATOR = ":";
+
+        private static ILogger<Utils> _logger;
+
+        public static void SetCliUtilsLogger(ILogger<Utils> cliUtilsLogger)
+        {
+            _logger = cliUtilsLogger;
+        }
 
         /// <summary>
         /// Creates the rest object which can be either a boolean value
@@ -68,7 +76,7 @@ namespace Cli
                     string[] arr = graphQL.Split(SEPARATOR);
                     if (arr.Length != 2)
                     {
-                        Console.Error.WriteLine($"Invalid format for --graphql. Accepted values are true/false," +
+                        _logger.LogError($"Invalid format for --graphql. Accepted values are true/false," +
                                                 "a string, or a pair of string in the format <singular>:<plural>");
                         return null;
                     }
@@ -96,16 +104,17 @@ namespace Cli
         /// <param name="operationName">operation string.</param>
         /// <param name="operation">Operation Enum output.</param>
         /// <returns>True if convert is successful. False otherwise.</returns>
-        public static bool TryConvertOperationNameToOperation(string operationName, out Operation operation)
+        public static bool TryConvertOperationNameToOperation(string? operationName, out Operation operation)
         {
             if (!Enum.TryParse(operationName, ignoreCase: true, out operation))
             {
-                if (operationName.Equals(WILDCARD, StringComparison.OrdinalIgnoreCase))
+                if (operationName is not null && operationName.Equals(WILDCARD, StringComparison.OrdinalIgnoreCase))
                 {
                     operation = Operation.All;
                 }
                 else
                 {
+                    _logger.LogError($"Invalid operation Name: {operationName}.");
                     return false;
                 }
             }
@@ -262,8 +271,8 @@ namespace Cli
                 string[] map = item.Split(SEPARATOR);
                 if (map.Length != 2)
                 {
-                    Console.Error.WriteLine("Invalid format for --map");
-                    Console.WriteLine("It should be in this format --map \"backendName1:exposedName1,backendName2:exposedName2,...\".");
+                    _logger.LogError("Invalid format for --map. " +
+                        "Acceptable format --map \"backendName1:exposedName1,backendName2:exposedName2,...\".");
                     return false;
                 }
 
@@ -277,15 +286,14 @@ namespace Cli
         /// Returns the default global settings.
         /// </summary>
         public static Dictionary<GlobalSettingsType, object> GetDefaultGlobalSettings(HostModeType hostMode,
-                                                                                      IEnumerable<string>? corsOrigin,
-                                                                                      bool? devModeDefaultAuth)
+                                                                                      IEnumerable<string>? corsOrigin)
         {
             Dictionary<GlobalSettingsType, object> defaultGlobalSettings = new();
             defaultGlobalSettings.Add(GlobalSettingsType.Rest, new RestGlobalSettings());
             defaultGlobalSettings.Add(GlobalSettingsType.GraphQL, new GraphQLGlobalSettings());
             defaultGlobalSettings.Add(
                 GlobalSettingsType.Host,
-                GetDefaultHostGlobalSettings(hostMode, corsOrigin, devModeDefaultAuth));
+                GetDefaultHostGlobalSettings(hostMode, corsOrigin));
             return defaultGlobalSettings;
         }
 
@@ -306,8 +314,7 @@ namespace Cli
         /// </summary>
         public static HostGlobalSettings GetDefaultHostGlobalSettings(
             HostModeType hostMode,
-            IEnumerable<string>? corsOrigin,
-            bool? devModeDefaultAuth)
+            IEnumerable<string>? corsOrigin)
         {
             string[]? corsOriginArray = corsOrigin is null ? new string[] { } : corsOrigin.ToArray();
             Cors cors = new(Origins: corsOriginArray);
@@ -315,7 +322,6 @@ namespace Cli
 
             return new HostGlobalSettings(
                 Mode: hostMode,
-                IsDevModeDefaultRequestAuthenticated: devModeDefaultAuth,
                 Cors: cors,
                 Authentication: authenticationConfig);
         }
@@ -362,8 +368,8 @@ namespace Cli
 
             if (!File.Exists(file))
             {
-                Console.WriteLine($"ERROR: Couldn't find config  file: {file}.");
-                Console.WriteLine($"Please run: dab init <options> to create a new config file.");
+                _logger.LogError($"Couldn't find config  file: {file}. " +
+                    "Please run: dab init <options> to create a new config file.");
                 return false;
             }
 
@@ -381,17 +387,25 @@ namespace Cli
         /// * -> Valid
         /// fetch, read -> Invalid
         /// read, delete -> Valid
+        /// Also verifies that stored-procedures are not allowed with more than 1 CRUD operations.
         /// </summary>
         /// <param name="operations">array of string containing operations for permissions</param>
         /// <returns>True if no invalid operation is found.</returns>
-        public static bool VerifyOperations(string[] operations)
+        public static bool VerifyOperations(string[] operations, SourceType sourceType)
         {
             // Check if there are any duplicate operations
             // Ex: read,read,create
             HashSet<string> uniqueOperations = operations.ToHashSet();
             if (uniqueOperations.Count() != operations.Length)
             {
-                Console.Error.WriteLine("Duplicate action found in --permissions");
+                _logger.LogError("Duplicate action found in --permissions");
+                return false;
+            }
+
+            // Currently, Stored Procedures can be configured with only 1 CRUD Operation.
+            if (sourceType is SourceType.StoredProcedure
+                    && !VerifySingleOperationForStoredProcedure(operations))
+            {
                 return false;
             }
 
@@ -406,14 +420,14 @@ namespace Cli
                     }
                     else if (!PermissionOperation.ValidPermissionOperations.Contains(op))
                     {
-                        Console.Error.WriteLine("Invalid actions found in --permissions");
+                        _logger.LogError("Invalid actions found in --permissions");
                         return false;
                     }
                 }
                 else
                 {
                     // Check for invalid operation.
-                    Console.Error.WriteLine("Invalid actions found in --permissions");
+                    _logger.LogError("Invalid actions found in --permissions");
                     return false;
                 }
             }
@@ -421,7 +435,7 @@ namespace Cli
             // Check for WILDCARD operation with CRUD operations.
             if (containsWildcardOperation && uniqueOperations.Count() > 1)
             {
-                Console.Error.WriteLine(" WILDCARD(*) along with other CRUD operations in a single operation is not allowed.");
+                _logger.LogError("WILDCARD(*) along with other CRUD operations in a single operation is not allowed.");
                 return false;
             }
 
@@ -441,7 +455,7 @@ namespace Cli
             operations = null;
             if (permissions.Count() != 2)
             {
-                Console.WriteLine("Please add permission in the following format. --permissions \"<<role>>:<<actions>>\"");
+                _logger.LogError("Invalid format for permission. Acceptable format: --permissions \"<<role>>:<<actions>>\"");
                 return false;
             }
 
@@ -465,14 +479,14 @@ namespace Cli
             if (!string.IsNullOrEmpty(userProvidedConfigFile))
             {
                 /// The existence of user provided config file is not checked here.
-                Console.WriteLine($"Using config file: {userProvidedConfigFile}");
+                _logger.LogInformation($"User provided config file: {userProvidedConfigFile}");
                 RuntimeConfigPath.CheckPrecedenceForConfigInEngine = false;
                 runtimeConfigFile = userProvidedConfigFile;
                 return true;
             }
             else
             {
-                Console.WriteLine("Config not provided. Trying to get default config based on DAB_ENVIRONMENT...");
+                _logger.LogInformation("Config not provided. Trying to get default config based on DAB_ENVIRONMENT...");
                 /// Need to reset to true explicitly so any that any re-invocations of this function
                 /// get simulated as being called for the first time specifically useful for tests.
                 RuntimeConfigPath.CheckPrecedenceForConfigInEngine = true;
@@ -496,7 +510,7 @@ namespace Cli
         {
             if (!TryReadRuntimeConfig(configFile, out string runtimeConfigJson))
             {
-                Console.Error.WriteLine($"Failed to read the config file: {configFile}.");
+                _logger.LogError($"Failed to read the config file: {configFile}.");
                 return false;
             }
 
@@ -505,13 +519,13 @@ namespace Cli
                     out RuntimeConfig? deserializedRuntimeConfig,
                     logger: null))
             {
-                Console.Error.WriteLine($"Failed to parse the config file: {configFile}.");
+                _logger.LogError($"Failed to parse the config file: {configFile}.");
                 return false;
             }
 
             if (string.IsNullOrWhiteSpace(deserializedRuntimeConfig.ConnectionString))
             {
-                Console.Error.WriteLine($"Invalid connection-string provided in the config.");
+                _logger.LogError($"Invalid connection-string provided in the config.");
                 return false;
             }
 
@@ -535,7 +549,7 @@ namespace Cli
             {
                 if (keyFields is not null && keyFields.Any())
                 {
-                    Console.Error.WriteLine("Stored Procedures don't support keyfields.");
+                    _logger.LogError("Stored Procedures don't support keyfields.");
                     return false;
                 }
             }
@@ -543,7 +557,7 @@ namespace Cli
             {
                 if (parameters is not null && parameters.Any())
                 {
-                    Console.Error.WriteLine("Tables/Views don't support parameters.");
+                    _logger.LogError("Tables/Views don't support parameters.");
                     return false;
                 }
             }
@@ -555,12 +569,12 @@ namespace Cli
         /// Creates source object by using valid type, params, and keyfields.
         /// </summary>
         /// <param name="name">Name of the source.</param>
-        /// <param name="type">Type of the soure. i.e, table,view, and stored-procedure.</param>
+        /// <param name="type">Type of the source. i.e, table,view, and stored-procedure.</param>
         /// <param name="parameters">Dictionary for parameters if source is stored-procedure</param>
         /// <param name="keyFields">Array of string containing key columns for table/view type.</param>
         /// <param name="sourceObject">Outputs the created source object.
         /// It can be null, string, or DatabaseObjectSource</param>
-        /// <returns>True in case of succesful creation of source object.</returns>
+        /// <returns>True in case of successful creation of source object.</returns>
         public static bool TryCreateSourceObject(
             string name,
             SourceType type,
@@ -612,8 +626,8 @@ namespace Cli
                 if (items.Length != 2)
                 {
                     sourceParameters = null;
-                    Console.Error.WriteLine("Invalid format for --source.params");
-                    Console.WriteLine("Correct source parameter syntax: --source.params \"key1:value1,key2:value2,...\".");
+                    _logger.LogError("Invalid format for --source.params");
+                    _logger.LogError("Correct source parameter syntax: --source.params \"key1:value1,key2:value2,...\".");
                     return false;
                 }
 
@@ -628,6 +642,66 @@ namespace Cli
                 sourceParameters = null;
             }
 
+            return true;
+        }
+
+        /// <summary>
+        /// This method loops through every role specified for stored-procedure entity
+        ///  and checks if it has only one CRUD operation.
+        /// </summary>
+        public static bool VerifyPermissionOperationsForStoredProcedures(
+            PermissionSetting[] permissionSettings)
+        {
+            foreach (PermissionSetting permissionSetting in permissionSettings)
+            {
+                if (!VerifySingleOperationForStoredProcedure(permissionSetting.Operations))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// This method checks that stored-procedure entity
+        /// has only one CRUD operation.
+        /// </summary>
+        private static bool VerifySingleOperationForStoredProcedure(object[] operations)
+        {
+            if (operations.Length > 1
+                || !TryGetOperationName(operations.First(), out Operation operationName)
+                || Operation.All.Equals(operationName))
+            {
+                _logger.LogError("Stored Procedure supports only 1 CRUD operation.");
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Checks if the operation is string or PermissionOperation object
+        /// and tries to parse the operation name accordingly.
+        /// Returns true on successful parsing.
+        /// </summary>
+        public static bool TryGetOperationName(object operation, out Operation operationName)
+        {
+            JsonElement operationJson = JsonSerializer.SerializeToElement(operation);
+            if (operationJson.ValueKind is JsonValueKind.String)
+            {
+                return TryConvertOperationNameToOperation(operationJson.GetString(), out operationName);
+            }
+
+            PermissionOperation? action = JsonSerializer.Deserialize<PermissionOperation>(operationJson);
+            if (action is null)
+            {
+                _logger.LogError($"Failed to parse the operation: {operation}.");
+                operationName = Operation.None;
+                return false;
+            }
+
+            operationName = action.Name;
             return true;
         }
 
@@ -664,7 +738,7 @@ namespace Cli
             }
             catch (Exception e)
             {
-                Console.Error.WriteLine($"Failed to generate the config file, operation failed with exception:{e}.");
+                _logger.LogError($"Failed to generate the config file, operation failed with exception:{e}.");
                 return false;
             }
 

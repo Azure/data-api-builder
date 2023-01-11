@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
@@ -108,6 +109,21 @@ namespace Azure.DataApiBuilder.Config
         }
 
         /// <summary>
+        /// This method reads the dab.draft.schema.json which contains the link for online published
+        /// schema for dab, based on the version of dab being used to generate the runtime config.
+        /// </summary>
+        public static string GetPublishedDraftSchemaLink()
+        {
+            string assemblyDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            string schemaPath = Path.Combine(assemblyDirectory, "dab.draft.schema.json");
+
+            string schemaFileContent = File.ReadAllText(schemaPath);
+            Dictionary<string, object> jsonDictionary = JsonSerializer.Deserialize<Dictionary<string, object>>(schemaFileContent)!;
+            Dictionary<string, string> properties = JsonSerializer.Deserialize<Dictionary<string, string>>(jsonDictionary["additionalProperties"].ToString())!;
+            return properties["version"];
+        }
+
+        /// <summary>
         /// Deserialize GraphQL configuration on each entity.
         /// </summary>
         public void DetermineGraphQLEntityNames()
@@ -126,7 +142,7 @@ namespace Azure.DataApiBuilder.Config
         /// This is used for looking up top-level entity name with GraphQL type, GraphQL type is not matching any of the top level entity name.
         /// Use singular field to find the top level entity name, then do the look up from the entities dictionary
         /// </summary>
-        public void MapGraphQLSingularTypeToEntityName()
+        public void MapGraphQLSingularTypeToEntityName(ILogger? logger)
         {
             foreach (KeyValuePair<string, Entity> item in Entities)
             {
@@ -141,6 +157,8 @@ namespace Azure.DataApiBuilder.Config
                     if (graphQL is null || graphQL.Type is null
                         || (graphQL.Type is not SingularPlural && graphQL.Type is not string))
                     {
+                        // Use entity name since GraphQL type unavailable
+                        logger?.LogInformation($"GraphQL type for {entityName} is {entityName}");
                         continue;
                     }
 
@@ -149,7 +167,16 @@ namespace Azure.DataApiBuilder.Config
                     if (graphQLType is not null)
                     {
                         GraphQLSingularTypeToEntityNameMap.TryAdd(graphQLType, entityName);
+                        // We have the GraphQL type so we log that
+                        logger?.LogInformation($"GraphQL type for {entityName} is {graphQLType}");
                     }
+                }
+
+                // Log every entity that is not disabled for GQL
+                if (entity.GraphQL is null || entity.GraphQL is true)
+                {
+                    // Use entity name since GraphQL type unavailable
+                    logger?.LogInformation($"GraphQL type for {entityName} is {entityName}");
                 }
             }
         }

@@ -4,7 +4,6 @@ using System.IO;
 using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
@@ -44,7 +43,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             CosmosClient? client = _clientProvider.Client;
-            if (client == null)
+            if (client is null)
             {
                 throw new DataApiBuilderException(
                     message: "Cosmos DB has not been properly initialized",
@@ -57,9 +56,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             ItemResponse<JObject>? response = resolver.OperationType switch
             {
-                Operation.UpdateGraphQL => await HandleUpdateAsync(queryArgs, container),
-                Operation.Create => await HandleCreateAsync(queryArgs, container),
-                Operation.Delete => await HandleDeleteAsync(queryArgs, container),
+                Config.Operation.UpdateGraphQL => await HandleUpdateAsync(queryArgs, container),
+                Config.Operation.Create => await HandleCreateAsync(queryArgs, container),
+                Config.Operation.Delete => await HandleDeleteAsync(queryArgs, container),
                 _ => throw new NotSupportedException($"unsupported operation type: {resolver.OperationType}")
             };
 
@@ -236,7 +235,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string containerName = _metadataProvider.GetDatabaseObjectName(entityName);
 
             string graphqlMutationName = context.Selection.Field.Name.Value;
-            Operation mutationOperation =
+            Config.Operation mutationOperation =
                 MutationBuilder.DetermineMutationOperationTypeBasedOnInputType(graphqlMutationName);
 
             CosmosOperationMetadata mutation = new(databaseName, containerName, mutationOperation);

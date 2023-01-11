@@ -17,7 +17,7 @@
       <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="6.0.10" />
       <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="6.0.10" />
       <PackageVersion Include="Microsoft.Azure.Cosmos" Version="3.20.0" />
-      <PackageVersion Include="Microsoft.Data.SqlClient" Version="3.0.0" />
+      <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.0.1" />
       <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="6.0.0" />
       <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
       <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.3.2" />
@@ -27,7 +27,7 @@
       <PackageVersion Include="MSTest.TestAdapter" Version="2.2.10" />
       <PackageVersion Include="MSTest.TestFramework" Version="2.2.10" />
       <PackageVersion Include="MySqlConnector" Version="2.1.5" />
-      <PackageVersion Include="Newtonsoft.Json" Version="13.0.1" />
+      <PackageVersion Include="Newtonsoft.Json" Version="13.0.2" />
       <PackageVersion Include="Npgsql" Version="5.0.10" />
       <PackageVersion Include="Polly" Version="7.2.3" />
       <PackageVersion Include="StyleCop.Analyzers" Version="1.1.118" />

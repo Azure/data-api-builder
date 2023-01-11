@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
@@ -185,6 +186,34 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 exceptionExpected: true,
                 expectedErrorMessage: expectedErrorMessage,
                 expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
+            );
+        }
+
+        /// <inheritdoc/>
+        [TestMethod]
+        public override async Task InsertOneTestViolatingUniqueKeyConstraint()
+        {
+            string requestBody = @"
+            {
+                ""categoryid"": 1,
+                ""pieceid"": 1,
+                ""categoryName"": ""SciFi""
+            }"
+            ;
+
+            string expectedErrorMessage = $"Duplicate entry '1-1' for key '{_Composite_NonAutoGenPK_TableName}.PRIMARY'";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                sqlQuery: string.Empty,
+                operationType: Config.Operation.Insert,
+                requestBody: requestBody,
+                exceptionExpected: true,
+                expectedErrorMessage: expectedErrorMessage,
+                expectedStatusCode: HttpStatusCode.Conflict,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
             );
         }

@@ -20,6 +20,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         // This is is the key which holds all the rows in the response
         // for REST requests.
         public static readonly string jsonResultTopLevelKey = "value";
+
+        // Json Property in error which the holds the actual exception properties. 
+        public const string PARENT_PROPERTY_ERROR = "error";
+
+        // Exception properties to put assertions when verifying results of SqlTests which expect exception.
+        private const string PROPERTY_MESSAGE = "message";
+        private const string PROPERTY_STATUS = "status";
+        private const string PROPERTY_CODE = "code";
+
         public static void RemoveAllRelationshipBetweenEntities(RuntimeConfig runtimeConfig)
         {
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities.ToList())
@@ -98,6 +107,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="httpMethod">The http method specified in the request.</param>
         /// <param name="expectedLocationHeader">The expected location header in the response(if any).</param>
         /// <param name="verifyNumRecords"></param>
+        /// <param name="lookForSubstrInActualErrorMsg">When set to true, will look for a substring expectedErrorMessage
+        /// in the actual exception message to verify the test result.</param>
         /// <returns></returns>
         public static async Task VerifyResultAsync(
             string expected,
@@ -106,7 +117,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             bool exceptionExpected,
             HttpMethod httpMethod,
             string expectedLocationHeader,
-            int verifyNumRecords)
+            int verifyNumRecords,
+            bool lookForSubstrInActualErrorMsg = false)
         {
             string responseBody = await response.Content.ReadAsStringAsync();
             if (!exceptionExpected)
@@ -143,7 +155,27 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
                 // Convert the escaped characters into their unescaped form.
                 responseBody = Regex.Unescape(responseBody);
-                Assert.AreEqual(expected, responseBody);
+
+                // Generate actual and expected error JObjects to assert that they are equal.
+                JObject expectedErrorObj = JObject.Parse(expected);
+                JObject actualErrorObj = JObject.Parse(responseBody);
+
+                // Assert that the exception subStatusCode(code) and statusCode(status) are equal.
+                Assert.AreEqual(expectedErrorObj[PARENT_PROPERTY_ERROR][PROPERTY_CODE], actualErrorObj[PARENT_PROPERTY_ERROR][PROPERTY_CODE]);
+                Assert.AreEqual(expectedErrorObj[PARENT_PROPERTY_ERROR][PROPERTY_STATUS], actualErrorObj[PARENT_PROPERTY_ERROR][PROPERTY_STATUS]);
+
+                // Assert that the actual and expected error messages are same (if needed by the test),
+                // or the expectedErrorMessage is present as a substring in the actual error message.
+                string actualErrorMsg = actualErrorObj[PARENT_PROPERTY_ERROR][PROPERTY_MESSAGE].ToString();
+                string expectedErrorMsg = expectedErrorObj[PARENT_PROPERTY_ERROR][PROPERTY_MESSAGE].ToString();
+                if (lookForSubstrInActualErrorMsg)
+                {
+                    Assert.IsTrue(actualErrorMsg.Contains(expectedErrorMsg, StringComparison.OrdinalIgnoreCase));
+                }
+                else
+                {
+                    Assert.AreEqual(expectedErrorMsg, actualErrorMsg);
+                }
             }
         }
 

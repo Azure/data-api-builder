@@ -593,6 +593,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         /// </summary>
         public abstract Task InsertOneTestViolatingForeignKeyConstraint();
 
+        /// <summary>
+        /// Abstract method overriden in each of the child class as each database has its own specific error message.
+        /// Validates conflict error (HTTP 409) is thrown when a user tries to insert data with duplicate key.
+        /// </summary>
+        public abstract Task InsertOneTestViolatingUniqueKeyConstraint();
+
         #endregion
     }
 }

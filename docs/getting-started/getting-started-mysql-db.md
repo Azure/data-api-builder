@@ -248,7 +248,7 @@ The `Author` entity should now look like the following:
     "relationships": {
         "books": {
             "cardinality": "many",
-            "target.entity": "book",
+            "target.entity": "Book",
             "linking.object": "books_authors"
         }
     }

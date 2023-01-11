@@ -237,7 +237,7 @@ Data API Builder will automatically figure out which columns are used to support
 The `Author` entity should now look like the following:
 
 ```json
-"author": {
+"Author": {
     "source": "authors",
     "permissions": [
         {

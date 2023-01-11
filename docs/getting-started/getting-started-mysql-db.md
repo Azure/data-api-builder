@@ -86,7 +86,7 @@ Now, you'll want to expose the `books` table as REST and/or GraphQL endpoints. T
 
 Run the DAB CLI command as shown below to create the entity called Books
 ```
-    dab add books --config "dab-config.MySql.json" --source books --permissions "anonymous:create,read,update,delete" --graphql "book:books"
+    dab add Book --config "dab-config.MySql.json" --source books --permissions "anonymous:create,read,update,delete"
     Using config file: dab-config.MySql.json
     Added new entity: Book with source: books to config: dab-config.MySql.json with permissions: anonymous:create,read,update,delete.
     SUGGESTION: Use 'dab update <options>' to update any entities in your config.

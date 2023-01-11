@@ -271,7 +271,7 @@ as we also want to enable querying a book and getting its authors, we also need 
     "relationships": {
         "authors": {
             "cardinality": "many",
-            "target.entity": "author",
+            "target.entity": "Author",
             "linking.object": "books_authors"
         }
     }

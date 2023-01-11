@@ -160,7 +160,7 @@ The REST endpoint is made available at the path (make sure to keep in mind that 
 so if you want to get a list of all the available books you can simply run this GET request:
 
 ```
-/api/book
+/api/Book
 ```
 
 The following HTTP verbs are supported:

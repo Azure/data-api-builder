@@ -220,7 +220,7 @@ Stop the engine (`Ctrl+C`) and go back to the `library-dab-config.json` and add 
 "relationships": {
     "books": {
         "cardinality": "many",
-        "target.entity": "book",
+        "target.entity": "Book",
         "linking.object": "books_authors"
     }
 }

@@ -938,8 +938,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         [DataRow("@claims.user_email ne @item.col1 and @claims.contact_no eq @item.col2 and not(@claims.name eq @item.col3)",
             "'xyz@microsoft.com' ne col1 and 1234 eq col2 and not('Aaron' eq col3)", DisplayName = "Valid policy parsing test 1")]
         [DataRow("(@claims.isemployee eq @item.col1 and @item.col2 ne @claims.user_email) or" +
-            " ('David' ne @item.col3 and @claims.contact_no ne @item.col3)", "(true eq col1 and col2 ne 'xyz@microsoft.com') or" +
-            " ('David' ne col3 and 1234 ne col3)", DisplayName = "Valid policy parsing test 2")]
+            "('David' ne @item.col3 and @claims.contact_no ne @item.col3)", "(true eq col1 and col2 ne 'xyz@microsoft.com') or" +
+            "('David' ne col3 and 1234 ne col3)", DisplayName = "Valid policy parsing test 2")]
         [DataRow("(@item.rating gt @claims.emprating) and (@claims.isemployee eq true)",
             "(rating gt 4.2) and (true eq true)", DisplayName = "Valid policy parsing test 3")]
         [DataRow("@item.rating eq @claims.emprating)", "rating eq 4.2)", DisplayName = "Valid policy parsing test 4")]
@@ -1034,7 +1034,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             catch (DataApiBuilderException ex)
             {
                 Assert.IsFalse(supportedValueType, message: ex.Message);
-                Assert.AreEqual(expected: AuthorizationResolver.UNSUPPORTED_CLAIM_DATATYPE_MESSAGE, actual: ex.Message, message: ex.Message);
+                Assert.AreEqual(
+                    $"The claim value for claim: testClaim belonging to the user has an unsupported data type.",
+                    actual: ex.Message,
+                    message: ex.Message);
             }
         }
 
@@ -1200,10 +1203,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
         /// <summary>
         /// Test to validate that the role claim corresponding to the X-MS-API-ROLE header is added to the claimsInRequestContext.
-        /// The role claim can either be added by DAB in case when the user is absent in a system role(authenticated/anonymous),
-        /// or the user can already have the claim by virtue of the identity provider.
+        /// The role claim will be sourced by DAB when the user is not already a member of a system role(authenticated/anonymous),
+        /// or the role claim will be sourced from a user's access token issued by an identity provider.
         /// </summary>
-        /// <param name="claimType"></param>
         [TestMethod]
         public void ValidateClientRoleHeaderClaimIsAddedToClaimsInRequestContext()
         {

@@ -177,6 +177,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
             return _queryMap[key];
         }
 
+        /// <inheritdoc/>
         [TestMethod]
         public override async Task PatchOneUpdateTestOnTableWithSecurityPolicy()
         {

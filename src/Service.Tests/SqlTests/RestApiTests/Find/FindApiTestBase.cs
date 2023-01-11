@@ -997,7 +997,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         /// Tests that the FIND operation can only read the rows which are accessible after applying the
         /// security policy which uses data from session context.
         /// </summary>
-        /// <returns></returns>
         [TestMethod]
         public virtual Task FindTestOnTableWithSecurityPolicy()
         {

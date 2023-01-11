@@ -233,6 +233,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                    $"table '{DatabaseName}.dbo.stocks'; column does not allow nulls. UPDATE fails.";
         }
 
+        /// <inheritdoc/>
         [TestMethod]
         public override async Task PutOneUpdateTestOnTableWithSecurityPolicy()
         {

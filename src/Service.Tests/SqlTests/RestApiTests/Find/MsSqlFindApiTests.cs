@@ -479,6 +479,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             return _queryMap[key];
         }
 
+        /// <inheritdoc/>
         [TestMethod]
         public override async Task FindTestOnTableWithSecurityPolicy()
         {

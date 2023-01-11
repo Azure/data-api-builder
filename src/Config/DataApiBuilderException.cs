@@ -68,9 +68,9 @@ namespace Azure.DataApiBuilder.Service.Exceptions
             /// </summary>
             ErrorProcessingEasyAuthHeader,
             /// <summary>
-            /// One of the claim belonging to the user has unsupported data type.
+            /// One of the claim belonging to the user has unsupported claim value type.
             /// </summary>
-            UnsupportedClaimType
+            UnsupportedClaimValueType
         }
 
         public HttpStatusCode StatusCode { get; }

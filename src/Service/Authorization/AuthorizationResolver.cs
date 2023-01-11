@@ -34,7 +34,6 @@ namespace Azure.DataApiBuilder.Service.Authorization
         public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
         public const string ROLE_ANONYMOUS = "anonymous";
         public const string ROLE_AUTHENTICATED = "authenticated";
-        public const string UNSUPPORTED_CLAIM_DATATYPE_MESSAGE = "One or more claims belonging to the user have value types which are not supported.";
 
         public Dictionary<string, EntityMetadata> EntityPermissionsMap { get; private set; } = new();
 
@@ -534,7 +533,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         }
 
         /// <summary>
-        /// Using the input parameter claim, returns the primitive literal from claim.Value enclosed within parentheses:
+        /// Using the input parameter claim, returns the primitive literal from claim.Value:
         /// e.g. @claims.idp (string) resolves as 'azuread'
         /// e.g. @claims.iat (int) resolves as 1537231048
         /// e.g. @claims.email_verified (boolean) resolves as true
@@ -578,9 +577,9 @@ namespace Azure.DataApiBuilder.Service.Authorization
                 default:
                     // One of the claims in the request had unsupported data type.
                     throw new DataApiBuilderException(
-                        message: UNSUPPORTED_CLAIM_DATATYPE_MESSAGE,
+                        message: $"The claim value for claim: {claim.Type} belonging to the user has an unsupported data type.",
                         statusCode: HttpStatusCode.Forbidden,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.UnsupportedClaimType
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.UnsupportedClaimValueType
                     );
             }
         }

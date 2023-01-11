@@ -81,8 +81,7 @@ namespace Azure.DataApiBuilder.Config
     /// </summary>
     public record MsSqlOptions(
         [property: JsonPropertyName("set-session-context")]
-        [property: JsonIgnore]
-        bool SetSessionContext = true)
+        bool SetSessionContext = false)
     {
         public const string JSON_PROPERTY_NAME = nameof(DatabaseType.mssql);
 

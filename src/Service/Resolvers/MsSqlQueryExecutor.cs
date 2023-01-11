@@ -136,16 +136,16 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public override string GetSessionMapQuery(Dictionary<string, Claim>? claimsDictionary)
+        public override string GetSessionMapQuery(Dictionary<string, Claim>? sessionParams)
         {
-            if (claimsDictionary is null || !_isSessionContextEnabled)
+            if (sessionParams is null || !_isSessionContextEnabled)
             {
                 return string.Empty;
             }
 
             string sessionMapQuery = string.Empty;
 
-            foreach ((string claimType, Claim claim) in claimsDictionary)
+            foreach ((string claimType, Claim claim) in sessionParams)
             {
                 string claimValue = AuthorizationResolver.GetClaimValue(claim);
                 sessionMapQuery = sessionMapQuery + "EXEC sp_set_session_context " + $"'{claimType}'," + claimValue + ";";

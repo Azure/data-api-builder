@@ -936,13 +936,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// <param name="expectedParsedPolicy">The policy which is expected to be generated after parsing.</param>
         [DataTestMethod]
         [DataRow("@claims.user_email ne @item.col1 and @claims.contact_no eq @item.col2 and not(@claims.name eq @item.col3)",
-            "'xyz@microsoft.com' ne col1 and 1234 eq col2 and not('Aaron' eq col3)", DisplayName = "Valid policy parsing test 1")]
+            "'xyz@microsoft.com' ne col1 and 1234 eq col2 and not('Aaron' eq col3)",
+            DisplayName = "Valid policy parsing test for string and int64 claimvaluetypes.")]
         [DataRow("(@claims.isemployee eq @item.col1 and @item.col2 ne @claims.user_email) or" +
             "('David' ne @item.col3 and @claims.contact_no ne @item.col3)", "(true eq col1 and col2 ne 'xyz@microsoft.com') or" +
-            "('David' ne col3 and 1234 ne col3)", DisplayName = "Valid policy parsing test 2")]
+            "('David' ne col3 and 1234 ne col3)", DisplayName = "Valid policy parsing test for constant string and int64 claimvaluetype.")]
         [DataRow("(@item.rating gt @claims.emprating) and (@claims.isemployee eq true)",
-            "(rating gt 4.2) and (true eq true)", DisplayName = "Valid policy parsing test 3")]
-        [DataRow("@item.rating eq @claims.emprating)", "rating eq 4.2)", DisplayName = "Valid policy parsing test 4")]
+            "(rating gt 4.2) and (true eq true)", DisplayName = "Valid policy parsing test for double and boolean claimvaluetypes.")]
+        [DataRow("@item.rating eq @claims.emprating)", "rating eq 4.2)", DisplayName = "Valid policy parsing test for double claimvaluetype.")]
         public void ParseValidDbPolicy(string policy, string expectedParsedPolicy)
         {
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
@@ -1202,7 +1203,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         }
 
         /// <summary>
-        /// Test to validate that the role claim corresponding to the X-MS-API-ROLE header is added to the claimsInRequestContext.
+        /// Test to validate the functionality of AuthorizationResolver.GetAllUserClaims() method for adding role claim -
+        /// that the role claim corresponding to the X-MS-API-ROLE header is added to the claimsInRequestContext.
         /// The role claim will be sourced by DAB when the user is not already a member of a system role(authenticated/anonymous),
         /// or the role claim will be sourced from a user's access token issued by an identity provider.
         /// </summary>
@@ -1228,6 +1230,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             context.Setup(x => x.User).Returns(principal);
             context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
 
+            // Execute the method to be tested - GetAllUserClaims().
             Dictionary<string, Claim> claimsInRequestContext = AuthorizationResolver.GetAllUserClaims(context.Object);
 
             // Assert that only the role claim corresponding to clientRoleHeader is added to the claims dictionary.

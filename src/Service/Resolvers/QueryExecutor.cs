@@ -116,6 +116,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="parameters">The parameters used to execute the SQL text.</param>
         /// <param name="dataReaderHandler">The function to invoke to handle the results
         /// in the DbDataReader obtained after executing the query.</param>
+        /// <param name="sessionParams">Dictionary containing all the claims belonging to the user, to be used as session parameters.</param>
         /// <param name="args">List of string arguments to the DbDataReader handler.</param>
         /// <returns>An object formed using the results of the query as returned by the given handler.</returns>
         public virtual async Task<TResult?> ExecuteQueryAgainstDbAsync<TResult>(
@@ -123,7 +124,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string sqltext,
             IDictionary<string, object?> parameters,
             Func<DbDataReader, List<string>?, Task<TResult?>>? dataReaderHandler,
-            Dictionary<string, Claim>? claimsDictionary,
+            Dictionary<string, Claim>? sessionParams,
             List<string>? args = null)
         {
             await conn.OpenAsync();
@@ -132,7 +133,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             // Add query to send user data from DAB to the underlying database to enable additional security the user might have configured
             // at the database level.
-            string sessionMapQuery = GetSessionMapQuery(claimsDictionary);
+            string sessionMapQuery = GetSessionMapQuery(sessionParams);
 
             cmd.CommandText = sessionMapQuery + sqltext;
             if (parameters is not null)
@@ -167,7 +168,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public virtual string GetSessionMapQuery(Dictionary<string, Claim>? claimsDictionary)
+        public virtual string GetSessionMapQuery(Dictionary<string, Claim>? sessionParams)
         {
             return string.Empty;
         }

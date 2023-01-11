@@ -402,9 +402,17 @@ EXEC('CREATE PROCEDURE insert_and_display_all_books_for_given_publisher @title v
 
         SELECT * FROM dbo.books WHERE publisher_id = @publisher_id;
       END');
+
+-- Create a function to be used as a filter predicate by the security policy to restrict access to rows in the table for SELECT,UPDATE,DELETE operations.
+-- Users with roles(claim value) = @accessible_role(column value) or,
+-- Users with roles(claim value) = null and @accessible_role(column value) = 'Anonymous',
+-- will be able to access a particular row.
 EXEC('CREATE FUNCTION dbo.revenuesPredicate(@accessible_role varchar(20))
     RETURNS TABLE
     WITH SCHEMABINDING
     AS RETURN SELECT 1 AS fn_securitypredicate_result
     WHERE @accessible_role = CAST(SESSION_CONTEXT(N''roles'') AS varchar(20)) or (SESSION_CONTEXT(N''roles'') is null and @accessible_role=''Anonymous'')');
+
+-- Adding a security policy which would restrict access to the rows in revenues table for
+-- SELECT,UPDATE,DELETE operations using the filter predicate dbo.revenuesPredicate.
 EXEC('CREATE SECURITY POLICY dbo.revenuesSecPolicy ADD FILTER PREDICATE dbo.revenuesPredicate(accessible_role) ON dbo.revenues;');

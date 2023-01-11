@@ -135,8 +135,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return _defaultAccessToken?.Token;
         }
 
-        /// <inheritdoc />
-        public override string GetSessionMapQuery(Dictionary<string, Claim>? sessionParams)
+        /// <summary>
+        /// Method to generate the query to send user data to the underlying database via SESSION_CONTEXT which might be used
+        /// for additional security (eg. using Security Policies) at the database level. The default payload limit for SESSION_CONTEXT is 1MB.
+        /// </summary>
+        /// <param name="sessionParams">Dictionary containing all the claims belonging to the user, to be used as session parameters.</param>
+        /// <returns>empty string / query to set session parameters for the connection.</returns>
+        /// <seealso cref="https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-set-session-context-transact-sql?view=sql-server-ver16"/>
+        public override string GetSessionParamsQuery(Dictionary<string, Claim>? sessionParams)
         {
             if (sessionParams is null || !_isSessionContextEnabled)
             {
@@ -148,7 +154,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             foreach ((string claimType, Claim claim) in sessionParams)
             {
                 string claimValue = AuthorizationResolver.GetClaimValue(claim);
-                sessionMapQuery = sessionMapQuery + "EXEC sp_set_session_context " + $"'{claimType}'," + claimValue + ";";
+
+                // Append statement to set read only param value - can be set only once for a connection.
+                string statementToSetReadOnlyParam = "EXEC sp_set_session_context " + $"'{claimType}'," + claimValue + ", @read_only = 1;";
+                sessionMapQuery = sessionMapQuery + statementToSetReadOnlyParam;
             }
 
             return sessionMapQuery;

@@ -109,6 +109,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         /// <param name="sessionParams">Dictionary containing all the claims belonging to the user, to be used as session parameters.</param>
         /// <returns>empty string / query to set session parameters for the connection.</returns>
-        public string GetSessionMapQuery(Dictionary<string, Claim> sessionParams);
+        public string GetSessionParamsQuery(Dictionary<string, Claim> sessionParams);
     }
 }

@@ -133,9 +133,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             // Add query to send user data from DAB to the underlying database to enable additional security the user might have configured
             // at the database level.
-            string sessionMapQuery = GetSessionMapQuery(sessionParams);
+            string sessionParamsQuery = GetSessionParamsQuery(sessionParams);
 
-            cmd.CommandText = sessionMapQuery + sqltext;
+            cmd.CommandText = sessionParamsQuery + sqltext;
             if (parameters is not null)
             {
                 foreach (KeyValuePair<string, object?> parameterEntry in parameters)
@@ -168,7 +168,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public virtual string GetSessionMapQuery(Dictionary<string, Claim>? sessionParams)
+        public virtual string GetSessionParamsQuery(Dictionary<string, Claim>? sessionParams)
         {
             return string.Empty;
         }

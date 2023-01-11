@@ -173,7 +173,7 @@ The following HTTP verbs are supported:
 Whenever you need to access a single item, you can get the item you want by specifying its primary key:
 
 ```
-GET /api/book/id/1000
+GET /api/Book/id/1000
 ```
 
 The ability to filter by primary key is supported by all verbs with the exception of POST as that verb is used to create a new item and therefore searching an item by its primary key is not applicable.

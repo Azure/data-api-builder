@@ -92,7 +92,7 @@ Run the DAB CLI command as shown below to create the entity called Books
     SUGGESTION: Use 'dab update <options>' to update any entities in your config.
 ```
 
-Start by adding the `books` entity:
+Start by adding the `Book` entity:
 
 ```json
 "entities": {

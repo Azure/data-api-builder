@@ -234,7 +234,7 @@ The element under `relationship` is used to add a field - `books` in the sample 
 
 Data API Builder will automatically figure out which columns are used to support the relationship between all the involved parts by analyzing the foreign key constraints that exist between the involved tables. For this reason, the configuration is done! (If you don't have foreign keys, you can always manually specify the columns you want to use to navigate between table relationships. More on this in the [relationships documentation](../relationships.md))
 
-The `author` entity should now look like the following:
+The `Author` entity should now look like the following:
 
 ```json
 "author": {

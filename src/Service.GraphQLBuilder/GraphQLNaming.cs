@@ -19,6 +19,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         // enforce their casing requirements
         private static readonly Regex _graphQLValidSymbols = new("[^a-zA-Z0-9_]");
 
+        /// <summary>
+        /// Per GraphQL Specification:
+        /// "Any Name within a GraphQL type system must not start with two underscores "__"
+        /// unless it is part of the introspection system as defined by this specification."
+        /// </summary>
+        /// <seealso cref="https://spec.graphql.org/October2021/#sec-Names.Reserved-Names"/>
         public const string INTROSPECTION_FIELD_PREFIX = "__";
 
         /// <summary>

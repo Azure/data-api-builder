@@ -951,7 +951,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <param name="entityName">Entity to check </param>
         /// <param name="fieldName">Name to evaluate against GraphQL naming requirements</param>
         /// <exception cref="DataApiBuilderException>
-        /// <returns>True/False</returns>
+        /// <returns>True if no name rules are broken. Otherwise, false</returns>
         public bool FieldMeetsGraphQLNameRequirements(string entityName, string fieldName)
         {
             if (_entities.TryGetValue(entityName, out Entity? entity))

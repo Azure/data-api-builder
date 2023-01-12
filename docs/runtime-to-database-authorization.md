@@ -45,10 +45,10 @@ CREATE TABLE revenues(
 INSERT INTO revenues(id, category, revenue, accessible_role) VALUES (1, 'Book', 5000, 'Anonymous'), (2, 'Comics', 10000, 'Anonymous'), (3, 'Journals', 20000, 'Authenticated'), (4, 'Series', 40000, 'Authenticated');
 
 ###### Creating function to be used as FILTER PREDICATE:
-``` Create a function to be used as a filter predicate by the security policy to restrict access to rows in the table for SELECT,UPDATE,DELETE operations.
+Create a function to be used as a filter predicate by the security policy to restrict access to rows in the table for SELECT,UPDATE,DELETE operations.
 Users with roles(claim value) = @accessible_role(column value) or,
 Users with roles(claim value) = null and @accessible_role(column value) = 'Anonymous',
-will be able to access a particular row.```
+will be able to access a particular row.
 CREATE FUNCTION dbo.revenuesPredicate(@accessible_role varchar(20))
 RETURNS TABLE
 WITH SCHEMABINDING

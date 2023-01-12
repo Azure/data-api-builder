@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 "14355", "17197", "20041", "40197", "40501", "40613", "41301", "41302", "41305", "41325", "41839", "49918", "49919", "49920",
 
                 // Transient error codes compiled from:
-                // https://docs.microsoft.com/en-us/dotnet/api/microsoft.data.sqlclient.sqlconfigurableretryfactory?view=sqlclient-dotnet-standard-4.1
+                //  https://learn.microsoft.com/en-us/dotnet/api/microsoft.data.sqlclient.sqlconfigurableretryfactory?view=sqlclient-dotnet-standard-5.0
                 "1222", "40143", "40540",
 
                 // Transient error codes compiled from:

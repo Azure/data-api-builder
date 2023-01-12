@@ -158,7 +158,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             }
         };
 
-        #region Overriden tests
+        #region overridden tests
         /// <inheritdoc/>
         [TestMethod]
         public override async Task InsertOneTestViolatingForeignKeyConstraint()

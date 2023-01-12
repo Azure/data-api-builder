@@ -22,7 +22,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
          * events finish in less than 60 seconds. During this reconfiguration time span, we might have issues with
          * connecting to your database in SQL Database.*/
         protected HashSet<string>? TransientExceptionCodes;
-
         protected HashSet<string>? ConflictExceptionCodes;
 
         public DbExceptionParser(RuntimeConfigProvider configProvider, HashSet<string> badRequestExceptionCodes)
@@ -51,7 +50,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// Helper method to determine whether an exception thrown by database is to be considered as transient.
         /// Each of the databases has their own way of classifying an exception as transient and hence the method will
-        /// be overriden in each of the subclasses.
+        /// be overridden in each of the subclasses.
         /// </summary>
         /// <param name="e">Exception to be classified as transient/non-transient.</param>
         /// <returns></returns>

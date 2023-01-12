@@ -588,13 +588,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         }
 
         /// <summary>
-        /// Abstract method overriden in each of the child class as each database has its own specific error message.
+        /// Abstract method overridden in each of the child classes as each database has its own specific error message.
         /// Validates request failure (HTTP 400) when an invalid foreign key is provided with an insertion.
         /// </summary>
         public abstract Task InsertOneTestViolatingForeignKeyConstraint();
 
         /// <summary>
-        /// Abstract method overriden in each of the child class as each database has its own specific error message.
+        /// Abstract method overridden in each of the child class as each database has its own specific error message.
         /// Validates conflict error (HTTP 409) is thrown when a user tries to insert data with duplicate key.
         /// </summary>
         public abstract Task InsertOneTestViolatingUniqueKeyConstraint();

@@ -444,7 +444,6 @@ namespace Azure.DataApiBuilder.Service.Authorization
 
             foreach (ClaimsIdentity identity in context.User.Identities)
             {
-                // Continue if identity is not authenticated.
                 if (!identity.IsAuthenticated)
                 {
                     continue;

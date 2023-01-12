@@ -148,7 +148,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     sqltext: string.Empty,
                     parameters: new Dictionary<string, object>(),
                     dataReaderHandler: null,
-                    claimsDictionary: null,
+                    sessionParams: null,
                     args: null);
             });
 

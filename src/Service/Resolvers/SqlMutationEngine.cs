@@ -370,7 +370,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             string queryString;
             Dictionary<string, object?> queryParameters;
-            Dictionary<string, Claim> claimsDictionary = AuthorizationResolver.GetAllUserClaims(_httpContextAccessor.HttpContext!);
+            Dictionary<string, Claim> sessionParams = AuthorizationResolver.GetAllUserClaims(_httpContextAccessor.HttpContext!);
             switch (operationType)
             {
                 case Config.Operation.Insert:
@@ -457,7 +457,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         queryString,
                         queryParameters,
                         _queryExecutor.ExtractRowFromDbDataReader,
-                        claimsDictionary,
+                        sessionParams,
                         sourceDefinition.PrimaryKey);
 
                 if (resultRecord is not null && resultRecord.Item1 is null)
@@ -478,7 +478,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         queryString,
                         queryParameters,
                         _queryExecutor.ExtractRowFromDbDataReader,
-                        claimsDictionary);
+                        sessionParams);
             }
 
             return resultRecord;

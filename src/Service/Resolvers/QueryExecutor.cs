@@ -58,7 +58,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string sqltext,
             IDictionary<string, object?> parameters,
             Func<DbDataReader, List<string>?, Task<TResult?>>? dataReaderHandler,
-            Dictionary<string, Claim>? claimsDictionary = null,
+            Dictionary<string, Claim>? sessionParams = null,
             List<string>? args = null)
         {
             int retryAttempt = 0;
@@ -79,7 +79,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             sqltext,
                             parameters,
                             dataReaderHandler,
-                            claimsDictionary,
+                            sessionParams,
                             args);
                     if (retryAttempt > 1)
                     {

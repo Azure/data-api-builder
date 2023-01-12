@@ -1038,7 +1038,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 Assert.AreEqual(
                     $"The claim value for claim: testClaim belonging to the user has an unsupported data type.",
                     actual: ex.Message,
-                    message: ex.Message);
+                    message: "Test expected to fail- a claim value for claim belonging to the user had datatype " +
+                    "which is not currently supported by DAB.");
             }
         }
 
@@ -1203,8 +1204,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         }
 
         /// <summary>
-        /// Test to validate the functionality of AuthorizationResolver.GetAllUserClaims() method for adding role claim -
-        /// that the role claim corresponding to the X-MS-API-ROLE header is added to the claimsInRequestContext.
+        /// Test to validate the AuthorizationResolver.GetAllUserClaims() successfully adds role claim to the claimsInRequestContext dictionary.
+        /// Only the role claim corresponding to the X-MS-API-ROLE header is added to the claimsInRequestContext.
         /// The role claim will be sourced by DAB when the user is not already a member of a system role(authenticated/anonymous),
         /// or the role claim will be sourced from a user's access token issued by an identity provider.
         /// </summary>

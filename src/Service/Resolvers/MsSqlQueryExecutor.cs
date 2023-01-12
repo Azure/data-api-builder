@@ -137,7 +137,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         /// <summary>
         /// Method to generate the query to send user data to the underlying database via SESSION_CONTEXT which might be used
-        /// for additional security (eg. using Security Policies) at the database level. The default payload limit for SESSION_CONTEXT is 1MB.
+        /// for additional security (eg. using Security Policies) at the database level. The max payload limit for SESSION_CONTEXT is 1MB.
         /// </summary>
         /// <param name="sessionParams">Dictionary containing all the claims belonging to the user, to be used as session parameters.</param>
         /// <returns>empty string / query to set session parameters for the connection.</returns>

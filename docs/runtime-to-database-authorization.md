@@ -58,16 +58,18 @@ WHERE @accessible_role = CAST(SESSION_CONTEXT(N'roles') AS varchar(20));
 
 ###### Creating SECURITY POLICY to add to the revenues table:
 Adding a security policy which would restrict access to the rows in revenues table for SELECT,UPDATE,DELETE operations using the filter predicate dbo.revenuesPredicate.  
+```sql
 CREATE SECURITY POLICY dbo.revenuesSecPolicy 
 ADD FILTER PREDICATE dbo.revenuesPredicate(accessible_role)  
 ON dbo.revenues;  
+```
 
 ##### SESSION_CONTEXT in action:
 Now that we have laid the groundwork for SESSION_CONTEXT, its time to see it in action.  
 
 ###### SCENARIO 1
 SELECT * FROM dbo.revenues;  
--- Notice that we have not set the value of the 'roles' key utilised by the filter predicate. It is worth mentioning here  
+-- Notice that we have not set the value of the 'roles' key utilized by the filter predicate. It is worth mentioning here  
 -- that any key whose value is not specified is assigned a null value).  
 
 ###### RESULT

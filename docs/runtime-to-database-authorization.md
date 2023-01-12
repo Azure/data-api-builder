@@ -81,7 +81,8 @@ Now that we have laid the groundwork for SESSION_CONTEXT, its time to see it in 
 ###### SCENARIO 1
 ```sql
 SELECT * FROM dbo.revenues;
-```Notice that we have not set the value of the 'roles' key utilized by the filter predicate.  
+```
+Notice that we have not set the value of the 'roles' key utilized by the filter predicate.  
 It is worth mentioning here that any key whose value is not specified is assigned a null value).   
 
 ###### RESULT

@@ -49,20 +49,18 @@ CREATE TABLE revenues(
 INSERT INTO revenues(id, category, revenue, accessible_role) VALUES (1, 'Book', 5000, 'Anonymous'), (2, 'Comics', 10000, 'Anonymous'), (3, 'Journals', 20000, 'Authenticated'), (4, 'Series', 40000, 'Authenticated');
 
 ###### Creating function to be used as FILTER PREDICATE:
-Create a function to be used as a filter predicate by the security policy to restrict access to rows in the table for SELECT,UPDATE,DELETE operations.  
-Users with roles(claim value) = @accessible_role(column value) will be able to access a particular row.  
-CREATE FUNCTION dbo.revenuesPredicate(@accessible_role varchar(20))
-RETURNS TABLE
-WITH SCHEMABINDING
-AS RETURN SELECT 1 AS fn_securitypredicate_result
-WHERE @accessible_role = CAST(SESSION_CONTEXT(N'roles') AS varchar(20)) or (SESSION_CONTEXT(N'roles') is null and @accessible_role='Anonymous');
+Create a function to be used as a filter predicate by the security policy to restrict access to rows in the table for SELECT,UPDATE,DELETE operations.Users with roles(claim value) = @accessible_role(column value) will be able to access a particular row.  
+CREATE FUNCTION dbo.revenuesPredicate(@accessible_role varchar(20))  
+RETURNS TABLE  
+WITH SCHEMABINDING  
+AS RETURN SELECT 1 AS fn_securitypredicate_result  
+WHERE @accessible_role = CAST(SESSION_CONTEXT(N'roles') AS varchar(20));  
 
 ###### Creating SECURITY POLICY to add to the revenues table:
-Adding a security policy which would restrict access to the rows in revenues table for  
-SELECT,UPDATE,DELETE operations using the filter predicate dbo.revenuesPredicate.  
+Adding a security policy which would restrict access to the rows in revenues table for SELECT,UPDATE,DELETE operations using the filter predicate dbo.revenuesPredicate.  
 CREATE SECURITY POLICY dbo.revenuesSecPolicy 
-ADD FILTER PREDICATE dbo.revenuesPredicate(accessible_role) 
-ON dbo.revenues;
+ADD FILTER PREDICATE dbo.revenuesPredicate(accessible_role)  
+ON dbo.revenues;  
 
 ##### SESSION_CONTEXT in action:
 Now that we have laid the groundwork for SESSION_CONTEXT, its time to see it in action.  

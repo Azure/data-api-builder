@@ -8,6 +8,10 @@
         <BaseOutputPath>..\..\out\tests</BaseOutputPath>
     </PropertyGroup>
 
+    <PropertyGroup Condition="'$(Configuration)'=='Release'">
+      <DebugType>none</DebugType>
+    </PropertyGroup>
+
     <ItemGroup>
         <PackageReference Include="coverlet.collector" >
             <PrivateAssets>all</PrivateAssets>

@@ -21,6 +21,12 @@
         <CopyToOutputDirectoryAction Condition="'$(Configuration)'=='Docker'">Never</CopyToOutputDirectoryAction>
     </PropertyGroup>
 
+    <PropertyGroup Condition="'$(Configuration)'=='Release'">
+      <DebugType>none</DebugType>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)'=='Docker'">
+      <DebugType>none</DebugType>
+    </PropertyGroup>
 
     <ItemGroup>
         <Content Update="appsettings*.json">

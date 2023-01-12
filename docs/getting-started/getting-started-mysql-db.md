@@ -135,7 +135,7 @@ Starting the runtime engine...
 info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[63]
       User profile is available. Using 'xxxxxxxxxxxxxxxxxxxxxxx' as key repository and Windows DPAPI to encrypt keys at rest.
 info: Azure.DataApiBuilder.Service.Services.ISqlMetadataProvider[0]
-      Book path: /api/book
+      Book path: /api/Book
 info: Azure.DataApiBuilder.Service.Configurations.RuntimeConfigValidator[0]
       Validating Relationship Section in Config...
 info: Microsoft.Hosting.Lifetime[14]

@@ -914,9 +914,9 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 string columnName = columnInfoFromAdapter["ColumnName"].ToString()!;
 
-                if (runtimeConfig.GraphQLGlobalSettings.Enabled)
-                {
-                    FieldMeetsGraphQLNameRequirements(entityName, columnName);
+                if (runtimeConfig.GraphQLGlobalSettings.Enabled && _entities.TryGetValue(entityName, out Entity? entity))
+                {                 
+                    FieldMeetsGraphQLNameRequirements(entity, columnName);
                 }
 
                 ColumnDefinition column = new()
@@ -948,30 +948,20 @@ namespace Azure.DataApiBuilder.Service.Services
         /// - If field does not have an alias/mapped value, then use the provided field name to
         /// check for naming violations.
         /// </summary>
-        /// <param name="entityName">Entity to check </param>
-        /// <param name="fieldName">Name to evaluate against GraphQL naming requirements</param>
+        /// <param name="entity">Entity to check </param>
+        /// <param name="databaseColumnName">Name to evaluate against GraphQL naming requirements</param>
         /// <exception cref="DataApiBuilderException>
         /// <returns>True if no name rules are broken. Otherwise, false</returns>
-        public bool FieldMeetsGraphQLNameRequirements(string entityName, string fieldName)
+        public static bool FieldMeetsGraphQLNameRequirements(Entity entity, string databaseColumnName)
         {
-            if (_entities.TryGetValue(entityName, out Entity? entity))
+            if (entity.GraphQL is bool enabled && enabled)
             {
-                if (entity.GraphQL is bool enabled && enabled)
+                if (entity.Mappings!.TryGetValue(databaseColumnName, out string? fieldAlias))
                 {
-                    if (entity.Mappings!.TryGetValue(fieldName, out string? fieldAlias))
-                    {
-                        fieldName = fieldAlias;
-                    }
-
-                    return !GraphQLNaming.IsIntrospectionField(fieldName);
+                    databaseColumnName = fieldAlias;
                 }
-            }
-            else
-            {
-                throw new DataApiBuilderException(
-                    message: "Entity not found in entities collection.",
-                    statusCode: HttpStatusCode.InternalServerError,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+
+                return !GraphQLNaming.IsIntrospectionField(databaseColumnName);
             }
 
             return true;

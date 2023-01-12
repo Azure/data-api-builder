@@ -1,8 +1,12 @@
+using System.Collections.Generic;
 using System.Net;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Services;
+using Azure.DataApiBuilder.Service.Tests.Configuration;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -201,6 +205,49 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 {
                     Assert.Fail(message: "REST and GraphQL path validation expected to fail.");
                 }
+            }
+            catch (DataApiBuilderException ex)
+            {
+                if (expectsError)
+                {
+                    Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: ex.StatusCode);
+                    Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: ex.SubStatusCode);
+                }
+                else
+                {
+                    Assert.Fail(message: "REST and GraphQL path validation expected to pass.");
+                }
+            }
+        }
+
+        [DataTestMethod, TestCategory(TestCategory.MSSQL)]
+        [DataRow("__typename", null, true, DisplayName = "Database object with column name that violates GraphQL name rules.")]
+        [DataRow("__typename", "typeName", false, DisplayName = "Runtime config entity field mapping/aliasing mitigates violation of GraphQL name rules.")]
+        [DataRow("ColumnName", null, false, DisplayName = "Database object with column name conforming to GraphQL name rules.")]
+        [DataRow("ColumnName", "__columnName", true, DisplayName = "Database object with column alias violating GraphQL name rules.")]
+        public void ValidateGraphQLReservedNaming_DatabaseColumns(string fieldName, string fieldAlias, bool expectsError)
+        {
+            Dictionary<string, string> columnNameMappings = new();
+            columnNameMappings.Add(key: fieldName, value: "ValidColumnName");
+
+            Entity sampleEntity = new(
+                Source: JsonSerializer.SerializeToElement("books"),
+                Rest: null,
+                GraphQL: JsonSerializer.SerializeToElement(true),
+                Permissions: new PermissionSetting[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: null,
+                Mappings: columnNameMappings
+                );
+
+            try
+            {
+                bool actual = MsSqlMetadataProvider.FieldMeetsGraphQLNameRequirements(sampleEntity, fieldName);
+                if (expectsError)
+                {
+                    Assert.Fail(message: "Failure expected");
+                }
+
+                Assert.AreEqual(expected: expectsError, actual);
             }
             catch (DataApiBuilderException ex)
             {

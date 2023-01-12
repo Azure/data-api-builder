@@ -158,17 +158,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 responseBody = Regex.Unescape(responseBody);
 
                 // Generate actual and expected error JObjects to assert that they are equal.
-                JObject expectedErrorObj = JObject.Parse(expected);
-                JObject actualErrorObj = JObject.Parse(responseBody);
+                JsonDocument expectedErrorObj = JsonDocument.Parse(expected);
+                JsonDocument actualErrorObj = JsonDocument.Parse(responseBody);
 
                 // Assert that the exception subStatusCode(code) and statusCode(status) are equal.
-                Assert.AreEqual(expectedErrorObj[PARENT_PROPERTY_ERROR][PROPERTY_CODE], actualErrorObj[PARENT_PROPERTY_ERROR][PROPERTY_CODE]);
-                Assert.AreEqual(expectedErrorObj[PARENT_PROPERTY_ERROR][PROPERTY_STATUS], actualErrorObj[PARENT_PROPERTY_ERROR][PROPERTY_STATUS]);
+                Assert.AreEqual(expectedErrorObj.RootElement.GetProperty(PARENT_PROPERTY_ERROR).GetProperty(PROPERTY_STATUS).ToString(),
+                    actualErrorObj.RootElement.GetProperty(PARENT_PROPERTY_ERROR).GetProperty(PROPERTY_STATUS).ToString());
+                Assert.AreEqual(expectedErrorObj.RootElement.GetProperty(PARENT_PROPERTY_ERROR).GetProperty(PROPERTY_CODE).ToString(),
+                    actualErrorObj.RootElement.GetProperty(PARENT_PROPERTY_ERROR).GetProperty(PROPERTY_CODE).ToString());
 
                 // Assert that the actual and expected error messages are same (if needed by the test),
                 // or the expectedErrorMessage is present as a substring in the actual error message.
-                string actualErrorMsg = actualErrorObj[PARENT_PROPERTY_ERROR][PROPERTY_MESSAGE].ToString();
-                string expectedErrorMsg = expectedErrorObj[PARENT_PROPERTY_ERROR][PROPERTY_MESSAGE].ToString();
+                string actualErrorMsg = actualErrorObj.RootElement.GetProperty(PARENT_PROPERTY_ERROR).GetProperty(PROPERTY_MESSAGE).ToString();
+                string expectedErrorMsg = expectedErrorObj.RootElement.GetProperty(PARENT_PROPERTY_ERROR).GetProperty(PROPERTY_MESSAGE).ToString();
                 if (isExpectedErrorMsgSubstr)
                 {
                     Assert.IsTrue(actualErrorMsg.Contains(expectedErrorMsg, StringComparison.OrdinalIgnoreCase));

@@ -65,14 +65,14 @@ ADD FILTER PREDICATE dbo.revenuesPredicate(accessible_role)
 ON dbo.revenues;
 
 ##### SESSION_CONTEXT in action:
-Now that we have laid the groundwork for SESSION_CONTEXT, its time to see it in action.
+Now that we have laid the groundwork for SESSION_CONTEXT, its time to see it in action.  
 
-SCENARIO 1: SELECT * FROM dbo.revenues;
--- Notice that we have not set the value of the 'roles' key utilised by the filter predicate. It is worth mentioning here
--- that any key whose value is not specified is assigned a null value).
+SCENARIO 1: SELECT * FROM dbo.revenues;  
+-- Notice that we have not set the value of the 'roles' key utilised by the filter predicate. It is worth mentioning here  
+-- that any key whose value is not specified is assigned a null value).  
 
-RESULT: No rows returned by the query as the FILTER PREDICATE returned 0 (false) for each of the row, i.e. none of the row is accessible to the user.
+RESULT: No rows returned by the query as the FILTER PREDICATE returned 0 (false) for each of the row, i.e. none of the row is accessible to the user.  
 
-SCENARIO 2: EXEC sp_set_session_context 'roles', 'Anonymous'; -- setting the value of 'roles' key in SESSION_CONTEXT;
-            SELECT * FROM dbo.revenues;
-RESULT: Rows corresponding to accessible_role = 'Anoymous' are returned as those rows match the criteria of the filter predicate imposed by the security policy.
+SCENARIO 2: EXEC sp_set_session_context 'roles', 'Anonymous'; -- setting the value of 'roles' key in SESSION_CONTEXT;  
+            SELECT * FROM dbo.revenues;  
+RESULT: Rows corresponding to accessible_role = 'Anoymous' are returned as those rows match the criteria of the filter predicate imposed by the security policy.  

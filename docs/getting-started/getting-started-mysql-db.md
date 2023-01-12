@@ -11,17 +11,17 @@ For Data API Builder, the format used for a MySQL connection is shown below base
 1. If MySQL server has SSL enabled, use the ADO.NET connection string format with SSL mode as required. If using an Azure MySQL Database, remember to download and install the [public SSL certificate](https://dl.cacerts.digicert.com/DigiCertGlobalRootCA.crt.pem) in the **Trusted Root certification authorities store** on the client machine using **certmgr.msc** Management Console on your local Windows system. If using an Azure cloud service like Azure App Service, you can copy the certificate to a folder on the App Service file system and add the argument **SslCa** using the full certificate path as shown below.
 
     ```
-    Server=<server-address>;Database=<database-name>;User ID=<user-d>;Password=<password>;Sslmode=Required;SslCa=<path-to-certificate>";
+    Server=<server-address>;Database=<database-name>;User ID=<username>;Password=<password>;Sslmode=Required;SslCa=<path-to-certificate>";
     ```
     
 2. If MySQL does not have SSL enabled, you can use the ADO.NET connection string format without the SSL mode parameter
     ```
-    Server=<server-address>;Database=<database-name>;User ID=<user-d>;Password=<password>;
+    Server=<server-address>;Database=<database-name>;User ID=<username>;Password=<password>;
     ```
 
 ## Create the database objects
 
-Create the database `booksdb` with tables to represent Authors, Books and the many-to-many relationship between Authors and Books. Execute this [sample script for books schema and data](../samples/getting-started/azure-mysql-db/exercise/exercise-library.azure-mysql.sql) in the Azure MySQL Database you decided to use.
+Create the database `booksdb` with tables to represent Authors, Books and the many-to-many relationship between Authors and Books. Execute this [sample script for books schema and data](../samples/getting-started/azure-mysql-db/exercise/exercise-library.azure-mysql.sql) in the MySQL Database you decided to use.
 
 - `authors`: Table containing authors
 - `books`: Table containing books
@@ -214,7 +214,13 @@ will return the first five books ordered by title in descending order.
 
 Everything is now up and working, and now you probably want to take advantage as much as possible of GraphQL capabilities to handle complex queries by sending just one request. For example you may want to get all the Authors in your library along with the books they have written. In order to achieve that you need to let Data API Builder know that you want such relationship to be available to be used in queries.
 
-Stop the engine (`Ctrl+C`) and go back to the `library-dab-config.json` and add the `relationships` section to the `Author` entity, using the code below:
+Stop the engine (`Ctrl+C`). Relationships must be defined on each entity where you want to have them. For example to create a relationship between a Book and its Authors, you can use the following DAB CLI command:
+
+```
+    dab update Author --relationship "books" --cardinality "many" --target.entity "Book" --linking.object "dbo.books_authors"
+```
+    
+which will create the relationships section in the Author entity:
 
 ```json
 "relationships": {

@@ -81,9 +81,8 @@ Now that we have laid the groundwork for SESSION_CONTEXT, its time to see it in 
 ###### SCENARIO 1
 ```sql
 SELECT * FROM dbo.revenues;
-```
--- Notice that we have not set the value of the 'roles' key utilized by the filter predicate. It is worth mentioning here  
--- that any key whose value is not specified is assigned a null value).  
+```Notice that we have not set the value of the 'roles' key utilized by the filter predicate.  
+It is worth mentioning here that any key whose value is not specified is assigned a null value).   
 
 ###### RESULT
 No rows returned by the query as the FILTER PREDICATE returned 0 (false) for each of the row, i.e. none of the row is accessible to the user.  
@@ -95,4 +94,4 @@ SELECT * FROM dbo.revenues;
 ```
 
 ###### RESULT
-Rows corresponding to accessible_role = 'Anoymous' are returned as those rows match the criteria of the filter predicate imposed by the security policy.  
+Rows corresponding to `accessible_role` = 'Anoymous' are returned as those rows match the criteria of the filter predicate imposed by the security policy.  

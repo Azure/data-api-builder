@@ -49,8 +49,8 @@ CREATE TABLE revenues(
 INSERT INTO revenues(id, category, revenue, accessible_role) VALUES (1, 'Book', 5000, 'Anonymous'), (2, 'Comics', 10000, 'Anonymous'), (3, 'Journals', 20000, 'Authenticated'), (4, 'Series', 40000, 'Authenticated');
 
 ###### Creating function to be used as FILTER PREDICATE:
---Create a function to be used as a filter predicate by the security policy to restrict access to rows in the table for SELECT,UPDATE,DELETE operations.
---Users with roles(claim value) = @accessible_role(column value) will be able to access a particular row.
+Create a function to be used as a filter predicate by the security policy to restrict access to rows in the table for SELECT,UPDATE,DELETE operations.  
+Users with roles(claim value) = @accessible_role(column value) will be able to access a particular row.  
 CREATE FUNCTION dbo.revenuesPredicate(@accessible_role varchar(20))
 RETURNS TABLE
 WITH SCHEMABINDING
@@ -58,8 +58,8 @@ AS RETURN SELECT 1 AS fn_securitypredicate_result
 WHERE @accessible_role = CAST(SESSION_CONTEXT(N'roles') AS varchar(20)) or (SESSION_CONTEXT(N'roles') is null and @accessible_role='Anonymous');
 
 ###### Creating SECURITY POLICY to add to the revenues table:
--- Adding a security policy which would restrict access to the rows in revenues table for
--- SELECT,UPDATE,DELETE operations using the filter predicate dbo.revenuesPredicate.
+Adding a security policy which would restrict access to the rows in revenues table for  
+SELECT,UPDATE,DELETE operations using the filter predicate dbo.revenuesPredicate.  
 CREATE SECURITY POLICY dbo.revenuesSecPolicy 
 ADD FILTER PREDICATE dbo.revenuesPredicate(accessible_role) 
 ON dbo.revenues;
@@ -67,12 +67,17 @@ ON dbo.revenues;
 ##### SESSION_CONTEXT in action:
 Now that we have laid the groundwork for SESSION_CONTEXT, its time to see it in action.  
 
-SCENARIO 1: SELECT * FROM dbo.revenues;  
+###### SCENARIO 1
+SELECT * FROM dbo.revenues;  
 -- Notice that we have not set the value of the 'roles' key utilised by the filter predicate. It is worth mentioning here  
 -- that any key whose value is not specified is assigned a null value).  
 
-RESULT: No rows returned by the query as the FILTER PREDICATE returned 0 (false) for each of the row, i.e. none of the row is accessible to the user.  
+###### RESULT
+No rows returned by the query as the FILTER PREDICATE returned 0 (false) for each of the row, i.e. none of the row is accessible to the user.  
 
-SCENARIO 2: EXEC sp_set_session_context 'roles', 'Anonymous'; -- setting the value of 'roles' key in SESSION_CONTEXT;  
-            SELECT * FROM dbo.revenues;  
-RESULT: Rows corresponding to accessible_role = 'Anoymous' are returned as those rows match the criteria of the filter predicate imposed by the security policy.  
+###### SCENARIO 2
+EXEC sp_set_session_context 'roles', 'Anonymous'; -- setting the value of 'roles' key in SESSION_CONTEXT;  
+SELECT * FROM dbo.revenues;  
+
+###### RESULT
+Rows corresponding to accessible_role = 'Anoymous' are returned as those rows match the criteria of the filter predicate imposed by the security policy.  

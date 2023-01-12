@@ -458,7 +458,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                      * claim.ValueType: "string"
                      */
                     // At this point, only add non-role claims to the collection and only throw an exception for duplicate non-role claims.
-                    if (claim.Type is not AuthenticationConfig.ROLE_CLAIM_TYPE && claim.Type is not ClaimTypes.Role &&
+                    if (!claim.Type.Equals(AuthenticationConfig.ROLE_CLAIM_TYPE) && claim.Type is not ClaimTypes.Role &&
                         !claimsInRequestContext.TryAdd(claim.Type, claim))
                     {
                         // If there are duplicate claims present in the request, return an exception.

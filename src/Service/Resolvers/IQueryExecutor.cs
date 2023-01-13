@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
-using System.Security.Claims;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
@@ -21,14 +21,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="parameters">The parameters used to execute the SQL text.</param>
         /// <param name="dataReaderHandler">The function to invoke to handle the results
         /// in the DbDataReader obtained after executing the query.</param>
-        /// <param name="sessionParams">Dictionary containing all the claims belonging to the user, to be used as session parameters.</param>
+        /// <param name="httpContext">Current request httpContext.</param>
         /// <param name="args">List of string arguments to the DbDataReader handler.</param>
         /// <returns>An object formed using the results of the query as returned by the given handler.</returns>
         public Task<TResult?> ExecuteQueryAsync<TResult>(
             string sqltext,
             IDictionary<string, object?> parameters,
             Func<DbDataReader, List<string>?, Task<TResult?>>? dataReaderHandler,
-            Dictionary<string, Claim>? sessionParams = null,
+            HttpContext? httpContext = null,
             List<string>? args = null);
 
         /// <summary>
@@ -107,8 +107,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Method to generate the query to send user data to the underlying database which might be used
         /// for additional security at the database level.
         /// </summary>
-        /// <param name="sessionParams">Dictionary containing all the claims belonging to the user, to be used as session parameters.</param>
+        /// <param name="httpContext">Current user httpContext.</param>
         /// <returns>empty string / query to set session parameters for the connection.</returns>
-        public string GetSessionParamsQuery(Dictionary<string, Claim> sessionParams);
+        public string GetSessionParamsQuery(HttpContext? httpContext);
     }
 }

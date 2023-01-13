@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Net;
-using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -11,6 +10,7 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Retry;
@@ -58,7 +58,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string sqltext,
             IDictionary<string, object?> parameters,
             Func<DbDataReader, List<string>?, Task<TResult?>>? dataReaderHandler,
-            Dictionary<string, Claim>? sessionParams = null,
+            HttpContext? httpContext = null,
             List<string>? args = null)
         {
             int retryAttempt = 0;
@@ -79,7 +79,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             sqltext,
                             parameters,
                             dataReaderHandler,
-                            sessionParams,
+                            httpContext,
                             args);
                     if (retryAttempt > 1)
                     {
@@ -116,7 +116,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="parameters">The parameters used to execute the SQL text.</param>
         /// <param name="dataReaderHandler">The function to invoke to handle the results
         /// in the DbDataReader obtained after executing the query.</param>
-        /// <param name="sessionParams">Dictionary containing all the claims belonging to the user, to be used as session parameters.</param>
+        /// <param name="httpContext">Current user httpContext.</param>
         /// <param name="args">List of string arguments to the DbDataReader handler.</param>
         /// <returns>An object formed using the results of the query as returned by the given handler.</returns>
         public virtual async Task<TResult?> ExecuteQueryAgainstDbAsync<TResult>(
@@ -124,7 +124,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string sqltext,
             IDictionary<string, object?> parameters,
             Func<DbDataReader, List<string>?, Task<TResult?>>? dataReaderHandler,
-            Dictionary<string, Claim>? sessionParams,
+            HttpContext? httpContext,
             List<string>? args = null)
         {
             await conn.OpenAsync();
@@ -133,7 +133,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             // Add query to send user data from DAB to the underlying database to enable additional security the user might have configured
             // at the database level.
-            string sessionParamsQuery = GetSessionParamsQuery(sessionParams);
+            string sessionParamsQuery = GetSessionParamsQuery(httpContext);
 
             cmd.CommandText = sessionParamsQuery + sqltext;
             if (parameters is not null)
@@ -168,7 +168,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public virtual string GetSessionParamsQuery(Dictionary<string, Claim>? sessionParams)
+        public virtual string GetSessionParamsQuery(HttpContext? httpContext)
         {
             return string.Empty;
         }

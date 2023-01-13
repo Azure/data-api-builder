@@ -8,6 +8,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.Identity;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 
@@ -140,16 +141,18 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Method to generate the query to send user data to the underlying database via SESSION_CONTEXT which might be used
         /// for additional security (eg. using Security Policies) at the database level. The max payload limit for SESSION_CONTEXT is 1MB.
         /// </summary>
-        /// <param name="sessionParams">Dictionary containing all the claims belonging to the user, to be used as session parameters.</param>
+        /// <param name="httpContext">Current user httpContext.</param>
         /// <returns>empty string / query to set session parameters for the connection.</returns>
         /// <seealso cref="https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-set-session-context-transact-sql?view=sql-server-ver16"/>
-        public override string GetSessionParamsQuery(Dictionary<string, Claim>? sessionParams)
+        public override string GetSessionParamsQuery(HttpContext? httpContext)
         {
-            if (sessionParams is null || !_isSessionContextEnabled)
+            if (httpContext is null || !_isSessionContextEnabled)
             {
                 return string.Empty;
             }
 
+            //Dictionary containing all the claims belonging to the user, to be used as session parameters.
+            Dictionary<string, Claim> sessionParams = AuthorizationResolver.GetAllUserClaims(httpContext);
             StringBuilder sessionMapQuery = new();
 
             foreach ((string claimType, Claim claim) in sessionParams)

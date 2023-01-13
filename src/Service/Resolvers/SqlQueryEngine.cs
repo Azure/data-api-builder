@@ -6,7 +6,6 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
@@ -124,7 +123,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         queryString,
                         structure.Parameters,
                         _queryExecutor.GetJsonResultAsync<List<JsonDocument>>,
-                        AuthorizationResolver.GetAllUserClaims(_httpContextAccessor.HttpContext!));
+                        _httpContextAccessor.HttpContext!);
 
                 if (jsonListResult is null)
                 {
@@ -305,7 +304,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     queryString,
                     structure.Parameters,
                     _queryExecutor.GetJsonResultAsync<JsonDocument>,
-                    AuthorizationResolver.GetAllUserClaims(_httpContextAccessor.HttpContext!));
+                    _httpContextAccessor.HttpContext!);
             return jsonDocument;
         }
 
@@ -324,7 +323,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     queryString,
                     structure.Parameters,
                     _queryExecutor.GetJsonArrayAsync,
-                    AuthorizationResolver.GetAllUserClaims(_httpContextAccessor.HttpContext!));
+                    _httpContextAccessor.HttpContext!);
 
             JsonDocument jsonDocument = null;
 

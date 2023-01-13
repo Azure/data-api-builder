@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Diagnostics.Metrics;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
@@ -7,6 +8,7 @@ using Azure.Core;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Service.Models;
 using Azure.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
@@ -142,9 +144,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// for additional security (eg. using Security Policies) at the database level. The max payload limit for SESSION_CONTEXT is 1MB.
         /// </summary>
         /// <param name="httpContext">Current user httpContext.</param>
+        /// <param name="parameters">Dictionary of parameters/value required to execute the query.</param>
         /// <returns>empty string / query to set session parameters for the connection.</returns>
         /// <seealso cref="https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-set-session-context-transact-sql?view=sql-server-ver16"/>
-        public override string GetSessionParamsQuery(HttpContext? httpContext)
+        public override string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, object?> parameters)
         {
             if (httpContext is null || !_isSessionContextEnabled)
             {
@@ -153,14 +156,18 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             //Dictionary containing all the claims belonging to the user, to be used as session parameters.
             Dictionary<string, Claim> sessionParams = AuthorizationResolver.GetAllUserClaims(httpContext);
+
+            // Counter to generate different param name for each of the sessionParam.
+            IncrementingInteger counter = new();
+            string paramNamePrefix = "session_param";
             StringBuilder sessionMapQuery = new();
 
             foreach ((string claimType, Claim claim) in sessionParams)
             {
-                string claimValue = AuthorizationResolver.GetClaimValue(claim);
-
+                string paramName = $"{paramNamePrefix}{counter.Next()}";
+                parameters.Add(paramName, claim.Value);
                 // Append statement to set read only param value - can be set only once for a connection.
-                string statementToSetReadOnlyParam = "EXEC sp_set_session_context " + $"'{claimType}'," + claimValue + ", @read_only = 1;";
+                string statementToSetReadOnlyParam = "EXEC sp_set_session_context " + $"'{claimType}', @" + paramName + ", @read_only = 1;";
                 sessionMapQuery = sessionMapQuery.Append(statementToSetReadOnlyParam);
             }
 

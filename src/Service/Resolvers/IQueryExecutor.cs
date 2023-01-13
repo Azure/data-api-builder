@@ -108,7 +108,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// for additional security at the database level.
         /// </summary>
         /// <param name="httpContext">Current user httpContext.</param>
+        /// <param name="parameters">Dictionary of parameters/value required to execute the query.</param>
         /// <returns>empty string / query to set session parameters for the connection.</returns>
-        public string GetSessionParamsQuery(HttpContext? httpContext);
+        public string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, object?> parameters);
     }
 }

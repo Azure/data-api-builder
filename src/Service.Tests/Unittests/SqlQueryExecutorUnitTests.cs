@@ -60,7 +60,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestCategory.MSSQL);
             runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString = connectionString;
-            Mock<DbExceptionParser> dbExceptionParser = new(runtimeConfigProvider, new HashSet<string>());
+            Mock<DbExceptionParser> dbExceptionParser = new(runtimeConfigProvider);
             Mock<ILogger<MsSqlQueryExecutor>> queryExecutorLogger = new();
             MsSqlQueryExecutor msSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser.Object, queryExecutorLogger.Object);
 

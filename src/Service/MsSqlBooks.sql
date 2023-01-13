@@ -35,6 +35,7 @@ DROP TABLE IF EXISTS aow;
 DROP TABLE IF EXISTS series;
 DROP TABLE IF EXISTS sales;
 DROP TABLE IF EXISTS authors_history;
+DROP TABLE IF EXISTS graphql_incompatible;
 DROP SCHEMA IF EXISTS [foo];
 COMMIT;
 
@@ -194,6 +195,12 @@ CREATE TABLE authors_history (
     last_name varchar(100) NOT NULL,
     year_of_publish int,
     books_published int
+);
+
+CREATE TABLE graphql_incompatible (
+    __typeName int PRIMARY KEY,
+    __introspectionName int,
+    conformingName varchar(12)
 );
 
 ALTER TABLE books

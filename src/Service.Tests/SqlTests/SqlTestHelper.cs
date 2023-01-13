@@ -21,9 +21,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         // for REST requests.
         public static readonly string jsonResultTopLevelKey = "value";
 
-        // Json Property in error which the holds the actual exception properties. 
-        public const string PARENT_PROPERTY_ERROR = "error";
-
         // Exception properties to put assertions when verifying results of SqlTests which expect exception.
         private const string PROPERTY_MESSAGE = "message";
         private const string PROPERTY_STATUS = "status";
@@ -158,8 +155,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 responseBody = Regex.Unescape(responseBody);
 
                 // Generate actual and expected error JObjects to assert that they are equal.
-                JsonDocument expectedErrorObj = JsonDocument.Parse(expected);
-                JsonDocument actualErrorObj = JsonDocument.Parse(responseBody);
+                using JsonDocument expectedErrorObj = JsonDocument.Parse(expected);
+                using JsonDocument actualErrorObj = JsonDocument.Parse(responseBody);
+
+                // Json Property in error which the holds the actual exception properties. 
+                string PARENT_PROPERTY_ERROR = "error";
 
                 // Assert that the exception subStatusCode(code) and statusCode(status) are equal.
                 Assert.AreEqual(expectedErrorObj.RootElement.GetProperty(PARENT_PROPERTY_ERROR).GetProperty(PROPERTY_STATUS).ToString(),

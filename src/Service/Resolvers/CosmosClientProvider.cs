@@ -32,10 +32,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else
             {
-                runtimeConfigProvider.RuntimeConfigLoaded += (sender, newValue) =>
+                runtimeConfigProvider.RuntimeConfigLoadedHandlers.Add((sender, newValue) =>
                 {
                     InitializeClient(newValue);
-                };
+                    return Task.FromResult(true);
+                });
             }
         }
 

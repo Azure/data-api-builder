@@ -903,7 +903,7 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 throw new DataApiBuilderException(
                        message: $"Primary key not configured on the given database object {tableName}",
-                       statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                       statusCode: HttpStatusCode.ServiceUnavailable,
                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
@@ -914,9 +914,14 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 string columnName = columnInfoFromAdapter["ColumnName"].ToString()!;
 
-                if (runtimeConfig.GraphQLGlobalSettings.Enabled && _entities.TryGetValue(entityName, out Entity? entity))
-                {                 
-                    FieldMeetsGraphQLNameRequirements(entity, columnName);
+                if (runtimeConfig.GraphQLGlobalSettings.Enabled
+                    && _entities.TryGetValue(entityName, out Entity? entity)
+                    && IsGraphQLReservedName(entity, columnName))
+                {
+                    throw new DataApiBuilderException(
+                       message: $"The column '{columnName}' violates GraphQL name restrictions.",
+                       statusCode: HttpStatusCode.ServiceUnavailable,
+                       subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                 }
 
                 ColumnDefinition column = new()
@@ -941,10 +946,10 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Determine whether the provided field of a GraphQL enabled entity meets GraphQL naming requirements.
+        /// Determine whether the provided field of a GraphQL enabled entity meets GraphQL reserved name requirements.
         /// Criteria:
         /// - Is GraphQL Enabled for entity
-        /// - If field has an alias/mapped value, then use the alias to evaluate name violation.
+        /// - If field has an mapped value (alias), then use the mapped value to evaluate name violation.
         /// - If field does not have an alias/mapped value, then use the provided field name to
         /// check for naming violations.
         /// </summary>
@@ -952,20 +957,22 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <param name="databaseColumnName">Name to evaluate against GraphQL naming requirements</param>
         /// <exception cref="DataApiBuilderException>
         /// <returns>True if no name rules are broken. Otherwise, false</returns>
-        public static bool FieldMeetsGraphQLNameRequirements(Entity entity, string databaseColumnName)
+        public static bool IsGraphQLReservedName(Entity entity, string databaseColumnName)
         {
             if (entity.GraphQL is bool enabled && enabled)
             {
-                if (entity.Mappings!.TryGetValue(databaseColumnName, out string? fieldAlias))
+                if (entity.Mappings!.TryGetValue(databaseColumnName, out string? fieldAlias)
+                    && !string.IsNullOrWhiteSpace(fieldAlias))
                 {
                     databaseColumnName = fieldAlias;
                 }
 
-                return !GraphQLNaming.IsIntrospectionField(databaseColumnName);
+                return IsIntrospectionField(databaseColumnName);
             }
 
-            return true;
+            return false;
         }
+
         /// <summary>
         /// Gets the DataTable from the EntitiesDataSet if already present.
         /// If not present, fills it first and returns the same.

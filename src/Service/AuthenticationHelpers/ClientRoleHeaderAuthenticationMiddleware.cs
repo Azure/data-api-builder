@@ -93,7 +93,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
             }
 
             // When the user is not in the clientDefinedRole and the client role header
-            // is resolved to a system role (anonymous, authenticated), add the matcching system
+            // is resolved to a system role (anonymous, authenticated), add the matching system
             // role name as a role claim to the ClaimsIdentity.
             if (!httpContext.User.IsInRole(clientDefinedRole) && IsSystemRole(clientDefinedRole))
             {

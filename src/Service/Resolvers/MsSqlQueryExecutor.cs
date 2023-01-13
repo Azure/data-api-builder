@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Security.Claims;
+using System.Text;
 using System.Threading.Tasks;
 using Azure.Core;
 using Azure.DataApiBuilder.Config;
@@ -149,7 +150,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 return string.Empty;
             }
 
-            string sessionMapQuery = string.Empty;
+            StringBuilder sessionMapQuery = new();
 
             foreach ((string claimType, Claim claim) in sessionParams)
             {
@@ -157,10 +158,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 // Append statement to set read only param value - can be set only once for a connection.
                 string statementToSetReadOnlyParam = "EXEC sp_set_session_context " + $"'{claimType}'," + claimValue + ", @read_only = 1;";
-                sessionMapQuery = sessionMapQuery + statementToSetReadOnlyParam;
+                sessionMapQuery = sessionMapQuery.Append(statementToSetReadOnlyParam);
             }
 
-            return sessionMapQuery;
+            return sessionMapQuery.ToString();
         }
     }
 }

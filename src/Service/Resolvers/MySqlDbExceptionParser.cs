@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Data.Common;
 using System.Net;
 using Azure.DataApiBuilder.Service.Configurations;
@@ -11,9 +12,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     /// </summary>
     public class MySqlDbExceptionParser : DbExceptionParser
     {
-        public MySqlDbExceptionParser(RuntimeConfigProvider configProvider) : base(configProvider,
+        public MySqlDbExceptionParser(RuntimeConfigProvider configProvider) : base(configProvider)
+        {
             // HashSet of 'SqlState'(s) which are to be considered as bad requests.
-            new()
+            BadRequestExceptionCodes.UnionWith(new List<string>
             {
                 // ER_BAD_NULL_ERROR : Column '%s' cannot be null
                 "1048",
@@ -44,21 +46,26 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 "1859",
                 // 15. ER_CONSTRAINT_FAILED: CONSTRAINT %`s failed for %`-.192s.%`-.192s
                 "4025"
-            })
-        {
-            TransientExceptionCodes = new() {
+            });
+
+            TransientExceptionCodes.UnionWith(new List<string>
+            {
                 // List compiled from: https://mariadb.com/kb/en/mariadb-error-codes/
                 "1020", "1021", "1037", "1038", "1040", "1041", "1150", "1151", "1156", "1157",
-                "1158", "1159", "1160", "1161", "1192", "1203", "1205", "1206", "1223" };
+                "1158", "1159", "1160", "1161", "1192", "1203", "1205", "1206", "1223"
+            });
 
-            ConflictExceptionCodes = new() { "1022", "1062", "1223", "1586", "1706", "1934" };
+            ConflictExceptionCodes.UnionWith(new List<string>
+            {
+                "1022", "1062", "1223", "1586", "1706", "1934"
+            });
         }
 
         /// <inheritdoc/>
         public override bool IsTransientException(DbException e)
         {
             MySqlException ex = (MySqlException)e;
-            return TransientExceptionCodes!.Contains(ex.Number.ToString());
+            return TransientExceptionCodes.Contains(ex.Number.ToString());
         }
 
         /// <inheritdoc/>
@@ -72,7 +79,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 return HttpStatusCode.BadRequest;
             }
 
-            if (ConflictExceptionCodes!.Contains(exceptionNumber))
+            if (ConflictExceptionCodes.Contains(exceptionNumber))
             {
                 return HttpStatusCode.Conflict;
             }

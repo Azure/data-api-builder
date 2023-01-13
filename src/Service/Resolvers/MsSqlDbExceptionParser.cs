@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Data.Common;
 using System.Net;
 using Azure.DataApiBuilder.Service.Configurations;
@@ -11,9 +12,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     /// </summary>
     public class MsSqlDbExceptionParser : DbExceptionParser
     {
-        public MsSqlDbExceptionParser(RuntimeConfigProvider configProvider) : base(configProvider,
+        public MsSqlDbExceptionParser(RuntimeConfigProvider configProvider) : base(configProvider)
+        {
             // HashSet of Error codes ('Number') which are to be considered as bad requests.
-            new()
+            BadRequestExceptionCodes.UnionWith(new List<string>
             {
                 "157", "158", "169", "404", "412", "414", "415",
                 "489", "513", "515", "544", "545", "547",
@@ -24,9 +26,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 "4442", "4443", "4444", "4445", "4446", "4447", "4448",
                 "4450", "4451", "4452", "4453", "4454", "4455", "4456",
                 "4457", "4933", "4934", "4936", "4988", "8102"
-            })
-        {
-            TransientExceptionCodes = new(){
+            });
+
+            TransientExceptionCodes.UnionWith(new List<string>
+            {
                 // Transient error codes compiled from:
                 // https://github.com/dotnet/efcore/blob/main/src/EFCore.SqlServer/Storage/Internal/SqlServerTransientExceptionDetector.cs
                 "20", "64", "121", "233", "601", "617", "669", "921", "997", "1203", "1204", "1205", "1221", "1807", "3935", "3960",
@@ -48,13 +51,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 // Transient error codes compiled from:
                 // https://docs.microsoft.com/en-us/sql/relational-databases/errors-events/database-engine-events-and-errors?view=sql-server-ver16
                 "18456"
-            };
+            });
 
-            ConflictExceptionCodes = new()
+            ConflictExceptionCodes.UnionWith(new List<string>
             {
                 "548", "2627", "22818", "22819", "22820", "22821",
                 "22822", "22823", "22824", "22825", "3960", "5062"
-            };
+            });
         }
 
         /// <inheritdoc/>
@@ -66,7 +69,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 return HttpStatusCode.BadRequest;
             }
 
-            if (ConflictExceptionCodes!.Contains(exceptionNumber))
+            if (ConflictExceptionCodes.Contains(exceptionNumber))
             {
                 return HttpStatusCode.Conflict;
             }
@@ -78,7 +81,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public override bool IsTransientException(DbException e)
         {
             string errorNumber = ((SqlException)e).Number.ToString();
-            return TransientExceptionCodes!.Contains(errorNumber);
+            return TransientExceptionCodes.Contains(errorNumber);
         }
     }
 }

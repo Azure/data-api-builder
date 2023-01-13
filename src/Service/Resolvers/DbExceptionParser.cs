@@ -21,13 +21,16 @@ namespace Azure.DataApiBuilder.Service.Resolvers
          * An occasional cause of transient errors can be reconfiguration events. Most of these reconfiguration
          * events finish in less than 60 seconds. During this reconfiguration time span, we might have issues with
          * connecting to your database in SQL Database.*/
-        protected HashSet<string>? TransientExceptionCodes;
-        protected HashSet<string>? ConflictExceptionCodes;
+        protected HashSet<string> TransientExceptionCodes;
+        protected HashSet<string> ConflictExceptionCodes;
 
-        public DbExceptionParser(RuntimeConfigProvider configProvider, HashSet<string> badRequestExceptionCodes)
+        public DbExceptionParser(RuntimeConfigProvider configProvider)
         {
             _developerMode = configProvider.IsDeveloperMode();
-            BadRequestExceptionCodes = badRequestExceptionCodes;
+            BadRequestExceptionCodes = new();
+            TransientExceptionCodes = new();
+            ConflictExceptionCodes = new();
+            ;
         }
 
         /// <summary>

@@ -199,7 +199,6 @@ CREATE TABLE authors_history (
 
 CREATE TABLE graphql_incompatible (
     __typeName int PRIMARY KEY,
-    __introspectionName int,
     conformingName varchar(12)
 );
 

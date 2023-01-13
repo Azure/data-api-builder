@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Microsoft.Extensions.Logging;
@@ -959,9 +958,10 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <returns>True if no name rules are broken. Otherwise, false</returns>
         public static bool IsGraphQLReservedName(Entity entity, string databaseColumnName)
         {
-            if (entity.GraphQL is bool enabled && enabled)
+            if (entity.GraphQL is not null && entity.GraphQL is bool enabled && enabled)
             {
-                if (entity.Mappings!.TryGetValue(databaseColumnName, out string? fieldAlias)
+                if (entity.Mappings is not null
+                    && entity.Mappings.TryGetValue(databaseColumnName, out string? fieldAlias)
                     && !string.IsNullOrWhiteSpace(fieldAlias))
                 {
                     databaseColumnName = fieldAlias;

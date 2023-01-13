@@ -925,6 +925,78 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
+        /// - Name violation, but GraphQL globally turned off
+        /// - Name violation, graphql globally on, entity graphql turned off
+        /// - Permissions hide violating column names
+        /// - Violating column names have proper aliases
+        /// - violating column names have violating aliases
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(true, true, "__typeName", "__introspectionField", true)]
+        [DataRow(true, true, "__typeName", "columnMapping", false)]
+        [DataRow(false, true, null, null, false)]
+        [DataRow(true, false, null, null, false)]
+        public void TestInvalidDatabaseColumnNameHandling(
+            bool globalGraphQLEnabled,
+            bool entityGraphQLEnabled,
+            string columnName,
+            string columnMapping,
+            bool expectError)
+        {
+            Dictionary<GlobalSettingsType, object> settings = new()
+            {
+                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){ Enabled = globalGraphQLEnabled }) }
+            };
+
+            DataSource dataSource = new(DatabaseType.mssql)
+            {
+                ConnectionString = GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)
+            };
+
+            // Configure Entity for testing
+            Dictionary<string, string> mappings = new()
+            {
+                { "__introspectionName","conformingIntrospectionName"}
+            };
+
+            if (!string.IsNullOrWhiteSpace(columnMapping))
+            {
+                mappings.Add(columnName, columnMapping);
+            }
+
+            Entity entity = new(
+                Source: JsonSerializer.SerializeToElement("graphql_incompatible"),
+                Rest: null,
+                GraphQL: JsonSerializer.SerializeToElement(entityGraphQLEnabled),
+                Permissions: new PermissionSetting[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: null,
+                Mappings: mappings
+                );
+
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(globalSettings: settings, dataSource: dataSource, entity: entity, entityName: "graphqlNameCompat");
+
+            const string CUSTOM_CONFIG = "custom-config.json";
+            File.WriteAllText(
+                CUSTOM_CONFIG,
+                JsonSerializer.Serialize(configuration, RuntimeConfig.SerializerOptions));
+
+            string[] args = new[]
+            {
+                    $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            try
+            {
+                using TestServer server = new(Program.CreateWebHostBuilder(args));
+                Assert.IsFalse(expectError, message: "Expected startup to fail.");
+            }
+            catch (Exception ex)
+            {
+                Assert.IsTrue(expectError, message: "Startup was not expected to fail. " + ex.Message);
+            }        
+        }
+
+        /// <summary>
         /// Validates that schema introspection requests fail when allow-introspection is false in the runtime configuration.
         /// </summary>
         /// <seealso cref="https://github.com/ChilliCream/hotchocolate/blob/6b2cfc94695cb65e2f68f5d8deb576e48397a98a/src/HotChocolate/Core/src/Abstractions/ErrorCodes.cs#L287"/>
@@ -1063,9 +1135,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <param name="globalSettings">Globla settings config.</param>
         /// <param name="dataSource">DataSource to pull connectionstring required for engine start.</param>
         /// <returns></returns>
-        public static RuntimeConfig InitMinimalRuntimeConfig(Dictionary<GlobalSettingsType, object> globalSettings, DataSource dataSource)
+        public static RuntimeConfig InitMinimalRuntimeConfig(
+            Dictionary<GlobalSettingsType, object> globalSettings,
+            DataSource dataSource,
+            Entity entity = null,
+            string entityName = null)
         {
-            Entity sampleEntity = new(
+            if (entity is null)
+            {
+                entity = new(
                 Source: JsonSerializer.SerializeToElement("books"),
                 Rest: null,
                 GraphQL: JsonSerializer.SerializeToElement(new GraphQLEntitySettings(Type: new SingularPlural(Singular: "book", Plural: "books"))),
@@ -1073,10 +1151,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Relationships: null,
                 Mappings: null
                 );
+            }
+
+            if (entityName is null)
+            {
+                entityName = "Book";
+            }
 
             Dictionary<string, Entity> entityMap = new()
             {
-                { "Book", sampleEntity }
+                { entityName, entity }
             };
 
             RuntimeConfig runtimeConfig = new(

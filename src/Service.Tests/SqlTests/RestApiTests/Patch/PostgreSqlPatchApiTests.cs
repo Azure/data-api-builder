@@ -200,7 +200,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
             await base.PatchOneViewBadRequestTest(expectedErrorMessage);
         }
 
-        #region Overriden tests
+        #region overridden tests
 
         #endregion
 

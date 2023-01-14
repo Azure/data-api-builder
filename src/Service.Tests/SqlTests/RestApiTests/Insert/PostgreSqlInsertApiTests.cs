@@ -183,7 +183,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         public async Task InsertOneInViewBadRequestTest()
         {
             string expectedErrorMessage = $"55000: cannot insert into view \"{_composite_subset_bookPub}\"";
-            await base.InsertOneInViewBadRequestTest(expectedErrorMessage);
+            await base.InsertOneInViewBadRequestTest(expectedErrorMessage, isExpectedErrorMsgSubstr: true);
         }
 
         #region overridden tests

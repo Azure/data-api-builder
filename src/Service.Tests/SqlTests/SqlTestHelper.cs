@@ -9,7 +9,6 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
-using HotChocolate;
 using Microsoft.Data.SqlClient;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json.Linq;
@@ -161,8 +160,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 // Generate actual and expected error JObjects to assert that they are equal.
                 JsonElement expectedErrorObj = JsonDocument.Parse(expected).RootElement.GetProperty(PARENT_PROPERTY_ERROR);
                 JsonElement actualErrorObj = JsonDocument.Parse(responseBody).RootElement.GetProperty(PARENT_PROPERTY_ERROR);
-
-
 
                 // Assert that the exception subStatusCode(code) and statusCode(status) are equal.
                 Assert.AreEqual(expectedErrorObj.GetProperty(PROPERTY_STATUS).ToString(),

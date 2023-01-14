@@ -340,6 +340,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="expectedStatusCode">int represents the returned http status code</param>
         /// <param name="expectedSubStatusCode">enum represents the returned sub status code</param>
         /// <param name="expectedLocationHeader">The expected location header in the response (if any)</param>
+        /// <param name="isExpectedErrorMsgSubstr">When set to true, will look for a substring 'expectedErrorMessage'
+        /// in the actual error message to verify the test result. This is helpful when the actual error message is dynamic and changes
+        /// on every single run of the test.</param>
         /// <returns></returns>
         protected static async Task SetupAndRunRestApiTest(
             string primaryKeyRoute,
@@ -358,7 +361,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             string expectedAfterQueryString = "",
             bool paginated = false,
             int verifyNumRecords = -1,
-            bool expectJson = true)
+            bool expectJson = true,
+            bool isExpectedErrorMsgSubstr = false)
         {
             // Create the rest endpoint using the path and entity name.
             string restEndPoint = restPath + "/" + entityNameOrPath;
@@ -466,7 +470,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 exceptionExpected: exceptionExpected,
                 httpMethod: httpMethod,
                 expectedLocationHeader: expectedLocationHeader,
-                verifyNumRecords: verifyNumRecords);
+                verifyNumRecords: verifyNumRecords,
+                isExpectedErrorMsgSubstr: isExpectedErrorMsgSubstr);
         }
 
         /// <summary>

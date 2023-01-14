@@ -246,7 +246,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             }
         };
 
-        #region Overriden tests
+        #region overridden tests
         [TestMethod]
         [Ignore]
         public override Task PutOneInsertInViewTest()

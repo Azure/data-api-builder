@@ -1051,7 +1051,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             catch (Exception ex)
             {
                 Assert.IsTrue(expectError, message: "Startup was not expected to fail. " + ex.Message);
-            }        
+            }
         }
 
         /// <summary>

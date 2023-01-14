@@ -153,12 +153,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 return string.Empty;
             }
 
-            //Dictionary containing all the claims belonging to the user, to be used as session parameters.
+            // Dictionary containing all the claims belonging to the user, to be used as session parameters.
             Dictionary<string, Claim> sessionParams = AuthorizationResolver.GetAllUserClaims(httpContext);
 
             // Counter to generate different param name for each of the sessionParam.
             IncrementingInteger counter = new();
-            string paramNamePrefix = "session_param";
+            const string paramNamePrefix = "session_param";
             StringBuilder sessionMapQuery = new();
 
             foreach ((string claimType, Claim claim) in sessionParams)

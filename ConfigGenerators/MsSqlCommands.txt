@@ -4,6 +4,7 @@ add Stock --config "dab-config.MsSql.json" --source stocks --permissions "anonym
 add Book --config "dab-config.MsSql.json" --source books --permissions "anonymous:create,read,update,delete" --graphql "book:books"
 add BookWebsitePlacement --config "dab-config.MsSql.json" --source book_website_placements --permissions "anonymous:read"
 add Author --config "dab-config.MsSql.json" --source authors --permissions "anonymous:read"
+add Revenue --config "dab-config.MsSql.json" --source revenues --permissions "anonymous:*"
 add Review --config "dab-config.MsSql.json" --source reviews --permissions "anonymous:create,read,update" --rest true --graphql "review:reviews"
 add Comic --config "dab-config.MsSql.json" --source comics --permissions "anonymous:create,read,update"
 add Broker --config "dab-config.MsSql.json" --source brokers --permissions "anonymous:read"

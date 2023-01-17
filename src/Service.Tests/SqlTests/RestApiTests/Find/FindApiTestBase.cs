@@ -992,6 +992,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 sqlQuery: GetQuery(nameof(FindTestWithDifferentMappingAfterSingleKeyPaginationAndOrderBy))
             );
         }
+
+        /// <summary>
+        /// Tests that the FIND operation can only read the rows which are accessible after applying the
+        /// security policy which uses data from session context.
+        /// </summary>
+        [TestMethod]
+        public virtual Task FindTestOnTableWithSecurityPolicy()
+        {
+            return Task.CompletedTask;
+        }
+
         #endregion
 
         #region Negative Tests

@@ -983,17 +983,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// - Name violation, but GraphQL globally turned off
-        /// - Name violation, graphql globally on, entity graphql turned off
-        /// - Permissions hide violating column names
-        /// - Violating column names have proper aliases
-        /// - violating column names have violating aliases
+        /// Indirectly tests IsGraphQLReservedName(). Runtime config provided to engine which will
+        /// trigger SqlMetadataProvider PopulateSourceDefinitionAsync() to pull column metadata from
+        /// the table "graphql_incompatible." That table contains columns which collide with reserved GraphQL
+        /// instrospection field names which begin with double underscore (__).
         /// </summary>
+        [TestCategory(TestCategory.MSSQL)]
         [DataTestMethod]
-        [DataRow(true, true, "__typeName", "__introspectionField", true)]
-        [DataRow(true, true, "__typeName", "columnMapping", false)]
-        [DataRow(false, true, null, null, false)]
-        [DataRow(true, false, null, null, false)]
+        [DataRow(true, true, "__typeName", "__introspectionField", true, DisplayName = "Name violation, fails since no proper mapping set.")]
+        [DataRow(true, true, "__typeName", "columnMapping", false, DisplayName = "Name violation, but OK since proper mapping set.")]
+        [DataRow(false, true, null, null, false, DisplayName = "Name violation, but OK since GraphQL globally disabled.")]
+        [DataRow(true, false, null, null, false, DisplayName = "Name violation, but OK since GraphQL disabled for entity.")]
         public void TestInvalidDatabaseColumnNameHandling(
             bool globalGraphQLEnabled,
             bool entityGraphQLEnabled,
@@ -1014,7 +1014,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             // Configure Entity for testing
             Dictionary<string, string> mappings = new()
             {
-                { "__introspectionName","conformingIntrospectionName"}
+                { "__introspectionName", "conformingIntrospectionName" }
             };
 
             if (!string.IsNullOrWhiteSpace(columnMapping))

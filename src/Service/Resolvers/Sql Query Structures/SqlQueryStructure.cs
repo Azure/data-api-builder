@@ -609,7 +609,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 {
                     continue;
                 }
-                else if (field.SelectionSet == null)
+                else if (field.SelectionSet is null)
                 {
                     AddColumn(fieldName);
                 }

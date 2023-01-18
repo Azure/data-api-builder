@@ -118,7 +118,6 @@ CREATE TABLE type_table(
     decimal_types decimal,
     boolean_types boolean,
     datetime_types datetime,
-    datetimenonutc_types datetime,
     bytearray_types blob
 );
 

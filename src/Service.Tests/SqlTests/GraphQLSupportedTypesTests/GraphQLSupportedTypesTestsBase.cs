@@ -128,6 +128,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 Assert.Inconclusive("Type not supported");
             }
 
+            // Datetime non utc type is a characterization of the value added to the datetime type,
+            // so before executing the query reset it to mean the actually underlying type.
+            if (type is "DATETIME_NONUTC_TYPE")
+            {
+                type = "DATETIME_TYPE";
+            }
+
             string field = $"{type.ToLowerInvariant()}_types";
             string graphQLQueryName = "createSupportedType";
             string gqlQuery = "mutation{ createSupportedType (item: {" + field + ": " + value + " }){ " + field + " } }";
@@ -159,6 +166,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             if (!IsSupportedType(type))
             {
                 Assert.Inconclusive("Type not supported");
+            }
+
+            // Datetime non utc type is a characterization of the value added to the datetime type,
+            // so before executing the query reset it to mean the actually underlying type.
+            if (type is "DATETIME_NONUTC_TYPE")
+            {
+                type = "DATETIME_TYPE";
             }
 
             string field = $"{type.ToLowerInvariant()}_types";
@@ -222,6 +236,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 Assert.Inconclusive("Type not supported");
             }
 
+            // Datetime non utc type is a characterization of the value added to the datetime type,
+            // so before executing the query reset it to mean the actually underlying type.
+            if (type is "DATETIME_NONUTC_TYPE")
+            {
+                type = "DATETIME_TYPE";
+            }
+
             string field = $"{type.ToLowerInvariant()}_types";
             string graphQLQueryName = "updateSupportedType";
             string gqlQuery = "mutation{ updateSupportedType (id: 1, item: {" + field + ": " + value + " }){ " + field + " } }";
@@ -255,6 +276,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             if (!IsSupportedType(type))
             {
                 Assert.Inconclusive("Type not supported");
+            }
+
+            // Datetime non utc type is a characterization of the value added to the datetime type,
+            // so before executing the query reset it to mean the actually underlying type.
+            if (type is "DATETIME_NONUTC_TYPE")
+            {
+                type = "DATETIME_TYPE";
             }
 
             string field = $"{type.ToLowerInvariant()}_types";

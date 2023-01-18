@@ -1,4 +1,6 @@
 BEGIN TRANSACTION
+DROP SECURITY POLICY IF EXISTS revenuesSecPolicy;
+DROP FUNCTION IF EXISTS revenuesPredicate;
 DROP VIEW IF EXISTS books_view_all;
 DROP VIEW IF EXISTS books_view_with_mapping;
 DROP VIEW IF EXISTS stocks_view_selected;
@@ -35,6 +37,7 @@ DROP TABLE IF EXISTS aow;
 DROP TABLE IF EXISTS series;
 DROP TABLE IF EXISTS sales;
 DROP TABLE IF EXISTS authors_history;
+DROP TABLE IF EXISTS revenues;
 DROP SCHEMA IF EXISTS [foo];
 COMMIT;
 
@@ -196,6 +199,13 @@ CREATE TABLE authors_history (
     books_published int
 );
 
+CREATE TABLE revenues(
+    id int PRIMARY KEY,
+    category varchar(max) NOT NULL,
+    revenue int,
+    accessible_role varchar(max) NOT NULL
+);
+
 ALTER TABLE books
 ADD CONSTRAINT book_publisher_fk
 FOREIGN KEY (publisher_id)
@@ -331,6 +341,9 @@ VALUES
 (10, 'Aaron', 'F.', 'Burtle', null, null)
 SET IDENTITY_INSERT authors_history OFF
 
+INSERT INTO revenues(id, category, revenue, accessible_role) VALUES (1, 'Book', 5000, 'Anonymous'), (2, 'Comics', 10000, 'Anonymous'),
+(3, 'Journals', 20000, 'Authenticated'), (4, 'Series', 40000, 'Authenticated');
+
 EXEC('CREATE VIEW books_view_all AS SELECT * FROM dbo.books');
 EXEC('CREATE VIEW books_view_with_mapping AS SELECT * FROM dbo.books');
 EXEC('CREATE VIEW stocks_view_selected AS SELECT
@@ -389,3 +402,17 @@ EXEC('CREATE PROCEDURE insert_and_display_all_books_for_given_publisher @title v
 
         SELECT * FROM dbo.books WHERE publisher_id = @publisher_id;
       END');
+
+-- Create a function to be used as a filter predicate by the security policy to restrict access to rows in the table for SELECT,UPDATE,DELETE operations.
+-- Users with roles(claim value) = @accessible_role(column value) or,
+-- Users with roles(claim value) = null and @accessible_role(column value) = 'Anonymous',
+-- will be able to access a particular row.
+EXEC('CREATE FUNCTION dbo.revenuesPredicate(@accessible_role varchar(20))
+    RETURNS TABLE
+    WITH SCHEMABINDING
+    AS RETURN SELECT 1 AS fn_securitypredicate_result
+    WHERE @accessible_role = CAST(SESSION_CONTEXT(N''roles'') AS varchar(20)) or (SESSION_CONTEXT(N''roles'') is null and @accessible_role=''Anonymous'')');
+
+-- Adding a security policy which would restrict access to the rows in revenues table for
+-- SELECT,UPDATE,DELETE operations using the filter predicate dbo.revenuesPredicate.
+EXEC('CREATE SECURITY POLICY dbo.revenuesSecPolicy ADD FILTER PREDICATE dbo.revenuesPredicate(accessible_role) ON dbo.revenues;');

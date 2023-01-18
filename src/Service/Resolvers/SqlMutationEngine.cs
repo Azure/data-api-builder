@@ -166,7 +166,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 await _queryExecutor.ExecuteQueryAsync(
                     queryText,
                     executeQueryStructure.Parameters,
-                    _queryExecutor.ExtractRowFromDbDataReader);
+                    _queryExecutor.ExtractRowFromDbDataReader,
+                    _httpContextAccessor.HttpContext!);
 
             // A note on returning stored procedure results:
             // We can't infer what the stored procedure actually did beyond the HasRows and RecordsAffected attributes
@@ -454,6 +455,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         queryString,
                         queryParameters,
                         _queryExecutor.ExtractRowFromDbDataReader,
+                        _httpContextAccessor.HttpContext!,
                         sourceDefinition.PrimaryKey);
 
                 if (resultRecord is not null && resultRecord.Item1 is null)
@@ -473,7 +475,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     await _queryExecutor.ExecuteQueryAsync(
                         queryString,
                         queryParameters,
-                        _queryExecutor.ExtractRowFromDbDataReader);
+                        _queryExecutor.ExtractRowFromDbDataReader,
+                        _httpContextAccessor.HttpContext!);
             }
 
             return resultRecord;
@@ -514,7 +517,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 resultProperties = await _queryExecutor.ExecuteQueryAsync(
                     queryString,
                     queryParameters,
-                    _queryExecutor.GetResultProperties);
+                    _queryExecutor.GetResultProperties,
+                    _httpContextAccessor.HttpContext!);
 
             return resultProperties;
         }
@@ -572,6 +576,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                        queryString,
                        queryParameters,
                        _queryExecutor.GetMultipleResultSetsIfAnyAsync,
+                       _httpContextAccessor.HttpContext!,
                        new List<string> { prettyPrintPk, entityName });
         }
 

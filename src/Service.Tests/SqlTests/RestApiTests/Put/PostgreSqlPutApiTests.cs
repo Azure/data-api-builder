@@ -284,10 +284,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 isExpectedErrorMsgSubstr: true);
         }
 
-        #region overridden tests
-
-        #endregion
-
         #region Test Fixture Setup
 
         /// <summary>

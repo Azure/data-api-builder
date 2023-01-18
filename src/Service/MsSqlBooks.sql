@@ -137,6 +137,7 @@ CREATE TABLE type_table(
     decimal_types decimal,
     boolean_types bit,
     datetime_types datetime,
+    datetimenonutc_types datetime,
     bytearray_types varbinary(max),
     guid_types uniqueidentifier DEFAULT newid()
 );

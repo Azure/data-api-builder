@@ -130,7 +130,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             // Datetime non utc type is a characterization of the value added to the datetime type,
             // so before executing the query reset it to mean the actually underlying type.
-            if (type is "DATETIME_NONUTC_TYPE")
+            if ("DATETIME_NONUTC_TYPE".Equals(type))
             {
                 type = "DATETIME_TYPE";
             }
@@ -170,7 +170,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             // Datetime non utc type is a characterization of the value added to the datetime type,
             // so before executing the query reset it to mean the actually underlying type.
-            if (type is "DATETIME_NONUTC_TYPE")
+            if ("DATETIME_NONUTC_TYPE".Equals(type))
             {
                 type = "DATETIME_TYPE";
             }
@@ -238,7 +238,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             // Datetime non utc type is a characterization of the value added to the datetime type,
             // so before executing the query reset it to mean the actually underlying type.
-            if (type is "DATETIME_NONUTC_TYPE")
+            if ("DATETIME_NONUTC_TYPE".Equals(type))
             {
                 type = "DATETIME_TYPE";
             }
@@ -280,7 +280,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             // Datetime non utc type is a characterization of the value added to the datetime type,
             // so before executing the query reset it to mean the actually underlying type.
-            if (type is "DATETIME_NONUTC_TYPE")
+            if ("DATETIME_NONUTC_TYPE".Equals(type))
             {
                 type = "DATETIME_TYPE";
             }

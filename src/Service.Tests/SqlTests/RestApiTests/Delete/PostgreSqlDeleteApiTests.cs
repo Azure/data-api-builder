@@ -29,7 +29,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Delete
             await base.DeleteOneInViewBadRequestTest(expectedErrorMessage);
         }
 
-        #region Overriden tests
+        #region overridden tests
 
         #endregion
 

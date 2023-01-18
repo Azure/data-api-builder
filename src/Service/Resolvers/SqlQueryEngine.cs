@@ -122,7 +122,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     await _queryExecutor.ExecuteQueryAsync(
                         queryString,
                         structure.Parameters,
-                        _queryExecutor.GetJsonResultAsync<List<JsonDocument>>);
+                        _queryExecutor.GetJsonResultAsync<List<JsonDocument>>,
+                        _httpContextAccessor.HttpContext!);
 
                 if (jsonListResult is null)
                 {
@@ -302,7 +303,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 await _queryExecutor.ExecuteQueryAsync(
                     queryString,
                     structure.Parameters,
-                    _queryExecutor.GetJsonResultAsync<JsonDocument>);
+                    _queryExecutor.GetJsonResultAsync<JsonDocument>,
+                    _httpContextAccessor.HttpContext!);
             return jsonDocument;
         }
 
@@ -320,7 +322,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 await _queryExecutor.ExecuteQueryAsync(
                     queryString,
                     structure.Parameters,
-                    _queryExecutor.GetJsonArrayAsync);
+                    _queryExecutor.GetJsonArrayAsync,
+                    _httpContextAccessor.HttpContext!);
 
             JsonDocument jsonDocument = null;
 

@@ -21,6 +21,9 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
     {
         private readonly RequestDelegate _nextMiddleware;
 
+        // Identity provider used for identities added to the ClaimsPrincipal object for the current user by DAB.
+        private const string INTERNAL_DAB_IDENTITY_PROVIDER = "DAB-VERIFIED";
+
         public ClientRoleHeaderAuthenticationMiddleware(RequestDelegate next)
         {
             _nextMiddleware = next;
@@ -90,14 +93,18 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
             }
 
             // When the user is not in the clientDefinedRole and the client role header
-            // is resolved to a system role (anonymous, authenticated), add the matcching system
+            // is resolved to a system role (anonymous, authenticated), add the matching system
             // role name as a role claim to the ClaimsIdentity.
             if (!httpContext.User.IsInRole(clientDefinedRole) && IsSystemRole(clientDefinedRole))
             {
-                Claim claim = new(ClaimTypes.Role, clientDefinedRole, ClaimValueTypes.String);
+                Claim claim = new(AuthenticationConfig.ROLE_CLAIM_TYPE, clientDefinedRole, ClaimValueTypes.String);
+                string authenticationType = isAuthenticatedRequest ? INTERNAL_DAB_IDENTITY_PROVIDER : string.Empty;
 
-                // To set the IsAuthenticated value as false, omit the authenticationType.
-                ClaimsIdentity identity = new();
+                // Add identity with the same value of IsAuthenticated flag as the original identity.
+                ClaimsIdentity identity = new(
+                    authenticationType: authenticationType,
+                    nameType: AuthenticationConfig.NAME_CLAIM_TYPE,
+                    roleType: AuthenticationConfig.ROLE_CLAIM_TYPE);
                 identity.AddClaim(claim);
                 httpContext.User.AddIdentity(identity);
             }

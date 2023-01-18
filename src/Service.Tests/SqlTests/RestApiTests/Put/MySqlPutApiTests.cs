@@ -263,10 +263,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
 
         [TestMethod]
         [Ignore]
-        public override Task PutOneInViewBadRequest(string expectedErrorMessage)
+        public void PutOneInViewBadRequest(string expectedErrorMessage)
         {
             throw new NotImplementedException();
         }
+
+        [TestMethod]
+        [Ignore]
+        public void PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest()
+        {
+            throw new NotImplementedException();
+        }
+
         #endregion
 
         #region Test Fixture Setup

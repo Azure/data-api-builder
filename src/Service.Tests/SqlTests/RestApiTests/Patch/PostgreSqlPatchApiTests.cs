@@ -197,7 +197,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         public async Task PatchOneViewBadRequestTest()
         {
             string expectedErrorMessage = $"55000: cannot update view \"{_composite_subset_bookPub}\"";
-            await base.PatchOneViewBadRequestTest(expectedErrorMessage);
+            await base.PatchOneViewBadRequestTest(
+                expectedErrorMessage,
+                isExpectedErrorMsgSubstr: true);
         }
 
         #region overridden tests

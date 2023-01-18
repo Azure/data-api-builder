@@ -131,3 +131,4 @@ AS
     INNER JOIN
         aggregated_authors aa ON b.id = aa.book_id
     ;
+    

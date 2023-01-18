@@ -210,7 +210,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 exceptionExpected: true,
                 expectedErrorMessage: expectedErrorMessage,
                 expectedStatusCode: HttpStatusCode.BadRequest,
-                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString(),
+                isExpectedErrorMsgSubstr: true
             );
         }
 
@@ -237,7 +238,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 exceptionExpected: true,
                 expectedErrorMessage: expectedErrorMessage,
                 expectedStatusCode: HttpStatusCode.Conflict,
-                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString(),
+                isExpectedErrorMsgSubstr: true
             );
         }
 

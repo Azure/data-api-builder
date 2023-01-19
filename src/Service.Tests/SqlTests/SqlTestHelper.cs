@@ -151,6 +151,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 // as it has to be added with a preceding backslash.
                 responseBody = Regex.Replace(responseBody, @"\\u0022", @"\\""");
 
+                // Remove all carriage returns and new lines from the response body.
+                responseBody = Regex.Replace(responseBody, @"\\n|\\r", "");
+
                 // Convert the escaped characters into their unescaped form.
                 responseBody = Regex.Unescape(responseBody);
 

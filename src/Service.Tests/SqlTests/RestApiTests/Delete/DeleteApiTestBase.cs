@@ -247,7 +247,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         /// </summary>
         /// <returns></returns>
         [TestMethod]
-        public virtual async Task DeleteOneInViewBadRequestTest(string expectedErrorMessage)
+        public virtual async Task DeleteOneInViewBadRequestTest(
+            string expectedErrorMessage,
+            bool isExpectedErrorMsgSubstr = false)
         {
             // Delete one from view based on books,publishers table.
             await SetupAndRunRestApiTest(
@@ -260,7 +262,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     exceptionExpected: true,
                     expectedErrorMessage: expectedErrorMessage,
                     expectedStatusCode: HttpStatusCode.BadRequest,
-                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString(),
+                    isExpectedErrorMsgSubstr: isExpectedErrorMsgSubstr
                 );
             ;
         }

@@ -160,6 +160,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             }
         };
 
+        [TestMethod]
+        [Ignore]
+        public void InsertOneInViewBadRequestTest()
+        {
+            throw new NotImplementedException();
+        }
+
         #region overridden tests
         /// <inheritdoc/>
         [TestMethod]
@@ -224,12 +231,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             throw new NotImplementedException();
         }
 
-        [TestMethod]
-        [Ignore]
-        public override Task InsertOneInViewBadRequestTest(string expectedErrorMessage)
-        {
-            throw new NotImplementedException();
-        }
         #endregion
 
         #region Test Fixture Setup

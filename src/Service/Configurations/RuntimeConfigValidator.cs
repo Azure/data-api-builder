@@ -457,17 +457,16 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         totalSupportedOperationsFromAllRoles.Add(actionOp);
                     }
 
-                    // Only one of the CRUD actions is allowed for stored procedure.
-                    // All the roles should have the same CRUD action.
+                    // Stored procedures only support the "execute" operation.
                     if (entity.ObjectType is SourceType.StoredProcedure)
                     {
                         if ((operationsList.Count > 1)
-                            || (operationsList.Count is 1 && operationsList[0] is Config.Operation.All))
+                            || (operationsList.Count is 1 && operationsList[0] is not Config.Operation.Execute))
                         {
                             throw new DataApiBuilderException(
                                 message: $"Invalid Operations for Entity: {entityName}. " +
-                                    $"StoredProcedure can process only one CRUD (Create/Read/Update/Delete) operation.",
-                                statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                    $"Stored procedures can only be configured with the 'execute' operation.",
+                                statusCode: HttpStatusCode.ServiceUnavailable,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                         }
 
@@ -475,8 +474,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         {
                             throw new DataApiBuilderException(
                                 message: $"Invalid Operations for Entity: {entityName}. " +
-                                    $"StoredProcedure should have the same single CRUD action specified for every role.",
-                                statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                    $"Stored procedures should have the same single CRUD action specified for every role.",
+                                statusCode: HttpStatusCode.ServiceUnavailable,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                         }
                     }

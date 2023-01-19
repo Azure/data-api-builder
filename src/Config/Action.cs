@@ -71,7 +71,10 @@ namespace Azure.DataApiBuilder.Config
         Insert, Update, UpdateGraphQL,
 
         // Additional
-        UpsertIncremental, UpdateIncremental
+        UpsertIncremental, UpdateIncremental,
+
+        // Stored Procedures / Functions
+        Execute
     }
 
     /// <summary>

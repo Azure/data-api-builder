@@ -650,9 +650,9 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// Creates new key value map of
         /// Key: operationType
         /// Value: Collection of role names.
-        /// There are only four possible operations
+        /// There are only five possible operations
         /// </summary>
-        /// <returns></returns>
+        /// <returns>Dictionary: Key - Operation | Value - List of roles.</returns>
         private static Dictionary<Config.Operation, List<string>> CreateOperationToRoleMap()
         {
             return new Dictionary<Config.Operation, List<string>>()
@@ -660,7 +660,8 @@ namespace Azure.DataApiBuilder.Service.Authorization
                 { Config.Operation.Create, new List<string>()},
                 { Config.Operation.Read, new List<string>()},
                 { Config.Operation.Update, new List<string>()},
-                { Config.Operation.Delete, new List<string>()}
+                { Config.Operation.Delete, new List<string>()},
+                { Config.Operation.Execute, new List<string>()}
             };
         }
 

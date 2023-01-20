@@ -210,7 +210,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <returns>Name to be used for the stored procedure GraphQL field.</returns>
         public static string GenerateStoredProcedureGraphQLFieldName(string entityName, Entity entity)
         {
-            return $"execute{FormatNameForField(GetDefinedSingularName(entityName, entity))}";
+            string preformattedField = $"execute{GetDefinedSingularName(entityName, entity)}";
+            return FormatNameForField(preformattedField);
         }
     }
 }

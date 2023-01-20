@@ -32,6 +32,7 @@ The Data API Builder engine needs a configuration file. There you'll define whic
 
 For this getting started guide, you will use DAB CLI to initialize your configuration file. Run the following command and use the connection string based on whether SSL is enabled or not. Please review the **Get the database connection string** section above. 
 
+```bash
 dab init  --config "dab-config.MySql.json" --database-type mysql --connection-string "<mysql-connection-string-ssl-or-non-ssl>" --host-mode "Development" --authenticate-devmode-requests false --cors-origin "http://localhost:5000"
 
 The output would look like 

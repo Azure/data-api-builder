@@ -305,7 +305,7 @@ namespace Azure.DataApiBuilder.Service.Services
             }
 
             // Generating exposed stored-procedure query/mutation name and adding to the dictionary mapping it to its entity name.
-            GraphQLStoredProcedureExposedNameToEntityNameMap.TryAdd(GenerateStoredProcedureQueryName(entityName, procedureEntity), entityName);
+            GraphQLStoredProcedureExposedNameToEntityNameMap.TryAdd(GenerateStoredProcedureGraphQLFieldName(entityName, procedureEntity), entityName);
         }
 
         /// <summary>

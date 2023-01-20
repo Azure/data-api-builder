@@ -202,13 +202,15 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         }
 
         /// <summary>
-        /// Generates the query name of a stored procedure exposed for GraphQL.
+        /// Generates the (query/mutation) field name to be included in the generated GraphQL schema for a stored procedure.
+        /// The name will be prefixed with 'execute'
+        /// e.g. executeEntityName
         /// </summary>
-        /// <param name="entityName">Name of the entity</param>
-        /// <returns>Name of the list query</returns>
-        public static string GenerateStoredProcedureQueryName(string entityName, Entity entity)
+        /// <param name="entityName">Name of the entity.</param>
+        /// <returns>Name to be used for the stored procedure GraphQL field.</returns>
+        public static string GenerateStoredProcedureGraphQLFieldName(string entityName, Entity entity)
         {
-            return FormatNameForField(GetDefinedSingularName(entityName, entity));
+            return $"execute{FormatNameForField(GetDefinedSingularName(entityName, entity))}";
         }
     }
 }

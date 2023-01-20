@@ -191,7 +191,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 if (entity.ObjectType is SourceType.StoredProcedure)
                 {
                     // For Stored Procedures a single query/mutation is generated.
-                    string storedProcedureQueryName = GenerateStoredProcedureQueryName(entityName, entity);
+                    string storedProcedureQueryName = GenerateStoredProcedureGraphQLFieldName(entityName, entity);
 
                     if (!graphQLOperationNames.Add(storedProcedureQueryName))
                     {
@@ -341,10 +341,9 @@ namespace Azure.DataApiBuilder.Service.Configurations
         }
 
         /// <summary>
-        /// Method to perform all the different validations related to the semantic correctness of the
-        /// runtime configuration, focusing on the permissions section of the entity.
+        /// Validates the semantic correctness of the permissions defined for each entity within runtime configuration.
         /// </summary>
-        /// <exception cref="DataApiBuilderException">Throws exception whenever some validation fails.</exception>
+        /// <exception cref="DataApiBuilderException">Throws exception when permission validation fails.</exception>
         public void ValidatePermissionsInConfig(RuntimeConfig runtimeConfig)
         {
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
@@ -354,9 +353,9 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 foreach (PermissionSetting permissionSetting in entity.Permissions)
                 {
                     string roleName = permissionSetting.Role;
-                    Object[] actions = permissionSetting.Operations;
+                    object[] actions = permissionSetting.Operations;
                     List<Config.Operation> operationsList = new();
-                    foreach (Object action in actions)
+                    foreach (object action in actions)
                     {
                         if (action is null)
                         {
@@ -366,7 +365,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         // Evaluate actionOp as the current operation to be validated.
                         Config.Operation actionOp;
                         JsonElement actionJsonElement = JsonSerializer.SerializeToElement(action);
-                        if ((actionJsonElement!).ValueKind is JsonValueKind.String)
+                        if (actionJsonElement!.ValueKind is JsonValueKind.String)
                         {
                             string actionName = action.ToString()!;
                             if (AuthorizationResolver.WILDCARD.Equals(actionName))
@@ -374,7 +373,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                 actionOp = Config.Operation.All;
                             }
                             else if (!Enum.TryParse<Config.Operation>(actionName, ignoreCase: true, out actionOp) ||
-                                !IsValidPermissionAction(actionOp))
+                                !IsValidPermissionAction(actionOp, entity, entityName))
                             {
                                 throw GetInvalidActionException(entityName, roleName, actionName);
                             }
@@ -384,13 +383,13 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             PermissionOperation configOperation;
                             try
                             {
-                                configOperation = JsonSerializer.Deserialize<Config.PermissionOperation>(action.ToString()!)!;
+                                configOperation = JsonSerializer.Deserialize<PermissionOperation>(action.ToString()!)!;
                             }
                             catch (Exception e)
                             {
                                 throw new DataApiBuilderException(
                                     message: $"One of the action specified for entity:{entityName} is not well formed.",
-                                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                    statusCode: HttpStatusCode.ServiceUnavailable,
                                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError,
                                     innerException: e);
                             }
@@ -398,7 +397,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             actionOp = configOperation.Name;
                             // If we have reached this point, it means that we don't have any invalid
                             // data type in actions. However we need to ensure that the actionOp is valid.
-                            if (!IsValidPermissionAction(actionOp))
+                            if (!IsValidPermissionAction(actionOp, entity, entityName))
                             {
                                 bool isActionPresent = ((JsonElement)action).TryGetProperty(_actionKey,
                                     out JsonElement actionElement);
@@ -406,7 +405,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                 {
                                     throw new DataApiBuilderException(
                                         message: $"action cannot be omitted for entity: {entityName}, role:{roleName}",
-                                        statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                        statusCode: HttpStatusCode.ServiceUnavailable,
                                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                                 }
 
@@ -425,10 +424,11 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                     string misconfiguredColumnSet = configOperation.Fields.Include.Contains(AuthorizationResolver.WILDCARD)
                                         && configOperation.Fields.Include.Count > 1 ? "included" : "excluded";
                                     string actionName = actionOp is Config.Operation.All ? "*" : actionOp.ToString();
+
                                     throw new DataApiBuilderException(
                                             message: $"No other field can be present with wildcard in the {misconfiguredColumnSet} set for:" +
                                             $" entity:{entityName}, role:{permissionSetting.Role}, action:{actionName}",
-                                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                            statusCode: HttpStatusCode.ServiceUnavailable,
                                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                                 }
 
@@ -469,15 +469,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                 statusCode: HttpStatusCode.ServiceUnavailable,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                         }
-
-                        if ((totalSupportedOperationsFromAllRoles.Count != 1))
-                        {
-                            throw new DataApiBuilderException(
-                                message: $"Invalid Operations for Entity: {entityName}. " +
-                                    $"Stored procedures should have the same single CRUD action specified for every role.",
-                                statusCode: HttpStatusCode.ServiceUnavailable,
-                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
-                        }
                     }
                 }
             }
@@ -490,7 +481,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// such as "WHERE name = 'xyz'"
         /// </summary>
         /// <param name="permission"></param>
-        /// <returns></returns>
+        /// <returns>True/False</returns>
         public bool IsValidDatabasePolicyForAction(PermissionOperation permission)
         {
             return !(permission.Policy?.Database != null && permission.Name == Config.Operation.Create);
@@ -831,10 +822,35 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// - Create, Read, Update, Delete (CRUD) operation
         /// - All (*)
         /// </summary>
-        /// <param name="action"></param>
+        /// <param name="action">Compared against valid actions to determine validity.</param>
+        /// <param name="entity">Used to identify entity's representative object type.</param>
+        /// <param name="entityName">Used to supplement error messages.</param>
         /// <returns>Boolean value indicating whether the action is valid or not.</returns>
-        public static bool IsValidPermissionAction(Config.Operation action)
+        public static bool IsValidPermissionAction(Config.Operation action, Entity entity, string entityName)
         {
+            if (entity.ObjectType is SourceType.StoredProcedure)
+            {
+                if (action is not Config.Operation.Execute)
+                {
+                    throw new DataApiBuilderException(
+                        message: $"Invalid operation for Entity: {entityName}. " +
+                            $"Stored procedures can only be configured with the 'execute' operation.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                }
+            }
+            else
+            {
+                if (action is Config.Operation.Execute)
+                {
+                    throw new DataApiBuilderException(
+                        message: $"Invalid operation for Entity: {entityName}. " +
+                            $"Stored procedures can only be configured with the 'execute' operation.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                }
+            }
+
             return action is Config.Operation.All || PermissionOperation.ValidPermissionOperations.Contains(action);
         }
     }

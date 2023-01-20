@@ -1,8 +1,6 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema",
-  "$id": {
-    "$ref": "#/additionalProperties/version"
-  },
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "$id": "#/additionalProperties/version",
   "title": "Data API Builder",
   "description": "Schema for Data API Builder engine",
   "additionalProperties": {

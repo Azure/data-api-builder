@@ -35,7 +35,7 @@ steps:
     then
       dabVersion=$(major).$(minor).$(patch)
     else
-      dabVersion=$(major).$(minor).$(patch)
+      dabVersion=$(major).$(minor).$(patch)-$(Build.BuildId)
     fi
     echo dabVersion = $dabVersion
     echo "##vso[task.setvariable variable=dabVersion]$dabVersion"
@@ -66,7 +66,7 @@ steps:
 
 # Use dotnet pack command to build the project because we want to generate build output
 # in the correct location that pack command will be using. This build output location
-# will be used to do code signing so we need to this first.
+# will be used to do code signing so we need to do this first.
 - task: DotNetCoreCLI@2
   displayName: Build
   inputs:
@@ -109,7 +109,7 @@ steps:
     command: custom
     custom: pack
     projects: '**/Cli.csproj'
-    arguments: '--configuration $(buildConfiguration) --no-build -p:Version=$(dabVersion) -o $(Build.ArtifactStagingDirectory)/nupkg'
+    arguments: '--configuration $(buildConfiguration) -p:Version=$(dabVersion) -o $(Build.ArtifactStagingDirectory)/nupkg'
 
 # Now sign the nuget package itself.
 - template: templates/code-signing.yml

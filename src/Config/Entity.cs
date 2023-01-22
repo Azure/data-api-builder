@@ -25,7 +25,6 @@ namespace Azure.DataApiBuilder.Config
     public record Entity(
         [property: JsonPropertyName("source")]
         object Source,
-        [property: JsonPropertyName("rest")]
         object? Rest,
         object? GraphQL,
         [property: JsonPropertyName("permissions")]
@@ -48,6 +47,9 @@ namespace Azure.DataApiBuilder.Config
 
         [JsonIgnore]
         public string[]? KeyFields { get; private set; }
+
+        [property: JsonPropertyName("rest")]
+        public object? Rest { get; set; } = Rest;
 
         [property: JsonPropertyName("graphql")]
         public object? GraphQL { get; set; } = GraphQL;
@@ -114,7 +116,20 @@ namespace Azure.DataApiBuilder.Config
                         return false;
                     }
 
-                    GraphQLEntitySettings graphQLEntitySettings = new(Type: nameConfiguration);
+                    JsonElement? graphQLOperation = configElement.GetProperty("operations");
+                    object? graphQLOperationConfiguration;
+
+                    if(graphQLOperation is null)
+                    {
+                        graphQLOperationConfiguration = null;
+                    }
+                    else
+                    {
+                        graphQLOperationConfiguration = JsonSerializer.Deserialize<GraphQLOperation[]>((JsonElement)graphQLOperation);
+
+                    }
+
+                    GraphQLEntitySettings graphQLEntitySettings = new(Type: nameConfiguration, GraphQLOperations: graphQLOperationConfiguration);
                     GraphQL = graphQLEntitySettings;
                 }
             }
@@ -293,19 +308,22 @@ namespace Azure.DataApiBuilder.Config
     /// Describes the REST settings specific to an entity.
     /// </summary>
     /// <param name="Path">Instructs the runtime to use this as the path
+    /// <param name="Methods">Defines the HTTP actions that are supported for stored procedures
     /// at which the REST endpoint for this entity is exposed
     /// instead of using the entity-name. Can be a string type.
     /// </param>
-    public record RestEntitySettings(object Path);
+    public record RestEntitySettings(object Path, [property: JsonPropertyName("methods")] RestMethod[] RestMethods);
 
     /// <summary>
     /// Describes the GraphQL settings specific to an entity.
     /// </summary>
     /// <param name="Type">Defines the name of the GraphQL type
+    /// <param name="Operations">Defines the graphQL operations that are supported for stored procedures 
     /// that will be used for this entity.Can be a string or Singular-Plural type.
     /// If string, a default plural route will be added as per the rules at
     /// <href="https://engdic.org/singular-and-plural-noun-rules-definitions-examples/" /></param>
-    public record GraphQLEntitySettings([property: JsonPropertyName("type")] object? Type);
+    public record GraphQLEntitySettings([property: JsonPropertyName("type")] object? Type, 
+                                        [property: JsonPropertyName("operations")] object? GraphQLOperations);
 
     /// <summary>
     /// Defines a name or route as singular (required) or

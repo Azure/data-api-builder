@@ -29,7 +29,7 @@ namespace Cli
         /// Creates the rest object which can be either a boolean value
         /// or a RestEntitySettings object containing api route based on the input
         /// </summary>
-        public static object? GetRestDetails(string? rest)
+        public static object? GetRestDetails(string? rest, RestMethod[] restMethods)
         {
             object? rest_detail;
             if (rest is null)
@@ -44,7 +44,7 @@ namespace Cli
             }
             else
             {
-                RestEntitySettings restEntitySettings = new("/" + rest);
+                RestEntitySettings restEntitySettings = new("/" + rest, restMethods);
                 rest_detail = restEntitySettings;
             }
 
@@ -55,7 +55,7 @@ namespace Cli
         /// Creates the graphql object which can be either a boolean value
         /// or a GraphQLEntitySettings object containing graphql type {singular, plural} based on the input
         /// </summary>
-        public static object? GetGraphQLDetails(string? graphQL)
+        public static object? GetGraphQLDetails(string? graphQL, GraphQLOperation[] graphQLOperations)
         {
             object? graphQL_detail;
             if (graphQL is null)
@@ -91,7 +91,7 @@ namespace Cli
                 }
 
                 SingularPlural singularPlural = new(singular, plural);
-                GraphQLEntitySettings graphQLEntitySettings = new(singularPlural);
+                GraphQLEntitySettings graphQLEntitySettings = new(singularPlural, graphQLOperations);
                 graphQL_detail = graphQLEntitySettings;
             }
 
@@ -404,7 +404,7 @@ namespace Cli
 
             // Currently, Stored Procedures can be configured with only 1 CRUD Operation.
             if (sourceType is SourceType.StoredProcedure
-                    && !VerifySingleOperationForStoredProcedure(operations))
+                    && !VerifyExecuteOperationForStoredProcedure(operations))
             {
                 return false;
             }
@@ -654,7 +654,7 @@ namespace Cli
         {
             foreach (PermissionSetting permissionSetting in permissionSettings)
             {
-                if (!VerifySingleOperationForStoredProcedure(permissionSetting.Operations))
+                if (!VerifyExecuteOperationForStoredProcedure(permissionSetting.Operations))
                 {
                     return false;
                 }
@@ -665,15 +665,15 @@ namespace Cli
 
         /// <summary>
         /// This method checks that stored-procedure entity
-        /// has only one CRUD operation.
+        /// is configured only with execute action
         /// </summary>
-        private static bool VerifySingleOperationForStoredProcedure(object[] operations)
+        private static bool VerifyExecuteOperationForStoredProcedure(object[] operations)
         {
             if (operations.Length > 1
                 || !TryGetOperationName(operations.First(), out Operation operationName)
-                || Operation.All.Equals(operationName))
+                || !Operation.Execute.Equals(operationName))
             {
-                _logger.LogError("Stored Procedure supports only 1 CRUD operation.");
+                _logger.LogError("Stored Procedure supports only execute operation.");
                 return false;
             }
 
@@ -744,5 +744,60 @@ namespace Cli
 
             return true;
         }
+
+        public static bool TryConvertRestMethodNameToRestMethod(string? method, out RestMethod restMethod)
+        {
+            if(! Enum.TryParse(method, ignoreCase: true ,out restMethod))
+            {
+                _logger.LogError("Invalid REST Method. Supported methods are GET, POST, PUT, PATCH and DELETE.");
+                return false;
+            }
+
+            return true;
+        }
+
+        public static RestMethod[] CreateRestMethods(IEnumerable<string> methods)
+        {
+            List<RestMethod> restMethods = new();
+
+            foreach (string method in methods)
+            {
+                RestMethod restMethod;
+                if (TryConvertRestMethodNameToRestMethod(method, out restMethod))
+                {
+                    restMethods.Add(restMethod);
+                }
+            }
+
+            return restMethods.ToArray();
+        }
+
+        public static bool TryConvertGraphQLOperationNameToGraphQLOperation(string? operation, out GraphQLOperation graphQLOperation)
+        {
+            if (! Enum.TryParse(operation, ignoreCase: true ,out graphQLOperation))
+            {
+                _logger.LogError("Invalid GrpahQL Operation. Supported operations are Query and Mutation.");
+                return false;
+            }
+
+            return true;
+        }
+
+        public static GraphQLOperation[] CreateGraphQLOperations(IEnumerable<string> operations)
+        {
+            List<GraphQLOperation> graphQLOperations = new();
+
+            foreach (string operation in operations)
+            {
+                GraphQLOperation graphQLOperation;
+                if (TryConvertGraphQLOperationNameToGraphQLOperation(operation, out graphQLOperation))
+                {
+                    graphQLOperations.Add(graphQLOperation);
+                }
+            }
+
+            return graphQLOperations.ToArray();
+        }
+
     }
 }

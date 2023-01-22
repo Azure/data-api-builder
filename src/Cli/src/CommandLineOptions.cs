@@ -84,7 +84,9 @@ namespace Cli
             IEnumerable<string>? sourceParameters,
             IEnumerable<string>? sourceKeyFields,
             string? restRoute,
+            IEnumerable<string>? restMethods,
             string? graphQLType,
+            IEnumerable<string>? graphQLOperations,
             IEnumerable<string>? fieldsToInclude,
             IEnumerable<string>? fieldsToExclude,
             string? policyRequest,
@@ -119,8 +121,14 @@ namespace Cli
         [Option("rest", Required = false, HelpText = "Route for rest api.")]
         public string? RestRoute { get; }
 
+        [Option("rest.methods", Required = false, HelpText = "HTTP actions to be supported for stored procedures. Specify the actions as a comma separated list.")]
+        public IEnumerable<string>? RestActionForStoredProcedure { get; }
+
         [Option("graphql", Required = false, HelpText = "Type of graphQL.")]
         public string? GraphQLType { get; }
+
+        [Option("graphql.operations", Required = false, HelpText = "GraphQL operations to be supported for stored procedures. Specify the actions as a comma separated list.")]
+        public IEnumerable<string>? GraphQLOperationsForStoredProcedures { get; }
 
         [Option("fields.include", Required = false, Separator = ',', HelpText = "Fields that are allowed access to permission.")]
         public IEnumerable<string>? FieldsToInclude { get; }
@@ -149,7 +157,9 @@ namespace Cli
             IEnumerable<string>? sourceParameters,
             IEnumerable<string>? sourceKeyFields,
             string? restRoute,
+            IEnumerable<string>? restMethods,
             string? graphQLType,
+            IEnumerable<string>? graphQLOperations,
             IEnumerable<string>? fieldsToInclude,
             IEnumerable<string>? fieldsToExclude,
             string? policyRequest,
@@ -160,7 +170,9 @@ namespace Cli
                   sourceParameters,
                   sourceKeyFields,
                   restRoute,
+                  restMethods,
                   graphQLType,
+                  graphQLOperations,
                   fieldsToInclude,
                   fieldsToExclude,
                   policyRequest,
@@ -200,7 +212,9 @@ namespace Cli
             IEnumerable<string>? sourceParameters,
             IEnumerable<string>? sourceKeyFields,
             string? restRoute,
+            IEnumerable<string>? restMethods,
             string? graphQLType,
+            IEnumerable<string>? graphQLOperations,
             IEnumerable<string>? fieldsToInclude,
             IEnumerable<string>? fieldsToExclude,
             string? policyRequest,
@@ -211,7 +225,9 @@ namespace Cli
                   sourceParameters,
                   sourceKeyFields,
                   restRoute,
+                  restMethods,
                   graphQLType,
+                  graphQLOperations,
                   fieldsToInclude,
                   fieldsToExclude,
                   policyRequest,

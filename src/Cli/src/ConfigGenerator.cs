@@ -191,12 +191,38 @@ namespace Cli
                 return false;
             }
 
+            RestMethod[] restMethods = new RestMethod[] {};
+            GraphQLOperation[] graphQLOperations = new GraphQLOperation[] {};
+
+            if( (options.GraphQLOperationsForStoredProcedures is not null && options.GraphQLOperationsForStoredProcedures.Any()) ||
+                (options.RestActionForStoredProcedure is not null && options.RestActionForStoredProcedure.Any()))
+            {
+                SourceTypeEnumConverter.TryGetSourceType(options.SourceType, out SourceType sourceObjectType);
+                if (sourceObjectType is not SourceType.StoredProcedure)
+                {
+                    _logger.LogError("GraphQL Operations or Rest Methods can only be specified for stored procedures.");
+                    return false;
+                }
+
+                if(options.GraphQLOperationsForStoredProcedures is not null && options.GraphQLOperationsForStoredProcedures.Any() )
+                {
+                    graphQLOperations = CreateGraphQLOperations(options.GraphQLOperationsForStoredProcedures);
+
+                }
+
+                if(options.RestActionForStoredProcedure is not null && options.RestActionForStoredProcedure.Any())
+                {
+                    restMethods = CreateRestMethods(options.RestActionForStoredProcedure);
+                }
+
+            }
+
             // Create new entity.
             //
             Entity entity = new(
                 source!,
-                GetRestDetails(options.RestRoute),
-                GetGraphQLDetails(options.GraphQLType),
+                GetRestDetails(options.RestRoute, restMethods),
+                GetGraphQLDetails(options.GraphQLType, graphQLOperations),
                 permissionSettings,
                 Relationships: null,
                 Mappings: null);
@@ -379,8 +405,34 @@ namespace Cli
                 return false;
             }
 
-            object? updatedRestDetails = options.RestRoute is null ? entity!.Rest : GetRestDetails(options.RestRoute);
-            object? updatedGraphQLDetails = options.GraphQLType is null ? entity!.GraphQL : GetGraphQLDetails(options.GraphQLType);
+            RestMethod[] restMethods = new RestMethod[] { };
+            GraphQLOperation[] graphQLOperations = new GraphQLOperation[] { };
+
+            if ((options.GraphQLOperationsForStoredProcedures is not null && options.GraphQLOperationsForStoredProcedures.Any()) ||
+                (options.RestActionForStoredProcedure is not null && options.RestActionForStoredProcedure.Any()))
+            {
+                SourceTypeEnumConverter.TryGetSourceType(options.SourceType, out SourceType sourceObjectType);
+                if (sourceObjectType is not SourceType.StoredProcedure)
+                {
+                    _logger.LogError("GraphQL Operations or Rest Methods can only be specified for stored procedures.");
+                    return false;
+                }
+
+                if (options.GraphQLOperationsForStoredProcedures is not null && options.GraphQLOperationsForStoredProcedures.Any())
+                {
+                    graphQLOperations = CreateGraphQLOperations(options.GraphQLOperationsForStoredProcedures);
+
+                }
+
+                if (options.RestActionForStoredProcedure is not null && options.RestActionForStoredProcedure.Any())
+                {
+                    restMethods = CreateRestMethods(options.RestActionForStoredProcedure);
+                }
+
+            }
+
+            object? updatedRestDetails = options.RestRoute is null ? entity!.Rest : GetRestDetails(options.RestRoute, restMethods);
+            object? updatedGraphQLDetails = options.GraphQLType is null ? entity!.GraphQL : GetGraphQLDetails(options.GraphQLType, graphQLOperations);
             PermissionSetting[]? updatedPermissions = entity!.Permissions;
             Dictionary<string, Relationship>? updatedRelationships = entity.Relationships;
             Dictionary<string, string>? updatedMappings = entity.Mappings;

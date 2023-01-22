@@ -71,7 +71,10 @@ namespace Azure.DataApiBuilder.Config
         Insert, Update, UpdateGraphQL,
 
         // Additional
-        UpsertIncremental, UpdateIncremental
+        UpsertIncremental, UpdateIncremental,
+
+        // Only valid operation for stored procedures
+        Execute
     }
 
     /// <summary>
@@ -114,4 +117,18 @@ namespace Azure.DataApiBuilder.Config
         [property: JsonPropertyName("database")]
         public string? Database { get; set; }
     }
+
+    public enum RestMethod {
+        Get,
+        Post,
+        Put,
+        Patch,
+        Delete
+    };
+
+    public enum GraphQLOperation {
+        Query,
+        Mutation
+    };
+
 }

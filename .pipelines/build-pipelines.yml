@@ -109,7 +109,7 @@ steps:
     command: custom
     custom: pack
     projects: '**/Cli.csproj'
-    arguments: '--configuration $(buildConfiguration) -p:Version=$(dabVersion) -o $(Build.ArtifactStagingDirectory)/nupkg'
+    arguments: '--configuration $(buildConfiguration) --no-build -p:Version=$(dabVersion) -o $(Build.ArtifactStagingDirectory)/nupkg'
 
 # Now sign the nuget package itself.
 - template: templates/code-signing.yml

@@ -76,12 +76,12 @@ namespace Azure.DataApiBuilder.Config
         }
 
         /// <summary>
-        /// Processes per entity GraphQL Naming Settings
-        /// Top Level: true | false
-        /// Alternatives: string, SingularPlural object
-        /// returns true on successfull processing
-        /// else false.
+        /// Processes per entity GraphQL runtime configuration JSON:
+        /// (bool) GraphQL enabled for entity true | false
+        /// (JSON Object) Alternative Naming: string, SingularPlural object
+        /// (JSON Object) Explicit Stored Procedure operation type "query" or "mutation"
         /// </summary>
+        /// <returns>True when processed successfully, otherwise false.</returns>
         public bool TryProcessGraphQLNamingConfig()
         {
             if (GraphQL is null)
@@ -97,25 +97,47 @@ namespace Azure.DataApiBuilder.Config
                 }
                 else if (configElement.ValueKind is JsonValueKind.Object)
                 {
-                    JsonElement nameTypeSettings = configElement.GetProperty("type");
-                    object nameConfiguration;
-
-                    if (nameTypeSettings.ValueKind is JsonValueKind.String)
+                    // Only stored procedure configuration can override the GraphQL operation type.
+                    if (ObjectType is SourceType.StoredProcedure)
                     {
-                        nameConfiguration = JsonSerializer.Deserialize<string>(nameTypeSettings)!;
+                        if (configElement.TryGetProperty(propertyName: "operation", out JsonElement operation) && operation.ValueKind is JsonValueKind.String)
+                        {
+                            string operationType = JsonSerializer.Deserialize<string>(operation)!;
+                            GraphQLEntitySettings graphQLEntitySettings = new(Type: null, Operation: operationType);
+                            GraphQL = graphQLEntitySettings;
+                        }
+                        else
+                        {
+                            GraphQLEntitySettings graphQLEntitySettings = new(Type: null, Operation: "mutation");
+                            GraphQL = graphQLEntitySettings;
+                        }
                     }
-                    else if (nameTypeSettings.ValueKind is JsonValueKind.Object)
+                    else if (configElement.TryGetProperty(propertyName: "type", out JsonElement nameTypeSettings))
                     {
-                        nameConfiguration = JsonSerializer.Deserialize<SingularPlural>(nameTypeSettings)!;
+                        object nameConfiguration;
+
+                        if (nameTypeSettings.ValueKind is JsonValueKind.String)
+                        {
+                            nameConfiguration = JsonSerializer.Deserialize<string>(nameTypeSettings)!;
+                        }
+                        else if (nameTypeSettings.ValueKind is JsonValueKind.Object)
+                        {
+                            nameConfiguration = JsonSerializer.Deserialize<SingularPlural>(nameTypeSettings)!;
+                        }
+                        else
+                        {
+                            // Not Supported Type
+                            return false;
+                        }
+
+                        GraphQLEntitySettings graphQLEntitySettings = new(Type: nameConfiguration, Operation: null);
+                        GraphQL = graphQLEntitySettings;
                     }
                     else
                     {
-                        // Not Supported Type
+                        // Unsupported GraphQL configuration.
                         return false;
                     }
-
-                    GraphQLEntitySettings graphQLEntitySettings = new(Type: nameConfiguration);
-                    GraphQL = graphQLEntitySettings;
                 }
             }
             else
@@ -304,8 +326,12 @@ namespace Azure.DataApiBuilder.Config
     /// <param name="Type">Defines the name of the GraphQL type
     /// that will be used for this entity.Can be a string or Singular-Plural type.
     /// If string, a default plural route will be added as per the rules at
+    /// <param name="Operation"/>Explicity defines the GraphQL operation
+    /// for a stored procedure entity.
     /// <href="https://engdic.org/singular-and-plural-noun-rules-definitions-examples/" /></param>
-    public record GraphQLEntitySettings([property: JsonPropertyName("type")] object? Type);
+    public record GraphQLEntitySettings(
+        [property: JsonPropertyName("type")] object? Type,
+        [property: JsonPropertyName("operation")] string? Operation = "mutation");
 
     /// <summary>
     /// Defines a name or route as singular (required) or

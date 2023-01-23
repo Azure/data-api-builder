@@ -43,8 +43,15 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     // unlike table/views where we create one for each CUD operation.
                     if (entities[dbEntityName].ObjectType is SourceType.StoredProcedure)
                     {
-                        // check graphql sp config 
-                        AddMutationsForStoredProcedure(dbEntityName, entityPermissionsMap, name, entities, mutationFields);
+                        // check graphql sp config
+                        string entityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
+                        Entity entity = entities[entityName];
+                        bool isSPDefinedAsQuery = (entity.GraphQL is GraphQLEntitySettings entitySettings && entitySettings.Operation == "query");
+                        if (!isSPDefinedAsQuery)
+                        {
+                            AddMutationsForStoredProcedure(dbEntityName, entityPermissionsMap, name, entities, mutationFields);
+                        }
+
                         continue;
                     }
 

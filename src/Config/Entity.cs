@@ -331,7 +331,7 @@ namespace Azure.DataApiBuilder.Config
     /// <href="https://engdic.org/singular-and-plural-noun-rules-definitions-examples/" /></param>
     public record GraphQLEntitySettings(
         [property: JsonPropertyName("type")] object? Type,
-        [property: JsonPropertyName("operation")] string? Operation = "mutation");
+        [property: JsonPropertyName("operation")] string? Operation = null);
 
     /// <summary>
     /// Defines a name or route as singular (required) or

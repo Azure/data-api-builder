@@ -13,24 +13,24 @@ database is alive, i.e. once the connection is closed, SESSION_CONTEXT expires. 
 data available via SESSION_CONTEXT can be used anywhere within the lifetime of the connection.
 
 #### How to read from/ write to SESSION_CONTEXT?
-Please refer to a very elaborative doc already available [here](https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-set-session-context-transact-sql?view=sql-server-ver16).
+Please refer to a very elaborative doc already available [here](https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-set-session-context-transact-sql).
 
 #### How to enable SESSION_CONTEXT in DAB?
 Inside the config file, there is a section `options` inside the `data-source` section. The `options` section holds database specific properties. To enable SESSION_CONTEXT,
 the user needs to have the property `set-session-context` set to `true` for MsSql.
 
 #### What is the size limit for SESSION_CONTEXT?
-As mentioned [here](https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-set-session-context-transact-sql?view=sql-server-ver16#remarks), 
+As mentioned [here](https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-set-session-context-transact-sql#remarks), 
 the total size of the session context is limited to 1 MB. If you set a value that causes this limit to be exceeded, the statement fails. 
-You can monitor overall memory usage by querying [sys.dm_os_memory_cache_counters](https://learn.microsoft.com/en-us/sql/relational-databases/system-dynamic-management-views/sys-dm-os-memory-cache-counters-transact-sql?view=sql-server-ver16) (Transact-SQL) as follows: 
+You can monitor overall memory usage by querying [sys.dm_os_memory_cache_counters](https://learn.microsoft.com/en-us/sql/relational-databases/system-dynamic-management-views/sys-dm-os-memory-cache-counters-transact-sql) (Transact-SQL) as follows: 
 `SELECT * FROM sys.dm_os_memory_cache_counters WHERE type = 'CACHESTORE_SESSION_CONTEXT';`.
 
 #### Example: How to use SESSION_CONTEXT to configure additional level of security (Row Level Security)?
-For more details about Row Level Security (RLS), please refer [here](https://learn.microsoft.com/en-us/sql/relational-databases/security/row-level-security?view=sql-server-ver16),
+For more details about Row Level Security (RLS), please refer [here](https://learn.microsoft.com/en-us/sql/relational-databases/security/row-level-security),
 but, basically RLS enables us to use group membership or execution context to control access to rows in a database table.
 
-In this demonstration, we will first be creating a database table `revenues`. We will then configure a [Security Policy](https://learn.microsoft.com/en-us/sql/t-sql/statements/create-security-policy-transact-sql?view=sql-server-ver16) which would add a FILTER PREDICATE
-to this `revenues` table. The [FILTER PREDICATE](https://learn.microsoft.com/en-us/sql/relational-databases/security/row-level-security?view=sql-server-ver16#Description) is nothing but a table-valued function which will filter the rows accessible to operations SELECT, UPDATE, DELETE
+In this demonstration, we will first be creating a database table `revenues`. We will then configure a [Security Policy](https://learn.microsoft.com/en-us/sql/t-sql/statements/create-security-policy-transact-sql) which would add a FILTER PREDICATE
+to this `revenues` table. The [FILTER PREDICATE](https://learn.microsoft.com/en-us/sql/relational-databases/security/row-level-security#Description) is nothing but a table-valued function which will filter the rows accessible to operations SELECT, UPDATE, DELETE
 based on the criteria that is configured for the function.
 
 
@@ -68,7 +68,7 @@ WHERE @accessible_role = CAST(SESSION_CONTEXT(N'roles') AS varchar(20));
 ```
 
 ###### Creating SECURITY POLICY to add to the revenues table:
-Adding a security policy which would restrict access to the rows in revenues table for SELECT,UPDATE,DELETE operations using the filter predicate dbo.revenuesPredicate.  
+Adding a security policy which would restrict access to the rows in revenues table for SELECT, UPDATE, DELETE operations using the filter predicate dbo.revenuesPredicate.  
 ```sql
 CREATE SECURITY POLICY dbo.revenuesSecPolicy 
 ADD FILTER PREDICATE dbo.revenuesPredicate(accessible_role)  

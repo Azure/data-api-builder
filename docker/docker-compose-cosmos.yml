@@ -6,4 +6,4 @@ services:
       - "5000:5000"
     volumes:
       - "../src/Service/dab-config.Cosmos.json:/App/dab-config.json"
-      - "../src/Service/schema.gql:/App/schema.gql"
+      - "../src/Service.Tests/schema.gql:/App/schema.gql"

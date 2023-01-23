@@ -1,8 +1,15 @@
+using System.Collections.Generic;
 using System.Data.Common;
+using System.Security.Claims;
+using System.Text;
 using System.Threading.Tasks;
 using Azure.Core;
+using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Service.Models;
 using Azure.Identity;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 
@@ -35,12 +42,16 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         private bool _attemptToSetAccessToken;
 
+        private bool _isSessionContextEnabled;
+
         public MsSqlQueryExecutor(
             RuntimeConfigProvider runtimeConfigProvider,
             DbExceptionParser dbExceptionParser,
             ILogger<QueryExecutor<SqlConnection>> logger)
             : base(runtimeConfigProvider, dbExceptionParser, logger)
         {
+            MsSqlOptions? msSqlOptions = runtimeConfigProvider.GetRuntimeConfiguration().DataSource.MsSql;
+            _isSessionContextEnabled = msSqlOptions is null ? false : msSqlOptions.SetSessionContext;
             _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
             _attemptToSetAccessToken =
                 ShouldManagedIdentityAccessBeAttempted(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString);
@@ -125,6 +136,41 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             return _defaultAccessToken?.Token;
+        }
+
+        /// <summary>
+        /// Method to generate the query to send user data to the underlying database via SESSION_CONTEXT which might be used
+        /// for additional security (eg. using Security Policies) at the database level. The max payload limit for SESSION_CONTEXT is 1MB.
+        /// </summary>
+        /// <param name="httpContext">Current user httpContext.</param>
+        /// <param name="parameters">Dictionary of parameters/value required to execute the query.</param>
+        /// <returns>empty string / query to set session parameters for the connection.</returns>
+        /// <seealso cref="https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-set-session-context-transact-sql?view=sql-server-ver16"/>
+        public override string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, object?> parameters)
+        {
+            if (httpContext is null || !_isSessionContextEnabled)
+            {
+                return string.Empty;
+            }
+
+            // Dictionary containing all the claims belonging to the user, to be used as session parameters.
+            Dictionary<string, Claim> sessionParams = AuthorizationResolver.GetAllUserClaims(httpContext);
+
+            // Counter to generate different param name for each of the sessionParam.
+            IncrementingInteger counter = new();
+            const string paramNamePrefix = "session_param";
+            StringBuilder sessionMapQuery = new();
+
+            foreach ((string claimType, Claim claim) in sessionParams)
+            {
+                string paramName = $"{paramNamePrefix}{counter.Next()}";
+                parameters.Add(paramName, claim.Value);
+                // Append statement to set read only param value - can be set only once for a connection.
+                string statementToSetReadOnlyParam = "EXEC sp_set_session_context " + $"'{claimType}', @" + paramName + ", @read_only = 1;";
+                sessionMapQuery = sessionMapQuery.Append(statementToSetReadOnlyParam);
+            }
+
+            return sessionMapQuery.ToString();
         }
     }
 }

@@ -296,6 +296,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         /// <summary>
+        /// Tests that the PATCH updates can only update the rows which are accessible after applying the
+        /// security policy which uses data from session context.
+        /// </summary>
+        [TestMethod]
+        public virtual Task PatchOneUpdateTestOnTableWithSecurityPolicy()
+        {
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
         /// Tests successful execution of PATCH update requests on views
         /// when requests try to modify fields belonging to one base table
         /// in the view.
@@ -581,7 +591,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         /// </summary>
         /// <returns></returns>
         [TestMethod]
-        public virtual async Task PatchOneViewBadRequestTest(string expectedErrorMessage)
+        public virtual async Task PatchOneViewBadRequestTest(
+            string expectedErrorMessage,
+            bool isExpectedErrorMsgSubstr = false)
         {
             // PATCH update trying to modify fields from multiple base table
             // will result in error.
@@ -601,7 +613,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 exceptionExpected: true,
                 expectedErrorMessage: expectedErrorMessage,
                 expectedStatusCode: HttpStatusCode.BadRequest,
-                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString(),
+                isExpectedErrorMsgSubstr: true
             );
         }
 

@@ -169,8 +169,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     executeQueryStructure.Parameters,
                     _queryExecutor.GetJsonArrayAsync);
 
-            JsonElement jsonElement;
-
             // A note on returning stored procedure results:
             // We can't infer what the stored procedure actually did beyond the HasRows and RecordsAffected attributes
             // of the DbDataReader. For example, we can't enforce that an UPDATE command outputs a result set using an OUTPUT
@@ -186,8 +184,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     // A "correctly" configured stored procedure would INSERT INTO ... OUTPUT ... VALUES as the result set
                     if (resultArray is not null && resultArray.Count > 0)
                     {
-                        jsonElement = JsonSerializer.SerializeToElement(resultArray.ToJsonString());
-                        return new CreatedResult(location: context.EntityName, OkMutationResponse(jsonElement).Value);
+                        using (JsonDocument jsonDocument = JsonDocument.Parse(resultArray.ToJsonString()))
+                        {
+                            return new CreatedResult(location: context.EntityName, OkMutationResponse(jsonDocument.RootElement.Clone()).Value);
+                        }
                     }
                     else
                     {   // If no result set returned, just return a 201 Created with empty array instead of array with single null value
@@ -207,8 +207,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     // A "correctly" configured stored procedure would UPDATE ... SET ... OUTPUT as the result set
                     if (resultArray is not null && resultArray.Count > 0)
                     {
-                        jsonElement = JsonSerializer.SerializeToElement(resultArray.ToJsonString());
-                        return OkMutationResponse(jsonElement);
+                        using (JsonDocument jsonDocument = JsonDocument.Parse(resultArray.ToJsonString()))
+                        {
+                            return OkMutationResponse(jsonDocument.RootElement.Clone());
+                        }
                     }
                     else
                     {

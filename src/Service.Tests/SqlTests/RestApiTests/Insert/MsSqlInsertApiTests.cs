@@ -257,7 +257,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         }
 
         /// <summary>
-        /// Tests the Insert one and return single/multiple rows functionality with a REST POST request
+        /// Tests the Insert one and returns either single or multiple rows functionality with a REST POST request
         /// using stored procedure.
         /// The request executes a stored procedure which attempts to insert a book for a given publisher
         /// and then returns all books under that publisher.
@@ -268,8 +268,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         public async Task InsertOneAndVerifyReturnedRowsWithStoredProcedureTest(
             string publisherName,
             string queryName,
-            bool expectJson
-        )
+            bool expectJson)
         {
             string requestBody = @"
             {

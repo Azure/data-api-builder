@@ -392,6 +392,9 @@ public class EndToEndTests
         );
 
         string? output = process.StandardOutput.ReadLine();
+        Assert.IsNotNull(output);
+        Assert.IsTrue(output.Contains($"{Program.PRODUCT_NAME} {GetProductVersion()}"));
+        output = process.StandardOutput.ReadLine();
         process.Kill();
         Assert.IsNotNull(output);
         Assert.IsTrue(output.Contains($"User provided config file: {_testRuntimeConfig}"));
@@ -443,6 +446,9 @@ public class EndToEndTests
         );
 
         string? output = process.StandardOutput.ReadLine();
+        Assert.IsNotNull(output);
+        Assert.IsTrue(output.Contains($"{Program.PRODUCT_NAME} {GetProductVersion()}"));
+        output = process.StandardOutput.ReadLine();
         Assert.IsNotNull(output);
         Assert.IsTrue(output.Contains($"User provided config file: {_testRuntimeConfig}"));
         output = process.StandardOutput.ReadLine();

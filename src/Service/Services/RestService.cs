@@ -1,11 +1,9 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Net;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using System.Web;
 using Azure.DataApiBuilder.Auth;
@@ -92,6 +90,14 @@ namespace Azure.DataApiBuilder.Service.Services
             // If request has resolved to a stored procedure entity, initialize and validate appropriate request context
             if (dbObject.SourceType is SourceType.StoredProcedure)
             {
+                if (!IsHttpMethodAllowedForStoredProcedure(operationType, entityName))
+                {
+                    throw new DataApiBuilderException(
+                        message: "This operation is not supported.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                }
+
                 PopulateStoredProcedureContext(
                     operationType,
                     dbObject,
@@ -257,16 +263,6 @@ namespace Azure.DataApiBuilder.Service.Services
             string requestBody,
             out RestRequestContext context)
         {
-            List<string> httpVerbs = new(GetStoredProcedureRESTVerbs(operationType, entityName));
-            HttpContext? httpContext = _httpContextAccessor.HttpContext;
-            if (httpContext is null || !httpVerbs.Contains(httpContext.Request.Method.ToString()))
-            {
-                throw new DataApiBuilderException(
-                    message: "This operation is not supported.",
-                    statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-            }
-
             switch (operationType)
             {
 
@@ -324,30 +320,48 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <summary>
         /// 
         /// </summary>
+        /// <param name="operationType"></param>
+        /// <param name="entityName"></param>
+        /// <returns></returns>
+        public bool IsHttpMethodAllowedForStoredProcedure(Config.Operation operationType, string entityName)
+        {
+            if (TryGetStoredProcedureRESTVerbs(operationType, entityName, out List<string>? httpVerbs))
+            {
+                HttpContext? httpContext = _httpContextAccessor.HttpContext;
+                if (httpContext is not null && httpVerbs.Contains(httpContext.Request.Method.ToString()))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Gets the list of HTTP methods defined for entities representing stored procedures.
+        /// When no explicit REST method configuration is present for a stored procedure entity,
+        /// the default method "POST" is populated in httpVerbs.
+        /// </summary>
         /// <param name="operation"></param>
         /// <param name="entityName"></param>
         /// <param name="httpVerbs"></param>
-        /// <returns></returns>
-        public IEnumerable<string> GetStoredProcedureRESTVerbs(Config.Operation operation, string entityName)
+        /// <returns>True, with a list of HTTP verbs. False, when entity is not found in config
+        /// or entity is not a stored procedure, and httpVerbs will be null.</returns>
+        public bool TryGetStoredProcedureRESTVerbs(Config.Operation operation, string entityName, [NotNullWhen(true)] out List<string>? httpVerbs)
         {
             if (_runtimeConfigProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
             {
                 if (runtimeConfig.Entities.TryGetValue(key: entityName, out Entity? entity) && entity is not null)
                 {
                     // if entity.Rest is null or true we just use entity name
-                    if (entity.Rest is not null && ((JsonElement)entity.Rest).ValueKind is JsonValueKind.Object)
-                    {
-                        JsonSerializerOptions options = RuntimeConfig.SerializerOptions;
-                        RestEntitySettings? rest = JsonSerializer.Deserialize<RestEntitySettings>((JsonElement)entity.Rest, options);
-                        if (rest is not null && rest.SpHttpVerbs is not null)
-                        {
-                            return new List<string>(rest.SpHttpVerbs);
-                        }
-                    }
+                    httpVerbs = entity.GetStoredProcedureRESTVerbs();
+                    return true;
+                    
                 }
             }
 
-            return new List<string>(new[] { "POST" });
+            httpVerbs = null;
+            return false;
         }
 
         /// <summary>

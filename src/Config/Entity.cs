@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -198,6 +199,26 @@ namespace Azure.DataApiBuilder.Config
                 throw new JsonException(message: $"Source not one of string or object");
             }
         }
+
+        /// <summary>
+        /// Gets the list of HTTP methods defined for entities representing stored procedures.
+        /// When no explicit configuration is present, the default method "POST" is returned.
+        /// </summary>
+        /// <returns>List of HTTP verbs</returns>
+        public List<string> GetStoredProcedureRESTVerbs()
+        {
+            if (Rest is not null && ((JsonElement)Rest).ValueKind is JsonValueKind.Object)
+            {
+                JsonSerializerOptions options = RuntimeConfig.SerializerOptions;
+                RestEntitySettings? rest = JsonSerializer.Deserialize<RestEntitySettings>((JsonElement)Rest, options);
+                if (rest is not null && rest.StoredProcedureHttpMethods is not null)
+                {
+                    return new List<string>(rest.StoredProcedureHttpMethods);
+                }
+            }
+
+            return new List<string>(new[] { "POST" });
+        }
     }
 
     /// <summary>
@@ -321,7 +342,9 @@ namespace Azure.DataApiBuilder.Config
     /// instead of using the entity-name. Can be a string type.
     /// </param>
     /// <param name="SpHttpVerbs"></param>
-    public record RestEntitySettings(object Path, IEnumerable<string>? SpHttpVerbs = null);
+    public record RestEntitySettings(
+        [property: JsonPropertyName("path")] object Path,
+        [property: JsonPropertyName("method")] string[]? StoredProcedureHttpMethods = null);
 
     /// <summary>
     /// Describes the GraphQL settings specific to an entity.

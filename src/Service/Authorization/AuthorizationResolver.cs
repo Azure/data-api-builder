@@ -224,7 +224,6 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// during runtime.
         /// </summary>
         /// <param name="runtimeConfig"></param>
-        /// <returns></returns>
         public void SetEntityPermissionMap(RuntimeConfig? runtimeConfig)
         {
             foreach ((string entityName, Entity entity) in runtimeConfig!.Entities)
@@ -236,17 +235,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
 
                 if (entity.ObjectType is SourceType.StoredProcedure)
                 {
-                    if (entity.Rest is RestEntitySettings restEntitySettings && restEntitySettings is not null)
-                    {
-                        if (restEntitySettings.SpHttpVerbs?.Count() > 0)
-                        {
-                            entityToRoleMap.StoredProcedureHttpVerbs = new(restEntitySettings.SpHttpVerbs);
-                        }
-                    }
-                    else
-                    {
-                        entityToRoleMap.StoredProcedureHttpVerbs = new(new[] { "POST" });
-                    }
+                    entityToRoleMap.StoredProcedureHttpVerbs = new(entity.GetStoredProcedureRESTVerbs());
                 }
 
                 // Store the allowedColumns for anonymous role.

@@ -106,7 +106,7 @@ namespace Cli
         /// <summary>
         /// Check if add/update command has Entity provided. Return false otherwise.
         /// </summary>
-        public static bool IsEntityProvided(string? entity, ILogger cliLogger, string command)
+        private static bool IsEntityProvided(string? entity, ILogger cliLogger, string command)
         {
             if (string.IsNullOrEmpty(entity))
             {

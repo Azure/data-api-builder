@@ -79,7 +79,7 @@ namespace Cli
     public class EntityOptions : Options
     {
         public EntityOptions(
-            string? entity,
+            string entity,
             string? sourceType,
             IEnumerable<string>? sourceParameters,
             IEnumerable<string>? sourceKeyFields,
@@ -106,7 +106,7 @@ namespace Cli
 
         // Entity is required but we have made required as false to have custom error message (more user friendly), if not provided.
         [Value(0, MetaName = "Entity", Required = false, HelpText = "Name of the entity.")]
-        public string? Entity { get; }
+        public string Entity { get; }
 
         [Option("source.type", Required = false, HelpText = "Type of the database object.Must be one of: [table, view, stored-procedure]")]
         public string? SourceType { get; }
@@ -145,7 +145,7 @@ namespace Cli
         public AddOptions(
             string source,
             IEnumerable<string> permissions,
-            string? entity,
+            string entity,
             string? sourceType,
             IEnumerable<string>? sourceParameters,
             IEnumerable<string>? sourceKeyFields,
@@ -196,7 +196,7 @@ namespace Cli
             IEnumerable<string>? linkingTargetFields,
             IEnumerable<string>? relationshipFields,
             IEnumerable<string>? map,
-            string? entity,
+            string entity,
             string? sourceType,
             IEnumerable<string>? sourceParameters,
             IEnumerable<string>? sourceKeyFields,

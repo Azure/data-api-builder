@@ -1,7 +1,7 @@
 {
   "$schema": "dab.draft-01.schema.json",
   "data-source": {
-    "database-type": "cosmos",
+    "database-type": "cosmosdb_nosql",
     "connection-string": "Connection String",
     "options": {
       "database": "graphqldb",

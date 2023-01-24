@@ -371,7 +371,7 @@ type Table @model(name: ""table"") {
 
 
         /// <summary>
-        /// Tests the GraphQL schema builder behavior when processing stored procedure entity configuration
+        /// Tests the GraphQL schema builder method QueryBuild.Build()'s behavior when processing stored procedure entity configuration
         /// which may expliticly define the field type(query/mutation) of the entity.
         /// </summary>
         /// <param name="graphQLOperation">Query or Mutation</param>
@@ -410,7 +410,7 @@ type Table @model(name: ""table"") {
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
 
-            // With a minimized configuration for this entity, 
+            // With a minimized configuration for this entity, the only field expected is the one that may be generated from this test.
             if (expectsQueryField)
             {
                 Assert.IsTrue(query.Fields.Any(), message: "A query field definition was NOT generated for the GraphQL schema when one was expected.");

@@ -52,7 +52,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     if (entity.ObjectType is SourceType.StoredProcedure)
                     {
                         // check configuration of SP to see if GraphQL operation was overridden to query instead of the default: mutation.
-                        bool isSPDefinedAsQuery = (entity.GraphQL is GraphQLEntitySettings entitySettings && entitySettings.Operation == "query");
+                        bool isSPDefinedAsQuery = (entity.GraphQL is GraphQLEntitySettings entitySettings && string.Equals(entitySettings.Operation, OBJECT_TYPE_QUERY, StringComparison.OrdinalIgnoreCase));
                         IEnumerable<string> rolesAllowedForExecute = IAuthorizationResolver.GetRolesForOperation(entityName, operation: Operation.Execute, entityPermissionsMap);
                         // This assignment prevents the generation of pagination fields in the schema for stored procedures
 

@@ -1002,5 +1002,69 @@ type Foo @model(name:""Foo"") {{
             FieldDefinitionNode deleteMutation = mutation.Fields.First(f => f.Name.Value == expectedDeleteMutationName);
             Assert.AreEqual(expectedDeleteMutationDescription, deleteMutation.Description.Value);
         }
+
+        /// <summary>
+        /// Tests the GraphQL schema builder method MutationBuild.Build()'s behavior when processing stored procedure entity configuration
+        /// which may expliticly define the field type(query/mutation) of the entity.
+        /// Only attempt to get the mutation ObjectTypeDefinitionNode when a mutation root operation type exists.
+        /// In this test, either a mutation is created or it is not, so only attempt to run GetMutationNode when a node is expected,
+        /// otherwise an exception is raised.
+        /// This is expected per GraphQL Specification (Oct 2021) https://spec.graphql.org/October2021/#sec-Root-Operation-Types
+        /// "The mutation root operation type is optional; if it is not provided, the service does not support mutations."
+        /// </summary>
+        /// <param name="graphQLOperation">Query or Mutation</param>
+        /// <param name="operations">CRUD + Execute -> for EntityPermissionsMap </param>
+        /// <param name="permissionOperations">CRUD + Execute -> for Entity.Permissions</param>
+        /// <param name="expectsMutationField">Whether MutationBuilder will generate a mutation field for the GraphQL schema.</param>
+        [DataTestMethod]
+        [DataRow("mutation", new[] { Config.Operation.Execute }, new[] { "execute" }, true, DisplayName = "Mutation field generated since all metadata is valid")]
+        [DataRow("", new[] { Config.Operation.Execute }, new[] { "execute" }, false, DisplayName = "Mutation field not generated since default operation is mutation.")]
+        [DataRow("mutation", new[] { Config.Operation.Read }, new[] { "read" }, false, DisplayName = "Mutation field not generated because invalid permissions were supplied")]
+        [DataRow("query", new[] { Config.Operation.Execute }, new[] { "execute" }, false, DisplayName = "Mutation field not generated because the configured operation is mutation.")]
+        public void StoredProcedureEntityAsMutationField(string graphQLOperation, Config.Operation[] operations, string[] permissionOperations, bool expectsMutationField)
+        {
+            string gql =
+            @"
+            type StoredProcedureType @model(name:""MyStoredProcedure"") {
+                field1: string
+            }
+            ";
+
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            _entityPermissions = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
+                    new string[] { "MyStoredProcedure" },
+                    operations,
+                    new string[] { "anonymous", "authenticated" }
+                    );
+            Entity entity = GraphQLTestHelpers.GenerateStoredProcedureEntity(graphQLTypeName: "StoredProcedureType", graphQLOperation, permissionOperations);
+
+            DocumentNode mutationRoot = MutationBuilder.Build(
+                root,
+                DatabaseType.mssql,
+                new Dictionary<string, Entity> { { "MyStoredProcedure", entity } },
+                entityPermissionsMap: _entityPermissions
+                );
+
+            try
+            {
+                ObjectTypeDefinitionNode mutation = GetMutationNode(mutationRoot);
+
+                // With a minimized configuration for this entity, the only field expected is the one that may be generated from this test.
+                Assert.IsTrue(mutation.Fields.Any(), message: "A mutation field definition was NOT generated for the GraphQL schema when one was expected.");
+                FieldDefinitionNode field = mutation.Fields.First(f => f.Name.Value == $"executeStoredProcedureType");
+                Assert.IsNotNull(field, message: "A mutation field definition was discovered, but was not the expected definition.");
+            }
+            catch (Exception ex)
+            {
+                if (expectsMutationField)
+                {
+                    Assert.Fail(message: $"A mutation field definition was NOT generated for the GraphQL schema when one was expected. {ex.Message}");
+                }
+                else
+                {
+                    Assert.IsTrue(mutationRoot.Definitions.Count == 0, message: "A mutation field definition was generated for the GraphQL schema when one NOT not expected.");
+                }
+            }
+        }
     }
 }

@@ -46,23 +46,26 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                         // check graphql sp config
                         string entityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
                         Entity entity = entities[entityName];
-                        bool isSPDefinedAsQuery = (entity.GraphQL is GraphQLEntitySettings entitySettings && entitySettings.Operation == "query");
-                        if (!isSPDefinedAsQuery)
+                        bool isSPDefinedAsMutation = (entity.GraphQL is GraphQLEntitySettings entitySettings && string.Equals(entitySettings.Operation, GraphQLUtils.OBJECT_TYPE_MUTATION, StringComparison.OrdinalIgnoreCase));
+                        if (isSPDefinedAsMutation)
                         {
                             AddMutationsForStoredProcedure(dbEntityName, entityPermissionsMap, name, entities, mutationFields);
                         }
-
-                        continue;
                     }
-
-                    AddMutations(dbEntityName, operation: Operation.Create, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
-                    AddMutations(dbEntityName, operation: Operation.Update, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
-                    AddMutations(dbEntityName, operation: Operation.Delete, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
+                    else
+                    {
+                        AddMutations(dbEntityName, operation: Operation.Create, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
+                        AddMutations(dbEntityName, operation: Operation.Update, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
+                        AddMutations(dbEntityName, operation: Operation.Delete, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
+                    }
                 }
             }
 
             List<IDefinitionNode> definitionNodes = new();
-            // Only add mutation type if we have fields authorized for mutation operations
+
+            // Only add mutation type if we have fields authorized for mutation operations.
+            // Per GraphQL Specification (Oct 2021) https://spec.graphql.org/October2021/#sec-Root-Operation-Types
+            // "The mutation root operation type is optional; if it is not provided, the service does not support mutations."
             if (mutationFields.Count() > 0)
             {
                 definitionNodes.Add(new ObjectTypeDefinitionNode(null, new NameNode("Mutation"), null, new List<DirectiveNode>(), new List<NamedTypeNode>(), mutationFields));

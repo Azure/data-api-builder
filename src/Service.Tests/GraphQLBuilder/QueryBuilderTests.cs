@@ -369,7 +369,6 @@ type Table @model(name: ""table"") {
             Assert.AreEqual(expectedAllQueryDescription, allItemsQueryFieldNode.Description.Value);
         }
 
-
         /// <summary>
         /// Tests the GraphQL schema builder method QueryBuild.Build()'s behavior when processing stored procedure entity configuration
         /// which may expliticly define the field type(query/mutation) of the entity.
@@ -415,6 +414,7 @@ type Table @model(name: ""table"") {
             {
                 Assert.IsTrue(query.Fields.Any(), message: "A query field definition was NOT generated for the GraphQL schema when one was expected.");
                 FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"executeStoredProcedureType");
+                Assert.IsNotNull(field, message: "A query field definition was discovered, but was not the expected definition.");
             }
             else
             {

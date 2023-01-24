@@ -69,6 +69,7 @@ namespace Azure.DataApiBuilder.Config
         public readonly static JsonSerializerOptions SerializerOptions = new()
         {
             PropertyNameCaseInsensitive = true,
+            ReadCommentHandling = JsonCommentHandling.Skip,
             Converters =
                 {
                     new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)

@@ -71,6 +71,38 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsTrue(JToken.DeepEquals(expected, actual));
         }
 
+        /// <summary>
+        /// Method to validate that comments are allowed in config file (and are ignored during deserialisation).
+        /// </summary>
+        [TestMethod]
+        public void CheckCommentParsingInConfigFile()
+        {
+            string actualJson = @"{
+                                    // Link for latest draft schema.
+                                    ""$schema"":""https://dataapibuilder.azureedge.net/schemas/vmajor.minor.patch-alpha/dab.draft.schema.json"",
+                                    ""data-source"": {
+                                    ""database-type"": ""mssql"",
+                                        ""options"": {
+                                        // Whether we want to send user data to the underlying database.
+                                            ""set-session-context"": true
+                                        },
+                                    ""connection-string"": ""Server=tcp:127.0.0.1,1433;Persist Security Info=False;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=False;Connection Timeout=5;""
+                                    }
+                                }";
+            string expectedJson = @"{
+                                    ""$schema"":""https://dataapibuilder.azureedge.net/schemas/vmajor.minor.patch-alpha/dab.draft.schema.json"",
+                                    ""data-source"": {
+                                    ""database-type"": ""mssql"",
+                                        ""options"": {
+                                            ""set-session-context"": true
+                                        },
+                                    ""connection-string"": ""Server=tcp:127.0.0.1,1433;Persist Security Info=False;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=False;Connection Timeout=5;""
+                                    }
+                                }";
+
+            Assert.AreEqual(RuntimeConfigPath.ParseConfigJsonAndReplaceEnvVariables(expectedJson), RuntimeConfigPath.ParseConfigJsonAndReplaceEnvVariables(actualJson));
+        }
+
         #endregion Positive Tests
 
         #region Negative Tests

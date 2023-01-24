@@ -35,8 +35,11 @@ namespace Azure.DataApiBuilder.Config
         public static string? ParseConfigJsonAndReplaceEnvVariables(string json)
         {
             Utf8JsonReader reader = new(jsonData: Encoding.UTF8.GetBytes(json),
-                                        isFinalBlock: true,
-                                        state: new());
+                                        options: new()
+                                        {
+                                            // Allow comments in config file.
+                                            CommentHandling = JsonCommentHandling.Skip
+                                        });
             MemoryStream stream = new();
             Utf8JsonWriter writer = new(stream, options: new() { Indented = true });
 

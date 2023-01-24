@@ -2,12 +2,12 @@
   "$schema": "dab.draft-01.schema.json",
   "data-source": {
     "database-type": "cosmos",
-    "connection-string": "Connection String"
-  },
-  "cosmos": {
-    "database": "graphqldb",
-    "container": "planet",
-    "schema": "schema.gql"
+    "connection-string": "Connection String",
+    "options": {
+      "database": "graphqldb",
+      "container": "planet",
+      "schema": "schema.gql"
+    }
   },
   "runtime": {
     "rest": {

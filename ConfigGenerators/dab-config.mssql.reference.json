@@ -2,7 +2,10 @@
   "$schema": "dab.draft-01.schema.json",
   "data-source": {
     "database-type": "mssql",
-    "connection-string": "Connection String"
+    "connection-string": "Connection String",
+    "options": {
+      "set-session-context": true
+    }
   },
   "runtime": {
     "rest": {
@@ -770,7 +773,7 @@
       "source": {
         "type": "view",
         "object": "books_view_with_mapping",
-        "key-fields": [ "id" ]
+        "key-fields": ["id"]
       },
       "rest": true,
       "permissions": [

@@ -402,7 +402,7 @@ type Table @model(name: ""table"") {
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
                 DatabaseType.mssql,
-                new Dictionary<string, Entity> { { "MyStoredProcedure", entity} },
+                new Dictionary<string, Entity> { { "MyStoredProcedure", entity } },
                 inputTypes: new(),
                 entityPermissionsMap: _entityPermissions
                 );

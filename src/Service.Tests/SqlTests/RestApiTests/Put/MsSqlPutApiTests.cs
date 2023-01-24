@@ -254,6 +254,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     expectedStatusCode: HttpStatusCode.OK
                 );
         }
+
+        [TestMethod]
+        public async Task PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest()
+        {
+            await base.PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest();
+        }
+
         #endregion
     }
 }

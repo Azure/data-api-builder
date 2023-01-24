@@ -72,7 +72,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Method to validate that comments are allowed in config file (and are ignored during deserialisation).
+        /// Method to validate that comments are allowed in config file (and are ignored during deserialization).
         /// </summary>
         [TestMethod]
         public void CheckCommentParsingInConfigFile()
@@ -99,8 +99,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                                     ""connection-string"": ""Server=tcp:127.0.0.1,1433;Persist Security Info=False;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=False;Connection Timeout=5;""
                                     }
                                 }";
-
-            Assert.AreEqual(RuntimeConfigPath.ParseConfigJsonAndReplaceEnvVariables(expectedJson), RuntimeConfigPath.ParseConfigJsonAndReplaceEnvVariables(actualJson));
+            string expected = RuntimeConfigPath.ParseConfigJsonAndReplaceEnvVariables(expectedJson);
+            string actual = RuntimeConfigPath.ParseConfigJsonAndReplaceEnvVariables(actualJson);
+            Assert.AreEqual(expected, actual);
         }
 
         #endregion Positive Tests

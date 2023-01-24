@@ -1,8 +1,6 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema",
-  "$id": {
-    "$ref": "#/additionalProperties/version"
-  },
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "$id": "#/additionalProperties/version",
   "title": "Data API Builder",
   "description": "Schema for Data API Builder engine",
   "additionalProperties": {
@@ -30,51 +28,91 @@
           "type": "string"
         }
       },
-      "if": {
-        "properties": {
-          "database-type": {
-            "const": "cosmosdb_nosql"
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "options": {
-            "description": "Database specific properties for the backend database",
-            "type": "object",
+      "allOf": [
+        {
+          "if": {
             "properties": {
-              "database": {
-                "type": "string",
-                "description": "Name of the database"
-              },
-              "container": {
-                "description": "Name of the container",
-                "type": "string"
-              },
-              "schema": {
-                "description": "Path to the GraphQL schema file",
-                "type": "string"
+              "database-type": {
+                "const": "cosmosdb_nosql"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "options": {
+                "description": "Database specific properties for the backend database",
+                "type": "object",
+                "properties": {
+                  "database": {
+                    "type": "string",
+                    "description": "Name of the database"
+                  },
+                  "container": {
+                    "description": "Name of the container",
+                    "type": "string"
+                  },
+                  "schema": {
+                    "description": "Path to the GraphQL schema file",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "database",
+                  "schema"
+                ]
               }
             },
             "required": [
-              "database",
-              "schema"
+              "options"
             ]
           }
         },
-        "required": [ "options" ]
-      },
-      "else": {
-        "properties": {
-          "options": {
-            "description": "Database specific properties for the backend database",
-            "type": "object",
+        {
+          "if": {
             "properties": {
+              "database-type": {
+                "const": "mssql"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "options": {
+                "type": "object",
+                "properties": {
+                  "set-session-context": {
+                    "type": "string",
+                    "description": "Enable sending data to MsSql using session context"
+                  }
+                }
+              }
             },
             "required": []
           }
+        },
+        {
+          "if": {
+            "properties": {
+              "database-type": {
+                "enum": [
+                  "mysql",
+                  "postgresql",
+                  "cosmosdb_postgresql"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "options": {
+                "type": "object",
+                "properties": {},
+                "required": []
+              }
+            }
+          }
         }
-      },
+      ],
       "required": [
         "database-type",
         "connection-string"

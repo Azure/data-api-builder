@@ -33,6 +33,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _nonExistentStocksEntityPathName = "asset";
         protected static readonly string _emptyTableEntityName = "Empty";
         protected static readonly string _emptyTableTableName = "empty_table";
+        protected static readonly string _entityWithSecurityPolicy = "Revenue";
+        protected static readonly string _tableWithSecurityPolicy = "revenues";
         protected static readonly string _simple_all_books = "books_view_all";
         protected static readonly string _book_view_with_key_and_mapping = "books_view_with_mapping";
         protected static readonly string _simple_subset_stocks = "stocks_view_selected";
@@ -41,6 +43,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _integrationProcedureFindMany_ProcName = "get_books";
         protected static readonly string _integrationProcedureFindOne_EntityName = "GetBook";
         protected static readonly string _integrationProcedureFindOne_ProcName = "get_book_by_id";
+        protected static readonly string _integrationProcedureInsertOneAndDisplay_EntityName = "InsertAndDisplayAllBooksUnderGivenPublisher";
+        protected static readonly string _integrationProcedureDeleteOne_EntityName = "DeleteLastInsertedBook";
         protected static readonly string _integrationMappingDifferentEntityPath = "plants";
         protected static readonly string _Composite_NonAutoGenPK_EntityPath = "commodities";
         protected static readonly string _integrationTypeEntity = "SupportedType";

@@ -277,10 +277,11 @@ namespace Azure.DataApiBuilder.Service
             else
             {
                 // Config provided during runtime.
-                runtimeConfigProvider.RuntimeConfigLoaded += (sender, newConfig) =>
+                runtimeConfigProvider.RuntimeConfigLoadedHandlers.Add(async (sender, newConfig) =>
                 {
-                    isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
-                };
+                    isRuntimeReady = await PerformOnConfigChangeAsync(app);
+                    return isRuntimeReady;
+                });
             }
 
             if (env.IsDevelopment())
@@ -292,6 +293,7 @@ namespace Azure.DataApiBuilder.Service
 
             // URL Rewrite middleware MUST be called prior to UseRouting().
             // https://andrewlock.net/understanding-pathbase-in-aspnetcore/#placing-usepathbase-in-the-correct-location
+            app.UseCorrelationIdMiddleware();
             app.UsePathRewriteMiddleware();
             app.UseRouting();
 
@@ -509,7 +511,7 @@ namespace Azure.DataApiBuilder.Service
                     _logger.LogError($"Endpoint service initialization failed");
                 }
 
-                if (app.ApplicationServices.GetService<RuntimeConfigProvider>()!.IsDeveloperMode())
+                if (runtimeConfigProvider.IsDeveloperMode())
                 {
                     // Running only in developer mode to ensure fast and smooth startup in production.
                     runtimeConfigValidator.ValidateRelationshipsInConfig(runtimeConfig, sqlMetadataProvider!);

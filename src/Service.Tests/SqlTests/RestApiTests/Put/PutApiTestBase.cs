@@ -115,6 +115,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         }
 
         /// <summary>
+        /// Tests that the PUT updates can only update the rows which are accessible after applying the
+        /// security policy which uses data from session context.
+        /// </summary>
+        [TestMethod]
+        public virtual Task PutOneUpdateTestOnTableWithSecurityPolicy()
+        {
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
         /// Tests the PutOne functionality with a REST PUT request using
         /// headers that include as a key "If-Match" with an item that does exist,
         /// resulting in an update occuring. We then verify that the update occurred.
@@ -272,7 +282,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         /// Tests successful execution of PUT insert requests which try to
         /// modify fields belonging to one base table in the view.
         /// </summary>
-        /// <returns></returns>
         [TestMethod]
         public virtual async Task PutOneInsertInViewTest()
         {
@@ -349,7 +358,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         /// Tests successful execution of PUT update requests which try to
         /// modify fields belonging to one base table in the view.
         /// </summary>
-        /// <returns></returns>
         [TestMethod]
         public virtual async Task PutOneUpdateViewTest()
         {
@@ -455,7 +463,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         }
 
         [TestMethod]
-        public virtual async Task PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest()
+        public virtual async Task PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest(
+            bool isExpectedErrorMsgSubstr = false)
         {
             // Behaviour expected when a non-nullable but default field
             // is missing from request body. In this case, when we try to null out
@@ -475,7 +484,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 exceptionExpected: true,
                 expectedErrorMessage: expectedErrorMessage,
                 expectedStatusCode: HttpStatusCode.BadRequest,
-                expectedSubStatusCode: $"{DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed}"
+                expectedSubStatusCode: $"{DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed}",
+                isExpectedErrorMsgSubstr: isExpectedErrorMsgSubstr
             );
         }
 
@@ -484,7 +494,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         /// with item that does NOT exist, AND parameters incorrectly match schema, results in BadRequest.
         /// sqlQuery represents the query used to get 'expected' result of zero items.
         /// </summary>
-        /// <returns></returns>
         [TestMethod]
         public virtual async Task PutOne_Insert_BadReq_Test()
         {
@@ -513,7 +522,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         /// which results in a BadRequest.
         /// sqlQuery represents the query used to get 'expected' result of zero items.
         /// </summary>
-        /// <returns></returns>
         [TestMethod]
         public virtual async Task PutOne_Insert_PKAutoGen_Test()
         {
@@ -564,7 +572,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         /// which results in a BadRequest.
         /// sqlQuery represents the query used to get 'expected' result of zero items.
         /// </summary>
-        /// <returns></returns>
         [TestMethod]
         public virtual async Task PutOne_Insert_BadReq_NonNullable_Test()
         {
@@ -768,9 +775,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         /// Test to verify that we throw exception for invalid/bad
         /// PUT requests on views.
         /// </summary>
-        /// <returns></returns>
         [TestMethod]
-        public virtual async Task PutOneInViewBadRequest(string expectedErrorMessage)
+        public virtual async Task PutOneInViewBadRequest(
+            string expectedErrorMessage,
+            bool isExpectedErrorMsgSubstr = false)
         {
             // PUT update trying to modify fields from multiple base table
             // will result in error.
@@ -790,7 +798,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 exceptionExpected: true,
                 expectedErrorMessage: expectedErrorMessage,
                 expectedStatusCode: HttpStatusCode.BadRequest,
-                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString(),
+                isExpectedErrorMsgSubstr: isExpectedErrorMsgSubstr
             );
         }
         #endregion

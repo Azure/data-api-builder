@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
@@ -20,12 +21,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="parameters">The parameters used to execute the SQL text.</param>
         /// <param name="dataReaderHandler">The function to invoke to handle the results
         /// in the DbDataReader obtained after executing the query.</param>
+        /// <param name="httpContext">Current request httpContext.</param>
         /// <param name="args">List of string arguments to the DbDataReader handler.</param>
-        ///<returns>An object formed using the results of the query as returned by the given handler.</returns>
+        /// <returns>An object formed using the results of the query as returned by the given handler.</returns>
         public Task<TResult?> ExecuteQueryAsync<TResult>(
             string sqltext,
             IDictionary<string, object?> parameters,
             Func<DbDataReader, List<string>?, Task<TResult?>>? dataReaderHandler,
+            HttpContext? httpContext = null,
             List<string>? args = null);
 
         /// <summary>
@@ -99,5 +102,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Modified the properties of the supplied connection to support managed identity access.
         /// </summary>
         public Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn);
+
+        /// <summary>
+        /// Method to generate the query to send user data to the underlying database which might be used
+        /// for additional security at the database level.
+        /// </summary>
+        /// <param name="httpContext">Current user httpContext.</param>
+        /// <param name="parameters">Dictionary of parameters/value required to execute the query.</param>
+        /// <returns>empty string / query to set session parameters for the connection.</returns>
+        public string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, object?> parameters);
     }
 }

@@ -166,7 +166,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             }
         };
 
-        #region Overriden tests
+        #region overridden tests
         /// <inheritdoc/>
         [TestMethod]
         public override async Task InsertOneTestViolatingForeignKeyConstraint()
@@ -192,6 +192,34 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 expectedErrorMessage: expectedErrorMessage,
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
+            );
+        }
+
+        /// <inheritdoc/>
+        [TestMethod]
+        public override async Task InsertOneTestViolatingUniqueKeyConstraint()
+        {
+            string requestBody = @"
+            {
+                ""categoryid"": 1,
+                ""pieceid"": 1,
+                ""categoryName"": ""SciFi""
+            }";
+
+            string expectedErrorMessage = $"Cannot insert duplicate key in object '{_defaultSchemaName}.{_Composite_NonAutoGenPK_TableName}'.";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                sqlQuery: string.Empty,
+                operationType: Config.Operation.Insert,
+                requestBody: requestBody,
+                exceptionExpected: true,
+                expectedErrorMessage: expectedErrorMessage,
+                expectedStatusCode: HttpStatusCode.Conflict,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString(),
+                isExpectedErrorMsgSubstr: true
             );
         }
         #endregion

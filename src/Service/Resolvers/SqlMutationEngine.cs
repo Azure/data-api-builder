@@ -169,7 +169,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     executeQueryStructure.Parameters,
                     _queryExecutor.GetJsonArrayAsync);
 
-            JsonDocument jsonDocument;
+            JsonElement jsonElement;
 
             // A note on returning stored procedure results:
             // We can't infer what the stored procedure actually did beyond the HasRows and RecordsAffected attributes
@@ -186,8 +186,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     // A "correctly" configured stored procedure would INSERT INTO ... OUTPUT ... VALUES as the result set
                     if (resultArray is not null && resultArray.Count > 0)
                     {
-                        jsonDocument = JsonDocument.Parse(resultArray.ToJsonString());
-                        return new CreatedResult(location: context.EntityName, OkMutationResponse(jsonDocument.RootElement.Clone()).Value);
+                        jsonElement = JsonSerializer.SerializeToElement(resultArray.ToJsonString());
+                        return new CreatedResult(location: context.EntityName, OkMutationResponse(jsonElement).Value);
                     }
                     else
                     {   // If no result set returned, just return a 201 Created with empty array instead of array with single null value
@@ -207,8 +207,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     // A "correctly" configured stored procedure would UPDATE ... SET ... OUTPUT as the result set
                     if (resultArray is not null && resultArray.Count > 0)
                     {
-                        jsonDocument = JsonDocument.Parse(resultArray.ToJsonString());
-                        return OkMutationResponse(jsonDocument.RootElement.Clone());
+                        jsonElement = JsonSerializer.SerializeToElement(resultArray.ToJsonString());
+                        return OkMutationResponse(jsonElement);
                     }
                     else
                     {
@@ -480,6 +480,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         queryString,
                         queryParameters,
                         _queryExecutor.ExtractRowFromDbDataReader,
+                        _httpContextAccessor.HttpContext!,
                         sourceDefinition.PrimaryKey);
 
                 if (resultRecord is not null && resultRecord.Item1 is null)
@@ -499,7 +500,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     await _queryExecutor.ExecuteQueryAsync(
                         queryString,
                         queryParameters,
-                        _queryExecutor.ExtractRowFromDbDataReader);
+                        _queryExecutor.ExtractRowFromDbDataReader,
+                        _httpContextAccessor.HttpContext!);
             }
 
             return resultRecord;
@@ -540,7 +542,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 resultProperties = await _queryExecutor.ExecuteQueryAsync(
                     queryString,
                     queryParameters,
-                    _queryExecutor.GetResultProperties);
+                    _queryExecutor.GetResultProperties,
+                    _httpContextAccessor.HttpContext!);
 
             return resultProperties;
         }
@@ -598,6 +601,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                        queryString,
                        queryParameters,
                        _queryExecutor.GetMultipleResultSetsIfAnyAsync,
+                       _httpContextAccessor.HttpContext!,
                        new List<string> { prettyPrintPk, entityName });
         }
 

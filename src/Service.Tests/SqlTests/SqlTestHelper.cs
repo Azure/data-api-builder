@@ -20,6 +20,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         // This is is the key which holds all the rows in the response
         // for REST requests.
         public static readonly string jsonResultTopLevelKey = "value";
+
+        // Exception properties to put assertions when verifying results of SqlTests which expect exception.
+        private const string PROPERTY_MESSAGE = "message";
+        private const string PROPERTY_STATUS = "status";
+        private const string PROPERTY_CODE = "code";
+
         public static void RemoveAllRelationshipBetweenEntities(RuntimeConfig runtimeConfig)
         {
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities.ToList())
@@ -98,6 +104,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="httpMethod">The http method specified in the request.</param>
         /// <param name="expectedLocationHeader">The expected location header in the response(if any).</param>
         /// <param name="verifyNumRecords"></param>
+        /// <param name="isExpectedErrorMsgSubstr">When set to true, will look for a substring 'expectedErrorMessage'
+        /// in the actual exception message to verify the test result. This is helpful when the actual error message is dynamic and changes
+        /// on every single run of the test.</param>
         /// <returns></returns>
         public static async Task VerifyResultAsync(
             string expected,
@@ -106,7 +115,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             bool exceptionExpected,
             HttpMethod httpMethod,
             string expectedLocationHeader,
-            int verifyNumRecords)
+            int verifyNumRecords,
+            bool isExpectedErrorMsgSubstr = false)
         {
             string responseBody = await response.Content.ReadAsStringAsync();
             if (!exceptionExpected)
@@ -141,9 +151,37 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 // as it has to be added with a preceding backslash.
                 responseBody = Regex.Replace(responseBody, @"\\u0022", @"\\""");
 
+                // Remove all carriage returns and new lines from the response body.
+                responseBody = Regex.Replace(responseBody, @"\\n|\\r", "");
+
                 // Convert the escaped characters into their unescaped form.
                 responseBody = Regex.Unescape(responseBody);
-                Assert.AreEqual(expected, responseBody);
+
+                // Json Property in error which the holds the actual exception properties. 
+                string PARENT_PROPERTY_ERROR = "error";
+
+                // Generate actual and expected error JObjects to assert that they are equal.
+                JsonElement expectedErrorObj = JsonDocument.Parse(expected).RootElement.GetProperty(PARENT_PROPERTY_ERROR);
+                JsonElement actualErrorObj = JsonDocument.Parse(responseBody).RootElement.GetProperty(PARENT_PROPERTY_ERROR);
+
+                // Assert that the exception subStatusCode(code) and statusCode(status) are equal.
+                Assert.AreEqual(expectedErrorObj.GetProperty(PROPERTY_STATUS).ToString(),
+                    actualErrorObj.GetProperty(PROPERTY_STATUS).ToString());
+                Assert.AreEqual(expectedErrorObj.GetProperty(PROPERTY_CODE).ToString(),
+                    actualErrorObj.GetProperty(PROPERTY_CODE).ToString());
+
+                // Assert that the actual and expected error messages are same (if needed by the test),
+                // or the expectedErrorMessage is present as a substring in the actual error message.
+                string actualErrorMsg = actualErrorObj.GetProperty(PROPERTY_MESSAGE).ToString();
+                string expectedErrorMsg = expectedErrorObj.GetProperty(PROPERTY_MESSAGE).ToString();
+                if (isExpectedErrorMsgSubstr)
+                {
+                    Assert.IsTrue(actualErrorMsg.Contains(expectedErrorMsg, StringComparison.OrdinalIgnoreCase));
+                }
+                else
+                {
+                    Assert.AreEqual(expectedErrorMsg, actualErrorMsg);
+                }
             }
         }
 

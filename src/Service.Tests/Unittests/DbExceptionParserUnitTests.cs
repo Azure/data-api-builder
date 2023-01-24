@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Data.Common;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
@@ -33,7 +32,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
             Mock<RuntimeConfigProvider> provider = new(configPath.Object, configProviderLogger.Object);
             provider.Setup(x => x.IsDeveloperMode()).Returns(isDeveloperMode);
-            Mock<DbExceptionParser> parser = new(provider.Object, new HashSet<string>());
+            Mock<DbExceptionParser> parser = new(provider.Object);
             DbException e = SqlTestHelper.CreateSqlException(connectionEstablishmentError, expected);
             string actual = (parser.Object).Parse(e).Message;
             Assert.AreEqual(expected, actual);

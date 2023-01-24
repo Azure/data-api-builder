@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.Data.Common;
+using System.Net;
 using Azure.DataApiBuilder.Service.Configurations;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
@@ -9,12 +11,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     /// </summary>
     public class PostgreSqlDbExceptionParser : DbExceptionParser
     {
-        public PostgreSqlDbExceptionParser(RuntimeConfigProvider configProvider) :
-            base(configProvider,
-                // HashSet of 'SqlState'(s) which are to be considered as bad requests.
-                new()
-                {
-                    // integrity_constraint_violation, occurs when an insert/update/delete statement violates
+        public PostgreSqlDbExceptionParser(RuntimeConfigProvider configProvider) : base(configProvider)
+        {
+            // HashSet of 'SqlState'(s) to be considered as bad requests.
+            BadRequestExceptionCodes.UnionWith(new List<string>
+            {
+                // integrity_constraint_violation, occurs when an insert/update/delete statement violates
                     // a foreign key, primary key, check or unique constraint.
                     "23000",
 
@@ -23,9 +25,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                     // foreign_key_violation, occurs when an insertion violates foreign key constraint.
                     "23503",
-
-                    // unique_violation, occurs when an insertion on a table tries to insert a duplicate value for a unique field.
-                    "23505",
 
                     // check_violation,The CHECK constraint ensures that all values in a column satisfy certain conditions.
                     // Check violation occurs when a check constraint fails. e.g. name like '.dab' when name = 'DAB' fails the check.
@@ -37,9 +36,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                     // object_not_in_prerequisite_state
                     "55000"
-                })
-        {
-            TransientErrorCodes = new()
+            });
+
+            TransientExceptionCodes.UnionWith(new List<string>
             {
                 // insufficient_resources
                 "53000",
@@ -85,13 +84,40 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 // transaction_resolution_unknown
                 "08007"
-            };
+            });
+
+            ConflictExceptionCodes.UnionWith(new List<string>
+            {
+                // unique_violation, occurs when an insertion on a table tries to insert a duplicate value for a unique field.
+                "23505",
+            });
         }
 
         /// <inheritdoc/>
         public override bool IsTransientException(DbException e)
         {
-            return e.SqlState is not null && TransientErrorCodes!.Contains(e.SqlState);
+            return e.SqlState is not null && TransientExceptionCodes.Contains(e.SqlState);
+        }
+
+        /// <inheritdoc/>
+        public override HttpStatusCode GetHttpStatusCodeForException(DbException e)
+        {
+            if (e.SqlState is null)
+            {
+                return HttpStatusCode.InternalServerError;
+            }
+
+            if (BadRequestExceptionCodes.Contains(e.SqlState))
+            {
+                return HttpStatusCode.BadRequest;
+            }
+
+            if (ConflictExceptionCodes.Contains(e.SqlState))
+            {
+                return HttpStatusCode.Conflict;
+            }
+
+            return HttpStatusCode.InternalServerError;
         }
     }
 }

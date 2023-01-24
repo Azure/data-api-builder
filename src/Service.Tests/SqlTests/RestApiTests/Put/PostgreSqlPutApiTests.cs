@@ -272,12 +272,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         public async Task PutOneInViewBadRequest()
         {
             string expectedErrorMessage = $"55000: cannot update view \"{_composite_subset_bookPub}\"";
-            await base.PutOneInViewBadRequest(expectedErrorMessage);
+            await base.PutOneInViewBadRequest(
+                expectedErrorMessage,
+                isExpectedErrorMsgSubstr: true);
         }
 
-        #region Overriden tests
-
-        #endregion
+        [TestMethod]
+        public async Task PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest()
+        {
+            await base.PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest(
+                isExpectedErrorMsgSubstr: true);
+        }
 
         #region Test Fixture Setup
 

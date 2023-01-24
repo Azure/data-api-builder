@@ -108,7 +108,7 @@ namespace Cli
         /// </summary>
         private static bool IsEntityProvided(string? entity, ILogger cliLogger, string command)
         {
-            if (string.IsNullOrEmpty(entity))
+            if (string.IsNullOrWhiteSpace(entity))
             {
                 cliLogger.LogError($"Entity name is missing. " +
                             $"Usage: dab {command} [entity-name] [{command}-options]");

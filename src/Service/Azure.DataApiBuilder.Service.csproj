@@ -5,6 +5,9 @@
         <Configurations>Debug;Release;Docker</Configurations>
         <OutputPath>$(BaseOutputPath)\engine</OutputPath>
         <RuntimeIdentifiers>win-x64;linux-x64;osx-x64</RuntimeIdentifiers>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+        <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
     </PropertyGroup>
 
     <ItemGroup>
@@ -21,12 +24,12 @@
         <CopyToOutputDirectoryAction Condition="'$(Configuration)'=='Docker'">Never</CopyToOutputDirectoryAction>
     </PropertyGroup>
 
-    <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <!-- <PropertyGroup Condition="'$(Configuration)'=='Release'">
       <DebugType>none</DebugType>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Configuration)'=='Docker'">
       <DebugType>none</DebugType>
-    </PropertyGroup>
+    </PropertyGroup> -->
 
     <ItemGroup>
         <Content Update="appsettings*.json">
@@ -71,6 +74,7 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
         <PackageReference Include="System.IO.Abstractions" />
+        <PackageReference Include="Microsoft.SourceLink.GitHub" />
 
     </ItemGroup>
     <ItemGroup>

@@ -13,15 +13,19 @@
     <RuntimeIdentifiers>win-x64;linux-x64;osx-x64</RuntimeIdentifiers>
     <AssemblyName>dab</AssemblyName>
     <PackageDescription>Data API Builder</PackageDescription>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+  <!-- <PropertyGroup Condition="'$(Configuration)'=='Release'">
     <DebugType>none</DebugType>
-  </PropertyGroup>
+  </PropertyGroup> -->
 
   <ItemGroup>
-    <PackageReference Include="CommandLineParser" />
-    <PackageReference Include="Humanizer.Core" />
+    <PackageReference Include="CommandLineParser"  />
+    <PackageReference Include="Humanizer.Core"  />
+    <PackageReference Include="Microsoft.SourceLink.GitHub"  />
   </ItemGroup>
 
   <ItemGroup>

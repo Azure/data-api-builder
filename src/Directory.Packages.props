@@ -34,5 +34,6 @@
       <PackageVersion Include="System.Drawing.Common" Version="6.0.0" />
       <PackageVersion Include="System.IO.Abstractions" Version="17.2.3" />
       <PackageVersion Include="System.IO.Abstractions.TestingHelpers" Version="17.2.3" />
+      <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="1.1.1" />
   </ItemGroup>
 </Project>

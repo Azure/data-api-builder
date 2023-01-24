@@ -5,11 +5,14 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <OutputPath>$(BaseOutputPath)\engine</OutputPath>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+  <!-- <PropertyGroup Condition="'$(Configuration)'=='Release'">
     <DebugType>none</DebugType>
-  </PropertyGroup>
+  </PropertyGroup> -->
 
   <ItemGroup>
     <ProjectReference Include="..\Auth\Azure.DataApiBuilder.Auth.csproj" />
@@ -17,14 +20,15 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="HotChocolate" />
-    <PackageReference Include="HotChocolate.AspNetCore.Authorization" />
-    <PackageReference Include="Humanizer" />
-    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="HotChocolate"  />
+    <PackageReference Include="HotChocolate.AspNetCore.Authorization"  />
+    <PackageReference Include="Humanizer"  />
+    <PackageReference Include="Newtonsoft.Json"  />
     <PackageReference Include="StyleCop.Analyzers" >
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.SourceLink.GitHub"  />
   </ItemGroup>
 
 </Project>

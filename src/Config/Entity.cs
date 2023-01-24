@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -106,8 +105,21 @@ namespace Azure.DataApiBuilder.Config
                         if (configElement.TryGetProperty(propertyName: "operation", out JsonElement operation) && operation.ValueKind is JsonValueKind.String)
                         {
                             string operationType = JsonSerializer.Deserialize<string>(operation)!;
-                            GraphQLEntitySettings graphQLEntitySettings = new(Type: null, Operation: operationType);
-                            GraphQL = graphQLEntitySettings;
+
+                            if (string.Equals(operationType, "mutation", StringComparison.OrdinalIgnoreCase) || string.Equals(operationType, string.Empty))
+                            {
+                                GraphQLEntitySettings graphQLEntitySettings = new(Type: null, Operation: "mutation");
+                                GraphQL = graphQLEntitySettings;
+                            }
+                            else if (string.Equals(operationType, "query", StringComparison.OrdinalIgnoreCase))
+                            {
+                                GraphQLEntitySettings graphQLEntitySettings = new(Type: null, Operation: "query");
+                                GraphQL = graphQLEntitySettings;
+                            }
+                            else
+                            {
+                                throw new JsonException(message: $"Unsupported GraphQL operation type: {operationType}");
+                            }
                         }
                         else
                         {

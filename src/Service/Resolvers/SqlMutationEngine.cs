@@ -356,7 +356,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// form that complies with vNext Api guidelines.
         /// The result is converted to a JSON Array if the result is not of that type already.
         /// </summary>
-        /// <seealso>https://github.com/microsoft/api-guidelines/blob/vNext/Guidelines.md</seealso>
+        /// <seealso>https://github.com/microsoft/api-guidelines/blob/vNext/Guidelines.md#92-serialization</seealso>
         /// <param name="jsonResult">Value representing the Json results of the client's request.</param>
         private static OkObjectResult OkMutationResponse(JsonElement jsonResult)
         {

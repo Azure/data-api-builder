@@ -84,6 +84,15 @@ namespace Azure.DataApiBuilder.Auth
         public IEnumerable<string> GetRolesForField(string entityName, string field, Operation operation);
 
         /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="entityName"></param>
+        /// <param name="roleName"></param>
+        /// <param name="httpVerb"></param>
+        /// <returns>True if the execution of the stored procedure is permitted.</returns>
+        public bool IsStoredProcedureExecutionPermitted(string entityName, string roleName, string httpVerb);
+
+        /// <summary>
         /// Returns a list of roles which define permissions for the provided operation.
         /// i.e. list of roles which allow the operation 'Read' on entityName.
         /// </summary>

@@ -121,6 +121,19 @@ namespace Azure.DataApiBuilder.Service.Authorization
             return false;
         }
 
+        public bool IsStoredProcedureExecutionPermitted(string entityName, string roleName, string httpVerb)
+        {
+            if (EntityPermissionsMap.TryGetValue(entityName, out EntityMetadata? entityMetadata))
+            {
+                if (entityMetadata.StoredProcedureHttpVerbs.Contains(httpVerb))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         /// <inheritdoc />
         public bool AreColumnsAllowedForOperation(string entityName, string roleName, Config.Operation operation, IEnumerable<string> columns)
         {
@@ -216,7 +229,25 @@ namespace Azure.DataApiBuilder.Service.Authorization
         {
             foreach ((string entityName, Entity entity) in runtimeConfig!.Entities)
             {
-                EntityMetadata entityToRoleMap = new();
+                EntityMetadata entityToRoleMap = new()
+                {
+                    ObjectType = entity.ObjectType
+                };
+
+                if (entity.ObjectType is SourceType.StoredProcedure)
+                {
+                    if (entity.Rest is RestEntitySettings restEntitySettings && restEntitySettings is not null)
+                    {
+                        if (restEntitySettings.SpHttpVerbs?.Count() > 0)
+                        {
+                            entityToRoleMap.StoredProcedureHttpVerbs = new(restEntitySettings.SpHttpVerbs);
+                        }
+                    }
+                    else
+                    {
+                        entityToRoleMap.StoredProcedureHttpVerbs = new(new[] { "POST" });
+                    }
+                }
 
                 // Store the allowedColumns for anonymous role.
                 // In case the authenticated role is not defined on the entity,

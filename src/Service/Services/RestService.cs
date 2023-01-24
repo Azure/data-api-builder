@@ -1,7 +1,11 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using System.Web;
 using Azure.DataApiBuilder.Auth;
@@ -65,7 +69,14 @@ namespace Azure.DataApiBuilder.Service.Services
             RequestValidator.ValidateEntity(entityName, _sqlMetadataProvider.EntityToDatabaseObject.Keys);
             DatabaseObject dbObject = _sqlMetadataProvider.EntityToDatabaseObject[entityName];
 
-            await AuthorizationCheckForRequirementAsync(resource: entityName, requirement: new EntityRoleOperationPermissionsRequirement());
+            if (dbObject.SourceType is not SourceType.StoredProcedure)
+            {
+                await AuthorizationCheckForRequirementAsync(resource: entityName, requirement: new EntityRoleOperationPermissionsRequirement());
+            }
+            else
+            {
+                await AuthorizationCheckForRequirementAsync(resource: entityName, requirement: new StoredProcedurePermissionsRequirement());
+            }
 
             QueryString? query = GetHttpContext().Request.QueryString;
             string queryString = query is null ? string.Empty : GetHttpContext().Request.QueryString.ToString();
@@ -81,7 +92,8 @@ namespace Azure.DataApiBuilder.Service.Services
             // If request has resolved to a stored procedure entity, initialize and validate appropriate request context
             if (dbObject.SourceType is SourceType.StoredProcedure)
             {
-                PopulateStoredProcedureContext(operationType,
+                PopulateStoredProcedureContext(
+                    operationType,
                     dbObject,
                     entityName,
                     queryString,
@@ -232,9 +244,12 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Helper method to populate the context in case the database object for this request is a stored procedure
+        /// Populates the request context when the representative database object is a stored procedure.
+        /// Stored procedures support arbitrary keys in the query string, so the read operation behaves differently
+        /// than for requests on non-stored procedure entities.
         /// </summary>
-        private void PopulateStoredProcedureContext(Config.Operation operationType,
+        private void PopulateStoredProcedureContext(
+            Config.Operation operationType,
             DatabaseObject dbObject,
             string entityName,
             string queryString,
@@ -242,6 +257,16 @@ namespace Azure.DataApiBuilder.Service.Services
             string requestBody,
             out RestRequestContext context)
         {
+            List<string> httpVerbs = new(GetStoredProcedureRESTVerbs(operationType, entityName));
+            HttpContext? httpContext = _httpContextAccessor.HttpContext;
+            if (httpContext is null || !httpVerbs.Contains(httpContext.Request.Method.ToString()))
+            {
+                throw new DataApiBuilderException(
+                    message: "This operation is not supported.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
             switch (operationType)
             {
 
@@ -280,9 +305,10 @@ namespace Azure.DataApiBuilder.Service.Services
                         operationType);
                     break;
                 default:
-                    throw new DataApiBuilderException(message: "This operation is not supported.",
-                                                   statusCode: HttpStatusCode.BadRequest,
-                                                   subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    throw new DataApiBuilderException(
+                        message: "This operation is not supported.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
 
             // Throws bad request if primaryKeyRoute set
@@ -292,8 +318,36 @@ namespace Azure.DataApiBuilder.Service.Services
             ((StoredProcedureRequestContext)context).PopulateResolvedParameters();
 
             // Validate the request parameters
-            RequestValidator.ValidateStoredProcedureRequestContext(
-                (StoredProcedureRequestContext)context, _sqlMetadataProvider);
+            RequestValidator.ValidateStoredProcedureRequestContext((StoredProcedureRequestContext)context, _sqlMetadataProvider);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="operation"></param>
+        /// <param name="entityName"></param>
+        /// <param name="httpVerbs"></param>
+        /// <returns></returns>
+        public IEnumerable<string> GetStoredProcedureRESTVerbs(Config.Operation operation, string entityName)
+        {
+            if (_runtimeConfigProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
+            {
+                if (runtimeConfig.Entities.TryGetValue(key: entityName, out Entity? entity) && entity is not null)
+                {
+                    // if entity.Rest is null or true we just use entity name
+                    if (entity.Rest is not null && ((JsonElement)entity.Rest).ValueKind is JsonValueKind.Object)
+                    {
+                        JsonSerializerOptions options = RuntimeConfig.SerializerOptions;
+                        RestEntitySettings? rest = JsonSerializer.Deserialize<RestEntitySettings>((JsonElement)entity.Rest, options);
+                        if (rest is not null && rest.SpHttpVerbs is not null)
+                        {
+                            return new List<string>(rest.SpHttpVerbs);
+                        }
+                    }
+                }
+            }
+
+            return new List<string>(new[] { "POST" });
         }
 
         /// <summary>

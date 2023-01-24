@@ -97,6 +97,8 @@ namespace Azure.DataApiBuilder.Config
                 }
                 else if (configElement.ValueKind is JsonValueKind.Object)
                 {
+                    // Hydrate the ObjectType field with metadata from database source.
+                    TryPopulateSourceFields();
                     // Only stored procedure configuration can override the GraphQL operation type.
                     if (ObjectType is SourceType.StoredProcedure)
                     {
@@ -318,7 +320,8 @@ namespace Azure.DataApiBuilder.Config
     /// at which the REST endpoint for this entity is exposed
     /// instead of using the entity-name. Can be a string type.
     /// </param>
-    public record RestEntitySettings(object Path);
+    /// <param name="SpHttpVerbs"></param>
+    public record RestEntitySettings(object Path, IEnumerable<string>? SpHttpVerbs = null);
 
     /// <summary>
     /// Describes the GraphQL settings specific to an entity.

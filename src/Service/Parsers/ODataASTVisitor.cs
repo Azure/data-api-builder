@@ -100,10 +100,29 @@ namespace Azure.DataApiBuilder.Service.Parsers
             {
                 switch (edmType.PrimitiveKind())
                 {
-                    case EdmPrimitiveTypeKind.String:
-                        return param;
+                    case EdmPrimitiveTypeKind.Guid:
+                        return Guid.Parse(param);
+                    case EdmPrimitiveTypeKind.Byte:
+                        return byte.Parse(param);
+                    case EdmPrimitiveTypeKind.Int16:
+                        return short.Parse(param);
                     case EdmPrimitiveTypeKind.Int32:
                         return int.Parse(param);
+                    case EdmPrimitiveTypeKind.Int64:
+                        return long.Parse(param);
+                    case EdmPrimitiveTypeKind.Single:
+                        return float.Parse(param);
+                    case EdmPrimitiveTypeKind.Double:
+                        return double.Parse(param);
+                    case EdmPrimitiveTypeKind.Decimal:
+                        return decimal.Parse(param);
+                    case EdmPrimitiveTypeKind.Boolean:
+                        return bool.Parse(param);
+                    case EdmPrimitiveTypeKind.Date:
+                    case EdmPrimitiveTypeKind.DateTimeOffset:
+                        return DateTimeOffset.Parse(param);
+                    case EdmPrimitiveTypeKind.String:
+                        return param;
                     default:
                         // should never happen due to the config being validated for correct types
                         throw new NotSupportedException($"{edmType} is not supported");

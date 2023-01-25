@@ -26,7 +26,7 @@ namespace Cli.Tests
         /// <summary>
         /// Returns a new dab Process with the given command and flags
         /// </summary>
-        public static Process StartDabProcess(string command, string flags)
+        public static Process ExecuteDabCommand(string command, string flags)
         {
             Process process = new()
             {

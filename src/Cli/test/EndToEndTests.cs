@@ -417,7 +417,7 @@ public class EndToEndTests
     {
         WriteJsonContentToFile(_testRuntimeConfig, INITIAL_CONFIG);
 
-        using Process process = StartDabProcess(
+        using Process process = ExecuteDabCommand(
             command: $"start --config {_testRuntimeConfig}",
             logLevelOption
         );
@@ -441,7 +441,7 @@ public class EndToEndTests
     [DataRow("", "--help", new string[] { "init", "add", "update", "start" }, DisplayName = "Checking output for --help.")]
     public void TestHelpWriterOutput(string command, string flags, string[] expectedOutputArray)
     {
-        using Process process = StartDabProcess(
+        using Process process = ExecuteDabCommand(
             command,
             flags
         );
@@ -471,7 +471,7 @@ public class EndToEndTests
     {
         string runtimeConfigJson = AddPropertiesToJson(initialConfig, entityDetails);
         File.WriteAllText(_testRuntimeConfig, runtimeConfigJson);
-        using Process process = StartDabProcess(
+        using Process process = ExecuteDabCommand(
             command: "start",
             flags: $"--config {_testRuntimeConfig}"
         );
@@ -494,6 +494,45 @@ public class EndToEndTests
             output = process.StandardOutput.ReadLine();
             Assert.IsNotNull(output);
             Assert.IsTrue(output.Contains($"Failed to start the engine."));
+        }
+
+        process.Kill();
+
+    }
+
+    /// <summary>
+    /// Test to verify that if entity is not specified in the add/update
+    /// command, a custom (more user friendly) message is displayed.
+    /// NOTE: Below order of execution is important, changing the order for DataRow might result in test failures.
+    /// The below order makes sure entity is added before update.
+    /// </summary>
+    [DataRow("add", "", "-s my_entity --permissions anonymous:create", false)]
+    [DataRow("add", "MyEntity", "-s my_entity --permissions anonymous:create", true)]
+    [DataRow("update", "", "-s my_entity --permissions authenticate:*", false)]
+    [DataRow("update", "MyEntity", "-s my_entity --permissions authenticate:*", true)]
+    [DataTestMethod]
+    public void TestMissingEntityFromCommand(
+        string command,
+        string entityName,
+        string flags,
+        bool expectSuccess)
+    {
+        if (!File.Exists(_testRuntimeConfig))
+        {
+            string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql" };
+            Program.Main(initArgs);
+        }
+
+        using Process process = ExecuteDabCommand(
+            command: $"{command} {entityName}",
+            flags: $"-c {_testRuntimeConfig} {flags}"
+        );
+
+        string? output = process.StandardOutput.ReadToEnd();
+        Assert.IsNotNull(output);
+        if (!expectSuccess)
+        {
+            Assert.IsTrue(output.Contains($"Error: Entity name is missing. Usage: dab {command} [entity-name] [{command}-options]"));
         }
 
         process.Kill();

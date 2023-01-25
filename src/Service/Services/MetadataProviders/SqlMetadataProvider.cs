@@ -915,7 +915,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
                 if (runtimeConfig.GraphQLGlobalSettings.Enabled
                     && _entities.TryGetValue(entityName, out Entity? entity)
-                    && IsGraphQLReservedName(entity, columnName))
+                    && IsGraphQLReservedName(entity, columnName, graphQLEnabledGlobally: runtimeConfig.GraphQLGlobalSettings.Enabled))
                 {
                     throw new DataApiBuilderException(
                        message: $"The column '{columnName}' violates GraphQL name restrictions.",
@@ -951,23 +951,28 @@ namespace Azure.DataApiBuilder.Service.Services
         /// - If field has an mapped value (alias), then use the mapped value to evaluate name violation.
         /// - If field does not have an alias/mapped value, then use the provided field name to
         /// check for naming violations.
+        /// This method must only be called when GraphQL is enabled globally.
         /// </summary>
         /// <param name="entity">Entity to check </param>
         /// <param name="databaseColumnName">Name to evaluate against GraphQL naming requirements</param>
-        /// <exception cref="DataApiBuilderException>
+        /// <param name="graphQLEnabledGlobally">Whether GraphQL is enabled globally in the runtime configuration.</param>
+        /// <exception cref="DataApiBuilderException"/>
         /// <returns>True if no name rules are broken. Otherwise, false</returns>
-        public static bool IsGraphQLReservedName(Entity entity, string databaseColumnName)
+        public static bool IsGraphQLReservedName(Entity entity, string databaseColumnName, bool graphQLEnabledGlobally)
         {
-            if (entity.GraphQL is not null && entity.GraphQL is bool enabled && enabled)
+            if (graphQLEnabledGlobally)
             {
-                if (entity.Mappings is not null
-                    && entity.Mappings.TryGetValue(databaseColumnName, out string? fieldAlias)
-                    && !string.IsNullOrWhiteSpace(fieldAlias))
+                if (entity.GraphQL is null || (entity.GraphQL is not null && entity.GraphQL is bool enabled && enabled))
                 {
-                    databaseColumnName = fieldAlias;
-                }
+                    if (entity.Mappings is not null
+                        && entity.Mappings.TryGetValue(databaseColumnName, out string? fieldAlias)
+                        && !string.IsNullOrWhiteSpace(fieldAlias))
+                    {
+                        databaseColumnName = fieldAlias;
+                    }
 
-                return IsIntrospectionField(databaseColumnName);
+                    return IsIntrospectionField(databaseColumnName);
+                }
             }
 
             return false;

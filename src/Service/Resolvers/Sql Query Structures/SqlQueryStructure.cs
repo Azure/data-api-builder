@@ -603,8 +603,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 FieldNode field = (FieldNode)node;
                 string fieldName = field.Name.Value;
 
-                // Do not add the reserved introspection field "__typename" to the SqlQueryStructure because it is handled by HotChocolate
-                bool isIntrospectionField = field.Name.Value == IntrospectionFields.TypeName ? true : false;
+                // Do not add reserved introspection fields prefixed with "__" to the SqlQueryStructure because those fields are handled by HotChocolate.
+                bool isIntrospectionField = GraphQLNaming.IsIntrospectionField(field.Name.Value);
                 if (isIntrospectionField)
                 {
                     continue;

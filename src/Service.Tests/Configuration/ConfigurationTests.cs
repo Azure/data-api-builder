@@ -986,7 +986,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// Indirectly tests IsGraphQLReservedName(). Runtime config provided to engine which will
         /// trigger SqlMetadataProvider PopulateSourceDefinitionAsync() to pull column metadata from
         /// the table "graphql_incompatible." That table contains columns which collide with reserved GraphQL
-        /// instrospection field names which begin with double underscore (__).
+        /// introspection field names which begin with double underscore (__).
         /// </summary>
         [TestCategory(TestCategory.MSSQL)]
         [DataTestMethod]

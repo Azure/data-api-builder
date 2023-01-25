@@ -248,11 +248,17 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Mappings: columnNameMappings
                 );
 
-            bool actualIsNameViolation = MsSqlMetadataProvider.IsGraphQLReservedName(sampleEntity, dbColumnName);
+            bool actualIsNameViolation = MsSqlMetadataProvider.IsGraphQLReservedName(sampleEntity, dbColumnName, graphQLEnabledGlobally: true);
             Assert.AreEqual(
                 expected: expectsError,
                 actual: actualIsNameViolation,
                 message: "Unexpectd failure. fieldName: " + dbColumnName + " | fieldMapping:" + mappedName);
+
+            bool isViolationWithGraphQLGloballyDisabled = MsSqlMetadataProvider.IsGraphQLReservedName(sampleEntity, dbColumnName, graphQLEnabledGlobally: false);
+            Assert.AreEqual(
+                expected: false,
+                actual: isViolationWithGraphQLGloballyDisabled,
+                message: "Unexpected failure. fieldName: " + dbColumnName + " | fieldMapping:" + mappedName);
         }
     }
 }

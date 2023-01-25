@@ -9,7 +9,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
     {
         private static string _invalidForeignKeyError =
             "23503: insert or update on table \\u0022books\\u0022 " +
-            "violates foreign key constraint \\u0022book_publisher_fk\\u0022\"";
+            "violates foreign key constraint \\u0022book_publisher_fk\\u0022";
 
         #region Test Fixture Setup
         /// <summary>

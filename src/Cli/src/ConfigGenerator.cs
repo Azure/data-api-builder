@@ -61,8 +61,7 @@ namespace Cli
             runtimeConfigJson = string.Empty;
 
             DatabaseType dbType = options.DatabaseType;
-
-            CosmosDbNoSqlOptions? cosmosDbNoSqlOptions = null;
+            object? dbOptions = null;
 
             switch (dbType)
             {
@@ -76,10 +75,12 @@ namespace Cli
                         return false;
                     }
 
-                    cosmosDbNoSqlOptions = new CosmosDbNoSqlOptions(cosmosDatabase, cosmosContainer, graphQLSchemaPath, GraphQLSchema: null);
+                    dbOptions = new CosmosDbNoSqlOptions(cosmosDatabase, cosmosContainer, graphQLSchemaPath, GraphQLSchema: null);
                     break;
 
                 case DatabaseType.mssql:
+                    dbOptions = new MsSqlOptions(SetSessionContext: options.SetSessionContext);
+                    break;
                 case DatabaseType.mysql:
                 case DatabaseType.postgresql:
                 case DatabaseType.cosmosdb_postgresql:
@@ -88,7 +89,7 @@ namespace Cli
                     throw new Exception($"DatabaseType: ${dbType} not supported.Please provide a valid database-type.");
             }
 
-            DataSource dataSource = new(dbType, DbOptions: cosmosDbNoSqlOptions);
+            DataSource dataSource = new(dbType, DbOptions: dbOptions);
 
             // default value of connection-string should be used, i.e Empty-string
             // if not explicitly provided by the user

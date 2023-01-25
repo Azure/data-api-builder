@@ -114,7 +114,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(BOOLEAN_TYPE, "true")]
         [DataRow(BOOLEAN_TYPE, "false")]
         [DataRow(BOOLEAN_TYPE, "null")]
-        [DataRow(DATETIME_TYPE, "\"1999-01-08 10:23:54+8:00\"")]
+        [DataRow(DATETIME_NONUTC_TYPE, "\"1999-01-08 10:23:54+8:00\"")]
         [DataRow(DATETIME_TYPE, "\"1999-01-08 09:20:00\"")]
         [DataRow(DATETIME_TYPE, "\"1999-01-08\"")]
         [DataRow(DATETIME_TYPE, "null")]
@@ -126,6 +126,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             if (!IsSupportedType(type))
             {
                 Assert.Inconclusive("Type not supported");
+            }
+
+            // Datetime non utc type is a characterization of the value added to the datetime type,
+            // so before executing the query reset it to mean the actually underlying type.
+            if (DATETIME_NONUTC_TYPE.Equals(type))
+            {
+                type = DATETIME_TYPE;
             }
 
             string field = $"{type.ToLowerInvariant()}_types";
@@ -151,13 +158,21 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(FLOAT_TYPE, -3.33)]
         [DataRow(DECIMAL_TYPE, 1222222.00000929292)]
         [DataRow(BOOLEAN_TYPE, true)]
-        [DataRow(DATETIME_TYPE, "1999-01-08 10:23:54+8:00")]
+        [DataRow(DATETIME_NONUTC_TYPE, "1999-01-08 10:23:54+8:00")]
+        [DataRow(DATETIME_TYPE, "1999-01-08 10:23:54")]
         [DataRow(BYTEARRAY_TYPE, "V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=")]
         public async Task InsertIntoTypeColumnWithArgument(string type, object value)
         {
             if (!IsSupportedType(type))
             {
                 Assert.Inconclusive("Type not supported");
+            }
+
+            // Datetime non utc type is a characterization of the value added to the datetime type,
+            // so before executing the query reset it to mean the actually underlying type.
+            if (DATETIME_NONUTC_TYPE.Equals(type))
+            {
+                type = DATETIME_TYPE;
             }
 
             string field = $"{type.ToLowerInvariant()}_types";
@@ -205,7 +220,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(BOOLEAN_TYPE, "true")]
         [DataRow(BOOLEAN_TYPE, "false")]
         [DataRow(BOOLEAN_TYPE, "null")]
-        [DataRow(DATETIME_TYPE, "\"1999-01-08 10:23:54+8:00\"")]
+        [DataRow(DATETIME_NONUTC_TYPE, "\"1999-01-08 10:23:54+8:00\"")]
         [DataRow(DATETIME_TYPE, "\"1999-01-08 09:20:00\"")]
         [DataRow(DATETIME_TYPE, "\"1999-01-08\"")]
         [DataRow(DATETIME_TYPE, "null")]
@@ -219,6 +234,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             if (!IsSupportedType(type))
             {
                 Assert.Inconclusive("Type not supported");
+            }
+
+            // Datetime non utc type is a characterization of the value added to the datetime type,
+            // so before executing the query reset it to mean the actually underlying type.
+            if (DATETIME_NONUTC_TYPE.Equals(type))
+            {
+                type = DATETIME_TYPE;
             }
 
             string field = $"{type.ToLowerInvariant()}_types";
@@ -244,7 +266,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(FLOAT_TYPE, -3.33)]
         [DataRow(DECIMAL_TYPE, 1222222.00000929292)]
         [DataRow(BOOLEAN_TYPE, true)]
-        [DataRow(DATETIME_TYPE, "1999-01-08 10:23:54+8:00")]
+        [DataRow(DATETIME_TYPE, "1999-01-08 10:23:54")]
+        [DataRow(DATETIME_NONUTC_TYPE, "1999-01-08 10:23:54+8:00")]
         [DataRow(BYTEARRAY_TYPE, "V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=")]
         [DataRow(GUID_TYPE, "3a1483a5-9ac2-4998-bcf3-78a28078c6ac")]
         [DataRow(GUID_TYPE, null)]
@@ -253,6 +276,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             if (!IsSupportedType(type))
             {
                 Assert.Inconclusive("Type not supported");
+            }
+
+            // Datetime non utc type is a characterization of the value added to the datetime type,
+            // so before executing the query reset it to mean the actually underlying type.
+            if (DATETIME_NONUTC_TYPE.Equals(type))
+            {
+                type = DATETIME_TYPE;
             }
 
             string field = $"{type.ToLowerInvariant()}_types";

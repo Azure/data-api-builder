@@ -6,6 +6,7 @@ using System.Net;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
@@ -33,7 +34,6 @@ namespace Azure.DataApiBuilder.Service.Authorization
         public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
         public const string ROLE_ANONYMOUS = "anonymous";
         public const string ROLE_AUTHENTICATED = "authenticated";
-        public const string INVALID_POLICY_CLAIM_MESSAGE = "One or more claims referenced in an authorization policy have value types which are not supported.";
 
         public Dictionary<string, EntityMetadata> EntityPermissionsMap { get; private set; } = new();
 
@@ -52,8 +52,11 @@ namespace Azure.DataApiBuilder.Service.Authorization
             }
             else
             {
-                runtimeConfigProvider.RuntimeConfigLoaded +=
-                    (object? sender, RuntimeConfig config) => SetEntityPermissionMap(config);
+                runtimeConfigProvider.RuntimeConfigLoadedHandlers.Add((RuntimeConfigProvider sender, RuntimeConfig config) =>
+                {
+                    SetEntityPermissionMap(config);
+                    return Task.FromResult(true);
+                });
             }
         }
 
@@ -431,41 +434,53 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// </summary>
         /// <param name="context">HttpContext object used to extract the authenticated user's claims.</param>
         /// <returns>Dictionary with claimType -> claim mappings.</returns>
-        private static Dictionary<string, Claim> GetAllUserClaims(HttpContext context)
+        public static Dictionary<string, Claim> GetAllUserClaims(HttpContext? context)
         {
             Dictionary<string, Claim> claimsInRequestContext = new();
-            ClaimsIdentity? identity = (ClaimsIdentity?)context.User.Identity;
-
-            if (identity is null)
+            if (context is null)
             {
                 return claimsInRequestContext;
             }
 
-            foreach (Claim claim in identity.Claims)
-            {
-                /*
-                 * An example claim would be of format:
-                 * claim.Type: "user_email"
-                 * claim.Value: "authz@microsoft.com"
-                 * claim.ValueType: "string"
-                 */
-                // At this point, only add non-role claims to the collection and only throw an exception for duplicate non-role claims.
-                if (claim.Type is not AuthenticationConfig.ROLE_CLAIM_TYPE && !claimsInRequestContext.TryAdd(claim.Type, claim))
-                {
-                    // If there are duplicate claims present in the request, return an exception.
-                    throw new DataApiBuilderException(
-                        message: "Duplicate claims are not allowed within a request.",
-                        statusCode: HttpStatusCode.Forbidden,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
-                        );
-                }
-            }
-
-            // Only add a role claim which represents the role context evaluated for the request.
             string clientRoleHeader = context.Request.Headers[CLIENT_ROLE_HEADER].ToString();
-            if (identity.HasClaim(type: AuthenticationConfig.ROLE_CLAIM_TYPE, value: clientRoleHeader))
+
+            // Iterate through all the identities to populate claims in request context.
+            foreach (ClaimsIdentity identity in context.User.Identities)
             {
-                claimsInRequestContext.Add(AuthenticationConfig.ROLE_CLAIM_TYPE, new Claim(AuthenticationConfig.ROLE_CLAIM_TYPE, clientRoleHeader, ClaimValueTypes.String));
+
+                // Only add a role claim which represents the role context evaluated for the request,
+                // as this can be via the virtue of an identity added by DAB.
+                if (!claimsInRequestContext.ContainsKey(AuthenticationConfig.ROLE_CLAIM_TYPE) &&
+                    identity.HasClaim(type: AuthenticationConfig.ROLE_CLAIM_TYPE, value: clientRoleHeader))
+                {
+                    claimsInRequestContext.Add(AuthenticationConfig.ROLE_CLAIM_TYPE, new Claim(AuthenticationConfig.ROLE_CLAIM_TYPE, clientRoleHeader, ClaimValueTypes.String));
+                }
+
+                // If identity is not authenticated, we don't honor any other claims present in this identity.
+                if (!identity.IsAuthenticated)
+                {
+                    continue;
+                }
+
+                foreach (Claim claim in identity.Claims)
+                {
+                    /*
+                     * An example claim would be of format:
+                     * claim.Type: "user_email"
+                     * claim.Value: "authz@microsoft.com"
+                     * claim.ValueType: "string"
+                     */
+                    // At this point, only add non-role claims to the collection and only throw an exception for duplicate non-role claims.
+                    if (!claim.Type.Equals(AuthenticationConfig.ROLE_CLAIM_TYPE) && !claimsInRequestContext.TryAdd(claim.Type, claim))
+                    {
+                        // If there are duplicate claims present in the request, return an exception.
+                        throw new DataApiBuilderException(
+                            message: "Duplicate claims are not allowed within a request.",
+                            statusCode: HttpStatusCode.Forbidden,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
+                            );
+                    }
+                }
             }
 
             return claimsInRequestContext;
@@ -507,7 +522,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
             string claimType = claimTypeMatch.Value.ToString().Substring(CLAIM_PREFIX.Length);
             if (claimsInRequestContext.TryGetValue(claimType, out Claim? claim))
             {
-                return GetODataCompliantClaimValue(claim);
+                return GetClaimValue(claim);
             }
             else
             {
@@ -521,10 +536,10 @@ namespace Azure.DataApiBuilder.Service.Authorization
         }
 
         /// <summary>
-        /// Using the input parameter claim, returns the primitive literal from claim.Value enclosed within parentheses:
-        /// e.g. @claims.idp (string) resolves as ('azuread')
-        /// e.g. @claims.iat (int) resolves as (1537231048)
-        /// e.g. @claims.email_verified (boolean) resolves as (true)
+        /// Using the input parameter claim, returns the primitive literal from claim.Value:
+        /// e.g. @claims.idp (string) resolves as 'azuread'
+        /// e.g. @claims.iat (int) resolves as 1537231048
+        /// e.g. @claims.email_verified (boolean) resolves as true
         /// To adhere with OData 4.01 ABNF construction rules (Section 7: Literal Data Values)
         /// - Primitive string literals in URLS must be enclosed within single quotes.
         /// - Other primitive types are represented as plain values and do not require single quotes.
@@ -540,7 +555,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// <seealso cref="https://www.iana.org/assignments/jwt/jwt.xhtml#claims"/>
         /// <seealso cref="https://www.rfc-editor.org/rfc/rfc7519.html#section-4"/>
         /// <seealso cref="https://github.com/microsoft/referencesource/blob/dae14279dd0672adead5de00ac8f117dcf74c184/mscorlib/system/security/claims/Claim.cs#L107"/>
-        private static string GetODataCompliantClaimValue(Claim claim)
+        public static string GetClaimValue(Claim claim)
         {
             /* An example Claim object:
              * claim.Type: "user_email"
@@ -551,7 +566,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
             switch (claim.ValueType)
             {
                 case ClaimValueTypes.String:
-                    return $"('{claim.Value}')";
+                    return $"'{claim.Value}'";
                 case ClaimValueTypes.Boolean:
                 case ClaimValueTypes.Integer:
                 case ClaimValueTypes.Integer32:
@@ -559,15 +574,15 @@ namespace Azure.DataApiBuilder.Service.Authorization
                 case ClaimValueTypes.UInteger32:
                 case ClaimValueTypes.UInteger64:
                 case ClaimValueTypes.Double:
-                    return $"({claim.Value})";
+                    return $"{claim.Value}";
                 case JsonClaimValueTypes.JsonNull:
-                    return $"(null)";
+                    return $"null";
                 default:
                     // One of the claims in the request had unsupported data type.
                     throw new DataApiBuilderException(
-                        message: INVALID_POLICY_CLAIM_MESSAGE,
+                        message: $"The claim value for claim: {claim.Type} belonging to the user has an unsupported data type.",
                         statusCode: HttpStatusCode.Forbidden,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.UnsupportedClaimValueType
                     );
             }
         }

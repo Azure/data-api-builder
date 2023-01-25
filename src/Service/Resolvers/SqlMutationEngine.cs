@@ -167,7 +167,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 await _queryExecutor.ExecuteQueryAsync(
                     queryText,
                     executeQueryStructure.Parameters,
-                    _queryExecutor.GetJsonArrayAsync);
+                    _queryExecutor.GetJsonArrayAsync,
+                    _httpContextAccessor.HttpContext!);
 
             // A note on returning stored procedure results:
             // We can't infer what the stored procedure actually did beyond the HasRows and RecordsAffected attributes

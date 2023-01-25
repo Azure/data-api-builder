@@ -265,7 +265,8 @@ namespace Cli
                 Encoder = JavaScriptEncoder.Create(UnicodeRanges.All),
                 WriteIndented = true,
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                PropertyNamingPolicy = new LowerCaseNamingPolicy()
+                PropertyNamingPolicy = new LowerCaseNamingPolicy(),
+                ReadCommentHandling = JsonCommentHandling.Skip
             };
 
             options.Converters.Add(new JsonStringEnumConverter(namingPolicy: new LowerCaseNamingPolicy()));

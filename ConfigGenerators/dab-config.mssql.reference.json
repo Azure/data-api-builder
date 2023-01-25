@@ -427,7 +427,7 @@
             {
               "action": "delete",
               "policy": {
-                "database": "@claims.id eq @item.id"
+                "database": "@claims.userId eq @item.id"
               },
               "fields": {
                 "include": [ "*" ]

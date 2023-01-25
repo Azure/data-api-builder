@@ -24,6 +24,7 @@ DROP TABLE IF EXISTS notebooks;
 DROP TABLE IF EXISTS journals;
 DROP TABLE IF EXISTS series;
 DROP TABLE IF EXISTS sales;
+DROP TABLE IF EXISTS graphql_incompatible;
 DROP FUNCTION IF EXISTS insertCompositeView;
 
 DROP SCHEMA IF EXISTS foo;
@@ -173,6 +174,11 @@ CREATE TABLE sales (
     subtotal float NOT NULL,
     tax float NOT NULL,
     total float generated always as (subtotal + tax) stored
+);
+
+CREATE TABLE graphql_incompatible (
+    __typeName int PRIMARY KEY,
+    conformingName text
 );
 
 ALTER TABLE books

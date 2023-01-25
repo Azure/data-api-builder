@@ -24,6 +24,7 @@ DROP TABLE IF EXISTS journals;
 DROP TABLE IF EXISTS aow;
 DROP TABLE IF EXISTS series;
 DROP TABLE IF EXISTS sales;
+DROP TABLE IF EXISTS graphql_incompatible;
 
 
 CREATE TABLE publishers(
@@ -169,6 +170,11 @@ CREATE TABLE sales (
     subtotal decimal(18,2) NOT NULL,
     tax decimal(18,2) NOT NULL,
     total decimal(18,2) generated always as (subtotal + tax) stored
+);
+
+CREATE TABLE graphql_incompatible (
+    __typeName int PRIMARY KEY,
+    conformingName text
 );
 
 ALTER TABLE books

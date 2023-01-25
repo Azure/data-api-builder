@@ -9,6 +9,8 @@ namespace Cli
     /// </summary>
     public class Program
     {
+        public const string PRODUCT_NAME = "Data API Builder";
+
         /// <summary>
         /// Main CLI entry point
         /// </summary>
@@ -32,6 +34,8 @@ namespace Cli
             ILogger<Utils> cliUtilsLogger = loggerFactory.CreateLogger<Utils>();
             ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger);
             Utils.SetCliUtilsLogger(cliUtilsLogger);
+
+            cliLogger.LogInformation($"{PRODUCT_NAME} {GetProductVersion()}");
 
             // Parsing user arguments and executing required methods.
             ParserResult<object>? result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions>(args)

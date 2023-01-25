@@ -240,7 +240,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 entityName: DEFAULT_ENTITY,
                 schemaName: DEFAULT_SCHEMA_NAME,
                 tableName: DEFAULT_TABLE_NAME,
-                filterString: "?$filter=id eq (publisher_id gt 1)",
+                filterString: "?$filter=id eq (id gt 1)",
                 expected: string.Empty
                 ));
 
@@ -257,7 +257,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 entityName: DEFAULT_ENTITY,
                 schemaName: DEFAULT_SCHEMA_NAME,
                 tableName: DEFAULT_TABLE_NAME,
-                filterString: "?$filter=id eq (publisher_id add 1)",
+                filterString: "?$filter=id eq (id add 1)",
                 expected: string.Empty
                 ));
 

@@ -57,7 +57,7 @@ type Star @model(name:""StarAlias"") {
         {
             MockFileSystem fileSystem = new(new Dictionary<string, MockFileData>()
             {
-                { @"./schema.gql", new MockFileData(GRAPHQL_SCHEMA) }
+                { @"../schema.gql", new MockFileData(GRAPHQL_SCHEMA) }
             });
 
             //create mock authorization resolver where mock entityPermissionsMap is created for Planet and Character.

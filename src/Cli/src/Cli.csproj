@@ -15,6 +15,10 @@
     <PackageDescription>Data API Builder</PackageDescription>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="CommandLineParser" />
     <PackageReference Include="Humanizer.Core" />

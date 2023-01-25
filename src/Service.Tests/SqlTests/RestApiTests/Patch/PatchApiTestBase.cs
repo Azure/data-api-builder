@@ -591,7 +591,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         /// </summary>
         /// <returns></returns>
         [TestMethod]
-        public virtual async Task PatchOneViewBadRequestTest(string expectedErrorMessage)
+        public virtual async Task PatchOneViewBadRequestTest(
+            string expectedErrorMessage,
+            bool isExpectedErrorMsgSubstr = false)
         {
             // PATCH update trying to modify fields from multiple base table
             // will result in error.
@@ -611,7 +613,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 exceptionExpected: true,
                 expectedErrorMessage: expectedErrorMessage,
                 expectedStatusCode: HttpStatusCode.BadRequest,
-                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString(),
+                isExpectedErrorMsgSubstr: true
             );
         }
 

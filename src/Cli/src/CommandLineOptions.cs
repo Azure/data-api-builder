@@ -123,7 +123,7 @@ namespace Cli
         [Option("rest", Required = false, HelpText = "Route for rest api.")]
         public string? RestRoute { get; }
 
-        [Option("rest.methods", Required = false, HelpText = "HTTP actions to be supported for stored procedures. Specify the actions as a comma separated list.")]
+        [Option("rest.methods", Required = false, Separator = ',',  HelpText = "HTTP actions to be supported for stored procedures. Specify the actions as a comma separated list.")]
         public IEnumerable<string>? RestMethodsForStoredProcedure { get; }
 
         [Option("graphql", Required = false, HelpText = "Type of graphQL.")]

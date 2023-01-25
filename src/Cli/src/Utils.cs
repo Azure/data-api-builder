@@ -29,73 +29,85 @@ namespace Cli
         /// Creates the rest object which can be either a boolean value
         /// or a RestEntitySettings object containing api route based on the input
         /// </summary>
-        public static object? GetRestDetails(string? rest, RestMethod[] restMethods)
+        public static object? GetRestDetails(string? rest, RestMethod[]? restMethods = null)
         {
-            object? rest_detail;
+            object? rest_detail;   
             if (rest is null)
             {
-                return rest;
-            }
-
-            bool trueOrFalse;
-            if (bool.TryParse(rest, out trueOrFalse))
-            {
-                rest_detail = trueOrFalse;
+                rest_detail = null;
             }
             else
             {
-                RestEntitySettings restEntitySettings = new("/" + rest, restMethods);
-                rest_detail = restEntitySettings;
+                bool trueOrFalse;
+                if (bool.TryParse(rest, out trueOrFalse))
+                {
+                    rest_detail = trueOrFalse;
+                    if(! trueOrFalse)
+                    {
+                        restMethods = null;
+                    }
+                }
+                else
+                {
+                    rest_detail = "/" + rest;
+                }
             }
-
-            return rest_detail;
+            
+            return (rest_detail is null && restMethods is null ) ? 
+                    null : new RestEntitySettings(rest_detail, restMethods);
         }
 
         /// <summary>
         /// Creates the graphql object which can be either a boolean value
         /// or a GraphQLEntitySettings object containing graphql type {singular, plural} based on the input
         /// </summary>
-        public static object? GetGraphQLDetails(string? graphQL, GraphQLOperation[] graphQLOperations)
+        public static object? GetGraphQLDetails(string? graphQL, GraphQLOperation? graphQLOperation = null)
         {
             object? graphQL_detail;
+            bool trueOrFalse;
             if (graphQL is null)
             {
-                return graphQL;
+                graphQL_detail = null;
             }
-
-            bool trueOrFalse;
-            if (bool.TryParse(graphQL, out trueOrFalse))
+            else 
             {
-                graphQL_detail = trueOrFalse;
-            }
-            else
-            {
-                string singular, plural;
-                if (graphQL.Contains(SEPARATOR))
+                if (bool.TryParse(graphQL, out trueOrFalse))
                 {
-                    string[] arr = graphQL.Split(SEPARATOR);
-                    if (arr.Length != 2)
+                    graphQL_detail = trueOrFalse;
+                    if(! trueOrFalse)
                     {
-                        _logger.LogError($"Invalid format for --graphql. Accepted values are true/false," +
-                                                "a string, or a pair of string in the format <singular>:<plural>");
-                        return null;
+                        graphQLOperation = null;   
                     }
-
-                    singular = arr[0];
-                    plural = arr[1];
                 }
                 else
                 {
-                    singular = graphQL.Singularize(inputIsKnownToBePlural: false);
-                    plural = graphQL.Pluralize(inputIsKnownToBeSingular: false);
+                    string singular, plural;
+                    if (graphQL.Contains(SEPARATOR))
+                    {
+                        string[] arr = graphQL.Split(SEPARATOR);
+                        if (arr.Length != 2)
+                        {
+                            _logger.LogError($"Invalid format for --graphql. Accepted values are true/false," +
+                                                    "a string, or a pair of string in the format <singular>:<plural>");
+                            return null;
+                        }
+
+                        singular = arr[0];
+                        plural = arr[1];
+                    }
+                    else
+                    {
+                        singular = graphQL.Singularize(inputIsKnownToBePlural: false);
+                        plural = graphQL.Pluralize(inputIsKnownToBeSingular: false);
+                    }
+
+                    graphQL_detail = new SingularPlural(singular, plural);
                 }
 
-                SingularPlural singularPlural = new(singular, plural);
-                GraphQLEntitySettings graphQLEntitySettings = new(singularPlural, graphQLOperations);
-                graphQL_detail = graphQLEntitySettings;
             }
-
-            return graphQL_detail;
+            
+            return (graphQL_detail is null && graphQLOperation is null) ? 
+                    null : new GraphQLEntitySettings(graphQL_detail, graphQLOperation);
         }
 
         /// <summary>
@@ -401,8 +413,8 @@ namespace Cli
                 _logger.LogError("Duplicate action found in --permissions");
                 return false;
             }
-
-            // Currently, Stored Procedures can be configured with only 1 CRUD Operation.
+            
+            // Currently, Stored Procedures can be configured with only Execute Operation.
             if (sourceType is SourceType.StoredProcedure
                     && !VerifyExecuteOperationForStoredProcedure(operations))
             {
@@ -671,12 +683,11 @@ namespace Cli
         {
             if (operations.Length > 1
                 || !TryGetOperationName(operations.First(), out Operation operationName)
-                || !Operation.Execute.Equals(operationName))
+                || operationName is not Operation.Execute)
             {
                 _logger.LogError("Stored Procedure supports only execute operation.");
                 return false;
             }
-
             return true;
         }
 
@@ -760,15 +771,20 @@ namespace Cli
         {
             List<RestMethod> restMethods = new();
 
-            foreach (string method in methods)
+            foreach(string method in methods)
             {
                 RestMethod restMethod;
-                if (TryConvertRestMethodNameToRestMethod(method, out restMethod))
+                if(TryConvertRestMethodNameToRestMethod(method, out restMethod))
                 {
                     restMethods.Add(restMethod);
                 }
-            }
+                else
+                {
+                    restMethods.Clear();
+                    break;
+                }
 
+            }
             return restMethods.ToArray();
         }
 
@@ -783,20 +799,24 @@ namespace Cli
             return true;
         }
 
-        public static GraphQLOperation[] CreateGraphQLOperations(IEnumerable<string> operations)
+        public static bool ValidateWhetherAnEntityIsAsStoredProcedure(EntityOptions options)
         {
-            List<GraphQLOperation> graphQLOperations = new();
+            SourceTypeEnumConverter.TryGetSourceType(options.SourceType, out SourceType sourceObjectType);
+            return sourceObjectType is SourceType.StoredProcedure;
+        }
 
-            foreach (string operation in operations)
-            {
-                GraphQLOperation graphQLOperation;
-                if (TryConvertGraphQLOperationNameToGraphQLOperation(operation, out graphQLOperation))
-                {
-                    graphQLOperations.Add(graphQLOperation);
-                }
-            }
+        public static bool CheckConflictingRestConfigurationForStoredProcedures(EntityOptions options)
+        {
+            return ValidateWhetherAnEntityIsAsStoredProcedure(options) &&
+                   (options.RestRoute is not null && bool.TryParse(options.RestRoute, out bool restEnabled) && !restEnabled) &&
+                   (options.RestMethodsForStoredProcedure is not null && options.RestMethodsForStoredProcedure.Any());
+        }
 
-            return graphQLOperations.ToArray();
+        public static bool CheckConflictingGraphQLConfigurationForStoredProcedures(EntityOptions options)
+        {
+            return ValidateWhetherAnEntityIsAsStoredProcedure(options) &&
+                   (options.GraphQLOperationForStoredProcedure is not null && bool.TryParse(options.GraphQLOperationForStoredProcedure, out bool graphQLEnabled) && !graphQLEnabled) &&
+                   (options.GraphQLOperationForStoredProcedure is not null);
         }
 
     }

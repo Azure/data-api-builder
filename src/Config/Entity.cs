@@ -116,8 +116,8 @@ namespace Azure.DataApiBuilder.Config
                         return false;
                     }
 
-                    JsonElement? graphQLOperation = configElement.GetProperty("operations");
-                    object? graphQLOperationConfiguration;
+                    JsonElement? graphQLOperation = configElement.GetProperty("operation");
+                    GraphQLOperation? graphQLOperationConfiguration;
 
                     if(graphQLOperation is null)
                     {
@@ -125,11 +125,10 @@ namespace Azure.DataApiBuilder.Config
                     }
                     else
                     {
-                        graphQLOperationConfiguration = JsonSerializer.Deserialize<GraphQLOperation[]>((JsonElement)graphQLOperation);
-
+                        graphQLOperationConfiguration = JsonSerializer.Deserialize<GraphQLOperation>((JsonElement)graphQLOperation);
                     }
 
-                    GraphQLEntitySettings graphQLEntitySettings = new(Type: nameConfiguration, GraphQLOperations: graphQLOperationConfiguration);
+                    GraphQLEntitySettings graphQLEntitySettings = new(Type: nameConfiguration, GraphQLOperation: graphQLOperationConfiguration);
                     GraphQL = graphQLEntitySettings;
                 }
             }
@@ -312,7 +311,8 @@ namespace Azure.DataApiBuilder.Config
     /// at which the REST endpoint for this entity is exposed
     /// instead of using the entity-name. Can be a string type.
     /// </param>
-    public record RestEntitySettings(object Path, [property: JsonPropertyName("methods")] RestMethod[] RestMethods);
+    public record RestEntitySettings(object? Path,
+                                     [property: JsonPropertyName("methods")] RestMethod[]? RestMethods = null);
 
     /// <summary>
     /// Describes the GraphQL settings specific to an entity.
@@ -323,7 +323,7 @@ namespace Azure.DataApiBuilder.Config
     /// If string, a default plural route will be added as per the rules at
     /// <href="https://engdic.org/singular-and-plural-noun-rules-definitions-examples/" /></param>
     public record GraphQLEntitySettings([property: JsonPropertyName("type")] object? Type, 
-                                        [property: JsonPropertyName("operations")] object? GraphQLOperations);
+                                        [property: JsonPropertyName("operation")] GraphQLOperation? GraphQLOperation = null);
 
     /// <summary>
     /// Defines a name or route as singular (required) or

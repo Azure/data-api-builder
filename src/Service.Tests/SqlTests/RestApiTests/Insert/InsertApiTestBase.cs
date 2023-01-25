@@ -564,7 +564,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         /// </summary>
         /// <returns></returns>
         [TestMethod]
-        public virtual async Task InsertOneInViewBadRequestTest(string expectedErrorMessage)
+        public virtual async Task InsertOneInViewBadRequestTest(
+            string expectedErrorMessage,
+            bool isExpectedErrorMsgSubstr = false)
         {
             // Request trying to modify fields from multiple base tables will fail .
             string requestBody = @"
@@ -583,7 +585,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 requestBody: requestBody,
                 expectedErrorMessage: expectedErrorMessage,
                 expectedStatusCode: HttpStatusCode.BadRequest,
-                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString(),
+                isExpectedErrorMsgSubstr: isExpectedErrorMsgSubstr
                 );
         }
 

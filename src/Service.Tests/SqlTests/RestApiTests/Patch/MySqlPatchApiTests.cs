@@ -203,7 +203,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
 
         [TestMethod]
         [Ignore]
-        public override Task PatchOneViewBadRequestTest(string expectedErrorMessage)
+        public void PatchOneViewBadRequestTest()
         {
             throw new NotImplementedException();
         }

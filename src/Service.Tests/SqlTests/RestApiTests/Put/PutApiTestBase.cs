@@ -463,7 +463,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         }
 
         [TestMethod]
-        public virtual async Task PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest()
+        public virtual async Task PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest(
+            bool isExpectedErrorMsgSubstr = false)
         {
             // Behaviour expected when a non-nullable but default field
             // is missing from request body. In this case, when we try to null out
@@ -483,7 +484,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 exceptionExpected: true,
                 expectedErrorMessage: expectedErrorMessage,
                 expectedStatusCode: HttpStatusCode.BadRequest,
-                expectedSubStatusCode: $"{DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed}"
+                expectedSubStatusCode: $"{DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed}",
+                isExpectedErrorMsgSubstr: isExpectedErrorMsgSubstr
             );
         }
 
@@ -774,7 +776,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         /// PUT requests on views.
         /// </summary>
         [TestMethod]
-        public virtual async Task PutOneInViewBadRequest(string expectedErrorMessage)
+        public virtual async Task PutOneInViewBadRequest(
+            string expectedErrorMessage,
+            bool isExpectedErrorMsgSubstr = false)
         {
             // PUT update trying to modify fields from multiple base table
             // will result in error.
@@ -794,7 +798,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 exceptionExpected: true,
                 expectedErrorMessage: expectedErrorMessage,
                 expectedStatusCode: HttpStatusCode.BadRequest,
-                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString(),
+                isExpectedErrorMsgSubstr: isExpectedErrorMsgSubstr
             );
         }
         #endregion

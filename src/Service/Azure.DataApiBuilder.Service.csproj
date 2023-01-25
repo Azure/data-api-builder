@@ -21,20 +21,14 @@
         <CopyToOutputDirectoryAction Condition="'$(Configuration)'=='Docker'">Never</CopyToOutputDirectoryAction>
     </PropertyGroup>
 
+    <PropertyGroup Condition="'$(Configuration)'=='Release'">
+      <DebugType>none</DebugType>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)'=='Docker'">
+      <DebugType>none</DebugType>
+    </PropertyGroup>
 
     <ItemGroup>
-        <Content Include="schema.gql">
-            <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
-        </Content>
-        <Content Include="MsSqlBooks.sql">
-            <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
-        </Content>
-        <Content Include="PostgreSqlBooks.sql">
-            <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
-        </Content>
-        <Content Include="MySqlBooks.sql">
-            <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
-        </Content>
         <Content Update="appsettings*.json">
             <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
         </Content>

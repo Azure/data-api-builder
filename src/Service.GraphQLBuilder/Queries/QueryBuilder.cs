@@ -65,9 +65,17 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     {
                         IEnumerable<string> rolesAllowedForRead = IAuthorizationResolver.GetRolesForOperation(entityName, operation: Operation.Read, entityPermissionsMap);
                         ObjectTypeDefinitionNode paginationReturnType = GenerateReturnType(name);
-                        queryFields.Add(GenerateGetAllQuery(objectTypeDefinitionNode, name, paginationReturnType, inputTypes, entity, rolesAllowedForRead));
-                        queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name, databaseType, entity, rolesAllowedForRead));
-                        returnTypes.Add(paginationReturnType);
+
+                        if (rolesAllowedForRead.Count() > 0)
+                        {
+                            queryFields.Add(GenerateGetAllQuery(objectTypeDefinitionNode, name, paginationReturnType, inputTypes, entity, rolesAllowedForRead));
+                            queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name, databaseType, entity, rolesAllowedForRead));
+                        }
+
+                        if (paginationReturnType is not null)
+                        {
+                            returnTypes.Add(paginationReturnType);
+                        }
                     }
                 }
             }

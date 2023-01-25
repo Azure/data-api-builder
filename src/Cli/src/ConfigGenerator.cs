@@ -102,7 +102,6 @@ namespace Cli
 
             if (!ValidateAudienceAndIssuerForJwtProvider(options.AuthenticationProvider, options.Audience, options.Issuer))
             {
-                _logger.LogError($"Authentication provider other than EasyAuth and Simulator requires both Audience and Issuer.");
                 return false;
             }
 

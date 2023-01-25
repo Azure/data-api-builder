@@ -238,21 +238,31 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Test to verify the generated config with different Authentication providers.
+        /// Test to verify the config is correctly generated with different Authentication providers.
         /// Audience and Issuer are needed only when the provider is JWT.
+        /// Example:
+        /// 1. With EasyAuth or Simulator
+        /// "authentication": {
+        ///     "provider": "StaticWebApps/AppService/Simulator"
+        /// }
+        ///
+        /// 2. With JWT provider
+        /// "authentication": {
+        ///     "provider": "AzureAD"
+        ///      "Jwt":
+        ///      {
+        ///          "Audience": "aud",
+        ///          "Issuer": "iss"
+        ///      }
+        /// }
         /// </summary>
         [DataTestMethod]
-        [DataRow("StaticWebApps", "aud-xxx", "issuer-xxx", DisplayName = "StaticWebApps with both audience and issuer specified.")]
-        [DataRow("StaticWebApps", null, "issuer-xxx", DisplayName = "StaticWebApps with no audience specified.")]
-        [DataRow("StaticWebApps", "aud-xxx", null, DisplayName = "StaticWebApps with no issuer specified.")]
         [DataRow("StaticWebApps", null, null, DisplayName = "StaticWebApps with no audience and no issuer specified.")]
-        [DataRow("Simulator", "aud-xxx", "issuer-xxx", DisplayName = "Simulator with both audience and issuer specified.")]
-        [DataRow("Simulator", null, "issuer-xxx", DisplayName = "Simulator with no audience specified.")]
-        [DataRow("Simulator", "aud-xxx", null, DisplayName = "Simulator with no issuer specified.")]
+        [DataRow("AppService", null, null, DisplayName = "AppService with no audience and no issuer specified.")]
         [DataRow("Simulator", null, null, DisplayName = "Simulator with no audience and no issuer specified.")]
         [DataRow("AzureAD", "aud-xxx", "issuer-xxx", DisplayName = "AzureAD with both audience and issuer specified.")]
-        public void EnsureAuthenticationIsCorrectlyConfiguredWithCLI(
-            string? authenticationProvider,
+        public void EnsureCorrectConfigGenerationWithDifferentAuthenticationProviders(
+            string authenticationProvider,
             string? audience,
             string? issuer)
         {

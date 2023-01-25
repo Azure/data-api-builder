@@ -412,7 +412,7 @@ namespace Cli.Tests
         public static string GetDefaultTestRuntimeSettingString(
             HostModeType hostModeType = HostModeType.Production,
             IEnumerable<string>? corsOrigins = null,
-            string? authenticationProvider = null,
+            string authenticationProvider = "StaticWebApps",
             string? audience = null,
             string? issuer = null)
         {
@@ -420,7 +420,7 @@ namespace Cli.Tests
             Dictionary<GlobalSettingsType, object> defaultGlobalSetting = GetDefaultGlobalSettings(
                 hostMode: hostModeType,
                 corsOrigin: corsOrigins,
-                authenticationProvider: authenticationProvider ?? EasyAuthType.StaticWebApps.ToString(),
+                authenticationProvider: authenticationProvider,
                 audience: audience,
                 issuer: issuer);
 

@@ -747,16 +747,29 @@ namespace Cli
 
         /// <summary>
         /// Check both Audience and Issuer are specified when the authentication provider is JWT.
+        /// Also providing Audience or Issuer with StaticWebApps or AppService wil result in failure.
         /// </summary>
         public static bool ValidateAudienceAndIssuerForJwtProvider(
             string authenticationProvider,
             string? audience,
             string? issuer)
         {
-            if (!(Enum.TryParse<EasyAuthType>(authenticationProvider, ignoreCase: true, out _))
-               && !(SIMULATOR_AUTHENTICATION.Equals(authenticationProvider)))
+            if (Enum.TryParse<EasyAuthType>(authenticationProvider, ignoreCase: true, out _)
+                || SIMULATOR_AUTHENTICATION.Equals(authenticationProvider))
             {
-                return (audience is not null) && (issuer is not null);
+                if ((audience is not null) || (issuer is not null))
+                {
+                    _logger.LogError("Audience and Issuer are not supported for StaticWebApps or AppService.");
+                    return false;
+                }
+            }
+            else
+            {
+                if ((audience is null) || (issuer is null))
+                {
+                    _logger.LogError($"Authentication provider other than EasyAuth and Simulator requires both Audience and Issuer.");
+                    return false;
+                }
             }
 
             return true;

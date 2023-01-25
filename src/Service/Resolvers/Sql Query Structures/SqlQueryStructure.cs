@@ -604,7 +604,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 if (field.SelectionSet == null)
                 {
-                    AddColumn(fieldName);
+                    if (MetadataProvider.TryGetBackingColumn(EntityName, fieldName, out string? name)
+                        && !string.IsNullOrWhiteSpace(name))
+                    {
+                        AddColumn(columnName: name, labelName: fieldName);
+                    }
+                    else
+                    {
+                        AddColumn(fieldName);
+                    }
                 }
                 else
                 {

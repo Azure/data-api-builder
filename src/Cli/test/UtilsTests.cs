@@ -182,7 +182,7 @@ namespace Cli.Tests
         /// <summary>
         /// Test to verify that both Audience and Issuer is mandatory when Authentication Provider is 
         /// neither EasyAuthType or Simulator. If Authentication Provider is either EasyAuth or Simulator
-        /// audience and issuer is ignored.
+        /// audience and issuer are ignored.
         /// </summary>
         [DataTestMethod]
         [DataRow("StaticWebApps", "aud-xxx", "issuer-xxx", true, DisplayName = "PASS: StaticWebApps with both audience and issuer specified.")]
@@ -205,7 +205,7 @@ namespace Cli.Tests
         {
             Assert.AreEqual(
                 expectSuccess,
-                ValidateAudienceAndIssuerForAuthenticationProvider(authenticationProvider, audience, issuer)
+                ValidateAudienceAndIssuerForJwtProvider(authenticationProvider, audience, issuer)
             );
         }
 

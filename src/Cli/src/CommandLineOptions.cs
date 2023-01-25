@@ -9,7 +9,7 @@ namespace Cli
     /// </summary>
     public class Options
     {
-        public Options(string config)
+        public Options(string? config)
         {
             Config = config;
         }
@@ -35,10 +35,10 @@ namespace Cli
             bool setSessionContext,
             HostModeType hostMode,
             IEnumerable<string>? corsOrigin,
-            string? authenticationProvider,
-            string? audience,
-            string? issuer,
-            string config)
+            string authenticationProvider,
+            string? audience = null,
+            string? issuer = null,
+            string? config = null)
             : base(config)
         {
             DatabaseType = databaseType;
@@ -78,13 +78,13 @@ namespace Cli
         [Option("cors-origin", Separator = ',', Required = false, HelpText = "Specify the list of allowed origins.")]
         public IEnumerable<string>? CorsOrigin { get; }
 
-        [Option("auth.provider", Required = false, HelpText = "Specify the Identity Provider.")]
-        public string? AuthenticationProvider { get; }
+        [Option("auth.provider", Default = "StaticWebApps", Required = false, HelpText = "Specify the Identity Provider.")]
+        public string AuthenticationProvider { get; }
 
-        [Option("audience", Required = false, HelpText = "Identifies the recipients that the JWT is intended for.")]
+        [Option("auth.audience", Required = false, HelpText = "Identifies the recipients that the JWT is intended for.")]
         public string? Audience { get; }
 
-        [Option("issuer", Required = false, HelpText = "Specify the party that issued the jwt token.")]
+        [Option("auth.issuer", Required = false, HelpText = "Specify the party that issued the jwt token.")]
         public string? Issuer { get; }
     }
 
@@ -104,7 +104,7 @@ namespace Cli
             IEnumerable<string>? fieldsToExclude,
             string? policyRequest,
             string? policyDatabase,
-            string config)
+            string? config)
             : base(config)
         {
             Entity = entity;
@@ -170,7 +170,7 @@ namespace Cli
             IEnumerable<string>? fieldsToExclude,
             string? policyRequest,
             string? policyDatabase,
-            string config)
+            string? config)
             : base(entity,
                   sourceType,
                   sourceParameters,

@@ -120,7 +120,7 @@ public class EndToEndTests
     public void TestVerifyAuthenticationOptions()
     {
         string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql",
-            "--auth.provider", "AzureAD", "--audience", "aud-xxx", "--issuer", "issuer-xxx" };
+            "--auth.provider", "AzureAD", "--auth.audience", "aud-xxx", "--auth.issuer", "issuer-xxx" };
         Program.Main(initArgs);
 
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);

@@ -313,7 +313,8 @@ namespace Cli
             defaultGlobalSettings.Add(GlobalSettingsType.GraphQL, new GraphQLGlobalSettings());
             defaultGlobalSettings.Add(
                 GlobalSettingsType.Host,
-                GetDefaultHostGlobalSettings(hostMode,
+                GetDefaultHostGlobalSettings(
+                    hostMode,
                     corsOrigin,
                     authenticationProvider,
                     audience,
@@ -745,9 +746,9 @@ namespace Cli
         }
 
         /// <summary>
-        /// Check both Audience and Issuer is specified, when Authentication provider is EasyAuthType or Simulator.
+        /// Check both Audience and Issuer are specified when the authentication provider is JWT.
         /// </summary>
-        public static bool ValidateAudienceAndIssuerForAuthenticationProvider(
+        public static bool ValidateAudienceAndIssuerForJwtProvider(
             string authenticationProvider,
             string? audience,
             string? issuer)

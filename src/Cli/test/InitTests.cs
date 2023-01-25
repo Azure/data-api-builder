@@ -34,8 +34,6 @@ namespace Cli.Tests
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                audience: null,
-                issuer: null,
                 config: _testRuntimeConfig);
 
             _basicRuntimeConfig =
@@ -78,8 +76,6 @@ namespace Cli.Tests
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                audience: null,
-                issuer: null,
                 config: _testRuntimeConfig);
 
             _basicRuntimeConfig =
@@ -119,8 +115,6 @@ namespace Cli.Tests
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                audience: null,
-                issuer: null,
                 config: _testRuntimeConfig);
 
             _basicRuntimeConfig =
@@ -162,8 +156,6 @@ namespace Cli.Tests
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                audience: null,
-                issuer: null,
                 config: _testRuntimeConfig);
 
             _basicRuntimeConfig =
@@ -213,8 +205,6 @@ namespace Cli.Tests
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                audience: null,
-                issuer: null,
                 config: _testRuntimeConfig);
 
             Assert.AreEqual(expectedResult, ConfigGenerator.TryCreateRuntimeConfig(options, out _));
@@ -237,8 +227,6 @@ namespace Cli.Tests
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { },
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                audience: null,
-                issuer: null,
                 config: _testRuntimeConfig);
 
             // Config generated successfully for the first time.
@@ -250,8 +238,8 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Test to verify that an error is thrown when user tries to
-        /// initialize a config with a file name that already exists.
+        /// Test to verify the generated config with different Authentication providers.
+        /// Audience and Issuer are needed only when the provider is JWT.
         /// </summary>
         [DataTestMethod]
         [DataRow("StaticWebApps", "aud-xxx", "issuer-xxx", DisplayName = "StaticWebApps with both audience and issuer specified.")]
@@ -274,6 +262,7 @@ namespace Cli.Tests
                 cosmosNoSqlDatabase: null,
                 cosmosNoSqlContainer: null,
                 graphQLSchemaPath: null,
+                setSessionContext: false,
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
                 authenticationProvider: authenticationProvider,
@@ -286,7 +275,10 @@ namespace Cli.Tests
                 @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
                 @"""data-source"": {
                     ""database-type"": ""mssql"",
-                    ""connection-string"": ""testconnectionstring""
+                    ""connection-string"": ""testconnectionstring"",
+                    ""options"":{
+                        ""set-session-context"": false
+                    }
                 },
                 ""entities"": {}
             }";
@@ -356,8 +348,6 @@ namespace Cli.Tests
                 hostMode: HostModeType.Production,
                 corsOrigin: new List<string>() { },
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                audience: null,
-                issuer: null,
                 config: fileName);
 
             return options;

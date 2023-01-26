@@ -21,7 +21,7 @@ add books_publishers_view_composite_insertable --config "dab-config.PostgreSql.j
 add Empty --config "dab-config.PostgreSql.json" --source "empty_table" --permissions "authenticated:create,read,update,delete" --rest true
 add Notebook --config "dab-config.PostgreSql.json" --source "notebooks" --permissions "anonymous:read" --rest true --graphql true --fields.include "*" --policy-database "@item ne 1"
 add Journal --config "dab-config.PostgreSql.json" --source "journals" --rest true --graphql true --permissions "policy_tester_noupdate:create,delete"
-add ArtOfWar --config "dab-config.PostgreSql.json" --source "aow" --rest true --permissions "anonymous:*"
+add ArtOfWar --config "dab-config.PostgreSql.json" --source "aow" --rest true --graphql false --permissions "anonymous:*"
 add series --config "dab-config.PostgreSql.json" --source "series" --permissions "anonymous:*"
 add Sales --config "dab-config.PostgreSql.json" --source "sales" --permissions "anonymous:*" --rest true --graphql true
 update Publisher --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship books --target.entity Book --cardinality many

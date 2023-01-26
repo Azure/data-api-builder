@@ -22,7 +22,7 @@ add books_publishers_view_composite_insertable --config "dab-config.MsSql.json" 
 add Empty --config "dab-config.MsSql.json" --source "empty_table" --permissions "authenticated:create,read,update,delete" --rest true
 add Notebook --config "dab-config.MsSql.json" --source "notebooks" --permissions "anonymous:read" --rest true --graphql true --fields.include "*" --policy-database "@item ne 1"
 add Journal --config "dab-config.MsSql.json" --source "journals" --rest true --graphql true --permissions "policy_tester_noupdate:create,delete"
-add ArtOfWar --config "dab-config.MsSql.json" --source "aow" --rest true --permissions "anonymous:*"
+add ArtOfWar --config "dab-config.MsSql.json" --source "aow" --rest true --garphql false --permissions "anonymous:*"
 add series --config "dab-config.MsSql.json" --source "series" --permissions "anonymous:*"
 add Sales --config "dab-config.MsSql.json" --source "sales" --permissions "anonymous:*" --rest true --graphql true
 add GetBooks --config "dab-config.MsSql.json" --source "get_books" --source.type "stored-procedure" --permissions "anonymous:read" --rest true --graphql true

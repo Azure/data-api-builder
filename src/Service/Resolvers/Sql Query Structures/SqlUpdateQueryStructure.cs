@@ -99,7 +99,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 {
                     pkBackingColumn = name;
                 }
-                
+
                 if (sourceDefinition.PrimaryKey.Contains(pkBackingColumn))
                 {
                     Predicates.Add(CreatePredicateForParam(new KeyValuePair<string, object?>(pkBackingColumn, param.Value)));
@@ -118,6 +118,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         {
                             fieldBackingColumn = resolvedBackingColumn;
                         }
+
                         if (columns.Contains(fieldBackingColumn))
                         {
                             UpdateOperations.Add(CreatePredicateForParam(new KeyValuePair<string, object?>(key: fieldBackingColumn, field.Value)));

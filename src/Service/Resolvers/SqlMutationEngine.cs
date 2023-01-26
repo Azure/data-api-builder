@@ -146,7 +146,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     // PrimaryKeyPredicates created in the SqlQueryStructure created by the query engine
                     // represent database column names.
                     Dictionary<string, object?> resultBackingRowNameAndProperties = new();
-                    foreach(KeyValuePair<string, object?> resultEntry in resultRowAndProperties.Item1)
+                    foreach (KeyValuePair<string, object?> resultEntry in resultRowAndProperties.Item1)
                     {
                         _sqlMetadataProvider.TryGetBackingColumn(entityName, resultEntry.Key, out string? name);
                         if (!string.IsNullOrWhiteSpace(name))

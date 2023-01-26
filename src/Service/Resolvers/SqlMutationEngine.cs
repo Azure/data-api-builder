@@ -508,7 +508,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 // primary key column names (backing columns) to the exposed (mapped) column names to
                 // identify primary key column names in the mutation result set.
                 List<string> primaryKeyExposedColumnNames = new();
-                foreach(string primaryKey in sourceDefinition.PrimaryKey)
+                foreach (string primaryKey in sourceDefinition.PrimaryKey)
                 {
                     if (_sqlMetadataProvider.TryGetExposedColumnName(entityName, primaryKey, out string? name) && !string.IsNullOrWhiteSpace(name))
                     {

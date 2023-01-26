@@ -466,7 +466,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         ///<summary>
-        /// Adds predicates for the primary keys in the paramters of the graphql query
+        /// Adds predicates for the primary keys in the parameters of the GraphQL query
         ///</summary>
         private void AddPrimaryKeyPredicates(IDictionary<string, object?> queryParams)
         {

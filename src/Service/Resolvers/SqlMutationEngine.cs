@@ -128,9 +128,27 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 if (resultRowAndProperties is not null && resultRowAndProperties.Item1 is not null
                     && !context.Selection.Type.IsScalarType())
                 {
+                    // Because the GraphQL mutation result set columns were exposed (mapped) column names,
+                    // the column names must be converted to backing (source) column names so the
+                    // PrimaryKeyPredicates created in the SqlQueryStructure created by the query engine
+                    // represent database column names.
+                    Dictionary<string, object?> resultBackingRowNameAndProperties = new();
+                    foreach(KeyValuePair<string, object?> resultEntry in resultRowAndProperties.Item1)
+                    {
+                        _sqlMetadataProvider.TryGetBackingColumn(entityName, resultEntry.Key, out string? name);
+                        if (!string.IsNullOrWhiteSpace(name))
+                        {
+                            resultBackingRowNameAndProperties.Add(name, resultEntry.Value);
+                        }
+                        else
+                        {
+                            resultBackingRowNameAndProperties.Add(resultEntry.Key, resultEntry.Value);
+                        }
+                    }
+
                     result = await _queryEngine.ExecuteAsync(
                                 context,
-                                resultRowAndProperties.Item1);
+                                resultBackingRowNameAndProperties);
                 }
             }
 
@@ -445,18 +463,31 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 SourceDefinition sourceDefinition = _sqlMetadataProvider.GetSourceDefinition(entityName);
 
-                // only extract pk columns
-                // since non pk columns can be null
+                // To support GraphQL field mappings (DB column aliases), convert the sourceDefinition
+                // primary key column names (backing columns) to the exposed (mapped) column names to
+                // identify primary key column names in the mutation result set.
+                List<string> primaryKeyExposedColumnNames = new();
+                foreach(string primaryKey in sourceDefinition.PrimaryKey)
+                {
+                    if (_sqlMetadataProvider.TryGetExposedColumnName(entityName, primaryKey, out string? name) && !string.IsNullOrWhiteSpace(name))
+                    {
+                        primaryKeyExposedColumnNames.Add(name);
+                    }
+                }
+
+                // Only extract pk columns since non pk columns can be null
                 // and the subsequent query would search with:
                 // nullParamName = NULL
                 // which would fail to get the mutated entry from the db
+                // When no exposed column names were resolved, it is safe to provide
+                // backing column names (sourceDefinition.Primary) as a list of arguments.
                 resultRecord =
                     await _queryExecutor.ExecuteQueryAsync(
                         queryString,
                         queryParameters,
                         _queryExecutor.ExtractRowFromDbDataReader,
                         _httpContextAccessor.HttpContext!,
-                        sourceDefinition.PrimaryKey);
+                        primaryKeyExposedColumnNames.Count > 0 ? primaryKeyExposedColumnNames : sourceDefinition.PrimaryKey);
 
                 if (resultRecord is not null && resultRecord.Item1 is null)
                 {

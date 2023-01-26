@@ -199,7 +199,7 @@ namespace Cli
                     {
                         if (op is Operation.All)
                         {
-                            // Expand wildcard to all valid operations
+                            // Expand wildcard to all valid operations (except execute)
                             foreach (Operation validOp in PermissionOperation.ValidPermissionOperations)
                             {
                                 result.Add(validOp, new PermissionOperation(validOp, null, null));
@@ -217,7 +217,7 @@ namespace Cli
 
                     if (ac.Name is Operation.All)
                     {
-                        // Expand wildcard to all valid operations.
+                        // Expand wildcard to all valid operations except execute.
                         foreach (Operation validOp in PermissionOperation.ValidPermissionOperations)
                         {
                             result.Add(

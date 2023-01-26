@@ -20,7 +20,8 @@ namespace Azure.DataApiBuilder.Config
         Field? Fields)
     {
         // Set of allowed operations for a request.
-        public static readonly HashSet<Operation> ValidPermissionOperations = new() { Operation.Create, Operation.Read, Operation.Update, Operation.Delete, Operation.Execute };
+        public static readonly HashSet<Operation> ValidPermissionOperations = new() { Operation.Create, Operation.Read, Operation.Update, Operation.Delete };
+        public static readonly HashSet<Operation> ValidStoredProcedurePermissionOperations = new() { Operation.Execute };
     }
 
     /// <summary>

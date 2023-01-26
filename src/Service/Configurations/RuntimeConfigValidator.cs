@@ -819,8 +819,11 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
         /// <summary>
         /// Returns whether the action is a valid
-        /// - Create, Read, Update, Delete (CRUD) operation
+        /// Valid non stored procedure actions:
+        /// - Create, Read, Update, Delete (CRUD)
         /// - All (*)
+        /// Valid stored procedure  actions:
+        /// - Execute
         /// </summary>
         /// <param name="action">Compared against valid actions to determine validity.</param>
         /// <param name="entity">Used to identify entity's representative object type.</param>
@@ -830,7 +833,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         {
             if (entity.ObjectType is SourceType.StoredProcedure)
             {
-                if (action is not Config.Operation.Execute)
+                if (!PermissionOperation.ValidStoredProcedurePermissionOperations.Contains(action))
                 {
                     throw new DataApiBuilderException(
                         message: $"Invalid operation for Entity: {entityName}. " +
@@ -838,6 +841,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         statusCode: HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }
+
+                return true;
             }
             else
             {
@@ -849,9 +854,9 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         statusCode: HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }
-            }
 
-            return action is Config.Operation.All || PermissionOperation.ValidPermissionOperations.Contains(action);
+                return action is Config.Operation.All || PermissionOperation.ValidPermissionOperations.Contains(action);
+            }
         }
     }
 }

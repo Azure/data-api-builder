@@ -104,7 +104,8 @@ namespace Cli
             PolicyDatabase = policyDatabase;
         }
 
-        [Value(0, MetaName = "Entity", Required = true, HelpText = "Name of the entity.")]
+        // Entity is required but we have made required as false to have custom error message (more user friendly), if not provided.
+        [Value(0, MetaName = "Entity", Required = false, HelpText = "Name of the entity.")]
         public string Entity { get; }
 
         [Option("source.type", Required = false, HelpText = "Type of the database object.Must be one of: [table, view, stored-procedure]")]

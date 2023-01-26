@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
@@ -193,11 +194,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string queryText = _queryBuilder.Build(executeQueryStructure);
             _logger.LogInformation(queryText);
 
-            Tuple<Dictionary<string, object?>?, Dictionary<string, object>>? resultRowAndProperties =
+            JsonArray? resultArray =
                 await _queryExecutor.ExecuteQueryAsync(
                     queryText,
                     executeQueryStructure.Parameters,
-                    _queryExecutor.ExtractRowFromDbDataReader,
+                    _queryExecutor.GetJsonArrayAsync,
                     _httpContextAccessor.HttpContext!);
 
             // A note on returning stored procedure results:
@@ -212,11 +213,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     return new NoContentResult();
                 case Config.Operation.Insert:
                     // Returns a 201 Created with whatever the first result set is returned from the procedure
-                    // A "correctly" configured stored procedure would INSERT INTO ... OUTPUT ... VALUES as the first and only result set
-                    if (resultRowAndProperties is not null &&
-                        DoesResultHaveRows(resultRowAndProperties.Item2))
+                    // A "correctly" configured stored procedure would INSERT INTO ... OUTPUT ... VALUES as the result set
+                    if (resultArray is not null && resultArray.Count > 0)
                     {
-                        return new CreatedResult(location: context.EntityName, OkMutationResponse(resultRowAndProperties.Item1).Value);
+                        using (JsonDocument jsonDocument = JsonDocument.Parse(resultArray.ToJsonString()))
+                        {
+                            return new CreatedResult(location: context.EntityName, OkMutationResponse(jsonDocument.RootElement.Clone()).Value);
+                        }
                     }
                     else
                     {   // If no result set returned, just return a 201 Created with empty array instead of array with single null value
@@ -233,11 +236,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 case Config.Operation.Upsert:
                 case Config.Operation.UpsertIncremental:
                     // Since we cannot check if anything was created, just return a 200 Ok response with first result set output
-                    // A "correctly" configured stored procedure would UPDATE ... SET ... OUTPUT as the first and only result set
-                    if (resultRowAndProperties is not null &&
-                        DoesResultHaveRows(resultRowAndProperties.Item2))
+                    // A "correctly" configured stored procedure would UPDATE ... SET ... OUTPUT as the result set
+                    if (resultArray is not null && resultArray.Count > 0)
                     {
-                        return OkMutationResponse(resultRowAndProperties.Item1);
+                        using (JsonDocument jsonDocument = JsonDocument.Parse(resultArray.ToJsonString()))
+                        {
+                            return OkMutationResponse(jsonDocument.RootElement.Clone());
+                        }
                     }
                     else
                     {
@@ -370,6 +375,29 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // Convert Dictionary to array of JsonElements
             string jsonString = $"[{JsonSerializer.Serialize(result)}]";
             JsonElement jsonResult = JsonSerializer.Deserialize<JsonElement>(jsonString);
+            IEnumerable<JsonElement> resultEnumerated = jsonResult.EnumerateArray();
+
+            return new OkObjectResult(new
+            {
+                value = resultEnumerated
+            });
+        }
+
+        /// <summary>
+        /// Helper function returns an OkObjectResult with provided arguments in a
+        /// form that complies with vNext Api guidelines.
+        /// The result is converted to a JSON Array if the result is not of that type already.
+        /// </summary>
+        /// <seealso>https://github.com/microsoft/api-guidelines/blob/vNext/Guidelines.md#92-serialization</seealso>
+        /// <param name="jsonResult">Value representing the Json results of the client's request.</param>
+        private static OkObjectResult OkMutationResponse(JsonElement jsonResult)
+        {
+            if (jsonResult.ValueKind != JsonValueKind.Array)
+            {
+                string jsonString = $"[{JsonSerializer.Serialize(jsonResult)}]";
+                jsonResult = JsonSerializer.Deserialize<JsonElement>(jsonString);
+            }
+
             IEnumerable<JsonElement> resultEnumerated = jsonResult.EnumerateArray();
 
             return new OkObjectResult(new
@@ -699,18 +727,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             return parameters;
-        }
-
-        /// <summary>
-        /// Checks if the given dictionary has a property named `HasRows`
-        /// and if its true.
-        /// </summary>
-        /// <param name="properties">A dictionary of properties of a Db Data Reader like RecordsAffected, HasRows.</param>
-        /// <returns>True if HasRows is true, false otherwise.</returns>
-        private static bool DoesResultHaveRows(Dictionary<string, object> properties)
-        {
-            return properties.TryGetValue(nameof(DbDataReader.HasRows), out object? hasRows) &&
-                   Convert.ToBoolean(hasRows);
         }
 
         /// <summary>

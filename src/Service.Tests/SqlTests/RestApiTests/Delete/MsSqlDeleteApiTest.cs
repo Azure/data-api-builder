@@ -68,7 +68,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Delete
         [TestMethod]
         public async Task DeleteOneWithStoredProcedureTest()
         {
-            // Delete one from view based on books table.
+            // Delete one from stored-procedure based on books table.
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: null,
                     queryString: null,

@@ -947,11 +947,11 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <summary>
         /// Determine whether the provided field of a GraphQL enabled entity meets GraphQL reserved name requirements.
         /// Criteria:
-        /// - Is GraphQL Enabled for entity
-        /// - If field has an mapped value (alias), then use the mapped value to evaluate name violation.
+        /// - Is GraphQL enabled globally
+        /// - Is GraphQL implicitly enabled e.g. entity.GraphQL is null, or explicitly enabled e.g. entity.GraphQL is true).
+        /// - If field has a mapped value (alias), then use the mapped value to evaluate name violation.
         /// - If field does not have an alias/mapped value, then use the provided field name to
         /// check for naming violations.
-        /// This method must only be called when GraphQL is enabled globally.
         /// </summary>
         /// <param name="entity">Entity to check </param>
         /// <param name="databaseColumnName">Name to evaluate against GraphQL naming requirements</param>

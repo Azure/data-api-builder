@@ -94,9 +94,22 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             if (mutationOperation is Config.Operation.Delete)
             {
+                Dictionary<string, object?> backingRowParams = new();
+                foreach (KeyValuePair<string, object?> resultEntry in parameters)
+                {
+                    _sqlMetadataProvider.TryGetBackingColumn(entityName, resultEntry.Key, out string? name);
+                    if (!string.IsNullOrWhiteSpace(name))
+                    {
+                        backingRowParams.Add(name, resultEntry.Value);
+                    }
+                    else
+                    {
+                        backingRowParams.Add(resultEntry.Key, resultEntry.Value);
+                    }
+                }
                 // compute the mutation result before removing the element,
                 // since typical GraphQL delete mutations return the metadata of the deleted item.
-                result = await _queryEngine.ExecuteAsync(context, parameters);
+                result = await _queryEngine.ExecuteAsync(context, backingRowParams);
 
                 Dictionary<string, object>? resultProperties =
                     await PerformDeleteOperation(
@@ -491,7 +504,16 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 if (resultRecord is not null && resultRecord.Item1 is null)
                 {
-                    string searchedPK = '<' + string.Join(", ", sourceDefinition.PrimaryKey.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
+                    string searchedPK;
+                    if (primaryKeyExposedColumnNames.Count > 0)
+                    {
+                        searchedPK = '<' + string.Join(", ", primaryKeyExposedColumnNames.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
+                    }
+                    else
+                    {
+                        searchedPK = '<' + string.Join(", ", sourceDefinition.PrimaryKey.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
+                    }
+
                     throw new DataApiBuilderException(
                         message: $"Could not find entity with {searchedPK}",
                         statusCode: HttpStatusCode.NotFound,

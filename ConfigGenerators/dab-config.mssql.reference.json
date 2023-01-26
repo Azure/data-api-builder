@@ -1,8 +1,11 @@
 {
   "$schema": "https://dataapibuilder.azureedge.net/schemas/v0.4.11-alpha/dab.draft.schema.json",
-  "data-source": { 
-    "database-type": "mysql",
-    "connection-string": "Connection String"
+  "data-source": {
+    "database-type": "mssql",
+    "connection-string": "Connection String",
+    "options": {
+      "set-session-context": true
+    }
   },
   "runtime": {
     "rest": {
@@ -770,7 +773,7 @@
       "source": {
         "type": "view",
         "object": "books_view_with_mapping",
-        "key-fields": [ "id" ]
+        "key-fields": ["id"]
       },
       "rest": true,
       "permissions": [

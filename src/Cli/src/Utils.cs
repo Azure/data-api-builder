@@ -419,7 +419,8 @@ namespace Cli
             }
 
             // Currently, Stored Procedures can be configured with only 1 CRUD Operation.
-            if (sourceType is SourceType.StoredProcedure
+            bool isStoredProcedure = sourceType is SourceType.StoredProcedure;
+            if (isStoredProcedure
                     && !VerifySingleOperationForStoredProcedure(operations))
             {
                 return false;
@@ -434,9 +435,14 @@ namespace Cli
                     {
                         containsWildcardOperation = true;
                     }
-                    else if (!PermissionOperation.ValidPermissionOperations.Contains(op))
+                    else if (!isStoredProcedure && !PermissionOperation.ValidPermissionOperations.Contains(op))
                     {
                         _logger.LogError("Invalid actions found in --permissions");
+                        return false;
+                    }
+                    else if (isStoredProcedure && !PermissionOperation.ValidStoredProcedurePermissionOperations.Contains(op))
+                    {
+                        _logger.LogError("Invalid stored procedure action(s) found in --permissions");
                         return false;
                     }
                 }

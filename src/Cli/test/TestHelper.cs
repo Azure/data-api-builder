@@ -4,7 +4,7 @@ namespace Cli.Tests
     {
         // Config file name for tests
         public static string _testRuntimeConfig = "dab-config-test.json";
-        public const string DAB_DRAFT_SCHEMA_TEST_PATH = "https://dataapibuilder.azureedge.net/schemas/vmajor.minor.patch-alpha/dab.draft.schema.json";
+        public const string DAB_DRAFT_SCHEMA_TEST_PATH = "https://dataapibuilder.azureedge.net/schemas/vmajor.minor.patch-beta/dab.draft.schema.json";
 
         /// <summary>
         /// Adds the entity properties to the configuration and returns the updated configuration json as a string.

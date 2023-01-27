@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Azure.Core;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.Identity;
-using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 

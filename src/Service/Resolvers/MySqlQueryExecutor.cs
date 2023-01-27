@@ -5,7 +5,6 @@ using Azure.DataApiBuilder.Service.Configurations;
 using Azure.Identity;
 using Microsoft.Extensions.Logging;
 using MySqlConnector;
-using Npgsql;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {

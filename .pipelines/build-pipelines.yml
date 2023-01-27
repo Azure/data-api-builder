@@ -246,8 +246,8 @@ steps:
 - task: CopyFiles@2
   displayName: 'Copy dab.draft.schema.json'
   inputs:
-    sourceFolder: '$(Build.SourcesDirectory)/src/'
-    contents: 'dab.draft.schema.json'
+    sourceFolder: '$(Build.SourcesDirectory)'
+    contents: 'DabTest.1.0.0.nupkg'
     targetFolder: '$(Build.ArtifactStagingDirectory)'
 
 # This code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.

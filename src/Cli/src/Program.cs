@@ -9,6 +9,8 @@ namespace Cli
     /// </summary>
     public class Program
     {
+        public const string PRODUCT_NAME = "Data API Builder";
+
         /// <summary>
         /// Main CLI entry point
         /// </summary>
@@ -33,6 +35,8 @@ namespace Cli
             ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger);
             Utils.SetCliUtilsLogger(cliUtilsLogger);
 
+            cliLogger.LogInformation($"{PRODUCT_NAME} {GetProductVersion()}");
+
             // Parsing user arguments and executing required methods.
             ParserResult<object>? result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions>(args)
                 .WithParsed<InitOptions>(options =>
@@ -41,7 +45,7 @@ namespace Cli
                     if (isSuccess)
                     {
                         cliLogger.LogInformation($"Config file generated.");
-                        cliLogger.LogInformation($"SUGGESTION: Use 'dab add <options>' to add new entities in your config.");
+                        cliLogger.LogInformation($"SUGGESTION: Use 'dab add [entity-name] [options]' to add new entities in your config.");
                     }
                     else
                     {
@@ -50,12 +54,17 @@ namespace Cli
                 })
                 .WithParsed<AddOptions>(options =>
                 {
+                    if (!IsEntityProvided(options.Entity, cliLogger, command: "add"))
+                    {
+                        return;
+                    }
+
                     bool isSuccess = ConfigGenerator.TryAddEntityToConfigWithOptions(options);
                     if (isSuccess)
                     {
                         cliLogger.LogInformation($"Added new entity: {options.Entity} with source: {options.Source} to config: {options.Config}" +
                             $" with permissions: {string.Join(SEPARATOR, options.Permissions.ToArray())}.");
-                        cliLogger.LogInformation($"SUGGESTION: Use 'dab update <options>' to update any entities in your config.");
+                        cliLogger.LogInformation($"SUGGESTION: Use 'dab update [entity-name] [options]' to update any entities in your config.");
                     }
                     else
                     {
@@ -65,11 +74,16 @@ namespace Cli
                 })
                 .WithParsed<UpdateOptions>(options =>
                 {
+                    if (!IsEntityProvided(options.Entity, cliLogger, command: "update"))
+                    {
+                        return;
+                    }
+
                     bool isSuccess = ConfigGenerator.TryUpdateEntityWithOptions(options);
 
                     if (isSuccess)
                     {
-                        cliLogger.LogInformation($"Updated the entity:{options.Entity} in the config.");
+                        cliLogger.LogInformation($"Updated the entity: {options.Entity} in the config.");
                     }
                     else
                     {
@@ -87,6 +101,21 @@ namespace Cli
                 });
 
             return result is Parsed<object> ? 0 : -1;
+        }
+
+        /// <summary>
+        /// Check if add/update command has Entity provided. Return false otherwise.
+        /// </summary>
+        private static bool IsEntityProvided(string? entity, ILogger cliLogger, string command)
+        {
+            if (string.IsNullOrWhiteSpace(entity))
+            {
+                cliLogger.LogError($"Entity name is missing. " +
+                            $"Usage: dab {command} [entity-name] [{command}-options]");
+                return false;
+            }
+
+            return true;
         }
     }
 }

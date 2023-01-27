@@ -23,9 +23,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     [TestClass, TestCategory(TestCategory.MSSQL)]
     public class ODataASTVisitorUnitTests : SqlTestBase
     {
-        private const string DEFAULT_ENTITY = "Book";
+        private const string DEFAULT_ENTITY = "SupportedType";
         private const string DEFAULT_SCHEMA_NAME = "dbo";
-        private const string DEFAULT_TABLE_NAME = "books";
+        private const string DEFAULT_TABLE_NAME = "type_table";
 
         /// <summary>
         /// Set the database engine for the tests
@@ -42,15 +42,28 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// Verify the correct string is parsed from the
         /// provided filter with eq and null on right side.
         /// </summary>
+        [DataRow("id eq 2147483647", "([id] = @param0)", DisplayName = "Equate int types.")]
+        [DataRow("id eq null", "([id] IS NULL)", DisplayName = "Equate int to null.")]
+        [DataRow("byte_types eq 127", "([byte_types] = @param0)", DisplayName = "Equate byte types.")]
+        [DataRow("short_types eq 255", "([short_types] = @param0)", DisplayName = "Equate short types.")]
+        [DataRow("long_types eq 9223372036854775807", "([long_types] = @param0)", DisplayName = "Equate long types.")]
+        [DataRow("string_types eq 'hello'", "([string_types] = @param0)", DisplayName = "Equate string types.")]
+        [DataRow("single_types eq 10.0", "([single_types] = @param0)", DisplayName = "Equate single types.")]
+        [DataRow("float_types eq 65535.9", "([float_types] = @param0)", DisplayName = "Equate float types.")]
+        [DataRow("decimal_types eq 25.5", "([decimal_types] = @param0)", DisplayName = "Equate decimal types.")]
+        [DataRow("boolean_types eq true", "([boolean_types] = @param0)", DisplayName = "Equate boolean types.")]
+        [DataRow("datetime_types eq  2023-01-24T12:51:59Z", "([datetime_types] = @param0)", DisplayName = "Equate datetime types.")]
+        [DataRow("bytearray_types eq 1000", "([bytearray_types] = @param0)", DisplayName = "Equate bytearray types.")]
+        [DataRow("guid_types eq 9A19103F-16F7-4668-BE54-9A1E7A4F7556", "([guid_types] = @param0)", DisplayName = "Equate guid types.")]
         [TestMethod]
-        public void VisitorLeftFieldRightNullFilterTest()
+        public void VisitorLeftFieldRightConstantFilterTest(string filterExp, string expectedPredicate)
         {
             PerformVisitorTest(
                 entityName: DEFAULT_ENTITY,
                 schemaName: DEFAULT_SCHEMA_NAME,
                 tableName: DEFAULT_TABLE_NAME,
-                filterString: "?$filter=id eq null",
-                expected: "([id] IS NULL)"
+                filterString: $"?$filter={filterExp}",
+                expected: expectedPredicate
                 );
         }
 
@@ -227,7 +240,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 entityName: DEFAULT_ENTITY,
                 schemaName: DEFAULT_SCHEMA_NAME,
                 tableName: DEFAULT_TABLE_NAME,
-                filterString: "?$filter=id eq (publisher_id gt 1)",
+                filterString: "?$filter=id eq (id gt 1)",
                 expected: string.Empty
                 ));
 
@@ -244,7 +257,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 entityName: DEFAULT_ENTITY,
                 schemaName: DEFAULT_SCHEMA_NAME,
                 tableName: DEFAULT_TABLE_NAME,
-                filterString: "?$filter=id eq (publisher_id add 1)",
+                filterString: "?$filter=id eq (id add 1)",
                 expected: string.Empty
                 ));
 

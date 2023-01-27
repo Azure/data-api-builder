@@ -759,7 +759,7 @@ namespace Cli
             {
                 if ((audience is not null) || (issuer is not null))
                 {
-                    _logger.LogError("Audience and Issuer are not supported for StaticWebApps or AppService.");
+                    _logger.LogError("Audience and Issuer are not required for StaticWebApps or AppService.");
                     return false;
                 }
             }

@@ -47,7 +47,7 @@ namespace Cli
         /// </summary>
         public static object? GetRestDetails(string? rest, RestMethod[]? restMethods = null)
         {
-            object? rest_detail;   
+            object? rest_detail;
             if (rest is null)
             {
                 rest_detail = null;
@@ -68,9 +68,31 @@ namespace Cli
                     rest_detail = "/" + rest;
                 }
             }
-            
-            return (rest_detail is null && restMethods is null ) ? 
-                    null : new RestEntitySettings(rest_detail, restMethods);
+
+            if(rest_detail is null && restMethods is null)
+            {
+                return null;
+            }
+            else if(restMethods is null)
+            {
+                if(rest_detail is true || rest_detail is false)
+                {
+                    return rest_detail;
+                }
+                else
+                {
+                    return new RestEntitySettings(Path: rest_detail, RestMethods: restMethods);
+                }
+            }
+            else if(rest_detail is null)
+            {
+                return new RestEntitySettings(Path: null, RestMethods: restMethods);
+            }
+            else
+            {
+                return new RestEntitySettings(Path: rest_detail, RestMethods: restMethods);
+            }
+
         }
 
         /// <summary>
@@ -121,9 +143,31 @@ namespace Cli
                 }
 
             }
-            
-            return (graphQL_detail is null && graphQLOperation is null) ? 
-                    null : new GraphQLEntitySettings(graphQL_detail, graphQLOperation);
+
+            if(graphQL_detail is null && graphQLOperation is null)
+            {
+                return null;
+            }
+            else if(graphQLOperation is null)
+            {   
+                if(graphQL_detail is true || graphQL_detail is false)
+                {
+                    return graphQL_detail;
+                }
+                else
+                {
+                    return new GraphQLEntitySettings(Type: graphQL_detail);
+                }
+            }
+            else if(graphQL_detail is null)
+            {
+                return new GraphQLEntitySettings(Type: null, GraphQLOperation: graphQLOperation);
+            }
+            else
+            {
+                return new GraphQLEntitySettings(Type: graphQL_detail, GraphQLOperation: graphQLOperation);
+            }
+
         }
 
         /// <summary>
@@ -704,6 +748,7 @@ namespace Cli
                 _logger.LogError("Stored Procedure supports only execute operation.");
                 return false;
             }
+
             return true;
         }
 
@@ -801,6 +846,7 @@ namespace Cli
                 }
 
             }
+
             return restMethods.ToArray();
         }
 
@@ -815,17 +861,36 @@ namespace Cli
             return true;
         }
 
+        /// <summary>
+        /// Method to check if the options for an entity represent a stored procedure  
+        /// </summary>
+        /// <param name="options"></param>
+        /// <returns></returns>
         public static bool IsEntityStoredProcedure(EntityOptions options)
         {
             SourceTypeEnumConverter.TryGetSourceType(options.SourceType, out SourceType sourceObjectType);
             return sourceObjectType is SourceType.StoredProcedure;
         }
 
+        /// <summary>
+        /// Method to check if an entity is a stored procedure
+        /// </summary>
+        /// <param name="entity"></param>
+        /// <returns></returns>
         public static bool IsEntityStoredProcedure(Entity entity)
         {
             return entity.ObjectType is SourceType.StoredProcedure;
         }
 
+        /// <summary>
+        /// For stored procedures, the rest HTTP verbs to be supported can be configured using
+        /// --rest.methods option.
+        /// Validation to ensure that configuring REST methods for a stored procedure that is
+        /// not enabled for REST results in an error. This validation is run along
+        /// with add command.
+        /// </summary>
+        /// <param name="options">Options entered using add command</param>
+        /// <returns></returns>
         public static bool CheckConflictingRestConfigurationForStoredProcedures(EntityOptions options)
         {
             return IsEntityStoredProcedure(options) &&
@@ -833,6 +898,16 @@ namespace Cli
                    (options.RestMethodsForStoredProcedure is not null && options.RestMethodsForStoredProcedure.Any());
         }
 
+        /// <summary>
+        /// For stored procedure, the rest HTTP verbs to be supported can be configured using
+        /// --rest.methods option.
+        /// Validation to ensure that configuring REST methods for a stored procedure that is
+        /// not enabled for REST results in an error. This validation is run along with
+        /// update command.
+        /// </summary>
+        /// <param name="options">Options entered using update command</param>
+        /// <param name="entity">Stored Procedure Entity</param>
+        /// <returns></returns>
         public static bool CheckConflictingRestConfigurationForStoredProcedures(EntityOptions options, Entity entity)
         {
             return CheckConflictingRestConfigurationForStoredProcedures(options) &&
@@ -840,6 +915,15 @@ namespace Cli
                    options.RestRoute is null && options.RestMethodsForStoredProcedure is not null && options.RestMethodsForStoredProcedure.Any());
         }
 
+        /// <summary>
+        /// For stored procedures, the graphql operation to be supported can be configured using
+        /// --graphql.operation.
+        /// Validation to ensure that configuring GraphQL operation for a stored procedure that is
+        /// not exposed for graphQL results in an error. This validation is run along with add
+        /// command
+        /// </summary>
+        /// <param name="options"></param>
+        /// <returns></returns>
         public static bool CheckConflictingGraphQLConfigurationForStoredProcedures(EntityOptions options)
         {
             return IsEntityStoredProcedure(options) &&
@@ -847,6 +931,16 @@ namespace Cli
                    (options.GraphQLOperationForStoredProcedure is not null);
         }
 
+        /// <summary>
+        /// For stored procedures, the graphql operation to be supported can be configured using
+        /// --graphql.operation.
+        /// Validation to ensure that configuring GraphQL operation for a stored procedure that is
+        /// not exposed for graphQL results in an error. This validation is run along with update
+        /// command
+        /// </summary>
+        /// <param name="options"></param>
+        /// <param name="entity"></param>
+        /// <returns></returns>
         public static bool CheckConflictingGraphQLConfigurationForStoredProcedures(EntityOptions options, Entity entity)
         {
             return CheckConflictingGraphQLConfigurationForStoredProcedures(options) &&

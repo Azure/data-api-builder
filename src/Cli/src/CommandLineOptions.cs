@@ -144,8 +144,6 @@ namespace Cli
 
         [Option("policy-database", Required = false, HelpText = "Specify an OData style filter rule that will be injected in the query sent to the database.")]
         public string? PolicyDatabase { get; }
-
-
     }
 
     /// <summary>

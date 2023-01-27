@@ -292,8 +292,8 @@ namespace Cli.Tests
         [DataRow(new string[] {"Get"}, "Query", "true", "true", true, DisplayName = "Both REST and GraphQL enabled without custom REST methods and GraphQL operations")]
         [DataRow(new string[] {"Post,Patch,Put"}, null, "true", "true", true, DisplayName = "Both REST and GraphQL enabled without custom REST methods")]
         [DataRow(null, "Mutation", "true", "true", true, DisplayName = "Both REST and GraphQL enabled without custom GraphQL operation")]
-        [DataRow(null, "Mutation", "true", "false", false, DisplayName = "Conflicting configurations - GraphQL operation specified but disabled for entity")]
-        [DataRow(null, "Mutation", "false", "true", false, DisplayName = "Conflicting configurations - GraphQL operation specified but disabled for entity")]
+        [DataRow(null, "Mutation", "true", "false", false, DisplayName = "Conflicting configurations - GraphQL operation specified but entity is disabled for GraphQL")]
+        [DataRow(new string[] {"Get"}, null, "false", "true", false, DisplayName = "Conflicting configurations - REST methods specified but entity is disabled for REST")]
         public void TestAddNewSpWithDifferentRestAndGraphQLOptions(
                 IEnumerable<string>? restMethods,
                 string? graphQLOperation,

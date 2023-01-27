@@ -252,6 +252,25 @@ public class EndToEndTests
     }
 
     /// <summary>
+    /// Test to validate that config json gets built correctly with the options
+    /// --rest.methods and --graphql.operations for stored procedures.
+    /// </summary>
+    [TestMethod]
+    public void TestAddingStoredProcedureWithRestMethodsAndGraphQLOperations()
+    {
+        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql",
+            "--host-mode", "Development", "--connection-string", "testconnectionstring", "--set-session-context", "true" };
+        Program.Main(initArgs);
+        RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
+        Assert.IsNotNull(runtimeConfig);
+        Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
+        string[] addArgs = { "add", "MyEntity", "-c", _testRuntimeConfig, "--source", "s001.book", "--permissions", "anonymous:execute", "--source.type", "stored-procedure", "--source.params", "param1:123,param2:hello,param3:true", "--rest.methods", "post,put,patch", "--graphql.operation", "query" };
+        Program.Main(addArgs);
+        string? expectedConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE_WITH_CUSTOM_REST_GRAPHQL_CONFIG);
+        Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfig), JObject.Parse(File.ReadAllText(_testRuntimeConfig))));
+    }
+
+    /// <summary>
     /// Test the exact config json generated to verify adding a new Entity with default source type and given key-fields.
     /// </summary>
     [TestMethod]

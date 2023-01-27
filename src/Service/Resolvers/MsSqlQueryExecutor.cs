@@ -32,6 +32,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         private readonly string? _accessTokenFromController;
 
+        /// <summary>
+        /// The MsSql specific connection string builder.
+        /// </summary>
+        protected override SqlConnectionStringBuilder ConnectionStringBuilder
+            => (SqlConnectionStringBuilder)base.ConnectionStringBuilder;
+
         public DefaultAzureCredential AzureCredential { get; set; } = new();
 
         /// <summary>
@@ -48,13 +54,18 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             RuntimeConfigProvider runtimeConfigProvider,
             DbExceptionParser dbExceptionParser,
             ILogger<QueryExecutor<SqlConnection>> logger)
-            : base(runtimeConfigProvider, dbExceptionParser, logger)
+            : base(dbExceptionParser,
+                  logger,
+                  new SqlConnectionStringBuilder(
+                      runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString))
         {
-            MsSqlOptions? msSqlOptions = runtimeConfigProvider.GetRuntimeConfiguration().DataSource.MsSql;
+            RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
+            MsSqlOptions? msSqlOptions = runtimeConfig.DataSource.MsSql;
+            ConnectionStringBuilder.Encrypt = SqlConnectionEncryptOption.Mandatory;
+            ConnectionStringBuilder.TrustServerCertificate = false;
             _isSessionContextEnabled = msSqlOptions is null ? false : msSqlOptions.SetSessionContext;
             _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
-            _attemptToSetAccessToken =
-                ShouldManagedIdentityAccessBeAttempted(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString);
+            _attemptToSetAccessToken = ShouldManagedIdentityAccessBeAttempted();
         }
 
         /// <summary>
@@ -95,13 +106,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// a System.InvalidOperationException.
         /// 2. It is NOT a Windows Integrated Security scenario.
         /// </summary>
-        private static bool ShouldManagedIdentityAccessBeAttempted(string connString)
+        private bool ShouldManagedIdentityAccessBeAttempted()
         {
-            SqlConnectionStringBuilder connStringBuilder = new(connString);
-            return string.IsNullOrEmpty(connStringBuilder.UserID) &&
-                string.IsNullOrEmpty(connStringBuilder.Password) &&
-                connStringBuilder.Authentication == SqlAuthenticationMethod.NotSpecified &&
-                !connStringBuilder.IntegratedSecurity;
+            return string.IsNullOrEmpty(ConnectionStringBuilder.UserID) &&
+                string.IsNullOrEmpty(ConnectionStringBuilder.Password) &&
+                ConnectionStringBuilder.Authentication == SqlAuthenticationMethod.NotSpecified &&
+                !ConnectionStringBuilder.IntegratedSecurity;
         }
 
         /// <summary>

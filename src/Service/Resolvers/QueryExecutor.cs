@@ -20,10 +20,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     /// <summary>
     /// Encapsulates query execution apis.
     /// </summary>
-    public class QueryExecutor<TConnection> : IQueryExecutor
+    public abstract class QueryExecutor<TConnection> : IQueryExecutor
         where TConnection : DbConnection, new()
     {
-        protected string ConnectionString { get; }
         protected DbExceptionParser DbExceptionParser { get; }
         protected ILogger<QueryExecutor<TConnection>> QueryExecutorLogger { get; }
 
@@ -33,14 +32,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         private AsyncRetryPolicy _retryPolicy;
 
-        public QueryExecutor(RuntimeConfigProvider runtimeConfigProvider,
-                             DbExceptionParser dbExceptionParser,
-                             ILogger<QueryExecutor<TConnection>> logger)
+        protected virtual DbConnectionStringBuilder ConnectionStringBuilder { get; set; }
+
+        public QueryExecutor(DbExceptionParser dbExceptionParser,
+                             ILogger<QueryExecutor<TConnection>> logger,
+                             DbConnectionStringBuilder connectionStringBuilder)
         {
-            RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
-            ConnectionString = runtimeConfig.ConnectionString;
             DbExceptionParser = dbExceptionParser;
             QueryExecutorLogger = logger;
+            ConnectionStringBuilder = connectionStringBuilder;
             _retryPolicy = Polly.Policy
             .Handle<DbException>(DbExceptionParser.IsTransientException)
             .WaitAndRetryAsync(
@@ -64,7 +64,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             int retryAttempt = 0;
             using TConnection conn = new()
             {
-                ConnectionString = ConnectionString,
+                ConnectionString = ConnectionStringBuilder.ConnectionString,
             };
 
             await SetManagedIdentityAccessTokenIfAnyAsync(conn);

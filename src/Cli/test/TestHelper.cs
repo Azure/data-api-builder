@@ -236,7 +236,7 @@ namespace Cli.Tests
                   {
                     ""role"": ""anonymous"",
                     ""actions"": [
-                      ""read""
+                      ""execute""
                     ]
                   }
                 ]

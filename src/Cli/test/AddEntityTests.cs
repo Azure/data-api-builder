@@ -179,7 +179,7 @@ namespace Cli.Tests
         {
             AddOptions options = new(
                 source: "s001.book",
-                permissions: new string[] { "anonymous", "read" },
+                permissions: new string[] { "anonymous", "execute" },
                 entity: "MyEntity",
                 sourceType: "stored-procedure",
                 sourceParameters: new string[] { "param1:123", "param2:hello", "param3:true" },
@@ -202,8 +202,8 @@ namespace Cli.Tests
         /// </summary>
         [DataTestMethod]
         [DataRow(null, null, null, "*", true, DisplayName = "Both KeyFields and Parameters not provided for source")]
-        [DataRow("stored-procedure", new string[] { "param1:value1" }, null, "create", true, DisplayName = "SourceParameters correctly included with stored procedure")]
-        [DataRow("Stored-Procedure", new string[] { "param1:value1" }, null, "read", true, DisplayName = "Stored procedure type check for Case Insensitivity")]
+        [DataRow("stored-procedure", new string[] { "param1:value1" }, null, "execute", true, DisplayName = "SourceParameters correctly included with stored procedure")]
+        [DataRow("Stored-Procedure", new string[] { "param1:value1" }, null, "execute", true, DisplayName = "Stored procedure type check for Case Insensitivity")]
         [DataRow("stored-procedure", new string[] { "param1:value1" }, null, "*", false, DisplayName = "Stored procedure incorrectly configured with wildcard CRUD action")]
         [DataRow("view", null, new string[] { "col1", "col2" }, "*", true, DisplayName = "Source KeyFields correctly included with with View")]
         [DataRow("table", null, new string[] { "col1", "col2" }, "*", true, DisplayName = "Source KeyFields correctly included with with Table")]

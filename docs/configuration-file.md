@@ -68,7 +68,7 @@ The configuration file has a `$schema` property as the first property in the con
 "$schema": "..."
 ```
 
-From version 0.4.11 schema is available at:
+From version 0.4.11-alpha schema is available at:
 
 ```txt
 https://dataapibuilder.azureedge.net/schemas/<VERSION>-<suffix>/dab.draft.schema.json

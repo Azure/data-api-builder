@@ -472,10 +472,18 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             foreach (KeyValuePair<string, object?> parameter in queryParams)
             {
+                string columnName = parameter.Key;
+
+                MetadataProvider.TryGetBackingColumn(base.EntityName, parameter.Key, out string? backingColumnName);
+                if (!string.IsNullOrWhiteSpace(backingColumnName))
+                {
+                    columnName = backingColumnName;
+                }
+
                 Predicates.Add(new Predicate(
                     new PredicateOperand(new Column(tableSchema: DatabaseObject.SchemaName,
                                                     tableName: DatabaseObject.Name,
-                                                    columnName: parameter.Key,
+                                                    columnName: columnName,
                                                     tableAlias: SourceAlias)),
                     PredicateOperation.Equal,
                     new PredicateOperand($"@{MakeParamWithValue(parameter.Value)}")

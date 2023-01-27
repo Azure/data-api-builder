@@ -54,6 +54,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
         }
 
+        [TestMethod]
+        public async Task MultipleResultQueryWithMappings(string dbQuery)
+        {
+            string graphQLQueryName = "gQLmappings";
+            string graphQLQuery = @"{
+                gQLmappings(first: 3) {
+                    items {
+                        column1
+                        column2
+                    }
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
         /// <summary>
         /// Gets array of results for querying a table containing computed columns.
         /// </summary>
@@ -496,6 +515,23 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             string graphQLQuery = @"{
                 book_by_pk(id: 2) {
                     title
+                }
+            }";
+
+            JsonElement actual = await base.ExecuteGraphQLRequestAsync(
+                graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        [TestMethod]
+        public async Task QueryWithSingleColumnPrimaryKeyAndMappings(string dbQuery)
+        {
+            string graphQLQueryName = "gQLmappings_by_pk";
+            string graphQLQuery = @"{
+                gQLmappings_by_pk(column1: 1) {
+                    column1
                 }
             }";
 

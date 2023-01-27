@@ -232,12 +232,20 @@ namespace Cli.Tests
                   {
                     ""role"": ""anonymous"",
                     ""actions"": [
-                      ""read""
+                      ""execute""
                     ]
                   }
-                ]
-              }
-            }
+                ],
+                ""rest"": {	
+                    ""methods"": [	
+                      ""post""	
+                    ]	
+                  },	
+                  ""graphql"": {	
+                    ""operation"": ""mutation""	
+                      }
+                    }
+                  }
           }";
 
         public const string SINGLE_ENTITY_WITH_SOURCE_AS_TABLE = @"

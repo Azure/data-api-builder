@@ -799,24 +799,42 @@ namespace Cli
             return true;
         }
 
-        public static bool ValidateWhetherAnEntityIsAsStoredProcedure(EntityOptions options)
+        public static bool IsEntityStoredProcedure(EntityOptions options)
         {
             SourceTypeEnumConverter.TryGetSourceType(options.SourceType, out SourceType sourceObjectType);
             return sourceObjectType is SourceType.StoredProcedure;
         }
 
+        public static bool IsEntityStoredProcedure(Entity entity)
+        {
+            return entity.ObjectType is SourceType.StoredProcedure;
+        }
+
         public static bool CheckConflictingRestConfigurationForStoredProcedures(EntityOptions options)
         {
-            return ValidateWhetherAnEntityIsAsStoredProcedure(options) &&
+            return IsEntityStoredProcedure(options) &&
                    (options.RestRoute is not null && bool.TryParse(options.RestRoute, out bool restEnabled) && !restEnabled) &&
                    (options.RestMethodsForStoredProcedure is not null && options.RestMethodsForStoredProcedure.Any());
         }
 
+        public static bool CheckConflictingRestConfigurationForStoredProcedures(EntityOptions options, Entity entity)
+        {
+            return CheckConflictingRestConfigurationForStoredProcedures(options) &&
+                   (entity.Rest is bool restEnabled && !restEnabled && 
+                   options.RestRoute is null && options.RestMethodsForStoredProcedure is not null && options.RestMethodsForStoredProcedure.Any());
+        }
+
         public static bool CheckConflictingGraphQLConfigurationForStoredProcedures(EntityOptions options)
         {
-            return ValidateWhetherAnEntityIsAsStoredProcedure(options) &&
-                   (options.GraphQLOperationForStoredProcedure is not null && bool.TryParse(options.GraphQLOperationForStoredProcedure, out bool graphQLEnabled) && !graphQLEnabled) &&
+            return IsEntityStoredProcedure(options) &&
+                   (options.GraphQLType is not null && bool.TryParse(options.GraphQLType, out bool graphQLEnabled) && !graphQLEnabled) &&
                    (options.GraphQLOperationForStoredProcedure is not null);
+        }
+
+        public static bool CheckConflictingGraphQLConfigurationForStoredProcedures(EntityOptions options, Entity entity)
+        {
+            return CheckConflictingGraphQLConfigurationForStoredProcedures(options) &&
+                   (entity.GraphQL is bool graphQLEnabled && !graphQLEnabled && options.GraphQLOperationForStoredProcedure is not null);
         }
 
     }

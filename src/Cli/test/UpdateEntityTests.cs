@@ -44,7 +44,10 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null)
+                ;
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -117,7 +120,10 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -191,7 +197,10 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -262,7 +271,10 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                         ""entities"": {
@@ -361,7 +373,10 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -430,7 +445,10 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                         ""entities"": {
@@ -542,7 +560,10 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                         ""entities"": {
@@ -663,7 +684,10 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             Relationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
 
@@ -705,7 +729,10 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             Relationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
 
@@ -747,7 +774,10 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             Relationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
 
@@ -797,7 +827,9 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { },
-                config: _testRuntimeConfig
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
             );
 
             string? actualConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY);
@@ -858,7 +890,9 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { },
-                config: _testRuntimeConfig
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
             );
 
             string? actualConfig = AddPropertiesToJson(INITIAL_CONFIG, BASIC_ENTITY_WITH_ANONYMOUS_ROLE);
@@ -919,7 +953,9 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { },
-                config: _testRuntimeConfig
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
             );
 
             string? initialConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
@@ -1039,7 +1075,9 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { },
-                config: _testRuntimeConfig
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
             );
 
             string runtimeConfig = AddPropertiesToJson(INITIAL_CONFIG, initialSourceObjectEntity);
@@ -1133,7 +1171,9 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { },
-                config: _testRuntimeConfig
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
             );
 
             string? actualConfig = AddPropertiesToJson(INITIAL_CONFIG, ENTITY_CONFIG_WITH_POLCIY_AND_ACTION_FIELDS);
@@ -1209,7 +1249,10 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
 
@@ -1243,7 +1286,10 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { "id:Identity", "name:Company Name" },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -1308,7 +1354,10 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: null,
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -1391,7 +1440,10 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { "Macaroni:Mac & Cheese", "region:United State's Region", "russian:русский", "chinese:中文" },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -1458,7 +1510,10 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { "name:Company Name", "addr:Company Address", "number:Contact Details" },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = GetConfigWithMappings();
 
@@ -1518,7 +1573,10 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -1580,7 +1638,10 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
 
@@ -1630,7 +1691,10 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: null,
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             Relationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
 
@@ -1667,7 +1731,10 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: mappings.Split(','),
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -1719,7 +1786,9 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: null,
-                config: _testRuntimeConfig
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
             );
 
             string runtimeConfig = GetConfigWithMappings();

@@ -36,7 +36,10 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string initialConfiguration = INITIAL_CONFIG;
             string expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
@@ -62,7 +65,10 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
             string configurationWithOneEntity = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
@@ -90,7 +96,10 @@ namespace Cli.Tests
                 fieldsToExclude: null,
                 policyRequest: null,
                 policyDatabase: null,
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
             Assert.IsFalse(ConfigGenerator.TryAddNewEntity(options, ref initialConfiguration));
@@ -116,7 +125,9 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                config: _testRuntimeConfig
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
             );
 
             string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
@@ -151,7 +162,9 @@ namespace Cli.Tests
                 fieldsToExclude: fieldsToExclude,
                 policyRequest: policyRequest,
                 policyDatabase: policyDatabase,
-                config: _testRuntimeConfig
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
             );
 
             string? expectedConfiguration = null;
@@ -179,7 +192,7 @@ namespace Cli.Tests
         {
             AddOptions options = new(
                 source: "s001.book",
-                permissions: new string[] { "anonymous", "read" },
+                permissions: new string[] { "anonymous", "execute" },
                 entity: "MyEntity",
                 sourceType: "stored-procedure",
                 sourceParameters: new string[] { "param1:123", "param2:hello", "param3:true" },
@@ -190,7 +203,10 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string initialConfiguration = INITIAL_CONFIG;
             string expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
@@ -202,8 +218,8 @@ namespace Cli.Tests
         /// </summary>
         [DataTestMethod]
         [DataRow(null, null, null, "*", true, DisplayName = "Both KeyFields and Parameters not provided for source")]
-        [DataRow("stored-procedure", new string[] { "param1:value1" }, null, "create", true, DisplayName = "SourceParameters correctly included with stored procedure")]
-        [DataRow("Stored-Procedure", new string[] { "param1:value1" }, null, "read", true, DisplayName = "Stored procedure type check for Case Insensitivity")]
+        [DataRow("stored-procedure", new string[] { "param1:value1" }, null, "execute", true, DisplayName = "SourceParameters correctly included with stored procedure")]
+        [DataRow("Stored-Procedure", new string[] { "param1:value1" }, null, "execute", true, DisplayName = "Stored procedure type check for Case Insensitivity")]
         [DataRow("stored-procedure", new string[] { "param1:value1" }, null, "*", false, DisplayName = "Stored procedure incorrectly configured with wildcard CRUD action")]
         [DataRow("view", null, new string[] { "col1", "col2" }, "*", true, DisplayName = "Source KeyFields correctly included with with View")]
         [DataRow("table", null, new string[] { "col1", "col2" }, "*", true, DisplayName = "Source KeyFields correctly included with with Table")]
@@ -234,7 +250,10 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = INITIAL_CONFIG;
 
@@ -268,7 +287,10 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { "level" },
                 policyRequest: null,
                 policyDatabase: null,
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = INITIAL_CONFIG;
 
@@ -287,7 +309,6 @@ namespace Cli.Tests
 
             JObject expectedJson = JObject.Parse(expectedConfig);
             JObject actualJson = JObject.Parse(initialConfig);
-
             Assert.IsTrue(JToken.DeepEquals(expectedJson, actualJson));
         }
 

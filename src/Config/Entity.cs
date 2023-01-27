@@ -311,7 +311,7 @@ namespace Azure.DataApiBuilder.Config
     /// at which the REST endpoint for this entity is exposed
     /// instead of using the entity-name. Can be a string type.
     /// </param>
-    public record RestEntitySettings(object? Path,
+    public record RestEntitySettings(object Path,
                                      [property: JsonPropertyName("methods")] RestMethod[]? RestMethods = null);
 
     /// <summary>

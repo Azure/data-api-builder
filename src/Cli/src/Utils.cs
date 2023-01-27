@@ -817,6 +817,13 @@ namespace Cli
             return true;
         }
 
+        /// <summary>
+        /// Utility method that converts REST HTTP verb string input to RestMethod Enum.
+        /// The method returns true/false corresponding to successful/unsuccessful conversion.
+        /// </summary>
+        /// <param name="method">String input entered by the user</param>
+        /// <param name="restMethod">RestMethod Enum type</param>
+        /// <returns></returns>
         public static bool TryConvertRestMethodNameToRestMethod(string? method, out RestMethod restMethod)
         {
             if(! Enum.TryParse(method, ignoreCase: true ,out restMethod))
@@ -828,6 +835,13 @@ namespace Cli
             return true;
         }
 
+        /// <summary>
+        /// Utility method that converts list of REST HTTP verbs configured for a
+        /// stored procedure into an array of RestMethod Enum type.
+        /// When no value is specified by the user, POST method is configured by default.
+        /// </summary>
+        /// <param name="method">List of REST HTTP verbs configured for the stored procedure</param>
+        /// <returns>REST methods as an array of RestMethod Enum type</returns>
         public static RestMethod[] CreateRestMethods(IEnumerable<string> methods)
         {
             List<RestMethod> restMethods = new();
@@ -850,6 +864,14 @@ namespace Cli
             return restMethods.ToArray();
         }
 
+        /// <summary>
+        /// Utility method that converts the graphQL operation configured for the stored procedure to
+        /// GraphWLOperation Enum type.
+        /// The metod returns true/false corresponding to successful/unsuccessful conversion.
+        /// </summary>
+        /// <param name="operation">GraphQL operation configured for the stored procedure</param>
+        /// <param name="graphQLOperation">GraphQL Operation as an Enum type</param>
+        /// <returns>true/false</returns>
         public static bool TryConvertGraphQLOperationNameToGraphQLOperation(string? operation, out GraphQLOperation graphQLOperation)
         {
             if (! Enum.TryParse(operation, ignoreCase: true ,out graphQLOperation))

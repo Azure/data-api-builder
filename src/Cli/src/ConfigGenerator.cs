@@ -891,6 +891,14 @@ namespace Cli
             return restMethods.Length > 0;
         }
 
+        /// <summary>
+        /// Identifies the graphQL operations configured for the stored procedure from add command.
+        /// When no value is specified, the stored procedure is configured with a mutation operation.
+        /// Returns true/false corresponding to a successful/unsuccessful conversion of the operations.
+        /// </summary>
+        /// <param name="options">GraphQL operatios configured for the Stored Procedure using add command</param>
+        /// <param name="graphQLOperationForStoredProcedure">GraphQL Operations as Enum type</param>
+        /// <returns>true/false</returns>
         private static bool TryAddGraphQLOperationForStoredProcedure(EntityOptions options, out GraphQLOperation? graphQLOperationForStoredProcedure)
         {
             if(options.GraphQLOperationForStoredProcedure is null)
@@ -908,6 +916,7 @@ namespace Cli
 
                 graphQLOperationForStoredProcedure = operation;
             }
+
             return true;
         }
     }

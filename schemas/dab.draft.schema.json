@@ -291,8 +291,13 @@
                       }
                     }
                   },
-                  "required": [
-                    "path"
+                  "anyOf": [
+                    {
+                      "required": [ "path" ]
+                    },
+                    {
+                      "required": [ "method" ]
+                    }
                   ]
                 }
               ]
@@ -316,8 +321,13 @@
                       ]
                     }
                   },
-                  "required": [
-                    "type"
+                  "anyOf": [
+                    {
+                      "required": [ "type" ]
+                    },
+                    {
+                      "required": [ "operation" ]
+                    }
                   ]
                 }
               ]

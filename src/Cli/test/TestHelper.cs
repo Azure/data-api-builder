@@ -92,10 +92,12 @@ namespace Cli.Tests
             @"
             ""runtime"": {
               ""rest"": {
-                ""path"": ""/api""
+                ""path"": ""/api"",
+                ""enabled"": true
               },
               ""graphql"": {
                 ""path"": ""/graphql"",
+                ""enabled"": true,
                 ""allow-introspection"": true
               },
               ""host"": {
@@ -121,10 +123,12 @@ namespace Cli.Tests
             @"
             ""runtime"": {
               ""rest"": {
-                ""path"": ""/api""
+                ""path"": ""/api"",
+                ""enabled"": true
               },
               ""graphql"": {
                 ""path"": ""/graphql"",
+                ""enabled"": true,
                 ""allow-introspection"": true
               },
               ""host"": {
@@ -373,10 +377,12 @@ namespace Cli.Tests
         },
         ""runtime"": {
           ""rest"": {
-            ""path"": ""/api""
+            ""path"": ""/api"",
+            ""enabled"": true
           },
           ""graphql"": {
             ""path"": ""/graphql"",
+            ""enabled"": true,
             ""allow-introspection"": true
           },
           ""host"": {

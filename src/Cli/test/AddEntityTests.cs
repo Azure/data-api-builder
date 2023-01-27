@@ -286,6 +286,44 @@ namespace Cli.Tests
             Assert.AreEqual(expectSuccess, ConfigGenerator.TryAddNewEntity(options, ref runtimeConfig));
         }
 
+        [DataTestMethod]
+        [DataRow(null, null, null, null, true, DisplayName = "Default Case without any customization")]
+        [DataRow(null, null, "true", "true", true, DisplayName = "Both REST and GraphQL enabled without any methods and operations configured explicitly")]
+        [DataRow(new string[] {"Get"}, "Query", "true", "true", true, DisplayName = "Both REST and GraphQL enabled without custom REST methods and GraphQL operations")]
+        [DataRow(new string[] {"Post,Patch,Put"}, null, "true", "true", true, DisplayName = "Both REST and GraphQL enabled without custom REST methods")]
+        [DataRow(null, "Mutation", "true", "true", true, DisplayName = "Both REST and GraphQL enabled without custom GraphQL operation")]
+        [DataRow(null, "Mutation", "true", "false", false, DisplayName = "Conflicting configurations - GraphQL operation specified but disabled for entity")]
+        [DataRow(null, "Mutation", "false", "true", false, DisplayName = "Conflicting configurations - GraphQL operation specified but disabled for entity")]
+        public void TestAddNewSpWithDifferentRestAndGraphQLOptions(
+                IEnumerable<string>? restMethods,
+                string? graphQLOperation,
+                string? restRoute,
+                string? graphQLType,
+                bool expectSuccess
+            )
+        {
+            AddOptions options = new(
+                source: "testSource",
+                permissions: new string[] { "anonymous", "execute" },
+                entity: "book",
+                sourceType: "stored-procedure",
+                sourceParameters: null,
+                sourceKeyFields: null,
+                restRoute: restRoute,
+                graphQLType: graphQLType,
+                fieldsToInclude: new string[] { },
+                fieldsToExclude: new string[] { },
+                policyRequest: null,
+                policyDatabase: null,
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: restMethods,
+                graphQLOperationForStoredProcedure: graphQLOperation
+                );
+
+            string runtimeConfig = INITIAL_CONFIG;
+            Assert.AreEqual(expectSuccess, ConfigGenerator.TryAddNewEntity(options, ref runtimeConfig));
+        }
+
         /// <summary>
         /// Check failure when adding an entity with permission containing invalid operations
         /// </summary>

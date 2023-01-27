@@ -757,17 +757,17 @@ namespace Cli
             if (Enum.TryParse<EasyAuthType>(authenticationProvider, ignoreCase: true, out _)
                 || SIMULATOR_AUTHENTICATION.Equals(authenticationProvider))
             {
-                if ((audience is not null) || (issuer is not null))
+                if (!(string.IsNullOrWhiteSpace(audience)) || !(string.IsNullOrWhiteSpace(issuer)))
                 {
-                    _logger.LogError("Audience and Issuer are not required for StaticWebApps or AppService.");
+                    _logger.LogError("Audience and Issuer can't be set for StaticWebApps or AppService authentication.");
                     return false;
                 }
             }
             else
             {
-                if ((audience is null) || (issuer is null))
+                if (string.IsNullOrWhiteSpace(audience) || string.IsNullOrWhiteSpace(issuer))
                 {
-                    _logger.LogError($"Authentication provider other than EasyAuth and Simulator requires both Audience and Issuer.");
+                    _logger.LogError($"Authentication providers other than EasyAuth and Simulator require both Audience and Issuer.");
                     return false;
                 }
             }

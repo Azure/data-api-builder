@@ -86,7 +86,7 @@ namespace Azure.DataApiBuilder.Config
         /// </summary>
         public bool TryProcessGraphQLNamingConfig()
         {
-            if (GraphQL is null)
+             if (GraphQL is null)
             {
                 return true;
             }
@@ -99,36 +99,55 @@ namespace Azure.DataApiBuilder.Config
                 }
                 else if (configElement.ValueKind is JsonValueKind.Object)
                 {
-                    JsonElement nameTypeSettings = configElement.GetProperty("type");
-                    object nameConfiguration;
+                    // Hydrate the ObjectType field with metadata from database source.
+                    TryPopulateSourceFields();
+                    GraphQLOperation? graphQLOperation = null;
 
-                    if (nameTypeSettings.ValueKind is JsonValueKind.String)
+                    // Only stored procedure configuration can override the GraphQL operation type.
+                    if (ObjectType is SourceType.StoredProcedure)
                     {
-                        nameConfiguration = JsonSerializer.Deserialize<string>(nameTypeSettings)!;
-                    }
-                    else if (nameTypeSettings.ValueKind is JsonValueKind.Object)
-                    {
-                        nameConfiguration = JsonSerializer.Deserialize<SingularPlural>(nameTypeSettings)!;
-                    }
-                    else
-                    {
-                        // Not Supported Type
-                        return false;
+                        if (configElement.TryGetProperty(propertyName: "operation", out JsonElement operation) && operation.ValueKind is JsonValueKind.String)
+                        {
+                            string operationType = JsonSerializer.Deserialize<string>(operation)!;
+
+                            if (string.Equals(operationType, "mutation", StringComparison.OrdinalIgnoreCase) || string.Equals(operationType, string.Empty))
+                            {
+                                graphQLOperation = GraphQLOperation.Mutation;
+                            }
+                            else if (string.Equals(operationType, "query", StringComparison.OrdinalIgnoreCase))
+                            {
+                                graphQLOperation = GraphQLOperation.Query;
+                            }
+                            else
+                            {
+                                throw new JsonException(message: $"Unsupported GraphQL operation type: {operationType}");
+                            }
+                        }
+                        else
+                        {
+                            graphQLOperation = GraphQLOperation.Query;
+                        }
                     }
 
-                    JsonElement? graphQLOperation = configElement.GetProperty("operation");
-                    GraphQLOperation? graphQLOperationConfiguration;
-
-                    if(graphQLOperation is null)
+                    object? typeConfiguration = null;
+                    if (configElement.TryGetProperty(propertyName: "type", out JsonElement nameTypeSettings))
                     {
-                        graphQLOperationConfiguration = null;
-                    }
-                    else
-                    {
-                        graphQLOperationConfiguration = JsonSerializer.Deserialize<GraphQLOperation>((JsonElement)graphQLOperation);
+                        if (nameTypeSettings.ValueKind is JsonValueKind.String)
+                        {
+                            typeConfiguration = JsonSerializer.Deserialize<string>(nameTypeSettings)!;
+                        }
+                        else if (nameTypeSettings.ValueKind is JsonValueKind.Object)
+                        {
+                            typeConfiguration = JsonSerializer.Deserialize<SingularPlural>(nameTypeSettings)!;
+                        }
+                        else
+                        {
+                            // Not Supported Type
+                            return false;
+                        }
                     }
 
-                    GraphQLEntitySettings graphQLEntitySettings = new(Type: nameConfiguration, GraphQLOperation: graphQLOperationConfiguration);
+                    GraphQLEntitySettings graphQLEntitySettings = new(Type: typeConfiguration, GraphQLOperation: graphQLOperation);
                     GraphQL = graphQLEntitySettings;
                 }
             }

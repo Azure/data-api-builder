@@ -32,6 +32,76 @@ This will correspondingly generate the data-source section in config file as fol
     "connection-string": "some-connection-string"
   }
  ```
+#### How and what data is sent via SESSION_CONTEXT (Example)
+All the claims present in the EasyAuth/JWT token are sent via the SESSION_CONTEXT to the underlying database. A sample decoded EasyAuth token looks like:
+```
+{
+  "auth_typ": "aad",
+  "claims": [
+    {
+      "typ": "aud",
+      "val": "bbff8fdb-c073-4466-9463-170744cbd2e2"
+    },
+    {
+      "typ": "iss",
+      "val": "https://login.microsoftonline.com/291bf275-ea78-4cde-84ea-21309a43a567/v2.0"
+    },
+    {
+      "typ": "iat",
+      "val": "1637043209"
+    },
+    {
+      "typ": "nbf",
+      "val": "1637043209"
+    },
+    {
+      "typ": "exp",
+      "val": "1637048193"
+    },
+    {
+      "typ": "aio",
+      "val": "ATQAy/8TAAAAGf/W0I7stMr3YH5iHFvESie38+INPT+Zf/p+ByYjTE5TsfeZud/5gqrpBpC1qUsD"
+    },
+    {
+      "typ": "azp",
+      "val": "a903e2e6-fd13-4502-8cae-9e09f86b7a6c"
+    },
+    {
+      "typ": "azpacr",
+      "val": "1"
+    },
+    {
+      "typ": "name",
+      "val": "Sean"
+    },
+    {
+      "typ": "uti",
+      "val": "_sSP3AwBY0SucuqqJyjEAA"
+    },
+    {
+      "typ": "ver",
+      "val": "2.0"
+    }
+  ],
+  "name_typ": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name",
+  "role_typ": "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
+}
+```
+
+All the claims present in the the token are translated into key-value pairs passed via SESSION_CONTEXT query formulated like below:
+```
+EXEC sp_set_session_context 'aud', 'bbff8fdb-c073-4466-9463-170744cbd2e2', @read_only = 1;
+EXEC sp_set_session_context 'iss', 'https://login.microsoftonline.com/291bf275-ea78-4cde-84ea-21309a43a567/v2.0', @read_only = 1;
+EXEC sp_set_session_context 'iat', '1637043209', @read_only = 1;
+EXEC sp_set_session_context 'nbf', '1637043209', @read_only = 1;
+EXEC sp_set_session_context 'exp', '1637048193', @read_only = 1;
+EXEC sp_set_session_context 'aio', 'ATQAy/8TAAAAGf/W0I7stMr3YH5iHFvESie38+INPT+Zf/p+ByYjTE5TsfeZud/5gqrpBpC1qUsD', @read_only = 1;
+EXEC sp_set_session_context 'azp', 'a903e2e6-fd13-4502-8cae-9e09f86b7a6c', @read_only = 1;
+EXEC sp_set_session_context 'azpacr', 1, @read_only = 1;
+EXEC sp_set_session_context 'name', 'Sean', @read_only = 1;
+EXEC sp_set_session_context 'uti', '_sSP3AwBY0SucuqqJyjEAA', @read_only = 1;
+EXEC sp_set_session_context 'ver', '2.0', @read_only = 1;
+```
 
 #### What is the size limit for SESSION_CONTEXT?
 As mentioned [here](https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-set-session-context-transact-sql#remarks), 
@@ -46,7 +116,6 @@ but, basically RLS enables us to use group membership or execution context to co
 In this demonstration, we will first be creating a database table `revenues`. We will then configure a [Security Policy](https://learn.microsoft.com/en-us/sql/t-sql/statements/create-security-policy-transact-sql) which would add a FILTER PREDICATE
 to this `revenues` table. The [FILTER PREDICATE](https://learn.microsoft.com/en-us/sql/relational-databases/security/row-level-security#Description) is nothing but a table-valued function which will filter the rows accessible to operations SELECT, UPDATE, DELETE
 based on the criteria that is configured for the function.
-
 
 
 ##### Laying down the ground work for SESSION_CONTEXT- Sql Queries:
@@ -109,4 +178,4 @@ SELECT * FROM dbo.revenues;
 ```
 
 ###### RESULT
-Rows corresponding to `accessible_role` = 'Anoymous' are returned as those rows match the criteria of the filter predicate imposed by the security policy.  
+Rows corresponding to `accessible_role` = 'Anonymous' are returned as those rows match the criteria of the filter predicate imposed by the security policy.  

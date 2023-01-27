@@ -673,12 +673,11 @@ namespace Azure.DataApiBuilder.Service.Services
 
         /// <summary>
         /// Helper function will parse the schema and database object name
-        /// from the provided and string and sort out if a default schema
-        /// should be used. It then returns the appropriate schema and
-        /// db object name as a tuple of strings.
+        /// from the provided source string and sort out if a default schema
+        /// should be used.
         /// </summary>
         /// <param name="source">source string to parse</param>
-        /// <returns></returns>
+        /// <returns>The appropriate schema and db object name as a tuple of strings.</returns>
         /// <exception cref="DataApiBuilderException"></exception>
         public (string, string) ParseSchemaAndDbTableName(string source)
         {
@@ -903,15 +902,27 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 throw new DataApiBuilderException(
                        message: $"Primary key not configured on the given database object {tableName}",
-                       statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                       statusCode: HttpStatusCode.ServiceUnavailable,
                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
             using DataTableReader reader = new(dataTable);
             DataTable schemaTable = reader.GetSchemaTable();
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
             foreach (DataRow columnInfoFromAdapter in schemaTable.Rows)
             {
                 string columnName = columnInfoFromAdapter["ColumnName"].ToString()!;
+
+                if (runtimeConfig.GraphQLGlobalSettings.Enabled
+                    && _entities.TryGetValue(entityName, out Entity? entity)
+                    && IsGraphQLReservedName(entity, columnName, graphQLEnabledGlobally: runtimeConfig.GraphQLGlobalSettings.Enabled))
+                {
+                    throw new DataApiBuilderException(
+                       message: $"The column '{columnName}' violates GraphQL name restrictions.",
+                       statusCode: HttpStatusCode.ServiceUnavailable,
+                       subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                }
+
                 ColumnDefinition column = new()
                 {
                     IsNullable = (bool)columnInfoFromAdapter["AllowDBNull"],
@@ -931,6 +942,40 @@ namespace Azure.DataApiBuilder.Service.Services
             PopulateColumnDefinitionWithHasDefault(
                 sourceDefinition,
                 columnsInTable);
+        }
+
+        /// <summary>
+        /// Determine whether the provided field of a GraphQL enabled entity meets GraphQL reserved name requirements.
+        /// Criteria:
+        /// - Is GraphQL enabled globally
+        /// - Is GraphQL implicitly enabled e.g. entity.GraphQL is null, or explicitly enabled e.g. entity.GraphQL is true).
+        /// - If field has a mapped value (alias), then use the mapped value to evaluate name violation.
+        /// - If field does not have an alias/mapped value, then use the provided field name to
+        /// check for naming violations.
+        /// </summary>
+        /// <param name="entity">Entity to check </param>
+        /// <param name="databaseColumnName">Name to evaluate against GraphQL naming requirements</param>
+        /// <param name="graphQLEnabledGlobally">Whether GraphQL is enabled globally in the runtime configuration.</param>
+        /// <exception cref="DataApiBuilderException"/>
+        /// <returns>True if no name rules are broken. Otherwise, false</returns>
+        public static bool IsGraphQLReservedName(Entity entity, string databaseColumnName, bool graphQLEnabledGlobally)
+        {
+            if (graphQLEnabledGlobally)
+            {
+                if (entity.GraphQL is null || (entity.GraphQL is not null && entity.GraphQL is bool enabled && enabled))
+                {
+                    if (entity.Mappings is not null
+                        && entity.Mappings.TryGetValue(databaseColumnName, out string? fieldAlias)
+                        && !string.IsNullOrWhiteSpace(fieldAlias))
+                    {
+                        databaseColumnName = fieldAlias;
+                    }
+
+                    return IsIntrospectionField(databaseColumnName);
+                }
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -1117,8 +1162,6 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Fills the table definition with information of the foreign keys
         /// for all the tables.
         /// </summary>
-        /// <param name="schemaName">Name of the default schema.</param>
-        /// <param name="tables">Dictionary of all tables.</param>
         private async Task PopulateForeignKeyDefinitionAsync()
         {
             // For each database object, that has a relationship metadata,
@@ -1159,16 +1202,14 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Helper method to find all the entities whose foreign key information is
-        /// to be retrieved.
+        /// Helper method to find all the entities whose foreign key information is to be retrieved.
         /// </summary>
         /// <param name="schemaNames">List of names of the schemas to which entities belong.</param>
         /// <param name="tableNames">List of names of the entities(tables)</param>
-        /// <returns></returns>
-        private IEnumerable<SourceDefinition>
-            FindAllEntitiesWhoseForeignKeyIsToBeRetrieved(
-                List<string> schemaNames,
-                List<string> tableNames)
+        /// <returns>A collection of entity names</returns>
+        private IEnumerable<SourceDefinition> FindAllEntitiesWhoseForeignKeyIsToBeRetrieved(
+            List<string> schemaNames,
+            List<string> tableNames)
         {
             Dictionary<string, SourceDefinition> sourceNameToSourceDefinition = new();
             foreach ((string entityName, DatabaseObject dbObject) in EntityToDatabaseObject)

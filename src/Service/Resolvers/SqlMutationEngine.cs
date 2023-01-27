@@ -726,7 +726,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 case Config.Operation.Execute:
                     //Authorization is not performed for the 'execute' operation because stored procedure
                     //backed entities do not support column level authorization.
-                    isAuthorized = true; 
+                    isAuthorized = true;
                     break;
                 case Config.Operation.Delete:
                     // Field level authorization is not supported for delete mutations. A requestor must be authorized

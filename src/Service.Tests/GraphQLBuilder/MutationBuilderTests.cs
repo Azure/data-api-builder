@@ -8,7 +8,6 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
 using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers;
 using HotChocolate.Language;
-using HotChocolate.Types.Descriptors.Definitions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder

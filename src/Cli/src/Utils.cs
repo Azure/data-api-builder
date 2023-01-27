@@ -759,8 +759,8 @@ namespace Cli
             {
                 if (!(string.IsNullOrWhiteSpace(audience)) || !(string.IsNullOrWhiteSpace(issuer)))
                 {
-                    _logger.LogError("Audience and Issuer can't be set for StaticWebApps or AppService authentication.");
-                    return false;
+                    _logger.LogWarning("Audience and Issuer can't be set for EasyAuth or Simulator authentication.");
+                    return true;
                 }
             }
             else

@@ -18,7 +18,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     /// <summary>
     /// Encapsulates query execution apis.
     /// </summary>
-    public abstract class QueryExecutor<TConnection> : IQueryExecutor
+    public class QueryExecutor<TConnection> : IQueryExecutor
         where TConnection : DbConnection, new()
     {
         protected DbExceptionParser DbExceptionParser { get; }

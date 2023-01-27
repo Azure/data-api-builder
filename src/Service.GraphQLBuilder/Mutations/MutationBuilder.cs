@@ -124,7 +124,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
         /// <summary>
         /// Uses the provided input arguments to add a stored procedure to the GraphQL schema as a mutation field when
-        /// at least one role is defined in the stored procedure's entity definition within the runtime config.
+        /// at least one role with permission to execute is defined in the stored procedure's entity definition within the runtime config.
         /// </summary>
         private static void AddMutationsForStoredProcedure(
             string dbEntityName,

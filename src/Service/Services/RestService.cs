@@ -90,7 +90,7 @@ namespace Azure.DataApiBuilder.Service.Services
             // If request has resolved to a stored procedure entity, initialize and validate appropriate request context
             if (dbObject.SourceType is SourceType.StoredProcedure)
             {
-                if (!IsHttpMethodAllowedForStoredProcedure(operationType, entityName))
+                if (!IsHttpMethodAllowedForStoredProcedure(entityName))
                 {
                     throw new DataApiBuilderException(
                         message: "This operation is not supported.",
@@ -318,14 +318,15 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// 
+        /// Returns whether the stored procedure backed entity allows the
+        /// request's HTTP method. e.g. when an entity is only configured for "GET"
+        /// and the request method is "POST" this method will return false.
         /// </summary>
-        /// <param name="operationType"></param>
-        /// <param name="entityName"></param>
-        /// <returns></returns>
-        public bool IsHttpMethodAllowedForStoredProcedure(Config.Operation operationType, string entityName)
+        /// <param name="entityName">Name of the entity.</param>
+        /// <returns>True if the operation is allowed. False, otherwise.</returns>
+        private bool IsHttpMethodAllowedForStoredProcedure(string entityName)
         {
-            if (TryGetStoredProcedureRESTVerbs(operationType, entityName, out List<string>? httpVerbs))
+            if (TryGetStoredProcedureRESTVerbs(entityName, out List<string>? httpVerbs))
             {
                 HttpContext? httpContext = _httpContextAccessor.HttpContext;
                 if (httpContext is not null && httpVerbs.Contains(httpContext.Request.Method.ToString()))
@@ -342,12 +343,11 @@ namespace Azure.DataApiBuilder.Service.Services
         /// When no explicit REST method configuration is present for a stored procedure entity,
         /// the default method "POST" is populated in httpVerbs.
         /// </summary>
-        /// <param name="operation"></param>
-        /// <param name="entityName"></param>
-        /// <param name="httpVerbs"></param>
+        /// <param name="entityName">Name of the entity.</param>
+        /// <param name="httpVerbs">Out Param: List of httpverbs configured for stored procedure backed entity.</param>
         /// <returns>True, with a list of HTTP verbs. False, when entity is not found in config
         /// or entity is not a stored procedure, and httpVerbs will be null.</returns>
-        public bool TryGetStoredProcedureRESTVerbs(Config.Operation operation, string entityName, [NotNullWhen(true)] out List<string>? httpVerbs)
+        private bool TryGetStoredProcedureRESTVerbs(string entityName, [NotNullWhen(true)] out List<string>? httpVerbs)
         {
             if (_runtimeConfigProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
             {

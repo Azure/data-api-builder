@@ -15,7 +15,7 @@ namespace Azure.DataApiBuilder.Config
         /// that details what operations are allowed to related roles.
         /// In a simple case, the array members are one of the following:
         /// create, read, update, delete, *.
-        /// The Operation.All (wildcard *) can be used to mean all the operations.</param>
+        /// The Operation.All (wildcard *) can be used to represent all options supported for that entity's source type.</param>
         public PermissionSetting(string role, object[] operations)
         {
             Role = role;

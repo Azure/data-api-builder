@@ -371,7 +371,7 @@ type Table @model(name: ""table"") {
 
         /// <summary>
         /// Tests the GraphQL schema builder method QueryBuild.Build()'s behavior when processing stored procedure entity configuration
-        /// which may expliticly define the field type(query/mutation) of the entity.
+        /// which may explicitly define the field type(query/mutation) of the entity.
         /// </summary>
         /// <param name="graphQLOperation">Query or Mutation</param>
         /// <param name="operations">CRUD + Execute -> for EntityPermissionsMap </param>
@@ -410,15 +410,19 @@ type Table @model(name: ""table"") {
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
 
             // With a minimized configuration for this entity, the only field expected is the one that may be generated from this test.
+            const string FIELDNOTFOUND_ERROR = "The expected query field definition was not detected.";
+
             if (expectsQueryField)
             {
-                Assert.IsTrue(query.Fields.Any(), message: "A query field definition was NOT generated for the GraphQL schema when one was expected.");
+                Assert.IsTrue(query.Fields.Any(), message: FIELDNOTFOUND_ERROR);
                 FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"executeStoredProcedureType");
-                Assert.IsNotNull(field, message: "A query field definition was discovered, but was not the expected definition.");
+                Assert.IsNotNull(field, message: FIELDNOTFOUND_ERROR);
+                string actualQueryType = field.Type.ToString();
+                Assert.AreEqual(expected: "[StoredProcedureType!]!", actual: actualQueryType, message: $"Incorrect query field type: {actualQueryType}");
             }
             else
             {
-                Assert.IsTrue(!query.Fields.Any(), message: "A query field definition was generated for the GraphQL schema when one NOT not expected.");
+                Assert.IsTrue(!query.Fields.Any(), message: FIELDNOTFOUND_ERROR);
             }
 
         }

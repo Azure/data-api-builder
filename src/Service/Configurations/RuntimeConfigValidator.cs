@@ -850,7 +850,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 {
                     throw new DataApiBuilderException(
                         message: $"Invalid operation for Entity: {entityName}. " +
-                            $"Stored procedures can only be configured with the 'execute' operation.",
+                            $"The 'execute' operation can only be configured for entities backed by stored procedures.",
                         statusCode: HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }

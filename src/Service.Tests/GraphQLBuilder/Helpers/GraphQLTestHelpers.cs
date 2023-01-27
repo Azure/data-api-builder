@@ -89,7 +89,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         /// </summary>
         /// <param name="graphQLTypeName">Desired GraphQL type name.</param>
         /// <param name="graphQLOperation">Query or Mutation</param>
-        /// <param name="permissionOperations">Collection of permissions operations (CRUD+Execute)</param>
+        /// <param name="permissionOperations">Collection of permission operations (CRUD+Execute)</param>
         /// <returns>Entity object.</returns>
         public static Entity GenerateStoredProcedureEntity(string graphQLTypeName, string graphQLOperation, string[] permissionOperations)
         {

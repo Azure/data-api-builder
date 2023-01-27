@@ -84,12 +84,13 @@ namespace Azure.DataApiBuilder.Auth
         public IEnumerable<string> GetRolesForField(string entityName, string field, Operation operation);
 
         /// <summary>
-        /// 
+        /// Returns whether the httpVerb (GET, POST, PUT, PATCH, DELETE) is allowed to be performed
+        /// on the stored procedure (represented by entityName) for the role: roleName.
         /// </summary>
         /// <param name="entityName"></param>
         /// <param name="roleName"></param>
         /// <param name="httpVerb"></param>
-        /// <returns>True if the execution of the stored procedure is permitted.</returns>
+        /// <returns>True if the execution of the stored procedure is permitted. Otherwise, false.</returns>
         public bool IsStoredProcedureExecutionPermitted(string entityName, string roleName, string httpVerb);
 
         /// <summary>

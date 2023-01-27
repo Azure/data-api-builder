@@ -26,7 +26,7 @@ namespace Cli.Tests
         /// <summary>
         /// Returns a new dab Process with the given command and flags
         /// </summary>
-        public static Process StartDabProcess(string command, string flags)
+        public static Process ExecuteDabCommand(string command, string flags)
         {
             Process process = new()
             {
@@ -92,10 +92,12 @@ namespace Cli.Tests
             @"
             ""runtime"": {
               ""rest"": {
-                ""path"": ""/api""
+                ""path"": ""/api"",
+                ""enabled"": true
               },
               ""graphql"": {
                 ""path"": ""/graphql"",
+                ""enabled"": true,
                 ""allow-introspection"": true
               },
               ""host"": {
@@ -121,10 +123,12 @@ namespace Cli.Tests
             @"
             ""runtime"": {
               ""rest"": {
-                ""path"": ""/api""
+                ""path"": ""/api"",
+                ""enabled"": true
               },
               ""graphql"": {
                 ""path"": ""/graphql"",
+                ""enabled"": true,
                 ""allow-introspection"": true
               },
               ""host"": {
@@ -381,10 +385,12 @@ namespace Cli.Tests
         },
         ""runtime"": {
           ""rest"": {
-            ""path"": ""/api""
+            ""path"": ""/api"",
+            ""enabled"": true
           },
           ""graphql"": {
             ""path"": ""/graphql"",
+            ""enabled"": true,
             ""allow-introspection"": true
           },
           ""host"": {

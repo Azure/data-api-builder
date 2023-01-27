@@ -1018,7 +1018,7 @@ type Foo @model(name:""Foo"") {{
         /// <param name="expectsMutationField">Whether MutationBuilder will generate a mutation field for the GraphQL schema.</param>
         [DataTestMethod]
         [DataRow("mutation", new[] { Config.Operation.Execute }, new[] { "execute" }, true, DisplayName = "Mutation field generated since all metadata is valid")]
-        [DataRow("", new[] { Config.Operation.Execute }, new[] { "execute" }, false, DisplayName = "Mutation field not generated since default operation is mutation.")]
+        [DataRow("", new[] { Config.Operation.Execute }, new[] { "execute" }, true, DisplayName = "Mutation field generated since default operation is mutation.")]
         [DataRow("mutation", new[] { Config.Operation.Read }, new[] { "read" }, false, DisplayName = "Mutation field not generated because invalid permissions were supplied")]
         [DataRow("query", new[] { Config.Operation.Execute }, new[] { "execute" }, false, DisplayName = "Mutation field not generated because the configured operation is query.")]
         public void StoredProcedureEntityAsMutationField(string graphQLOperation, Config.Operation[] operations, string[] permissionOperations, bool expectsMutationField)

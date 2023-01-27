@@ -258,6 +258,7 @@ steps:
 
 - task: NuGetCommand@2
   displayName: 'NuGet push'
+  condition: eq(variables.isReleaseBuild, 'true')
   inputs:
     command: push
     packagesToPush: '$(Build.ArtifactStagingDirectory)/DabTest.1.0.0.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'

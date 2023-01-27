@@ -213,6 +213,32 @@ namespace Cli.Tests
             RunTest(options, initialConfiguration, expectedConfiguration);
         }
 
+        [TestMethod]
+        public void TestAddStoredProcedureWithRestMethodsAndGraphQLOperations()
+        {
+            AddOptions options = new(
+                source: "s001.book",
+                permissions: new string[] { "anonymous", "execute" },
+                entity: "MyEntity",
+                sourceType: "stored-procedure",
+                sourceParameters: new string[] { "param1:123", "param2:hello", "param3:true" },
+                sourceKeyFields: null,
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: new string[] { },
+                fieldsToExclude: new string[] { },
+                policyRequest: null,
+                policyDatabase: null,
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: new string[] { "Post", "Put", "Patch"},
+                graphQLOperationForStoredProcedure: "Query"
+                );
+
+            string initialConfiguration = INITIAL_CONFIG;
+            string expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE_WITH_CUSTOM_REST_GRAPHQL_CONFIG);
+            RunTest(options, initialConfiguration, expectedConfiguration);
+        }
+
         /// <summary>
         /// Simple test to verify success on adding a new entity with source object for valid fields.
         /// </summary>

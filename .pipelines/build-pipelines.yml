@@ -263,4 +263,4 @@ steps:
     command: push
     packagesToPush: '$(Build.ArtifactStagingDirectory)/Microsoft.DataApiBuilder.0.0.1.nupkg'
     nuGetFeedType: external
-    publishFeedCredentials: nuget.org
+    publishFeedCredentials: Microsoft.DataApiBuilder

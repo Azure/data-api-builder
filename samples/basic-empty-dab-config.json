@@ -1,5 +1,5 @@
 {
-    "$schema": "https://dataapibuilder.blob.core.windows.net/schemas/v0.3.7-alpha/dab.draft.schema.json",
+    "$schema": "https://dataapibuilder.azureedge.net/schemas/v0.4.11-alpha/dab.draft.schema.json",
     "data-source": {
         "database-type": "",
         "connection-string": ""

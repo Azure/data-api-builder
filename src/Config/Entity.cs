@@ -326,7 +326,7 @@ namespace Azure.DataApiBuilder.Config
     /// Describes the REST settings specific to an entity.
     /// </summary>
     /// <param name="Path">Instructs the runtime to use this as the path
-    /// <param name="Methods">Defines the HTTP actions that are supported for stored procedures
+    /// <param name="RestMethods">Defines the HTTP actions that are supported for stored procedures
     /// at which the REST endpoint for this entity is exposed
     /// instead of using the entity-name. Can be a string type.
     /// </param>
@@ -337,7 +337,7 @@ namespace Azure.DataApiBuilder.Config
     /// Describes the GraphQL settings specific to an entity.
     /// </summary>
     /// <param name="Type">Defines the name of the GraphQL type
-    /// <param name="Operations">Defines the graphQL operations that are supported for stored procedures 
+    /// <param name="GraphQLOperation">Defines the graphQL operations that are supported for stored procedures 
     /// that will be used for this entity.Can be a string or Singular-Plural type.
     /// If string, a default plural route will be added as per the rules at
     /// <href="https://engdic.org/singular-and-plural-noun-rules-definitions-examples/" /></param>

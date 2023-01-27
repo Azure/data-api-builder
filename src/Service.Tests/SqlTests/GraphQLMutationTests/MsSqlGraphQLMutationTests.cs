@@ -528,6 +528,64 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             await UpdateSimpleView(msSqlQuery);
         }
 
+        [TestMethod]
+        public async Task InsertMutationWithVariablesAndMappings()
+        {
+            string msSqlQuery = @"
+                SELECT TOP 1 [__column1] AS [column1], [__column2] AS [column2]
+                FROM [GQLmappings]
+                WHERE [__column1] = 2
+                ORDER BY [__column1]
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            await InsertMutationWithVariablesAndMappings(msSqlQuery);
+        }
+
+        [TestMethod]
+        public async Task UpdateMutationWithVariablesAndMappings()
+        {
+            string msSqlQuery = @"
+                SELECT TOP 1 [__column1] AS [column1], [__column2] AS [column2]
+                FROM [GQLmappings]
+                WHERE [GQLmappings].[__column1] = 3
+                    AND [GQLmappings].[__column2] = 'Updated Value of Mapped Column'
+                ORDER BY [__column1]
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            await UpdateMutationWithVariablesAndMappings(msSqlQuery);
+        }
+
+        [TestMethod]
+        public async Task DeleteMutationWithVariablesAndMappings()
+        {
+            string msSqlQueryToVerifyDeletion = @"
+                SELECT COUNT(*) AS count
+                FROM [GQLmappings]
+                WHERE [__column1] = 4
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            string msSqlQueryForResult = @"
+                SELECT TOP 1 [__column1] AS [column1], [__column2] AS [column2]
+                FROM [GQLmappings]
+                WHERE [__column1] = 4
+                ORDER BY [__column1]
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            await DeleteMutationWithVariablesAndMappings(msSqlQueryForResult, msSqlQueryToVerifyDeletion);
+        }
+
         /// <summary>
         /// <code>Do: </code>Delete an entry from a simple view
         /// <code>Check: </code>if the mutation returned result is as expected and if the entry that id has been deleted

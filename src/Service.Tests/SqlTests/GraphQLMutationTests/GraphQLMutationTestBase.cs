@@ -570,6 +570,68 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
 
+        /// <summary>
+        /// Demonstrates that 
+        /// </summary>
+        public async Task InsertMutationWithVariablesAndMappings(string dbQuery)
+        {
+            string graphQLMutationName = "createGQLmappings";
+            string graphQLMutation = @"
+                mutation($id: Int!, $col2Value: String) {
+                    createGQLmappings(item: { column1: $id, column2: $col2Value }) {
+                        column1
+                        column2
+                    }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true, new() { { "id", 2 }, { "col2Value", "My New Value" } });
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        public async Task UpdateMutationWithVariablesAndMappings(string dbQuery)
+        {
+            string graphQLMutationName = "updateGQLmappings";
+            string graphQLMutation = @"
+                mutation($id: Int!, $col2Value: String) {
+                    updateGQLmappings(column1: $id, item: { column2: $col2Value }) {
+                        column1
+                        column2
+                    }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true, new() { { "id", 3 }, { "col2Value", "Updated Value of Mapped Column" } });
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        public async Task DeleteMutationWithVariablesAndMappings(string dbQuery, string dbQueryToVerifyDeletion)
+        {
+            string graphQLMutationName = "deleteGQLmappings";
+            string graphQLMutation = @"
+                mutation($id: Int!) {
+                    deleteGQLmappings(column1: $id) {
+                        column1
+                        column2
+                    }
+                }
+            ";
+
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true, new() { { "id", 4 } });
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+
+            string dbResponse = await GetDatabaseResultAsync(dbQueryToVerifyDeletion);
+
+            using JsonDocument result = JsonDocument.Parse(dbResponse);
+            Assert.AreEqual(result.RootElement.GetProperty("count").GetInt64(), 0);
+        }
+
         #endregion
 
         #region Negative Tests

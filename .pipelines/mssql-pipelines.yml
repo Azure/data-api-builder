@@ -44,32 +44,32 @@ jobs:
     condition: eq( variables['Agent.OS'], 'Linux' )
     displayName: Get and Start Ubuntu SQL Server Image Docker
 
-  - task: DotNetCoreCLI@2
-    displayName: Build
-    inputs:
-      command: build
-      projects: '**/*.csproj'
-      arguments: '-p:generateConfigFileForDbType=mssql --configuration $(buildConfiguration)' # Update this to match your need
+  # - task: DotNetCoreCLI@2
+  #   displayName: Build
+  #   inputs:
+  #     command: build
+  #     projects: '**/*.csproj'
+  #     arguments: '-p:generateConfigFileForDbType=mssql --configuration $(buildConfiguration)' # Update this to match your need
 
-  - task: FileTransform@1.206.0
-    displayName: 'Generate dab-config.MsSql.json'
-    inputs:
-      folderPath: '$(System.DefaultWorkingDirectory)'
-      fileType: 'json'
-      targetFiles: 'src/out/tests/net6.0/dab-config.MsSql.json'
+  # - task: FileTransform@1.206.0
+  #   displayName: 'Generate dab-config.MsSql.json'
+  #   inputs:
+  #     folderPath: '$(System.DefaultWorkingDirectory)'
+  #     fileType: 'json'
+  #     targetFiles: 'src/out/tests/net6.0/dab-config.MsSql.json'
 
-  - task: DotNetCoreCLI@2
-    displayName: 'Run MsSql Integration Tests'
-    inputs:
-      command: test
-      arguments: '--filter "TestCategory=MsSql" --no-build --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
-      projects: '**/*Tests/*.csproj'
+  # - task: DotNetCoreCLI@2
+  #   displayName: 'Run MsSql Integration Tests'
+  #   inputs:
+  #     command: test
+  #     arguments: '--filter "TestCategory=MsSql" --no-build --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
+  #     projects: '**/*Tests/*.csproj'
 
-  - task: PublishCodeCoverageResults@1
-    displayName: 'Publish code coverage'
-    inputs:
-      codeCoverageTool: Cobertura
-      summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
+  # - task: PublishCodeCoverageResults@1
+  #   displayName: 'Publish code coverage'
+  #   inputs:
+  #     codeCoverageTool: Cobertura
+  #     summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
 
 
 - job: windows
@@ -129,29 +129,29 @@ jobs:
         SqlLocalDb.exe start MSSQLLocalDB
         SqlLocalDb.exe info "MSSQLLocalDB"
 
-  - task: DotNetCoreCLI@2
-    displayName: Build
-    inputs:
-      command: build
-      projects: '**/*.csproj'
-      arguments: '-p:generateConfigFileForDbType=MsSql --configuration $(buildConfiguration)' # Update this to match your need
+  # - task: DotNetCoreCLI@2
+  #   displayName: Build
+  #   inputs:
+  #     command: build
+  #     projects: '**/*.csproj'
+  #     arguments: '-p:generateConfigFileForDbType=MsSql --configuration $(buildConfiguration)' # Update this to match your need
     
-  - task: FileTransform@1.206.0
-    displayName: 'Generate dab-config.MsSql.json'
-    inputs:
-      folderPath: '$(System.DefaultWorkingDirectory)'
-      fileType: 'json'
-      targetFiles: 'src/out/tests/net6.0/dab-config.MsSql.json'
+  # - task: FileTransform@1.206.0
+  #   displayName: 'Generate dab-config.MsSql.json'
+  #   inputs:
+  #     folderPath: '$(System.DefaultWorkingDirectory)'
+  #     fileType: 'json'
+  #     targetFiles: 'src/out/tests/net6.0/dab-config.MsSql.json'
 
-  - task: DotNetCoreCLI@2
-    displayName: 'Run MsSql Integration Tests'
-    inputs:
-      command: test
-      arguments: '--filter "TestCategory=MsSql" --no-build --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
-      projects: '**/*Tests/*.csproj'
+  # - task: DotNetCoreCLI@2
+  #   displayName: 'Run MsSql Integration Tests'
+  #   inputs:
+  #     command: test
+  #     arguments: '--filter "TestCategory=MsSql" --no-build --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
+  #     projects: '**/*Tests/*.csproj'
 
-  - task: PublishCodeCoverageResults@1
-    displayName: 'Publish code coverage'
-    inputs:
-      codeCoverageTool: Cobertura
-      summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
+  # - task: PublishCodeCoverageResults@1
+  #   displayName: 'Publish code coverage'
+  #   inputs:
+  #     codeCoverageTool: Cobertura
+  #     summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'

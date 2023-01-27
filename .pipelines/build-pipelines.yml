@@ -247,7 +247,7 @@ steps:
   displayName: 'Copy dab.draft.schema.json'
   inputs:
     sourceFolder: '$(Build.SourcesDirectory)'
-    contents: 'DabTest.1.0.0.nupkg'
+    contents: 'Microsoft.DataApiBuilder.nupkg'
     targetFolder: '$(Build.ArtifactStagingDirectory)'
 
 # This code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
@@ -257,10 +257,10 @@ steps:
     targetPath: '$(Build.ArtifactStagingDirectory)'
 
 - task: NuGetCommand@2
-  displayName: 'NuGet push'
+  displayName: 'Test NuGet push'
   condition: eq(variables.isReleaseBuild, 'true')
   inputs:
     command: push
-    packagesToPush: '$(Build.ArtifactStagingDirectory)/DabTest.1.0.0.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/Microsoft.DataApiBuilder.nupkg'
     nuGetFeedType: external
     publishFeedCredentials: nuget.org

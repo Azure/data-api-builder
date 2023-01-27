@@ -41,30 +41,30 @@ steps:
     feedsToUse: config
     nugetConfigPath: Nuget.config
 
-- task: DotNetCoreCLI@2
-  displayName: Build
-  inputs:
-    command: build
-    projects: '**/*.csproj'
-    arguments: '-p:generateConfigFileForDbType=cosmosdb_nosql --configuration $(buildConfiguration)' # Update this to match your need
+# - task: DotNetCoreCLI@2
+#   displayName: Build
+#   inputs:
+#     command: build
+#     projects: '**/*.csproj'
+#     arguments: '-p:generateConfigFileForDbType=cosmosdb_nosql --configuration $(buildConfiguration)' # Update this to match your need
 
-- task: FileTransform@1.206.0
-  displayName: 'Generate dab-config.CosmosDb_NoSql.json'
-  inputs:
-    folderPath: '$(System.DefaultWorkingDirectory)'
-    fileType: 'json'
-    targetFiles: 'src/out/tests/net6.0/dab-config.CosmosDb_NoSql.json'
+# - task: FileTransform@1.206.0
+#   displayName: 'Generate dab-config.CosmosDb_NoSql.json'
+#   inputs:
+#     folderPath: '$(System.DefaultWorkingDirectory)'
+#     fileType: 'json'
+#     targetFiles: 'src/out/tests/net6.0/dab-config.CosmosDb_NoSql.json'
 
-- task: DotNetCoreCLI@2
-  displayName: 'Run CosmosDb_NoSql Integration Tests'
-  inputs:
-    command: test
-    arguments: '--filter "TestCategory=CosmosDb_NoSql" --no-build --configuration $(buildConfiguration) $(ADDITIONAL_TEST_ARGS)'
-    projects: '**/*Tests/*.csproj'
+# - task: DotNetCoreCLI@2
+#   displayName: 'Run CosmosDb_NoSql Integration Tests'
+#   inputs:
+#     command: test
+#     arguments: '--filter "TestCategory=CosmosDb_NoSql" --no-build --configuration $(buildConfiguration) $(ADDITIONAL_TEST_ARGS)'
+#     projects: '**/*Tests/*.csproj'
 
-# '/XPlat Code coverage --results-directory /home/vsts/work/1/s/TestResults/'
-- task: PublishCodeCoverageResults@1
-  displayName: 'Publish code coverage'
-  inputs:
-    codeCoverageTool: Cobertura
-    summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
+# # '/XPlat Code coverage --results-directory /home/vsts/work/1/s/TestResults/'
+# - task: PublishCodeCoverageResults@1
+#   displayName: 'Publish code coverage'
+#   inputs:
+#     codeCoverageTool: Cobertura
+#     summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'

@@ -37,7 +37,7 @@
 
     <ItemGroup>
         <!-- extends watching group to include .json and .gql files -->
-        <Watch Include="**\*.json;**\*.gql" Exclude="obj\**\*;bin\**\*" />
+        <Watch Include="**\*.json;**\*.gql;**\DabTest.1.0.0.nupkg" Exclude="obj\**\*;bin\**\*" />
     </ItemGroup>
 
 

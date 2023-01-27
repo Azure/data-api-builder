@@ -8,6 +8,7 @@ using System.Text.Unicode;
 using Azure.DataApiBuilder.Config;
 using Humanizer;
 using Microsoft.Extensions.Logging;
+using static Azure.DataApiBuilder.Config.AuthenticationConfig;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
 /// <summary>
@@ -302,14 +303,22 @@ namespace Cli
         /// Returns the default global settings.
         /// </summary>
         public static Dictionary<GlobalSettingsType, object> GetDefaultGlobalSettings(HostModeType hostMode,
-                                                                                      IEnumerable<string>? corsOrigin)
+                                                                                      IEnumerable<string>? corsOrigin,
+                                                                                      string authenticationProvider,
+                                                                                      string? audience = null,
+                                                                                      string? issuer = null)
         {
             Dictionary<GlobalSettingsType, object> defaultGlobalSettings = new();
             defaultGlobalSettings.Add(GlobalSettingsType.Rest, new RestGlobalSettings());
             defaultGlobalSettings.Add(GlobalSettingsType.GraphQL, new GraphQLGlobalSettings());
             defaultGlobalSettings.Add(
                 GlobalSettingsType.Host,
-                GetDefaultHostGlobalSettings(hostMode, corsOrigin));
+                GetDefaultHostGlobalSettings(
+                    hostMode,
+                    corsOrigin,
+                    authenticationProvider,
+                    audience,
+                    issuer));
             return defaultGlobalSettings;
         }
 
@@ -330,11 +339,26 @@ namespace Cli
         /// </summary>
         public static HostGlobalSettings GetDefaultHostGlobalSettings(
             HostModeType hostMode,
-            IEnumerable<string>? corsOrigin)
+            IEnumerable<string>? corsOrigin,
+            string authenticationProvider,
+            string? audience,
+            string? issuer)
         {
             string[]? corsOriginArray = corsOrigin is null ? new string[] { } : corsOrigin.ToArray();
             Cors cors = new(Origins: corsOriginArray);
-            AuthenticationConfig authenticationConfig = new(Provider: EasyAuthType.StaticWebApps.ToString());
+            AuthenticationConfig authenticationConfig;
+            if (Enum.TryParse<EasyAuthType>(authenticationProvider, ignoreCase: true, out _)
+                || SIMULATOR_AUTHENTICATION.Equals(authenticationProvider))
+            {
+                authenticationConfig = new(Provider: authenticationProvider);
+            }
+            else
+            {
+                authenticationConfig = new(
+                    Provider: authenticationProvider,
+                    Jwt: new(audience, issuer)
+                );
+            }
 
             return new HostGlobalSettings(
                 Mode: hostMode,
@@ -718,6 +742,36 @@ namespace Cli
             }
 
             operationName = action.Name;
+            return true;
+        }
+
+        /// <summary>
+        /// Check both Audience and Issuer are specified when the authentication provider is JWT.
+        /// Also providing Audience or Issuer with StaticWebApps or AppService wil result in failure.
+        /// </summary>
+        public static bool ValidateAudienceAndIssuerForJwtProvider(
+            string authenticationProvider,
+            string? audience,
+            string? issuer)
+        {
+            if (Enum.TryParse<EasyAuthType>(authenticationProvider, ignoreCase: true, out _)
+                || SIMULATOR_AUTHENTICATION.Equals(authenticationProvider))
+            {
+                if (!(string.IsNullOrWhiteSpace(audience)) || !(string.IsNullOrWhiteSpace(issuer)))
+                {
+                    _logger.LogWarning("Audience and Issuer can't be set for EasyAuth or Simulator authentication.");
+                    return true;
+                }
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(audience) || string.IsNullOrWhiteSpace(issuer))
+                {
+                    _logger.LogError($"Authentication providers other than EasyAuth and Simulator require both Audience and Issuer.");
+                    return false;
+                }
+            }
+
             return true;
         }
 

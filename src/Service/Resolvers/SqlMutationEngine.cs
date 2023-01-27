@@ -95,22 +95,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             if (mutationOperation is Config.Operation.Delete)
             {
-                Dictionary<string, object?> backingRowParams = new();
-                foreach (KeyValuePair<string, object?> resultEntry in parameters)
-                {
-                    _sqlMetadataProvider.TryGetBackingColumn(entityName, resultEntry.Key, out string? name);
-                    if (!string.IsNullOrWhiteSpace(name))
-                    {
-                        backingRowParams.Add(name, resultEntry.Value);
-                    }
-                    else
-                    {
-                        backingRowParams.Add(resultEntry.Key, resultEntry.Value);
-                    }
-                }
                 // compute the mutation result before removing the element,
                 // since typical GraphQL delete mutations return the metadata of the deleted item.
-                result = await _queryEngine.ExecuteAsync(context, backingRowParams);
+                result = await _queryEngine.ExecuteAsync(context, GetBackingColumnsFromCollection(entityName, parameters));
 
                 Dictionary<string, object>? resultProperties =
                     await PerformDeleteOperation(
@@ -146,23 +133,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     // the column names must be converted to backing (source) column names so the
                     // PrimaryKeyPredicates created in the SqlQueryStructure created by the query engine
                     // represent database column names.
-                    Dictionary<string, object?> resultBackingRowNameAndProperties = new();
-                    foreach (KeyValuePair<string, object?> resultEntry in resultRowAndProperties.Item1)
-                    {
-                        _sqlMetadataProvider.TryGetBackingColumn(entityName, resultEntry.Key, out string? name);
-                        if (!string.IsNullOrWhiteSpace(name))
-                        {
-                            resultBackingRowNameAndProperties.Add(name, resultEntry.Value);
-                        }
-                        else
-                        {
-                            resultBackingRowNameAndProperties.Add(resultEntry.Key, resultEntry.Value);
-                        }
-                    }
-
                     result = await _queryEngine.ExecuteAsync(
                                 context,
-                                resultBackingRowNameAndProperties);
+                                GetBackingColumnsFromCollection(entityName, resultRowAndProperties.Item1));
                 }
             }
 
@@ -175,6 +148,33 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// Converts exposed column names from the parameters provided to backing column names.
+        /// parameters.Value is not modified.
+        /// </summary>
+        /// <param name="entityName">Name of Entity</param>
+        /// <param name="parameters">Key/Value collection where only the key is converted.</param>
+        /// <returns>Dictionary where the keys now represent backing column names.</returns>
+        public Dictionary<string, object?> GetBackingColumnsFromCollection(string entityName, IDictionary<string, object?> parameters)
+        {
+            Dictionary<string, object?> backingRowParams = new();
+
+            foreach (KeyValuePair<string, object?> resultEntry in parameters)
+            {
+                _sqlMetadataProvider.TryGetBackingColumn(entityName, resultEntry.Key, out string? name);
+                if (!string.IsNullOrWhiteSpace(name))
+                {
+                    backingRowParams.Add(name, resultEntry.Value);
+                }
+                else
+                {
+                    backingRowParams.Add(resultEntry.Key, resultEntry.Value);
+                }
+            }
+
+            return backingRowParams;
         }
 
         /// <summary>

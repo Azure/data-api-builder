@@ -46,7 +46,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                         // check graphql sp config
                         string entityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
                         Entity entity = entities[entityName];
-                        bool isSPDefinedAsMutation = (entity.GraphQL is GraphQLEntitySettings entitySettings && string.Equals(entitySettings.Operation, GraphQLUtils.OBJECT_TYPE_MUTATION, StringComparison.OrdinalIgnoreCase));
+                        bool isSPDefinedAsMutation = ((entity.GraphQL is bool enabled && enabled) || entity.GraphQL is GraphQLEntitySettings entitySettings && string.Equals(entitySettings.Operation, GraphQLUtils.OBJECT_TYPE_MUTATION, StringComparison.OrdinalIgnoreCase));
                         if (isSPDefinedAsMutation)
                         {
                             AddMutationsForStoredProcedure(dbEntityName, entityPermissionsMap, name, entities, mutationFields);

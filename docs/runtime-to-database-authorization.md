@@ -16,8 +16,22 @@ data available via SESSION_CONTEXT can be used anywhere within the lifetime of t
 Please refer to a very elaborative doc already available [here](https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-set-session-context-transact-sql).
 
 #### How to enable SESSION_CONTEXT in DAB?
-Inside the config file, there is a section `options` inside the `data-source` section. The `options` section holds database specific properties. To enable SESSION_CONTEXT,
-the user needs to have the property `set-session-context` set to `true` for MsSql.
+Inside the config file, there is a section `options` inside the `data-source` section. The `options` section holds database specific properties. To enable SESSION_CONTEXT, the user needs to have the property `set-session-context` set to `true` for MsSql. This can be done while generating the config file via CLI at the first time or can be done later as well by setting the property manually in the config file.
+
+##### CLI command to set the SESSION_CONTEXT:
+```
+dab init -c config.json --database-type mssql --connection-string some-connection-string --set-session-context true
+```  
+This will correspondingly generate the data-source section in config file as follows:
+```
+"data-source": {
+    "database-type": "mssql",
+    "options": {
+      "set-session-context": true
+    },
+    "connection-string": "some-connection-string"
+  }
+ ```
 
 #### What is the size limit for SESSION_CONTEXT?
 As mentioned [here](https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-set-session-context-transact-sql#remarks), 

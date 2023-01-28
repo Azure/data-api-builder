@@ -106,7 +106,8 @@ For more details about Row Level Security (RLS), please refer the this [Microsof
 
 In this demonstration, we will first be creating a database table `revenues`. We will then configure a [Security Policy](https://learn.microsoft.com/sql/t-sql/statements/create-security-policy-transact-sql) which would add a FILTER PREDICATE
 to this `revenues` table. The [FILTER PREDICATE](https://learn.microsoft.com/sql/relational-databases/security/row-level-security#Description) is nothing but a table-valued function which will filter the rows accessible to operations SELECT, UPDATE, DELETE
-based on the criteria that is configured for the function.
+based on the criteria that is configured for the function.  
+At the end of the demonstration, we will see that only those rows are returned to the user which match the criteria of the filter predicate imposed by the security policy.  
 
 
 ##### Laying down the ground work for SESSION_CONTEXT- SQL Queries:
@@ -134,11 +135,11 @@ INSERT INTO revenues(id, category, revenue, accessible_role) VALUES
 Create a function to be used as a filter predicate by the security policy to restrict access to rows in the table for SELECT, UPDATE, DELETE operations. Users with roles(claim value) = @accessible_role(column value) will be able to access a particular row.  
   
 ```tsql
-CREATE FUNCTION dbo.revenuesPredicate(@accessible_role varchar(20))  
+CREATE FUNCTION dbo.revenuesPredicate(@accessible_role varchar(max))  
 RETURNS TABLE  
 WITH SCHEMABINDING  
 AS RETURN SELECT 1 AS fn_securitypredicate_result  
-WHERE @accessible_role = CAST(SESSION_CONTEXT(N'roles') AS varchar(20));  
+WHERE @accessible_role = CAST(SESSION_CONTEXT(N'roles') AS varchar(max));  
 ```
 
 ###### Creating SECURITY POLICY to add to the revenues table:
@@ -152,21 +153,14 @@ ON dbo.revenues;
 ##### SESSION_CONTEXT in action:
 Now that we have laid the groundwork for SESSION_CONTEXT, it's time to see it in action.  
 
-###### SCENARIO 1
-```sql
-SELECT * FROM dbo.revenues;
-```
-Notice that we have not set the value of the 'roles' key utilized by the filter predicate.  
-It is worth mentioning here that any key whose value is not specified is assigned a null value).   
-
-###### RESULT
-No rows returned by the query as the FILTER PREDICATE returned 0 (false) for each of the row, i.e. none of the row is accessible to the user.  
-
-###### SCENARIO 2
 ```sql
 EXEC sp_set_session_context 'roles', 'Anonymous'; -- setting the value of 'roles' key in SESSION_CONTEXT;  
 SELECT * FROM dbo.revenues;  
 ```
 
 ###### RESULT
-Rows corresponding to `accessible_role` = 'Anonymous' are returned as those rows match the criteria of the filter predicate imposed by the security policy.  
+Rows corresponding to `accessible_role` = 'Anonymous' are returned as only these rows match the criteria of the filter predicate imposed by the security policy.    
+
+###### NOTE
+In the case if we would not have set the SESSION_CONTEXT, all the keys in the SESSION_CONTEXT are assigned null values, and no exception is thrown.  
+In this particular example, no rows would have been returned by the query as the FILTER PREDICATE would have returned 0 (false) for each of the row, i.e. none of the row is accessible to the user.  

@@ -119,34 +119,34 @@ CREATE TABLE revenues(
     id int PRIMARY KEY,  
     category varchar(max) NOT NULL,  
     revenue int,  
-    accessible_role varchar(max) NOT NULL  
+    username varchar(max) NOT NULL  
 );  
 ```
 
 ```sql
-INSERT INTO revenues(id, category, revenue, accessible_role) VALUES  
-(1, 'Book', 5000, 'Anonymous'),  
-(2, 'Comics', 10000, 'Anonymous'),  
-(3, 'Journals', 20000, 'Authenticated'),  
-(4, 'Series', 40000, 'Authenticated');  
+INSERT INTO revenues(id, category, revenue, username) VALUES  
+(1, 'Book', 5000, 'Sean'),  
+(2, 'Comics', 10000, 'Sean'),  
+(3, 'Journals', 20000, 'Davide'),  
+(4, 'Series', 40000, 'Davide');  
 ```
 
 ###### Creating function to be used as FILTER PREDICATE:
-Create a function to be used as a filter predicate by the security policy to restrict access to rows in the table for SELECT, UPDATE, DELETE operations. We use the variable @accessible_role to store the value of the column revenues.accessible_role and then filter the rows accessible to the user using the filter predicate with condition: @accessible_role = SESSION_CONTEXT(N'roles').
+Create a function to be used as a filter predicate by the security policy to restrict access to rows in the table for SELECT, UPDATE, DELETE operations. We use the variable @username to store the value of the column revenues.username and then filter the rows accessible to the user using the filter predicate with condition: @username = SESSION_CONTEXT(N'name').
   
 ```tsql
-CREATE FUNCTION dbo.revenuesPredicate(@accessible_role varchar(max))  
+CREATE FUNCTION dbo.revenuesPredicate(@username varchar(max))  
 RETURNS TABLE  
 WITH SCHEMABINDING  
 AS RETURN SELECT 1 AS fn_securitypredicate_result  
-WHERE @accessible_role = CAST(SESSION_CONTEXT(N'roles') AS varchar(max));  
+WHERE @username = CAST(SESSION_CONTEXT(N'name') AS varchar(max));  
 ```
 
 ###### Creating SECURITY POLICY to add to the revenues table:
 Adding a security policy which would restrict access to the rows in revenues table for SELECT, UPDATE, DELETE operations using the filter predicate dbo.revenuesPredicate.  
 ```sql
 CREATE SECURITY POLICY dbo.revenuesSecPolicy 
-ADD FILTER PREDICATE dbo.revenuesPredicate(accessible_role)  
+ADD FILTER PREDICATE dbo.revenuesPredicate(username)  
 ON dbo.revenues;  
 ```
 
@@ -154,12 +154,12 @@ ON dbo.revenues;
 Now that we have laid the groundwork for SESSION_CONTEXT, it's time to see it in action.  
 
 ```sql
-EXEC sp_set_session_context 'roles', 'Anonymous'; -- setting the value of 'roles' key in SESSION_CONTEXT;  
+EXEC sp_set_session_context 'name', 'Sean'; -- setting the value of 'name' key in SESSION_CONTEXT;  
 SELECT * FROM dbo.revenues;  
 ```
 
 ###### RESULT
-Rows corresponding to `accessible_role` = 'Anonymous' are returned as only these rows match the criteria of the filter predicate imposed by the security policy.    
+Rows corresponding to `username` = 'Sean' are returned as only these rows match the criteria of the filter predicate imposed by the security policy.    
 
 ###### NOTE
 In the case if we would not have set the SESSION_CONTEXT, all the keys in the SESSION_CONTEXT are assigned null values, and no exception is thrown.  

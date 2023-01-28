@@ -305,7 +305,7 @@ namespace Azure.DataApiBuilder.Service.Services
             }
 
             // Generating exposed stored-procedure query/mutation name and adding to the dictionary mapping it to its entity name.
-            GraphQLStoredProcedureExposedNameToEntityNameMap.TryAdd(GenerateStoredProcedureQueryName(entityName, procedureEntity), entityName);
+            GraphQLStoredProcedureExposedNameToEntityNameMap.TryAdd(GenerateStoredProcedureGraphQLFieldName(entityName, procedureEntity), entityName);
         }
 
         /// <summary>
@@ -387,7 +387,15 @@ namespace Azure.DataApiBuilder.Service.Services
             // they are json element so this means deserializing at each step with case insensitivity
             JsonSerializerOptions options = RuntimeConfig.SerializerOptions;
             RestEntitySettings rest = JsonSerializer.Deserialize<RestEntitySettings>((JsonElement)entity.Rest, options)!;
-            return JsonSerializer.Deserialize<string>((JsonElement)rest.Path, options)!;
+
+            if (rest.Path is not null)
+            {
+                return JsonSerializer.Deserialize<string>((JsonElement)rest.Path, options)!;
+            }
+            else
+            {
+                return entityName;
+            }
         }
 
         /// <summary>

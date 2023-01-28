@@ -138,11 +138,14 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Test to verify that stored-procedures contain only 1 CRUD operation.
+        /// Validates permissions operations are valid for the provided source type.
         /// </summary>
+        /// <param name="operations">CRUD + Execute + *</param>
+        /// <param name="sourceType">Table, StoredProcedure, View</param>
+        /// <param name="isSuccess">True/False</param>
         [DataTestMethod]
         [DataRow(new string[] { "*" }, SourceType.StoredProcedure, false, DisplayName = "FAIL: Stored-Procedure with wildcard CRUD operation.")]
-        [DataRow(new string[] { "create" }, SourceType.StoredProcedure, true, DisplayName = "PASS: Stored-Procedure with 1 CRUD operation.")]
+        [DataRow(new string[] { "execute" }, SourceType.StoredProcedure, true, DisplayName = "PASS: Stored-Procedure with execute operation only.")]
         [DataRow(new string[] { "create", "read" }, SourceType.StoredProcedure, false, DisplayName = "FAIL: Stored-Procedure with more than 1 CRUD operation.")]
         [DataRow(new string[] { "*" }, SourceType.Table, true, DisplayName = "PASS: Table with wildcard CRUD operation.")]
         [DataRow(new string[] { "create" }, SourceType.Table, true, DisplayName = "PASS: Table with 1 CRUD operation.")]

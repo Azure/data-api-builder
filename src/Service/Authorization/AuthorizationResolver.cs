@@ -121,6 +121,15 @@ namespace Azure.DataApiBuilder.Service.Authorization
             return false;
         }
 
+        public bool IsStoredProcedureExecutionPermitted(string entityName, string roleName, string httpVerb)
+        {
+            bool executionPermitted = EntityPermissionsMap.TryGetValue(entityName, out EntityMetadata? entityMetadata)
+                && entityMetadata is not null
+                && entityMetadata.StoredProcedureHttpVerbs.Contains(httpVerb);
+
+            return executionPermitted;
+        }
+
         /// <inheritdoc />
         public bool AreColumnsAllowedForOperation(string entityName, string roleName, Config.Operation operation, IEnumerable<string> columns)
         {
@@ -211,12 +220,19 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// during runtime.
         /// </summary>
         /// <param name="runtimeConfig"></param>
-        /// <returns></returns>
         public void SetEntityPermissionMap(RuntimeConfig? runtimeConfig)
         {
             foreach ((string entityName, Entity entity) in runtimeConfig!.Entities)
             {
-                EntityMetadata entityToRoleMap = new();
+                EntityMetadata entityToRoleMap = new()
+                {
+                    ObjectType = entity.ObjectType
+                };
+
+                if (entity.ObjectType is SourceType.StoredProcedure)
+                {
+                    entityToRoleMap.StoredProcedureHttpVerbs = new(entity.GetStoredProcedureRESTVerbs());
+                }
 
                 // Store the allowedColumns for anonymous role.
                 // In case the authenticated role is not defined on the entity,
@@ -650,9 +666,9 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// Creates new key value map of
         /// Key: operationType
         /// Value: Collection of role names.
-        /// There are only four possible operations
+        /// There are only five possible operations
         /// </summary>
-        /// <returns></returns>
+        /// <returns>Dictionary: Key - Operation | Value - List of roles.</returns>
         private static Dictionary<Config.Operation, List<string>> CreateOperationToRoleMap()
         {
             return new Dictionary<Config.Operation, List<string>>()
@@ -660,7 +676,8 @@ namespace Azure.DataApiBuilder.Service.Authorization
                 { Config.Operation.Create, new List<string>()},
                 { Config.Operation.Read, new List<string>()},
                 { Config.Operation.Update, new List<string>()},
-                { Config.Operation.Delete, new List<string>()}
+                { Config.Operation.Delete, new List<string>()},
+                { Config.Operation.Execute, new List<string>()}
             };
         }
 

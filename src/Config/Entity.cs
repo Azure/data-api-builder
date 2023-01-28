@@ -78,12 +78,12 @@ namespace Azure.DataApiBuilder.Config
         }
 
         /// <summary>
-        /// Processes per entity GraphQL Naming Settings
-        /// Top Level: true | false
-        /// Alternatives: string, SingularPlural object
-        /// returns true on successfull processing
-        /// else false.
+        /// Processes per entity GraphQL runtime configuration JSON:
+        /// (bool) GraphQL enabled for entity true | false
+        /// (JSON Object) Alternative Naming: string, SingularPlural object
+        /// (JSON Object) Explicit Stored Procedure operation type "query" or "mutation"
         /// </summary>
+        /// <returns>True when processed successfully, otherwise false.</returns>
         public bool TryProcessGraphQLNamingConfig()
         {
             if (GraphQL is null)
@@ -221,6 +221,26 @@ namespace Azure.DataApiBuilder.Config
             {
                 throw new JsonException(message: $"Source not one of string or object");
             }
+        }
+
+        /// <summary>
+        /// Gets the list of HTTP methods defined for entities representing stored procedures.
+        /// When no explicit configuration is present, the default method "POST" is returned.
+        /// </summary>
+        /// <returns>List of HTTP verbs</returns>
+        public List<string> GetStoredProcedureRESTVerbs()
+        {
+            if (Rest is not null && ((JsonElement)Rest).ValueKind is JsonValueKind.Object)
+            {
+                JsonSerializerOptions options = RuntimeConfig.SerializerOptions;
+                RestEntitySettings? rest = JsonSerializer.Deserialize<RestEntitySettings>((JsonElement)Rest, options);
+                if (rest is not null && rest.StoredProcedureHttpMethods is not null)
+                {
+                    return new List<string>(rest.StoredProcedureHttpMethods);
+                }
+            }
+
+            return new List<string>(new[] { "POST" });
         }
     }
 
@@ -375,6 +395,8 @@ namespace Azure.DataApiBuilder.Config
     /// <param name="Type">Defines the name of the GraphQL type.
     /// Can be a string or Singular-Plural type.
     /// If string, a default plural route will be added as per the rules at
+    /// <param name="Operation"/>Explicity defines the GraphQL operation
+    /// for a stored procedure entity.
     /// <href="https://engdic.org/singular-and-plural-noun-rules-definitions-examples/" /></param>
     public record GraphQLEntitySettings([property: JsonPropertyName("type")] object? Type = null);
 

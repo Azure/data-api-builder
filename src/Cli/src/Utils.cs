@@ -253,7 +253,7 @@ namespace Cli
                     {
                         if (op is Operation.All)
                         {
-                            // Expand wildcard to all valid operations
+                            // Expand wildcard to all valid operations (except execute)
                             foreach (Operation validOp in PermissionOperation.ValidPermissionOperations)
                             {
                                 result.Add(validOp, new PermissionOperation(validOp, null, null));
@@ -271,7 +271,7 @@ namespace Cli
 
                     if (ac.Name is Operation.All)
                     {
-                        // Expand wildcard to all valid operations.
+                        // Expand wildcard to all valid operations except execute.
                         foreach (Operation validOp in PermissionOperation.ValidPermissionOperations)
                         {
                             result.Add(
@@ -488,9 +488,14 @@ namespace Cli
                     {
                         containsWildcardOperation = true;
                     }
-                    else if (!PermissionOperation.ValidPermissionOperations.Contains(op))
+                    else if (!isStoredProcedure && !PermissionOperation.ValidPermissionOperations.Contains(op))
                     {
                         _logger.LogError("Invalid actions found in --permissions");
+                        return false;
+                    }
+                    else if (isStoredProcedure && !PermissionOperation.ValidStoredProcedurePermissionOperations.Contains(op))
+                    {
+                        _logger.LogError("Invalid stored procedure action(s) found in --permissions");
                         return false;
                     }
                 }

@@ -860,7 +860,7 @@ namespace Cli.Tests
         [DataTestMethod]
         [Ignore]
         [DataRow("s001.book", null, new string[] { "anonymous", "*" }, null, null, "UpdateSourceName", DisplayName = "Updating sourceName with no change in parameters or keyfields.")]
-        [DataRow(null, "stored-procedure", null, new string[] { "param1:123", "param2:hello", "param3:true" }, null, "ConvertToStoredProcedure", DisplayName = "SourceParameters with stored procedure.")]
+        [DataRow(null, "stored-procedure", new string[] { "anonymous", "execute" }, new string[] { "param1:123", "param2:hello", "param3:true" }, null, "ConvertToStoredProcedure", DisplayName = "SourceParameters with stored procedure.")]
         [DataRow(null, "view", null, null, new string[] { "col1", "col2" }, "ConvertToView", DisplayName = "Source KeyFields with View")]
         [DataRow(null, "table", null, null, new string[] { "id", "name" }, "ConvertToTable", DisplayName = "Source KeyFields with Table")]
         [DataRow(null, null, null, null, new string[] { "id", "name" }, "ConvertToDefaultType", DisplayName = "Source KeyFields with SourceType not provided")]
@@ -924,22 +924,27 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Simple test to verify success on updating a source's value type from string to object.
+        /// Validate behavior of updating a source's value type from string to object.
         /// </summary>
+        /// <param name="source">Name of database object.</param>
+        /// <param name="parameters">Stored Procedure Parameters</param>
+        /// <param name="keyFields">Primary key fields</param>
+        /// <param name="permissionConfig">Permissions role:action</param>
+        /// <param name="task">Denotes which test/assertion is made on updated entity.</param>
         [DataTestMethod]
-        [Ignore]
-        [DataRow("newSourceName", null, null, "UpdateSourceName", DisplayName = "Update Source Name of the source object.")]
-        [DataRow(null, new string[] { "param1:dab", "param2:false" }, null, "UpdateParameters", DisplayName = "update Parameters of stored procedure.")]
-        [DataRow(null, null, new string[] { "col1", "col2" }, "UpdateKeyFields", DisplayName = "update KeyFields for table/view.")]
+        [DataRow("newSourceName", null, null, new string[] { "anonymous", "execute" }, "UpdateSourceName", DisplayName = "Update Source Name of the source object.")]
+        [DataRow(null, new string[] { "param1:dab", "param2:false" }, null, new string[] { "anonymous", "execute" }, "UpdateParameters", DisplayName = "Update Parameters of stored procedure.")]
+        [DataRow(null, null, new string[] { "col1", "col2" }, new string[] { "anonymous", "read" }, "UpdateKeyFields", DisplayName = "Update KeyFields for table/view.")]
         public void TestUpdateDatabaseSourceObject(
             string? source,
             IEnumerable<string>? parameters,
             IEnumerable<string>? keyFields,
+            IEnumerable<string>? permissionConfig,
             string task)
         {
             UpdateOptions options = new(
                 source: source,
-                permissions: new string[] { "anonymous", "read" },
+                permissions: permissionConfig,
                 entity: "MyEntity",
                 sourceType: null,
                 sourceParameters: parameters,
@@ -1026,7 +1031,7 @@ namespace Cli.Tests
         [DataTestMethod]
         [Ignore]
         [DataRow(SINGLE_ENTITY_WITH_ONLY_READ_PERMISSION, "stored-procedure", new string[] { "param1:123", "param2:hello", "param3:true" },
-            null, SINGLE_ENTITY_WITH_STORED_PROCEDURE, null, false, true,
+            null, SINGLE_ENTITY_WITH_STORED_PROCEDURE, new string[] { "anonymous", "execute" }, false, true,
             DisplayName = "PASS:Convert table to stored-procedure with valid parameters.")]
         [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "stored-procedure", null, new string[] { "col1", "col2" },
             SINGLE_ENTITY_WITH_STORED_PROCEDURE, new string[] { "anonymous", "execute" }, false, false,
@@ -1227,7 +1232,7 @@ namespace Cli.Tests
         [DataRow("authenticated", "*", false, DisplayName = "FAIL: Stored-Procedure with wildcard CRUD operation for a new role.")]
         [DataRow("authenticated", "execute", true, DisplayName = "PASS: Stored-Procedure with execute operation for a new role.")]
         [DataRow("authenticated", "execute", true, DisplayName = "PASS: Stored-Procedure with the same execute operation for a new role as that of existing one.")]
-        [DataRow("authenticated", "create,read", false, DisplayName = "FAIL: Stored-Procedure with more than 1 CRUD operation for a new role.")]
+        [DataRow("authenticated", "create,execute", false, DisplayName = "FAIL: Stored-Procedure with more than 1 CRUD operation for a new role.")]
         public void TestUpdatePermissionsForStoredProcedure(
             string role,
             string operations,

@@ -49,28 +49,32 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     string entityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
                     Entity entity = entities[entityName];
 
-                    ObjectTypeDefinitionNode? paginationReturnType = GenerateReturnType(name);
-
-                    IEnumerable<string> rolesAllowedForRead = IAuthorizationResolver.GetRolesForOperation(entityName, operation: Operation.Read, entityPermissionsMap);
-
-                    if (rolesAllowedForRead.Count() > 0)
+                    if (entity.ObjectType is SourceType.StoredProcedure)
                     {
-                        if (entity.ObjectType is SourceType.StoredProcedure)
+                        // Check runtime configuration of the stored procedure entity to check that the GraphQL operation type was overridden to 'query' from the default 'mutation.'
+                        bool isSPDefinedAsQuery = (entity.GraphQL is GraphQLEntitySettings entitySettings && string.Equals(entitySettings.Operation, OBJECT_TYPE_QUERY, StringComparison.OrdinalIgnoreCase));
+                        IEnumerable<string> rolesAllowedForExecute = IAuthorizationResolver.GetRolesForOperation(entityName, operation: Operation.Execute, entityPermissionsMap);
+
+                        if (isSPDefinedAsQuery && rolesAllowedForExecute.Any())
                         {
-                            // This assignment prevents the generation of pagination fields in the schema for stored procedures
-                            paginationReturnType = null;
-                            queryFields.Add(GraphQLStoredProcedureBuilder.GenerateStoredProcedureSchema(name, entity, rolesAllowedForRead));
+                            queryFields.Add(GraphQLStoredProcedureBuilder.GenerateStoredProcedureSchema(name, entity, rolesAllowedForExecute));
                         }
-                        else
+                    }
+                    else
+                    {
+                        IEnumerable<string> rolesAllowedForRead = IAuthorizationResolver.GetRolesForOperation(entityName, operation: Operation.Read, entityPermissionsMap);
+                        ObjectTypeDefinitionNode paginationReturnType = GenerateReturnType(name);
+
+                        if (rolesAllowedForRead.Count() > 0)
                         {
                             queryFields.Add(GenerateGetAllQuery(objectTypeDefinitionNode, name, paginationReturnType, inputTypes, entity, rolesAllowedForRead));
                             queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name, databaseType, entity, rolesAllowedForRead));
                         }
-                    }
 
-                    if (paginationReturnType is not null)
-                    {
-                        returnTypes.Add(paginationReturnType);
+                        if (paginationReturnType is not null)
+                        {
+                            returnTypes.Add(paginationReturnType);
+                        }
                     }
                 }
             }

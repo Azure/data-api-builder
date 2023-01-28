@@ -912,15 +912,18 @@
         "object": "get_books"
       },
       "rest": true,
-      "graphql": true,
+      "graphql": {
+        "type": "GetBooks",
+        "operation": "query"
+      },
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "execute" ]
         },
         {
           "role": "authenticated",
-          "actions": [ "read" ]
+          "actions": [ "execute" ]
         }
       ]
     },
@@ -929,16 +932,19 @@
         "type": "stored-procedure",
         "object": "get_book_by_id"
       },
-      "rest": true,
+      "rest": {
+        "path": "GetBook",
+        "method": [ "GET" ]
+      },
       "graphql": false,
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [ "execute" ]
         },
         {
           "role": "authenticated",
-          "actions": [ "read" ]
+          "actions": [ "execute" ]
         }
       ]
     },
@@ -975,22 +981,28 @@
         },
         "key-fields": []
       },
-      "rest": true,
+      "rest": {
+        "path": "InsertBook",
+        "method": [ "POST" ]
+      },
       "permissions": [
         {
           "role": "anonymous",
           "actions": [
-            "create"
+            "execute"
           ]
         },
         {
           "role": "authenticated",
           "actions": [
-            "create"
+            "execute"
           ]
         }
       ],
-      "graphql": true
+      "graphql": {
+        "type": "InsertBook",
+        "operation": "mutation"
+      }
     },
     "CountBooks": {
       "source": {
@@ -998,22 +1010,28 @@
         "object": "count_books",
         "key-fields": []
       },
-      "rest": true,
+      "rest": {
+        "path": "CountBooks",
+        "method": [ "GET" ]
+      },
       "permissions": [
         {
           "role": "anonymous",
           "actions": [
-            "read"
+            "execute"
           ]
         },
         {
           "role": "authenticated",
           "actions": [
-            "read"
+            "execute"
           ]
         }
       ],
-      "graphql": true
+      "graphql": {
+        "type": "CountBooks",
+        "operation": "query"
+      }
     },
     "DeleteLastInsertedBook": {
       "source": {
@@ -1021,7 +1039,10 @@
         "object": "delete_last_inserted_book",
         "key-fields": []
       },
-      "rest": true,
+      "rest": {
+        "path": "DeleteLastInsertedBook",
+        "method": [ "DELETE" ]
+      },
       "permissions": [
         {
           "role": "anonymous",
@@ -1036,7 +1057,10 @@
           ]
         }
       ],
-      "graphql": true
+      "graphql": {
+        "type": "DeleteLastInsertedBook",
+        "operation": "mutation"
+      }
     },
     "UpdateBookTitle": {
       "source": {
@@ -1048,22 +1072,28 @@
         },
         "key-fields": []
       },
-      "rest": true,
+      "rest": {
+        "path": "UpdateBookTitle",
+        "method": [ "PUT", "PATCH" ]
+      },
       "permissions": [
         {
           "role": "anonymous",
           "actions": [
-            "update"
+            "execute"
           ]
         },
         {
           "role": "authenticated",
           "actions": [
-            "update"
+            "execute"
           ]
         }
       ],
-      "graphql": true
+      "graphql": {
+        "type": "UpdateBookTitle",
+        "operation": "mutation"
+      }
     },
     "GetPublisher": {
       "source": {
@@ -1073,7 +1103,10 @@
           "id": 1
         }
       },
-      "rest": true,
+      "rest": {
+        "path": "GetPublisher",
+        "method": [ "GET" ]
+      },
       "permissions": [
         {
           "role": "anonymous",
@@ -1088,7 +1121,10 @@
           ]
         }
       ],
-      "graphql": true
+      "graphql": {
+        "type": "GetPublisher",
+        "operation": "query"
+      }
     }
   }
 }

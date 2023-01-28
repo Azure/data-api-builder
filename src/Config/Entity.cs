@@ -234,9 +234,9 @@ namespace Azure.DataApiBuilder.Config
             {
                 JsonSerializerOptions options = RuntimeConfig.SerializerOptions;
                 RestEntitySettings? rest = JsonSerializer.Deserialize<RestEntitySettings>((JsonElement)Rest, options);
-                if (rest is not null && rest.StoredProcedureHttpMethods is not null)
+                if (rest is not null && rest.RestMethods is not null)
                 {
-                    return new List<string>(rest.StoredProcedureHttpMethods);
+                    return new List<string>(rest.RestMethods);
                 }
             }
 

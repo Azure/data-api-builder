@@ -91,11 +91,11 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         /// <param name="graphQLOperation">Query or Mutation</param>
         /// <param name="permissionOperations">Collection of permission operations (CRUD+Execute)</param>
         /// <returns>Entity object.</returns>
-        public static Entity GenerateStoredProcedureEntity(string graphQLTypeName, string graphQLOperation, string[] permissionOperations)
+        public static Entity GenerateStoredProcedureEntity(string graphQLTypeName, GraphQLOperation graphQLOperation, string[] permissionOperations)
         {
             Entity entity = new(Source: new DatabaseObjectSource(SourceType.StoredProcedure, Name: "foo", Parameters: null, KeyFields: null),
                               Rest: null,
-                              GraphQL: JsonSerializer.SerializeToElement(new GraphQLEntitySettings(Type: graphQLTypeName, Operation: graphQLOperation)),
+                              GraphQL: JsonSerializer.SerializeToElement(new GraphQLStoredProcedureEntityVerboseSettings(Type: graphQLTypeName, GraphQLOperation: graphQLOperation)),
                               Permissions: new[] { new PermissionSetting(role: "anonymous", operations: permissionOperations) },
                               Relationships: new(),
                               Mappings: new());

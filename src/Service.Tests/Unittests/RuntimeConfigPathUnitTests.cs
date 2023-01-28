@@ -72,7 +72,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Method to validate that comments are allowed in config file (and are ignored during deserialization).
+        /// Method to validate that comments are skipped in config file (and are ignored during deserialization).
         /// </summary>
         [TestMethod]
         public void CheckCommentParsingInConfigFile()

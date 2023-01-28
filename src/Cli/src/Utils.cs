@@ -267,6 +267,9 @@ namespace Cli
                 WriteIndented = true,
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
                 PropertyNamingPolicy = new LowerCaseNamingPolicy(),
+                // As of .NET Core 7, JsonDocument and JsonSerializer only support skipping or disallowing 
+                // of comments; they do not support loading them. If we set JsonCommentHandling.Allow for either,
+                // it will throw an exception.
                 ReadCommentHandling = JsonCommentHandling.Skip
             };
 

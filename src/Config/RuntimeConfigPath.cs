@@ -37,7 +37,9 @@ namespace Azure.DataApiBuilder.Config
             Utf8JsonReader reader = new(jsonData: Encoding.UTF8.GetBytes(json),
                                         options: new()
                                         {
-                                            // Allow comments in config file.
+                                            // As of .NET Core 7, JsonDocument and JsonSerializer only support skipping or disallowing 
+                                            // of comments; they do not support loading them. If we set JsonCommentHandling.Allow for either,
+                                            // it will throw an exception.
                                             CommentHandling = JsonCommentHandling.Skip
                                         });
             MemoryStream stream = new();

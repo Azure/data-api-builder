@@ -102,7 +102,7 @@ EXEC sp_set_session_context 'ver', '2.0', @read_only = 1;
 ```
 
 #### Example: How to use SESSION_CONTEXT to configure additional level of security (Row Level Security)?
-For more details about Row Level Security (RLS), please refer the this [Microsoft Learn article](https://learn.microsoft.com/sql/relational-databases/security/row-level-security), but, basically RLS enables us to use group membership or execution context to control access to rows in a database table.  
+For more details about Row Level Security (RLS), please refer this [Microsoft Learn article](https://learn.microsoft.com/sql/relational-databases/security/row-level-security), but, basically RLS enables us to use group membership or execution context to control access to rows in a database table.  
 
 In this demonstration, we will first be creating a database table `revenues`. We will then configure a [Security Policy](https://learn.microsoft.com/sql/t-sql/statements/create-security-policy-transact-sql) which would add a FILTER PREDICATE
 to this `revenues` table. The [FILTER PREDICATE](https://learn.microsoft.com/sql/relational-databases/security/row-level-security#Description) is nothing but a table-valued function which will filter the rows accessible to operations SELECT, UPDATE, DELETE

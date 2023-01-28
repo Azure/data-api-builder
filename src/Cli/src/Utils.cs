@@ -107,7 +107,7 @@ namespace Cli
             {
                 graphQL_detail = null;
             }
-            else 
+            else
             {
                 if (bool.TryParse(graphQL, out trueOrFalse))
                 {
@@ -473,7 +473,7 @@ namespace Cli
                 _logger.LogError("Duplicate action found in --permissions");
                 return false;
             }
-            
+
             // Currently, Stored Procedures can be configured with only Execute Operation.
             if (sourceType is SourceType.StoredProcedure
                     && !VerifyExecuteOperationForStoredProcedure(operations))
@@ -872,9 +872,9 @@ namespace Cli
         /// <param name="operation">GraphQL operation configured for the stored procedure</param>
         /// <param name="graphQLOperation">GraphQL Operation as an Enum type</param>
         /// <returns>true/false</returns>
-        public static bool TryConvertGraphQLOperationNameToGraphQLOperation(string? operation, out GraphQLOperation graphQLOperation)
+        public static bool TryConvertGraphQLOperationNameToGraphQLOperation(string? operation, [NotNullWhen(true)] out GraphQLOperation graphQLOperation)
         {
-            if (! Enum.TryParse(operation, ignoreCase: true ,out graphQLOperation))
+            if (!Enum.TryParse(operation, ignoreCase: true, out graphQLOperation))
             {
                 _logger.LogError("Invalid GrpahQL Operation. Supported operations are Query and Mutation.");
                 return false;

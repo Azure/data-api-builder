@@ -876,9 +876,9 @@ namespace Cli
             return Azure.DataApiBuilder.Service.Program.StartEngine(args.ToArray());
         }
     
-        private static bool TryAddRestMethodsForStoredProcedure(EntityOptions options, out RestMethod[]? restMethods)
+        private static bool TryAddRestMethodsForStoredProcedure(EntityOptions options, [NotNullWhen(true)] out RestMethod[]? restMethods)
         {
-            if(options.RestMethodsForStoredProcedure is null || !options.RestMethodsForStoredProcedure.Any())
+            if (options.RestMethodsForStoredProcedure is null || !options.RestMethodsForStoredProcedure.Any())
             {
                 restMethods = new RestMethod[] {RestMethod.Post};
             }
@@ -897,8 +897,8 @@ namespace Cli
         /// </summary>
         /// <param name="options">GraphQL operations configured for the Stored Procedure using add command</param>
         /// <param name="graphQLOperationForStoredProcedure">GraphQL Operations as Enum type</param>
-        /// <returns>true/false</returns>
-        private static bool TryAddGraphQLOperationForStoredProcedure(EntityOptions options, out GraphQLOperation? graphQLOperationForStoredProcedure)
+        /// <returns>True when a user declared GraphQL operation on a stored procedure backed entity is supported. False, otherwise.</returns>
+        private static bool TryAddGraphQLOperationForStoredProcedure(EntityOptions options, [NotNullWhen(true)] out GraphQLOperation? graphQLOperationForStoredProcedure)
         {
             if(options.GraphQLOperationForStoredProcedure is null)
             {   
@@ -906,8 +906,7 @@ namespace Cli
             }
             else
             {
-                GraphQLOperation operation;
-                if(! TryConvertGraphQLOperationNameToGraphQLOperation(options.GraphQLOperationForStoredProcedure, out operation))
+                if(!TryConvertGraphQLOperationNameToGraphQLOperation(options.GraphQLOperationForStoredProcedure, out GraphQLOperation operation))
                 {
                     graphQLOperationForStoredProcedure = null;
                     return false;

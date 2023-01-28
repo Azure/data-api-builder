@@ -162,5 +162,5 @@ SELECT * FROM dbo.revenues;
 Rows corresponding to `username` = 'Sean' are returned as only these rows match the criteria of the filter predicate imposed by the security policy.    
 
 ###### NOTE
-In the case if we would not have set the SESSION_CONTEXT, all the keys in the SESSION_CONTEXT are assigned null values, and no exception is thrown.  
-In this particular example, no rows would have been returned by the query as the FILTER PREDICATE would have returned 0 (false) for each of the row, i.e. none of the row is accessible to the user.  
+If we would not have set the SESSION_CONTEXT, any key referenced in SESSION_CONTEXT is assigned null value, and no exception is thrown.  
+In this particular example, no rows would have been returned by the query as the filter predicate would have returned 0 (false) for each of the row, i.e. none of the row is accessible to the user.  

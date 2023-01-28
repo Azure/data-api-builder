@@ -40,6 +40,7 @@ namespace Azure.DataApiBuilder.Config
                                             // As of .NET Core 7, JsonDocument and JsonSerializer only support skipping or disallowing 
                                             // of comments; they do not support loading them. If we set JsonCommentHandling.Allow for either,
                                             // it will throw an exception.
+                                            // Reference: https://stackoverflow.com/questions/59447229/how-can-i-parse-json-with-comments-using-system-text-json.
                                             CommentHandling = JsonCommentHandling.Skip
                                         });
             MemoryStream stream = new();

@@ -8,15 +8,13 @@
 
 For MsSql, DAB uses SESSION_CONTEXT to send user data to the underlying database. This data is accessible to DAB by virtue of the claims present in the authentication token (JWT/EasyAuth tokens).
 The data sent to the database can then be used to configure an additional level of security (eg. by configuring Security policies) to further prevent access
-to data in operations like SELECT, UPDATE, DELETE. The data available to the database via the SESSION_CONTEXT will be available till the connection to the
-database is alive, i.e. once the connection is closed, SESSION_CONTEXT expires. The same data can be used inside a stored procedure as well. Long story short,
-data available via SESSION_CONTEXT can be used anywhere within the lifetime of the connection.
+to data in operations like SELECT, UPDATE, DELETE. The SESSION_CONTEXT data is available to the database for the duration of the database connection until that connection is closed. The same data can be used inside a stored procedure as well.  
 
-#### How to read from/ write to SESSION_CONTEXT?
-Please refer to a very elaborative doc already available [here](https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-set-session-context-transact-sql).
+#### How to read and write to SESSION_CONTEXT?
+Learn more about setting SESSION_CONTEXT data from the `sp_set_session_context` [Microsoft Learn article](https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-set-session-context-transact-sql).
 
 #### How to enable SESSION_CONTEXT in DAB?
-Inside the config file, there is a section `options` inside the `data-source` section. The `options` section holds database specific properties. To enable SESSION_CONTEXT, the user needs to have the property `set-session-context` set to `true` for MsSql. This can be done while generating the config file via CLI at the first time or can be done later as well by setting the property manually in the config file.
+In the config file, the `data-source` section sub-key `options` holds database specific configuration properties. To enable SESSION_CONTEXT, the user needs to set the property `set-session-context` to `true` for MsSql. This can be done while generating the config file via CLI at the first time or can be done later as well by setting the property manually in the config file.
 
 ##### CLI command to set the SESSION_CONTEXT:
 ```
@@ -159,7 +157,7 @@ ON dbo.revenues;
 ```
 
 ##### SESSION_CONTEXT in action:
-Now that we have laid the groundwork for SESSION_CONTEXT, its time to see it in action.  
+Now that we have laid the groundwork for SESSION_CONTEXT, it's time to see it in action.  
 
 ###### SCENARIO 1
 ```sql

@@ -132,7 +132,7 @@ INSERT INTO revenues(id, category, revenue, accessible_role) VALUES
 ```
 
 ###### Creating function to be used as FILTER PREDICATE:
-Create a function to be used as a filter predicate by the security policy to restrict access to rows in the table for SELECT, UPDATE, DELETE operations. Users with roles(claim value) = @accessible_role(column value) will be able to access a particular row.  
+Create a function to be used as a filter predicate by the security policy to restrict access to rows in the table for SELECT, UPDATE, DELETE operations. We use the variable @accessible_role to store the value of the column revenues.accessible_role and then filter the rows accessible to the user using the filter predicate with condition: @accessible_role = SESSION_CONTEXT(N'roles').
   
 ```tsql
 CREATE FUNCTION dbo.revenuesPredicate(@accessible_role varchar(max))  

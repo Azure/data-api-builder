@@ -261,19 +261,34 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 }
                 else if (entity.GraphQL is GraphQLEntitySettings graphQLSettings)
                 {
-                    if (graphQLSettings.Type is string graphQLName)
-                    {
-                        ValidateNameRequirements(graphQLName);
-                    }
-                    else if (graphQLSettings.Type is SingularPlural singularPluralSettings)
-                    {
-                        ValidateNameRequirements(singularPluralSettings.Singular);
+                    ValidateGraphQLEntitySettings(graphQLSettings.Type);
+                }
+                else if (entity.GraphQL is GraphQLStoredProcedureEntityVerboseSettings graphQLVerboseSettings)
+                {
+                    ValidateGraphQLEntitySettings(graphQLVerboseSettings.Type);
+                }
+            }
+        }
 
-                        if (singularPluralSettings.Plural is not null)
-                        {
-                            ValidateNameRequirements(singularPluralSettings.Plural);
-                        }
-                    }
+        /// <summary>
+        /// Validates a GraphQL entity's Type configuration, which involves checking
+        /// whether the string value, if present, is a valid GraphQL name
+        /// whether the SingularPlural value, if present, are valid GraphQL names.
+        /// </summary>
+        /// <param name="graphQLEntitySettingsType">object which is a string or a SingularPlural type.</param>
+        private static void ValidateGraphQLEntitySettings(object? graphQLEntitySettingsType)
+        {
+            if (graphQLEntitySettingsType is string graphQLName)
+            {
+                ValidateNameRequirements(graphQLName);
+            }
+            else if (graphQLEntitySettingsType is SingularPlural singularPluralSettings)
+            {
+                ValidateNameRequirements(singularPluralSettings.Singular);
+
+                if (singularPluralSettings.Plural is not null)
+                {
+                    ValidateNameRequirements(singularPluralSettings.Plural);
                 }
             }
         }

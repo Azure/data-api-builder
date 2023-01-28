@@ -147,7 +147,7 @@ namespace Cli
             {
                 return null;
             }
-            else if(graphQLOperation is null)
+            else if(graphQL_detail is not null && graphQLOperation is null)
             {   
                 if(graphQL_detail is true || graphQL_detail is false)
                 {
@@ -158,15 +158,14 @@ namespace Cli
                     return new GraphQLEntitySettings(Type: graphQL_detail);
                 }
             }
-            else if(graphQL_detail is null)
+            else if(graphQL_detail is null && graphQLOperation is not null)
             {
-                return new GraphQLStoredProcedureEntitySettings(GraphQLOperation: graphQLOperation);
+                return new GraphQLStoredProcedureEntityOperationSettings(GraphQLOperation: graphQLOperation);
             }
             else
             {
-                return new GraphQLEntitySettings(Type: graphQL_detail);
+                return new GraphQLStoredProcedureEntityVerboseSettings(Type: graphQL_detail, GraphQLOperation: graphQLOperation);
             }
-
         }
 
         /// <summary>

@@ -25,7 +25,6 @@ namespace Azure.DataApiBuilder.Config
     public record Entity(
         [property: JsonPropertyName("source")]
         object Source,
-        [property: JsonPropertyName("rest")]
         object? Rest,
         object? GraphQL,
         [property: JsonPropertyName("permissions")]
@@ -48,6 +47,9 @@ namespace Azure.DataApiBuilder.Config
 
         [JsonIgnore]
         public string[]? KeyFields { get; private set; }
+
+        [property: JsonPropertyName("rest")]
+        public object? Rest { get; set; } = Rest;
 
         [property: JsonPropertyName("graphql")]
         public object? GraphQL { get; set; } = GraphQL;
@@ -99,33 +101,6 @@ namespace Azure.DataApiBuilder.Config
                 {
                     // Hydrate the ObjectType field with metadata from database source.
                     TryPopulateSourceFields();
-                    string? graphQLOperation = null;
-
-                    // Only stored procedure configuration can override the GraphQL operation type.
-                    if (ObjectType is SourceType.StoredProcedure)
-                    {
-                        if (configElement.TryGetProperty(propertyName: "operation", out JsonElement operation) && operation.ValueKind is JsonValueKind.String)
-                        {
-                            string operationType = JsonSerializer.Deserialize<string>(operation)!;
-
-                            if (string.Equals(operationType, "mutation", StringComparison.OrdinalIgnoreCase) || string.Equals(operationType, string.Empty))
-                            {
-                                graphQLOperation = "mutation";
-                            }
-                            else if (string.Equals(operationType, "query", StringComparison.OrdinalIgnoreCase))
-                            {
-                                graphQLOperation = "query";
-                            }
-                            else
-                            {
-                                throw new JsonException(message: $"Unsupported GraphQL operation type: {operationType}");
-                            }
-                        }
-                        else
-                        {
-                            graphQLOperation = "mutation";
-                        }
-                    }
 
                     object? typeConfiguration = null;
                     if (configElement.TryGetProperty(propertyName: "type", out JsonElement nameTypeSettings))
@@ -145,8 +120,50 @@ namespace Azure.DataApiBuilder.Config
                         }
                     }
 
-                    GraphQLEntitySettings graphQLEntitySettings = new(Type: typeConfiguration, Operation: graphQLOperation);
-                    GraphQL = graphQLEntitySettings;
+                    // Only stored procedure configuration can override the GraphQL operation type.
+                    // When the entity is a stored procedure, GraphQL metadata will either be:
+                    // - GraphQLStoredProcedureEntityOperationSettings when only operation is configured.
+                    // - GraphQLStoredProcedureEntityVerboseSettings when both type and operation are configured.
+                    // This verbosity is necessary to ensure the operation key/value pair is not persisted in the runtime config
+                    // for non stored procedure entity types.
+                    if (ObjectType is SourceType.StoredProcedure)
+                    {
+                        GraphQLOperation? graphQLOperation;
+                        if (configElement.TryGetProperty(propertyName: "operation", out JsonElement operation) && operation.ValueKind is JsonValueKind.String)
+                        {
+                            string operationType = JsonSerializer.Deserialize<string>(operation)!;
+
+                            if (string.Equals(operationType, "mutation", StringComparison.OrdinalIgnoreCase) || string.Equals(operationType, string.Empty))
+                            {
+                                graphQLOperation = GraphQLOperation.Mutation;
+                            }
+                            else if (string.Equals(operationType, "query", StringComparison.OrdinalIgnoreCase))
+                            {
+                                graphQLOperation = GraphQLOperation.Query;
+                            }
+                            else
+                            {
+                                throw new JsonException(message: $"Unsupported GraphQL operation type: {operationType}");
+                            }
+                        }
+                        else
+                        {
+                            graphQLOperation = GraphQLOperation.Query;
+                        }
+
+                        if (typeConfiguration is null)
+                        {
+                            GraphQL = new GraphQLStoredProcedureEntityOperationSettings(GraphQLOperation: graphQLOperation);
+                        }
+                        else
+                        {
+                            GraphQL = new GraphQLStoredProcedureEntityVerboseSettings(Type: typeConfiguration, GraphQLOperation: graphQLOperation);
+                        }
+                    }
+                    else
+                    {
+                        GraphQL = new GraphQLEntitySettings(Type: typeConfiguration);
+                    }
                 }
             }
             else
@@ -344,26 +361,62 @@ namespace Azure.DataApiBuilder.Config
     /// Describes the REST settings specific to an entity.
     /// </summary>
     /// <param name="Path">Instructs the runtime to use this as the path
+    /// <param name="RestMethods">Defines the HTTP actions that are supported for stored procedures
     /// at which the REST endpoint for this entity is exposed
     /// instead of using the entity-name. Can be a string type.
     /// </param>
-    /// <param name="SpHttpVerbs"></param>
-    public record RestEntitySettings(
-        [property: JsonPropertyName("path")] object Path,
-        [property: JsonPropertyName("method")] string[]? StoredProcedureHttpMethods = null);
+    public record RestEntitySettings(object? Path,
+                                     [property: JsonPropertyName("methods")] RestMethod[]? RestMethods = null);
+
+    /// <summary>
+    /// Describes the REST settings specific to an entity backed by a stored procedure.
+    /// </summary>
+    /// <param name="RestMethods">Defines the HTTP actions that are supported for stored procedures
+    /// at which the REST endpoint for this entity is exposed
+    /// instead of using the entity-name. Can be a string type.
+    /// </param>
+    public record RestStoredProcedureEntitySettings([property: JsonPropertyName("methods")] RestMethod[]? RestMethods = null);
+
+    /// <summary>
+    /// Describes the verbose REST settings specific to an entity back by a stored procedure.
+    /// Both path overrides and methods overrides can be defined.
+    /// </summary>
+    /// <param name="Path">Instructs the runtime to use this as the path
+    /// <param name="RestMethods">Defines the HTTP actions that are supported for stored procedures
+    /// at which the REST endpoint for this entity is exposed
+    /// instead of using the entity-name. Can be a string type.
+    /// </param>
+    public record RestStoredProcedureEntityVerboseSettings(object? Path,
+                                     [property: JsonPropertyName("methods")] RestMethod[]? RestMethods = null);
 
     /// <summary>
     /// Describes the GraphQL settings specific to an entity.
     /// </summary>
-    /// <param name="Type">Defines the name of the GraphQL type
-    /// that will be used for this entity.Can be a string or Singular-Plural type.
+    /// <param name="Type">Defines the name of the GraphQL type.
+    /// Can be a string or Singular-Plural type.
     /// If string, a default plural route will be added as per the rules at
     /// <param name="Operation"/>Explicity defines the GraphQL operation
     /// for a stored procedure entity.
     /// <href="https://engdic.org/singular-and-plural-noun-rules-definitions-examples/" /></param>
-    public record GraphQLEntitySettings(
-        [property: JsonPropertyName("type")] object? Type,
-        [property: JsonPropertyName("operation")] string? Operation = null);
+    public record GraphQLEntitySettings([property: JsonPropertyName("type")] object? Type = null);
+
+    /// <summary>
+    /// Describes the GraphQL settings applicable to an entity which is backed by a stored procedure.
+    /// The GraphQL Operation denotes the field type generated for the stored procedure: mutation or query.
+    /// </summary>
+    /// <param name="GraphQLOperation">Defines the graphQL operation (mutation/query) that is supported for stored procedures 
+    /// that will be used for this entity."</param>
+    public record GraphQLStoredProcedureEntityOperationSettings([property: JsonPropertyName("operation")] GraphQLOperation? GraphQLOperation = null);
+
+    /// <summary>
+    /// Describes the GraphQL settings applicable to an entity which is backed by a stored procedure.
+    /// The GraphQL Operation denotes the field type generated for the stored procedure: mutation or query.
+    /// </summary>
+    /// <param name="Type">Defines the name of the GraphQL type
+    /// <param name="GraphQLOperation">Defines the graphQL operation (mutation/query) that is supported for stored procedures 
+    /// that will be used for this entity."</param>
+    public record GraphQLStoredProcedureEntityVerboseSettings([property: JsonPropertyName("type")] object? Type = null,
+        [property: JsonPropertyName("operation")] GraphQLOperation? GraphQLOperation = null);
 
     /// <summary>
     /// Defines a name or route as singular (required) or

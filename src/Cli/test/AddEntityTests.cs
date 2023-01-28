@@ -36,7 +36,10 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string initialConfiguration = INITIAL_CONFIG;
             string expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
@@ -62,7 +65,10 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
             string configurationWithOneEntity = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
@@ -90,7 +96,10 @@ namespace Cli.Tests
                 fieldsToExclude: null,
                 policyRequest: null,
                 policyDatabase: null,
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
             Assert.IsFalse(ConfigGenerator.TryAddNewEntity(options, ref initialConfiguration));
@@ -116,7 +125,9 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                config: _testRuntimeConfig
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
             );
 
             string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
@@ -151,7 +162,9 @@ namespace Cli.Tests
                 fieldsToExclude: fieldsToExclude,
                 policyRequest: policyRequest,
                 policyDatabase: policyDatabase,
-                config: _testRuntimeConfig
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
             );
 
             string? expectedConfiguration = null;
@@ -190,10 +203,39 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string initialConfiguration = INITIAL_CONFIG;
             string expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
+            RunTest(options, initialConfiguration, expectedConfiguration);
+        }
+
+        [TestMethod]
+        public void TestAddStoredProcedureWithRestMethodsAndGraphQLOperations()
+        {
+            AddOptions options = new(
+                source: "s001.book",
+                permissions: new string[] { "anonymous", "execute" },
+                entity: "MyEntity",
+                sourceType: "stored-procedure",
+                sourceParameters: new string[] { "param1:123", "param2:hello", "param3:true" },
+                sourceKeyFields: null,
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: new string[] { },
+                fieldsToExclude: new string[] { },
+                policyRequest: null,
+                policyDatabase: null,
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: new string[] { "Post", "Put", "Patch"},
+                graphQLOperationForStoredProcedure: "Query"
+                );
+
+            string initialConfiguration = INITIAL_CONFIG;
+            string expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE_WITH_CUSTOM_REST_GRAPHQL_CONFIG);
             RunTest(options, initialConfiguration, expectedConfiguration);
         }
 
@@ -234,10 +276,51 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = INITIAL_CONFIG;
 
+            Assert.AreEqual(expectSuccess, ConfigGenerator.TryAddNewEntity(options, ref runtimeConfig));
+        }
+
+        [DataTestMethod]
+        [DataRow(null, null, null, null, true, DisplayName = "Default Case without any customization")]
+        [DataRow(null, null, "true", "true", true, DisplayName = "Both REST and GraphQL enabled without any methods and operations configured explicitly")]
+        [DataRow(new string[] {"Get"}, "Query", "true", "true", true, DisplayName = "Both REST and GraphQL enabled without custom REST methods and GraphQL operations")]
+        [DataRow(new string[] {"Post,Patch,Put"}, null, "true", "true", true, DisplayName = "Both REST and GraphQL enabled without custom REST methods")]
+        [DataRow(null, "Mutation", "true", "true", true, DisplayName = "Both REST and GraphQL enabled without custom GraphQL operation")]
+        [DataRow(null, "Mutation", "true", "false", false, DisplayName = "Conflicting configurations - GraphQL operation specified but entity is disabled for GraphQL")]
+        [DataRow(new string[] {"Get"}, null, "false", "true", false, DisplayName = "Conflicting configurations - REST methods specified but entity is disabled for REST")]
+        public void TestAddNewSpWithDifferentRestAndGraphQLOptions(
+                IEnumerable<string>? restMethods,
+                string? graphQLOperation,
+                string? restRoute,
+                string? graphQLType,
+                bool expectSuccess
+            )
+        {
+            AddOptions options = new(
+                source: "testSource",
+                permissions: new string[] { "anonymous", "execute" },
+                entity: "book",
+                sourceType: "stored-procedure",
+                sourceParameters: null,
+                sourceKeyFields: null,
+                restRoute: restRoute,
+                graphQLType: graphQLType,
+                fieldsToInclude: new string[] { },
+                fieldsToExclude: new string[] { },
+                policyRequest: null,
+                policyDatabase: null,
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: restMethods,
+                graphQLOperationForStoredProcedure: graphQLOperation
+                );
+
+            string runtimeConfig = INITIAL_CONFIG;
             Assert.AreEqual(expectSuccess, ConfigGenerator.TryAddNewEntity(options, ref runtimeConfig));
         }
 
@@ -268,7 +351,10 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { "level" },
                 policyRequest: null,
                 policyDatabase: null,
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = INITIAL_CONFIG;
 
@@ -287,7 +373,6 @@ namespace Cli.Tests
 
             JObject expectedJson = JObject.Parse(expectedConfig);
             JObject actualJson = JObject.Parse(initialConfig);
-
             Assert.IsTrue(JToken.DeepEquals(expectedJson, actualJson));
         }
 

@@ -45,73 +45,127 @@ namespace Cli
         /// Creates the rest object which can be either a boolean value
         /// or a RestEntitySettings object containing api route based on the input
         /// </summary>
-        public static object? GetRestDetails(string? rest)
+        public static object? GetRestDetails(string? rest, RestMethod[]? restMethods = null)
         {
             object? rest_detail;
             if (rest is null)
             {
-                return rest;
-            }
-
-            bool trueOrFalse;
-            if (bool.TryParse(rest, out trueOrFalse))
-            {
-                rest_detail = trueOrFalse;
+                rest_detail = null;
             }
             else
             {
-                RestEntitySettings restEntitySettings = new("/" + rest);
-                rest_detail = restEntitySettings;
+                bool trueOrFalse;
+                if (bool.TryParse(rest, out trueOrFalse))
+                {
+                    rest_detail = trueOrFalse;
+                    if(! trueOrFalse)
+                    {
+                        restMethods = null;
+                    }
+                }
+                else
+                {
+                    rest_detail = "/" + rest;
+                }
             }
 
-            return rest_detail;
+            if(rest_detail is null && restMethods is null)
+            {
+                return null;
+            }
+            else if(restMethods is null)
+            {
+                if(rest_detail is true || rest_detail is false)
+                {
+                    return rest_detail;
+                }
+                else
+                {
+                    return new RestEntitySettings(Path: rest_detail, RestMethods: restMethods);
+                }
+            }
+            else if(rest_detail is null)
+            {
+                return new RestEntitySettings(Path: null, RestMethods: restMethods);
+            }
+            else
+            {
+                return new RestEntitySettings(Path: rest_detail, RestMethods: restMethods);
+            }
+
         }
 
         /// <summary>
         /// Creates the graphql object which can be either a boolean value
         /// or a GraphQLEntitySettings object containing graphql type {singular, plural} based on the input
         /// </summary>
-        public static object? GetGraphQLDetails(string? graphQL)
+        public static object? GetGraphQLDetails(string? graphQL, GraphQLOperation? graphQLOperation = null)
         {
             object? graphQL_detail;
+            bool trueOrFalse;
             if (graphQL is null)
             {
-                return graphQL;
-            }
-
-            bool trueOrFalse;
-            if (bool.TryParse(graphQL, out trueOrFalse))
-            {
-                graphQL_detail = trueOrFalse;
+                graphQL_detail = null;
             }
             else
             {
-                string singular, plural;
-                if (graphQL.Contains(SEPARATOR))
+                if (bool.TryParse(graphQL, out trueOrFalse))
                 {
-                    string[] arr = graphQL.Split(SEPARATOR);
-                    if (arr.Length != 2)
+                    graphQL_detail = trueOrFalse;
+                    if(! trueOrFalse)
                     {
-                        _logger.LogError($"Invalid format for --graphql. Accepted values are true/false," +
-                                                "a string, or a pair of string in the format <singular>:<plural>");
-                        return null;
+                        graphQLOperation = null;   
                     }
-
-                    singular = arr[0];
-                    plural = arr[1];
                 }
                 else
                 {
-                    singular = graphQL.Singularize(inputIsKnownToBePlural: false);
-                    plural = graphQL.Pluralize(inputIsKnownToBeSingular: false);
-                }
+                    string singular, plural;
+                    if (graphQL.Contains(SEPARATOR))
+                    {
+                        string[] arr = graphQL.Split(SEPARATOR);
+                        if (arr.Length != 2)
+                        {
+                            _logger.LogError($"Invalid format for --graphql. Accepted values are true/false," +
+                                                    "a string, or a pair of string in the format <singular>:<plural>");
+                            return null;
+                        }
 
-                SingularPlural singularPlural = new(singular, plural);
-                GraphQLEntitySettings graphQLEntitySettings = new(singularPlural);
-                graphQL_detail = graphQLEntitySettings;
+                        singular = arr[0];
+                        plural = arr[1];
+                    }
+                    else
+                    {
+                        singular = graphQL.Singularize(inputIsKnownToBePlural: false);
+                        plural = graphQL.Pluralize(inputIsKnownToBeSingular: false);
+                    }
+
+                    graphQL_detail = new SingularPlural(singular, plural);
+                }
             }
 
-            return graphQL_detail;
+            if(graphQL_detail is null && graphQLOperation is null)
+            {
+                return null;
+            }
+            else if(graphQL_detail is not null && graphQLOperation is null)
+            {   
+                if(graphQL_detail is true || graphQL_detail is false)
+                {
+                    return graphQL_detail;
+                }
+                else
+                {
+                    return new GraphQLEntitySettings(Type: graphQL_detail);
+                }
+            }
+            else if(graphQL_detail is null && graphQLOperation is not null)
+            {
+                return new GraphQLStoredProcedureEntityOperationSettings(GraphQLOperation: graphQLOperation);
+            }
+            else
+            {
+                return new GraphQLStoredProcedureEntityVerboseSettings(Type: graphQL_detail, GraphQLOperation: graphQLOperation);
+            }
         }
 
         /// <summary>
@@ -418,10 +472,9 @@ namespace Cli
                 return false;
             }
 
-            // Currently, Stored Procedures can be configured with only 1 CRUD Operation.
-            bool isStoredProcedure = sourceType is SourceType.StoredProcedure;
-            if (isStoredProcedure
-                    && !VerifySingleOperationForStoredProcedure(operations))
+            // Currently, Stored Procedures can be configured with only Execute Operation.
+            if (sourceType is SourceType.StoredProcedure
+                    && !VerifyExecuteOperationForStoredProcedure(operations))
             {
                 return false;
             }
@@ -676,7 +729,7 @@ namespace Cli
         {
             foreach (PermissionSetting permissionSetting in permissionSettings)
             {
-                if (!VerifySingleOperationForStoredProcedure(permissionSetting.Operations))
+                if (!VerifyExecuteOperationForStoredProcedure(permissionSetting.Operations))
                 {
                     return false;
                 }
@@ -687,15 +740,15 @@ namespace Cli
 
         /// <summary>
         /// This method checks that stored-procedure entity
-        /// has only one CRUD operation.
+        /// is configured only with execute action
         /// </summary>
-        private static bool VerifySingleOperationForStoredProcedure(object[] operations)
+        private static bool VerifyExecuteOperationForStoredProcedure(object[] operations)
         {
             if (operations.Length > 1
                 || !TryGetOperationName(operations.First(), out Operation operationName)
-                || Operation.All.Equals(operationName))
+                || operationName is not Operation.Execute)
             {
-                _logger.LogError("Stored Procedure supports only 1 CRUD operation.");
+                _logger.LogError("Stored Procedure supports only execute operation.");
                 return false;
             }
 
@@ -766,5 +819,158 @@ namespace Cli
 
             return true;
         }
+
+        /// <summary>
+        /// Utility method that converts REST HTTP verb string input to RestMethod Enum.
+        /// The method returns true/false corresponding to successful/unsuccessful conversion.
+        /// </summary>
+        /// <param name="method">String input entered by the user</param>
+        /// <param name="restMethod">RestMethod Enum type</param>
+        /// <returns></returns>
+        public static bool TryConvertRestMethodNameToRestMethod(string? method, out RestMethod restMethod)
+        {
+            if(! Enum.TryParse(method, ignoreCase: true ,out restMethod))
+            {
+                _logger.LogError("Invalid REST Method. Supported methods are GET, POST, PUT, PATCH and DELETE.");
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Utility method that converts list of REST HTTP verbs configured for a
+        /// stored procedure into an array of RestMethod Enum type.
+        /// When no value is specified by the user, POST method is configured by default.
+        /// </summary>
+        /// <param name="method">List of REST HTTP verbs configured for the stored procedure</param>
+        /// <returns>REST methods as an array of RestMethod Enum type</returns>
+        public static RestMethod[] CreateRestMethods(IEnumerable<string> methods)
+        {
+            List<RestMethod> restMethods = new();
+
+            foreach(string method in methods)
+            {
+                RestMethod restMethod;
+                if(TryConvertRestMethodNameToRestMethod(method, out restMethod))
+                {
+                    restMethods.Add(restMethod);
+                }
+                else
+                {
+                    restMethods.Clear();
+                    break;
+                }
+
+            }
+
+            return restMethods.ToArray();
+        }
+
+        /// <summary>
+        /// Utility method that converts the graphQL operation configured for the stored procedure to
+        /// GraphWLOperation Enum type.
+        /// The metod returns true/false corresponding to successful/unsuccessful conversion.
+        /// </summary>
+        /// <param name="operation">GraphQL operation configured for the stored procedure</param>
+        /// <param name="graphQLOperation">GraphQL Operation as an Enum type</param>
+        /// <returns>true/false</returns>
+        public static bool TryConvertGraphQLOperationNameToGraphQLOperation(string? operation, [NotNullWhen(true)] out GraphQLOperation graphQLOperation)
+        {
+            if (!Enum.TryParse(operation, ignoreCase: true, out graphQLOperation))
+            {
+                _logger.LogError("Invalid GrpahQL Operation. Supported operations are Query and Mutation.");
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Method to check if the options for an entity represent a stored procedure  
+        /// </summary>
+        /// <param name="options"></param>
+        /// <returns></returns>
+        public static bool IsEntityStoredProcedure(EntityOptions options)
+        {
+            SourceTypeEnumConverter.TryGetSourceType(options.SourceType, out SourceType sourceObjectType);
+            return sourceObjectType is SourceType.StoredProcedure;
+        }
+
+        /// <summary>
+        /// Method to check if an entity is a stored procedure
+        /// </summary>
+        /// <param name="entity"></param>
+        /// <returns></returns>
+        public static bool IsEntityStoredProcedure(Entity entity)
+        {
+            return entity.ObjectType is SourceType.StoredProcedure;
+        }
+
+        /// <summary>
+        /// For stored procedures, the rest HTTP verbs to be supported can be configured using
+        /// --rest.methods option.
+        /// Validation to ensure that configuring REST methods for a stored procedure that is
+        /// not enabled for REST results in an error. This validation is run along
+        /// with add command.
+        /// </summary>
+        /// <param name="options">Options entered using add command</param>
+        /// <returns></returns>
+        public static bool CheckConflictingRestConfigurationForStoredProcedures(EntityOptions options)
+        {
+            return IsEntityStoredProcedure(options) &&
+                   (options.RestRoute is not null && bool.TryParse(options.RestRoute, out bool restEnabled) && !restEnabled) &&
+                   (options.RestMethodsForStoredProcedure is not null && options.RestMethodsForStoredProcedure.Any());
+        }
+
+        /// <summary>
+        /// For stored procedure, the rest HTTP verbs to be supported can be configured using
+        /// --rest.methods option.
+        /// Validation to ensure that configuring REST methods for a stored procedure that is
+        /// not enabled for REST results in an error. This validation is run along with
+        /// update command.
+        /// </summary>
+        /// <param name="options">Options entered using update command</param>
+        /// <param name="entity">Stored Procedure Entity</param>
+        /// <returns></returns>
+        public static bool CheckConflictingRestConfigurationForStoredProcedures(EntityOptions options, Entity entity)
+        {
+            return CheckConflictingRestConfigurationForStoredProcedures(options) &&
+                   (entity.Rest is bool restEnabled && !restEnabled && 
+                   options.RestRoute is null && options.RestMethodsForStoredProcedure is not null && options.RestMethodsForStoredProcedure.Any());
+        }
+
+        /// <summary>
+        /// For stored procedures, the graphql operation to be supported can be configured using
+        /// --graphql.operation.
+        /// Validation to ensure that configuring GraphQL operation for a stored procedure that is
+        /// not exposed for graphQL results in an error. This validation is run along with add
+        /// command
+        /// </summary>
+        /// <param name="options"></param>
+        /// <returns></returns>
+        public static bool CheckConflictingGraphQLConfigurationForStoredProcedures(EntityOptions options)
+        {
+            return IsEntityStoredProcedure(options) &&
+                   (options.GraphQLType is not null && bool.TryParse(options.GraphQLType, out bool graphQLEnabled) && !graphQLEnabled) &&
+                   (options.GraphQLOperationForStoredProcedure is not null);
+        }
+
+        /// <summary>
+        /// For stored procedures, the graphql operation to be supported can be configured using
+        /// --graphql.operation.
+        /// Validation to ensure that configuring GraphQL operation for a stored procedure that is
+        /// not exposed for graphQL results in an error. This validation is run along with update
+        /// command
+        /// </summary>
+        /// <param name="options"></param>
+        /// <param name="entity"></param>
+        /// <returns></returns>
+        public static bool CheckConflictingGraphQLConfigurationForStoredProcedures(EntityOptions options, Entity entity)
+        {
+            return CheckConflictingGraphQLConfigurationForStoredProcedures(options) &&
+                   (entity.GraphQL is bool graphQLEnabled && !graphQLEnabled && options.GraphQLOperationForStoredProcedure is not null);
+        }
+
     }
 }

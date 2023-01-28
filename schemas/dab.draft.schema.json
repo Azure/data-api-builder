@@ -81,7 +81,7 @@
                 "type": "object",
                 "properties": {
                   "set-session-context": {
-                    "type": "string",
+                    "type": "boolean",
                     "description": "Enable sending data to MsSql using session context"
                   }
                 }
@@ -277,10 +277,27 @@
                   "properties": {
                     "path": {
                       "type": "string"
+                    },
+                    "methods": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "GET",
+                          "POST",
+                          "PUT",
+                          "PATCH"
+                        ]
+                      }
                     }
                   },
-                  "required": [
-                    "path"
+                  "anyOf": [
+                    {
+                      "required": [ "path" ]
+                    },
+                    {
+                      "required": [ "methods" ]
+                    }
                   ]
                 }
               ]
@@ -295,10 +312,22 @@
                   "properties": {
                     "type": {
                       "$ref": "#/$defs/singular-plural"
+                    },
+                    "operation": {
+                      "type": "string",
+                      "enum": [
+                        "mutation",
+                        "query"
+                      ]
                     }
                   },
-                  "required": [
-                    "type"
+                  "anyOf": [
+                    {
+                      "required": [ "type" ]
+                    },
+                    {
+                      "required": [ "operation" ]
+                    }
                   ]
                 }
               ]
@@ -466,7 +495,8 @@
             "create",
             "read",
             "update",
-            "delete"
+            "delete",
+            "execute"
           ]
         },
         {

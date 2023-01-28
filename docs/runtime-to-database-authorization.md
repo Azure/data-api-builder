@@ -20,8 +20,8 @@ In the config file, the `data-source` section sub-key `options` holds database s
 ```
 dab init -c config.json --database-type mssql --connection-string some-connection-string --set-session-context true
 ```  
-This will correspondingly generate the data-source section in config file as follows:
-```
+This will generate the data-source section in config file as follows:
+```json
 "data-source": {
     "database-type": "mssql",
     "options": {
@@ -32,17 +32,17 @@ This will correspondingly generate the data-source section in config file as fol
  ```
 #### How and what data is sent via SESSION_CONTEXT (Example)
 All the claims present in the EasyAuth/JWT token are sent via the SESSION_CONTEXT to the underlying database. A sample decoded EasyAuth token looks like:
-```
+```json
 {
   "auth_typ": "aad",
   "claims": [
     {
       "typ": "aud",
-      "val": "bbff8fdb-c073-4466-9463-170744cbd2e2"
+      "val": "<AudienceID>"
     },
     {
       "typ": "iss",
-      "val": "https://login.microsoftonline.com/291bf275-ea78-4cde-84ea-21309a43a567/v2.0"
+      "val": "https://login.microsoftonline.com/<TenantID>/v2.0"
     },
     {
       "typ": "iat",
@@ -87,9 +87,9 @@ All the claims present in the EasyAuth/JWT token are sent via the SESSION_CONTEX
 ```
 
 All the claims present in the the token are translated into key-value pairs passed via SESSION_CONTEXT query formulated like below:
-```
-EXEC sp_set_session_context 'aud', 'bbff8fdb-c073-4466-9463-170744cbd2e2', @read_only = 1;
-EXEC sp_set_session_context 'iss', 'https://login.microsoftonline.com/291bf275-ea78-4cde-84ea-21309a43a567/v2.0', @read_only = 1;
+```tsql
+EXEC sp_set_session_context 'aud', '<AudienceID>', @read_only = 1;
+EXEC sp_set_session_context 'iss', 'https://login.microsoftonline.com/<TenantID>/v2.0', @read_only = 1;
 EXEC sp_set_session_context 'iat', '1637043209', @read_only = 1;
 EXEC sp_set_session_context 'nbf', '1637043209', @read_only = 1;
 EXEC sp_set_session_context 'exp', '1637048193', @read_only = 1;
@@ -101,22 +101,15 @@ EXEC sp_set_session_context 'uti', '_sSP3AwBY0SucuqqJyjEAA', @read_only = 1;
 EXEC sp_set_session_context 'ver', '2.0', @read_only = 1;
 ```
 
-#### What is the size limit for SESSION_CONTEXT?
-As mentioned [here](https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-set-session-context-transact-sql#remarks), 
-the total size of the session context is limited to 1 MB. If you set a value that causes this limit to be exceeded, the statement fails. 
-You can monitor overall memory usage by querying [sys.dm_os_memory_cache_counters](https://learn.microsoft.com/en-us/sql/relational-databases/system-dynamic-management-views/sys-dm-os-memory-cache-counters-transact-sql) (Transact-SQL) as follows: 
-`SELECT * FROM sys.dm_os_memory_cache_counters WHERE type = 'CACHESTORE_SESSION_CONTEXT';`.
-
 #### Example: How to use SESSION_CONTEXT to configure additional level of security (Row Level Security)?
-For more details about Row Level Security (RLS), please refer [here](https://learn.microsoft.com/en-us/sql/relational-databases/security/row-level-security),
-but, basically RLS enables us to use group membership or execution context to control access to rows in a database table.
+For more details about Row Level Security (RLS), please refer the this [Microsoft Learn article](https://learn.microsoft.com/sql/relational-databases/security/row-level-security), but, basically RLS enables us to use group membership or execution context to control access to rows in a database table.  
 
-In this demonstration, we will first be creating a database table `revenues`. We will then configure a [Security Policy](https://learn.microsoft.com/en-us/sql/t-sql/statements/create-security-policy-transact-sql) which would add a FILTER PREDICATE
-to this `revenues` table. The [FILTER PREDICATE](https://learn.microsoft.com/en-us/sql/relational-databases/security/row-level-security#Description) is nothing but a table-valued function which will filter the rows accessible to operations SELECT, UPDATE, DELETE
+In this demonstration, we will first be creating a database table `revenues`. We will then configure a [Security Policy](https://learn.microsoft.com/sql/t-sql/statements/create-security-policy-transact-sql) which would add a FILTER PREDICATE
+to this `revenues` table. The [FILTER PREDICATE](https://learn.microsoft.com/sql/relational-databases/security/row-level-security#Description) is nothing but a table-valued function which will filter the rows accessible to operations SELECT, UPDATE, DELETE
 based on the criteria that is configured for the function.
 
 
-##### Laying down the ground work for SESSION_CONTEXT- Sql Queries:
+##### Laying down the ground work for SESSION_CONTEXT- SQL Queries:
 We can execute the below SQL queries in the same order via SSMS or any other SQL client to lay the groundwork for SESSION_CONTEXT.
 
 ###### Creating revenues table:
@@ -138,9 +131,9 @@ INSERT INTO revenues(id, category, revenue, accessible_role) VALUES
 ```
 
 ###### Creating function to be used as FILTER PREDICATE:
-Create a function to be used as a filter predicate by the security policy to restrict access to rows in the table for SELECT,UPDATE,DELETE operations.Users with roles(claim value) = @accessible_role(column value) will be able to access a particular row.  
+Create a function to be used as a filter predicate by the security policy to restrict access to rows in the table for SELECT, UPDATE, DELETE operations. Users with roles(claim value) = @accessible_role(column value) will be able to access a particular row.  
   
-```sql
+```tsql
 CREATE FUNCTION dbo.revenuesPredicate(@accessible_role varchar(20))  
 RETURNS TABLE  
 WITH SCHEMABINDING  

@@ -227,7 +227,7 @@ namespace Cli
                     return false;
                 }
 
-                if(! TryAddRestMethodsForStoredProcedure(options, out restMethods))
+                if(!TryAddRestMethodsForStoredProcedure(options, out restMethods))
                 {
                     return false;
                 }                     
@@ -339,7 +339,6 @@ namespace Cli
             // Parse the SourceType.
             // Parsing won't fail as this check is already done during source object creation.
             SourceTypeEnumConverter.TryGetSourceType(sourceType, out SourceType sourceObjectType);
-        
             // Check if provided operations are valid
             if (!VerifyOperations(operations!.Split(","), sourceObjectType))
             {
@@ -896,7 +895,7 @@ namespace Cli
         /// When no value is specified, the stored procedure is configured with a mutation operation.
         /// Returns true/false corresponding to a successful/unsuccessful conversion of the operations.
         /// </summary>
-        /// <param name="options">GraphQL operatios configured for the Stored Procedure using add command</param>
+        /// <param name="options">GraphQL operations configured for the Stored Procedure using add command</param>
         /// <param name="graphQLOperationForStoredProcedure">GraphQL Operations as Enum type</param>
         /// <returns>true/false</returns>
         private static bool TryAddGraphQLOperationForStoredProcedure(EntityOptions options, out GraphQLOperation? graphQLOperationForStoredProcedure)

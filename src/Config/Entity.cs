@@ -86,7 +86,7 @@ namespace Azure.DataApiBuilder.Config
         /// </summary>
         public bool TryProcessGraphQLNamingConfig()
         {
-             if (GraphQL is null)
+            if (GraphQL is null)
             {
                 return true;
             }
@@ -337,7 +337,7 @@ namespace Azure.DataApiBuilder.Config
     /// Describes the GraphQL settings specific to an entity.
     /// </summary>
     /// <param name="Type">Defines the name of the GraphQL type
-    /// <param name="GraphQLOperation">Defines the graphQL operations that are supported for stored procedures 
+    /// <param name="GraphQLOperation">Defines the graphQL operation that is supported for stored procedures 
     /// that will be used for this entity.Can be a string or Singular-Plural type.
     /// If string, a default plural route will be added as per the rules at
     /// <href="https://engdic.org/singular-and-plural-noun-rules-definitions-examples/" /></param>

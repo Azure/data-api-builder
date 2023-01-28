@@ -130,7 +130,7 @@ namespace Cli
         [Option("graphql", Required = false, HelpText = "Type of graphQL.")]
         public string? GraphQLType { get; }
 
-        [Option("graphql.operation", Required = false, HelpText = "GraphQL operation to be supported for stored procedure")]
+        [Option("graphql.operation", Required = false, HelpText = "GraphQL operation to be supported for stored procedure.")]
         public string? GraphQLOperationForStoredProcedure { get; }
 
         [Option("fields.include", Required = false, Separator = ',', HelpText = "Fields that are allowed access to permission.")]

@@ -141,7 +141,6 @@ namespace Cli
 
                     graphQL_detail = new SingularPlural(singular, plural);
                 }
-
             }
 
             if(graphQL_detail is null && graphQLOperation is null)
@@ -161,11 +160,11 @@ namespace Cli
             }
             else if(graphQL_detail is null)
             {
-                return new GraphQLEntitySettings(Type: null, GraphQLOperation: graphQLOperation);
+                return new GraphQLStoredProcedureEntitySettings(GraphQLOperation: graphQLOperation);
             }
             else
             {
-                return new GraphQLEntitySettings(Type: graphQL_detail, GraphQLOperation: graphQLOperation);
+                return new GraphQLEntitySettings(Type: graphQL_detail);
             }
 
         }

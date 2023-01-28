@@ -147,8 +147,18 @@ namespace Azure.DataApiBuilder.Config
                         }
                     }
 
-                    GraphQLEntitySettings graphQLEntitySettings = new(Type: typeConfiguration, GraphQLOperation: graphQLOperation);
-                    GraphQL = graphQLEntitySettings;
+                    // When 'operation' is not null, it should be included in the runtime config, otherwise, exclude the 'operation' key
+                    // from the runtime config completely.
+                    if (graphQLOperation is null)
+                    {
+                        GraphQLEntitySettings graphQLEntitySettings = new(Type: typeConfiguration);
+                        GraphQL = graphQLEntitySettings;
+                    }
+                    else
+                    {
+                        GraphQLStoredProcedureEntitySettings graphQLStoredProcedureEntitySettings = new(GraphQLOperation: graphQLOperation);
+                        GraphQL = graphQLStoredProcedureEntitySettings;
+                    }
                 }
             }
             else
@@ -341,8 +351,14 @@ namespace Azure.DataApiBuilder.Config
     /// that will be used for this entity.Can be a string or Singular-Plural type.
     /// If string, a default plural route will be added as per the rules at
     /// <href="https://engdic.org/singular-and-plural-noun-rules-definitions-examples/" /></param>
-    public record GraphQLEntitySettings([property: JsonPropertyName("type")] object? Type, 
-                                        [property: JsonPropertyName("operation")] GraphQLOperation? GraphQLOperation = null);
+    public record GraphQLEntitySettings([property: JsonPropertyName("type")] object? Type = null);
+
+    /// <summary>
+    /// Describes the GraphQL settings applicable to an entity which is backed by a stored procedure.
+    /// The GraphQL Operation denotes the field type generated for the stored procedure: mutation or query.
+    /// </summary>
+    /// <param name="GraphQLOperation">String value either "mutation" or "query"</param>
+    public record GraphQLStoredProcedureEntitySettings([property: JsonPropertyName("operation")] GraphQLOperation? GraphQLOperation = null);
 
     /// <summary>
     /// Defines a name or route as singular (required) or

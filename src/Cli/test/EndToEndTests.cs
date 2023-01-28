@@ -86,8 +86,6 @@ public class EndToEndTests
         Program.Main(initArgs);
 
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
-        runtimeConfig!.DetermineGlobalSettings();
-        runtimeConfig!.DetermineGraphQLEntityNames();
 
         // Perform assertions on various properties.
         Assert.IsNotNull(runtimeConfig);
@@ -104,7 +102,7 @@ public class EndToEndTests
         Assert.IsTrue(runtimeConfig.Entities.ContainsKey("todo"));
         Entity entity = runtimeConfig.Entities["todo"];
         Assert.AreEqual("{\"path\":\"/todo\"}", JsonSerializer.Serialize(entity.Rest));
-        Assert.AreEqual("{\"type\":{\"singular\":\"todo\",\"plural\":\"todos\"},\"operation\":null}", JsonSerializer.Serialize(entity.GraphQL));
+        Assert.AreEqual("{\"type\":{\"singular\":\"todo\",\"plural\":\"todos\"}}", JsonSerializer.Serialize(entity.GraphQL));
         Assert.AreEqual(1, entity.Permissions.Length);
         Assert.AreEqual("anonymous", entity.Permissions[0].Role);
         Assert.AreEqual(1, entity.Permissions[0].Operations.Length);

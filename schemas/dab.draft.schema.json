@@ -286,7 +286,8 @@
                           "GET",
                           "POST",
                           "PUT",
-                          "PATCH"
+                          "PATCH",
+                          "DELETE"
                         ]
                       }
                     }
@@ -400,6 +401,15 @@
                 "role",
                 "actions"
               ]
+            },
+            "mappings": {
+              "type": "object",
+              "description": "Define mappings between database fields and GraphQL and REST fields",
+              "patternProperties": {
+                "^.*$": {
+                  "type": "string"
+                }
+              }
             },
             "relationships": {
               "type": "object",

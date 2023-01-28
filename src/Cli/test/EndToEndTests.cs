@@ -82,7 +82,7 @@ public class EndToEndTests
     [TestMethod]
     public void TestAddEntity()
     {
-        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--host-mode", "development", "--database-type", "mssql", "--connection-string", "localhost:5000" };
+        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--host-mode", "development", "--database-type", "mssql", "--connection-string", "localhost:5000", "--auth.provider", "StaticWebApps" };
         Program.Main(initArgs);
 
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
@@ -109,6 +109,37 @@ public class EndToEndTests
         Assert.AreEqual("anonymous", entity.Permissions[0].Role);
         Assert.AreEqual(1, entity.Permissions[0].Operations.Length);
         Assert.AreEqual(WILDCARD, ((JsonElement)entity.Permissions[0].Operations[0]).GetString());
+    }
+
+    /// <summary>
+    /// Test to verify authentication options with init command containing
+    /// neither EasyAuth or Simulator as Authentication provider.
+    /// It checks correct generation of config with provider, audience and issuer.
+    /// </summary>
+    [TestMethod]
+    public void TestVerifyAuthenticationOptions()
+    {
+        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql",
+            "--auth.provider", "AzureAD", "--auth.audience", "aud-xxx", "--auth.issuer", "issuer-xxx" };
+        Program.Main(initArgs);
+
+        RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
+        Assert.IsNotNull(runtimeConfig);
+        Console.WriteLine(JsonSerializer.Serialize(runtimeConfig.HostGlobalSettings.Authentication));
+        string expectedAuthenticationJson = @"
+            {
+                ""Provider"": ""AzureAD"",
+                ""Jwt"":
+                {
+                    ""Audience"": ""aud-xxx"",
+                    ""Issuer"": ""issuer-xxx""
+                }
+            }";
+
+        JObject expectedJson = JObject.Parse(expectedAuthenticationJson);
+        JObject actualJson = JObject.Parse(JsonSerializer.Serialize(runtimeConfig.HostGlobalSettings.Authentication));
+
+        Assert.IsTrue(JToken.DeepEquals(expectedJson, actualJson));
     }
 
     /// <summary>

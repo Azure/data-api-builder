@@ -68,16 +68,16 @@ The configuration file has a `$schema` property as the first property in the con
 "$schema": "..."
 ```
 
-From version 0.3.7 schema is available at:
+From version 0.4.11-alpha schema is available at:
 
 ```txt
-https://dataapibuilder.blob.core.windows.net/schemas/<VERSION>-alpha/dab.draft.schema.json
+https://dataapibuilder.azureedge.net/schemas/<VERSION>-<suffix>/dab.draft.schema.json
 ```
 
-make sure to replace the **VERSION** placeholder with the version you want to use, for example:
+make sure to replace the **VERSION-suffix** placeholder with the version you want to use, for example:
 
 ```txt
-https://dataapibuilder.blob.core.windows.net/schemas/v0.3.7-alpha/dab.draft.schema.json
+https://dataapibuilder.azureedge.net/schemas/v0.4.11-alpha/dab.draft.schema.json
 ```
 
 ### Data Source

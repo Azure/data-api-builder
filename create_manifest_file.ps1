@@ -13,7 +13,7 @@ $maxVersionCount = 3
 
 if ($isReleaseBuild -eq 'true')
 {
-    $versionTag = "v" + $versionId + "-alpha"
+    $versionTag = "v" + $versionId + "-beta"
     $releaseType = "released"
 }
 

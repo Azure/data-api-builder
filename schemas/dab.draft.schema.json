@@ -405,7 +405,6 @@
           "if": {
             "properties": {
               "source": {
-                "type": "object",
                 "properties": {
                   "type": {
                     "const": "stored-procedure"

@@ -35,8 +35,13 @@ namespace Azure.DataApiBuilder.Config
         public static string? ParseConfigJsonAndReplaceEnvVariables(string json)
         {
             Utf8JsonReader reader = new(jsonData: Encoding.UTF8.GetBytes(json),
-                                        isFinalBlock: true,
-                                        state: new());
+                                        options: new()
+                                        {
+                                            // As of .NET Core 7, JsonDocument and JsonSerializer only support skipping or disallowing 
+                                            // of comments; they do not support loading them. If we set JsonCommentHandling.Allow for either,
+                                            // it will throw an exception.
+                                            CommentHandling = JsonCommentHandling.Skip
+                                        });
             MemoryStream stream = new();
             Utf8JsonWriter writer = new(stream, options: new() { Indented = true });
 

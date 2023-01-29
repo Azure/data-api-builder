@@ -2,13 +2,13 @@ parameters:
 # Path to search for binaries for signing.
 - name: 'path' 
   type: string
-  default: '$(Build.ArtifactStagingDirectory)\publish'
+  default: '$(Build.ArtifactStagingDirectory)'
 # Flag to indicate if we want to sign nuget package or not.
 - name: 'signNuget'
   type: boolean
-  default: false
+  default: true
 
-# We are spliting the signing between our code and OSS/Third party code
+# We are splitting the signing between our code and OSS/Third party code
 # because they are using different signing key code.
 # Same reason with nuget package signing. It is using different code.
 steps:

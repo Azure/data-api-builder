@@ -39,10 +39,13 @@ jobs:
       dockerVersion: 17.09.0-ce
       releaseType: stable
 
-  - bash: |
-      docker run -d -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=$(DockerSQLpass)" -p 1433:1433 --name customerdb mcr.microsoft.com/mssql/server:2019-latest
+  - task: Bash@3
     condition: eq( variables['Agent.OS'], 'Linux' )
-    displayName: Get and Start Ubuntu SQL Server Image Docker
+    displayName: Get and Start Ubuntu SQL Server Image Docker with SSL enabled
+    inputs:
+      filePath: scripts/start-mssql-server.bash
+      arguments: $(DockerSQLPass)
+      failOnStderr: true
 
   - task: DotNetCoreCLI@2
     displayName: Build

@@ -1,7 +1,10 @@
 #!/bin/bash
 
+# Exit on error.
+set -e
+
 DOCKER_SQL_PASS=$0
-CERT_DIR=/container/customerdb
+CERT_DIR=~/container/customerdb
 
 # Create directory to store certificate
 mkdir -p $CERT_DIR

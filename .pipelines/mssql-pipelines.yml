@@ -45,7 +45,6 @@ jobs:
     inputs:
       filePath: scripts/start-mssql-server.bash
       arguments: $(DockerSQLPass)
-      failOnStderr: true
 
   - task: DotNetCoreCLI@2
     displayName: Build

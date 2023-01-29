@@ -244,11 +244,16 @@ steps:
 
 ######################################
 - task: CopyFiles@2
-  displayName: 'Copy dab.draft.schema.json'
+  displayName: 'Copy Test Package'
   inputs:
     sourceFolder: '$(Build.SourcesDirectory)'
     contents: 'DataApiBuilder.0.0.1.nupkg'
     targetFolder: '$(Build.ArtifactStagingDirectory)'
+
+# Sign the binaries that were generated per platform
+- template: templates/code-signing.yml
+  parameters:
+    path: '$(Build.ArtifactStagingDirectory)'
 
 # This code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
 - task: PublishPipelineArtifact@1

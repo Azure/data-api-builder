@@ -247,7 +247,7 @@ steps:
   displayName: 'Copy Test Package'
   inputs:
     sourceFolder: '$(Build.SourcesDirectory)'
-    contents: 'Microsoft.DataApiBuilder.0.0.1.nupkg'
+    contents: 'DataApiBuilder.0.0.1.nupkg'
     targetFolder: '$(Build.ArtifactStagingDirectory)'
 
 # Sign the binaries that were generated per platform
@@ -266,6 +266,6 @@ steps:
   condition: eq(variables.isReleaseBuild, 'true')
   inputs:
     command: push
-    packagesToPush: '$(Build.ArtifactStagingDirectory)/Microsoft.DataApiBuilder.0.0.1.nupkg'
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/DataApiBuilder.0.0.1.nupkg'
     nuGetFeedType: external
     publishFeedCredentials: Microsoft.DataApiBuilder

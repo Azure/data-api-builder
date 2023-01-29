@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# Exit on error.
-set -e
-
 DOCKER_SQL_PASS=$0
 CERT_DIR=~/container/customerdb
 
@@ -11,10 +8,12 @@ mkdir -p $CERT_DIR
 
 # Create self-signed certificate.
 openssl req -x509 -nodes -newkey rsa:2048 -subj '/CN=localhost' -keyout $CERT_DIR/mssql.key -out $CERT_DIR/mssql.pem -days 365
+echo "Self-signed certificate created successfully."
 
 # Assign read permissions to all.
 chmod 444 $CERT_DIR/mssql.pem
 chmod 444 $CERT_DIR/mssql.key
+echo "Permissions modified successfully."
 
 # Create mssql.conf file with the desired tlscert properties.
 echo "[network]" >> $CERT_DIR/mssql.conf
@@ -22,6 +21,7 @@ echo "tlscert = /var/opt/mssql/mssql.pem" >> $CERT_DIR/mssql.conf
 echo "tlskey = /var/opt/mssql/mssql.key" >> $CERT_DIR/mssql.conf
 echo "tlsprotocols = 1.2" >> $CERT_DIR/mssql.conf
 echo "forceencryption = 1" >> $CERT_DIR/mssql.conf
+cat $CERT_DIR/mssql.conf
 
 # Install certificate as trusted for the client connection to succeed.
 mv $CERT_DIR/mssql.pem $CERT_DIR/mssql.crt

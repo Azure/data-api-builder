@@ -247,7 +247,7 @@ steps:
   displayName: 'Copy dab.draft.schema.json'
   inputs:
     sourceFolder: '$(Build.SourcesDirectory)'
-    contents: 'Microsoft.DataApiBuilder.0.0.1.nupkg'
+    contents: 'DataApiBuilder.0.0.1.nupkg'
     targetFolder: '$(Build.ArtifactStagingDirectory)'
 
 # This code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
@@ -261,6 +261,6 @@ steps:
   condition: eq(variables.isReleaseBuild, 'true')
   inputs:
     command: push
-    packagesToPush: '$(Build.ArtifactStagingDirectory)/Microsoft.DataApiBuilder.0.0.1.nupkg'
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/DataApiBuilder.0.0.1.nupkg'
     nuGetFeedType: external
     publishFeedCredentials: Microsoft.DataApiBuilder

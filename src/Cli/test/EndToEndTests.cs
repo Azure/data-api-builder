@@ -448,6 +448,7 @@ public class EndToEndTests
 
         string? output = process.StandardOutput.ReadToEnd();
         Assert.IsNotNull(output);
+        Assert.IsTrue(output.Contains($"{Program.PRODUCT_NAME} {GetProductVersion()}"));
 
         foreach (string expectedOutput in expectedOutputArray)
         {
@@ -458,14 +459,15 @@ public class EndToEndTests
     }
 
     /// <summary>
-    /// Test to verify that the version info is logged only once per command.
+    /// Test to verify that the version info is logged for both correct/incorrect command.
     /// </summary>
-    [DataRow("", "--version", false, DisplayName = "Case sensitivity: LogLevel Debug from command line.")]
-    [DataRow("", "--help", false, DisplayName = "Case sensitivity: LogLevel Information from command line.")]
-    [DataRow("init", "--database-type mssql", true, DisplayName = "Case sensitivity: LogLevel Warning from command line.")]
-    [DataRow("add", "MyEntity -s myentity --permissions \"anonymous:*\"", true, DisplayName = "Case sensitivity: LogLevel Error from command line.")]
-    [DataRow("update", "MyEntity -s my_entity", true, DisplayName = "Case sensitivity: LogLevel Critical from command line.")]
-    [DataRow("start", "", true, DisplayName = "Case sensitivity: LogLevel None from command line.")]
+    [DataRow("", "--version", false, DisplayName = "Checking dab version with --version.")]
+    [DataRow("", "--help", false, DisplayName = "Checking version through --help option.")]
+    [DataRow("edit", "--new-option", false, DisplayName = "Version printed with invalid command edit.")]
+    [DataRow("init", "--database-type mssql", true, DisplayName = "Version printed with valid command init.")]
+    [DataRow("add", "MyEntity -s myentity --permissions \"anonymous:*\"", true, DisplayName = "Version printed with valid command add.")]
+    [DataRow("update", "MyEntity -s my_entity", true, DisplayName = "Version printed with valid command update.")]
+    [DataRow("start", "", true, DisplayName = "Version printed with valid command start.")]
     [DataTestMethod]
     public void TestVersionInfoIsCorrectlyDisplayedWithDifferentCommand(string command, string options, bool isDabCommand)
     {
@@ -478,7 +480,7 @@ public class EndToEndTests
 
         string? output = process.StandardOutput.ReadLine();
         Assert.IsNotNull(output);
-        
+
         // Version Info logged by dab irrespective of commands being parsed correctly.
         Assert.IsTrue(output.Contains($"{Program.PRODUCT_NAME} {GetProductVersion()}"));
 

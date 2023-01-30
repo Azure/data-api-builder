@@ -32,7 +32,7 @@ namespace Cli.Tests
             {
                 StartInfo =
                 {
-                    FileName = @"./dab",
+                    FileName = @"./Microsoft.DataApiBuilder",
                     Arguments = $"{command} {flags}",
                     WindowStyle = ProcessWindowStyle.Hidden,
                     UseShellExecute = false,

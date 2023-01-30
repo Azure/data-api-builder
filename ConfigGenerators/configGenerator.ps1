@@ -23,8 +23,8 @@ else{
 $cliBuildOutputPath = $PSScriptRoot + "\..\src\out\cli\";
 $commandsFilesBasePath = $PSScriptRoot;
 
-#Fetching the absolute path of dab.dll from build output directory
-$pathToDabDLL = Get-ChildItem -Path $cliBuildOutputPath -Recurse -include "dab.dll" | Select-Object -ExpandProperty FullName -First 1
+#Fetching the absolute path of Microsoft.DataApiBuilder.dll from build output directory
+$pathToDabDLL = Get-ChildItem -Path $cliBuildOutputPath -Recurse -include "Microsoft.DataApiBuilder.dll" | Select-Object -ExpandProperty FullName -First 1
 
 #Change the working directory to where the config file needs to be generated.
 $workingDirectory = $PSScriptRoot + "\..\src\Service\";

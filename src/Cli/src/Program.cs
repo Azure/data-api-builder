@@ -93,6 +93,7 @@ namespace Cli
                 })
                 .WithParsed<StartOptions>(options =>
                 {
+                    cliLogger.LogInformation($"{PRODUCT_NAME} {GetProductVersion()}");
                     bool isSuccess = ConfigGenerator.TryStartEngineWithOptions(options);
 
                     if (!isSuccess)

@@ -457,6 +457,38 @@ public class EndToEndTests
         process.Kill();
     }
 
+    [DataRow("", "--version", false, DisplayName = "Case sensitivity: LogLevel Debug from command line.")]
+    [DataRow("", "--help", false, DisplayName = "Case sensitivity: LogLevel Information from command line.")]
+    [DataRow("init", "--database-type mssql", true, DisplayName = "Case sensitivity: LogLevel Warning from command line.")]
+    [DataRow("add", "MyEntity -s myentity --permissions \"anonymous:*\"", true, DisplayName = "Case sensitivity: LogLevel Error from command line.")]
+    [DataRow("update", "MyEntity -s my_entity", true, DisplayName = "Case sensitivity: LogLevel Critical from command line.")]
+    [DataRow("start", "", true, DisplayName = "Case sensitivity: LogLevel None from command line.")]
+    [DataTestMethod]
+    public void TestVersionInfoIsCorrectlyDisplayedWithDifferentCommand(string command, string options, bool isDabCommand)
+    {
+        WriteJsonContentToFile(_testRuntimeConfig, INITIAL_CONFIG);
+
+        using Process process = ExecuteDabCommand(
+            command: $"{command} ",
+            flags: $"--config {_testRuntimeConfig} {options}"
+        );
+
+        string? output = process.StandardOutput.ReadLine();
+        Assert.IsNotNull(output);
+        if (isDabCommand)
+        {
+            // Version Info logged by dab when commands are parsed correctly.
+            Assert.IsTrue(output.Contains($"{Program.PRODUCT_NAME} {GetProductVersion()}"));
+        }
+        else
+        {
+            // Default version info automatically printed by dab when incorrect/help commands are used
+            Assert.IsTrue(output.Contains($"dab {GetProductVersion()}"));
+        }
+
+        process.Kill();
+    }
+
     /// <summary>
     /// Test to verify that any parsing errors in the config
     /// are caught before starting the engine.

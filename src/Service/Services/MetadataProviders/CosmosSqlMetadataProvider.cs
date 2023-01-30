@@ -166,9 +166,19 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             throw new NotImplementedException();
         }
 
+        /// <summary>
+        /// Mapped column are not yet supported for Cosmos.
+        /// Returns the value of the field provided.
+        /// </summary>
+        /// <param name="entityName">Name of the entity.</param>
+        /// <param name="field">Name of the database field.</param>
+        /// <param name="name">Mapped name, which for CosmosDB is the value provided for field."</param>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
         public bool TryGetBackingColumn(string entityName, string field, out string? name)
         {
-            throw new NotImplementedException();
+            name = field;
+            return true;
         }
 
         public IDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects()

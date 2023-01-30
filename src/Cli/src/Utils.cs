@@ -45,35 +45,13 @@ namespace Cli
         /// Creates the rest object which can be either a boolean value
         /// or a RestEntitySettings object containing api route based on the input
         /// </summary>
-        public static object? GetRestDetails(string? rest, RestMethod[]? restMethods = null)
+        public static object? GetRestDetails(object? rest_detail = null, RestMethod[]? restMethods = null)
         {
-            object? rest_detail;
-            if (rest is null)
-            {
-                rest_detail = null;
-            }
-            else
-            {
-                bool trueOrFalse;
-                if (bool.TryParse(rest, out trueOrFalse))
-                {
-                    rest_detail = trueOrFalse;
-                    if(! trueOrFalse)
-                    {
-                        restMethods = null;
-                    }
-                }
-                else
-                {
-                    rest_detail = "/" + rest;
-                }
-            }
-
             if(rest_detail is null && restMethods is null)
             {
                 return null;
             }
-            else if(restMethods is null)
+            else if(rest_detail is not null && restMethods is null)
             {
                 if(rest_detail is true || rest_detail is false)
                 {
@@ -81,68 +59,24 @@ namespace Cli
                 }
                 else
                 {
-                    return new RestEntitySettings(Path: rest_detail, RestMethods: restMethods);
+                    return new RestEntitySettings(Path: rest_detail);
                 }
             }
-            else if(rest_detail is null)
+            else if(restMethods is not null && rest_detail is null)
             {
-                return new RestEntitySettings(Path: null, RestMethods: restMethods);
-            }
-            else
-            {
-                return new RestEntitySettings(Path: rest_detail, RestMethods: restMethods);
+                return new RestStoredProcedureEntitySettings(RestMethods: restMethods);
             }
 
+            return new RestStoredProcedureEntityVerboseSettings(Path: rest_detail, RestMethods: restMethods!);
         }
 
         /// <summary>
         /// Creates the graphql object which can be either a boolean value
         /// or a GraphQLEntitySettings object containing graphql type {singular, plural} based on the input
         /// </summary>
-        public static object? GetGraphQLDetails(string? graphQL, GraphQLOperation? graphQLOperation = null)
+        public static object? GetGraphQLDetails(object? graphQL_detail, GraphQLOperation? graphQLOperation = null)
         {
-            object? graphQL_detail;
-            bool trueOrFalse;
-            if (graphQL is null)
-            {
-                graphQL_detail = null;
-            }
-            else
-            {
-                if (bool.TryParse(graphQL, out trueOrFalse))
-                {
-                    graphQL_detail = trueOrFalse;
-                    if(! trueOrFalse)
-                    {
-                        graphQLOperation = null;   
-                    }
-                }
-                else
-                {
-                    string singular, plural;
-                    if (graphQL.Contains(SEPARATOR))
-                    {
-                        string[] arr = graphQL.Split(SEPARATOR);
-                        if (arr.Length != 2)
-                        {
-                            _logger.LogError($"Invalid format for --graphql. Accepted values are true/false," +
-                                                    "a string, or a pair of string in the format <singular>:<plural>");
-                            return null;
-                        }
-
-                        singular = arr[0];
-                        plural = arr[1];
-                    }
-                    else
-                    {
-                        singular = graphQL.Singularize(inputIsKnownToBePlural: false);
-                        plural = graphQL.Pluralize(inputIsKnownToBeSingular: false);
-                    }
-
-                    graphQL_detail = new SingularPlural(singular, plural);
-                }
-            }
-
+            
             if(graphQL_detail is null && graphQLOperation is null)
             {
                 return null;
@@ -162,10 +96,9 @@ namespace Cli
             {
                 return new GraphQLStoredProcedureEntityOperationSettings(GraphQLOperation: graphQLOperation);
             }
-            else
-            {
-                return new GraphQLStoredProcedureEntityVerboseSettings(Type: graphQL_detail, GraphQLOperation: graphQLOperation);
-            }
+
+            return new GraphQLStoredProcedureEntityVerboseSettings(Type: graphQL_detail, GraphQLOperation: graphQLOperation);
+            
         }
 
         /// <summary>
@@ -480,6 +413,7 @@ namespace Cli
             }
 
             bool containsWildcardOperation = false;
+            bool isStoredProcedure = sourceType is SourceType.StoredProcedure;
             foreach (string operation in uniqueOperations)
             {
                 if (TryConvertOperationNameToOperation(operation, out Operation op))
@@ -918,8 +852,7 @@ namespace Cli
         /// <returns></returns>
         public static bool CheckConflictingRestConfigurationForStoredProcedures(EntityOptions options)
         {
-            return IsEntityStoredProcedure(options) &&
-                   (options.RestRoute is not null && bool.TryParse(options.RestRoute, out bool restEnabled) && !restEnabled) &&
+            return (options.RestRoute is not null && bool.TryParse(options.RestRoute, out bool restEnabled) && !restEnabled) &&
                    (options.RestMethodsForStoredProcedure is not null && options.RestMethodsForStoredProcedure.Any());
         }
 
@@ -935,7 +868,7 @@ namespace Cli
         /// <returns></returns>
         public static bool CheckConflictingRestConfigurationForStoredProcedures(EntityOptions options, Entity entity)
         {
-            return CheckConflictingRestConfigurationForStoredProcedures(options) &&
+            return CheckConflictingRestConfigurationForStoredProcedures(options) ||
                    (entity.Rest is bool restEnabled && !restEnabled && 
                    options.RestRoute is null && options.RestMethodsForStoredProcedure is not null && options.RestMethodsForStoredProcedure.Any());
         }
@@ -951,9 +884,8 @@ namespace Cli
         /// <returns></returns>
         public static bool CheckConflictingGraphQLConfigurationForStoredProcedures(EntityOptions options)
         {
-            return IsEntityStoredProcedure(options) &&
-                   (options.GraphQLType is not null && bool.TryParse(options.GraphQLType, out bool graphQLEnabled) && !graphQLEnabled) &&
-                   (options.GraphQLOperationForStoredProcedure is not null);
+            return (options.GraphQLType is not null && bool.TryParse(options.GraphQLType, out bool graphQLEnabled) && !graphQLEnabled)
+                    && (options.GraphQLOperationForStoredProcedure is not null);
         }
 
         /// <summary>
@@ -968,8 +900,74 @@ namespace Cli
         /// <returns></returns>
         public static bool CheckConflictingGraphQLConfigurationForStoredProcedures(EntityOptions options, Entity entity)
         {
-            return CheckConflictingGraphQLConfigurationForStoredProcedures(options) &&
+            return CheckConflictingGraphQLConfigurationForStoredProcedures(options) ||
                    (entity.GraphQL is bool graphQLEnabled && !graphQLEnabled && options.GraphQLOperationForStoredProcedure is not null);
+        }
+
+        public static object? GetRestPathDetails(string? restPath)
+        {
+            object? rest_detail;
+            if (restPath is null)
+            {
+                rest_detail = null;
+            }
+            else
+            {
+                bool trueOrFalse;
+                if (bool.TryParse(restPath, out trueOrFalse))
+                {
+                    rest_detail = trueOrFalse;
+                }
+                else
+                {
+                    rest_detail = "/" + restPath;
+                }
+            }
+
+            return rest_detail;
+        }
+
+        public static object? GetGraphQLEntityNameConfig(string? graphQL)
+        {
+            object? graphQL_detail;
+            bool trueOrFalse;
+            if (graphQL is null)
+            {
+                graphQL_detail = null;
+            }
+            else
+            {
+                if (bool.TryParse(graphQL, out trueOrFalse))
+                {
+                    graphQL_detail = trueOrFalse;
+                }
+                else
+                {
+                    string singular, plural;
+                    if (graphQL.Contains(SEPARATOR))
+                    {
+                        string[] arr = graphQL.Split(SEPARATOR);
+                        if (arr.Length != 2)
+                        {
+                            _logger.LogError($"Invalid format for --graphql. Accepted values are true/false," +
+                                                    "a string, or a pair of string in the format <singular>:<plural>");
+                            return null;
+                        }
+
+                        singular = arr[0];
+                        plural = arr[1];
+                    }
+                    else
+                    {
+                        singular = graphQL.Singularize(inputIsKnownToBePlural: false);
+                        plural = graphQL.Pluralize(inputIsKnownToBeSingular: false);
+                    }
+
+                    graphQL_detail = new SingularPlural(singular, plural);
+                }
+            }
+
+            return graphQL_detail;
         }
 
     }

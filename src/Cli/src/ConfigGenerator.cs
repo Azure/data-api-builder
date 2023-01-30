@@ -191,24 +191,28 @@ namespace Cli
                 return false;
             }
 
+            bool isStoredProcedure = IsEntityStoredProcedure(options);
             // Validations to ensure that REST methods and GraphQL operations can be configured only
             // for stored procedures 
-            if( options.GraphQLOperationForStoredProcedure is not null && !IsEntityStoredProcedure(options))
+            if ( options.GraphQLOperationForStoredProcedure is not null && !isStoredProcedure)
             {
                 _logger.LogError("--graphql.operation can be configured only for stored procedures");
                 return false;
             }
 
             if( (options.RestMethodsForStoredProcedure is not null && options.RestMethodsForStoredProcedure.Any()) 
-                && !IsEntityStoredProcedure(options))
+                && !isStoredProcedure)
                 {
                     _logger.LogError("--rest.methods can be configured only for stored procedures");
                     return false;
                 }
 
+            object? restPathDetails = GetRestPathDetails(options.RestRoute);
+            object? graphQLNamingConfig = GetGraphQLEntityNameConfig(options.GraphQLType);
+
             GraphQLOperation? graphQLOperationsForStoredProcedures = null;
             RestMethod[]? restMethods = null;
-            if(IsEntityStoredProcedure(options))
+            if(isStoredProcedure)
             {   
                 if(CheckConflictingGraphQLConfigurationForStoredProcedures(options))
                 {   
@@ -237,8 +241,8 @@ namespace Cli
             //
             Entity entity = new(
                 source!,
-                GetRestDetails(options.RestRoute, restMethods),
-                GetGraphQLDetails(options.GraphQLType, graphQLOperationsForStoredProcedures),
+                GetRestDetails(restPathDetails, restMethods),
+                GetGraphQLDetails(graphQLNamingConfig, graphQLOperationsForStoredProcedures),
                 permissionSettings,
                 Relationships: null,
                 Mappings: null);
@@ -417,6 +421,40 @@ namespace Cli
                 _logger.LogError("Failed to update the source object.");
                 return false;
             }
+
+            bool isStoredProcedure = IsEntityStoredProcedure(options);
+            // Validations to ensure that REST methods and GraphQL operations can be configured only
+            // for stored procedures 
+            if (options.GraphQLOperationForStoredProcedure is not null && !isStoredProcedure)
+            {
+                _logger.LogError("--graphql.operation can be configured only for stored procedures");
+                return false;
+            }
+
+            if ((options.RestMethodsForStoredProcedure is not null && options.RestMethodsForStoredProcedure.Any())
+                && !isStoredProcedure)
+            {
+                _logger.LogError("--rest.methods can be configured only for stored procedures");
+                return false;
+            }
+
+            if (isStoredProcedure)
+            {
+                if (CheckConflictingGraphQLConfigurationForStoredProcedures(options))
+                {
+                    _logger.LogError("Conflicting GraphQL configurations found");
+                    return false;
+                }
+
+                if (CheckConflictingRestConfigurationForStoredProcedures(options))
+                {
+                    _logger.LogError("Conflicting Rest configurations found");
+                    return false;
+                }
+
+            }
+
+
 
             object? updatedRestDetails = options.RestRoute is null ? entity!.Rest : GetRestDetails(options.RestRoute);
             object? updatedGraphQLDetails = options.GraphQLType is null ? entity!.GraphQL : GetGraphQLDetails(options.GraphQLType);

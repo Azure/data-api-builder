@@ -4,7 +4,7 @@
   "title": "Data API Builder",
   "description": "Schema for Data API Builder engine",
   "additionalProperties": {
-    "version": "https://dataapibuilder.azureedge.net/schemas/vmajor.minor.patch-alpha/dab.draft.schema.json"
+    "version": "https://dataapibuilder.azureedge.net/schemas/vmajor.minor.patch-beta/dab.draft.schema.json"
   },
   "type": "object",
   "properties": {
@@ -278,7 +278,7 @@
                     "path": {
                       "type": "string"
                     },
-                    "methods": {
+                    "method": {
                       "type": "array",
                       "items": {
                         "type": "string",
@@ -286,17 +286,22 @@
                           "GET",
                           "POST",
                           "PUT",
-                          "PATCH"
+                          "PATCH",
+                          "DELETE"
                         ]
                       }
                     }
                   },
                   "anyOf": [
                     {
-                      "required": [ "path" ]
+                      "required": [
+                        "path"
+                      ]
                     },
                     {
-                      "required": [ "methods" ]
+                      "required": [
+                        "method"
+                      ]
                     }
                   ]
                 }
@@ -323,83 +328,27 @@
                   },
                   "anyOf": [
                     {
-                      "required": [ "type" ]
+                      "required": [
+                        "type"
+                      ]
                     },
                     {
-                      "required": [ "operation" ]
+                      "required": [
+                        "operation"
+                      ]
                     }
                   ]
                 }
               ]
             },
-            "permissions": {
-              "type": "array",
-              "description": "Permissions assigned to this object",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "role": {
-                    "type": "string"
-                  },
-                  "actions": {
-                    "oneOf": [
-                      {
-                        "type": "string",
-                        "pattern": "[*]"
-                      },
-                      {
-                        "type": "array",
-                        "items": {
-                          "oneOf": [
-                            {
-                              "$ref": "#/$defs/action"
-                            },
-                            {
-                              "type": "object",
-                              "properties": {
-                                "action": {
-                                  "$ref": "#/$defs/action"
-                                },
-                                "fields": {
-                                  "type": "object",
-                                  "properties": {
-                                    "include": {
-                                      "type": "array",
-                                      "items": {
-                                        "type": "string"
-                                      }
-                                    },
-                                    "exclude": {
-                                      "type": "array",
-                                      "items": {
-                                        "type": "string"
-                                      }
-                                    }
-                                  }
-                                },
-                                "policy": {
-                                  "type": "object",
-                                  "description": "Define item-level security policy",
-                                  "properties": {
-                                    "database": {
-                                      "type": "string"
-                                    }
-                                  }
-                                }
-                              }
-                            }
-                          ]
-                        },
-                        "uniqueItems": true
-                      }
-                    ]
-                  }
+            "mappings": {
+              "type": "object",
+              "description": "Define mappings between database fields and GraphQL and REST fields",
+              "patternProperties": {
+                "^.*$": {
+                  "type": "string"
                 }
-              },
-              "required": [
-                "role",
-                "actions"
-              ]
+              }
             },
             "relationships": {
               "type": "object",
@@ -453,6 +402,169 @@
               }
             }
           },
+          "if": {
+            "properties": {
+              "source": {
+                "properties": {
+                  "type": {
+                    "const": "stored-procedure"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "permissions": {
+                "type": "array",
+                "description": "Permissions assigned to this object",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "type": "string"
+                    },
+                    "actions": {
+                      "oneOf": [
+                        {
+                          "type": "string",
+                          "pattern": "[*]"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "oneOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "execute"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "action": {
+                                    "type": "string",
+                                    "enum": [
+                                      "execute"
+                                    ]
+                                  },
+                                  "fields": {
+                                    "type": "object",
+                                    "properties": {
+                                      "include": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "exclude": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "policy": {
+                                    "type": "object",
+                                    "description": "Define item-level security policy",
+                                    "properties": {
+                                      "database": {
+                                        "type": "string"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "uniqueItems": true
+                        }
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "role",
+                  "actions"
+                ]
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "permissions": {
+                "type": "array",
+                "description": "Permissions assigned to this object",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "type": "string"
+                    },
+                    "actions": {
+                      "oneOf": [
+                        {
+                          "type": "string",
+                          "pattern": "[*]"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "oneOf": [
+                              {
+                                "$ref": "#/$defs/action"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "action": {
+                                    "$ref": "#/$defs/action"
+                                  },
+                                  "fields": {
+                                    "type": "object",
+                                    "properties": {
+                                      "include": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "exclude": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "policy": {
+                                    "type": "object",
+                                    "description": "Define item-level security policy",
+                                    "properties": {
+                                      "database": {
+                                        "type": "string"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "uniqueItems": true
+                        }
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "role",
+                  "actions"
+                ]
+              }
+            }
+          },
           "required": [
             "source",
             "permissions"
@@ -495,8 +607,7 @@
             "create",
             "read",
             "update",
-            "delete",
-            "execute"
+            "delete"
           ]
         },
         {

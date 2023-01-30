@@ -9,7 +9,7 @@ namespace Cli
     /// </summary>
     public class Program
     {
-        public const string PRODUCT_NAME = "Data API Builder";
+        public const string PRODUCT_NAME = "Microsoft.DataApiBuilder";
 
         /// <summary>
         /// Main CLI entry point

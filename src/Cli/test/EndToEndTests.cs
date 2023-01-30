@@ -478,16 +478,9 @@ public class EndToEndTests
 
         string? output = process.StandardOutput.ReadLine();
         Assert.IsNotNull(output);
-        if (isDabCommand)
-        {
-            // Version Info logged by dab when commands are parsed correctly.
-            Assert.IsTrue(output.Contains($"{Program.PRODUCT_NAME} {GetProductVersion()}"));
-        }
-        else
-        {
-            // Default version info automatically printed by dab when incorrect/help commands are used
-            Assert.IsTrue(output.Contains($"dab {GetProductVersion()}"));
-        }
+        
+        // Version Info logged by dab irrespective of commands being parsed correctly.
+        Assert.IsTrue(output.Contains($"{Program.PRODUCT_NAME} {GetProductVersion()}"));
 
         process.Kill();
     }

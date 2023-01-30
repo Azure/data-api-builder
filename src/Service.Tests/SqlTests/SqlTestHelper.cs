@@ -191,7 +191,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="operationType">The operation to be executed on the entity.</param>
         /// <returns></returns>
         /// <exception cref="DataApiBuilderException"></exception>
-        public static HttpMethod GetHttpMethodFromOperation(Config.Operation operationType)
+        public static HttpMethod GetHttpMethodFromOperation(Config.Operation operationType, Config.RestMethod? restMethod = null)
         {
             switch (operationType)
             {
@@ -205,6 +205,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     return HttpMethod.Put;
                 case Config.Operation.UpsertIncremental:
                     return HttpMethod.Patch;
+                case Config.Operation.Execute:
+                     return ConvertRestMethodToHttpMethod(restMethod);
                 default:
                     throw new DataApiBuilderException(
                         message: "Operation not supported for the request.",
@@ -213,6 +215,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             }
         }
 
+        private static HttpMethod ConvertRestMethodToHttpMethod(RestMethod? restMethod)
+        {
+            switch(restMethod)
+            {
+              case RestMethod.Get: return HttpMethod.Get;
+              case RestMethod.Post: return HttpMethod.Post;
+              case RestMethod.Put: return HttpMethod.Put;
+              case RestMethod.Patch: return HttpMethod.Patch;
+              case RestMethod.Delete: return HttpMethod.Delete;
+            }
+            
+            return HttpMethod.Post;
+        }
         /// <summary>
         /// Helper function handles the loading of the runtime config.
         /// </summary>

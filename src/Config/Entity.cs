@@ -179,6 +179,10 @@ namespace Azure.DataApiBuilder.Config
             return true;
         }
 
+        /// <summary>
+        /// Gets the graphQL operation that is configured for the stored procedure.
+        /// </summary>
+        /// <returns>Name of the graphQL operation as a string</returns>
         public string? GetGraphQLOperation()
         {
             string? operation = null;
@@ -195,6 +199,10 @@ namespace Azure.DataApiBuilder.Config
             return operation;
         }
 
+        /// <summary>
+        /// Fetches the name of the graphQL operation configured for the stored procedure
+        /// </summary>
+        /// <returns>Name of the graphQL operation as an Enum</returns>
         public GraphQLOperation? FetchGraphQLOperationEnum()
         {
             if (GraphQL is null)
@@ -214,6 +222,11 @@ namespace Azure.DataApiBuilder.Config
             return null;
         }
 
+        /// <summary>
+        /// Gets the graphQL Type configured for the entity.
+        /// </summary>
+        /// <returns>GraphQL Type configured for the entity</returns>
+        /// <exception cref="JsonException"></exception>
         public object? GetGraphQLType()
         {
             if (GraphQL is null)
@@ -332,6 +345,10 @@ namespace Azure.DataApiBuilder.Config
             return new List<RestMethod>(new[] { RestMethod.Post });
         }
 
+        /// <summary>
+        /// Gets the REST HTTP methods configured for the stored procedure
+        /// </summary>
+        /// <returns>An array of HTTP methods configured</returns>
         public RestMethod[]? GetRestMethodsConfiguredForStoredProcedure()
         {
             if (Rest is not null && ((JsonElement)Rest).ValueKind is JsonValueKind.Object)
@@ -347,6 +364,11 @@ namespace Azure.DataApiBuilder.Config
             return null;
         }
 
+        /// <summary>
+        /// Gets the REST API path configured for the entity.
+        /// </summary>
+        /// <returns>REST Path</returns>
+        /// <exception cref="JsonException"></exception>
         public object? GetRestPath()
         {
             if (Rest is null)

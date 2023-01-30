@@ -242,8 +242,8 @@ namespace Cli
                 }
             }
 
-            object? restPathDetails = GetRestPathDetails(options.RestRoute);
-            object? graphQLNamingConfig = GetGraphQLTypeDetails(options.GraphQLType);
+            object? restPathDetails = ConstructRestPathDetails(options.RestRoute);
+            object? graphQLNamingConfig = ConstructGraphQLTypeDetails(options.GraphQLType);
 
             if (restPathDetails is not null && restPathDetails is false)
             {
@@ -473,8 +473,8 @@ namespace Cli
 
             }
 
-            object? updatedRestDetails = GetUpdatedRestDetails(entity, options);
-            object? updatedGraphQLDetails = GetUpdatedGraphQLDetails(entity, options);
+            object? updatedRestDetails = ConstructUpdatedRestDetails(entity, options);
+            object? updatedGraphQLDetails = ConstructUpdatedGraphQLDetails(entity, options);
             PermissionSetting[]? updatedPermissions = entity!.Permissions;
             Dictionary<string, Relationship>? updatedRelationships = entity.Relationships;
             Dictionary<string, string>? updatedMappings = entity.Mappings;
@@ -932,7 +932,7 @@ namespace Cli
         }
 
         /// <summary>
-        /// Returns an array of RestMethod's resolved from command line input (EntityOptions).
+        /// Returns an array of RestMethods resolved from command line input (EntityOptions).
         /// When no methods are specified, the default "POST" is returned.
         /// </summary>
         /// <param name="options"></param>
@@ -981,7 +981,14 @@ namespace Cli
             return true;
         }
 
-        private static object? GetUpdatedRestDetails(Entity entity, EntityOptions options)
+        /// <summary>
+        /// Constructs the updated REST settings based on the input from update command and
+        /// existing REST configuration for an entity
+        /// </summary>
+        /// <param name="entity">Entity for which the REST settings are updated</param>
+        /// <param name="options">Input from update command</param>
+        /// <returns></returns>
+        private static object? ConstructUpdatedRestDetails(Entity entity, EntityOptions options)
         {
 
             if (options.RestRoute is null && (options.RestMethodsForStoredProcedure is null || !options.RestMethodsForStoredProcedure.Any()))
@@ -990,7 +997,7 @@ namespace Cli
             }
 
             // Updated REST Route details
-            object? restPath = (options.RestRoute is not null) ? GetRestPathDetails(options.RestRoute) : entity.GetRestPath();
+            object? restPath = (options.RestRoute is not null) ? ConstructRestPathDetails(options.RestRoute) : entity.GetRestPath();
 
             // Updated REST Methods info for stored procedures
             RestMethod[]? restMethods;
@@ -1018,7 +1025,14 @@ namespace Cli
             return GetRestDetails(restPath, restMethods);
         }
 
-        private static object? GetUpdatedGraphQLDetails(Entity entity, EntityOptions options)
+        /// <summary>
+        /// Constructs the updated GraphQL settings based on the input from update command and
+        /// existing graphQL configuration for an entity
+        /// </summary>
+        /// <param name="entity">Entity for which GraphQL settings are updated</param>
+        /// <param name="options">Input from update command</param>
+        /// <returns></returns>
+        private static object? ConstructUpdatedGraphQLDetails(Entity entity, EntityOptions options)
         {
             if (options.GraphQLType is null && options.GraphQLOperationForStoredProcedure is null)
             {
@@ -1026,7 +1040,7 @@ namespace Cli
             }
 
             //Updated GraphQL Type
-            object? graphQLType = (options.GraphQLType is not null) ? GetGraphQLTypeDetails(options.GraphQLType) : entity.GetGraphQLType();
+            object? graphQLType = (options.GraphQLType is not null) ? ConstructGraphQLTypeDetails(options.GraphQLType) : entity.GetGraphQLType();
             GraphQLOperation? graphQLOperation;
 
             if (IsEntityStoredProcedure(entity) || IsEntityStoredProcedure(options))

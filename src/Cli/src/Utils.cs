@@ -866,7 +866,7 @@ namespace Cli
 
         /// <summary>
         /// Utility method that converts the graphQL operation configured for the stored procedure to
-        /// GraphWLOperation Enum type.
+        /// GraphQLOperation Enum type.
         /// The metod returns true/false corresponding to successful/unsuccessful conversion.
         /// </summary>
         /// <param name="operation">GraphQL operation configured for the stored procedure</param>
@@ -920,23 +920,6 @@ namespace Cli
         }
 
         /// <summary>
-        /// For stored procedure, the rest HTTP verbs to be supported can be configured using
-        /// --rest.methods option.
-        /// Validation to ensure that configuring REST methods for a stored procedure that is
-        /// not enabled for REST results in an error. This validation is run along with
-        /// update command.
-        /// </summary>
-        /// <param name="options">Options entered using update command</param>
-        /// <param name="entity">Stored Procedure Entity</param>
-        /// <returns></returns>
-        public static bool CheckConflictingRestConfigurationForStoredProcedures(EntityOptions options, Entity entity)
-        {
-            return CheckConflictingRestConfigurationForStoredProcedures(options) ||
-                   (entity.Rest is bool restEnabled && !restEnabled &&
-                   options.RestRoute is null && options.RestMethodsForStoredProcedure is not null && options.RestMethodsForStoredProcedure.Any());
-        }
-
-        /// <summary>
         /// For stored procedures, the graphql operation to be supported can be configured using
         /// --graphql.operation.
         /// Validation to ensure that configuring GraphQL operation for a stored procedure that is
@@ -952,22 +935,11 @@ namespace Cli
         }
 
         /// <summary>
-        /// For stored procedures, the graphql operation to be supported can be configured using
-        /// --graphql.operation.
-        /// Validation to ensure that configuring GraphQL operation for a stored procedure that is
-        /// not exposed for graphQL results in an error. This validation is run along with update
-        /// command
+        /// Constructs the REST Path using the add/update command --rest option  
         /// </summary>
-        /// <param name="options"></param>
-        /// <param name="entity"></param>
-        /// <returns></returns>
-        public static bool CheckConflictingGraphQLConfigurationForStoredProcedures(EntityOptions options, Entity entity)
-        {
-            return CheckConflictingGraphQLConfigurationForStoredProcedures(options) ||
-                   (entity.GraphQL is bool graphQLEnabled && !graphQLEnabled && options.GraphQLOperationForStoredProcedure is not null);
-        }
-
-        public static object? GetRestPathDetails(string? restPath)
+        /// <param name="restPath">--rest option</param>
+        /// <returns>Constructed REST Path</returns>
+        public static object? ConstructRestPathDetails(string? restPath)
         {
             object? restRoute;
             if (restPath is null)
@@ -990,7 +962,12 @@ namespace Cli
             return restRoute;
         }
 
-        public static object? GetGraphQLTypeDetails(string? graphQL)
+        /// <summary>
+        /// Constructs the graphQL Type from add/update command --graphql option
+        /// </summary>
+        /// <param name="graphQL">GraphQL type input from the CLI commands</param>
+        /// <returns>Constructed GraphQL Type</returns>
+        public static object? ConstructGraphQLTypeDetails(string? graphQL)
         {
             object? graphQLType;
             bool graphQLEnabled;

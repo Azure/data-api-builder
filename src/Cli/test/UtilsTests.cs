@@ -17,46 +17,33 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Test to check if it successfully creates the rest object
-        /// which can be either a boolean value
-        /// or a RestEntitySettings object
+        /// Test to validate the successful construction of REST object for 
+        /// various possible REST Path and Methods.
         /// </summary>
-        [TestMethod]
-        [Ignore]
-        public void TestGetRestDetails()
+        [DataTestMethod]
+        [DataRow(true, null, typeof(bool), DisplayName = "REST Configuration - Boolean Path without Methods")]
+        [DataRow(false, null, typeof(bool), DisplayName = "REST Configuration - Boolean Path without Methods")]
+        [DataRow("book", null, typeof(RestEntitySettings), DisplayName = "REST Configuration - Custom API Path without Methods")]
+        [DataRow(null, new RestMethod[] {RestMethod.Get, RestMethod.Post}, typeof(RestStoredProcedureEntitySettings), DisplayName = "REST Configuration - Methods without Path configured")]
+        [DataRow(true, new RestMethod[] {RestMethod.Get, RestMethod.Post}, typeof(RestStoredProcedureEntityVerboseSettings), DisplayName = "REST Configuration - Boolean Path with Methods configured")]
+        [DataRow("book", new RestMethod[] {RestMethod.Get, RestMethod.Post}, typeof(RestStoredProcedureEntityVerboseSettings), DisplayName = "REST Configuration - Custom Path with Methods configured")]
+        public void TestGetRestDetails(
+                object? restPath, 
+                RestMethod[]? restMethods,
+                Type expectedRestObjectType)
         {
             // When the rest is a boolean object
-            object? restDetails = GetRestDetails("true");
+            object? restDetails = GetRestDetails(rest_detail: restPath, restMethods: restMethods);
             Assert.IsNotNull(restDetails);
-            Assert.IsInstanceOfType(restDetails, typeof(bool));
-            Assert.IsTrue((bool)restDetails);
-
-            restDetails = GetRestDetails("True");
-            Assert.IsNotNull(restDetails);
-            Assert.IsInstanceOfType(restDetails, typeof(bool));
-            Assert.IsTrue((bool)restDetails);
-
-            restDetails = GetRestDetails("false");
-            Assert.IsNotNull(restDetails);
-            Assert.IsInstanceOfType(restDetails, typeof(bool));
-            Assert.IsFalse((bool)restDetails);
-
-            restDetails = GetRestDetails("False");
-            Assert.IsNotNull(restDetails);
-            Assert.IsInstanceOfType(restDetails, typeof(bool));
-            Assert.IsFalse((bool)restDetails);
-
-            // When rest is non-boolean string
-            restDetails = GetRestDetails("book", null);
-            Assert.AreEqual(new RestEntitySettings(Path: "/book"), restDetails);
+            Assert.IsInstanceOfType(restDetails, expectedRestObjectType);
         }
 
         /// <summary>
-        /// Test to check if it successfully creates the graphql object which can be either a boolean value
-        /// or a GraphQLEntitySettings object containing graphql type {singular, plural} based on the input
+        /// Test to validate the successful creation of GraphQL configuration for 
+        /// various possible GraphQL Type and Operation combinations
         /// </summary>
         [TestMethod]
-        [Ignore]
+        [Ignore]        
         public void TestGetGraphQLDetails()
         {
             object? graphQlDetails = GetGraphQLDetails("true");

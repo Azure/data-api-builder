@@ -937,29 +937,28 @@ namespace Cli
         /// <summary>
         /// Constructs the REST Path using the add/update command --rest option  
         /// </summary>
-        /// <param name="restPath">--rest option</param>
+        /// <param name="restRoute">Input entered using --rest option</param>
         /// <returns>Constructed REST Path</returns>
-        public static object? ConstructRestPathDetails(string? restPath)
+        public static object? ConstructRestPathDetails(string? restRoute)
         {
-            object? restRoute;
-            if (restPath is null)
+            object? restPath;
+            if (restRoute is null)
             {
-                restRoute = null;
+                restPath = null;
             }
             else
             {
-                bool restEnabled;
-                if (bool.TryParse(restPath, out restEnabled))
+                if (bool.TryParse(restRoute, out bool restEnabled))
                 {
-                    restRoute = restEnabled;
+                    restPath = restEnabled;
                 }
                 else
                 {
-                    restRoute = "/" + restPath;
+                    restPath = "/" + restRoute;
                 }
             }
 
-            return restRoute;
+            return restPath;
         }
 
         /// <summary>

@@ -32,7 +32,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// The PostgreSql specific connection string builder.
         /// </summary>
-        protected override NpgsqlConnectionStringBuilder ConnectionStringBuilder
+        public override NpgsqlConnectionStringBuilder ConnectionStringBuilder
             => (NpgsqlConnectionStringBuilder)base.ConnectionStringBuilder;
 
         /// <summary>

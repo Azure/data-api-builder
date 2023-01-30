@@ -30,7 +30,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// The MySql specific connection string builder.
         /// </summary>
-        protected override MySqlConnectionStringBuilder ConnectionStringBuilder
+        public override MySqlConnectionStringBuilder ConnectionStringBuilder
             => (MySqlConnectionStringBuilder)base.ConnectionStringBuilder;
 
         /// <summary>

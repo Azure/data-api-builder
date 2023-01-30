@@ -35,7 +35,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// The MsSql specific connection string builder.
         /// </summary>
-        protected override SqlConnectionStringBuilder ConnectionStringBuilder
+        public override SqlConnectionStringBuilder ConnectionStringBuilder
             => (SqlConnectionStringBuilder)base.ConnectionStringBuilder;
 
         public DefaultAzureCredential AzureCredential { get; set; } = new();
@@ -60,9 +60,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                       runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString))
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
-            MsSqlOptions? msSqlOptions = runtimeConfig.DataSource.MsSql;
             ConnectionStringBuilder.Encrypt = SqlConnectionEncryptOption.Mandatory;
             ConnectionStringBuilder.TrustServerCertificate = false;
+            MsSqlOptions? msSqlOptions = runtimeConfig.DataSource.MsSql;
             _isSessionContextEnabled = msSqlOptions is null ? false : msSqlOptions.SetSessionContext;
             _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
             _attemptToSetAccessToken = ShouldManagedIdentityAccessBeAttempted();

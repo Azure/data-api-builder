@@ -89,7 +89,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // TODO: Revisit 'first' while adding support for TOP queries
             if (queryParams.ContainsKey(QueryBuilder.PAGE_START_ARGUMENT_NAME))
             {
-                MaxItemCount = (int?) queryParams[QueryBuilder.PAGE_START_ARGUMENT_NAME];
+                MaxItemCount = (int?)queryParams[QueryBuilder.PAGE_START_ARGUMENT_NAME];
                 queryParams.Remove(QueryBuilder.PAGE_START_ARGUMENT_NAME);
             }
 

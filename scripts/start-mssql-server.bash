@@ -11,8 +11,8 @@ openssl req -x509 -nodes -newkey rsa:2048 -subj '/CN=localhost' -keyout $CERT_DI
 echo "Self-signed certificate created successfully."
 
 # Assign read permissions to all.
-chmod 444 $CERT_DIR/mssql.pem
-chmod 444 $CERT_DIR/mssql.key
+chmod 555 $CERT_DIR/mssql.pem
+chmod 555 $CERT_DIR/mssql.key
 echo "Permissions modified successfully."
 
 # Create mssql.conf file with the desired tlscert properties.
@@ -30,4 +30,7 @@ sudo update-ca-certificates --fresh
 
 # Start mssql-server by volume mounting the cert, key and conf files.
 docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=$DOCKER_SQL_PASS" -p 1433:1433 --name customerdb -h customerdb -v $CERT_DIR/mssql.conf:/var/opt/mssql/mssql.conf -v $CERT_DIR/mssql.pem:/var/opt/mssql/mssql.pem -v $CERT_DIR/mssql.key:/var/opt/mssql/mssql.key -d mcr.microsoft.com/mssql/server:2019-latest
+
+sleep 30
 docker logs customerdb
+

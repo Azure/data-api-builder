@@ -7,7 +7,7 @@ CERT_DIR=~/container/customerdb
 mkdir -p $CERT_DIR
 
 # Create self-signed certificate.
-openssl req -x509 -nodes -newkey rsa:2048 -subj '/CN=localhost' -keyout $CERT_DIR/mssql.key -out $CERT_DIR/mssql.pem -days 365
+openssl req -x509 -nodes -newkey rsa:2048 -subj '/CN=tcp:127.0.0.1' -keyout $CERT_DIR/mssql.key -out $CERT_DIR/mssql.pem -days 365
 echo "Self-signed certificate created successfully."
 
 # Assign read permissions to all.

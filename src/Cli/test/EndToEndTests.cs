@@ -467,7 +467,7 @@ public class EndToEndTests
     [DataRow("init", "--database-type mssql", DisplayName = "Version printed with valid command init.")]
     [DataRow("add", "MyEntity -s myentity --permissions \"anonymous:*\"", DisplayName = "Version printed with valid command add.")]
     [DataRow("update", "MyEntity -s my_entity", DisplayName = "Version printed with valid command update.")]
-    [DataRow("start", "",  DisplayName = "Version printed with valid command start.")]
+    [DataRow("start", "", DisplayName = "Version printed with valid command start.")]
     [DataTestMethod]
     public void TestVersionInfoIsCorrectlyDisplayedWithDifferentCommand(string command, string options)
     {

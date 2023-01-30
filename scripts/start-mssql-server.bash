@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DOCKER_SQL_PASS=$0
+DOCKER_SQL_PASS=$1
 CERT_DIR=~/container/customerdb
 
 # Create directory to store certificate

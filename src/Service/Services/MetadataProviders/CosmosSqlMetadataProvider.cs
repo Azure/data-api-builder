@@ -173,8 +173,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         /// <param name="entityName">Name of the entity.</param>
         /// <param name="field">Name of the database field.</param>
         /// <param name="name">Mapped name, which for CosmosDB is the value provided for field."</param>
-        /// <returns></returns>
-        /// <exception cref="NotImplementedException"></exception>
+        /// <returns>True, with out variable set as the value of the input "field" value.</returns>
         public bool TryGetBackingColumn(string entityName, string field, out string? name)
         {
             name = field;

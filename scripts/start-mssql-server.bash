@@ -23,14 +23,13 @@ echo "tlsprotocols = 1.2" >> $CERT_DIR/mssql.conf
 echo "forceencryption = 1" >> $CERT_DIR/mssql.conf
 cat $CERT_DIR/mssql.conf
 
+# Start mssql-server by volume mounting the cert, key and conf files.
+docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=$DOCKER_SQL_PASS" -p 1433:1433 --name customerdb -h customerdb -v $CERT_DIR/mssql.conf:/var/opt/mssql/mssql.conf -v $CERT_DIR/mssql.pem:/var/opt/mssql/mssql.pem -v $CERT_DIR/mssql.key:/var/opt/mssql/mssql.key -d mcr.microsoft.com/mssql/server:2019-latest
+sleep 30
+docker logs customerdb
+
 # Install certificate as trusted for the client connection to succeed.
 mv $CERT_DIR/mssql.pem $CERT_DIR/mssql.crt
 sudo cp $CERT_DIR/mssql.crt /usr/local/share/ca-certificates
 sudo update-ca-certificates --fresh
-
-# Start mssql-server by volume mounting the cert, key and conf files.
-docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=$DOCKER_SQL_PASS" -p 1433:1433 --name customerdb -h customerdb -v $CERT_DIR/mssql.conf:/var/opt/mssql/mssql.conf -v $CERT_DIR/mssql.pem:/var/opt/mssql/mssql.pem -v $CERT_DIR/mssql.key:/var/opt/mssql/mssql.key -d mcr.microsoft.com/mssql/server:2019-latest
-
-sleep 30
-docker logs customerdb
-
+echo "Self-signed certificate added as trusted in certificate store successfully."

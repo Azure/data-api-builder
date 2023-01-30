@@ -7,7 +7,9 @@ using System.Text.Json.Serialization;
 using System.Text.Unicode;
 using Azure.DataApiBuilder.Config;
 using Humanizer;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 using static Azure.DataApiBuilder.Config.AuthenticationConfig;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
@@ -53,6 +55,7 @@ namespace Cli
             {
                 return null;
             }
+            // Tables and Views 
             else if(rest_detail is not null && restMethods is null)
             {
                 if(rest_detail is true || rest_detail is false)
@@ -64,11 +67,13 @@ namespace Cli
                     return new RestEntitySettings(Path: rest_detail);
                 }
             }
+            //Stored Procedures without any custom REST path
             else if(restMethods is not null && rest_detail is null)
             {
                 return new RestStoredProcedureEntitySettings(RestMethods: restMethods);
             }
 
+            //Stored Procedures with custom REST path
             return new RestStoredProcedureEntityVerboseSettings(Path: rest_detail, RestMethods: restMethods!);
         }
 
@@ -966,40 +971,40 @@ namespace Cli
 
         public static object? GetRestPathDetails(string? restPath)
         {
-            object? rest_detail;
+            object? restRoute;
             if (restPath is null)
             {
-                rest_detail = null;
+                restRoute = null;
             }
             else
             {
-                bool trueOrFalse;
-                if (bool.TryParse(restPath, out trueOrFalse))
+                bool restEnabled;
+                if (bool.TryParse(restPath, out restEnabled))
                 {
-                    rest_detail = trueOrFalse;
+                    restRoute = restEnabled;
                 }
                 else
                 {
-                    rest_detail = "/" + restPath;
+                    restRoute = "/" + restPath;
                 }
             }
 
-            return rest_detail;
+            return restRoute;
         }
 
-        public static object? GetGraphQLEntityNameConfig(string? graphQL)
+        public static object? GetGraphQLTypeDetails(string? graphQL)
         {
-            object? graphQL_detail;
-            bool trueOrFalse;
+            object? graphQLType;
+            bool graphQLEnabled;
             if (graphQL is null)
             {
-                graphQL_detail = null;
+                graphQLType = null;
             }
             else
             {
-                if (bool.TryParse(graphQL, out trueOrFalse))
+                if (bool.TryParse(graphQL, out graphQLEnabled))
                 {
-                    graphQL_detail = trueOrFalse;
+                    graphQLType = graphQLEnabled;
                 }
                 else
                 {
@@ -1023,12 +1028,20 @@ namespace Cli
                         plural = graphQL.Pluralize(inputIsKnownToBeSingular: false);
                     }
 
-                    graphQL_detail = new SingularPlural(singular, plural);
+                    graphQLType = new SingularPlural(singular, plural);
                 }
             }
 
-            return graphQL_detail;
+            return graphQLType;
         }
 
+        public static bool DoOptionsRepresentStoredProcedure(EntityOptions options)
+        {
+            return (options.SourceType is not null && SourceTypeEnumConverter.TryGetSourceType(
+                    options.SourceType,
+                    out SourceType objectType) && objectType is SourceType.StoredProcedure);
+        }
+
+        
     }
 }

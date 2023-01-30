@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Config
 {
@@ -177,21 +178,78 @@ namespace Azure.DataApiBuilder.Config
 
         public string? GetGraphQLOperation()
         {
-            string? operation = null;
-            if (GraphQL is bool enabled && enabled)
+            GraphQLOperation? graphQLOperation = FetchGraphQLOperationEnum();
+            return graphQLOperation is not null ? graphQLOperation.ToString() : null;
+        }
+
+        public GraphQLOperation? FetchGraphQLOperationEnum()
+        {
+            if(GraphQL is null)
             {
-                operation = GraphQLOperation.Mutation.ToString();
-            }
-            else if (GraphQL is GraphQLStoredProcedureEntityOperationSettings operationSettings)
-            {
-                operation = operationSettings.GraphQLOperation.ToString();
-            }
-            else if (GraphQL is GraphQLStoredProcedureEntityVerboseSettings operationVerboseSettings)
-            {
-                operation = operationVerboseSettings.GraphQLOperation.ToString();
+                return null;
             }
 
-            return operation;
+            JsonElement graphQLConfigElement = (JsonElement)GraphQL;
+            if(graphQLConfigElement.TryGetProperty("operation", out JsonElement operationConfigElement))
+            {
+                string? operation = JsonSerializer.Deserialize<string>(operationConfigElement);
+                if(Enum.TryParse(operation, ignoreCase: true, out GraphQLOperation graphQLOperation))
+                {
+                    return graphQLOperation;
+                }
+            }
+
+            return null;
+        }
+
+        public object? GetGraphQLType()
+        {
+            if(GraphQL is null)
+            {
+                return null;
+            }
+
+            JsonElement graphQLConfigElement = (JsonElement)GraphQL;
+            if(graphQLConfigElement.ValueKind is JsonValueKind.True || graphQLConfigElement.ValueKind is JsonValueKind.False)
+            {
+                return JsonSerializer.Deserialize<bool>(graphQLConfigElement);
+            }
+            else if(graphQLConfigElement.ValueKind is JsonValueKind.String)
+            {
+                return JsonSerializer.Deserialize<string>(graphQLConfigElement);
+            }
+            else if(graphQLConfigElement.ValueKind is JsonValueKind.Object)
+            {
+                if(graphQLConfigElement.TryGetProperty("type", out JsonElement graphQLTypeElement))
+                {
+                    if(graphQLTypeElement.ValueKind is JsonValueKind.True || graphQLTypeElement.ValueKind is JsonValueKind.False)
+                    {
+                        return JsonSerializer.Deserialize<bool>(graphQLTypeElement);
+                    }
+                    else if(graphQLTypeElement.ValueKind is JsonValueKind.String)
+                    {
+                        return JsonSerializer.Deserialize<string>(graphQLTypeElement);
+                    }
+                    else if(graphQLTypeElement.ValueKind is JsonValueKind.Object)
+                    {
+                        return JsonSerializer.Deserialize<SingularPlural>(graphQLTypeElement);
+                    }
+                    else
+                    {
+                        throw new JsonException("Unsupported GraphQL Type");
+                    }
+
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            else
+            {
+                throw new JsonException("Unsupported GraphQL Type");
+            }
+
         }
 
         /// <summary>
@@ -261,6 +319,68 @@ namespace Azure.DataApiBuilder.Config
 
             return new List<RestMethod>( new[]{ RestMethod.Post }) ;
         }
+
+        public RestMethod[]? GetRestMethodsConfiguredForStoredProcedure()
+        {
+            if(Rest is not null && ((JsonElement)Rest).ValueKind is JsonValueKind.Object)
+            {
+                JsonSerializerOptions options = RuntimeConfig.SerializerOptions;
+                RestEntitySettings? rest = JsonSerializer.Deserialize<RestEntitySettings>((JsonElement)Rest, options);
+                if(rest is not null && rest.RestMethods is not null)
+                {
+                    return rest.RestMethods;
+                }
+            }
+
+            return null;
+        }
+
+        public object? GetRestPath()
+        {
+            if (Rest is null)
+            {
+                return null;
+            }
+
+            JsonElement RestConfigElement = (JsonElement)Rest;
+            if(RestConfigElement.ValueKind is JsonValueKind.True || RestConfigElement.ValueKind is JsonValueKind.True)
+            {
+                return JsonSerializer.Deserialize<bool>(RestConfigElement);
+            }
+            else if(RestConfigElement.ValueKind is JsonValueKind.String)
+            {
+                return JsonSerializer.Deserialize<string>(RestConfigElement);
+            }
+            else if(RestConfigElement.ValueKind is JsonValueKind.Object)
+            {
+                if (RestConfigElement.TryGetProperty("path", out JsonElement restPathElement))
+                {
+                    if (restPathElement.ValueKind is JsonValueKind.True || restPathElement.ValueKind is JsonValueKind.False)
+                    {
+                        return JsonSerializer.Deserialize<bool>(restPathElement);
+                    }
+                    else if (restPathElement.ValueKind is JsonValueKind.String)
+                    {
+                        return JsonSerializer.Deserialize<string>(restPathElement);
+                    }
+                    else
+                    {
+                        throw new JsonException("Unsupported Rest Path Type");
+                    }
+
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            else
+            {
+                throw new JsonException("Unsupported Rest Type");
+            }
+
+        }
+
     }
 
     /// <summary>

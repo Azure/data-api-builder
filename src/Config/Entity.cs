@@ -175,6 +175,25 @@ namespace Azure.DataApiBuilder.Config
             return true;
         }
 
+        public string? GetGraphQLOperation()
+        {
+            string? operation = null;
+            if (GraphQL is bool enabled && enabled)
+            {
+                operation = GraphQLOperation.Mutation.ToString();
+            }
+            else if (GraphQL is GraphQLStoredProcedureEntityOperationSettings operationSettings)
+            {
+                operation = operationSettings.GraphQLOperation.ToString();
+            }
+            else if (GraphQL is GraphQLStoredProcedureEntityVerboseSettings operationVerboseSettings)
+            {
+                operation = operationVerboseSettings.GraphQLOperation.ToString();
+            }
+
+            return operation;
+        }
+
         /// <summary>
         /// After the Entity has been deserialized, populate the source-related fields
         /// Deserialize into DatabaseObjectSource to parse fields if source is an object
@@ -228,19 +247,19 @@ namespace Azure.DataApiBuilder.Config
         /// When no explicit configuration is present, the default method "POST" is returned.
         /// </summary>
         /// <returns>List of HTTP verbs</returns>
-        public List<string> GetStoredProcedureRESTVerbs()
+        public List<RestMethod> GetStoredProcedureRESTVerbs()
         {
             if (Rest is not null && ((JsonElement)Rest).ValueKind is JsonValueKind.Object)
             {
                 JsonSerializerOptions options = RuntimeConfig.SerializerOptions;
                 RestEntitySettings? rest = JsonSerializer.Deserialize<RestEntitySettings>((JsonElement)Rest, options);
-                if (rest is not null && rest.StoredProcedureHttpMethods is not null)
+                if (rest is not null && rest.RestMethods is not null)
                 {
-                    return new List<string>(rest.StoredProcedureHttpMethods);
+                    return new List<RestMethod>(rest.RestMethods);
                 }
             }
 
-            return new List<string>(new[] { "POST" });
+            return new List<RestMethod>( new[]{ RestMethod.Post }) ;
         }
     }
 
@@ -378,7 +397,7 @@ namespace Azure.DataApiBuilder.Config
     public record RestStoredProcedureEntitySettings([property: JsonPropertyName("methods")] RestMethod[]? RestMethods = null);
 
     /// <summary>
-    /// Describes the verbose REST settings specific to an entity back by a stored procedure.
+    /// Describes the verbose REST settings specific to an entity backed by a stored procedure.
     /// Both path overrides and methods overrides can be defined.
     /// </summary>
     /// <param name="Path">Instructs the runtime to use this as the path

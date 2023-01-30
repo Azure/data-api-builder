@@ -100,12 +100,20 @@ namespace Cli
 
             string dabSchemaLink = RuntimeConfig.GetPublishedDraftSchemaLink();
 
+            if (!ValidateAudienceAndIssuerForJwtProvider(options.AuthenticationProvider, options.Audience, options.Issuer))
+            {
+                return false;
+            }
+
             RuntimeConfig runtimeConfig = new(
                 Schema: dabSchemaLink,
                 DataSource: dataSource,
                 RuntimeSettings: GetDefaultGlobalSettings(
                     options.HostMode,
-                    options.CorsOrigin),
+                    options.CorsOrigin,
+                    options.AuthenticationProvider,
+                    options.Audience,
+                    options.Issuer),
                 Entities: new Dictionary<string, Entity>());
 
             runtimeConfigJson = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());
@@ -914,6 +922,14 @@ namespace Cli
             return Azure.DataApiBuilder.Service.Program.StartEngine(args.ToArray());
         }
     
+        /// <summary>
+        /// Returns an array of RestMethod's resolved from command line input (EntityOptions).
+        /// When no methods are specified, the default "POST" is returned.
+        /// </summary>
+        /// <param name="options"></param>
+        /// <param name="restMethods"></param>
+        /// <returns>True when the default or user provided stored procedure REST methods are supplied.
+        /// Returns false and an empty array when an invalid REST method is provided.</returns>
         private static bool TryAddRestMethodsForStoredProcedure(EntityOptions options, [NotNullWhen(true)] out RestMethod[]? restMethods)
         {
             if (options.RestMethodsForStoredProcedure is null || !options.RestMethodsForStoredProcedure.Any())

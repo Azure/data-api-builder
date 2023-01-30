@@ -121,7 +121,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
             return false;
         }
 
-        public bool IsStoredProcedureExecutionPermitted(string entityName, string roleName, string httpVerb)
+        public bool IsStoredProcedureExecutionPermitted(string entityName, string roleName, RestMethod httpVerb)
         {
             bool executionPermitted = EntityPermissionsMap.TryGetValue(entityName, out EntityMetadata? entityMetadata)
                 && entityMetadata is not null

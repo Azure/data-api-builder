@@ -69,6 +69,10 @@ namespace Azure.DataApiBuilder.Config
         public readonly static JsonSerializerOptions SerializerOptions = new()
         {
             PropertyNameCaseInsensitive = true,
+            // As of .NET Core 7, JsonDocument and JsonSerializer only support skipping or disallowing 
+            // of comments; they do not support loading them. If we set JsonCommentHandling.Allow for either,
+            // it will throw an exception.
+            ReadCommentHandling = JsonCommentHandling.Skip,
             Converters =
                 {
                     new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)

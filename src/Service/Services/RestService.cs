@@ -326,10 +326,12 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <returns>True if the operation is allowed. False, otherwise.</returns>
         private bool IsHttpMethodAllowedForStoredProcedure(string entityName)
         {
-            if (TryGetStoredProcedureRESTVerbs(entityName, out List<string>? httpVerbs))
+            if (TryGetStoredProcedureRESTVerbs(entityName, out List<RestMethod>? httpVerbs))
             {
                 HttpContext? httpContext = _httpContextAccessor.HttpContext;
-                if (httpContext is not null && httpVerbs.Contains(httpContext.Request.Method.ToString()))
+                if (httpContext is not null
+                    && Enum.TryParse(httpContext.Request.Method, ignoreCase: true, out RestMethod method)
+                    && httpVerbs.Contains(method))
                 {
                     return true;
                 }
@@ -347,7 +349,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <param name="httpVerbs">Out Param: List of httpverbs configured for stored procedure backed entity.</param>
         /// <returns>True, with a list of HTTP verbs. False, when entity is not found in config
         /// or entity is not a stored procedure, and httpVerbs will be null.</returns>
-        private bool TryGetStoredProcedureRESTVerbs(string entityName, [NotNullWhen(true)] out List<string>? httpVerbs)
+        private bool TryGetStoredProcedureRESTVerbs(string entityName, [NotNullWhen(true)] out List<RestMethod>? httpVerbs)
         {
             if (_runtimeConfigProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
             {

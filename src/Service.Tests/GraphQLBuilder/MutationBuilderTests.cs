@@ -1017,11 +1017,11 @@ type Foo @model(name:""Foo"") {{
         /// <param name="permissionOperations">Collection of operations denoted by their string value, for GenerateStoredProcedureEntity()</param>
         /// <param name="expectsMutationField">Whether MutationBuilder will generate a mutation field for the GraphQL schema.</param>
         [DataTestMethod]
-        [DataRow("mutation", new[] { Config.Operation.Execute }, new[] { "execute" }, true, DisplayName = "Mutation field generated since all metadata is valid")]
-        [DataRow("", new[] { Config.Operation.Execute }, new[] { "execute" }, true, DisplayName = "Mutation field generated since default operation is mutation.")]
-        [DataRow("mutation", new[] { Config.Operation.Read }, new[] { "read" }, false, DisplayName = "Mutation field not generated because invalid permissions were supplied")]
-        [DataRow("query", new[] { Config.Operation.Execute }, new[] { "execute" }, false, DisplayName = "Mutation field not generated because the configured operation is query.")]
-        public void StoredProcedureEntityAsMutationField(string graphQLOperation, Config.Operation[] operations, string[] permissionOperations, bool expectsMutationField)
+        [DataRow(GraphQLOperation.Mutation, new[] { Config.Operation.Execute }, new[] { "execute" }, true, DisplayName = "Mutation field generated since all metadata is valid")]
+        [DataRow(null, new[] { Config.Operation.Execute }, new[] { "execute" }, true, DisplayName = "Mutation field generated since default operation is mutation.")]
+        [DataRow(GraphQLOperation.Mutation, new[] { Config.Operation.Read }, new[] { "read" }, false, DisplayName = "Mutation field not generated because invalid permissions were supplied")]
+        [DataRow(GraphQLOperation.Query, new[] { Config.Operation.Execute }, new[] { "execute" }, false, DisplayName = "Mutation field not generated because the configured operation is query.")]
+        public void StoredProcedureEntityAsMutationField(GraphQLOperation graphQLOperation, Config.Operation[] operations, string[] permissionOperations, bool expectsMutationField)
         {
             string gql =
             @"

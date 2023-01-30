@@ -38,7 +38,7 @@ namespace Azure.DataApiBuilder.Auth
         /// <summary>
         /// List of Http verbs enabled for Stored Procedure entities that have their REST endpoint enabled.
         /// </summary>
-        public HashSet<string> StoredProcedureHttpVerbs { get; set; } = new();
+        public HashSet<RestMethod> StoredProcedureHttpVerbs { get; set; } = new();
 
         /// <summary>
         /// Defines the type of database object the entity represents.

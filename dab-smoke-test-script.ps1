@@ -23,7 +23,7 @@ switch ($OsName) {
 }
 
 $executableFileDirectory = "$BuildOutputDir/publish/$BuildConfiguration/$RID/dab"
-$executableDAB = "$executableFileDirectory/dab"
+$executableDAB = "$executableFileDirectory/Microsoft.DataApiBuilder"
 $configFileName = "dab-config-smoke-test.json"
 
 describe SmokeTest {
@@ -31,7 +31,7 @@ describe SmokeTest {
         $ver = Invoke-expression "$executableDAB --version"
         Write-Host("installed-version: {$ver}")
         Write-Host("expected-version: {$DabVersion}")
-        $ver.Contains("dab $DabVersion") | Should -Be True
+        $ver.Contains("Microsoft.DataApiBuilder $DabVersion") | Should -Be True
     }
 
     it 'Check Command Help Window' {

@@ -133,5 +133,4 @@ namespace Azure.DataApiBuilder.Config
         Query,
         Mutation
     };
-
 }

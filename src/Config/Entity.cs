@@ -259,7 +259,7 @@ namespace Azure.DataApiBuilder.Config
                 }
             }
 
-            return new List<RestMethod>( new[]{ RestMethod.Post }) ;
+            return new List<RestMethod>(new[] { RestMethod.Post });
         }
     }
 

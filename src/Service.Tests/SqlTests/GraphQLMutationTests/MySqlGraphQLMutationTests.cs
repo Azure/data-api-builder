@@ -126,11 +126,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             string mySqlQuery = @"
                 SELECT JSON_OBJECT('column1', `subq`.`column1`, 'column2', `subq`.`column2`) AS `data`
                 FROM (
-                    SELECT `table0`.`__column1` AS `column``,
+                    SELECT `table0`.`__column1` AS `column1`,
                         `table0`.`__column2` AS `column2`
                     FROM `GQLmappings` AS `table0`
-                    WHERE `__column1` = 2
-                    ORDER BY `__column1` asc LIMIT 1
+                    WHERE `table0`.`__column1` = 2
+                    ORDER BY `table0`.`__column1` asc LIMIT 1
                     ) AS `subq`
             ";
 

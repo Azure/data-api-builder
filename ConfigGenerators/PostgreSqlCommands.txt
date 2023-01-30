@@ -24,7 +24,7 @@ add Journal --config "dab-config.PostgreSql.json" --source "journals" --rest tru
 add ArtOfWar --config "dab-config.PostgreSql.json" --source "aow" --rest true --graphql false --permissions "anonymous:*"
 add series --config "dab-config.PostgreSql.json" --source "series" --permissions "anonymous:*"
 add Sales --config "dab-config.PostgreSql.json" --source "sales" --permissions "anonymous:*" --rest true --graphql true
-add GQLmappings --config "dab-config.PostgreSql.json" --source "GQLmappings" --permissions "anonymous:*" --rest true --graphql true
+add GQLmappings --config "dab-config.PostgreSql.json" --source "gqlmappings" --permissions "anonymous:*" --rest true --graphql true
 update GQLmappings --config "dab-config.PostgreSql.json" --map "__column1:column1,__column2:column2" --permissions "authenticated:*"
 update Publisher --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship books --target.entity Book --cardinality many
 update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tester_01:create,delete"

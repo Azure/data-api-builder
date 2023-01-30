@@ -981,7 +981,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         public async Task TestStoredProcedureQueryForGettingSingleRow(string dbQuery)
         {
             string graphQLQueryName = "executeGetPublisher";
-            string graphQLQuery = @"{
+            string graphQLQuery = @"mutation {
                 executeGetPublisher(id: 1234) {
                     id
                     name
@@ -1020,7 +1020,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         public async Task TestStoredProcedureQueryForGettingTotalNumberOfRows(string dbQuery)
         {
             string graphQLQueryName = "executeCountBooks";
-            string graphQLQuery = @"{
+            string graphQLQuery = @"mutation {
                 executeCountBooks {
                     total_books
                 }
@@ -1040,7 +1040,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         public async Task TestStoredProcedureQueryWithResultsContainingNull(string dbQuery)
         {
             string graphQLQueryName = "executeSearchAuthorByFirstName";
-            string graphQLQuery = @"{
+            string graphQLQuery = @"mutation {
                 executeSearchAuthorByFirstName(firstName: ""Aaron"") {
                     author_name
                     first_publish_year

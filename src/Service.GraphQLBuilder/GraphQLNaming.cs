@@ -129,6 +129,17 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                     }
                 }
             }
+            else if (configEntity.GraphQL is not null && configEntity.GraphQL is GraphQLStoredProcedureEntityVerboseSettings graphQLStoredProcedureEntityVerboseSettings)
+            {
+                if(graphQLStoredProcedureEntityVerboseSettings is not null && graphQLStoredProcedureEntityVerboseSettings.Type is SingularPlural singularPlural)
+                {
+                    if(singularPlural is not null)
+                    {
+                        singularPluralConfig = singularPlural;
+                        return true;
+                    }
+                }
+            }
 
             singularPluralConfig = null;
             return false;
@@ -139,6 +150,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             if (configEntity.GraphQL is not null && configEntity.GraphQL is GraphQLEntitySettings graphQLEntitySettings)
             {
                 if (graphQLEntitySettings is not null && graphQLEntitySettings.Type is string typeEntityName)
+                {
+                    graphQLName = typeEntityName;
+                    return true;
+                }
+            }
+            else if(configEntity.GraphQL is not null && configEntity.GraphQL is GraphQLStoredProcedureEntityVerboseSettings graphQLSpEntityVerboseSettings)
+            {
+                if(graphQLSpEntityVerboseSettings is not null && graphQLSpEntityVerboseSettings.Type is string typeEntityName)
                 {
                     graphQLName = typeEntityName;
                     return true;

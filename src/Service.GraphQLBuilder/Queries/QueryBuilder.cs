@@ -52,7 +52,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     if (entity.ObjectType is SourceType.StoredProcedure)
                     {
                         // Check runtime configuration of the stored procedure entity to check that the GraphQL operation type was overridden to 'query' from the default 'mutation.'
-                        bool isSPDefinedAsQuery = (entity.GraphQL is GraphQLStoredProcedureEntityOperationSettings entitySettings && string.Equals(entitySettings.GraphQLOperation.ToString(), OBJECT_TYPE_QUERY, StringComparison.OrdinalIgnoreCase));
+                        bool isSPDefinedAsQuery = string.Equals(entity.GetGraphQLOperation(), GraphQLOperation.Query.ToString(), StringComparison.OrdinalIgnoreCase);
+
                         IEnumerable<string> rolesAllowedForExecute = IAuthorizationResolver.GetRolesForOperation(entityName, operation: Operation.Execute, entityPermissionsMap);
 
                         if (isSPDefinedAsQuery && rolesAllowedForExecute.Any())

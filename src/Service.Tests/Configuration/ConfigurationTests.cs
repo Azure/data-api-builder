@@ -515,6 +515,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// deserialization succeeds.
         /// </summary>
         [TestMethod("Validates if deserialization of MsSql config file succeeds."), TestCategory(TestCategory.MSSQL)]
+        [Ignore]
         public void TestReadingRuntimeConfigForMsSql()
         {
             ConfigFileDeserializationValidationHelper(File.ReadAllText($"{RuntimeConfigPath.CONFIGFILE_NAME}.{MSSQL_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"));

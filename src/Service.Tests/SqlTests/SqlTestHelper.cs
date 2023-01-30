@@ -32,7 +32,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             {
                 Entity updatedEntity = new(entity.Source, entity.Rest,
                                            entity.GraphQL, entity.Permissions,
-                                           Relationships: null, Mappings: null);
+                                           Relationships: null, Mappings: entity.Mappings);
                 runtimeConfig.Entities.Remove(entityName);
                 runtimeConfig.Entities.Add(entityName, updatedEntity);
             }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
@@ -47,6 +48,11 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// The access token representing a Managed Identity to connect to the database.
         /// </summary>
         public string? ManagedIdentityAccessToken { get; private set; }
+
+        /// <summary>
+        /// Specifies whether configuration was provided late.
+        /// </summary>
+        public virtual bool IsLateConfigured { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RuntimeConfigProvider"/> class.
@@ -223,8 +229,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             string configuration,
             string? schema,
             string connectionString,
-            string? accessToken,
-            string? database = null)
+            string? accessToken)
         {
             if (string.IsNullOrEmpty(connectionString))
             {
@@ -235,6 +240,14 @@ namespace Azure.DataApiBuilder.Service.Configurations
             {
                 throw new ArgumentException($"'{nameof(configuration)}' cannot be null or empty.", nameof(configuration));
             }
+
+            DbConnectionStringBuilder dbConnectionStringBuilder = new()
+            {
+                ConnectionString = connectionString
+            };
+
+            // SWA may provide cosmosdb database name in connectionString 
+            string? database = dbConnectionStringBuilder.ContainsKey("Database") ? (string)dbConnectionStringBuilder["Database"] : null;
 
             if (RuntimeConfig.TryGetDeserializedRuntimeConfig(
                     configuration,
@@ -276,6 +289,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
             }
 
             await Task.WhenAll(configLoadedTasks);
+
+            IsLateConfigured = true;
 
             // Verify that all tasks succeeded. 
             return configLoadedTasks.All(x => x.Result);

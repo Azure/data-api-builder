@@ -60,6 +60,26 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
+        /// Demonstrates that using mapped column names for fields within the GraphQL mutatation results in successful engine processing.
+        /// </summary>
+        [TestMethod]
+        public async Task InsertMutationWithVariablesAndMappings()
+        {
+            string postgresQuery = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT table0.__column1 AS column1,
+                          table0.__column2 AS column2
+                   FROM GQLmappings AS table0
+                   WHERE __column1 = 2
+                   ORDER BY __column1 asc
+                   LIMIT 1) AS subq
+            ";
+
+            await InsertMutationWithVariablesAndMappings(postgresQuery);
+        }
+
+        /// <summary>
         /// <code>Do: </code> Inserts new sale item into sales table that automatically calculates the total price
         /// based on subtotal and tax.
         /// <code>Check: Calculated column is persisted successfully with correct calculated result. </code>
@@ -207,6 +227,57 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             ";
 
             await UpdateMutationForComputedColumns(postgresQuery);
+        }
+
+        /// <summary>
+        /// Demonstrates that using mapped column names for fields within the GraphQL mutatation results in successful engine processing
+        /// of the column2 value update for the record where column1 = $id.
+        /// </summary>
+        [TestMethod]
+        public async Task UpdateMutationWithVariablesAndMappings()
+        {
+            string postgresQuery = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT table0.__column1 AS column1,
+                          table0.__column2 AS column2
+                   FROM GQLmappings AS table0
+                   WHERE __column1 = 3
+                     AND __column2 = 'Updated Value of Mapped Column'
+                   ORDER BY __column1 asc
+                   LIMIT 1) AS subq
+            ";
+
+            await UpdateMutationWithVariablesAndMappings(postgresQuery);
+        }
+
+        /// <summary>
+        /// Demonstrates that using mapped column names for fields within the GraphQL mutatation results in successful engine processing
+        /// of removal of the record where column1 = $id and the returned object representing the deleting record utilizes the mapped column values.
+        /// </summary>
+        [TestMethod]
+        public async Task DeleteMutationWithVariablesAndMappings()
+        {
+            string postgresQueryForResult = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT table0.__column1 AS column1,
+                          table0.__column2 AS column2
+                   FROM GQLmappings AS table0
+                   WHERE __column1 = 4
+                   ORDER BY __column1 asc
+                   LIMIT 1) AS subq
+            ";
+
+            string postgresQueryToVerifyDeletion = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT COUNT(*) AS COUNT
+                   FROM GQLmappings AS table0
+                   WHERE __column1 = 4) AS subq
+                ";
+
+            await DeleteMutationWithVariablesAndMappings(postgresQueryForResult, postgresQueryToVerifyDeletion);
         }
 
         /// <summary>

@@ -30,7 +30,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         private AsyncRetryPolicy _retryPolicy;
 
-        protected virtual DbConnectionStringBuilder ConnectionStringBuilder { get; set; }
+        public virtual DbConnectionStringBuilder ConnectionStringBuilder { get; set; }
 
         public QueryExecutor(DbExceptionParser dbExceptionParser,
                              ILogger<QueryExecutor<TConnection>> logger,

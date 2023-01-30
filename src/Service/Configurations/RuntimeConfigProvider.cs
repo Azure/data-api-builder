@@ -51,7 +51,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <summary>
         /// Specifies whether configuration was provided late.
         /// </summary>
-        public bool IsLateConfigured { get; set; }
+        public virtual bool IsLateConfigured { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RuntimeConfigProvider"/> class.

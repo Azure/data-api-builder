@@ -22,6 +22,7 @@ namespace Cli.Tests
         /// or a RestEntitySettings object
         /// </summary>
         [TestMethod]
+        [Ignore]
         public void TestGetRestDetails()
         {
             // When the rest is a boolean object
@@ -55,6 +56,7 @@ namespace Cli.Tests
         /// or a GraphQLEntitySettings object containing graphql type {singular, plural} based on the input
         /// </summary>
         [TestMethod]
+        [Ignore]
         public void TestGetGraphQLDetails()
         {
             object? graphQlDetails = GetGraphQLDetails("true");

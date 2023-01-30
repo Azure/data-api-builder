@@ -1034,14 +1034,5 @@ namespace Cli
 
             return graphQLType;
         }
-
-        public static bool DoOptionsRepresentStoredProcedure(EntityOptions options)
-        {
-            return (options.SourceType is not null && SourceTypeEnumConverter.TryGetSourceType(
-                    options.SourceType,
-                    out SourceType objectType) && objectType is SourceType.StoredProcedure);
-        }
-
-        
     }
 }

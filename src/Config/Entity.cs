@@ -106,7 +106,11 @@ namespace Azure.DataApiBuilder.Config
                     object? typeConfiguration = null;
                     if (configElement.TryGetProperty(propertyName: "type", out JsonElement nameTypeSettings))
                     {
-                        if (nameTypeSettings.ValueKind is JsonValueKind.String)
+                        if (nameTypeSettings.ValueKind is JsonValueKind.True || nameTypeSettings.ValueKind is JsonValueKind.False)
+                        {
+                            typeConfiguration = JsonSerializer.Deserialize<bool>(nameTypeSettings);
+                        }
+                        else if (nameTypeSettings.ValueKind is JsonValueKind.String)
                         {
                             typeConfiguration = JsonSerializer.Deserialize<string>(nameTypeSettings)!;
                         }
@@ -178,8 +182,18 @@ namespace Azure.DataApiBuilder.Config
 
         public string? GetGraphQLOperation()
         {
-            GraphQLOperation? graphQLOperation = FetchGraphQLOperationEnum();
-            return graphQLOperation is not null ? graphQLOperation.ToString() : null;
+            string? operation = null;
+
+            if (GraphQL is GraphQLStoredProcedureEntityOperationSettings operationSettings)
+            {
+                operation = operationSettings.GraphQLOperation.ToString();
+            }
+            else if (GraphQL is GraphQLStoredProcedureEntityVerboseSettings operationVerboseSettings)
+            {
+                operation = operationVerboseSettings.GraphQLOperation.ToString();
+            }
+
+            return operation;
         }
 
         public GraphQLOperation? FetchGraphQLOperationEnum()
@@ -189,14 +203,13 @@ namespace Azure.DataApiBuilder.Config
                 return null;
             }
 
-            JsonElement graphQLConfigElement = (JsonElement)GraphQL;
-            if(graphQLConfigElement.TryGetProperty("operation", out JsonElement operationConfigElement))
+            if(GraphQL is GraphQLStoredProcedureEntityOperationSettings operationSettings)
             {
-                string? operation = JsonSerializer.Deserialize<string>(operationConfigElement);
-                if(Enum.TryParse(operation, ignoreCase: true, out GraphQLOperation graphQLOperation))
-                {
-                    return graphQLOperation;
-                }
+                return operationSettings.GraphQLOperation;
+            }
+            else if(GraphQL is GraphQLStoredProcedureEntityVerboseSettings verboseSettings)
+            {
+                return verboseSettings.GraphQLOperation;
             }
 
             return null;

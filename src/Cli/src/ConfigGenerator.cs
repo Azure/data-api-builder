@@ -440,7 +440,7 @@ namespace Cli
                 return false;
             }
 
-            bool isStoredProcedure = IsEntityStoredProcedure(entity) || DoOptionsRepresentStoredProcedure(options);
+            bool isStoredProcedure = IsEntityStoredProcedure(entity) || IsEntityStoredProcedure(options);
 
             // Validations to ensure that REST methods and GraphQL operations can be configured only
             // for stored procedures 
@@ -994,7 +994,7 @@ namespace Cli
 
             // Updated REST Methods info for stored procedures
             RestMethod[]? restMethods;
-            if (entity.ObjectType is SourceType.StoredProcedure || DoOptionsRepresentStoredProcedure(options))
+            if (IsEntityStoredProcedure(entity) || IsEntityStoredProcedure(options))
             {
                 if (options.RestMethodsForStoredProcedure is null || !options.RestMethodsForStoredProcedure.Any())
                 {
@@ -1029,7 +1029,7 @@ namespace Cli
             object? graphQLType = (options.GraphQLType is not null) ? GetGraphQLTypeDetails(options.GraphQLType) : entity.GetGraphQLType();
             GraphQLOperation? graphQLOperation;
 
-            if(entity.ObjectType is SourceType.StoredProcedure || DoOptionsRepresentStoredProcedure(options))
+            if(IsEntityStoredProcedure(entity) || IsEntityStoredProcedure(options))
             {
                 if(options.GraphQLOperationForStoredProcedure is null)
                 {

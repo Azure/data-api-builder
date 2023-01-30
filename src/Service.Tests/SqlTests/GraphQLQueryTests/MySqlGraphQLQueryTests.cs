@@ -173,7 +173,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 SELECT JSON_OBJECT('column1', `subq3`.`column1`) AS `data`
                 FROM (
                     SELECT `table0`.`__column1` AS `column1`
-                    FROM `GQLMappings` AS `table0`
+                    FROM `GQLmappings` AS `table0`
                     WHERE `table0`.`__column1` = 1
                     ORDER BY `table0`.`__column1` asc
                     LIMIT 1

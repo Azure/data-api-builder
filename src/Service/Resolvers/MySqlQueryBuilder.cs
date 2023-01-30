@@ -142,7 +142,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public override string BuildForeignKeyInfoQuery(int numberOfParameters, bool developerMode, ILogger logger)
+        public override string BuildForeignKeyInfoQuery(int numberOfParameters)
         {
             string[] databaseNameParams = CreateParams(DATABASE_NAME_PARAM, numberOfParameters);
             string[] tableNameParams = CreateParams(TABLE_NAME_PARAM, numberOfParameters);

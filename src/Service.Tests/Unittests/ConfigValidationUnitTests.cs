@@ -815,6 +815,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("Entity^Name", true, DisplayName = "Invalid body character ^")]
         [DataRow("Entity&Name", true, DisplayName = "Invalid body character &")]
         [DataRow("Entity name", true, DisplayName = "Invalid body character whitespace")]
+        [DataRow("__introspectionField", true, DisplayName = "Invalid double underscore reserved for introspection fields.")]
         public void ValidateGraphQLTypeNamesFromConfig(string entityNameFromConfig, bool expectsException)
         {
             Dictionary<string, Entity> entityCollection = new();

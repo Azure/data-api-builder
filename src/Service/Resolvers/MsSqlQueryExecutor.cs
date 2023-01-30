@@ -60,8 +60,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                       runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString))
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
-            ConnectionStringBuilder.Encrypt = SqlConnectionEncryptOption.Mandatory;
-            ConnectionStringBuilder.TrustServerCertificate = false;
+
+            if (runtimeConfigProvider.IsLateConfigured)
+            {
+                ConnectionStringBuilder.Encrypt = SqlConnectionEncryptOption.Mandatory;
+                ConnectionStringBuilder.TrustServerCertificate = false;
+            }
+
             MsSqlOptions? msSqlOptions = runtimeConfig.DataSource.MsSql;
             _isSessionContextEnabled = msSqlOptions is null ? false : msSqlOptions.SetSessionContext;
             _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;

@@ -49,6 +49,11 @@ namespace Azure.DataApiBuilder.Service.Configurations
         public string? ManagedIdentityAccessToken { get; private set; }
 
         /// <summary>
+        /// Specifies whether configuration was provided late.
+        /// </summary>
+        public bool IsLateConfigured { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="RuntimeConfigProvider"/> class.
         /// </summary>
         /// <param name="runtimeConfigPath"></param>
@@ -276,6 +281,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
             }
 
             await Task.WhenAll(configLoadedTasks);
+
+            IsLateConfigured = true;
 
             // Verify that all tasks succeeded. 
             return configLoadedTasks.All(x => x.Result);

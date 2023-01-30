@@ -206,7 +206,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 case Config.Operation.UpsertIncremental:
                     return HttpMethod.Patch;
                 case Config.Operation.Execute:
-                     return ConvertRestMethodToHttpMethod(restMethod);
+                    return ConvertRestMethodToHttpMethod(restMethod);
                 default:
                     throw new DataApiBuilderException(
                         message: "Operation not supported for the request.",
@@ -217,15 +217,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
         private static HttpMethod ConvertRestMethodToHttpMethod(RestMethod? restMethod)
         {
-            switch(restMethod)
+            switch (restMethod)
             {
-              case RestMethod.Get: return HttpMethod.Get;
-              case RestMethod.Post: return HttpMethod.Post;
-              case RestMethod.Put: return HttpMethod.Put;
-              case RestMethod.Patch: return HttpMethod.Patch;
-              case RestMethod.Delete: return HttpMethod.Delete;
+                case RestMethod.Get:
+                    return HttpMethod.Get;
+                case RestMethod.Post:
+                    return HttpMethod.Post;
+                case RestMethod.Put:
+                    return HttpMethod.Put;
+                case RestMethod.Patch:
+                    return HttpMethod.Patch;
+                case RestMethod.Delete:
+                    return HttpMethod.Delete;
             }
-            
+
             return HttpMethod.Post;
         }
         /// <summary>

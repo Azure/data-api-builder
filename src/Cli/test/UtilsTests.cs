@@ -24,11 +24,11 @@ namespace Cli.Tests
         [DataRow(true, null, typeof(bool), DisplayName = "REST Configuration - Boolean Path without Methods")]
         [DataRow(false, null, typeof(bool), DisplayName = "REST Configuration - Boolean Path without Methods")]
         [DataRow("book", null, typeof(RestEntitySettings), DisplayName = "REST Configuration - Custom API Path without Methods")]
-        [DataRow(null, new RestMethod[] {RestMethod.Get, RestMethod.Post}, typeof(RestStoredProcedureEntitySettings), DisplayName = "REST Configuration - Methods without Path configured")]
-        [DataRow(true, new RestMethod[] {RestMethod.Get, RestMethod.Post}, typeof(RestStoredProcedureEntityVerboseSettings), DisplayName = "REST Configuration - Boolean Path with Methods configured")]
-        [DataRow("book", new RestMethod[] {RestMethod.Get, RestMethod.Post}, typeof(RestStoredProcedureEntityVerboseSettings), DisplayName = "REST Configuration - Custom Path with Methods configured")]
+        [DataRow(null, new RestMethod[] { RestMethod.Get, RestMethod.Post }, typeof(RestStoredProcedureEntitySettings), DisplayName = "REST Configuration - Methods without Path configured")]
+        [DataRow(true, new RestMethod[] { RestMethod.Get, RestMethod.Post }, typeof(RestStoredProcedureEntityVerboseSettings), DisplayName = "REST Configuration - Boolean Path with Methods configured")]
+        [DataRow("book", new RestMethod[] { RestMethod.Get, RestMethod.Post }, typeof(RestStoredProcedureEntityVerboseSettings), DisplayName = "REST Configuration - Custom Path with Methods configured")]
         public void TestGetRestDetails(
-                object? restPath, 
+                object? restPath,
                 RestMethod[]? restMethods,
                 Type expectedRestObjectType)
         {
@@ -43,7 +43,7 @@ namespace Cli.Tests
         /// various possible GraphQL Type and Operation combinations
         /// </summary>
         [TestMethod]
-        [Ignore]        
+        [Ignore]
         public void TestGetGraphQLDetails()
         {
             object? graphQlDetails = GetGraphQLDetails("true");

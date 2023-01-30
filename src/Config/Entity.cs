@@ -1,7 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Config
 {
@@ -198,16 +197,16 @@ namespace Azure.DataApiBuilder.Config
 
         public GraphQLOperation? FetchGraphQLOperationEnum()
         {
-            if(GraphQL is null)
+            if (GraphQL is null)
             {
                 return null;
             }
 
-            if(GraphQL is GraphQLStoredProcedureEntityOperationSettings operationSettings)
+            if (GraphQL is GraphQLStoredProcedureEntityOperationSettings operationSettings)
             {
                 return operationSettings.GraphQLOperation;
             }
-            else if(GraphQL is GraphQLStoredProcedureEntityVerboseSettings verboseSettings)
+            else if (GraphQL is GraphQLStoredProcedureEntityVerboseSettings verboseSettings)
             {
                 return verboseSettings.GraphQLOperation;
             }
@@ -217,33 +216,33 @@ namespace Azure.DataApiBuilder.Config
 
         public object? GetGraphQLType()
         {
-            if(GraphQL is null)
+            if (GraphQL is null)
             {
                 return null;
             }
 
             JsonElement graphQLConfigElement = (JsonElement)GraphQL;
-            if(graphQLConfigElement.ValueKind is JsonValueKind.True || graphQLConfigElement.ValueKind is JsonValueKind.False)
+            if (graphQLConfigElement.ValueKind is JsonValueKind.True || graphQLConfigElement.ValueKind is JsonValueKind.False)
             {
                 return JsonSerializer.Deserialize<bool>(graphQLConfigElement);
             }
-            else if(graphQLConfigElement.ValueKind is JsonValueKind.String)
+            else if (graphQLConfigElement.ValueKind is JsonValueKind.String)
             {
                 return JsonSerializer.Deserialize<string>(graphQLConfigElement);
             }
-            else if(graphQLConfigElement.ValueKind is JsonValueKind.Object)
+            else if (graphQLConfigElement.ValueKind is JsonValueKind.Object)
             {
-                if(graphQLConfigElement.TryGetProperty("type", out JsonElement graphQLTypeElement))
+                if (graphQLConfigElement.TryGetProperty("type", out JsonElement graphQLTypeElement))
                 {
-                    if(graphQLTypeElement.ValueKind is JsonValueKind.True || graphQLTypeElement.ValueKind is JsonValueKind.False)
+                    if (graphQLTypeElement.ValueKind is JsonValueKind.True || graphQLTypeElement.ValueKind is JsonValueKind.False)
                     {
                         return JsonSerializer.Deserialize<bool>(graphQLTypeElement);
                     }
-                    else if(graphQLTypeElement.ValueKind is JsonValueKind.String)
+                    else if (graphQLTypeElement.ValueKind is JsonValueKind.String)
                     {
                         return JsonSerializer.Deserialize<string>(graphQLTypeElement);
                     }
-                    else if(graphQLTypeElement.ValueKind is JsonValueKind.Object)
+                    else if (graphQLTypeElement.ValueKind is JsonValueKind.Object)
                     {
                         return JsonSerializer.Deserialize<SingularPlural>(graphQLTypeElement);
                     }
@@ -330,16 +329,16 @@ namespace Azure.DataApiBuilder.Config
                 }
             }
 
-            return new List<RestMethod>( new[]{ RestMethod.Post }) ;
+            return new List<RestMethod>(new[] { RestMethod.Post });
         }
 
         public RestMethod[]? GetRestMethodsConfiguredForStoredProcedure()
         {
-            if(Rest is not null && ((JsonElement)Rest).ValueKind is JsonValueKind.Object)
+            if (Rest is not null && ((JsonElement)Rest).ValueKind is JsonValueKind.Object)
             {
                 JsonSerializerOptions options = RuntimeConfig.SerializerOptions;
                 RestEntitySettings? rest = JsonSerializer.Deserialize<RestEntitySettings>((JsonElement)Rest, options);
-                if(rest is not null && rest.RestMethods is not null)
+                if (rest is not null && rest.RestMethods is not null)
                 {
                     return rest.RestMethods;
                 }
@@ -356,15 +355,15 @@ namespace Azure.DataApiBuilder.Config
             }
 
             JsonElement RestConfigElement = (JsonElement)Rest;
-            if(RestConfigElement.ValueKind is JsonValueKind.True || RestConfigElement.ValueKind is JsonValueKind.True)
+            if (RestConfigElement.ValueKind is JsonValueKind.True || RestConfigElement.ValueKind is JsonValueKind.True)
             {
                 return JsonSerializer.Deserialize<bool>(RestConfigElement);
             }
-            else if(RestConfigElement.ValueKind is JsonValueKind.String)
+            else if (RestConfigElement.ValueKind is JsonValueKind.String)
             {
                 return JsonSerializer.Deserialize<string>(RestConfigElement);
             }
-            else if(RestConfigElement.ValueKind is JsonValueKind.Object)
+            else if (RestConfigElement.ValueKind is JsonValueKind.Object)
             {
                 if (RestConfigElement.TryGetProperty("path", out JsonElement restPathElement))
                 {

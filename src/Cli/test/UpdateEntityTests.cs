@@ -1396,7 +1396,6 @@ namespace Cli.Tests
                         }
                     }";
 
-
             Assert.IsFalse(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
         }
 

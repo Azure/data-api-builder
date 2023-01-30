@@ -202,57 +202,57 @@ namespace Cli
             bool isStoredProcedure = IsEntityStoredProcedure(options);
             // Validations to ensure that REST methods and GraphQL operations can be configured only
             // for stored procedures 
-            if ( options.GraphQLOperationForStoredProcedure is not null && !isStoredProcedure)
+            if (options.GraphQLOperationForStoredProcedure is not null && !isStoredProcedure)
             {
                 _logger.LogError("--graphql.operation can be configured only for stored procedures");
                 return false;
             }
 
-            if( (options.RestMethodsForStoredProcedure is not null && options.RestMethodsForStoredProcedure.Any()) 
+            if ((options.RestMethodsForStoredProcedure is not null && options.RestMethodsForStoredProcedure.Any())
                 && !isStoredProcedure)
-                {
-                    _logger.LogError("--rest.methods can be configured only for stored procedures");
-                    return false;
-                }
+            {
+                _logger.LogError("--rest.methods can be configured only for stored procedures");
+                return false;
+            }
 
             GraphQLOperation? graphQLOperationsForStoredProcedures = null;
             RestMethod[]? restMethods = null;
-            if(isStoredProcedure)
-            {   
-                if(CheckConflictingGraphQLConfigurationForStoredProcedures(options))
-                {   
+            if (isStoredProcedure)
+            {
+                if (CheckConflictingGraphQLConfigurationForStoredProcedures(options))
+                {
                     _logger.LogError("Conflicting GraphQL configurations found.");
                     return false;
                 }
 
-                if(! TryAddGraphQLOperationForStoredProcedure(options,out graphQLOperationsForStoredProcedures))
+                if (!TryAddGraphQLOperationForStoredProcedure(options, out graphQLOperationsForStoredProcedures))
                 {
                     return false;
                 }
 
-                if(CheckConflictingRestConfigurationForStoredProcedures(options))
+                if (CheckConflictingRestConfigurationForStoredProcedures(options))
                 {
                     _logger.LogError("Conflicting Rest configurations found.");
                     return false;
                 }
 
-                if(!TryAddRestMethodsForStoredProcedure(options, out restMethods))
+                if (!TryAddRestMethodsForStoredProcedure(options, out restMethods))
                 {
                     return false;
-                }                     
+                }
             }
 
             object? restPathDetails = GetRestPathDetails(options.RestRoute);
             object? graphQLNamingConfig = GetGraphQLTypeDetails(options.GraphQLType);
-            
-            if(restPathDetails is not null && restPathDetails is false)
+
+            if (restPathDetails is not null && restPathDetails is false)
             {
                 restMethods = null;
             }
-            
-            if(graphQLNamingConfig is not null && graphQLNamingConfig is false)
+
+            if (graphQLNamingConfig is not null && graphQLNamingConfig is false)
             {
-                graphQLOperationsForStoredProcedures = null; 
+                graphQLOperationsForStoredProcedures = null;
             }
 
             // Create new entity.
@@ -473,8 +473,8 @@ namespace Cli
 
             }
 
-            object? updatedRestDetails = GetUpdatedRestDetails(entity,options);
-            object? updatedGraphQLDetails = GetUpdatedGraphQLDetails(entity,options);
+            object? updatedRestDetails = GetUpdatedRestDetails(entity, options);
+            object? updatedGraphQLDetails = GetUpdatedGraphQLDetails(entity, options);
             PermissionSetting[]? updatedPermissions = entity!.Permissions;
             Dictionary<string, Relationship>? updatedRelationships = entity.Relationships;
             Dictionary<string, string>? updatedMappings = entity.Mappings;
@@ -930,7 +930,7 @@ namespace Cli
 
             return Azure.DataApiBuilder.Service.Program.StartEngine(args.ToArray());
         }
-    
+
         /// <summary>
         /// Returns an array of RestMethod's resolved from command line input (EntityOptions).
         /// When no methods are specified, the default "POST" is returned.
@@ -943,11 +943,11 @@ namespace Cli
         {
             if (options.RestMethodsForStoredProcedure is null || !options.RestMethodsForStoredProcedure.Any())
             {
-                restMethods = new RestMethod[] {RestMethod.Post};
+                restMethods = new RestMethod[] { RestMethod.Post };
             }
-            else 
+            else
             {
-               restMethods = CreateRestMethods(options.RestMethodsForStoredProcedure);   
+                restMethods = CreateRestMethods(options.RestMethodsForStoredProcedure);
             }
 
             return restMethods.Length > 0;
@@ -963,17 +963,17 @@ namespace Cli
         /// <returns>True when a user declared GraphQL operation on a stored procedure backed entity is supported. False, otherwise.</returns>
         private static bool TryAddGraphQLOperationForStoredProcedure(EntityOptions options, [NotNullWhen(true)] out GraphQLOperation? graphQLOperationForStoredProcedure)
         {
-            if(options.GraphQLOperationForStoredProcedure is null)
-            {   
+            if (options.GraphQLOperationForStoredProcedure is null)
+            {
                 graphQLOperationForStoredProcedure = GraphQLOperation.Mutation;
             }
             else
             {
-                if(!TryConvertGraphQLOperationNameToGraphQLOperation(options.GraphQLOperationForStoredProcedure, out GraphQLOperation operation))
+                if (!TryConvertGraphQLOperationNameToGraphQLOperation(options.GraphQLOperationForStoredProcedure, out GraphQLOperation operation))
                 {
                     graphQLOperationForStoredProcedure = null;
                     return false;
-                }            
+                }
 
                 graphQLOperationForStoredProcedure = operation;
             }
@@ -983,7 +983,7 @@ namespace Cli
 
         private static object? GetUpdatedRestDetails(Entity entity, EntityOptions options)
         {
-            
+
             if (options.RestRoute is null && (options.RestMethodsForStoredProcedure is null || !options.RestMethodsForStoredProcedure.Any()))
             {
                 return entity.Rest;
@@ -1009,8 +1009,8 @@ namespace Cli
             {
                 restMethods = null;
             }
-            
-            if(restPath is false)
+
+            if (restPath is false)
             {
                 restMethods = null;
             }
@@ -1020,7 +1020,7 @@ namespace Cli
 
         private static object? GetUpdatedGraphQLDetails(Entity entity, EntityOptions options)
         {
-            if(options.GraphQLType is null && options.GraphQLOperationForStoredProcedure is null)
+            if (options.GraphQLType is null && options.GraphQLOperationForStoredProcedure is null)
             {
                 return entity.GraphQL;
             }
@@ -1029,9 +1029,9 @@ namespace Cli
             object? graphQLType = (options.GraphQLType is not null) ? GetGraphQLTypeDetails(options.GraphQLType) : entity.GetGraphQLType();
             GraphQLOperation? graphQLOperation;
 
-            if(IsEntityStoredProcedure(entity) || IsEntityStoredProcedure(options))
+            if (IsEntityStoredProcedure(entity) || IsEntityStoredProcedure(options))
             {
-                if(options.GraphQLOperationForStoredProcedure is null)
+                if (options.GraphQLOperationForStoredProcedure is null)
                 {
                     graphQLOperation = entity.FetchGraphQLOperationEnum();
                     _logger.LogInformation("Inside null section for gql operation :" + graphQLOperation.ToString());
@@ -1054,7 +1054,7 @@ namespace Cli
                 graphQLOperation = null;
             }
 
-            if(graphQLType is false)
+            if (graphQLType is false)
             {
                 graphQLOperation = null;
             }

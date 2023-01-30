@@ -230,7 +230,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 config: _testRuntimeConfig,
-                restMethodsForStoredProcedure: new string[] { "Post", "Put", "Patch"},
+                restMethodsForStoredProcedure: new string[] { "Post", "Put", "Patch" },
                 graphQLOperationForStoredProcedure: "Query"
                 );
 
@@ -297,11 +297,11 @@ namespace Cli.Tests
         [DataTestMethod]
         [DataRow(null, null, null, null, true, DisplayName = "Default Case without any customization")]
         [DataRow(null, null, "true", "true", true, DisplayName = "Both REST and GraphQL enabled without any methods and operations configured explicitly")]
-        [DataRow(new string[] {"Get"}, "Query", "true", "true", true, DisplayName = "Both REST and GraphQL enabled with custom REST methods and GraphQL operations")]
-        [DataRow(new string[] {"Post,Patch,Put"}, null, "true", "true", true, DisplayName = "Both REST and GraphQL enabled with custom REST methods")]
+        [DataRow(new string[] { "Get" }, "Query", "true", "true", true, DisplayName = "Both REST and GraphQL enabled with custom REST methods and GraphQL operations")]
+        [DataRow(new string[] { "Post,Patch,Put" }, null, "true", "true", true, DisplayName = "Both REST and GraphQL enabled with custom REST methods")]
         [DataRow(null, "Mutation", "true", "true", true, DisplayName = "Both REST and GraphQL enabled without custom GraphQL operation")]
         [DataRow(null, "Mutation", "true", "false", false, DisplayName = "Conflicting configurations - GraphQL operation specified but entity is disabled for GraphQL")]
-        [DataRow(new string[] {"Get"}, null, "false", "true", false, DisplayName = "Conflicting configurations - REST methods specified but entity is disabled for REST")]
+        [DataRow(new string[] { "Get" }, null, "false", "true", false, DisplayName = "Conflicting configurations - REST methods specified but entity is disabled for REST")]
         public void TestAddNewSpWithDifferentRestAndGraphQLOptions(
                 IEnumerable<string>? restMethods,
                 string? graphQLOperation,

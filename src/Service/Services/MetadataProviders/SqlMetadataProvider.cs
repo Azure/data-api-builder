@@ -387,14 +387,14 @@ namespace Azure.DataApiBuilder.Service.Services
             // they are json element so this means deserializing at each step with case insensitivity
             JsonSerializerOptions options = RuntimeConfig.SerializerOptions;
             JsonElement restConfigElement = (JsonElement)entity.Rest;
-            if(entity.ObjectType is SourceType.StoredProcedure)
+            if (entity.ObjectType is SourceType.StoredProcedure)
             {
-                if( restConfigElement.TryGetProperty("path", out JsonElement path))
+                if (restConfigElement.TryGetProperty("path", out JsonElement path))
                 {
-                    if(path.ValueKind is JsonValueKind.True || path.ValueKind is JsonValueKind.False)
+                    if (path.ValueKind is JsonValueKind.True || path.ValueKind is JsonValueKind.False)
                     {
-                        bool restEnabled = JsonSerializer.Deserialize<bool>(path,options)!;
-                        if(restEnabled)
+                        bool restEnabled = JsonSerializer.Deserialize<bool>(path, options)!;
+                        if (restEnabled)
                         {
                             return entityName;
                         }
@@ -405,7 +405,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     }
                     else
                     {
-                        return JsonSerializer.Deserialize<string>(path,options)!;
+                        return JsonSerializer.Deserialize<string>(path, options)!;
                     }
                 }
                 else

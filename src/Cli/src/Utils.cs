@@ -7,9 +7,7 @@ using System.Text.Json.Serialization;
 using System.Text.Unicode;
 using Azure.DataApiBuilder.Config;
 using Humanizer;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
 using static Azure.DataApiBuilder.Config.AuthenticationConfig;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
@@ -51,14 +49,14 @@ namespace Cli
         /// </summary>
         public static object? GetRestDetails(object? rest_detail = null, RestMethod[]? restMethods = null)
         {
-            if(rest_detail is null && restMethods is null)
+            if (rest_detail is null && restMethods is null)
             {
                 return null;
             }
             // Tables and Views 
-            else if(rest_detail is not null && restMethods is null)
+            else if (rest_detail is not null && restMethods is null)
             {
-                if(rest_detail is true || rest_detail is false)
+                if (rest_detail is true || rest_detail is false)
                 {
                     return rest_detail;
                 }
@@ -68,7 +66,7 @@ namespace Cli
                 }
             }
             //Stored Procedures without any custom REST path
-            else if(restMethods is not null && rest_detail is null)
+            else if (restMethods is not null && rest_detail is null)
             {
                 return new RestStoredProcedureEntitySettings(RestMethods: restMethods);
             }
@@ -83,14 +81,14 @@ namespace Cli
         /// </summary>
         public static object? GetGraphQLDetails(object? graphQL_detail, GraphQLOperation? graphQLOperation = null)
         {
-            
-            if(graphQL_detail is null && graphQLOperation is null)
+
+            if (graphQL_detail is null && graphQLOperation is null)
             {
                 return null;
             }
-            else if(graphQL_detail is not null && graphQLOperation is null)
-            {   
-                if(graphQL_detail is true || graphQL_detail is false)
+            else if (graphQL_detail is not null && graphQLOperation is null)
+            {
+                if (graphQL_detail is true || graphQL_detail is false)
                 {
                     return graphQL_detail;
                 }
@@ -99,13 +97,13 @@ namespace Cli
                     return new GraphQLEntitySettings(Type: graphQL_detail);
                 }
             }
-            else if(graphQL_detail is null && graphQLOperation is not null)
+            else if (graphQL_detail is null && graphQLOperation is not null)
             {
                 return new GraphQLStoredProcedureEntityOperationSettings(GraphQLOperation: graphQLOperation);
             }
 
             return new GraphQLStoredProcedureEntityVerboseSettings(Type: graphQL_detail, GraphQLOperation: graphQLOperation);
-            
+
         }
 
         /// <summary>
@@ -827,7 +825,7 @@ namespace Cli
         /// <returns></returns>
         public static bool TryConvertRestMethodNameToRestMethod(string? method, out RestMethod restMethod)
         {
-            if(! Enum.TryParse(method, ignoreCase: true ,out restMethod))
+            if (!Enum.TryParse(method, ignoreCase: true, out restMethod))
             {
                 _logger.LogError("Invalid REST Method. Supported methods are GET, POST, PUT, PATCH and DELETE.");
                 return false;
@@ -848,10 +846,10 @@ namespace Cli
         {
             List<RestMethod> restMethods = new();
 
-            foreach(string method in methods)
+            foreach (string method in methods)
             {
                 RestMethod restMethod;
-                if(TryConvertRestMethodNameToRestMethod(method, out restMethod))
+                if (TryConvertRestMethodNameToRestMethod(method, out restMethod))
                 {
                     restMethods.Add(restMethod);
                 }
@@ -934,7 +932,7 @@ namespace Cli
         public static bool CheckConflictingRestConfigurationForStoredProcedures(EntityOptions options, Entity entity)
         {
             return CheckConflictingRestConfigurationForStoredProcedures(options) ||
-                   (entity.Rest is bool restEnabled && !restEnabled && 
+                   (entity.Rest is bool restEnabled && !restEnabled &&
                    options.RestRoute is null && options.RestMethodsForStoredProcedure is not null && options.RestMethodsForStoredProcedure.Any());
         }
 

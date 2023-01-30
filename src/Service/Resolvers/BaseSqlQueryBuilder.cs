@@ -7,7 +7,6 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.Models;
-using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Service.Exceptions.DataApiBuilderException;
 
 namespace Azure.DataApiBuilder.Service.Resolvers

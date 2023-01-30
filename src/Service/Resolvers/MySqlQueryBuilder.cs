@@ -173,12 +173,6 @@ WHERE
     (REFERENCED_TABLE_SCHEMA IN (@{tableSchemaParamsForInClause}) AND
     REFERENCED_TABLE_NAME IN (@{tableNameParamsForInClause}))";
 
-            // only display foreign key query information in dev mode
-            if (developerMode)
-            {
-                logger.LogInformation($"Foreign Key Query is : {foreignKeyQuery}");
-            }
-
             return foreignKeyQuery;
         }
 

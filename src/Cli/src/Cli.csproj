@@ -11,8 +11,10 @@
     <PackageOutputPath>./nupkg</PackageOutputPath>
     <BaseOutputPath>..\..\out\cli</BaseOutputPath>
     <RuntimeIdentifiers>win-x64;linux-x64;osx-x64</RuntimeIdentifiers>
-    <AssemblyName>dab</AssemblyName>
     <PackageDescription>Data API Builder</PackageDescription>
+    <id>Microsoft.DataApiBuilder</id>
+    <title>DataApiBuilder</title>
+    <AssemblyName>Microsoft.DataApiBuilder</AssemblyName>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Release'">

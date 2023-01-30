@@ -1,6 +1,4 @@
 
-using Microsoft.Extensions.Logging;
-
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
     // <summary>

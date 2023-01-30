@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Models;
-using Microsoft.Extensions.Logging;
 using MySqlConnector;
 
 namespace Azure.DataApiBuilder.Service.Resolvers

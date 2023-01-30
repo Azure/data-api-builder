@@ -100,12 +100,20 @@ namespace Cli
 
             string dabSchemaLink = RuntimeConfig.GetPublishedDraftSchemaLink();
 
+            if (!ValidateAudienceAndIssuerForJwtProvider(options.AuthenticationProvider, options.Audience, options.Issuer))
+            {
+                return false;
+            }
+
             RuntimeConfig runtimeConfig = new(
                 Schema: dabSchemaLink,
                 DataSource: dataSource,
                 RuntimeSettings: GetDefaultGlobalSettings(
                     options.HostMode,
-                    options.CorsOrigin),
+                    options.CorsOrigin,
+                    options.AuthenticationProvider,
+                    options.Audience,
+                    options.Issuer),
                 Entities: new Dictionary<string, Entity>());
 
             runtimeConfigJson = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());

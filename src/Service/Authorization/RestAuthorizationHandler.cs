@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -225,7 +226,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                     }
 
                     string roleName = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
-                    string httpVerb = httpContext.Request.Method.ToUpperInvariant();
+                    Enum.TryParse<RestMethod>(httpContext.Request.Method, ignoreCase: true, out RestMethod httpVerb);
                     bool isAuthorized = _authorizationResolver.IsStoredProcedureExecutionPermitted(entityName, roleName, httpVerb);
                     if (!isAuthorized)
                     {

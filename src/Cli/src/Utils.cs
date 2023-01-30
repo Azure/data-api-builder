@@ -42,9 +42,13 @@ namespace Cli
         }
 
         /// <summary>
-        /// Creates the rest object which can be either a boolean value
-        /// or a RestEntitySettings object containing api route based on the input
+        /// Creates the REST object which can be either a boolean value
+        /// or a RestEntitySettings object containing api route based on the input.
+        /// Returns null when no REST configuration is provided.
         /// </summary>
+        /// <param name="rest">string value of a boolean (true/false), otherwise the REST path.</param>
+        /// <param name="restMethods">Array of REST methods.</param>
+        /// <returns></returns>
         public static object? GetRestDetails(string? rest, RestMethod[]? restMethods = null)
         {
             object? rest_detail;
@@ -842,9 +846,10 @@ namespace Cli
         /// Utility method that converts list of REST HTTP verbs configured for a
         /// stored procedure into an array of RestMethod Enum type.
         /// When no value is specified by the user, POST method is configured by default.
+        /// If any invalid REST methods are supplied, an empty array is returned.
         /// </summary>
         /// <param name="method">List of REST HTTP verbs configured for the stored procedure</param>
-        /// <returns>REST methods as an array of RestMethod Enum type</returns>
+        /// <returns>REST methods as an array of RestMethod Enum type.</returns>
         public static RestMethod[] CreateRestMethods(IEnumerable<string> methods)
         {
             List<RestMethod> restMethods = new();

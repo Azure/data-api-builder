@@ -2,7 +2,7 @@ parameters:
 # Path to search for binaries for signing.
 - name: 'path' 
   type: string
-  default: '$(Build.ArtifactStagingDirectory)'
+  default: '$(Build.ArtifactStagingDirectory)\publish'
 # Flag to indicate if we want to sign nuget package or not.
 - name: 'signNuget'
   type: boolean

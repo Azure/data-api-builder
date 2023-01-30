@@ -247,8 +247,8 @@ steps:
   displayName: 'Copy Test Package'
   inputs:
     sourceFolder: '$(Build.SourcesDirectory)'
-    contents: 'DataApiBuilder.0.0.1.nupkg'
-    targetFolder: '$(Build.ArtifactStagingDirectory)'
+    contents: 'Microsoft.DataApiBuilder.Test.0.0.1.nupkg'
+    targetFolder: '$(Build.ArtifactStagingDirectory)/publish'
 
 # Sign the binaries that were generated per platform
 - template: templates/code-signing.yml
@@ -259,13 +259,13 @@ steps:
 - task: PublishPipelineArtifact@1
   displayName: "Upload build artifacts"
   inputs:
-    targetPath: '$(Build.ArtifactStagingDirectory)'
+    targetPath: '$(Build.ArtifactStagingDirectory)/publish'
 
 - task: NuGetCommand@2
   displayName: 'Test NuGet push'
   condition: eq(variables.isReleaseBuild, 'true')
   inputs:
     command: push
-    packagesToPush: '$(Build.ArtifactStagingDirectory)/DataApiBuilder.0.0.1.nupkg'
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/publish/Microsoft.DataApiBuilder.Test.0.0.1.nupkg'
     nuGetFeedType: external
     publishFeedCredentials: Microsoft.DataApiBuilder

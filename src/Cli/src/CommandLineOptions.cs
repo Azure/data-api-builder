@@ -9,7 +9,7 @@ namespace Cli
     /// </summary>
     public class Options
     {
-        public Options(string config)
+        public Options(string? config)
         {
             Config = config;
         }
@@ -35,7 +35,10 @@ namespace Cli
             bool setSessionContext,
             HostModeType hostMode,
             IEnumerable<string>? corsOrigin,
-            string config)
+            string authenticationProvider,
+            string? audience = null,
+            string? issuer = null,
+            string? config = null)
             : base(config)
         {
             DatabaseType = databaseType;
@@ -46,6 +49,9 @@ namespace Cli
             SetSessionContext = setSessionContext;
             HostMode = hostMode;
             CorsOrigin = corsOrigin;
+            AuthenticationProvider = authenticationProvider;
+            Audience = audience;
+            Issuer = issuer;
         }
 
         [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmosdb_nosql, cosmosdb_postgresql, mysql, postgresql")]
@@ -71,6 +77,15 @@ namespace Cli
 
         [Option("cors-origin", Separator = ',', Required = false, HelpText = "Specify the list of allowed origins.")]
         public IEnumerable<string>? CorsOrigin { get; }
+
+        [Option("auth.provider", Default = "StaticWebApps", Required = false, HelpText = "Specify the Identity Provider.")]
+        public string AuthenticationProvider { get; }
+
+        [Option("auth.audience", Required = false, HelpText = "Identifies the recipients that the JWT is intended for.")]
+        public string? Audience { get; }
+
+        [Option("auth.issuer", Required = false, HelpText = "Specify the party that issued the jwt token.")]
+        public string? Issuer { get; }
     }
 
     /// <summary>
@@ -89,7 +104,7 @@ namespace Cli
             IEnumerable<string>? fieldsToExclude,
             string? policyRequest,
             string? policyDatabase,
-            string config)
+            string? config)
             : base(config)
         {
             Entity = entity;
@@ -104,7 +119,8 @@ namespace Cli
             PolicyDatabase = policyDatabase;
         }
 
-        [Value(0, MetaName = "Entity", Required = true, HelpText = "Name of the entity.")]
+        // Entity is required but we have made required as false to have custom error message (more user friendly), if not provided.
+        [Value(0, MetaName = "Entity", Required = false, HelpText = "Name of the entity.")]
         public string Entity { get; }
 
         [Option("source.type", Required = false, HelpText = "Type of the database object.Must be one of: [table, view, stored-procedure]")]
@@ -154,7 +170,7 @@ namespace Cli
             IEnumerable<string>? fieldsToExclude,
             string? policyRequest,
             string? policyDatabase,
-            string config)
+            string? config)
             : base(entity,
                   sourceType,
                   sourceParameters,

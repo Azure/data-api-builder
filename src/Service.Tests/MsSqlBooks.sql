@@ -38,6 +38,7 @@ DROP TABLE IF EXISTS series;
 DROP TABLE IF EXISTS sales;
 DROP TABLE IF EXISTS authors_history;
 DROP TABLE IF EXISTS revenues;
+DROP TABLE IF EXISTS graphql_incompatible;
 DROP SCHEMA IF EXISTS [foo];
 COMMIT;
 
@@ -204,6 +205,11 @@ CREATE TABLE revenues(
     category varchar(max) NOT NULL,
     revenue int,
     accessible_role varchar(max) NOT NULL
+);
+
+CREATE TABLE graphql_incompatible (
+    __typeName int PRIMARY KEY,
+    conformingName varchar(12)
 );
 
 ALTER TABLE books

@@ -33,6 +33,7 @@ namespace Cli.Tests
                 setSessionContext: true,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
                 config: _testRuntimeConfig);
 
             _basicRuntimeConfig =
@@ -74,6 +75,7 @@ namespace Cli.Tests
                 setSessionContext: false,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
                 config: _testRuntimeConfig);
 
             _basicRuntimeConfig =
@@ -112,6 +114,7 @@ namespace Cli.Tests
                 setSessionContext: false,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
                 config: _testRuntimeConfig);
 
             _basicRuntimeConfig =
@@ -152,6 +155,7 @@ namespace Cli.Tests
                 setSessionContext: false,
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
                 config: _testRuntimeConfig);
 
             _basicRuntimeConfig =
@@ -200,6 +204,7 @@ namespace Cli.Tests
                 setSessionContext: false,
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
                 config: _testRuntimeConfig);
 
             Assert.AreEqual(expectedResult, ConfigGenerator.TryCreateRuntimeConfig(options, out _));
@@ -221,6 +226,7 @@ namespace Cli.Tests
                 setSessionContext: false,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { },
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
                 config: _testRuntimeConfig);
 
             // Config generated successfully for the first time.
@@ -229,6 +235,72 @@ namespace Cli.Tests
             // Error is thrown because the config file with the same name
             // already exists.
             Assert.AreEqual(false, ConfigGenerator.TryGenerateConfig(options));
+        }
+
+        /// <summary>
+        /// Test to verify the config is correctly generated with different Authentication providers.
+        /// Audience and Issuer are needed only when the provider is JWT.
+        /// Example:
+        /// 1. With EasyAuth or Simulator
+        /// "authentication": {
+        ///     "provider": "StaticWebApps/AppService/Simulator"
+        /// }
+        ///
+        /// 2. With JWT provider
+        /// "authentication": {
+        ///     "provider": "AzureAD"
+        ///      "Jwt":
+        ///      {
+        ///          "Audience": "aud",
+        ///          "Issuer": "iss"
+        ///      }
+        /// }
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("StaticWebApps", null, null, DisplayName = "StaticWebApps with no audience and no issuer specified.")]
+        [DataRow("AppService", null, null, DisplayName = "AppService with no audience and no issuer specified.")]
+        [DataRow("Simulator", null, null, DisplayName = "Simulator with no audience and no issuer specified.")]
+        [DataRow("AzureAD", "aud-xxx", "issuer-xxx", DisplayName = "AzureAD with both audience and issuer specified.")]
+        public void EnsureCorrectConfigGenerationWithDifferentAuthenticationProviders(
+            string authenticationProvider,
+            string? audience,
+            string? issuer)
+        {
+            InitOptions options = new(
+                databaseType: DatabaseType.mssql,
+                connectionString: "testconnectionstring",
+                cosmosNoSqlDatabase: null,
+                cosmosNoSqlContainer: null,
+                graphQLSchemaPath: null,
+                setSessionContext: false,
+                hostMode: HostModeType.Production,
+                corsOrigin: null,
+                authenticationProvider: authenticationProvider,
+                audience: audience,
+                issuer: issuer,
+                config: _testRuntimeConfig);
+
+            _basicRuntimeConfig =
+            @"{" +
+                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                @"""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""testconnectionstring"",
+                    ""options"":{
+                        ""set-session-context"": false
+                    }
+                },
+                ""entities"": {}
+            }";
+
+            // Adding runtime settings to the above basic config
+            string expectedRuntimeConfig = AddPropertiesToJson(
+                _basicRuntimeConfig,
+                GetDefaultTestRuntimeSettingString(
+                    authenticationProvider: authenticationProvider,
+                    audience: audience,
+                    issuer: issuer));
+            RunTest(options, expectedRuntimeConfig);
         }
 
         /// <summary>
@@ -285,6 +357,7 @@ namespace Cli.Tests
                 setSessionContext: false,
                 hostMode: HostModeType.Production,
                 corsOrigin: new List<string>() { },
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
                 config: fileName);
 
             return options;

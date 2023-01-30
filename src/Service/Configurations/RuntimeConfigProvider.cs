@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
@@ -228,8 +229,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             string configuration,
             string? schema,
             string connectionString,
-            string? accessToken,
-            string? database = null)
+            string? accessToken)
         {
             if (string.IsNullOrEmpty(connectionString))
             {
@@ -240,6 +240,14 @@ namespace Azure.DataApiBuilder.Service.Configurations
             {
                 throw new ArgumentException($"'{nameof(configuration)}' cannot be null or empty.", nameof(configuration));
             }
+
+            DbConnectionStringBuilder dbConnectionStringBuilder = new()
+            {
+                ConnectionString = connectionString
+            };
+
+            // SWA may provide cosmosdb database name in connectionString 
+            string? database = dbConnectionStringBuilder.ContainsKey("Database") ? (string)dbConnectionStringBuilder["Database"] : null;
 
             if (RuntimeConfig.TryGetDeserializedRuntimeConfig(
                     configuration,

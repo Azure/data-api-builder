@@ -457,6 +457,9 @@ public class EndToEndTests
         process.Kill();
     }
 
+    /// <summary>
+    /// Test to verify that the version info is logged only once per command.
+    /// </summary>
     [DataRow("", "--version", false, DisplayName = "Case sensitivity: LogLevel Debug from command line.")]
     [DataRow("", "--help", false, DisplayName = "Case sensitivity: LogLevel Information from command line.")]
     [DataRow("init", "--database-type mssql", true, DisplayName = "Case sensitivity: LogLevel Warning from command line.")]

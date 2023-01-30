@@ -34,6 +34,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await MultipleResultQuery(mySqlQuery);
         }
 
+        [TestMethod]
+        public async Task MultipleResultQueryWithMappings()
+        {
+            string mySqlQuery = @"
+                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('column1', `subq1`.`column1`, 'column2', `subq1`.`column2`)), '[]') AS `data`
+                FROM
+                  (SELECT `table0`.`__column1` AS `column1`,
+                          `table0`.`__column2` AS `column2`
+                   FROM `GQLMappings` AS `table0`
+                   WHERE 1 = 1
+                   ORDER BY `table0`.`__column1` asc
+                   LIMIT 100) AS `subq1`";
+
+            await MultipleResultQueryWithMappings(mySqlQuery);
+        }
+
         /// <summary>
         /// Gets array of results for querying a table containing computed columns.
         /// </summary>
@@ -148,6 +164,23 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             ";
 
             await QueryWithMultipleColumnPrimaryKey(mySqlQuery);
+        }
+
+        [TestMethod]
+        public async Task QueryWithSingleColumnPrimaryKeyAndMappings()
+        {
+            string mySqlQuery = @"
+                SELECT JSON_OBJECT('column1', `subq3`.`column1`) AS `data`
+                FROM (
+                    SELECT `table0`.`__column1` AS `column1`
+                    FROM `GQLMappings` AS `table0`
+                    WHERE `table0`.`__column1` = 1
+                    ORDER BY `table0`.`__column1` asc
+                    LIMIT 1
+                    ) AS `subq3`
+            ";
+
+            await QueryWithSingleColumnPrimaryKeyAndMappings(mySqlQuery);
         }
 
         [TestMethod]

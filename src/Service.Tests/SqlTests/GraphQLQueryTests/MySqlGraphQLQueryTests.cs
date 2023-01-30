@@ -42,7 +42,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 FROM
                   (SELECT `table0`.`__column1` AS `column1`,
                           `table0`.`__column2` AS `column2`
-                   FROM `GQLMappings` AS `table0`
+                   FROM `GQLmappings` AS `table0`
                    WHERE 1 = 1
                    ORDER BY `table0`.`__column1` asc
                    LIMIT 100) AS `subq1`";

@@ -63,7 +63,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         {
             string msSqlQuery = @"
                 SELECT [__column1] AS [column1], [__column2] AS [column2]
-                FROM GQLMappings
+                FROM GQLmappings
                 ORDER BY [__column1] asc
                 FOR JSON PATH, INCLUDE_NULL_VALUES";
 

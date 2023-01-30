@@ -454,7 +454,7 @@ public class EndToEndTests
     [DataTestMethod]
     [DataRow("", "", new string[] { "ERROR" }, DisplayName = "No flags provided.")]
     [DataRow("initialize", "", new string[] { "ERROR", "Verb 'initialize' is not recognized." }, DisplayName = "Wrong Command provided.")]
-    [DataRow("", "--version", new string[] { "dab 1.0.0" }, DisplayName = "Checking version.")]
+    [DataRow("", "--version", new string[] { "Microsoft.DataApiBuilder 1.0.0" }, DisplayName = "Checking version.")]
     [DataRow("", "--help", new string[] { "init", "add", "update", "start" }, DisplayName = "Checking output for --help.")]
     public void TestHelpWriterOutput(string command, string flags, string[] expectedOutputArray)
     {

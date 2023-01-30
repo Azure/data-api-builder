@@ -26,7 +26,7 @@ cliOutputPath="$absolutePath/../src/out/cli";
 commandFilesBasePath=$absolutePath;
 
 #Finding the path of dab dll file, piped to `head` to pick up only the first match.
-pathToDLL=$(find $cliOutputPath -name dab.dll | head -n 1)
+pathToDLL=$(find $cliOutputPath -name Microsoft.DataApiBuilder.dll | head -n 1)
 
 #Change the working directory to where the config file needs to be generated.
 workingDirectory="$absolutePath/../src/Service/"

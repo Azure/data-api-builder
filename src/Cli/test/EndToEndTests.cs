@@ -461,15 +461,15 @@ public class EndToEndTests
     /// <summary>
     /// Test to verify that the version info is logged for both correct/incorrect command.
     /// </summary>
-    [DataRow("", "--version", false, DisplayName = "Checking dab version with --version.")]
-    [DataRow("", "--help", false, DisplayName = "Checking version through --help option.")]
-    [DataRow("edit", "--new-option", false, DisplayName = "Version printed with invalid command edit.")]
-    [DataRow("init", "--database-type mssql", true, DisplayName = "Version printed with valid command init.")]
-    [DataRow("add", "MyEntity -s myentity --permissions \"anonymous:*\"", true, DisplayName = "Version printed with valid command add.")]
-    [DataRow("update", "MyEntity -s my_entity", true, DisplayName = "Version printed with valid command update.")]
-    [DataRow("start", "", true, DisplayName = "Version printed with valid command start.")]
+    [DataRow("", "--version", DisplayName = "Checking dab version with --version.")]
+    [DataRow("", "--help", DisplayName = "Checking version through --help option.")]
+    [DataRow("edit", "--new-option", DisplayName = "Version printed with invalid command edit.")]
+    [DataRow("init", "--database-type mssql", DisplayName = "Version printed with valid command init.")]
+    [DataRow("add", "MyEntity -s myentity --permissions \"anonymous:*\"", DisplayName = "Version printed with valid command add.")]
+    [DataRow("update", "MyEntity -s my_entity", DisplayName = "Version printed with valid command update.")]
+    [DataRow("start", "",  DisplayName = "Version printed with valid command start.")]
     [DataTestMethod]
-    public void TestVersionInfoIsCorrectlyDisplayedWithDifferentCommand(string command, string options, bool isDabCommand)
+    public void TestVersionInfoIsCorrectlyDisplayedWithDifferentCommand(string command, string options)
     {
         WriteJsonContentToFile(_testRuntimeConfig, INITIAL_CONFIG);
 

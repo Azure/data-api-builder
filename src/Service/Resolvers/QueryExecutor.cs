@@ -7,8 +7,6 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -23,7 +21,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     public class QueryExecutor<TConnection> : IQueryExecutor
         where TConnection : DbConnection, new()
     {
-        protected string ConnectionString { get; }
         protected DbExceptionParser DbExceptionParser { get; }
         protected ILogger<QueryExecutor<TConnection>> QueryExecutorLogger { get; }
 
@@ -33,14 +30,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         private AsyncRetryPolicy _retryPolicy;
 
-        public QueryExecutor(RuntimeConfigProvider runtimeConfigProvider,
-                             DbExceptionParser dbExceptionParser,
-                             ILogger<QueryExecutor<TConnection>> logger)
+        public virtual DbConnectionStringBuilder ConnectionStringBuilder { get; set; }
+
+        public QueryExecutor(DbExceptionParser dbExceptionParser,
+                             ILogger<QueryExecutor<TConnection>> logger,
+                             DbConnectionStringBuilder connectionStringBuilder)
         {
-            RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
-            ConnectionString = runtimeConfig.ConnectionString;
             DbExceptionParser = dbExceptionParser;
             QueryExecutorLogger = logger;
+            ConnectionStringBuilder = connectionStringBuilder;
             _retryPolicy = Polly.Policy
             .Handle<DbException>(DbExceptionParser.IsTransientException)
             .WaitAndRetryAsync(
@@ -64,7 +62,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             int retryAttempt = 0;
             using TConnection conn = new()
             {
-                ConnectionString = ConnectionString,
+                ConnectionString = ConnectionStringBuilder.ConnectionString,
             };
 
             await SetManagedIdentityAccessTokenIfAnyAsync(conn);

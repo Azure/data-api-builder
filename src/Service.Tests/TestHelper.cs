@@ -52,7 +52,11 @@ namespace Azure.DataApiBuilder.Service.Tests
             Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
             RuntimeConfigProvider runtimeConfigProvider
                 = new(configPath,
-                      configProviderLogger.Object);
+                      configProviderLogger.Object)
+                {
+                    IsLateConfigured = true
+                };
+
             return runtimeConfigProvider;
         }
 
@@ -68,7 +72,10 @@ namespace Azure.DataApiBuilder.Service.Tests
             Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
             RuntimeConfigProvider runtimeConfigProvider
                 = new(config,
-                      configProviderLogger.Object);
+                      configProviderLogger.Object)
+                {
+                    IsLateConfigured = true
+                };
             return runtimeConfigProvider;
         }
 
@@ -93,6 +100,7 @@ namespace Azure.DataApiBuilder.Service.Tests
             string configJson = RuntimeConfigProvider.GetRuntimeConfigJsonString(configPath.ConfigFileName);
             RuntimeConfig.TryGetDeserializedRuntimeConfig(configJson, out RuntimeConfig runtimeConfig, configProviderLogger.Object);
             mockRuntimeConfigProvider.Setup(x => x.GetRuntimeConfiguration()).Returns(runtimeConfig);
+            mockRuntimeConfigProvider.Setup(x => x.IsLateConfigured).Returns(true);
             return mockRuntimeConfigProvider.Object;
         }
 

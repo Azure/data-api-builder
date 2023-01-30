@@ -19,7 +19,7 @@ steps:
     inputs:
       ConnectedServiceName: 'ESRP Official Codesigning'
       FolderPath: ${{ parameters.path }}
-      Pattern: 'dab.dll, dab.exe, Azure.DataApiBuilder*.dll, Azure.DataApiBuilder*.exe'
+      Pattern: 'Microsoft.DataApiBuilder.dll, Microsoft.DataApiBuilder.exe, Azure.DataApiBuilder*.dll, Azure.DataApiBuilder*.exe'
       signConfigType: 'inlineSignParams'
       inlineOperation: |
         [

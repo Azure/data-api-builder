@@ -55,7 +55,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Builds the query to obtain foreign key information with the given
         /// number of parameters.
         /// </summary>
-        public string BuildForeignKeyInfoQuery(int numberOfParameters, bool developerMode, ILogger logger);
+        public string BuildForeignKeyInfoQuery(int numberOfParameters);
 
         /// <summary>
         /// Builds the query to obtain details about the result set for stored-procedure

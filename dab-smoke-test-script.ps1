@@ -23,7 +23,7 @@ switch ($OsName) {
 }
 
 $executableFileDirectory = "$BuildOutputDir/publish/$BuildConfiguration/$RID/dab"
-$executableDAB = "$executableFileDirectory/dab"
+$executableDAB = "$executableFileDirectory/Microsoft.DataApiBuilder"
 $configFileName = "dab-config-smoke-test.json"
 
 describe SmokeTest {

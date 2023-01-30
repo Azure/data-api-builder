@@ -35,7 +35,7 @@ namespace Cli
             ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger);
             Utils.SetCliUtilsLogger(cliUtilsLogger);
 
-            // cliLogger.LogInformation($"{PRODUCT_NAME} {GetProductVersion()}");
+            cliLogger.LogInformation($"{PRODUCT_NAME} {GetProductVersion()}");
 
             // Parsing user arguments and executing required methods.
             ParserResult<object>? result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions>(args)

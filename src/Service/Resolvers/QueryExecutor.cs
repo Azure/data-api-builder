@@ -90,6 +90,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             $"{_maxRetryCount + 1} available attempts.");
                     }
 
+                    // When IsLateConfigured is true we are in a hosted scenario and do not reveal query information.
                     if (!ConfigProvider.IsLateConfigured)
                     {
                         QueryExecutorLogger.LogDebug($"Query Executed: \n{sqltext}");

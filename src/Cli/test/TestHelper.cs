@@ -4,7 +4,7 @@ namespace Cli.Tests
     {
         // Config file name for tests
         public static string _testRuntimeConfig = "dab-config-test.json";
-        public const string DAB_DRAFT_SCHEMA_TEST_PATH = "https://dataapibuilder.azureedge.net/schemas/vmajor.minor.patch-alpha/dab.draft.schema.json";
+        public const string DAB_DRAFT_SCHEMA_TEST_PATH = "https://dataapibuilder.azureedge.net/schemas/vmajor.minor.patch-beta/dab.draft.schema.json";
 
         /// <summary>
         /// Adds the entity properties to the configuration and returns the updated configuration json as a string.
@@ -26,7 +26,7 @@ namespace Cli.Tests
         /// <summary>
         /// Returns a new dab Process with the given command and flags
         /// </summary>
-        public static Process StartDabProcess(string command, string flags)
+        public static Process ExecuteDabCommand(string command, string flags)
         {
             Process process = new()
             {
@@ -92,10 +92,12 @@ namespace Cli.Tests
             @"
             ""runtime"": {
               ""rest"": {
-                ""path"": ""/api""
+                ""path"": ""/api"",
+                ""enabled"": true
               },
               ""graphql"": {
                 ""path"": ""/graphql"",
+                ""enabled"": true,
                 ""allow-introspection"": true
               },
               ""host"": {
@@ -121,10 +123,12 @@ namespace Cli.Tests
             @"
             ""runtime"": {
               ""rest"": {
-                ""path"": ""/api""
+                ""path"": ""/api"",
+                ""enabled"": true
               },
               ""graphql"": {
                 ""path"": ""/graphql"",
+                ""enabled"": true,
                 ""allow-introspection"": true
               },
               ""host"": {
@@ -373,10 +377,12 @@ namespace Cli.Tests
         },
         ""runtime"": {
           ""rest"": {
-            ""path"": ""/api""
+            ""path"": ""/api"",
+            ""enabled"": true
           },
           ""graphql"": {
             ""path"": ""/graphql"",
+            ""enabled"": true,
             ""allow-introspection"": true
           },
           ""host"": {
@@ -411,12 +417,18 @@ namespace Cli.Tests
         /// </summary>
         public static string GetDefaultTestRuntimeSettingString(
             HostModeType hostModeType = HostModeType.Production,
-            IEnumerable<string>? corsOrigins = null)
+            IEnumerable<string>? corsOrigins = null,
+            string authenticationProvider = "StaticWebApps",
+            string? audience = null,
+            string? issuer = null)
         {
             Dictionary<string, object> runtimeSettingDict = new();
             Dictionary<GlobalSettingsType, object> defaultGlobalSetting = GetDefaultGlobalSettings(
                 hostMode: hostModeType,
-                corsOrigin: corsOrigins);
+                corsOrigin: corsOrigins,
+                authenticationProvider: authenticationProvider,
+                audience: audience,
+                issuer: issuer);
 
             runtimeSettingDict.Add("runtime", defaultGlobalSetting);
 

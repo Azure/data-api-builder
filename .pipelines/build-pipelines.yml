@@ -19,7 +19,7 @@ variables:
   # The counter is reset when the minor version is updated.
   patch: $[counter(format('{0}_{1}', variables['build.reason'], variables['minor']), 0)]
   isReleaseBuild: $(isNugetRelease)
-  additionalProperties.version: 'https://dataapibuilder.azureedge.net/schemas/v$(major).$(minor).$(patch)-alpha/dab.draft.schema.json'
+  additionalProperties.version: 'https://dataapibuilder.azureedge.net/schemas/v$(major).$(minor).$(patch)-beta/dab.draft.schema.json'
 
 steps:
 - task: NuGetAuthenticate@1
@@ -66,7 +66,7 @@ steps:
 
 # Use dotnet pack command to build the project because we want to generate build output
 # in the correct location that pack command will be using. This build output location
-# will be used to do code signing so we need to this first.
+# will be used to do code signing so we need to do this first.
 - task: DotNetCoreCLI@2
   displayName: Build
   inputs:
@@ -192,7 +192,7 @@ steps:
     action: 'create'
     target: '$(Build.SourceVersion)'
     tagSource: 'userSpecifiedTag'
-    tag: 'v$(dabVersion)-alpha'
+    tag: 'v$(dabVersion)-beta'
     title: 'New Release: Data API Builder for Azure Databases'
     assets: |
       $(Build.ArtifactStagingDirectory)/**/*.nupkg

@@ -100,12 +100,20 @@ namespace Cli
 
             string dabSchemaLink = RuntimeConfig.GetPublishedDraftSchemaLink();
 
+            if (!ValidateAudienceAndIssuerForJwtProvider(options.AuthenticationProvider, options.Audience, options.Issuer))
+            {
+                return false;
+            }
+
             RuntimeConfig runtimeConfig = new(
                 Schema: dabSchemaLink,
                 DataSource: dataSource,
                 RuntimeSettings: GetDefaultGlobalSettings(
                     options.HostMode,
-                    options.CorsOrigin),
+                    options.CorsOrigin,
+                    options.AuthenticationProvider,
+                    options.Audience,
+                    options.Issuer),
                 Entities: new Dictionary<string, Entity>());
 
             runtimeConfigJson = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());
@@ -166,7 +174,7 @@ namespace Cli
 
             // If entity exists, we cannot add. Display warning
             //
-            if (runtimeConfig!.Entities.ContainsKey(options.Entity))
+            if (runtimeConfig.Entities.ContainsKey(options.Entity))
             {
                 _logger.LogWarning($"Entity-{options.Entity} is already present. No new changes are added to Config.");
                 return false;
@@ -365,9 +373,7 @@ namespace Cli
             }
 
             // Check if Entity is present
-            //
-            Entity? entity;
-            if (!runtimeConfig.Entities.TryGetValue(options.Entity, out entity))
+            if (!runtimeConfig.Entities.TryGetValue(options.Entity!, out Entity? entity))
             {
                 _logger.LogError($"Entity:{options.Entity} not found. Please add the entity first.");
                 return false;

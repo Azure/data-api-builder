@@ -82,7 +82,7 @@ public class EndToEndTests
     [TestMethod]
     public void TestAddEntity()
     {
-        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--host-mode", "development", "--database-type", "mssql", "--connection-string", "localhost:5000" };
+        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--host-mode", "development", "--database-type", "mssql", "--connection-string", "localhost:5000", "--auth.provider", "StaticWebApps" };
         Program.Main(initArgs);
 
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
@@ -109,6 +109,37 @@ public class EndToEndTests
         Assert.AreEqual("anonymous", entity.Permissions[0].Role);
         Assert.AreEqual(1, entity.Permissions[0].Operations.Length);
         Assert.AreEqual(WILDCARD, ((JsonElement)entity.Permissions[0].Operations[0]).GetString());
+    }
+
+    /// <summary>
+    /// Test to verify authentication options with init command containing
+    /// neither EasyAuth or Simulator as Authentication provider.
+    /// It checks correct generation of config with provider, audience and issuer.
+    /// </summary>
+    [TestMethod]
+    public void TestVerifyAuthenticationOptions()
+    {
+        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql",
+            "--auth.provider", "AzureAD", "--auth.audience", "aud-xxx", "--auth.issuer", "issuer-xxx" };
+        Program.Main(initArgs);
+
+        RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
+        Assert.IsNotNull(runtimeConfig);
+        Console.WriteLine(JsonSerializer.Serialize(runtimeConfig.HostGlobalSettings.Authentication));
+        string expectedAuthenticationJson = @"
+            {
+                ""Provider"": ""AzureAD"",
+                ""Jwt"":
+                {
+                    ""Audience"": ""aud-xxx"",
+                    ""Issuer"": ""issuer-xxx""
+                }
+            }";
+
+        JObject expectedJson = JObject.Parse(expectedAuthenticationJson);
+        JObject actualJson = JObject.Parse(JsonSerializer.Serialize(runtimeConfig.HostGlobalSettings.Authentication));
+
+        Assert.IsTrue(JToken.DeepEquals(expectedJson, actualJson));
     }
 
     /// <summary>
@@ -386,12 +417,15 @@ public class EndToEndTests
     {
         WriteJsonContentToFile(_testRuntimeConfig, INITIAL_CONFIG);
 
-        using Process process = StartDabProcess(
+        using Process process = ExecuteDabCommand(
             command: $"start --config {_testRuntimeConfig}",
             logLevelOption
         );
 
         string? output = process.StandardOutput.ReadLine();
+        Assert.IsNotNull(output);
+        Assert.IsTrue(output.Contains($"{Program.PRODUCT_NAME} {GetProductVersion()}"));
+        output = process.StandardOutput.ReadLine();
         process.Kill();
         Assert.IsNotNull(output);
         Assert.IsTrue(output.Contains($"User provided config file: {_testRuntimeConfig}"));
@@ -407,7 +441,7 @@ public class EndToEndTests
     [DataRow("", "--help", new string[] { "init", "add", "update", "start" }, DisplayName = "Checking output for --help.")]
     public void TestHelpWriterOutput(string command, string flags, string[] expectedOutputArray)
     {
-        using Process process = StartDabProcess(
+        using Process process = ExecuteDabCommand(
             command,
             flags
         );
@@ -437,12 +471,15 @@ public class EndToEndTests
     {
         string runtimeConfigJson = AddPropertiesToJson(initialConfig, entityDetails);
         File.WriteAllText(_testRuntimeConfig, runtimeConfigJson);
-        using Process process = StartDabProcess(
+        using Process process = ExecuteDabCommand(
             command: "start",
             flags: $"--config {_testRuntimeConfig}"
         );
 
         string? output = process.StandardOutput.ReadLine();
+        Assert.IsNotNull(output);
+        Assert.IsTrue(output.Contains($"{Program.PRODUCT_NAME} {GetProductVersion()}"));
+        output = process.StandardOutput.ReadLine();
         Assert.IsNotNull(output);
         Assert.IsTrue(output.Contains($"User provided config file: {_testRuntimeConfig}"));
         output = process.StandardOutput.ReadLine();
@@ -457,6 +494,45 @@ public class EndToEndTests
             output = process.StandardOutput.ReadLine();
             Assert.IsNotNull(output);
             Assert.IsTrue(output.Contains($"Failed to start the engine."));
+        }
+
+        process.Kill();
+
+    }
+
+    /// <summary>
+    /// Test to verify that if entity is not specified in the add/update
+    /// command, a custom (more user friendly) message is displayed.
+    /// NOTE: Below order of execution is important, changing the order for DataRow might result in test failures.
+    /// The below order makes sure entity is added before update.
+    /// </summary>
+    [DataRow("add", "", "-s my_entity --permissions anonymous:create", false)]
+    [DataRow("add", "MyEntity", "-s my_entity --permissions anonymous:create", true)]
+    [DataRow("update", "", "-s my_entity --permissions authenticate:*", false)]
+    [DataRow("update", "MyEntity", "-s my_entity --permissions authenticate:*", true)]
+    [DataTestMethod]
+    public void TestMissingEntityFromCommand(
+        string command,
+        string entityName,
+        string flags,
+        bool expectSuccess)
+    {
+        if (!File.Exists(_testRuntimeConfig))
+        {
+            string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql" };
+            Program.Main(initArgs);
+        }
+
+        using Process process = ExecuteDabCommand(
+            command: $"{command} {entityName}",
+            flags: $"-c {_testRuntimeConfig} {flags}"
+        );
+
+        string? output = process.StandardOutput.ReadToEnd();
+        Assert.IsNotNull(output);
+        if (!expectSuccess)
+        {
+            Assert.IsTrue(output.Contains($"Error: Entity name is missing. Usage: dab {command} [entity-name] [{command}-options]"));
         }
 
         process.Kill();

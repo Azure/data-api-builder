@@ -92,7 +92,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                     if (!ConfigProvider.IsLateConfigured)
                     {
-                        QueryExecutorLogger.LogInformation($"Query Executed: \n{sqltext}");
+                        QueryExecutorLogger.LogDebug($"Query Executed: \n{sqltext}");
                     }
 
                     return result;

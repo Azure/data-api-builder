@@ -58,6 +58,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await MultipleResultQueryWithVariables(msSqlQuery);
         }
 
+        [TestMethod]
+        public async Task MultipleResultQueryWithMappings()
+        {
+            string msSqlQuery = @"
+                SELECT [__column1] AS [column1], [__column2] AS [column2]
+                FROM GQLmappings
+                ORDER BY [__column1] asc
+                FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            await MultipleResultQueryWithMappings(msSqlQuery);
+        }
+
         /// <summary>
         /// Test One-To-One relationship both directions
         /// (book -> website placement, website placememnt -> book)
@@ -116,6 +128,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             ";
 
             await QueryWithSingleColumnPrimaryKey(msSqlQuery);
+        }
+
+        [TestMethod]
+        public async Task QueryWithSingleColumnPrimaryKeyAndMappings()
+        {
+            string msSqlQuery = @"
+                SELECT [__column1] AS [column1] FROM GQLMappings
+                WHERE [__column1] = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER
+            ";
+
+            await QueryWithSingleColumnPrimaryKeyAndMappings(msSqlQuery);
         }
 
         [TestMethod]
@@ -301,6 +324,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         {
             string msSqlQuery = $"EXEC dbo.count_books";
             await TestStoredProcedureQueryForGettingTotalNumberOfRows(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to execute stored-procedure in graphQL that contains null in the result set.
+        /// </summary>
+        [TestMethod]
+        public async Task TestStoredProcedureQueryWithResultsContainingNull()
+        {
+            string msSqlQuery = $"EXEC dbo.get_authors_history_by_first_name @firstName='Aaron'";
+            await TestStoredProcedureQueryWithResultsContainingNull(msSqlQuery);
         }
 
         [TestMethod]

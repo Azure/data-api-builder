@@ -5,4 +5,4 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - "../src/Service/dab-config.MySql.json:/App/dab-config.json"
+      - "<LOCAL PATH TO THE CONFIG FILE>:/App/dab-config.json"

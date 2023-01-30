@@ -6,6 +6,7 @@ using System.Net;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
@@ -33,7 +34,6 @@ namespace Azure.DataApiBuilder.Service.Authorization
         public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
         public const string ROLE_ANONYMOUS = "anonymous";
         public const string ROLE_AUTHENTICATED = "authenticated";
-        public const string INVALID_POLICY_CLAIM_MESSAGE = "One or more claims referenced in an authorization policy have value types which are not supported.";
 
         public Dictionary<string, EntityMetadata> EntityPermissionsMap { get; private set; } = new();
 
@@ -52,8 +52,11 @@ namespace Azure.DataApiBuilder.Service.Authorization
             }
             else
             {
-                runtimeConfigProvider.RuntimeConfigLoaded +=
-                    (object? sender, RuntimeConfig config) => SetEntityPermissionMap(config);
+                runtimeConfigProvider.RuntimeConfigLoadedHandlers.Add((RuntimeConfigProvider sender, RuntimeConfig config) =>
+                {
+                    SetEntityPermissionMap(config);
+                    return Task.FromResult(true);
+                });
             }
         }
 
@@ -102,7 +105,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         }
 
         /// <inheritdoc />
-        public bool AreRoleAndOperationDefinedForEntity(string entityName, string roleName, Operation operation)
+        public bool AreRoleAndOperationDefinedForEntity(string entityName, string roleName, Config.Operation operation)
         {
             if (EntityPermissionsMap.TryGetValue(entityName, out EntityMetadata? valueOfEntityToRole))
             {
@@ -119,7 +122,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         }
 
         /// <inheritdoc />
-        public bool AreColumnsAllowedForOperation(string entityName, string roleName, Operation operation, IEnumerable<string> columns)
+        public bool AreColumnsAllowedForOperation(string entityName, string roleName, Config.Operation operation, IEnumerable<string> columns)
         {
             // Columns.Count() will never be zero because this method is called after a check ensures Count() > 0
             Assert.IsFalse(columns.Count() == 0, message: "columns.Count() should be greater than 0.");
@@ -159,7 +162,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         }
 
         /// <inheritdoc />
-        public string ProcessDBPolicy(string entityName, string roleName, Operation operation, HttpContext httpContext)
+        public string ProcessDBPolicy(string entityName, string roleName, Config.Operation operation, HttpContext httpContext)
         {
             string dBpolicyWithClaimTypes = GetDBPolicyForRequest(entityName, roleName, operation);
 
@@ -184,7 +187,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// <param name="roleName">Role defined in client role header.</param>
         /// <param name="operation">Operation type: create, read, update, delete.</param>
         /// <returns>Policy string if a policy exists in config.</returns>
-        private string GetDBPolicyForRequest(string entityName, string roleName, Operation operation)
+        private string GetDBPolicyForRequest(string entityName, string roleName, Config.Operation operation)
         {
             if (!EntityPermissionsMap[entityName].RoleToOperationMap.TryGetValue(roleName, out RoleMetadata? roleMetadata))
             {
@@ -226,7 +229,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                     object[] Operations = permission.Operations;
                     foreach (JsonElement operationElement in Operations)
                     {
-                        Operation operation = Operation.None;
+                        Config.Operation operation = Config.Operation.None;
                         OperationMetadata operationToColumn = new();
 
                         // Use a hashset to store all the backing field names
@@ -239,7 +242,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                         if (operationElement.ValueKind is JsonValueKind.String)
                         {
                             string operationName = operationElement.ToString();
-                            operation = AuthorizationResolver.WILDCARD.Equals(operationName) ? Operation.All : Enum.Parse<Operation>(operationName, ignoreCase: true);
+                            operation = AuthorizationResolver.WILDCARD.Equals(operationName) ? Config.Operation.All : Enum.Parse<Config.Operation>(operationName, ignoreCase: true);
                             operationToColumn.Included.UnionWith(allTableColumns);
                             allowedColumns.UnionWith(allTableColumns);
                         }
@@ -302,8 +305,8 @@ namespace Azure.DataApiBuilder.Service.Authorization
                         // so that it doesn't need to be evaluated per request.
                         PopulateAllowedExposedColumns(operationToColumn.AllowedExposedColumns, entityName, allowedColumns);
 
-                        IEnumerable<Operation> operations = GetAllOperations(operation);
-                        foreach (Operation crudOperation in operations)
+                        IEnumerable<Config.Operation> operations = GetAllOperations(operation);
+                        foreach (Config.Operation crudOperation in operations)
                         {
                             // Try to add the opElement to the map if not present.
                             // Builds up mapping: i.e. Operation.Create permitted in {Role1, Role2, ..., RoleN}
@@ -361,9 +364,9 @@ namespace Azure.DataApiBuilder.Service.Authorization
             entityToRoleMap.RoleToOperationMap[ROLE_AUTHENTICATED] = entityToRoleMap.RoleToOperationMap[ROLE_ANONYMOUS];
 
             // Copy over OperationToRolesMap for authenticated role from anonymous role.
-            Dictionary<Operation, OperationMetadata> allowedOperationMap =
+            Dictionary<Config.Operation, OperationMetadata> allowedOperationMap =
                 entityToRoleMap.RoleToOperationMap[ROLE_ANONYMOUS].OperationToColumnMap;
-            foreach (Operation operation in allowedOperationMap.Keys)
+            foreach (Config.Operation operation in allowedOperationMap.Keys)
             {
                 entityToRoleMap.OperationToRolesMap[operation].Add(ROLE_AUTHENTICATED);
             }
@@ -371,9 +374,9 @@ namespace Azure.DataApiBuilder.Service.Authorization
             // Copy over FieldToRolesMap for authenticated role from anonymous role.
             foreach (string allowedColumnInAnonymousRole in allowedColumnsForAnonymousRole)
             {
-                Dictionary<Operation, List<string>> allowedOperationsForField =
+                Dictionary<Config.Operation, List<string>> allowedOperationsForField =
                     entityToRoleMap.FieldToRolesMap[allowedColumnInAnonymousRole];
-                foreach (Operation operation in allowedOperationsForField.Keys)
+                foreach (Config.Operation operation in allowedOperationsForField.Keys)
                 {
                     if (allowedOperationsForField[operation].Contains(ROLE_ANONYMOUS))
                     {
@@ -389,9 +392,9 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// </summary>
         /// <param name="operation">operation type.</param>
         /// <returns>IEnumerable of all available operations.</returns>
-        public static IEnumerable<Operation> GetAllOperations(Operation operation)
+        public static IEnumerable<Config.Operation> GetAllOperations(Config.Operation operation)
         {
-            return operation is Operation.All ? PermissionOperation.ValidPermissionOperations : new List<Operation> { operation };
+            return operation is Config.Operation.All ? PermissionOperation.ValidPermissionOperations : new List<Config.Operation> { operation };
         }
 
         /// <summary>
@@ -420,7 +423,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         }
 
         /// <inheritdoc />
-        public IEnumerable<string> GetAllowedExposedColumns(string entityName, string roleName, Operation operation)
+        public IEnumerable<string> GetAllowedExposedColumns(string entityName, string roleName, Config.Operation operation)
         {
             return EntityPermissionsMap[entityName].RoleToOperationMap[roleName].OperationToColumnMap[operation].AllowedExposedColumns;
         }
@@ -431,41 +434,53 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// </summary>
         /// <param name="context">HttpContext object used to extract the authenticated user's claims.</param>
         /// <returns>Dictionary with claimType -> claim mappings.</returns>
-        private static Dictionary<string, Claim> GetAllUserClaims(HttpContext context)
+        public static Dictionary<string, Claim> GetAllUserClaims(HttpContext? context)
         {
             Dictionary<string, Claim> claimsInRequestContext = new();
-            ClaimsIdentity? identity = (ClaimsIdentity?)context.User.Identity;
-
-            if (identity is null)
+            if (context is null)
             {
                 return claimsInRequestContext;
             }
 
-            foreach (Claim claim in identity.Claims)
-            {
-                /*
-                 * An example claim would be of format:
-                 * claim.Type: "user_email"
-                 * claim.Value: "authz@microsoft.com"
-                 * claim.ValueType: "string"
-                 */
-                // At this point, only add non-role claims to the collection and only throw an exception for duplicate non-role claims.
-                if (claim.Type is not AuthenticationConfig.ROLE_CLAIM_TYPE && !claimsInRequestContext.TryAdd(claim.Type, claim))
-                {
-                    // If there are duplicate claims present in the request, return an exception.
-                    throw new DataApiBuilderException(
-                        message: "Duplicate claims are not allowed within a request.",
-                        statusCode: HttpStatusCode.Forbidden,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
-                        );
-                }
-            }
-
-            // Only add a role claim which represents the role context evaluated for the request.
             string clientRoleHeader = context.Request.Headers[CLIENT_ROLE_HEADER].ToString();
-            if (identity.HasClaim(type: AuthenticationConfig.ROLE_CLAIM_TYPE, value: clientRoleHeader))
+
+            // Iterate through all the identities to populate claims in request context.
+            foreach (ClaimsIdentity identity in context.User.Identities)
             {
-                claimsInRequestContext.Add(AuthenticationConfig.ROLE_CLAIM_TYPE, new Claim(AuthenticationConfig.ROLE_CLAIM_TYPE, clientRoleHeader, ClaimValueTypes.String));
+
+                // Only add a role claim which represents the role context evaluated for the request,
+                // as this can be via the virtue of an identity added by DAB.
+                if (!claimsInRequestContext.ContainsKey(AuthenticationConfig.ROLE_CLAIM_TYPE) &&
+                    identity.HasClaim(type: AuthenticationConfig.ROLE_CLAIM_TYPE, value: clientRoleHeader))
+                {
+                    claimsInRequestContext.Add(AuthenticationConfig.ROLE_CLAIM_TYPE, new Claim(AuthenticationConfig.ROLE_CLAIM_TYPE, clientRoleHeader, ClaimValueTypes.String));
+                }
+
+                // If identity is not authenticated, we don't honor any other claims present in this identity.
+                if (!identity.IsAuthenticated)
+                {
+                    continue;
+                }
+
+                foreach (Claim claim in identity.Claims)
+                {
+                    /*
+                     * An example claim would be of format:
+                     * claim.Type: "user_email"
+                     * claim.Value: "authz@microsoft.com"
+                     * claim.ValueType: "string"
+                     */
+                    // At this point, only add non-role claims to the collection and only throw an exception for duplicate non-role claims.
+                    if (!claim.Type.Equals(AuthenticationConfig.ROLE_CLAIM_TYPE) && !claimsInRequestContext.TryAdd(claim.Type, claim))
+                    {
+                        // If there are duplicate claims present in the request, return an exception.
+                        throw new DataApiBuilderException(
+                            message: "Duplicate claims are not allowed within a request.",
+                            statusCode: HttpStatusCode.Forbidden,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
+                            );
+                    }
+                }
             }
 
             return claimsInRequestContext;
@@ -507,7 +522,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
             string claimType = claimTypeMatch.Value.ToString().Substring(CLAIM_PREFIX.Length);
             if (claimsInRequestContext.TryGetValue(claimType, out Claim? claim))
             {
-                return GetODataCompliantClaimValue(claim);
+                return GetClaimValue(claim);
             }
             else
             {
@@ -521,10 +536,10 @@ namespace Azure.DataApiBuilder.Service.Authorization
         }
 
         /// <summary>
-        /// Using the input parameter claim, returns the primitive literal from claim.Value enclosed within parentheses:
-        /// e.g. @claims.idp (string) resolves as ('azuread')
-        /// e.g. @claims.iat (int) resolves as (1537231048)
-        /// e.g. @claims.email_verified (boolean) resolves as (true)
+        /// Using the input parameter claim, returns the primitive literal from claim.Value:
+        /// e.g. @claims.idp (string) resolves as 'azuread'
+        /// e.g. @claims.iat (int) resolves as 1537231048
+        /// e.g. @claims.email_verified (boolean) resolves as true
         /// To adhere with OData 4.01 ABNF construction rules (Section 7: Literal Data Values)
         /// - Primitive string literals in URLS must be enclosed within single quotes.
         /// - Other primitive types are represented as plain values and do not require single quotes.
@@ -540,7 +555,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// <seealso cref="https://www.iana.org/assignments/jwt/jwt.xhtml#claims"/>
         /// <seealso cref="https://www.rfc-editor.org/rfc/rfc7519.html#section-4"/>
         /// <seealso cref="https://github.com/microsoft/referencesource/blob/dae14279dd0672adead5de00ac8f117dcf74c184/mscorlib/system/security/claims/Claim.cs#L107"/>
-        private static string GetODataCompliantClaimValue(Claim claim)
+        public static string GetClaimValue(Claim claim)
         {
             /* An example Claim object:
              * claim.Type: "user_email"
@@ -551,7 +566,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
             switch (claim.ValueType)
             {
                 case ClaimValueTypes.String:
-                    return $"('{claim.Value}')";
+                    return $"'{claim.Value}'";
                 case ClaimValueTypes.Boolean:
                 case ClaimValueTypes.Integer:
                 case ClaimValueTypes.Integer32:
@@ -559,15 +574,15 @@ namespace Azure.DataApiBuilder.Service.Authorization
                 case ClaimValueTypes.UInteger32:
                 case ClaimValueTypes.UInteger64:
                 case ClaimValueTypes.Double:
-                    return $"({claim.Value})";
+                    return $"{claim.Value}";
                 case JsonClaimValueTypes.JsonNull:
-                    return $"(null)";
+                    return $"null";
                 default:
                     // One of the claims in the request had unsupported data type.
                     throw new DataApiBuilderException(
-                        message: INVALID_POLICY_CLAIM_MESSAGE,
+                        message: $"The claim value for claim: {claim.Type} belonging to the user has an unsupported data type.",
                         statusCode: HttpStatusCode.Forbidden,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.UnsupportedClaimValueType
                     );
             }
         }
@@ -590,7 +605,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// <param name="entityName">Entity to lookup permissions</param>
         /// <param name="operation">Operation to lookup applicable roles</param>
         /// <returns>Collection of roles.</returns>
-        public IEnumerable<string> GetRolesForOperation(string entityName, Operation operation)
+        public IEnumerable<string> GetRolesForOperation(string entityName, Config.Operation operation)
         {
             if (EntityPermissionsMap[entityName].OperationToRolesMap.TryGetValue(operation, out List<string>? roleList) && roleList is not null)
             {
@@ -608,7 +623,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// <param name="field">Field to lookup operation permissions</param>
         /// <param name="operation">Specific operation to get collection of roles</param>
         /// <returns>Collection of role names allowed to perform operation on Entity's field.</returns>
-        public IEnumerable<string> GetRolesForField(string entityName, string field, Operation operation)
+        public IEnumerable<string> GetRolesForField(string entityName, string field, Config.Operation operation)
         {
             return EntityPermissionsMap[entityName].FieldToRolesMap[field][operation];
         }
@@ -621,7 +636,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// <returns>Collection of columns in table definition.</returns>
         private IEnumerable<string> ResolveEntityDefinitionColumns(string entityName)
         {
-            if (_metadataProvider.GetDatabaseType() is DatabaseType.cosmos)
+            if (_metadataProvider.GetDatabaseType() is DatabaseType.cosmosdb_nosql)
             {
                 return new List<string>();
             }
@@ -638,14 +653,14 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// There are only four possible operations
         /// </summary>
         /// <returns></returns>
-        private static Dictionary<Operation, List<string>> CreateOperationToRoleMap()
+        private static Dictionary<Config.Operation, List<string>> CreateOperationToRoleMap()
         {
-            return new Dictionary<Operation, List<string>>()
+            return new Dictionary<Config.Operation, List<string>>()
             {
-                { Operation.Create, new List<string>()},
-                { Operation.Read, new List<string>()},
-                { Operation.Update, new List<string>()},
-                { Operation.Delete, new List<string>()}
+                { Config.Operation.Create, new List<string>()},
+                { Config.Operation.Read, new List<string>()},
+                { Config.Operation.Update, new List<string>()},
+                { Config.Operation.Delete, new List<string>()}
             };
         }
 

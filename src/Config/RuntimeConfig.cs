@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
@@ -68,6 +69,10 @@ namespace Azure.DataApiBuilder.Config
         public readonly static JsonSerializerOptions SerializerOptions = new()
         {
             PropertyNameCaseInsensitive = true,
+            // As of .NET Core 7, JsonDocument and JsonSerializer only support skipping or disallowing 
+            // of comments; they do not support loading them. If we set JsonCommentHandling.Allow for either,
+            // it will throw an exception.
+            ReadCommentHandling = JsonCommentHandling.Skip,
             Converters =
                 {
                     new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
@@ -105,6 +110,21 @@ namespace Azure.DataApiBuilder.Config
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// This method reads the dab.draft.schema.json which contains the link for online published
+        /// schema for dab, based on the version of dab being used to generate the runtime config.
+        /// </summary>
+        public static string GetPublishedDraftSchemaLink()
+        {
+            string assemblyDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            string schemaPath = Path.Combine(assemblyDirectory, "dab.draft.schema.json");
+
+            string schemaFileContent = File.ReadAllText(schemaPath);
+            Dictionary<string, object> jsonDictionary = JsonSerializer.Deserialize<Dictionary<string, object>>(schemaFileContent)!;
+            Dictionary<string, string> properties = JsonSerializer.Deserialize<Dictionary<string, string>>(jsonDictionary["additionalProperties"].ToString())!;
+            return properties["version"];
         }
 
         /// <summary>

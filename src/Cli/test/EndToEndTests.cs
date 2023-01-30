@@ -1,6 +1,3 @@
-using Microsoft.Extensions.Logging;
-using Moq;
-
 namespace Cli.Tests;
 
 /// <summary>
@@ -10,13 +7,22 @@ namespace Cli.Tests;
 public class EndToEndTests
 {
     /// <summary>
+    /// Setup the logger for CLI
+    /// </summary>
+    [TestInitialize]
+    public void SetupLoggerForCLI()
+    {
+        TestHelper.SetupTestLoggerForCLI();
+    }
+
+    /// <summary>
     /// Initializing config for cosmosdb_nosql.
     /// </summary>
     [TestMethod]
     public void TestInitForCosmosDBNoSql()
     {
         string[] args = { "init", "-c", _testRuntimeConfig, "--database-type", "cosmosdb_nosql",
-                          "--connection-string", "localhost:5000", "--authenticate-devmode-requests", "True", "--cosmosdb_nosql-database",
+                          "--connection-string", "localhost:5000", "--cosmosdb_nosql-database",
                           "graphqldb", "--cosmosdb_nosql-container", "planet", "--graphql-schema", "schema.gql", "--cors-origin", "localhost:3000,www.nolocalhost.com:80" };
         Program.Main(args);
 
@@ -30,7 +36,6 @@ public class EndToEndTests
         Assert.AreEqual("planet", runtimeConfig.DataSource.CosmosDbNoSql.Container);
         Assert.AreEqual("schema.gql", runtimeConfig.DataSource.CosmosDbNoSql.GraphQLSchemaPath);
         Assert.IsNotNull(runtimeConfig.RuntimeSettings);
-        Assert.AreEqual(true, runtimeConfig.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated);
         JsonElement jsonRestSettings = (JsonElement)runtimeConfig.RuntimeSettings[GlobalSettingsType.Rest];
 
         RestGlobalSettings? restGlobalSettings = JsonSerializer.Deserialize<RestGlobalSettings>(jsonRestSettings, RuntimeConfig.SerializerOptions);
@@ -50,8 +55,7 @@ public class EndToEndTests
     public void TestInitForCosmosDBPostgreSql()
     {
         string[] args = { "init", "-c", _testRuntimeConfig, "--database-type", "cosmosdb_postgresql",
-                          "--connection-string", "localhost:5000", "--authenticate-devmode-requests", "True",
-                          "--cors-origin", "localhost:3000,www.nolocalhost.com:80" };
+                          "--connection-string", "localhost:5000", "--cors-origin", "localhost:3000,www.nolocalhost.com:80" };
         Program.Main(args);
 
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
@@ -60,7 +64,6 @@ public class EndToEndTests
         Assert.AreEqual(DatabaseType.cosmosdb_postgresql, runtimeConfig.DatabaseType);
         Assert.IsNull(runtimeConfig.DataSource.CosmosDbPostgreSql);
         Assert.IsNotNull(runtimeConfig.RuntimeSettings);
-        Assert.AreEqual(true, runtimeConfig.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated);
         JsonElement jsonRestSettings = (JsonElement)runtimeConfig.RuntimeSettings[GlobalSettingsType.Rest];
 
         RestGlobalSettings? restGlobalSettings = JsonSerializer.Deserialize<RestGlobalSettings>(jsonRestSettings, RuntimeConfig.SerializerOptions);
@@ -79,7 +82,7 @@ public class EndToEndTests
     [TestMethod]
     public void TestAddEntity()
     {
-        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--host-mode", "development", "--database-type", "mssql", "--connection-string", "localhost:5000", "--authenticate-devmode-requests", "false" };
+        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--host-mode", "development", "--database-type", "mssql", "--connection-string", "localhost:5000", "--auth.provider", "StaticWebApps" };
         Program.Main(initArgs);
 
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
@@ -90,7 +93,6 @@ public class EndToEndTests
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
         Assert.AreEqual(HostModeType.Development, runtimeConfig.HostGlobalSettings.Mode);
-        Assert.AreEqual(false, runtimeConfig.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated);
 
         string[] addArgs = {"add", "todo", "-c", _testRuntimeConfig, "--source", "s001.todo",
                             "--rest", "todo", "--graphql", "todo", "--permissions", "anonymous:*"};
@@ -107,6 +109,37 @@ public class EndToEndTests
         Assert.AreEqual("anonymous", entity.Permissions[0].Role);
         Assert.AreEqual(1, entity.Permissions[0].Operations.Length);
         Assert.AreEqual(WILDCARD, ((JsonElement)entity.Permissions[0].Operations[0]).GetString());
+    }
+
+    /// <summary>
+    /// Test to verify authentication options with init command containing
+    /// neither EasyAuth or Simulator as Authentication provider.
+    /// It checks correct generation of config with provider, audience and issuer.
+    /// </summary>
+    [TestMethod]
+    public void TestVerifyAuthenticationOptions()
+    {
+        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql",
+            "--auth.provider", "AzureAD", "--auth.audience", "aud-xxx", "--auth.issuer", "issuer-xxx" };
+        Program.Main(initArgs);
+
+        RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
+        Assert.IsNotNull(runtimeConfig);
+        Console.WriteLine(JsonSerializer.Serialize(runtimeConfig.HostGlobalSettings.Authentication));
+        string expectedAuthenticationJson = @"
+            {
+                ""Provider"": ""AzureAD"",
+                ""Jwt"":
+                {
+                    ""Audience"": ""aud-xxx"",
+                    ""Issuer"": ""issuer-xxx""
+                }
+            }";
+
+        JObject expectedJson = JObject.Parse(expectedAuthenticationJson);
+        JObject actualJson = JObject.Parse(JsonSerializer.Serialize(runtimeConfig.HostGlobalSettings.Authentication));
+
+        Assert.IsTrue(JToken.DeepEquals(expectedJson, actualJson));
     }
 
     /// <summary>
@@ -161,7 +194,6 @@ public class EndToEndTests
         Assert.AreEqual(1, runtimeConfig.Entities.Count()); // 1 new entity added
         Assert.IsTrue(runtimeConfig.Entities.ContainsKey("book"));
         Entity entity = runtimeConfig.Entities["book"];
-        Console.WriteLine(JsonSerializer.Serialize(entity));
         Assert.IsNull(entity.Rest);
         Assert.IsNull(entity.GraphQL);
         Assert.AreEqual(1, entity.Permissions.Length);
@@ -178,7 +210,8 @@ public class EndToEndTests
     [TestMethod]
     public void TestConfigGeneratedAfterAddingEntityWithoutIEnumerables()
     {
-        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql", "--connection-string", "localhost:5000" };
+        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql", "--connection-string", "localhost:5000",
+            "--set-session-context", "true" };
         Program.Main(initArgs);
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
         Assert.IsNotNull(runtimeConfig);
@@ -194,12 +227,13 @@ public class EndToEndTests
     [TestMethod]
     public void TestConfigGeneratedAfterAddingEntityWithSourceAsStoredProcedure()
     {
-        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql", "--host-mode", "Development", "--connection-string", "testconnectionstring" };
+        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql",
+            "--host-mode", "Development", "--connection-string", "testconnectionstring", "--set-session-context", "true" };
         Program.Main(initArgs);
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
-        string[] addArgs = { "add", "MyEntity", "-c", _testRuntimeConfig, "--source", "s001.book", "--permissions", "anonymous:*", "--source.type", "stored-procedure", "--source.params", "param1:123,param2:hello,param3:true" };
+        string[] addArgs = { "add", "MyEntity", "-c", _testRuntimeConfig, "--source", "s001.book", "--permissions", "anonymous:read", "--source.type", "stored-procedure", "--source.params", "param1:123,param2:hello,param3:true" };
         Program.Main(addArgs);
         string? actualConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
         Assert.IsTrue(JToken.DeepEquals(JObject.Parse(actualConfig), JObject.Parse(File.ReadAllText(_testRuntimeConfig))));
@@ -254,7 +288,8 @@ public class EndToEndTests
     [TestMethod]
     public void TestConfigGeneratedAfterAddingEntityWithSourceWithDefaultType()
     {
-        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql", "--host-mode", "Development", "--connection-string", "testconnectionstring" };
+        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql", "--host-mode", "Development",
+            "--connection-string", "testconnectionstring", "--set-session-context", "true"  };
         Program.Main(initArgs);
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
         Assert.IsNotNull(runtimeConfig);
@@ -382,12 +417,15 @@ public class EndToEndTests
     {
         WriteJsonContentToFile(_testRuntimeConfig, INITIAL_CONFIG);
 
-        using Process process = StartDabProcess(
+        using Process process = ExecuteDabCommand(
             command: $"start --config {_testRuntimeConfig}",
             logLevelOption
         );
 
         string? output = process.StandardOutput.ReadLine();
+        Assert.IsNotNull(output);
+        Assert.IsTrue(output.Contains($"{Program.PRODUCT_NAME} {GetProductVersion()}"));
+        output = process.StandardOutput.ReadLine();
         process.Kill();
         Assert.IsNotNull(output);
         Assert.IsTrue(output.Contains($"User provided config file: {_testRuntimeConfig}"));
@@ -399,11 +437,11 @@ public class EndToEndTests
     [DataTestMethod]
     [DataRow("", "", new string[] { "ERROR" }, DisplayName = "No flags provided.")]
     [DataRow("initialize", "", new string[] { "ERROR", "Verb 'initialize' is not recognized." }, DisplayName = "Wrong Command provided.")]
-    [DataRow("", "--version", new string[] { "dab 1.0.0" }, DisplayName = "Checking version.")]
+    [DataRow("", "--version", new string[] { "Microsoft.DataApiBuilder 1.0.0" }, DisplayName = "Checking version.")]
     [DataRow("", "--help", new string[] { "init", "add", "update", "start" }, DisplayName = "Checking output for --help.")]
     public void TestHelpWriterOutput(string command, string flags, string[] expectedOutputArray)
     {
-        using Process process = StartDabProcess(
+        using Process process = ExecuteDabCommand(
             command,
             flags
         );
@@ -424,7 +462,6 @@ public class EndToEndTests
     /// are caught before starting the engine.
     /// </summary>
     [DataRow(INITIAL_CONFIG, BASIC_ENTITY_WITH_ANONYMOUS_ROLE, true, DisplayName = "Correct Config")]
-    [DataRow(CONFIG_WITH_INVALID_DEVMODE_REQUEST_AUTH_TYPE, BASIC_ENTITY_WITH_ANONYMOUS_ROLE, false, DisplayName = "Invalid devmode auth request type")]
     [DataRow(INITIAL_CONFIG, SINGLE_ENTITY_WITH_INVALID_GRAPHQL_TYPE, false, DisplayName = "Invalid GraphQL type for entity")]
     [DataTestMethod]
     public void TestExitOfRuntimeEngineWithInvalidConfig(
@@ -434,26 +471,68 @@ public class EndToEndTests
     {
         string runtimeConfigJson = AddPropertiesToJson(initialConfig, entityDetails);
         File.WriteAllText(_testRuntimeConfig, runtimeConfigJson);
-        using Process process = StartDabProcess(
+        using Process process = ExecuteDabCommand(
             command: "start",
             flags: $"--config {_testRuntimeConfig}"
         );
 
         string? output = process.StandardOutput.ReadLine();
         Assert.IsNotNull(output);
+        Assert.IsTrue(output.Contains($"{Program.PRODUCT_NAME} {GetProductVersion()}"));
+        output = process.StandardOutput.ReadLine();
+        Assert.IsNotNull(output);
         Assert.IsTrue(output.Contains($"User provided config file: {_testRuntimeConfig}"));
         output = process.StandardOutput.ReadLine();
+        Assert.IsNotNull(output);
         if (expectSuccess)
         {
-            Assert.IsNotNull(output);
             Assert.IsTrue(output.Contains("Starting the runtime engine..."));
         }
         else
         {
-            Assert.IsNull(output);
-            string? err = process.StandardError.ReadToEnd();
-            Assert.IsTrue(err.Contains($"Deserialization of the configuration file failed."));
-            Assert.IsTrue(err.Contains("Failed to start the engine."));
+            Assert.IsTrue(output.Contains($"Failed to parse the config file: {_testRuntimeConfig}."));
+            output = process.StandardOutput.ReadLine();
+            Assert.IsNotNull(output);
+            Assert.IsTrue(output.Contains($"Failed to start the engine."));
+        }
+
+        process.Kill();
+
+    }
+
+    /// <summary>
+    /// Test to verify that if entity is not specified in the add/update
+    /// command, a custom (more user friendly) message is displayed.
+    /// NOTE: Below order of execution is important, changing the order for DataRow might result in test failures.
+    /// The below order makes sure entity is added before update.
+    /// </summary>
+    [DataRow("add", "", "-s my_entity --permissions anonymous:create", false)]
+    [DataRow("add", "MyEntity", "-s my_entity --permissions anonymous:create", true)]
+    [DataRow("update", "", "-s my_entity --permissions authenticate:*", false)]
+    [DataRow("update", "MyEntity", "-s my_entity --permissions authenticate:*", true)]
+    [DataTestMethod]
+    public void TestMissingEntityFromCommand(
+        string command,
+        string entityName,
+        string flags,
+        bool expectSuccess)
+    {
+        if (!File.Exists(_testRuntimeConfig))
+        {
+            string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql" };
+            Program.Main(initArgs);
+        }
+
+        using Process process = ExecuteDabCommand(
+            command: $"{command} {entityName}",
+            flags: $"-c {_testRuntimeConfig} {flags}"
+        );
+
+        string? output = process.StandardOutput.ReadToEnd();
+        Assert.IsNotNull(output);
+        if (!expectSuccess)
+        {
+            Assert.IsTrue(output.Contains($"Error: Entity name is missing. Usage: dab {command} [entity-name] [{command}-options]"));
         }
 
         process.Kill();

@@ -11,8 +11,14 @@
     <PackageOutputPath>./nupkg</PackageOutputPath>
     <BaseOutputPath>..\..\out\cli</BaseOutputPath>
     <RuntimeIdentifiers>win-x64;linux-x64;osx-x64</RuntimeIdentifiers>
-    <AssemblyName>dab</AssemblyName>
     <PackageDescription>Data API Builder</PackageDescription>
+    <id>Microsoft.DataApiBuilder</id>
+    <title>DataApiBuilder</title>
+    <AssemblyName>Microsoft.DataApiBuilder</AssemblyName>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <DebugType>none</DebugType>
   </PropertyGroup>
 
   <ItemGroup>
@@ -39,8 +45,8 @@
   </ItemGroup>
 
   <Target Name="GenerateConfigFiles" AfterTargets="PostBuildEvent">
-      <Exec Command="powershell.exe -command ..\..\..\ConfigGenerators\configGenerator.ps1 " Condition=" '$(OS)' == 'Windows_NT' And '$(generateConfigFiles)' == 'true' " />
-      <Exec Command="bash ../../../ConfigGenerators/configGenerator.sh" Condition=" '$(OS)' != 'Windows_NT' And '$(generateConfigFiles)' == 'true' " />
+      <Exec Command="powershell.exe -command ..\..\..\ConfigGenerators\configGenerator.ps1 $(generateConfigFileForDbType) " Condition=" '$(OS)' == 'Windows_NT' And '$(generateConfigFileForDbType)' != '' " />
+      <Exec Command="bash ../../../ConfigGenerators/configGenerator.sh $(generateConfigFileForDbType) " Condition=" '$(OS)' != 'Windows_NT' And '$(generateConfigFileForDbType)' != '' " />
       <Copy SourceFiles="@(ConfigFiles)" DestinationFolder="..\..\out\tests\$(TargetFramework)" />
   </Target>
 

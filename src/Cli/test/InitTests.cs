@@ -9,6 +9,15 @@ namespace Cli.Tests
         private string _basicRuntimeConfig = string.Empty;
 
         /// <summary>
+        /// Setup the logger for CLI
+        /// </summary>
+        [TestInitialize]
+        public void SetupLoggerForCLI()
+        {
+            TestHelper.SetupTestLoggerForCLI();
+        }
+
+        /// <summary>
         /// Test the simple init config for mssql database. PG and MySQL should be similar.
         /// There is no need for a separate test.
         /// </summary>
@@ -21,17 +30,21 @@ namespace Cli.Tests
                 cosmosNoSqlDatabase: null,
                 cosmosNoSqlContainer: null,
                 graphQLSchemaPath: null,
+                setSessionContext: true,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                config: _testRuntimeConfig,
-                devModeDefaultAuth: "true");
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                config: _testRuntimeConfig);
 
             _basicRuntimeConfig =
-            @"{
-                ""$schema"": ""dab.draft.schema.json"",
-                ""data-source"": {
+            @"{" +
+                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                @"""data-source"": {
                     ""database-type"": ""mssql"",
-                    ""connection-string"": ""testconnectionstring""
+                    ""connection-string"": ""testconnectionstring"",
+                    ""options"":{
+                        ""set-session-context"": true
+                    }
                 },
                 ""entities"": {}
             }";
@@ -41,8 +54,7 @@ namespace Cli.Tests
                 _basicRuntimeConfig,
                 GetDefaultTestRuntimeSettingString(
                     HostModeType.Development,
-                    new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                    authenticateDevModeRequest: true)
+                    new List<string>() { "http://localhost:3000", "http://nolocalhost:80" })
             );
 
             RunTest(options, expectedRuntimeConfig);
@@ -60,15 +72,16 @@ namespace Cli.Tests
                 cosmosNoSqlDatabase: null,
                 cosmosNoSqlContainer: null,
                 graphQLSchemaPath: null,
+                setSessionContext: false,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                config: _testRuntimeConfig,
-                devModeDefaultAuth: "true");
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                config: _testRuntimeConfig);
 
             _basicRuntimeConfig =
-            @"{
-                ""$schema"": ""dab.draft.schema.json"",
-                ""data-source"": {
+            @"{" +
+                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                @"""data-source"": {
                     ""database-type"": ""cosmosdb_postgresql"",
                     ""connection-string"": ""testconnectionstring""
                 },
@@ -80,8 +93,7 @@ namespace Cli.Tests
                 _basicRuntimeConfig,
                 GetDefaultTestRuntimeSettingString(
                     HostModeType.Development,
-                    new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                    authenticateDevModeRequest: true)
+                    new List<string>() { "http://localhost:3000", "http://nolocalhost:80" })
             );
             RunTest(options, expectedRuntimeConfig);
         }
@@ -99,17 +111,21 @@ namespace Cli.Tests
                 cosmosNoSqlDatabase: null,
                 cosmosNoSqlContainer: null,
                 graphQLSchemaPath: null,
+                setSessionContext: false,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                config: _testRuntimeConfig,
-                devModeDefaultAuth: "false");
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                config: _testRuntimeConfig);
 
             _basicRuntimeConfig =
-            @"{
-                ""$schema"": ""dab.draft.schema.json"",
-                ""data-source"": {
+            @"{" +
+                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                @"""data-source"": {
                     ""database-type"": ""mssql"",
-                    ""connection-string"": """"
+                    ""connection-string"": """",
+                    ""options"":{
+                        ""set-session-context"": false
+                    }
                 },
                 ""entities"": {}
             }";
@@ -119,8 +135,7 @@ namespace Cli.Tests
                 _basicRuntimeConfig,
                 GetDefaultTestRuntimeSettingString(
                     HostModeType.Development,
-                    new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                    authenticateDevModeRequest: false)
+                    new List<string>() { "http://localhost:3000", "http://nolocalhost:80" })
             );
             RunTest(options, expectedRuntimeConfig);
         }
@@ -137,14 +152,16 @@ namespace Cli.Tests
                 cosmosNoSqlDatabase: "testdb",
                 cosmosNoSqlContainer: "testcontainer",
                 graphQLSchemaPath: "schemafile",
+                setSessionContext: false,
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
-                config: _testRuntimeConfig,
-                devModeDefaultAuth: null);
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                config: _testRuntimeConfig);
 
-            _basicRuntimeConfig = @"{
-                ""$schema"": ""dab.draft.schema.json"",
-                ""data-source"": {
+            _basicRuntimeConfig =
+            @"{" +
+                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                @"""data-source"": {
                     ""database-type"": ""cosmosdb_nosql"",
                     ""connection-string"": ""testconnectionstring"",
                     ""options"": {
@@ -184,11 +201,11 @@ namespace Cli.Tests
                 cosmosNoSqlDatabase: cosmosDatabase,
                 cosmosNoSqlContainer: cosmosContainer,
                 graphQLSchemaPath: graphQLSchema,
+                setSessionContext: false,
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
-                config: _testRuntimeConfig,
-                devModeDefaultAuth: null
-                );
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                config: _testRuntimeConfig);
 
             Assert.AreEqual(expectedResult, ConfigGenerator.TryCreateRuntimeConfig(options, out _));
         }
@@ -206,10 +223,11 @@ namespace Cli.Tests
                 cosmosNoSqlDatabase: null,
                 cosmosNoSqlContainer: null,
                 graphQLSchemaPath: null,
+                setSessionContext: false,
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { },
-                config: _testRuntimeConfig,
-                devModeDefaultAuth: null);
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                config: _testRuntimeConfig);
 
             // Config generated successfully for the first time.
             Assert.AreEqual(true, ConfigGenerator.TryGenerateConfig(options));
@@ -217,6 +235,72 @@ namespace Cli.Tests
             // Error is thrown because the config file with the same name
             // already exists.
             Assert.AreEqual(false, ConfigGenerator.TryGenerateConfig(options));
+        }
+
+        /// <summary>
+        /// Test to verify the config is correctly generated with different Authentication providers.
+        /// Audience and Issuer are needed only when the provider is JWT.
+        /// Example:
+        /// 1. With EasyAuth or Simulator
+        /// "authentication": {
+        ///     "provider": "StaticWebApps/AppService/Simulator"
+        /// }
+        ///
+        /// 2. With JWT provider
+        /// "authentication": {
+        ///     "provider": "AzureAD"
+        ///      "Jwt":
+        ///      {
+        ///          "Audience": "aud",
+        ///          "Issuer": "iss"
+        ///      }
+        /// }
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("StaticWebApps", null, null, DisplayName = "StaticWebApps with no audience and no issuer specified.")]
+        [DataRow("AppService", null, null, DisplayName = "AppService with no audience and no issuer specified.")]
+        [DataRow("Simulator", null, null, DisplayName = "Simulator with no audience and no issuer specified.")]
+        [DataRow("AzureAD", "aud-xxx", "issuer-xxx", DisplayName = "AzureAD with both audience and issuer specified.")]
+        public void EnsureCorrectConfigGenerationWithDifferentAuthenticationProviders(
+            string authenticationProvider,
+            string? audience,
+            string? issuer)
+        {
+            InitOptions options = new(
+                databaseType: DatabaseType.mssql,
+                connectionString: "testconnectionstring",
+                cosmosNoSqlDatabase: null,
+                cosmosNoSqlContainer: null,
+                graphQLSchemaPath: null,
+                setSessionContext: false,
+                hostMode: HostModeType.Production,
+                corsOrigin: null,
+                authenticationProvider: authenticationProvider,
+                audience: audience,
+                issuer: issuer,
+                config: _testRuntimeConfig);
+
+            _basicRuntimeConfig =
+            @"{" +
+                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                @"""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""testconnectionstring"",
+                    ""options"":{
+                        ""set-session-context"": false
+                    }
+                },
+                ""entities"": {}
+            }";
+
+            // Adding runtime settings to the above basic config
+            string expectedRuntimeConfig = AddPropertiesToJson(
+                _basicRuntimeConfig,
+                GetDefaultTestRuntimeSettingString(
+                    authenticationProvider: authenticationProvider,
+                    audience: audience,
+                    issuer: issuer));
+            RunTest(options, expectedRuntimeConfig);
         }
 
         /// <summary>
@@ -270,10 +354,11 @@ namespace Cli.Tests
                 cosmosNoSqlDatabase: null,
                 cosmosNoSqlContainer: null,
                 graphQLSchemaPath: null,
+                setSessionContext: false,
                 hostMode: HostModeType.Production,
                 corsOrigin: new List<string>() { },
-                config: fileName,
-                devModeDefaultAuth: null);
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                config: fileName);
 
             return options;
         }

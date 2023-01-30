@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
@@ -86,17 +87,17 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             Tuple<JsonDocument, IMetadata>? result = null;
-            Operation mutationOperation =
+            Config.Operation mutationOperation =
                 MutationBuilder.DetermineMutationOperationTypeBasedOnInputType(graphqlMutationName);
 
             // If authorization fails, an exception will be thrown and request execution halts.
             AuthorizeMutationFields(context, parameters, entityName, mutationOperation);
 
-            if (mutationOperation is Operation.Delete)
+            if (mutationOperation is Config.Operation.Delete)
             {
                 // compute the mutation result before removing the element,
                 // since typical GraphQL delete mutations return the metadata of the deleted item.
-                result = await _queryEngine.ExecuteAsync(context, parameters);
+                result = await _queryEngine.ExecuteAsync(context, GetBackingColumnsFromCollection(entityName, parameters));
 
                 Dictionary<string, object>? resultProperties =
                     await PerformDeleteOperation(
@@ -128,9 +129,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 if (resultRowAndProperties is not null && resultRowAndProperties.Item1 is not null
                     && !context.Selection.Type.IsScalarType())
                 {
+                    // Because the GraphQL mutation result set columns were exposed (mapped) column names,
+                    // the column names must be converted to backing (source) column names so the
+                    // PrimaryKeyPredicates created in the SqlQueryStructure created by the query engine
+                    // represent database column names.
                     result = await _queryEngine.ExecuteAsync(
                                 context,
-                                resultRowAndProperties.Item1);
+                                GetBackingColumnsFromCollection(entityName, resultRowAndProperties.Item1));
                 }
             }
 
@@ -143,6 +148,33 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// Converts exposed column names from the parameters provided to backing column names.
+        /// parameters.Value is not modified.
+        /// </summary>
+        /// <param name="entityName">Name of Entity</param>
+        /// <param name="parameters">Key/Value collection where only the key is converted.</param>
+        /// <returns>Dictionary where the keys now represent backing column names.</returns>
+        public Dictionary<string, object?> GetBackingColumnsFromCollection(string entityName, IDictionary<string, object?> parameters)
+        {
+            Dictionary<string, object?> backingRowParams = new();
+
+            foreach (KeyValuePair<string, object?> resultEntry in parameters)
+            {
+                _sqlMetadataProvider.TryGetBackingColumn(entityName, resultEntry.Key, out string? name);
+                if (!string.IsNullOrWhiteSpace(name))
+                {
+                    backingRowParams.Add(name, resultEntry.Value);
+                }
+                else
+                {
+                    backingRowParams.Add(resultEntry.Key, resultEntry.Value);
+                }
+            }
+
+            return backingRowParams;
         }
 
         /// <summary>
@@ -162,11 +194,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string queryText = _queryBuilder.Build(executeQueryStructure);
             _logger.LogInformation(queryText);
 
-            Tuple<Dictionary<string, object?>?, Dictionary<string, object>>? resultRowAndProperties =
+            JsonArray? resultArray =
                 await _queryExecutor.ExecuteQueryAsync(
                     queryText,
                     executeQueryStructure.Parameters,
-                    _queryExecutor.ExtractRowFromDbDataReader);
+                    _queryExecutor.GetJsonArrayAsync,
+                    _httpContextAccessor.HttpContext!);
 
             // A note on returning stored procedure results:
             // We can't infer what the stored procedure actually did beyond the HasRows and RecordsAffected attributes
@@ -175,16 +208,18 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // to each action, with data always from the first result set, as there may be arbitrarily many.
             switch (context.OperationType)
             {
-                case Operation.Delete:
+                case Config.Operation.Delete:
                     // Returns a 204 No Content so long as the stored procedure executes without error
                     return new NoContentResult();
-                case Operation.Insert:
+                case Config.Operation.Insert:
                     // Returns a 201 Created with whatever the first result set is returned from the procedure
-                    // A "correctly" configured stored procedure would INSERT INTO ... OUTPUT ... VALUES as the first and only result set
-                    if (resultRowAndProperties is not null &&
-                        DoesResultHaveRows(resultRowAndProperties.Item2))
+                    // A "correctly" configured stored procedure would INSERT INTO ... OUTPUT ... VALUES as the result set
+                    if (resultArray is not null && resultArray.Count > 0)
                     {
-                        return new CreatedResult(location: context.EntityName, OkMutationResponse(resultRowAndProperties.Item1).Value);
+                        using (JsonDocument jsonDocument = JsonDocument.Parse(resultArray.ToJsonString()))
+                        {
+                            return new CreatedResult(location: context.EntityName, OkMutationResponse(jsonDocument.RootElement.Clone()).Value);
+                        }
                     }
                     else
                     {   // If no result set returned, just return a 201 Created with empty array instead of array with single null value
@@ -196,16 +231,18 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             }
                         );
                     }
-                case Operation.Update:
-                case Operation.UpdateIncremental:
-                case Operation.Upsert:
-                case Operation.UpsertIncremental:
+                case Config.Operation.Update:
+                case Config.Operation.UpdateIncremental:
+                case Config.Operation.Upsert:
+                case Config.Operation.UpsertIncremental:
                     // Since we cannot check if anything was created, just return a 200 Ok response with first result set output
-                    // A "correctly" configured stored procedure would UPDATE ... SET ... OUTPUT as the first and only result set
-                    if (resultRowAndProperties is not null &&
-                        DoesResultHaveRows(resultRowAndProperties.Item2))
+                    // A "correctly" configured stored procedure would UPDATE ... SET ... OUTPUT as the result set
+                    if (resultArray is not null && resultArray.Count > 0)
                     {
-                        return OkMutationResponse(resultRowAndProperties.Item1);
+                        using (JsonDocument jsonDocument = JsonDocument.Parse(resultArray.ToJsonString()))
+                        {
+                            return OkMutationResponse(jsonDocument.RootElement.Clone());
+                        }
                     }
                     else
                     {
@@ -235,7 +272,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             Dictionary<string, object?> parameters = PrepareParameters(context);
 
-            if (context.OperationType is Operation.Delete)
+            if (context.OperationType is Config.Operation.Delete)
             {
                 Dictionary<string, object>? resultProperties =
                     await PerformDeleteOperation(
@@ -251,7 +288,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     return new NoContentResult();
                 }
             }
-            else if (context.OperationType is Operation.Upsert || context.OperationType is Operation.UpsertIncremental)
+            else if (context.OperationType is Config.Operation.Upsert || context.OperationType is Config.Operation.UpsertIncremental)
             {
                 Tuple<Dictionary<string, object?>?, Dictionary<string, object>>? resultRowAndProperties =
                     await PerformUpsertOperation(
@@ -292,7 +329,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         context.OperationType,
                         parameters);
 
-                if (context.OperationType is Operation.Insert)
+                if (context.OperationType is Config.Operation.Insert)
                 {
                     if (resultRowAndProperties is null || resultRowAndProperties.Item1 is null)
                     {
@@ -307,7 +344,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(resultRow).Value);
                 }
 
-                if (context.OperationType is Operation.Update || context.OperationType is Operation.UpdateIncremental)
+                if (context.OperationType is Config.Operation.Update || context.OperationType is Config.Operation.UpdateIncremental)
                 {
                     // Nothing to update means we throw Exception
                     if (resultRowAndProperties is null ||
@@ -347,6 +384,29 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
+        /// Helper function returns an OkObjectResult with provided arguments in a
+        /// form that complies with vNext Api guidelines.
+        /// The result is converted to a JSON Array if the result is not of that type already.
+        /// </summary>
+        /// <seealso>https://github.com/microsoft/api-guidelines/blob/vNext/Guidelines.md#92-serialization</seealso>
+        /// <param name="jsonResult">Value representing the Json results of the client's request.</param>
+        private static OkObjectResult OkMutationResponse(JsonElement jsonResult)
+        {
+            if (jsonResult.ValueKind != JsonValueKind.Array)
+            {
+                string jsonString = $"[{JsonSerializer.Serialize(jsonResult)}]";
+                jsonResult = JsonSerializer.Deserialize<JsonElement>(jsonString);
+            }
+
+            IEnumerable<JsonElement> resultEnumerated = jsonResult.EnumerateArray();
+
+            return new OkObjectResult(new
+            {
+                value = resultEnumerated
+            });
+        }
+
+        /// <summary>
         /// Performs the given REST and GraphQL mutation operation of type
         /// Insert, Create, Update, UpdateIncremental, UpdateGraphQL
         /// on the source backing the given entity.
@@ -362,7 +422,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private async Task<Tuple<Dictionary<string, object?>?, Dictionary<string, object>>?>
             PerformMutationOperation(
                 string entityName,
-                Operation operationType,
+                Config.Operation operationType,
                 IDictionary<string, object?> parameters,
                 IMiddlewareContext? context = null)
         {
@@ -370,8 +430,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             Dictionary<string, object?> queryParameters;
             switch (operationType)
             {
-                case Operation.Insert:
-                case Operation.Create:
+                case Config.Operation.Insert:
+                case Config.Operation.Create:
                     SqlInsertStructure insertQueryStruct = context is null
                         ? new(
                             entityName,
@@ -388,7 +448,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     queryString = _queryBuilder.Build(insertQueryStruct);
                     queryParameters = insertQueryStruct.Parameters;
                     break;
-                case Operation.Update:
+                case Config.Operation.Update:
                     SqlUpdateStructure updateStructure = new(
                         entityName,
                         _sqlMetadataProvider,
@@ -399,7 +459,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     queryString = _queryBuilder.Build(updateStructure);
                     queryParameters = updateStructure.Parameters;
                     break;
-                case Operation.UpdateIncremental:
+                case Config.Operation.UpdateIncremental:
                     SqlUpdateStructure updateIncrementalStructure = new(
                         entityName,
                         _sqlMetadataProvider,
@@ -410,7 +470,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     queryString = _queryBuilder.Build(updateIncrementalStructure);
                     queryParameters = updateIncrementalStructure.Parameters;
                     break;
-                case Operation.UpdateGraphQL:
+                case Config.Operation.UpdateGraphQL:
                     if (context is null)
                     {
                         throw new ArgumentNullException("Context should not be null for a GraphQL operation.");
@@ -424,7 +484,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         _gQLFilterParser,
                         parameters);
                     AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
-                        Operation.Update,
+                        Config.Operation.Update,
                         updateGraphQLStructure,
                         _httpContextAccessor.HttpContext!,
                         _authorizationResolver,
@@ -444,21 +504,44 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 SourceDefinition sourceDefinition = _sqlMetadataProvider.GetSourceDefinition(entityName);
 
-                // only extract pk columns
-                // since non pk columns can be null
+                // To support GraphQL field mappings (DB column aliases), convert the sourceDefinition
+                // primary key column names (backing columns) to the exposed (mapped) column names to
+                // identify primary key column names in the mutation result set.
+                List<string> primaryKeyExposedColumnNames = new();
+                foreach (string primaryKey in sourceDefinition.PrimaryKey)
+                {
+                    if (_sqlMetadataProvider.TryGetExposedColumnName(entityName, primaryKey, out string? name) && !string.IsNullOrWhiteSpace(name))
+                    {
+                        primaryKeyExposedColumnNames.Add(name);
+                    }
+                }
+
+                // Only extract pk columns since non pk columns can be null
                 // and the subsequent query would search with:
                 // nullParamName = NULL
                 // which would fail to get the mutated entry from the db
+                // When no exposed column names were resolved, it is safe to provide
+                // backing column names (sourceDefinition.Primary) as a list of arguments.
                 resultRecord =
                     await _queryExecutor.ExecuteQueryAsync(
                         queryString,
                         queryParameters,
                         _queryExecutor.ExtractRowFromDbDataReader,
-                        sourceDefinition.PrimaryKey);
+                        _httpContextAccessor.HttpContext!,
+                        primaryKeyExposedColumnNames.Count > 0 ? primaryKeyExposedColumnNames : sourceDefinition.PrimaryKey);
 
                 if (resultRecord is not null && resultRecord.Item1 is null)
                 {
-                    string searchedPK = '<' + string.Join(", ", sourceDefinition.PrimaryKey.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
+                    string searchedPK;
+                    if (primaryKeyExposedColumnNames.Count > 0)
+                    {
+                        searchedPK = '<' + string.Join(", ", primaryKeyExposedColumnNames.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
+                    }
+                    else
+                    {
+                        searchedPK = '<' + string.Join(", ", sourceDefinition.PrimaryKey.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
+                    }
+
                     throw new DataApiBuilderException(
                         message: $"Could not find entity with {searchedPK}",
                         statusCode: HttpStatusCode.NotFound,
@@ -473,7 +556,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     await _queryExecutor.ExecuteQueryAsync(
                         queryString,
                         queryParameters,
-                        _queryExecutor.ExtractRowFromDbDataReader);
+                        _queryExecutor.ExtractRowFromDbDataReader,
+                        _httpContextAccessor.HttpContext!);
             }
 
             return resultRecord;
@@ -501,7 +585,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 _gQLFilterParser,
                 parameters);
             AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
-                Operation.Delete,
+                Config.Operation.Delete,
                 deleteStructure,
                 _httpContextAccessor.HttpContext!,
                 _authorizationResolver,
@@ -514,7 +598,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 resultProperties = await _queryExecutor.ExecuteQueryAsync(
                     queryString,
                     queryParameters,
-                    _queryExecutor.GetResultProperties);
+                    _queryExecutor.GetResultProperties,
+                    _httpContextAccessor.HttpContext!);
 
             return resultProperties;
         }
@@ -536,10 +621,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             string queryString;
             Dictionary<string, object?> queryParameters;
-            Operation operationType = context.OperationType;
+            Config.Operation operationType = context.OperationType;
             string entityName = context.EntityName;
 
-            if (operationType is Operation.Upsert)
+            if (operationType is Config.Operation.Upsert)
             {
                 SqlUpsertQueryStructure upsertStructure = new(
                     entityName,
@@ -572,6 +657,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                        queryString,
                        queryParameters,
                        _queryExecutor.GetMultipleResultSetsIfAnyAsync,
+                       _httpContextAccessor.HttpContext!,
                        new List<string> { prettyPrintPk, entityName });
         }
 
@@ -618,14 +704,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             switch (context.OperationType)
             {
-                case Operation.Delete:
+                case Config.Operation.Delete:
                     // DeleteOne based off primary key in request.
                     parameters = new(context.PrimaryKeyValuePairs!);
                     break;
-                case Operation.Upsert:
-                case Operation.UpsertIncremental:
-                case Operation.Update:
-                case Operation.UpdateIncremental:
+                case Config.Operation.Upsert:
+                case Config.Operation.UpsertIncremental:
+                case Config.Operation.Update:
+                case Config.Operation.UpdateIncremental:
                     // Combine both PrimaryKey/Field ValuePairs
                     // because we create an update statement.
                     parameters = new(context.PrimaryKeyValuePairs!);
@@ -644,18 +730,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
-        /// Checks if the given dictionary has a property named `HasRows`
-        /// and if its true.
-        /// </summary>
-        /// <param name="properties">A dictionary of properties of a Db Data Reader like RecordsAffected, HasRows.</param>
-        /// <returns>True if HasRows is true, false otherwise.</returns>
-        private static bool DoesResultHaveRows(Dictionary<string, object> properties)
-        {
-            return properties.TryGetValue(nameof(DbDataReader.HasRows), out object? hasRows) &&
-                   Convert.ToBoolean(hasRows);
-        }
-
-        /// <summary>
         /// Authorization check on mutation fields provided in a GraphQL Mutation request.
         /// </summary>
         /// <param name="context"></param>
@@ -669,7 +743,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             IMiddlewareContext context,
             IDictionary<string, object?> parameters,
             string entityName,
-            Operation mutationOperation)
+            Config.Operation mutationOperation)
         {
             string role = string.Empty;
             if (context.ContextData.TryGetValue(key: AuthorizationResolver.CLIENT_ROLE_HEADER, out object? value))
@@ -686,7 +760,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             List<string> inputArgumentKeys;
-            if (mutationOperation != Operation.Delete)
+            if (mutationOperation != Config.Operation.Delete)
             {
                 inputArgumentKeys = BaseSqlQueryStructure.GetSubArgumentNamesFromGQLMutArguments(MutationBuilder.INPUT_ARGUMENT_NAME, parameters);
             }
@@ -699,13 +773,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             switch (mutationOperation)
             {
-                case Operation.UpdateGraphQL:
-                    isAuthorized = _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: role, operation: Operation.Update, inputArgumentKeys);
+                case Config.Operation.UpdateGraphQL:
+                    isAuthorized = _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: role, operation: Config.Operation.Update, inputArgumentKeys);
                     break;
-                case Operation.Create:
-                    isAuthorized = _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: role, operation: Operation.Create, inputArgumentKeys);
+                case Config.Operation.Create:
+                    isAuthorized = _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: role, operation: Config.Operation.Create, inputArgumentKeys);
                     break;
-                case Operation.Delete:
+                case Config.Operation.Delete:
                     // Delete operations are not checked for authorization on field level,
                     // and instead at the mutation level and would be rejected before this time in the pipeline.
                     // Continuing on with operation.

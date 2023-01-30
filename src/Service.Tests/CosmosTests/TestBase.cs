@@ -57,7 +57,7 @@ type Star @model(name:""StarAlias"") {
         {
             MockFileSystem fileSystem = new(new Dictionary<string, MockFileData>()
             {
-                { @"./schema.gql", new MockFileData(GRAPHQL_SCHEMA) }
+                { @"../schema.gql", new MockFileData(GRAPHQL_SCHEMA) }
             });
 
             //create mock authorization resolver where mock entityPermissionsMap is created for Planet and Character.
@@ -158,7 +158,7 @@ type Star @model(name:""StarAlias"") {
         {
             return GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     entityNames: entities,
-                    operations: new Operation[] { Operation.Create, Operation.Read, Operation.Update, Operation.Delete },
+                    operations: new Config.Operation[] { Config.Operation.Create, Config.Operation.Read, Config.Operation.Update, Config.Operation.Delete },
                     roles: new string[] { "anonymous", "authenticated" }
                 );
         }

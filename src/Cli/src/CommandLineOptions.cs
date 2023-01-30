@@ -9,7 +9,7 @@ namespace Cli
     /// </summary>
     public class Options
     {
-        public Options(string config)
+        public Options(string? config)
         {
             Config = config;
         }
@@ -32,10 +32,13 @@ namespace Cli
             string? cosmosNoSqlDatabase,
             string? cosmosNoSqlContainer,
             string? graphQLSchemaPath,
+            bool setSessionContext,
             HostModeType hostMode,
             IEnumerable<string>? corsOrigin,
-            string config,
-            string? devModeDefaultAuth)
+            string authenticationProvider,
+            string? audience = null,
+            string? issuer = null,
+            string? config = null)
             : base(config)
         {
             DatabaseType = databaseType;
@@ -43,25 +46,31 @@ namespace Cli
             CosmosNoSqlDatabase = cosmosNoSqlDatabase;
             CosmosNoSqlContainer = cosmosNoSqlContainer;
             GraphQLSchemaPath = graphQLSchemaPath;
+            SetSessionContext = setSessionContext;
             HostMode = hostMode;
             CorsOrigin = corsOrigin;
-            DevModeDefaultAuth = devModeDefaultAuth;
+            AuthenticationProvider = authenticationProvider;
+            Audience = audience;
+            Issuer = issuer;
         }
 
-        [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmos, mysql, postgresql")]
+        [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmosdb_nosql, cosmosdb_postgresql, mysql, postgresql")]
         public DatabaseType DatabaseType { get; }
 
         [Option("connection-string", Required = false, HelpText = "(Default: '') Connection details to connect to the database.")]
         public string? ConnectionString { get; }
 
-        [Option("cosmosdb_nosql-database", Required = false, HelpText = "Database name for Cosmos DB.")]
+        [Option("cosmosdb_nosql-database", Required = false, HelpText = "Database name for Cosmos DB for NoSql.")]
         public string? CosmosNoSqlDatabase { get; }
 
-        [Option("cosmosdb_nosql-container", Required = false, HelpText = "Container name for Cosmos DB.")]
+        [Option("cosmosdb_nosql-container", Required = false, HelpText = "Container name for Cosmos DB for NoSql.")]
         public string? CosmosNoSqlContainer { get; }
 
         [Option("graphql-schema", Required = false, HelpText = "GraphQL schema Path.")]
         public string? GraphQLSchemaPath { get; }
+
+        [Option("set-session-context", Default = false, Required = false, HelpText = "Enable sending data to MsSql using session context.")]
+        public bool SetSessionContext { get; }
 
         [Option("host-mode", Default = HostModeType.Production, Required = false, HelpText = "Specify the Host mode - Development or Production")]
         public HostModeType HostMode { get; }
@@ -69,9 +78,14 @@ namespace Cli
         [Option("cors-origin", Separator = ',', Required = false, HelpText = "Specify the list of allowed origins.")]
         public IEnumerable<string>? CorsOrigin { get; }
 
-        [Option("authenticate-devmode-requests", Default = null, Required = false,
-            HelpText = "boolean. Optional. Use when host-mode = Development. Treats all requests as authenticated in devmode when set to true.")]
-        public string? DevModeDefaultAuth { get; }
+        [Option("auth.provider", Default = "StaticWebApps", Required = false, HelpText = "Specify the Identity Provider.")]
+        public string AuthenticationProvider { get; }
+
+        [Option("auth.audience", Required = false, HelpText = "Identifies the recipients that the JWT is intended for.")]
+        public string? Audience { get; }
+
+        [Option("auth.issuer", Required = false, HelpText = "Specify the party that issued the jwt token.")]
+        public string? Issuer { get; }
     }
 
     /// <summary>
@@ -90,7 +104,7 @@ namespace Cli
             IEnumerable<string>? fieldsToExclude,
             string? policyRequest,
             string? policyDatabase,
-            string config)
+            string? config)
             : base(config)
         {
             Entity = entity;
@@ -105,7 +119,8 @@ namespace Cli
             PolicyDatabase = policyDatabase;
         }
 
-        [Value(0, MetaName = "Entity", Required = true, HelpText = "Name of the entity.")]
+        // Entity is required but we have made required as false to have custom error message (more user friendly), if not provided.
+        [Value(0, MetaName = "Entity", Required = false, HelpText = "Name of the entity.")]
         public string Entity { get; }
 
         [Option("source.type", Required = false, HelpText = "Type of the database object.Must be one of: [table, view, stored-procedure]")]
@@ -155,7 +170,7 @@ namespace Cli
             IEnumerable<string>? fieldsToExclude,
             string? policyRequest,
             string? policyDatabase,
-            string config)
+            string? config)
             : base(entity,
                   sourceType,
                   sourceParameters,

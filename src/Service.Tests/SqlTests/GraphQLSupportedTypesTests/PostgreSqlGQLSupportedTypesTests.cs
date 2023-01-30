@@ -38,6 +38,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             return type switch
             {
                 BYTE_TYPE => false,
+                DATETIME_NONUTC_TYPE => false,
                 _ => true
             };
         }

@@ -48,7 +48,7 @@ Stored procedures can be used as objects related to entities exposed by Data API
 If you have a stored procedure, for example [`dbo.stp_get_all_cowritten_books_by_author`](../samples/getting-started/azure-sql-db/library.azure-sql.sql#L138) it can be exposed using the following `dab` command:
 
 ```sh
-dab add GetCowrittenBooksByAuthor --source dbo.stp_get_all_cowritten_books_by_author --source.type "stored-procedure" source.params "searchType:s" --permissions "anonymous:read"
+dab add GetCowrittenBooksByAuthor --source dbo.stp_get_all_cowritten_books_by_author --source.type "stored-procedure" source.params "searchType:s" --permissions "anonymous:read" --rest true --graphql true
 ```
 
 the `dab-config.json` file will look like the following:
@@ -62,6 +62,8 @@ the `dab-config.json` file will look like the following:
       "searchType": "s"
     }
   },
+  "rest": true,
+  "graphql": true,
   "permissions": [{
    "role": "anonymous",
     "actions": [ "read" ]
@@ -69,12 +71,12 @@ the `dab-config.json` file will look like the following:
 }
 ```
 
-The `parameters` object is optional, and is used to provide default values to be passed to the stored procedure parameters, if those are not provided in the HTTP request.
+The `parameters` defines which parameters should be exposed and to provide default values to be passed to the stored procedure parameters, if those are not provided in the HTTP request.
 
-**ATTENTION**: 
+**ATTENTION**:
+
 1. Only the first result set returned by the stored procedure will be used by Data API Builder.
-2. Currently we only support simple StoredProcedures,i.e. stored procedure that requires only 1 CRUD action to execute.
-3. If more than one CRUD action is specified in the config, runtime initialization will fail due to config validation error.
+1. If more than one CRUD action is specified in the config, runtime initialization will fail due to config validation error.
 
 Please note that **you should configure the permission accordingly with the stored procedure behavior**. For example, if a Stored Procedure create a new item in the database, it is recommended to allow only the action `create` for such stored procedure. If, like in the sample, a stored procedure returns some data, it is recommended to allow only the action `read`. In general the recommendation is to align the allowed actions to what the stored procedure does, so to provide a consistent experience to the developer.
 
@@ -92,4 +94,22 @@ If a parameter is specified both in the configuration file and in the URL query 
 
 ### GraphQL support for stored procedures
 
-Stored procedure are not supported, at the moment, in GraphQL. No query or mutation will be generated for an entity based on a stored procedure.
+Just like for REST, entities backed by a stored procedure, do not have all the capabilities automatically provided for entities backed by tables, collections or views. An entity using a stored procedure will not have support for pagination, ordering, filtering or for returning an item by specifying the primary key values.
+
+Depending on the `action` defined in the configuration file a GraphQL query object will be generated - if `read` action has been specified - or a mutation object will be created - if `create`, `update` or `delete` action has been specified.
+
+If the stored procedure accepts parameters, those can be passed as parameter of the query or mutation. For example:
+
+```graphql
+query {
+  GetCowrittenBooksByAuthor(author:"asimov")
+   {
+    id
+    title
+    pages
+    year
+  }
+}
+```
+
+If a parameter is specified both in the configuration file and in the URL query string for a stored procedure, the one in the URL query string will take precedence.

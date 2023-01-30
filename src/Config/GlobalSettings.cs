@@ -19,7 +19,6 @@ namespace Azure.DataApiBuilder.Config
     /// <param name="Enabled">If the API is enabled.</param>
     /// <param name="Path">The URL path at which the API is available.</param>
     public record ApiSettings(
-        [property: JsonIgnore]
         bool Enabled = true,
         string Path = ""
         ) : GlobalSettings();
@@ -53,8 +52,6 @@ namespace Azure.DataApiBuilder.Config
     /// <param name="Authentication">Authentication configuration properties.</param>
     public record HostGlobalSettings
         (HostModeType Mode = HostModeType.Production,
-         [property:JsonPropertyName("authenticate-devmode-requests")]
-         bool? IsDevModeDefaultRequestAuthenticated = null,
          Cors? Cors = null,
          AuthenticationConfig? Authentication = null)
         : GlobalSettings();

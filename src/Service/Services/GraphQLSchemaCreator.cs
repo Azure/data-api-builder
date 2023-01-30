@@ -107,7 +107,7 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             (DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes) = _databaseType switch
             {
-                DatabaseType.cosmos => GenerateCosmosGraphQLObjects(),
+                DatabaseType.cosmosdb_nosql => GenerateCosmosGraphQLObjects(),
                 DatabaseType.mssql or
                 DatabaseType.postgresql or
                 DatabaseType.mysql => GenerateSqlGraphQLObjects(_entities),
@@ -149,7 +149,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
                     foreach (string column in sourceDefinition.Columns.Keys)
                     {
-                        IEnumerable<string> roles = _authorizationResolver.GetRolesForField(entityName, field: column, operation: Operation.Read);
+                        IEnumerable<string> roles = _authorizationResolver.GetRolesForField(entityName, field: column, operation: Config.Operation.Read);
                         if (!rolesAllowedForFields.TryAdd(key: column, value: roles))
                         {
                             throw new DataApiBuilderException(

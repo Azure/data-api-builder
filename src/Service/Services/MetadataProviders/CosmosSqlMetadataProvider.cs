@@ -16,10 +16,13 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         private readonly IFileSystem _fileSystem;
         private readonly DatabaseType _databaseType;
         private readonly Dictionary<string, Entity> _entities;
-        private CosmosDbOptions _cosmosDb;
+        private CosmosDbNoSqlOptions _cosmosDb;
         private readonly RuntimeConfig _runtimeConfig;
         private Dictionary<string, string> _partitionKeyPaths = new();
         private Dictionary<string, string> _graphQLSingularTypeToEntityNameMap = new();
+
+        /// <inheritdoc />
+        public Dictionary<string, string> GraphQLStoredProcedureExposedNameToEntityNameMap { get; set; } = new();
 
         /// <inheritdoc />
         public Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } = new(StringComparer.InvariantCultureIgnoreCase);
@@ -33,7 +36,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             _databaseType = _runtimeConfig.DatabaseType;
             _graphQLSingularTypeToEntityNameMap = _runtimeConfig.GraphQLSingularTypeToEntityNameMap;
 
-            CosmosDbOptions? cosmosDb = _runtimeConfig.DataSource.CosmosDbNoSql;
+            CosmosDbNoSqlOptions? cosmosDb = _runtimeConfig.DataSource.CosmosDbNoSql;
 
             if (cosmosDb is null)
             {
@@ -98,7 +101,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
 
         /// <summary>
         /// Even though there is no source definition for underlying entity names for
-        /// cosmos db, we return back an empty source definition required for
+        /// cosmosdb_nosql, we return back an empty source definition required for
         /// graphql filter parser.
         /// </summary>
         /// <param name="entityName"></param>
@@ -163,9 +166,18 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             throw new NotImplementedException();
         }
 
+        /// <summary>
+        /// Mapped column are not yet supported for Cosmos.
+        /// Returns the value of the field provided.
+        /// </summary>
+        /// <param name="entityName">Name of the entity.</param>
+        /// <param name="field">Name of the database field.</param>
+        /// <param name="name">Mapped name, which for CosmosDB is the value provided for field."</param>
+        /// <returns>True, with out variable set as the value of the input "field" value.</returns>
         public bool TryGetBackingColumn(string entityName, string field, out string? name)
         {
-            throw new NotImplementedException();
+            name = field;
+            return true;
         }
 
         public IDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects()

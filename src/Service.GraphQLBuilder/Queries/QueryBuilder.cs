@@ -49,7 +49,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     string entityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
                     Entity entity = entities[entityName];
 
-                    ObjectTypeDefinitionNode returnType = GenerateReturnType(name);
+                    ObjectTypeDefinitionNode? paginationReturnType = GenerateReturnType(name);
 
                     IEnumerable<string> rolesAllowedForRead = IAuthorizationResolver.GetRolesForOperation(entityName, operation: Operation.Read, entityPermissionsMap);
 
@@ -57,16 +57,21 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     {
                         if (entity.ObjectType is SourceType.StoredProcedure)
                         {
+                            // This assignment prevents the generation of pagination fields in the schema for stored procedures
+                            paginationReturnType = null;
                             queryFields.Add(GraphQLStoredProcedureBuilder.GenerateStoredProcedureSchema(name, entity, rolesAllowedForRead));
                         }
                         else
                         {
-                            queryFields.Add(GenerateGetAllQuery(objectTypeDefinitionNode, name, returnType, inputTypes, entity, rolesAllowedForRead));
+                            queryFields.Add(GenerateGetAllQuery(objectTypeDefinitionNode, name, paginationReturnType, inputTypes, entity, rolesAllowedForRead));
                             queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name, databaseType, entity, rolesAllowedForRead));
                         }
                     }
 
-                    returnTypes.Add(returnType);
+                    if (paginationReturnType is not null)
+                    {
+                        returnTypes.Add(paginationReturnType);
+                    }
                 }
             }
 

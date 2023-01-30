@@ -20,6 +20,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         private static readonly Regex _graphQLValidSymbols = new("[^a-zA-Z0-9_]");
 
         /// <summary>
+        /// Per GraphQL Specification:
+        /// "Any Name within a GraphQL type system must not start with two underscores "__"
+        /// unless it is part of the introspection system as defined by this specification."
+        /// </summary>
+        /// <seealso cref="https://spec.graphql.org/October2021/#sec-Names.Reserved-Names"/>
+        public const string INTROSPECTION_FIELD_PREFIX = "__";
+
+        /// <summary>
         /// Enforces the GraphQL naming restrictions on <paramref name="name"/>.
         /// Completely removes invalid characters from the input parameter: name.
         /// Splits up the name into segments where *space* is the splitting token.
@@ -64,6 +72,21 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         public static bool ViolatesNameRequirements(string name)
         {
             return _graphQLValidSymbols.Match(name).Success;
+        }
+
+        /// <summary>
+        /// Per GraphQL specification (October2021):
+        /// "Any Name within a GraphQL type system must not start with two underscores '__'."
+        /// because such types and fields are reserved by GraphQL's introspection system 
+        /// This helper function identifies whether the provided name is prefixed with double
+        /// underscores.
+        /// </summary>
+        /// <seealso cref="https://spec.graphql.org/October2021/#sec-Introspection.Reserved-Names"/>
+        /// <param name="fieldName">Field name to evaluate</param>
+        /// <returns>True/False</returns>
+        public static bool IsIntrospectionField(string fieldName)
+        {
+            return fieldName.StartsWith(INTROSPECTION_FIELD_PREFIX, StringComparison.Ordinal);
         }
 
         /// <summary>
@@ -199,6 +222,16 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         public static string GenerateListQueryName(string entityName, Entity entity)
         {
             return FormatNameForField(Pluralize(entityName, entity).Value);
+        }
+
+        /// <summary>
+        /// Generates the query name of a stored procedure exposed for GraphQL.
+        /// </summary>
+        /// <param name="entityName">Name of the entity</param>
+        /// <returns>Name of the list query</returns>
+        public static string GenerateStoredProcedureQueryName(string entityName, Entity entity)
+        {
+            return FormatNameForField(GetDefinedSingularName(entityName, entity));
         }
     }
 }

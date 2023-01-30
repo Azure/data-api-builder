@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Services;
 using Microsoft.AspNetCore.Http;
@@ -38,7 +37,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     queryString: null,
                     entityNameOrPath: _integrationEntityName,
                     sqlQuery: GetQuery(nameof(PutOne_Update_Test)),
-                    operationType: Operation.Upsert,
+                    operationType: Config.Operation.Upsert,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
                 );
@@ -54,7 +53,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 queryString: null,
                 entityNameOrPath: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery("PutOne_Update_Default_Test"),
-                operationType: Operation.Upsert,
+                operationType: Config.Operation.Upsert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.OK
                 );
@@ -72,7 +71,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 queryString: null,
                 entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: GetQuery("PutOne_Update_CompositeNonAutoGenPK_Test"),
-                operationType: Operation.Upsert,
+                operationType: Config.Operation.Upsert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.OK
                 );
@@ -91,7 +90,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 queryString: null,
                 entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: GetQuery("PutOne_Update_NullOutMissingField_Test"),
-                operationType: Operation.Upsert,
+                operationType: Config.Operation.Upsert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.OK
             );
@@ -109,10 +108,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 queryString: null,
                 entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: GetQuery("PutOne_Update_Empty_Test"),
-                operationType: Operation.Upsert,
+                operationType: Config.Operation.Upsert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.OK
                 );
+        }
+
+        /// <summary>
+        /// Tests that the PUT updates can only update the rows which are accessible after applying the
+        /// security policy which uses data from session context.
+        /// </summary>
+        [TestMethod]
+        public virtual Task PutOneUpdateTestOnTableWithSecurityPolicy()
+        {
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -136,7 +145,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     queryString: null,
                     entityNameOrPath: _integrationEntityName,
                     sqlQuery: GetQuery(nameof(PutOne_Update_IfMatchHeaders_Test)),
-                    operationType: Operation.Upsert,
+                    operationType: Config.Operation.Upsert,
                     headers: new HeaderDictionary(headerDictionary),
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
@@ -164,7 +173,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     queryString: null,
                     entityNameOrPath: _integration_NonAutoGenPK_EntityName,
                     sqlQuery: GetQuery(nameof(PutOne_Insert_Test)),
-                    operationType: Operation.Upsert,
+                    operationType: Config.Operation.Upsert,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
                     expectedLocationHeader: expectedLocationHeader
@@ -185,7 +194,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 queryString: null,
                 entityNameOrPath: _integration_NonAutoGenPK_EntityName,
                 sqlQuery: GetQuery("PutOne_Insert_Nullable_Test"),
-                operationType: Operation.Upsert,
+                operationType: Config.Operation.Upsert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader
@@ -207,7 +216,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 queryString: null,
                 entityNameOrPath: _integration_AutoGenNonPK_EntityName,
                 sqlQuery: GetQuery("PutOne_Insert_AutoGenNonPK_Test"),
-                operationType: Operation.Upsert,
+                operationType: Config.Operation.Upsert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader
@@ -226,7 +235,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 queryString: null,
                 entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: GetQuery("PutOne_Insert_CompositeNonAutoGenPK_Test"),
-                operationType: Operation.Upsert,
+                operationType: Config.Operation.Upsert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader
@@ -243,7 +252,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 queryString: null,
                 entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: GetQuery("PutOne_Insert_Default_Test"),
-                operationType: Operation.Upsert,
+                operationType: Config.Operation.Upsert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader
@@ -262,7 +271,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 queryString: null,
                 entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: GetQuery("PutOne_Insert_Empty_Test"),
-                operationType: Operation.Upsert,
+                operationType: Config.Operation.Upsert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader
@@ -273,7 +282,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         /// Tests successful execution of PUT insert requests which try to
         /// modify fields belonging to one base table in the view.
         /// </summary>
-        /// <returns></returns>
         [TestMethod]
         public virtual async Task PutOneInsertInViewTest()
         {
@@ -290,7 +298,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 queryString: null,
                 entityNameOrPath: _simple_subset_stocks,
                 sqlQuery: GetQuery("PutOneInsertInStocksViewSelected"),
-                operationType: Operation.Upsert,
+                operationType: Config.Operation.Upsert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created
                 );
@@ -319,7 +327,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     queryString: null,
                     entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                     sqlQuery: GetQuery("PutOne_Insert_Nulled_Test"),
-                    operationType: Operation.Upsert,
+                    operationType: Config.Operation.Upsert,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
                     expectedLocationHeader: expectedLocationHeader
@@ -340,7 +348,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 queryString: null,
                 entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: GetQuery("PutOne_Update_Nulled_Test"),
-                operationType: Operation.Upsert,
+                operationType: Config.Operation.Upsert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.OK
                 );
@@ -350,7 +358,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         /// Tests successful execution of PUT update requests which try to
         /// modify fields belonging to one base table in the view.
         /// </summary>
-        /// <returns></returns>
         [TestMethod]
         public virtual async Task PutOneUpdateViewTest()
         {
@@ -365,7 +372,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     queryString: null,
                     entityNameOrPath: _simple_subset_stocks,
                     sqlQuery: GetQuery("PutOneUpdateStocksViewSelected"),
-                    operationType: Operation.Upsert,
+                    operationType: Config.Operation.Upsert,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
                 );
@@ -392,7 +399,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     queryString: null,
                     entityNameOrPath: _integrationMappingEntity,
                     sqlQuery: GetQuery(nameof(PutOne_Update_With_Mapping_Test)),
-                    operationType: Operation.Upsert,
+                    operationType: Config.Operation.Upsert,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
                 );
@@ -421,7 +428,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     queryString: null,
                     entityNameOrPath: _integrationEntityName,
                     sqlQuery: GetQuery(query),
-                    operationType: Operation.Upsert,
+                    operationType: Config.Operation.Upsert,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
                 );
@@ -446,7 +453,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 queryString: string.Empty,
                 entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: string.Empty,
-                operationType: Operation.Upsert,
+                operationType: Config.Operation.Upsert,
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: "Invalid request body. Missing field in body: categoryName.",
@@ -456,7 +463,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         }
 
         [TestMethod]
-        public virtual async Task PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest()
+        public virtual async Task PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest(
+            bool isExpectedErrorMsgSubstr = false)
         {
             // Behaviour expected when a non-nullable but default field
             // is missing from request body. In this case, when we try to null out
@@ -471,12 +479,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 queryString: string.Empty,
                 entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: string.Empty,
-                operationType: Operation.Upsert,
+                operationType: Config.Operation.Upsert,
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: expectedErrorMessage,
                 expectedStatusCode: HttpStatusCode.BadRequest,
-                expectedSubStatusCode: $"{DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed}"
+                expectedSubStatusCode: $"{DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed}",
+                isExpectedErrorMsgSubstr: isExpectedErrorMsgSubstr
             );
         }
 
@@ -485,7 +494,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         /// with item that does NOT exist, AND parameters incorrectly match schema, results in BadRequest.
         /// sqlQuery represents the query used to get 'expected' result of zero items.
         /// </summary>
-        /// <returns></returns>
         [TestMethod]
         public virtual async Task PutOne_Insert_BadReq_Test()
         {
@@ -499,7 +507,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     queryString: string.Empty,
                     entityNameOrPath: _integrationEntityName,
                     sqlQuery: string.Empty,
-                    operationType: Operation.Upsert,
+                    operationType: Config.Operation.Upsert,
                     requestBody: requestBody,
                     exceptionExpected: true,
                     expectedErrorMessage: "Invalid request body. Missing field in body: publisher_id.",
@@ -514,7 +522,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         /// which results in a BadRequest.
         /// sqlQuery represents the query used to get 'expected' result of zero items.
         /// </summary>
-        /// <returns></returns>
         [TestMethod]
         public virtual async Task PutOne_Insert_PKAutoGen_Test()
         {
@@ -529,7 +536,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     queryString: string.Empty,
                     entityNameOrPath: _integrationEntityName,
                     sqlQuery: string.Empty,
-                    operationType: Operation.Upsert,
+                    operationType: Config.Operation.Upsert,
                     requestBody: requestBody,
                     exceptionExpected: true,
                     expectedErrorMessage: $"Cannot perform INSERT and could not find {_integrationEntityName} with primary key <id: 1000> to perform UPDATE on.",
@@ -551,7 +558,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     queryString: string.Empty,
                     entityNameOrPath: _entityWithCompositePrimaryKey,
                     sqlQuery: string.Empty,
-                    operationType: Operation.Upsert,
+                    operationType: Config.Operation.Upsert,
                     requestBody: requestBody,
                     exceptionExpected: true,
                     expectedErrorMessage: $"Cannot perform INSERT and could not find {_entityWithCompositePrimaryKey} with primary key <id: 5002, book_id: 1> to perform UPDATE on.",
@@ -565,7 +572,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         /// which results in a BadRequest.
         /// sqlQuery represents the query used to get 'expected' result of zero items.
         /// </summary>
-        /// <returns></returns>
         [TestMethod]
         public virtual async Task PutOne_Insert_BadReq_NonNullable_Test()
         {
@@ -579,7 +585,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     queryString: string.Empty,
                     entityNameOrPath: _integrationEntityName,
                     sqlQuery: string.Empty,
-                    operationType: Operation.Upsert,
+                    operationType: Config.Operation.Upsert,
                     requestBody: requestBody,
                     exceptionExpected: true,
                     expectedErrorMessage: $"Invalid request body. Missing field in body: publisher_id.",
@@ -597,7 +603,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     queryString: string.Empty,
                     entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                     sqlQuery: string.Empty,
-                    operationType: Operation.Upsert,
+                    operationType: Config.Operation.Upsert,
                     requestBody: requestBody,
                     exceptionExpected: true,
                     expectedErrorMessage: $"Invalid request body. Missing field in body: categoryName.",
@@ -624,7 +630,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 queryString: null,
                 entityNameOrPath: _integration_AutoGenNonPK_EntityName,
                 sqlQuery: string.Empty,
-                operationType: Operation.Upsert,
+                operationType: Config.Operation.Upsert,
                 requestBody: requestBody,
                 expectedErrorMessage: @"Invalid request body. Either insufficient or extra fields supplied.",
                 expectedStatusCode: HttpStatusCode.BadRequest
@@ -653,7 +659,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     queryString: string.Empty,
                     entityNameOrPath: _integrationEntityName,
                     sqlQuery: string.Empty,
-                    operationType: Operation.Upsert,
+                    operationType: Config.Operation.Upsert,
                     headers: new HeaderDictionary(headerDictionary),
                     requestBody: requestBody,
                     exceptionExpected: true,
@@ -682,7 +688,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     queryString: null,
                     entityNameOrPath: _integration_NonAutoGenPK_EntityName,
                     sqlQuery: string.Empty,
-                    operationType: Operation.Upsert,
+                    operationType: Config.Operation.Upsert,
                     requestBody: requestBody,
                     exceptionExpected: true,
                     expectedErrorMessage: RequestValidator.PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE,
@@ -708,7 +714,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 queryString: string.Empty,
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: null,
-                operationType: Operation.Upsert,
+                operationType: Config.Operation.Upsert,
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: "Parameter \"StringFailsToCastToInt\" cannot be resolved as column \"publisher_id\" with type \"Int32\".",
@@ -737,7 +743,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 queryString: string.Empty,
                 entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: string.Empty,
-                operationType: Operation.Upsert,
+                operationType: Config.Operation.Upsert,
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: "Invalid value for field categoryName in request body.",
@@ -757,7 +763,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 queryString: string.Empty,
                 entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: string.Empty,
-                operationType: Operation.Upsert,
+                operationType: Config.Operation.Upsert,
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: "Invalid value for field categoryName in request body.",
@@ -769,9 +775,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         /// Test to verify that we throw exception for invalid/bad
         /// PUT requests on views.
         /// </summary>
-        /// <returns></returns>
         [TestMethod]
-        public virtual async Task PutOneInViewBadRequest(string expectedErrorMessage)
+        public virtual async Task PutOneInViewBadRequest(
+            string expectedErrorMessage,
+            bool isExpectedErrorMsgSubstr = false)
         {
             // PUT update trying to modify fields from multiple base table
             // will result in error.
@@ -786,12 +793,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 queryString: string.Empty,
                 entityNameOrPath: _composite_subset_bookPub,
                 sqlQuery: string.Empty,
-                operationType: Operation.Upsert,
+                operationType: Config.Operation.Upsert,
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: expectedErrorMessage,
                 expectedStatusCode: HttpStatusCode.BadRequest,
-                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString(),
+                isExpectedErrorMsgSubstr: isExpectedErrorMsgSubstr
             );
         }
         #endregion

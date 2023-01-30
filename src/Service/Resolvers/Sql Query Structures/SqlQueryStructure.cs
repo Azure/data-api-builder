@@ -354,7 +354,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             HttpContext httpContext = (HttpContext)httpContextValue!;
 
             // Process Authorization Policy of the entity being processed.
-            AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(Operation.Read, queryStructure: this, httpContext, authorizationResolver, sqlMetadataProvider);
+            AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(Config.Operation.Read, queryStructure: this, httpContext, authorizationResolver, sqlMetadataProvider);
 
             if (outputType.IsNonNullType())
             {
@@ -466,16 +466,24 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         ///<summary>
-        /// Adds predicates for the primary keys in the paramters of the graphql query
+        /// Adds predicates for the primary keys in the parameters of the GraphQL query
         ///</summary>
         private void AddPrimaryKeyPredicates(IDictionary<string, object?> queryParams)
         {
             foreach (KeyValuePair<string, object?> parameter in queryParams)
             {
+                string columnName = parameter.Key;
+
+                MetadataProvider.TryGetBackingColumn(base.EntityName, parameter.Key, out string? backingColumnName);
+                if (!string.IsNullOrWhiteSpace(backingColumnName))
+                {
+                    columnName = backingColumnName;
+                }
+
                 Predicates.Add(new Predicate(
                     new PredicateOperand(new Column(tableSchema: DatabaseObject.SchemaName,
                                                     tableName: DatabaseObject.Name,
-                                                    columnName: parameter.Key,
+                                                    columnName: columnName,
                                                     tableAlias: SourceAlias)),
                     PredicateOperation.Equal,
                     new PredicateOperand($"@{MakeParamWithValue(parameter.Value)}")
@@ -602,9 +610,23 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 FieldNode field = (FieldNode)node;
                 string fieldName = field.Name.Value;
 
-                if (field.SelectionSet == null)
+                // Do not add reserved introspection fields prefixed with "__" to the SqlQueryStructure because those fields are handled by HotChocolate.
+                bool isIntrospectionField = GraphQLNaming.IsIntrospectionField(field.Name.Value);
+                if (isIntrospectionField)
                 {
-                    AddColumn(fieldName);
+                    continue;
+                }
+                else if (field.SelectionSet is null)
+                {
+                    if (MetadataProvider.TryGetBackingColumn(EntityName, fieldName, out string? name)
+                        && !string.IsNullOrWhiteSpace(name))
+                    {
+                        AddColumn(columnName: name, labelName: fieldName);
+                    }
+                    else
+                    {
+                        AddColumn(fieldName);
+                    }
                 }
                 else
                 {

@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -147,10 +146,27 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 $"AND [title] = ' '' UNION SELECT * FROM books/*' " +
                 $"AND [publisher_id] = 1234 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "InsertOneAndReturnSingleRowWithStoredProcedureTest",
+                // This query attempts retrieval of the stored procedure insert operation result,
+                // and is explicitly not representative of the engine generated insert statement.
+                $"SELECT table0.[id], table0.[title], table0.[publisher_id] FROM books AS table0 " +
+                $"JOIN (SELECT id FROM publishers WHERE name = 'The First Publisher') AS table1 " +
+                $"ON table0.[publisher_id] = table1.[id] " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "InsertOneAndReturnMultipleRowsWithStoredProcedureTest",
+                // This query attempts retrieval of the stored procedure insert operation result,
+                // and is explicitly not representative of the engine generated insert statement.
+                $"SELECT table0.[id], table0.[title], table0.[publisher_id] FROM books AS table0 " +
+                $"JOIN (SELECT id FROM publishers WHERE name = 'Big Company') AS table1 " +
+                $"ON table0.[publisher_id] = table1.[id] "
             }
         };
 
-        #region Overriden tests
+        #region overridden tests
         /// <inheritdoc/>
         [TestMethod]
         public override async Task InsertOneTestViolatingForeignKeyConstraint()
@@ -170,12 +186,40 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: string.Empty,
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: string.Empty,
-                operationType: Operation.Insert,
+                operationType: Config.Operation.Insert,
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: expectedErrorMessage,
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
+            );
+        }
+
+        /// <inheritdoc/>
+        [TestMethod]
+        public override async Task InsertOneTestViolatingUniqueKeyConstraint()
+        {
+            string requestBody = @"
+            {
+                ""categoryid"": 1,
+                ""pieceid"": 1,
+                ""categoryName"": ""SciFi""
+            }";
+
+            string expectedErrorMessage = $"Cannot insert duplicate key in object '{_defaultSchemaName}.{_Composite_NonAutoGenPK_TableName}'.";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                sqlQuery: string.Empty,
+                operationType: Config.Operation.Insert,
+                requestBody: requestBody,
+                exceptionExpected: true,
+                expectedErrorMessage: expectedErrorMessage,
+                expectedStatusCode: HttpStatusCode.Conflict,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString(),
+                isExpectedErrorMsgSubstr: true
             );
         }
         #endregion
@@ -210,6 +254,39 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         {
             _ = $"View or function '{_defaultSchemaName}.{_composite_subset_bookPub}' is not updatable " +
                                           $"because the modification affects multiple base tables.";
+        }
+
+        /// <summary>
+        /// Tests the Insert one and returns either single or multiple rows functionality with a REST POST request
+        /// using stored procedure.
+        /// The request executes a stored procedure which attempts to insert a book for a given publisher
+        /// and then returns all books under that publisher.
+        /// </summary>
+        [DataRow("The First Publisher", "InsertOneAndReturnSingleRowWithStoredProcedureTest", true, DisplayName = "Test Single row result")]
+        [DataRow("Big Company", "InsertOneAndReturnMultipleRowsWithStoredProcedureTest", false, DisplayName = "Test multiple row result")]
+        [DataTestMethod]
+        public async Task InsertOneAndVerifyReturnedRowsWithStoredProcedureTest(
+            string publisherName,
+            string queryName,
+            bool expectJson)
+        {
+            string requestBody = @"
+            {
+                ""title"": ""Happy New Year"",
+                ""publisher_name"": """ + $"{publisherName}" + @"""" +
+            "}";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _integrationProcedureInsertOneAndDisplay_EntityName,
+                sqlQuery: GetQuery(queryName),
+                operationType: Config.Operation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: _integrationProcedureInsertOneAndDisplay_EntityName,
+                expectJson: expectJson
+            );
         }
 
         #region RestApiTestBase Overrides

@@ -55,6 +55,33 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
+        /// Tests that the following "Find Many" query is properly handled by the engine given that it references
+        /// mapped column names "column1" and "column2" and NOT "__column1" nor "__column2"
+        /// and that the two mapped names are present in the result set.
+        /// </summary>
+        /// <param name="dbQuery"></param>
+        [TestMethod]
+        public async Task MultipleResultQueryWithMappings(string dbQuery)
+        {
+            string graphQLQueryName = "gQLmappings";
+
+            // "4" references the number of records in the GQLmappings table.
+            string graphQLQuery = @"{
+                gQLmappings(first: 4) {
+                    items {
+                        column1
+                        column2
+                    }
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
+        /// <summary>
         /// Gets array of results for querying a table containing computed columns.
         /// </summary>
         /// <returns>rows from sales table</returns>
@@ -496,6 +523,23 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             string graphQLQuery = @"{
                 book_by_pk(id: 2) {
                     title
+                }
+            }";
+
+            JsonElement actual = await base.ExecuteGraphQLRequestAsync(
+                graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        [TestMethod]
+        public async Task QueryWithSingleColumnPrimaryKeyAndMappings(string dbQuery)
+        {
+            string graphQLQueryName = "gQLmappings_by_pk";
+            string graphQLQuery = @"{
+                gQLmappings_by_pk(column1: 1) {
+                    column1
                 }
             }";
 
@@ -980,16 +1024,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// </summary>
         public async Task TestStoredProcedureQueryForGettingSingleRow(string dbQuery)
         {
-            string graphQLQueryName = "GetPublisher";
+            string graphQLQueryName = "getPublisher";
             string graphQLQuery = @"{
-                GetPublisher(id: 1234) {
+                getPublisher(id: 1234) {
                     id
                     name
                 }
             }";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery, false);
+            string expected = await GetDatabaseResultAsync(dbQuery, expectJson: false);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -999,9 +1043,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// </summary>
         public async Task TestStoredProcedureQueryForGettingMultipleRows(string dbQuery)
         {
-            string graphQLQueryName = "GetBooks";
+            string graphQLQueryName = "getBooks";
             string graphQLQuery = @"{
-                GetBooks {
+                getBooks {
                     id
                     title
                     publisher_id
@@ -1009,7 +1053,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             }";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery, false);
+            string expected = await GetDatabaseResultAsync(dbQuery, expectJson: false);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -1019,15 +1063,37 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// </summary>
         public async Task TestStoredProcedureQueryForGettingTotalNumberOfRows(string dbQuery)
         {
-            string graphQLQueryName = "CountBooks";
+            string graphQLQueryName = "countBooks";
             string graphQLQuery = @"{
-                CountBooks {
+                countBooks {
                     total_books
                 }
             }";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery, false);
+            string expected = await GetDatabaseResultAsync(dbQuery, expectJson: false);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Test to verify Stored Procedure can handle nullable result columns
+        /// The result will contain a row which has columns containing null value.
+        /// Columns:[first_publish_year and total_books_published] in the result set are nullable.
+        /// </summary>
+        public async Task TestStoredProcedureQueryWithResultsContainingNull(string dbQuery)
+        {
+            string graphQLQueryName = "searchAuthorByFirstName";
+            string graphQLQuery = @"{
+                searchAuthorByFirstName(firstName: ""Aaron"") {
+                    author_name
+                    first_publish_year
+                    total_books_published
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery, expectJson: false);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -1052,6 +1118,93 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
+        /// <summary>
+        /// Validates the presence of a resolved __typename in a GraphQL query result payload.
+        /// __typename should not be resolved as a database field and should not result in a database error.
+        /// </summary>
+        [TestMethod]
+        public async Task SingleItemQueryWithIntrospectionFields()
+        {
+
+            string graphQLQueryName = "book_by_pk";
+            string graphQLQuery = @"query {
+                book_by_pk(id: 1) {
+                  id,
+                  __typename
+                }
+            }";
+
+            string expected = @"
+            {
+                ""id"": 1,
+                ""__typename"": ""book""
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Validates the presence of a resolved __typename in a GraphQL query result payload where there
+        /// are nested fields. This query returns the __typename of publishers (PublisherConnection) and the
+        /// __typename of the items collection (Publisher).
+        /// Including the __typename field for items should not result in a database error because __typename
+        /// should not be resolved as a field for the Publisher table.
+        /// </summary>
+        [TestMethod]
+        public async Task ListQueryWithIntrospectionFields()
+        {
+
+            string graphQLQueryName = "publishers";
+            string graphQLQuery = @"query {
+                publishers {
+                  __typename,
+                  items {
+                    __typename,
+                    name
+                  }
+                }
+            }";
+
+            string expected = @"
+            {
+              ""__typename"": ""PublisherConnection"",
+              ""items"": [
+                {
+                  ""__typename"": ""Publisher"",
+                  ""name"": ""The First Publisher""
+                },
+                {
+                  ""__typename"": ""Publisher"",
+                  ""name"": ""Big Company""
+                },
+                {
+                  ""__typename"": ""Publisher"",
+                  ""name"": ""Policy Publisher 01""
+                },
+                {
+                  ""__typename"": ""Publisher"",
+                  ""name"": ""Policy Publisher 02""
+                },
+                {
+                  ""__typename"": ""Publisher"",
+                  ""name"": ""TBD Publishing One""
+                },
+                {
+                  ""__typename"": ""Publisher"",
+                  ""name"": ""TBD Publishing Two Ltd""
+                },
+                {
+                  ""__typename"": ""Publisher"",
+                  ""name"": ""Small Town Publisher""
+                }
+              ]
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
 
         #endregion

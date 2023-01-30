@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             {
                 ValidateGlobalEndpointRouteConfig(runtimeConfig);
                 ValidateEntityNamesInConfig(runtimeConfig.Entities);
-                ValidateEntitiesDoNotGenerateDuplicateQueries(runtimeConfig.Entities);
+                ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(runtimeConfig.Entities);
             }
         }
 
@@ -122,11 +122,10 @@ namespace Azure.DataApiBuilder.Service.Configurations
             }
 
             // Schema file should be present in the directory if not specified in the config
-            // when using cosmos database.
-            if (runtimeConfig.DatabaseType is DatabaseType.cosmos ||
-                runtimeConfig.DatabaseType is DatabaseType.cosmosdb_nosql)
+            // when using cosmosdb_nosql database.
+            if (runtimeConfig.DatabaseType is DatabaseType.cosmosdb_nosql)
             {
-                CosmosDbOptions cosmosDbNoSql = runtimeConfig.DataSource.CosmosDbNoSql!;
+                CosmosDbNoSqlOptions cosmosDbNoSql = runtimeConfig.DataSource.CosmosDbNoSql!;
                 if (cosmosDbNoSql is null)
                 {
                     throw new NotSupportedException("CosmosDB_NoSql is specified but no CosmosDB_NoSql configuration information has been provided.");
@@ -169,37 +168,64 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// All these entities will create queries with the following field names
         /// pk query name: book_by_pk
         /// List query name: books
-        /// NOTE: we don't do this check for storedProcedure, because the name of the query is same
-        /// as that provided in the config, and two different entity can't have same name in the config.
+        /// create mutation name: createBook
+        /// update mutation name: updateBook
+        /// delete mutation name: deleteBook
         /// </summary>
         /// <param name="entityCollection">Entity definitions</param>
         /// <exception cref="DataApiBuilderException"></exception>
-        public static void ValidateEntitiesDoNotGenerateDuplicateQueries(IDictionary<string, Entity> entityCollection)
+        public static void ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(IDictionary<string, Entity> entityCollection)
         {
-            HashSet<string> graphQLQueries = new();
+            HashSet<string> graphQLOperationNames = new();
 
             foreach ((string entityName, Entity entity) in entityCollection)
             {
                 entity.TryPopulateSourceFields();
-                if (
-                    entity.ObjectType is SourceType.StoredProcedure ||
-                    entity.GraphQL is null
+                if (entity.GraphQL is null
                     || (entity.GraphQL is bool graphQLEnabled && !graphQLEnabled))
                 {
                     continue;
                 }
 
-                // For entities that have graphQL exposed, two queries would be generated.
-                // Primary Key Query: For fetching an item using its primary key.
-                // List Query: To fetch a paginated list of items
-                // Query names for both these queries are determined.
-                string pkQueryName = GenerateByPKQueryName(entityName, entity);
-                string listQueryName = GenerateListQueryName(entityName, entity);
+                bool containsDuplicateOperationNames = false;
+                if (entity.ObjectType is SourceType.StoredProcedure)
+                {
+                    // For Stored Procedures a single query/mutation is generated.
+                    string storedProcedureQueryName = GenerateStoredProcedureQueryName(entityName, entity);
 
-                if (!graphQLQueries.Add(pkQueryName) || !graphQLQueries.Add(listQueryName))
+                    if (!graphQLOperationNames.Add(storedProcedureQueryName))
+                    {
+                        containsDuplicateOperationNames = true;
+                    }
+                }
+                else
+                {
+                    // For entities (table/view) that have graphQL exposed, two queries and three mutations would be generated.
+                    // Primary Key Query: For fetching an item using its primary key.
+                    // List Query: To fetch a paginated list of items.
+                    // Query names for both these queries are determined.
+                    string pkQueryName = GenerateByPKQueryName(entityName, entity);
+                    string listQueryName = GenerateListQueryName(entityName, entity);
+
+                    // Mutations names for the exposed entities are determined.
+                    string createMutationName = $"create{GetDefinedSingularName(entityName, entity)}";
+                    string updateMutationName = $"update{GetDefinedSingularName(entityName, entity)}";
+                    string deleteMutationName = $"delete{GetDefinedSingularName(entityName, entity)}";
+
+                    if (!graphQLOperationNames.Add(pkQueryName)
+                        || !graphQLOperationNames.Add(listQueryName)
+                        || !graphQLOperationNames.Add(createMutationName)
+                        || !graphQLOperationNames.Add(updateMutationName)
+                        || !graphQLOperationNames.Add(deleteMutationName))
+                    {
+                        containsDuplicateOperationNames = true;
+                    }
+                }
+
+                if (containsDuplicateOperationNames)
                 {
                     throw new DataApiBuilderException(
-                        message: $"Entity {entityName} generates queries that already exist",
+                        message: $"Entity {entityName} generates queries/mutation that already exist",
                         statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }
@@ -293,19 +319,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
         {
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
 
-            // Validate that the user has not set the devmode-authenticate-all-requests
-            // feature switch when hostmode is production.
-
-            if (runtimeConfig.HostGlobalSettings.Mode == HostModeType.Production
-                && runtimeConfig.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated is not null
-                && runtimeConfig.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated is true)
-            {
-                throw new DataApiBuilderException(
-                    message: $"Default state of authentication cannot be set for requests in production mode.",
-                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
-            }
-
             bool isAudienceSet =
                 runtimeConfig.AuthNConfig is not null &&
                 runtimeConfig.AuthNConfig.Jwt is not null &&
@@ -337,11 +350,12 @@ namespace Azure.DataApiBuilder.Service.Configurations
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
                 entity.TryPopulateSourceFields();
+                HashSet<Config.Operation> totalSupportedOperationsFromAllRoles = new();
                 foreach (PermissionSetting permissionSetting in entity.Permissions)
                 {
                     string roleName = permissionSetting.Role;
                     Object[] actions = permissionSetting.Operations;
-                    List<Operation> operationsList = new();
+                    List<Config.Operation> operationsList = new();
                     foreach (Object action in actions)
                     {
                         if (action is null)
@@ -350,16 +364,16 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         }
 
                         // Evaluate actionOp as the current operation to be validated.
-                        Operation actionOp;
+                        Config.Operation actionOp;
                         JsonElement actionJsonElement = JsonSerializer.SerializeToElement(action);
                         if ((actionJsonElement!).ValueKind is JsonValueKind.String)
                         {
                             string actionName = action.ToString()!;
                             if (AuthorizationResolver.WILDCARD.Equals(actionName))
                             {
-                                actionOp = Operation.All;
+                                actionOp = Config.Operation.All;
                             }
-                            else if (!Enum.TryParse<Operation>(actionName, ignoreCase: true, out actionOp) ||
+                            else if (!Enum.TryParse<Config.Operation>(actionName, ignoreCase: true, out actionOp) ||
                                 !IsValidPermissionAction(actionOp))
                             {
                                 throw GetInvalidActionException(entityName, roleName, actionName);
@@ -410,7 +424,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                     // If thats the case with both of them, we specify 'included' in error.
                                     string misconfiguredColumnSet = configOperation.Fields.Include.Contains(AuthorizationResolver.WILDCARD)
                                         && configOperation.Fields.Include.Count > 1 ? "included" : "excluded";
-                                    string actionName = actionOp is Operation.All ? "*" : actionOp.ToString();
+                                    string actionName = actionOp is Config.Operation.All ? "*" : actionOp.ToString();
                                     throw new DataApiBuilderException(
                                             message: $"No other field can be present with wildcard in the {misconfiguredColumnSet} set for:" +
                                             $" entity:{entityName}, role:{permissionSetting.Role}, action:{actionName}",
@@ -440,17 +454,28 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         }
 
                         operationsList.Add(actionOp);
+                        totalSupportedOperationsFromAllRoles.Add(actionOp);
                     }
 
                     // Only one of the CRUD actions is allowed for stored procedure.
+                    // All the roles should have the same CRUD action.
                     if (entity.ObjectType is SourceType.StoredProcedure)
                     {
                         if ((operationsList.Count > 1)
-                            || (operationsList.Count is 1 && operationsList[0] is Operation.All))
+                            || (operationsList.Count is 1 && operationsList[0] is Config.Operation.All))
                         {
                             throw new DataApiBuilderException(
                                 message: $"Invalid Operations for Entity: {entityName}. " +
                                     $"StoredProcedure can process only one CRUD (Create/Read/Update/Delete) operation.",
+                                statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                        }
+
+                        if ((totalSupportedOperationsFromAllRoles.Count != 1))
+                        {
+                            throw new DataApiBuilderException(
+                                message: $"Invalid Operations for Entity: {entityName}. " +
+                                    $"StoredProcedure should have the same single CRUD action specified for every role.",
                                 statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                         }
@@ -469,7 +494,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <returns></returns>
         public bool IsValidDatabasePolicyForAction(PermissionOperation permission)
         {
-            return !(permission.Policy?.Database != null && permission.Name == Operation.Create);
+            return !(permission.Policy?.Database != null && permission.Name == Config.Operation.Create);
         }
 
         /// <summary>
@@ -599,7 +624,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                                                             entityName,
                                                                             dbObject,
                                                                             JsonSerializer.SerializeToElement(entity.Parameters),
-                                                                            Operation.All);
+                                                                            Config.Operation.All);
                     try
                     {
                         RequestValidator.ValidateStoredProcedureRequestContext(sqRequestContext, sqlMetadataProvider);
@@ -809,9 +834,9 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// </summary>
         /// <param name="action"></param>
         /// <returns>Boolean value indicating whether the action is valid or not.</returns>
-        public static bool IsValidPermissionAction(Operation action)
+        public static bool IsValidPermissionAction(Config.Operation action)
         {
-            return action is Operation.All || PermissionOperation.ValidPermissionOperations.Contains(action);
+            return action is Config.Operation.All || PermissionOperation.ValidPermissionOperations.Contains(action);
         }
     }
 }

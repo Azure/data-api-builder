@@ -1,3 +1,4 @@
+#nullable enable
 using System.Collections.Generic;
 using System.Net;
 using System.Text.Json;
@@ -34,7 +35,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
                 roleName: AuthorizationHelpers.TEST_ROLE,
-                operation: Operation.Create,
+                operation: Config.Operation.Create,
                 includedCols: new HashSet<string> { "*" },
                 excludedCols: new HashSet<string> { "id", "email" },
                 databasePolicy: dbPolicy
@@ -49,28 +50,47 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Test method to validate that only 1 CRUD operation is supported for stored procedure.
+        /// Test method to validate that only 1 CRUD operation is supported for stored procedure
+        /// and every role has that same single operation.
         /// </summary>
         [DataTestMethod]
-        [DataRow(new object[] { "create", "read" }, false, DisplayName = "Stored-procedure with create-read permission")]
-        [DataRow(new object[] { "update", "read" }, false, DisplayName = "Stored-procedure with update-read permission")]
-        [DataRow(new object[] { "delete", "read" }, false, DisplayName = "Stored-procedure with delete-read permission")]
-        [DataRow(new object[] { "create" }, true, DisplayName = "Stored-procedure with only create permission")]
-        [DataRow(new object[] { "read" }, true, DisplayName = "Stored-procedure with only read permission")]
-        [DataRow(new object[] { "update" }, true, DisplayName = "Stored-procedure with only update permission")]
-        [DataRow(new object[] { "delete" }, true, DisplayName = "Stored-procedure with only delete permission")]
-        [DataRow(new object[] { "update", "create" }, false, DisplayName = "Stored-procedure with update-create permission")]
-        [DataRow(new object[] { "delete", "read", "update" }, false, DisplayName = "Stored-procedure with delete-read-update permission")]
-        public void InvalidCRUDForStoredProcedure(object[] operations, bool isValid)
+        [DataRow("anonymous", new object[] { "create", "read" }, null, null, false, false, DisplayName = "Stored-procedure with create-read permission")]
+        [DataRow("anonymous", new object[] { "update", "read" }, null, null, false, false, DisplayName = "Stored-procedure with update-read permission")]
+        [DataRow("anonymous", new object[] { "delete", "read" }, null, null, false, false, DisplayName = "Stored-procedure with delete-read permission")]
+        [DataRow("anonymous", new object[] { "create" }, null, null, true, false, DisplayName = "Stored-procedure with only create permission")]
+        [DataRow("anonymous", new object[] { "read" }, null, null, true, false, DisplayName = "Stored-procedure with only read permission")]
+        [DataRow("anonymous", new object[] { "update" }, null, null, true, false, DisplayName = "Stored-procedure with only update permission")]
+        [DataRow("anonymous", new object[] { "delete" }, null, null, true, false, DisplayName = "Stored-procedure with only delete permission")]
+        [DataRow("anonymous", new object[] { "update", "create" }, null, null, false, false, DisplayName = "Stored-procedure with update-create permission")]
+        [DataRow("anonymous", new object[] { "delete", "read", "update" }, null, null, false, false, DisplayName = "Stored-procedure with delete-read-update permission")]
+        [DataRow("anonymous", new object[] { "create" }, "authenticated", new object[] { "create" }, true, false, DisplayName = "Stored-procedure with only create permission")]
+        [DataRow("anonymous", new object[] { "read" }, "authenticated", new object[] { "create" }, false, true, DisplayName = "Stored-procedure with only read permission")]
+        public void InvalidCRUDForStoredProcedure(
+            string role1,
+            object[] operationsRole1,
+            string? role2,
+            object[]? operationsRole2,
+            bool isValid,
+            bool differentOperationDifferentRoleFailure)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
                 roleName: AuthorizationHelpers.TEST_ROLE
             );
 
-            PermissionSetting permissionForEntity = new(
-                role: AuthorizationHelpers.TEST_ROLE,
-                operations: operations);
+            List<PermissionSetting> permissionSettings = new();
+
+            permissionSettings.Add(new(
+                role: role1,
+                operations: operationsRole1));
+
+            // Adding another role for the entity.
+            if (role2 is not null && operationsRole2 is not null)
+            {
+                permissionSettings.Add(new(
+                    role: role2,
+                    operations: operationsRole2));
+            }
 
             object entitySource = new DatabaseObjectSource(
                     Type: SourceType.StoredProcedure,
@@ -83,7 +103,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Source: entitySource,
                 Rest: true,
                 GraphQL: true,
-                Permissions: new PermissionSetting[] { permissionForEntity },
+                Permissions: permissionSettings.ToArray(),
                 Relationships: null,
                 Mappings: null
             );
@@ -98,8 +118,17 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             catch (DataApiBuilderException ex)
             {
                 Assert.AreEqual(false, isValid);
-                Assert.AreEqual("Invalid Operations for Entity: SampleEntity. " +
-                    $"StoredProcedure can process only one CRUD (Create/Read/Update/Delete) operation.", ex.Message);
+                if (differentOperationDifferentRoleFailure)
+                {
+                    Assert.AreEqual("Invalid Operations for Entity: SampleEntity. " +
+                        $"StoredProcedure should have the same single CRUD action specified for every role.", ex.Message);
+                }
+                else
+                {
+                    Assert.AreEqual("Invalid Operations for Entity: SampleEntity. " +
+                        $"StoredProcedure can process only one CRUD (Create/Read/Update/Delete) operation.", ex.Message);
+                }
+
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
             }
@@ -112,10 +141,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="dbPolicy">Database policy.</param>
         /// <param name="action">The action to be validated.</param>
         [DataTestMethod]
-        [DataRow("@claims.id eq @item.col1", Operation.Insert, DisplayName = "Invalid action Insert specified in config")]
-        [DataRow("@claims.id eq @item.col2", Operation.Upsert, DisplayName = "Invalid action Upsert specified in config")]
-        [DataRow("@claims.id eq @item.col3", Operation.UpsertIncremental, DisplayName = "Invalid action UpsertIncremental specified in config")]
-        public void InvalidActionSpecifiedForARole(string dbPolicy, Operation action)
+        [DataRow("@claims.id eq @item.col1", Config.Operation.Insert, DisplayName = "Invalid action Insert specified in config")]
+        [DataRow("@claims.id eq @item.col2", Config.Operation.Upsert, DisplayName = "Invalid action Upsert specified in config")]
+        [DataRow("@claims.id eq @item.col3", Config.Operation.UpsertIncremental, DisplayName = "Invalid action UpsertIncremental specified in config")]
+        public void InvalidActionSpecifiedForARole(string dbPolicy, Config.Operation action)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
@@ -142,13 +171,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="action">The action to be validated.</param>
         /// <param name="errorExpected">Whether an error is expected.</param>
         [DataTestMethod]
-        [DataRow("1 eq @item.col1", Operation.Create, true, DisplayName = "Database Policy defined for Create fails")]
-        [DataRow("", Operation.Create, true, DisplayName = "Database Policy left empty for Create fails")]
-        [DataRow(null, Operation.Create, false, DisplayName = "Database Policy NOT defined for Create passes")]
-        [DataRow("1 eq @item.col2", Operation.Read, false, DisplayName = "Database Policy defined for Read passes")]
-        [DataRow("2 eq @item.col3", Operation.Update, false, DisplayName = "Database Policy defined for Update passes")]
-        [DataRow("2 eq @item.col3", Operation.Delete, false, DisplayName = "Database Policy defined for Delete passes")]
-        public void AddDatabasePolicyToCreateOperationPermission(string dbPolicy, Operation action, bool errorExpected)
+        [DataRow("1 eq @item.col1", Config.Operation.Create, true, DisplayName = "Database Policy defined for Create fails")]
+        [DataRow("", Config.Operation.Create, true, DisplayName = "Database Policy left empty for Create fails")]
+        [DataRow(null, Config.Operation.Create, false, DisplayName = "Database Policy NOT defined for Create passes")]
+        [DataRow("1 eq @item.col2", Config.Operation.Read, false, DisplayName = "Database Policy defined for Read passes")]
+        [DataRow("2 eq @item.col3", Config.Operation.Update, false, DisplayName = "Database Policy defined for Update passes")]
+        [DataRow("2 eq @item.col3", Config.Operation.Delete, false, DisplayName = "Database Policy defined for Delete passes")]
+        public void AddDatabasePolicyToCreateOperationPermission(string dbPolicy, Config.Operation action, bool errorExpected)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
@@ -547,7 +576,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
                 roleName: AuthorizationHelpers.TEST_ROLE,
-                operation: Operation.Create,
+                operation: Config.Operation.Create,
                 includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: dbPolicy
                 );
@@ -579,7 +608,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
                 roleName: AuthorizationHelpers.TEST_ROLE,
-                operation: Operation.Create,
+                operation: Config.Operation.Create,
                 includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: policy
                 );
@@ -602,11 +631,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="action">The action for which database policy is defined.</param>
         /// <param name="errorExpected">Boolean value indicating whether an exception is expected or not.</param>
         [DataTestMethod]
-        [DataRow("StaticWebApps", "@claims.userId eq @item.col2", Operation.Read, false, DisplayName = "SWA- Database Policy defined for Read passes")]
-        [DataRow("staticwebapps", "@claims.userDetails eq @item.col3", Operation.Update, false, DisplayName = "SWA- Database Policy defined for Update passes")]
-        [DataRow("StaticWebAPPs", "@claims.email eq @item.col3", Operation.Delete, true, DisplayName = "SWA- Database Policy defined for Delete fails")]
-        [DataRow("appService", "@claims.email eq @item.col3", Operation.Delete, false, DisplayName = "AppService- Database Policy defined for Delete passes")]
-        public void TestInvalidClaimsForStaticWebApps(string authProvider, string dbPolicy, Operation action, bool errorExpected)
+        [DataRow("StaticWebApps", "@claims.userId eq @item.col2", Config.Operation.Read, false, DisplayName = "SWA- Database Policy defined for Read passes")]
+        [DataRow("staticwebapps", "@claims.userDetails eq @item.col3", Config.Operation.Update, false, DisplayName = "SWA- Database Policy defined for Update passes")]
+        [DataRow("StaticWebAPPs", "@claims.email eq @item.col3", Config.Operation.Delete, true, DisplayName = "SWA- Database Policy defined for Delete fails")]
+        [DataRow("appService", "@claims.email eq @item.col3", Config.Operation.Delete, false, DisplayName = "AppService- Database Policy defined for Delete passes")]
+        public void TestInvalidClaimsForStaticWebApps(string authProvider, string dbPolicy, Config.Operation action, bool errorExpected)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
@@ -640,7 +669,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
                 roleName: AuthorizationHelpers.TEST_ROLE,
-                operation: Operation.All,
+                operation: Config.Operation.All,
                 includedCols: new HashSet<string> { "col1", "col2", "col3" }
                 );
             RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
@@ -654,9 +683,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// in it.
         /// </summary>
         [DataTestMethod]
-        [DataRow(Operation.Create, DisplayName = "Wildcard Field with another field in included set and create action")]
-        [DataRow(Operation.Update, DisplayName = "Wildcard Field with another field in included set and update action")]
-        public void WildCardAndOtherFieldsPresentInIncludeSet(Operation actionOp)
+        [DataRow(Config.Operation.Create, DisplayName = "Wildcard Field with another field in included set and create action")]
+        [DataRow(Config.Operation.Update, DisplayName = "Wildcard Field with another field in included set and update action")]
+        public void WildCardAndOtherFieldsPresentInIncludeSet(Config.Operation actionOp)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
@@ -677,9 +706,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [DataTestMethod]
-        [DataRow(Operation.Create, DisplayName = "Wildcard Field with another field in excluded set and create action")]
-        [DataRow(Operation.Update, DisplayName = "Wildcard Field with another field in excluded set and update action")]
-        public void WildCardAndOtherFieldsPresentInExcludeSet(Operation actionOp)
+        [DataRow(Config.Operation.Create, DisplayName = "Wildcard Field with another field in excluded set and create action")]
+        [DataRow(Config.Operation.Update, DisplayName = "Wildcard Field with another field in excluded set and update action")]
+        public void WildCardAndOtherFieldsPresentInExcludeSet(Config.Operation actionOp)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
@@ -786,6 +815,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("Entity^Name", true, DisplayName = "Invalid body character ^")]
         [DataRow("Entity&Name", true, DisplayName = "Invalid body character &")]
         [DataRow("Entity name", true, DisplayName = "Invalid body character whitespace")]
+        [DataRow("__introspectionField", true, DisplayName = "Invalid double underscore reserved for introspection fields.")]
         public void ValidateGraphQLTypeNamesFromConfig(string entityNameFromConfig, bool expectsException)
         {
             Dictionary<string, Entity> entityCollection = new();
@@ -863,6 +893,90 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             SortedDictionary<string, Entity> entityCollection = new();
             entityCollection.Add("book", book);
             entityCollection.Add("Book", bookWithUpperCase);
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "Book");
+        }
+
+        /// <summary>
+        /// Validates that an exception is thrown when
+        /// there is a collision in the graphQL queries
+        /// generated by the entity definitions.
+        /// This test declares entities with the following graphQL
+        /// definitions
+        /// "Book" {
+        ///     "source" :{
+        ///         "type": "table"
+        ///    }
+        ///     "graphQL": true
+        /// }
+        /// "book_by_pk" {
+        ///     "source" :{
+        ///         "type": "stored-procedure"
+        ///    }
+        ///     "graphQL": true
+        /// }
+        /// </summary>
+        [TestMethod]
+        public void ValidateStoredProcedureAndTableGeneratedDuplicateQueries()
+        {
+            // Entity Name: Book
+            // Entity Type: table
+            // pk_query: book_by_pk
+            // List Query: books
+            Entity bookTable = GraphQLTestHelpers.GenerateEmptyEntity(sourceType: SourceType.Table);
+            bookTable.GraphQL = new GraphQLEntitySettings(true);
+
+            // Entity Name: book_by_pk
+            // Entity Type: Stored Procedure
+            // StoredProcedure Query: book_by_pk
+            Entity bookByPkStoredProcedure = GraphQLTestHelpers.GenerateEmptyEntity(sourceType: SourceType.StoredProcedure);
+            bookByPkStoredProcedure.GraphQL = new GraphQLEntitySettings(true);
+
+            SortedDictionary<string, Entity> entityCollection = new();
+            entityCollection.Add("Book", bookTable);
+            entityCollection.Add("book_by_pk", bookByPkStoredProcedure);
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_by_pk");
+        }
+
+        /// <summary>
+        /// Validates that an exception is thrown when
+        /// there is a collision in the graphQL mutation
+        /// generated by the entity definitions.
+        /// This test declares entities with the following graphQL
+        /// definitions
+        /// "Book" {
+        ///     "source" :{
+        ///         "type": "table"
+        ///    }
+        ///     "graphQL": true
+        /// }
+        /// "AddBook" {
+        ///     "source" :{
+        ///         "type": "stored-procedure"
+        ///    }
+        ///     "graphQL": {
+        ///         "type": "createBook"
+        ///     }
+        /// }
+        /// </summary>
+        [TestMethod]
+        public void ValidateStoredProcedureAndTableGeneratedDuplicateMutation()
+        {
+            // Entity Name: Book
+            // Entity Type: table
+            // mutation generated: createBook, updateBook, deleteBook
+            Entity bookTable = GraphQLTestHelpers.GenerateEmptyEntity(sourceType: SourceType.Table);
+            bookTable.GraphQL = new GraphQLEntitySettings(true);
+
+            // Entity Name: AddBook
+            // Entity Type: Stored Procedure
+            // StoredProcedure mutation: createBook
+            Entity addBookStoredProcedure = GraphQLTestHelpers.GenerateEntityWithStringType(
+                                                type: "createBook",
+                                                sourceType: SourceType.StoredProcedure);
+
+            SortedDictionary<string, Entity> entityCollection = new();
+            entityCollection.Add("Book", bookTable);
+            entityCollection.Add("AddBook", addBookStoredProcedure);
             ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "Book");
         }
 
@@ -1058,7 +1172,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             entityCollection.Add("BooK", bookWithDifferentCase);
             entityCollection.Add("BOOK", bookWithAllUpperCase);
             entityCollection.Add("Book_alt", book_alt_upperCase);
-            RuntimeConfigValidator.ValidateEntitiesDoNotGenerateDuplicateQueries(entityCollection);
+            RuntimeConfigValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(entityCollection);
         }
 
         /// <summary>
@@ -1115,9 +1229,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         private static void ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(SortedDictionary<string, Entity> entityCollection, string entityName)
         {
             DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
-               action: () => RuntimeConfigValidator.ValidateEntitiesDoNotGenerateDuplicateQueries(entityCollection));
+               action: () => RuntimeConfigValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(entityCollection));
 
-            Assert.AreEqual(expected: $"Entity {entityName} generates queries that already exist", actual: dabException.Message);
+            Assert.AreEqual(expected: $"Entity {entityName} generates queries/mutation that already exist", actual: dabException.Message);
             Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
             Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
         }
@@ -1135,7 +1249,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             )
         {
             PermissionOperation actionForRole = new(
-                Name: Operation.Create,
+                Name: Config.Operation.Create,
                 Fields: null,
                 Policy: null);
 

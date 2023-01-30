@@ -1,11 +1,8 @@
 {
-  "$schema": "dab.draft-01.schema.json",
-  "data-source": {
-    "database-type": "mssql",
+  "$schema": "https://dataapibuilder.azureedge.net/schemas/v0.4.11-alpha/dab.draft.schema.json",
+  "data-source": { 
+    "database-type": "mysql",
     "connection-string": "Connection String"
-  },
-  "mssql": {
-    "set-session-context": false
   },
   "runtime": {
     "rest": {
@@ -16,7 +13,6 @@
     },
     "host": {
       "mode": "development",
-      "authenticate-devmode-requests": false,
       "cors": {
         "origins": [ "http://localhost:5000" ],
         "allow-credentials": false
@@ -428,7 +424,7 @@
             {
               "action": "delete",
               "policy": {
-                "database": "@claims.id eq @item.id"
+                "database": "@claims.userId eq @item.id"
               },
               "fields": {
                 "include": [ "*" ]
@@ -774,7 +770,7 @@
       "source": {
         "type": "view",
         "object": "books_view_with_mapping",
-        "key-fields": ["id"]
+        "key-fields": [ "id" ]
       },
       "rest": true,
       "permissions": [
@@ -1093,6 +1089,24 @@
         }
       ],
       "graphql": true
+    },
+    "GQLmappings": {
+      "source": "GQLmappings",
+      "graphql": true,
+      "mappings": {
+        "__column1": "column1",
+        "__column2": "column2"
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "*" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "*" ]
+        }
+      ]
     }
   }
 }

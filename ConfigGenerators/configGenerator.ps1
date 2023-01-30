@@ -7,12 +7,12 @@ $PSDefaultParameterValues['*:Encoding'] = 'utf8';
 # When invoked without any arguments, config files for all the database types will be generated.
 $databaseTypes = @();
 if($args.Count -eq 0){
-    $databaseTypes = "MsSql", "MySql", "PostgreSql", "Cosmos";
+    $databaseTypes = "mssql", "mysql", "postgresql", "cosmosdb_nosql";
 }
 elseif($args.Count -eq 1){
     $databaseType = $args[0];
-    if(-not( ($databaseType -eq "MsSql") -or ($databaseType -eq "MySql") -or ($databaseType -eq "PostgreSql") -or ($databaseType -eq "Cosmos"))){
-        throw "Valid arguments are MsSql, Mysql, PostgreSql or Cosmos";
+    if(-not( ($databaseType -eq "mssql") -or ($databaseType -eq "mysql") -or ($databaseType -eq "postgresql") -or ($databaseType -eq "cosmosdb_nosql"))){
+        throw "Valid arguments are mssql, mysql, postgresql or cosmosdb_nosql";
     }
     $databaseTypes += $databaseType;
 }
@@ -23,8 +23,8 @@ else{
 $cliBuildOutputPath = $PSScriptRoot + "\..\src\out\cli\";
 $commandsFilesBasePath = $PSScriptRoot;
 
-#Fetching the absolute path of dab.dll from build output directory
-$pathToDabDLL = Get-ChildItem -Path $cliBuildOutputPath -Recurse -include "dab.dll" | Select-Object -ExpandProperty FullName -First 1
+#Fetching the absolute path of Microsoft.DataApiBuilder.dll from build output directory
+$pathToDabDLL = Get-ChildItem -Path $cliBuildOutputPath -Recurse -include "Microsoft.DataApiBuilder.dll" | Select-Object -ExpandProperty FullName -First 1
 
 #Change the working directory to where the config file needs to be generated.
 $workingDirectory = $PSScriptRoot + "\..\src\Service\";
@@ -32,21 +32,21 @@ Set-Location $workingDirectory;
 
 #Generates the config files for the selected database types.
 foreach($databaseType in $databaseTypes){
-    if($databaseType -eq "MsSql"){
+    if($databaseType -eq "mssql"){
         $commandFile = "MsSqlCommands.txt";
         $configFile = "dab-config.MsSql.json";
     }
-    elseif($databaseType -eq "MySql"){
+    elseif($databaseType -eq "mysql"){
         $commandFile = "MySqlCommands.txt";
         $configFile = "dab-config.MySql.json";
     }
-    elseif($databaseType -eq "PostgreSql"){
+    elseif($databaseType -eq "postgresql"){
         $commandFile = "PostgreSqlCommands.txt";
         $configFile = "dab-config.PostgreSql.json";
     }
     else{
         $commandFile = "CosmosCommands.txt";
-        $configFile = "dab-config.Cosmos.json";
+        $configFile = "dab-config.CosmosDb_NoSql.json";
     }
 
     # If a config file with the same name exists, it is deleted to avoid writing to

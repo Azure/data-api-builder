@@ -95,7 +95,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
 
             if (setMappings)
             {
-                mappings.Add(backingColumnName,mappedName);
+                mappings.Add(backingColumnName, mappedName);
             }
 
             SourceDefinition table = new();

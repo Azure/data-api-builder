@@ -78,6 +78,55 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             Assert.AreEqual(expected, od.Fields[0].Name.Value);
         }
 
+        /// <summary>
+        /// Tests that an Entity object's mapping configuration is utilized in the schema generator
+        /// by checking that mapped column values are used for field names instead of backing column names.
+        /// </summary>
+        /// <param name="setMappings">Whether to add mapping entries to the mappings collection.</param>
+        /// <param name="backingColumnName">Name of database column.</param>
+        /// <param name="mappedName">Configured alternative (mapped) name of column to be used in REST/GraphQL endpoints.</param>
+        /// <param name="expectMappedName">Whether GraphQL object field name should equal the mapped column name provided.</param>
+        [DataTestMethod]
+        [DataRow(true, "__typename", "typename", true, DisplayName = "Mapped column name fixes GraphQL introspection naming violation. ")]
+        [DataRow(false, "typename", "mappedtypename", false, DisplayName = "Mapped column name  ")]
+        public void FieldNameMatchesMappedValue(bool setMappings, string backingColumnName, string mappedName, bool expectMappedName)
+        {
+            Dictionary<string, string> mappings = new();
+
+            if (setMappings)
+            {
+                mappings.Add(backingColumnName,mappedName);
+            }
+
+            SourceDefinition table = new();
+            table.Columns.Add(backingColumnName, new ColumnDefinition
+            {
+                SystemType = typeof(string)
+            });
+
+            DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
+
+            Entity configEntity = GenerateEmptyEntity() with { Mappings = mappings };
+
+            ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
+                "table",
+                dbObject,
+                configEntity,
+                entities: new(),
+                rolesAllowedForEntity: GetRolesAllowedForEntity(),
+                rolesAllowedForFields: GetFieldToRolesMap(columnName: table.Columns.First().Key));
+
+            string errorMessage = "Object field representing database column has an unexpected name value.";
+            if (expectMappedName)
+            {
+                Assert.AreEqual(mappedName, od.Fields[0].Name.Value, message: errorMessage);
+            }
+            else
+            {
+                Assert.AreEqual(backingColumnName, od.Fields[0].Name.Value, message: errorMessage);
+            }
+        }
+
         [TestMethod]
         public void PrimaryKeyColumnHasAppropriateDirective()
         {

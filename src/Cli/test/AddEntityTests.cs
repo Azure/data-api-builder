@@ -230,7 +230,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 config: _testRuntimeConfig,
-                restMethodsForStoredProcedure: new string[] { "Post", "Put", "Patch"},
+                restMethodsForStoredProcedure: new string[] { "Post", "Put", "Patch" },
                 graphQLOperationForStoredProcedure: "Query"
                 );
 
@@ -287,7 +287,8 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Test conflicting configurations of GraphQL and REST. 
+        /// Test adding a new stored procedure with different combinations of REST Path, REST Methods,
+        /// GraphQL Type and GraphQL Operation
         /// </summary>
         /// <param name="restMethods">Explicitly configured REST methods for stored procedure.</param>
         /// <param name="graphQLOperation">Explicitly configured GraphQL operation for stored procedure (Query/Mutation).</param>
@@ -296,12 +297,22 @@ namespace Cli.Tests
         /// <param name="expectSuccess">Whether adding the specified option is expected to succeed. (True/false).</param>
         [DataTestMethod]
         [DataRow(null, null, null, null, true, DisplayName = "Default Case without any customization")]
-        [DataRow(null, null, "true", "true", true, DisplayName = "Both REST and GraphQL enabled without any methods and operations configured explicitly")]
-        [DataRow(new string[] {"Get"}, "Query", "true", "true", true, DisplayName = "Both REST and GraphQL enabled with custom REST methods and GraphQL operations")]
-        [DataRow(new string[] {"Post,Patch,Put"}, null, "true", "true", true, DisplayName = "Both REST and GraphQL enabled with custom REST methods")]
-        [DataRow(null, "Mutation", "true", "true", true, DisplayName = "Both REST and GraphQL enabled without custom GraphQL operation")]
+        [DataRow(null, null, "true", null, true, DisplayName = "REST enabled without any methods explicitly configured")]
+        [DataRow(null, null, "book", null, true, DisplayName = "Custom REST path defined without any methods explictly configured")]
+        [DataRow(new string[] { "Get", "Post", "Patch" }, null, null, null, true, DisplayName = "REST methods defined without REST Path explicitly configured")]
+        [DataRow(new string[] { "Get", "Post", "Patch" }, null, "true", null, true, DisplayName = "REST enabled along with some methods")]
+        [DataRow(new string[] { "Get", "Post", "Patch" }, null, "book", null, true, DisplayName = "Custom REST path defined along with some methods")]
+        [DataRow(null, null, null, "true", true, DisplayName = "GraphQL enabled without any operation explicitly configured")]
+        [DataRow(null, null, null, "book", true, DisplayName = "Custom GraphQL Type defined without any operation explicitly configured")]
+        [DataRow(null, null, null, "book:books", true, DisplayName = "SingularPlural GraphQL Type enabled without any operation explicitly configured")]
+        [DataRow(null, "Query", null, "true", true, DisplayName = "GraphQL enabled with Query operation")]
+        [DataRow(null, "Query", null, "book", true, DisplayName = "Custom GraphQL Type defined along with Query operation")]
+        [DataRow(null, "Query", null, "book:books", true, DisplayName = "SingularPlural GraphQL Type defined along with Query operation")]
+        [DataRow(null, null, null, "true", true, DisplayName = "Both REST and GraphQL enabled without any methods and operations configured explicitly")]
+        [DataRow(new string[] { "Get" }, "Query", "true", "true", true, DisplayName = "Both REST and GraphQL enabled with custom REST methods and GraphQL operations")]
+        [DataRow(new string[] { "Post,Patch,Put" }, "Query", "book", "book:books", true, DisplayName = "Configuration with REST Path, Methods and GraphQL Type, Operation")]
         [DataRow(null, "Mutation", "true", "false", false, DisplayName = "Conflicting configurations - GraphQL operation specified but entity is disabled for GraphQL")]
-        [DataRow(new string[] {"Get"}, null, "false", "true", false, DisplayName = "Conflicting configurations - REST methods specified but entity is disabled for REST")]
+        [DataRow(new string[] { "Get" }, null, "false", "true", false, DisplayName = "Conflicting configurations - REST methods specified but entity is disabled for REST")]
         public void TestAddNewSpWithDifferentRestAndGraphQLOptions(
                 IEnumerable<string>? restMethods,
                 string? graphQLOperation,

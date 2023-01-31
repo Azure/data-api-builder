@@ -356,6 +356,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             bool exceptionExpected = false,
             string expectedErrorMessage = "",
             HttpStatusCode expectedStatusCode = HttpStatusCode.OK,
+            RestMethod? restHttpVerb = null,
             string expectedSubStatusCode = "BadRequest",
             string expectedLocationHeader = null,
             string expectedAfterQueryString = "",
@@ -391,7 +392,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             };
 
             // Get the httpMethod based on the operation to be executed.
-            HttpMethod httpMethod = SqlTestHelper.GetHttpMethodFromOperation(operationType);
+            HttpMethod httpMethod = SqlTestHelper.GetHttpMethodFromOperation(operationType, restHttpVerb);
 
             // Create the request to be sent to the engine.
             HttpRequestMessage request;

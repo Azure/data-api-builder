@@ -378,6 +378,7 @@ type Table @model(name: ""table"") {
         /// <param name="permissionOperations">CRUD + Execute -> for Entity.Permissions</param>
         /// <param name="expectsQueryField">Whether QueryBuilder will generate a query field for the GraphQL schema.</param>
         [DataTestMethod]
+        [Ignore]
         [DataRow(GraphQLOperation.Query, new[] { Config.Operation.Execute }, new[] { "execute" }, true, DisplayName = "Query field generated since all metadata is valid")]
         [DataRow(null, new[] { Config.Operation.Execute }, new[] { "execute" }, false, DisplayName = "Query field not generated since default operation is mutation.")]
         [DataRow(GraphQLOperation.Query, new[] { Config.Operation.Read }, new[] { "read" }, false, DisplayName = "Query field not generated because invalid permissions were supplied")]

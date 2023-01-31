@@ -607,8 +607,7 @@
             "create",
             "read",
             "update",
-            "delete",
-            "execute"
+            "delete"
           ]
         },
         {

@@ -108,6 +108,14 @@ namespace Azure.DataApiBuilder.Service.Models
                 {
                     List<ObjectFieldNode> subfields = (List<ObjectFieldNode>)fieldValue;
 
+                    // Preserve the name value present in the filter.
+                    string backingColumnName = name;
+                    _metadataProvider.TryGetBackingColumn(queryStructure.EntityName, field: name, out string? resolvedBackingColumnName);
+                    if (!string.IsNullOrWhiteSpace(resolvedBackingColumnName))
+                    {
+                        backingColumnName = resolvedBackingColumnName;
+                    }
+
                     if (!StandardQueryInputs.IsStandardInputType(filterInputObjectType.Name))
                     {
                         if (sourceDefinition.PrimaryKey.Count != 0)
@@ -124,8 +132,8 @@ namespace Azure.DataApiBuilder.Service.Models
                         }
                         else
                         {
-                            queryStructure.DatabaseObject.Name = sourceName + "." + name;
-                            queryStructure.SourceAlias = sourceName + "." + name;
+                            queryStructure.DatabaseObject.Name = sourceName + "." + backingColumnName;
+                            queryStructure.SourceAlias = sourceName + "." + backingColumnName;
                             predicates.Push(new PredicateOperand(Parse(ctx,
                                 filterArgumentObject.Fields[name],
                                 subfields,
@@ -141,7 +149,7 @@ namespace Azure.DataApiBuilder.Service.Models
                                 ParseScalarType(
                                     ctx,
                                     argumentSchema: filterArgumentObject.Fields[name],
-                                    name,
+                                    backingColumnName,
                                     subfields,
                                     schemaName,
                                     sourceName,

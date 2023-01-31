@@ -1125,6 +1125,24 @@
         "type": "GetPublisher",
         "operation": "query"
       }
+    },
+    "GQLmappings": {
+      "source": "GQLmappings",
+      "graphql": true,
+      "mappings": {
+        "__column1": "column1",
+        "__column2": "column2"
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "*" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "*" ]
+        }
+      ]
     }
   }
 }

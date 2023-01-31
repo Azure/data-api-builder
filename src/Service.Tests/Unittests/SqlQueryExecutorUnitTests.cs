@@ -81,7 +81,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 }
                 else
                 {
-                    runtimeConfigProvider.Initialize(
+                    await runtimeConfigProvider.Initialize(
                         JsonSerializer.Serialize(runtimeConfigProvider.GetRuntimeConfiguration()),
                         schema: null,
                         connectionString: connectionString,
@@ -122,7 +122,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestCategory.MSSQL);
             Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
-            Mock<MsSqlQueryExecutor> queryExecutor = new(runtimeConfigProvider, dbExceptionParser, queryExecutorLogger.Object);
+            Mock<MsSqlQueryExecutor> queryExecutor
+                = new(runtimeConfigProvider, dbExceptionParser, queryExecutorLogger.Object);
+
+            queryExecutor.Setup(x => x.ConnectionStringBuilder).Returns(
+                new SqlConnectionStringBuilder(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString));
 
             // Mock the ExecuteQueryAgainstDbAsync to throw a transient exception.
             queryExecutor.Setup(x => x.ExecuteQueryAgainstDbAsync(
@@ -169,7 +173,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestCategory.MSSQL);
             Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
-            Mock<MsSqlQueryExecutor> queryExecutor = new(runtimeConfigProvider, dbExceptionParser, queryExecutorLogger.Object);
+            Mock<MsSqlQueryExecutor> queryExecutor
+                = new(runtimeConfigProvider, dbExceptionParser, queryExecutorLogger.Object);
+
+            queryExecutor.Setup(x => x.ConnectionStringBuilder).Returns(
+                new SqlConnectionStringBuilder(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString));
 
             // Mock the ExecuteQueryAgainstDbAsync to throw a transient exception.
             queryExecutor.SetupSequence(x => x.ExecuteQueryAgainstDbAsync(

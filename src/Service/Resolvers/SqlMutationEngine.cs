@@ -20,7 +20,6 @@ using HotChocolate.Resolvers;
 using HotChocolate.Types;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
@@ -36,7 +35,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private readonly IQueryBuilder _queryBuilder;
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly ILogger<SqlMutationEngine> _logger;
         private readonly GQLFilterParser _gQLFilterParser;
         public const string IS_FIRST_RESULT_SET = "IsFirstResultSet";
 
@@ -50,8 +48,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ISqlMetadataProvider sqlMetadataProvider,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
-            IHttpContextAccessor httpContextAccessor,
-            ILogger<SqlMutationEngine> logger)
+            IHttpContextAccessor httpContextAccessor)
         {
             _queryEngine = queryEngine;
             _queryExecutor = queryExecutor;
@@ -59,7 +56,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             _sqlMetadataProvider = sqlMetadataProvider;
             _authorizationResolver = authorizationResolver;
             _httpContextAccessor = httpContextAccessor;
-            _logger = logger;
             _gQLFilterParser = gQLFilterParser;
         }
 
@@ -192,7 +188,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 _gQLFilterParser,
                 context.ResolvedParameters);
             string queryText = _queryBuilder.Build(executeQueryStructure);
-            _logger.LogInformation(queryText);
 
             JsonArray? resultArray =
                 await _queryExecutor.ExecuteQueryAsync(
@@ -496,8 +491,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     throw new NotSupportedException($"Unexpected mutation operation \" {operationType}\" requested.");
             }
 
-            _logger.LogInformation(queryString);
-
             Tuple<Dictionary<string, object?>?, Dictionary<string, object>>? resultRecord = null;
 
             if (context is not null && !context.Selection.Type.IsScalarType())
@@ -592,7 +585,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 _sqlMetadataProvider);
             queryString = _queryBuilder.Build(deleteStructure);
             queryParameters = deleteStructure.Parameters;
-            _logger.LogInformation(queryString);
 
             Dictionary<string, object>?
                 resultProperties = await _queryExecutor.ExecuteQueryAsync(

@@ -126,8 +126,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                 _sqlMetadataProvider.Object,
                 _authorizationResolver.Object,
                 _gQLFilterParser.Object,
-                httpContextAccessor.Object,
-                _mutationEngineLogger.Object
+                httpContextAccessor.Object
                 );
         }
     }

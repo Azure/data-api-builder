@@ -223,8 +223,8 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
             GenerateDatabaseObjectForEntities();
-            await PopulateObjectDefinitionForEntities();
             GenerateExposedToBackingColumnMapsForEntities();
+            await PopulateObjectDefinitionForEntities();
             GenerateRestPathToEntityMap();
             InitODataParser();
             timer.Stop();

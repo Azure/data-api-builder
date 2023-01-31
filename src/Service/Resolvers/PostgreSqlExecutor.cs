@@ -49,7 +49,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ILogger<QueryExecutor<NpgsqlConnection>> logger)
             : base(dbExceptionParser,
                   logger,
-                  new NpgsqlConnectionStringBuilder(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString))
+                  new NpgsqlConnectionStringBuilder(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString),
+                  runtimeConfigProvider)
         {
             _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
             _attemptToSetAccessToken =

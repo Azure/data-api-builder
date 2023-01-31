@@ -166,8 +166,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 sqlMetadataProvider.Object,
                 authorizationResolver,
                 gQLFilterParser,
-                httpContextAccessor.Object,
-                mutationEngingLogger.Object);
+                httpContextAccessor.Object);
 
             // Setup REST Service
             _restService = new RestService(

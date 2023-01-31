@@ -1121,7 +1121,10 @@
           ]
         }
       ],
-      "graphql": true
+      "graphql": {
+        "type": "GetPublisher",
+        "operation": "query"
+      }
     },
     "GQLmappings": {
       "source": "GQLmappings",

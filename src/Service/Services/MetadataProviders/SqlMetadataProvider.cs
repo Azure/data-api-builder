@@ -906,6 +906,7 @@ namespace Azure.DataApiBuilder.Service.Services
                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
+            // HashSet used for performance: constant time .contains() lookup inside upcoming loop.
             HashSet<string> pKeySet = new(sourceDefinition.PrimaryKey);
             _logger.LogDebug($"Logging Primary Key information for Entity: {entityName}.");
             using DataTableReader reader = new(dataTable);

@@ -18,9 +18,9 @@ using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
-    //<summary>
-    // CosmosQueryEngine to execute queries against CosmosDb.
-    //</summary>
+    /// <summary>
+    /// CosmosQueryEngine to execute queries against CosmosDb.
+    /// </summary>
     public class CosmosQueryEngine : IQueryEngine
     {
         private readonly CosmosClientProvider _clientProvider;
@@ -29,9 +29,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private readonly GQLFilterParser _gQLFilterParser;
         private readonly IAuthorizationResolver _authorizationResolver;
 
-        // <summary>
-        // Constructor.
-        // </summary>
+        /// <summary>
+        /// Constructor 
+        /// </summary>
         public CosmosQueryEngine(
             CosmosClientProvider clientProvider,
             ISqlMetadataProvider metadataStoreProvider,
@@ -51,7 +51,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(
             IMiddlewareContext context,
-            IDictionary<string, object?> parameters)
+            IDictionary<string, object> parameters)
         {
             // TODO: fixme we have multiple rounds of serialization/deserialization JsomDocument/JObject
             // TODO: add support for nesting
@@ -70,7 +70,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             foreach (KeyValuePair<string, object> parameterEntry in structure.Parameters)
             {
-                querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value);
+                querySpec = querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value);
             }
 
             if (!string.IsNullOrEmpty(partitionKeyValue))
@@ -135,6 +135,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return new Tuple<JsonDocument, IMetadata>(null, null);
         }
 
+        /// <summary>
+        /// Executes the given IMiddlewareContext of the GraphQL query and
+        /// expecting a list of Json back.
+        /// </summary>
         public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
             // TODO: fixme we have multiple rounds of serialization/deserialization JsomDocument/JObject
@@ -149,7 +153,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             foreach (KeyValuePair<string, object> parameterEntry in structure.Parameters)
             {
-                querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value);
+                querySpec = querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value);
             }
 
             FeedIterator<JObject> resultSetIterator = container.GetItemQueryIterator<JObject>(querySpec);
@@ -169,14 +173,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return new Tuple<IEnumerable<JsonDocument>, IMetadata>(resultsAsList, null);
         }
 
-        // <summary>
-        // Given the SqlQueryStructure structure, obtains the query text and executes it against the backend.
-        // </summary>
+        /// <inheritdoc />
         public Task<IActionResult> ExecuteAsync(FindRequestContext context)
         {
             throw new NotImplementedException();
         }
 
+        /// <inheritdoc />
         public Task<IActionResult> ExecuteAsync(StoredProcedureRequestContext context)
         {
             throw new NotImplementedException();
@@ -305,7 +308,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 {
                     // Recursion to mapping next inner object
                     int index = partitionKeyPath.IndexOf(currentEntity);
-                    string newPartitionKeyPath = partitionKeyPath.Substring(index + currentEntity.Length);
+                    string newPartitionKeyPath = partitionKeyPath[(index + currentEntity.Length)..partitionKeyPath.Length];
                     return GetPartitionKeyValue(newPartitionKeyPath, item.Value.Value);
                 }
             }
@@ -318,7 +321,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         /// <param name="parameter"></param>
         /// <returns></returns>
-        private static string GetIdValue(object parameter)
+        private static string? GetIdValue(object? parameter)
         {
             if (parameter != null)
             {
@@ -327,7 +330,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     if (string.Equals(item.Name.Value, "id", StringComparison.OrdinalIgnoreCase))
                     {
                         IList<ObjectFieldNode>? idValueObj = (IList<ObjectFieldNode>?)item.Value.Value;
-                        return idValueObj.FirstOrDefault(x => x.Name.Value == "eq")?.Value.Value.ToString();
+                        return idValueObj?.FirstOrDefault(x => x.Name.Value == "eq")?.Value?.Value?.ToString();
                     }
                 }
             }
@@ -335,7 +338,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return null;
         }
 
-        private static string Base64Encode(string plainText)
+        private static string? Base64Encode(string plainText)
         {
             if (plainText == default)
             {
@@ -346,7 +349,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return Convert.ToBase64String(plainTextBytes);
         }
 
-        private static string Base64Decode(string base64EncodedData)
+        private static string? Base64Decode(string base64EncodedData)
         {
             if (base64EncodedData == default)
             {

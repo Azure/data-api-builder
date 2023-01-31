@@ -280,8 +280,8 @@ public class EndToEndTests
     }
 
     /// <summary>
-    /// Test to validate that config json gets built correctly with the options
-    /// --rest.methods and --graphql.operations for stored procedures.
+    /// Validates that the built JSON configuration contains the explicit stored procedure entity settings
+    /// --rest.methods and --graphql.operations.
     /// </summary>
     [TestMethod]
     public void TestAddingStoredProcedureWithRestMethodsAndGraphQLOperations()
@@ -298,6 +298,10 @@ public class EndToEndTests
         Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfig), JObject.Parse(File.ReadAllText(_testRuntimeConfig))));
     }
 
+    /// <summary>
+    /// Validates that CLI execution of the add/update commands results in a stored procedure entity
+    /// with explicit rest method GET and GraphQL endpoint disabled.
+    /// </summary>
     [TestMethod]
     public void TestUpdatingStoredProcedureWithRestMethodsAndGraphQLOperations()
     {

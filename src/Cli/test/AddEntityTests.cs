@@ -213,6 +213,11 @@ namespace Cli.Tests
             RunTest(options, initialConfiguration, expectedConfiguration);
         }
 
+        /// <summary>
+        /// Tests that the CLI Add command translates the user provided options into the expected configuration file.
+        /// This test validates that the stored procedure entity configuration JSON contains the execute permission as well as
+        /// the explicitly configured REST methods (Post, Put, Patch) and GraphQL operation (Query).
+        /// </summary>
         [TestMethod]
         public void TestAddStoredProcedureWithRestMethodsAndGraphQLOperations()
         {
@@ -287,8 +292,11 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Test adding a new stored procedure with different combinations of REST Path, REST Methods,
-        /// GraphQL Type and GraphQL Operation
+        /// Validates the successful/unsuccessful execution of ConfigGenerator.TryAddNewEntity()
+        /// by passing AddOptions for a stored procedure with various combinations of REST Path, REST Methods,
+        /// GraphQL Type, and GraphQL Operation.
+        /// Failure is limited to when GraphQL and REST explicit options are provided, but the associated
+        /// REST/GraphQL endpoint for the entity is disabled.
         /// </summary>
         /// <param name="restMethods">Explicitly configured REST methods for stored procedure.</param>
         /// <param name="graphQLOperation">Explicitly configured GraphQL operation for stored procedure (Query/Mutation).</param>

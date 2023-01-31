@@ -314,7 +314,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private async Task<JsonDocument> ExecuteAsync(SqlExecuteStructure structure)
         {
             string queryString = _queryBuilder.Build(structure);
-            _logger.LogInformation(queryString);
 
             JsonArray resultArray =
                 await _queryExecutor.ExecuteQueryAsync(

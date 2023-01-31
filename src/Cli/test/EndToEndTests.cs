@@ -272,8 +272,7 @@ public class EndToEndTests
                 ""param1"": 123,
                 ""param2"": ""hello"",
                 ""param3"": true
-            },
-            ""key-fields"": []
+            }
         }";
 
         actualSourceObject = JsonSerializer.Serialize(runtimeConfig.Entities["MyEntity"].Source);
@@ -617,7 +616,6 @@ public class EndToEndTests
             return null;
         }
 
-        Console.WriteLine(jsonString);
         RuntimeConfig.TryGetDeserializedRuntimeConfig(jsonString, out RuntimeConfig? runtimeConfig, logger);
 
         if (runtimeConfig is null)

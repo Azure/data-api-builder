@@ -342,8 +342,6 @@ namespace Cli.Tests
                     }";
 
             Assert.IsTrue(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
-            Console.WriteLine("expected : " + JObject.Parse(expectedConfig));
-            Console.WriteLine("actual : " + JObject.Parse(runtimeConfig));
             Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfig), JObject.Parse(runtimeConfig)));
         }
 

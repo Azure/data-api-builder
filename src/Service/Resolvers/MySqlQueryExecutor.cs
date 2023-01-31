@@ -47,7 +47,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ILogger<QueryExecutor<MySqlConnection>> logger)
             : base(dbExceptionParser,
                   logger,
-                  new MySqlConnectionStringBuilder(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString))
+                  new MySqlConnectionStringBuilder(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString),
+                  runtimeConfigProvider)
         {
             _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
             _attemptToSetAccessToken =

@@ -22,7 +22,7 @@ add books_publishers_view_composite_insertable --config "dab-config.MsSql.json" 
 add Empty --config "dab-config.MsSql.json" --source "empty_table" --permissions "authenticated:create,read,update,delete" --rest true
 add Notebook --config "dab-config.MsSql.json" --source "notebooks" --permissions "anonymous:read" --rest true --graphql true --fields.include "*" --policy-database "@item ne 1"
 add Journal --config "dab-config.MsSql.json" --source "journals" --rest true --graphql true --permissions "policy_tester_noupdate:create,delete"
-add ArtOfWar --config "dab-config.MsSql.json" --source "aow" --rest true --permissions "anonymous:*"
+add ArtOfWar --config "dab-config.MsSql.json" --source "aow" --rest true --graphql false --permissions "anonymous:*"
 add series --config "dab-config.MsSql.json" --source "series" --permissions "anonymous:*"
 add Sales --config "dab-config.MsSql.json" --source "sales" --permissions "anonymous:*" --rest true --graphql true
 add GetBooks --config "dab-config.MsSql.json" --source "get_books" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql true --graphql.operation "Query"
@@ -93,7 +93,7 @@ update stocks_price --config "dab-config.MsSql.json" --permissions "authenticate
 update Comic --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship myseries --target.entity series --cardinality one
 update series --config "dab-config.MsSql.json" --relationship comics --target.entity Comic --cardinality many
 update Broker --config "dab-config.MsSql.json" --permissions "authenticated:create,update,read,delete" --graphql false
-update Tree --config "dab-config.MsSql.json" --rest true --permissions "authenticated:create,read,update,delete" --map "species:Scientific Name,region:United State's Region"
+update Tree --config "dab-config.MsSql.json" --rest true --graphql false --permissions "authenticated:create,read,update,delete" --map "species:Scientific Name,region:United State's Region"
 update Shrub --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --map "species:fancyName"
 update Fungus --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --map "spores:hazards" --rest true
 update Fungus --config "dab-config.MsSql.json" --permissions "policy_tester_01:read" --fields.include "*" --policy-database "@item.region ne 'northeast'"

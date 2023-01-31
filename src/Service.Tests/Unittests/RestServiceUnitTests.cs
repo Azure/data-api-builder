@@ -127,7 +127,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<ILogger<SqlMutationEngine>> mutationEngingLogger = new();
             Mock<ILogger<AuthorizationResolver>> authLogger = new();
 
-            QueryExecutor<SqlConnection> queryExecutor = new(
+            MsSqlQueryExecutor queryExecutor = new(
                 runtimeConfigProvider,
                 dbExceptionParser.Object,
                 queryExecutorLogger.Object);

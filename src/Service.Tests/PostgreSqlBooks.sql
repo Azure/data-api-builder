@@ -25,6 +25,7 @@ DROP TABLE IF EXISTS journals;
 DROP TABLE IF EXISTS series;
 DROP TABLE IF EXISTS sales;
 DROP TABLE IF EXISTS graphql_incompatible;
+DROP TABLE IF EXISTS GQLmappings;
 DROP FUNCTION IF EXISTS insertCompositeView;
 
 DROP SCHEMA IF EXISTS foo;
@@ -181,6 +182,12 @@ CREATE TABLE graphql_incompatible (
     conformingName text
 );
 
+CREATE TABLE GQLmappings (
+    __column1 int PRIMARY KEY,
+    __column2 text,
+    column3 text
+);
+
 ALTER TABLE books
 ADD CONSTRAINT book_publisher_fk
 FOREIGN KEY (publisher_id)
@@ -229,6 +236,10 @@ FOREIGN KEY (series_id)
 REFERENCES series(id)
 ON DELETE CASCADE;
 
+INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (1, 'Incompatible GraphQL Name', 'Compatible GraphQL Name');
+INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (3, 'Old Value', 'Record to be Updated');
+INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (4, 'Lost Record', 'Record to be Deleted');
+INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (5, 'Filtered Record', 'Record to be Filtered on Find');
 INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd'), (1940, 'Policy Publisher 01'), (1941, 'Policy Publisher 02'), (1156, 'The First Publisher');
 INSERT INTO authors(id, name, birthdate) VALUES (123, 'Jelte', '2001-01-01'), (124, 'Aniruddh', '2002-02-02'), (125, 'Aniruddh', '2001-01-01'), (126, 'Aaron', '2001-01-01');
 INSERT INTO books(id, title, publisher_id)

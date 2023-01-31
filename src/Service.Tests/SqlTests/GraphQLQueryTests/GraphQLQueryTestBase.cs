@@ -55,6 +55,33 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
+        /// Tests that the following "Find Many" query is properly handled by the engine given that it references
+        /// mapped column names "column1" and "column2" and NOT "__column1" nor "__column2"
+        /// and that the two mapped names are present in the result set.
+        /// </summary>
+        /// <param name="dbQuery"></param>
+        [TestMethod]
+        public async Task MultipleResultQueryWithMappings(string dbQuery)
+        {
+            string graphQLQueryName = "gQLmappings";
+
+            // "4" references the number of records in the GQLmappings table.
+            string graphQLQuery = @"{
+                gQLmappings(first: 4) {
+                    items {
+                        column1
+                        column2
+                    }
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
+        /// <summary>
         /// Gets array of results for querying a table containing computed columns.
         /// </summary>
         /// <returns>rows from sales table</returns>
@@ -496,6 +523,23 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             string graphQLQuery = @"{
                 book_by_pk(id: 2) {
                     title
+                }
+            }";
+
+            JsonElement actual = await base.ExecuteGraphQLRequestAsync(
+                graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        [TestMethod]
+        public async Task QueryWithSingleColumnPrimaryKeyAndMappings(string dbQuery)
+        {
+            string graphQLQueryName = "gQLmappings_by_pk";
+            string graphQLQuery = @"{
+                gQLmappings_by_pk(column1: 1) {
+                    column1
                 }
             }";
 

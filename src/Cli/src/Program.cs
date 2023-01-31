@@ -9,7 +9,7 @@ namespace Cli
     /// </summary>
     public class Program
     {
-        public const string PRODUCT_NAME = "Data API Builder";
+        public const string PRODUCT_NAME = "Microsoft.DataApiBuilder";
 
         /// <summary>
         /// Main CLI entry point
@@ -34,8 +34,6 @@ namespace Cli
             ILogger<Utils> cliUtilsLogger = loggerFactory.CreateLogger<Utils>();
             ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger);
             Utils.SetCliUtilsLogger(cliUtilsLogger);
-
-            cliLogger.LogInformation($"{PRODUCT_NAME} {GetProductVersion()}");
 
             // Parsing user arguments and executing required methods.
             ParserResult<object>? result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions>(args)
@@ -95,6 +93,7 @@ namespace Cli
                 })
                 .WithParsed<StartOptions>(options =>
                 {
+                    cliLogger.LogInformation($"{PRODUCT_NAME} {GetProductVersion()}");
                     bool isSuccess = ConfigGenerator.TryStartEngineWithOptions(options);
 
                     if (!isSuccess)

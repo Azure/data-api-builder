@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Hosting;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json.Linq;
 
@@ -189,7 +190,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// Helper method to get the HttpMethod based on the operation type.
         /// </summary>
         /// <param name="operationType">The operation to be executed on the entity.</param>
-        /// <returns></returns>
+        /// <returns>HttpMethod representing the passed in operationType.</returns>
         /// <exception cref="DataApiBuilderException"></exception>
         public static HttpMethod GetHttpMethodFromOperation(Config.Operation operationType, Config.RestMethod? restMethod = null)
         {
@@ -215,23 +216,27 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             }
         }
 
+        /// <summary>
+        /// Converts the provided RestMethod to the corresponding HttpMethod
+        /// </summary>
+        /// <param name="restMethod"></param>
+        /// <returns>HttpMethod corresponding the RestMethod provided as input.</returns>
         private static HttpMethod ConvertRestMethodToHttpMethod(RestMethod? restMethod)
         {
             switch (restMethod)
             {
                 case RestMethod.Get:
                     return HttpMethod.Get;
-                case RestMethod.Post:
-                    return HttpMethod.Post;
                 case RestMethod.Put:
                     return HttpMethod.Put;
                 case RestMethod.Patch:
                     return HttpMethod.Patch;
                 case RestMethod.Delete:
                     return HttpMethod.Delete;
+                case RestMethod.Post:
+                default:
+                    return HttpMethod.Post;
             }
-
-            return HttpMethod.Post;
         }
         /// <summary>
         /// Helper function handles the loading of the runtime config.

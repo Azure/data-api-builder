@@ -33,7 +33,7 @@ namespace Cli.Tests
                 Type expectedRestObjectType)
         {
             // When the rest is a boolean object
-            object? restDetails = GetRestDetails(rest_detail: restPath, restMethods: restMethods);
+            object? restDetails = GetRestDetails(restDetail: restPath, restMethods: restMethods);
             Assert.IsNotNull(restDetails);
             Assert.IsInstanceOfType(restDetails, expectedRestObjectType);
         }

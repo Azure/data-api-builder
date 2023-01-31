@@ -3,7 +3,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Microsoft.Extensions.Logging;
-using Microsoft.Identity.Client;
 using static Cli.Utils;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 

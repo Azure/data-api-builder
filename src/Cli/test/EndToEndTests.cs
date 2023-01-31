@@ -437,7 +437,7 @@ public class EndToEndTests
     [DataTestMethod]
     [DataRow("", "", new string[] { "ERROR" }, DisplayName = "No flags provided.")]
     [DataRow("initialize", "", new string[] { "ERROR", "Verb 'initialize' is not recognized." }, DisplayName = "Wrong Command provided.")]
-    [DataRow("", "--version", new string[] { "dab 1.0.0" }, DisplayName = "Checking version.")]
+    [DataRow("", "--version", new string[] { "Microsoft.DataApiBuilder 1.0.0" }, DisplayName = "Checking version.")]
     [DataRow("", "--help", new string[] { "init", "add", "update", "start" }, DisplayName = "Checking output for --help.")]
     public void TestHelpWriterOutput(string command, string flags, string[] expectedOutputArray)
     {
@@ -448,11 +448,41 @@ public class EndToEndTests
 
         string? output = process.StandardOutput.ReadToEnd();
         Assert.IsNotNull(output);
+        Assert.IsTrue(output.Contains($"{Program.PRODUCT_NAME} {GetProductVersion()}"));
 
         foreach (string expectedOutput in expectedOutputArray)
         {
             Assert.IsTrue(output.Contains(expectedOutput));
         }
+
+        process.Kill();
+    }
+
+    /// <summary>
+    /// Test to verify that the version info is logged for both correct/incorrect command.
+    /// </summary>
+    [DataRow("", "--version", DisplayName = "Checking dab version with --version.")]
+    [DataRow("", "--help", DisplayName = "Checking version through --help option.")]
+    [DataRow("edit", "--new-option", DisplayName = "Version printed with invalid command edit.")]
+    [DataRow("init", "--database-type mssql", DisplayName = "Version printed with valid command init.")]
+    [DataRow("add", "MyEntity -s myentity --permissions \"anonymous:*\"", DisplayName = "Version printed with valid command add.")]
+    [DataRow("update", "MyEntity -s my_entity", DisplayName = "Version printed with valid command update.")]
+    [DataRow("start", "", DisplayName = "Version printed with valid command start.")]
+    [DataTestMethod]
+    public void TestVersionInfoIsCorrectlyDisplayedWithDifferentCommand(string command, string options)
+    {
+        WriteJsonContentToFile(_testRuntimeConfig, INITIAL_CONFIG);
+
+        using Process process = ExecuteDabCommand(
+            command: $"{command} ",
+            flags: $"--config {_testRuntimeConfig} {options}"
+        );
+
+        string? output = process.StandardOutput.ReadLine();
+        Assert.IsNotNull(output);
+
+        // Version Info logged by dab irrespective of commands being parsed correctly.
+        Assert.IsTrue(output.Contains($"{Program.PRODUCT_NAME} {GetProductVersion()}"));
 
         process.Kill();
     }

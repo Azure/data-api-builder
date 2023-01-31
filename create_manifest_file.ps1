@@ -42,7 +42,7 @@ foreach ($RID in $RIDs) {
 }
 
 # Generating hash for nuget
-$nugetFileName = "dab.$DabVersion.nupkg"
+$nugetFileName = "Microsoft.DataApiBuilder.$DabVersion.nupkg"
 $nugetFilePath = "$BuildOutputDir/nupkg/$nugetFileName"
 $fileHashInfo = Get-FileHash $nugetFilePath
 $nuget_file_hash = $fileHashInfo.Hash

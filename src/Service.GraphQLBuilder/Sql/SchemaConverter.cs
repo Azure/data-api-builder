@@ -105,10 +105,16 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                             directives.Add(authZDirective!);
                         }
 
+                        string exposedColumnName = columnName;
+                        if (configEntity.Mappings is not null && configEntity.Mappings.TryGetValue(key: columnName, out string? columnAlias))
+                        {
+                            exposedColumnName = columnAlias;
+                        }
+
                         NamedTypeNode fieldType = new(GetGraphQLTypeForColumnType(column.SystemType));
                         FieldDefinitionNode field = new(
                             location: null,
-                            new(columnName),
+                            new(exposedColumnName),
                             description: null,
                             new List<InputValueDefinitionNode>(),
                             column.IsNullable ? fieldType : new NonNullTypeNode(fieldType),

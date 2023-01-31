@@ -40,8 +40,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
                     configuration.Configuration,
                     configuration.Schema,
                     configuration.ConnectionString,
-                    configuration.AccessToken,
-                    configuration.Database);
+                    configuration.AccessToken);
 
                 if (initResult && _configurationProvider.TryGetRuntimeConfiguration(out _))
                 {

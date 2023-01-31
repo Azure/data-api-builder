@@ -9,7 +9,7 @@ namespace Cli
     /// </summary>
     public class Program
     {
-        public const string PRODUCT_NAME = "Data API Builder";
+        public const string PRODUCT_NAME = "Microsoft.DataApiBuilder";
 
         /// <summary>
         /// Main CLI entry point
@@ -35,12 +35,11 @@ namespace Cli
             ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger);
             Utils.SetCliUtilsLogger(cliUtilsLogger);
 
-            cliLogger.LogInformation($"{PRODUCT_NAME} {GetProductVersion()}");
-
             // Parsing user arguments and executing required methods.
             ParserResult<object>? result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions>(args)
                 .WithParsed<InitOptions>(options =>
                 {
+                    cliLogger.LogInformation($"{PRODUCT_NAME} {GetProductVersion()}");
                     bool isSuccess = ConfigGenerator.TryGenerateConfig(options);
                     if (isSuccess)
                     {
@@ -54,6 +53,7 @@ namespace Cli
                 })
                 .WithParsed<AddOptions>(options =>
                 {
+                    cliLogger.LogInformation($"{PRODUCT_NAME} {GetProductVersion()}");
                     if (!IsEntityProvided(options.Entity, cliLogger, command: "add"))
                     {
                         return;
@@ -74,6 +74,7 @@ namespace Cli
                 })
                 .WithParsed<UpdateOptions>(options =>
                 {
+                    cliLogger.LogInformation($"{PRODUCT_NAME} {GetProductVersion()}");
                     if (!IsEntityProvided(options.Entity, cliLogger, command: "update"))
                     {
                         return;
@@ -92,6 +93,7 @@ namespace Cli
                 })
                 .WithParsed<StartOptions>(options =>
                 {
+                    cliLogger.LogInformation($"{PRODUCT_NAME} {GetProductVersion()}");
                     bool isSuccess = ConfigGenerator.TryStartEngineWithOptions(options);
 
                     if (!isSuccess)

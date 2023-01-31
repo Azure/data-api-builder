@@ -17,69 +17,47 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Test to validate the successful construction of REST object for 
-        /// various possible REST Path and Methods.
+        /// Test to validate the REST Path constructed from the input entered using
+        /// --rest option  
         /// </summary>
+        /// <param name="restRoute">REST Route input from the --rest option</param>
+        /// <param name="expectedRestPath">Expected REST path to be constructed</param>
         [DataTestMethod]
-        [DataRow(true, null, typeof(bool), DisplayName = "REST Configuration - Rest Enabled without Methods")]
-        [DataRow(false, null, typeof(bool), DisplayName = "REST Configuration - Rest Disabled")]
-        [DataRow("book", null, typeof(RestEntitySettings), DisplayName = "REST Configuration - Custom API Path without Methods")]
-        [DataRow(null, new RestMethod[] { RestMethod.Get, RestMethod.Post }, typeof(RestStoredProcedureEntitySettings), DisplayName = "REST Configuration - Methods without Path configured")]
-        [DataRow(true, new RestMethod[] { RestMethod.Get, RestMethod.Post }, typeof(RestStoredProcedureEntityVerboseSettings), DisplayName = "REST Configuration - Boolean Path with Methods configured")]
-        [DataRow("book", new RestMethod[] { RestMethod.Get, RestMethod.Post }, typeof(RestStoredProcedureEntityVerboseSettings), DisplayName = "REST Configuration - Custom Path with Methods configured")]
-        public void TestGetRestDetails(
-                object? restPath,
-                RestMethod[]? restMethods,
-                Type expectedRestObjectType)
+        [DataRow(null, null, DisplayName = "No Rest Path definition")]
+        [DataRow("true", true, DisplayName = "REST enabled for the entity")]
+        [DataRow("false", false, DisplayName = "REST disabled for the entity")]
+        [DataRow("customPath", "/customPath", DisplayName = "Custom REST path defined for the entity")]
+        public void TestContructRestPathDetails(string? restRoute, object? expectedRestPath)
         {
-            // When the rest is a boolean object
-            object? restDetails = GetRestDetails(restDetail: restPath, restMethods: restMethods);
-            Assert.IsNotNull(restDetails);
-            Assert.IsInstanceOfType(restDetails, expectedRestObjectType);
+            object? actualRestPathDetails = ConstructRestPathDetails(restRoute);
+            Assert.AreEqual(expectedRestPath, actualRestPathDetails);
         }
 
         /// <summary>
-        /// Test to validate the successful creation of GraphQL configuration for 
-        /// various possible GraphQL Type and Operation combinations
+        /// Test to validate the GraphQL Type constructed from the input entered using
+        /// --graphql option
         /// </summary>
-        [TestMethod]
-        [Ignore]
-        public void TestGetGraphQLDetails()
+        /// <param name="graphQLType">GraphQL Type input from --graphql option</param>
+        /// <param name="expectedGraphQLType">Expected GraphQL Type to be constructed</param>
+        [DataTestMethod]
+        [DataRow(null, null, false, DisplayName = "No GraphQL Type definition")]
+        [DataRow("true", true, false, DisplayName = "GraphQL enabled for the entity")]
+        [DataRow("false", false, false, DisplayName = "GraphQL disabled for the entity")]
+        [DataRow("book", null, true, DisplayName = "Custom GraphQL type - Singular value defined")]
+        [DataRow("book:books", null, true, DisplayName = "Custom GraphQL type - Singular and Plural values defined")]
+        public void TestConstructGraphQLTypeDetails(string? graphQLType, object? expectedGraphQLType, bool isSingularPluralType)
         {
-            object? graphQlDetails = GetGraphQLDetails("true");
-            Assert.IsNotNull(graphQlDetails);
-            Assert.IsInstanceOfType(graphQlDetails, typeof(bool));
-            Assert.IsTrue((bool)graphQlDetails);
-
-            graphQlDetails = GetGraphQLDetails("True");
-            Assert.IsNotNull(graphQlDetails);
-            Assert.IsInstanceOfType(graphQlDetails, typeof(bool));
-            Assert.IsTrue((bool)graphQlDetails);
-
-            graphQlDetails = GetGraphQLDetails("false");
-            Assert.IsNotNull(graphQlDetails);
-            Assert.IsInstanceOfType(graphQlDetails, typeof(bool));
-            Assert.IsFalse((bool)graphQlDetails);
-
-            graphQlDetails = GetGraphQLDetails("False");
-            Assert.IsNotNull(graphQlDetails);
-            Assert.IsInstanceOfType(graphQlDetails, typeof(bool));
-            Assert.IsFalse((bool)graphQlDetails);
-
-            //when graphql is null
-            Assert.IsNull(GetGraphQLDetails(null));
-
-            // When graphql is non-boolean string
-            graphQlDetails = GetGraphQLDetails("book");
-            Assert.AreEqual(new GraphQLEntitySettings(Type: new SingularPlural(Singular: "book", Plural: "books")), graphQlDetails);
-
-            // When graphql is a pair of string for custom singular, plural string.
-            graphQlDetails = GetGraphQLDetails("book:plural_books");
-            Assert.AreEqual(new GraphQLEntitySettings(Type: new SingularPlural(Singular: "book", Plural: "plural_books")), graphQlDetails);
-
-            // Invalid graphql string
-            graphQlDetails = GetGraphQLDetails("book:plural_books:ads");
-            Assert.IsNull(graphQlDetails);
+            object? actualGraphQLType = ConstructGraphQLTypeDetails(graphQLType);
+            if(! isSingularPluralType)
+            {
+                Assert.AreEqual(expectedGraphQLType, actualGraphQLType);
+            }
+            else
+            {
+                SingularPlural expectedType = new(Singular:"book", Plural: "books");
+                Assert.AreEqual(expectedType, actualGraphQLType);
+            }
+     
         }
 
         /// <summary>

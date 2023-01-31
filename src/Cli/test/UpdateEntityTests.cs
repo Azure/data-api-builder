@@ -248,7 +248,6 @@ namespace Cli.Tests
         /// It will update only "read" and "delete".
         /// </summary>
         [TestMethod, Description("it should update the permission which has action as WILDCARD.")]
-        [Ignore]
         public void TestUpdateEntityPermissionHavingWildcardAction()
         {
             UpdateOptions options = new(
@@ -858,9 +857,7 @@ namespace Cli.Tests
         /// Simple test to verify success on updating a source from string to source object for valid fields.
         /// </summary>
         [DataTestMethod]
-        [Ignore]
         [DataRow("s001.book", null, new string[] { "anonymous", "*" }, null, null, "UpdateSourceName", DisplayName = "Updating sourceName with no change in parameters or keyfields.")]
-        [DataRow(null, "stored-procedure", new string[] { "anonymous", "execute" }, new string[] { "param1:123", "param2:hello", "param3:true" }, null, "ConvertToStoredProcedure", DisplayName = "SourceParameters with stored procedure.")]
         [DataRow(null, "view", null, null, new string[] { "col1", "col2" }, "ConvertToView", DisplayName = "Source KeyFields with View")]
         [DataRow(null, "table", null, null, new string[] { "id", "name" }, "ConvertToTable", DisplayName = "Source KeyFields with Table")]
         [DataRow(null, null, null, null, new string[] { "id", "name" }, "ConvertToDefaultType", DisplayName = "Source KeyFields with SourceType not provided")]
@@ -906,10 +903,6 @@ namespace Cli.Tests
                 case "UpdateSourceName":
                     actualConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY);
                     expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, BASIC_ENTITY_WITH_ANONYMOUS_ROLE);
-                    break;
-                case "ConvertToStoredProcedure":
-                    actualConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_ONLY_READ_PERMISSION);
-                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
                     break;
                 case "ConvertToView":
                     expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_SOURCE_AS_VIEW);
@@ -1222,17 +1215,16 @@ namespace Cli.Tests
         /// <summary>
         /// Test to verify updating permissions for stored-procedure.
         /// Checks: 
-        /// 1. Updating with WILDCARD/multiple CRUD action should fail.
-        /// 2. Adding a new role should have the same single CRUD operation as the existing one.
+        /// 1. Updating a stored-procedure with WILDCARD/CRUD action should fail.
+        /// 2. Adding a new role/Updating an existing role with execute action should succeeed.
         /// </summary>
         [DataTestMethod]
-        [DataRow("anonymous", "*", false, DisplayName = "FAIL: Stored-Procedure incorrectly updated with wildcard CRUD operation.")]
-        [DataRow("anonymous", "execute", true, DisplayName = "PASS: Stored-Procedure with execute operation for an existing role.")]
-        [DataRow("anonymous", "create,read", false, DisplayName = "FAIL: Stored-Procedure with more than 1 CRUD operation for an existing role.")]
-        [DataRow("authenticated", "*", false, DisplayName = "FAIL: Stored-Procedure with wildcard CRUD operation for a new role.")]
-        [DataRow("authenticated", "execute", true, DisplayName = "PASS: Stored-Procedure with execute operation for a new role.")]
-        [DataRow("authenticated", "execute", true, DisplayName = "PASS: Stored-Procedure with the same execute operation for a new role as that of existing one.")]
-        [DataRow("authenticated", "create,execute", false, DisplayName = "FAIL: Stored-Procedure with more than 1 CRUD operation for a new role.")]
+        [DataRow("anonymous", "*", false, DisplayName = "FAIL: Stored-Procedure updated with wildcard operation")]
+        [DataRow("anonymous", "execute", true, DisplayName = "PASS: Stored-Procedure updated with execute operation")]
+        [DataRow("anonymous", "create,read", false, DisplayName = "FAIL: Stored-Procedure updated with CRUD action.")]
+        [DataRow("authenticated", "*", false, DisplayName = "FAIL: Stored-Procedure updated with wildcard operation for an existing role.")]
+        [DataRow("authenticated", "execute", true, DisplayName = "PASS: Stored-Procedure updated with execute operation for an existing role.")]
+        [DataRow("authenticated", "create,read", false, DisplayName = "FAIL: Stored-Procedure updated with CRUD action for an existing role.")]
         public void TestUpdatePermissionsForStoredProcedure(
             string role,
             string operations,
@@ -1382,13 +1374,13 @@ namespace Cli.Tests
                                     {
                                     ""role"": ""anonymous"",
                                     ""actions"": [
-                                            ""read""
+                                            ""execute""
                                         ]
                                     },
                                     {
                                     ""role"": ""authenticated"",
                                     ""actions"": [
-                                            ""read""
+                                            ""execute""
                                         ]
                                     }
                                 ]
@@ -1524,6 +1516,93 @@ namespace Cli.Tests
 
             Assert.IsTrue(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
             Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfig), JObject.Parse(runtimeConfig)));
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="restMethods"></param>
+        /// <param name="graphQLOperation"></param>
+        /// <param name="restRoute"></param>
+        /// <param name="graphQLType"></param>
+        /// <param name="expectSuccess"></param>
+        [DataTestMethod]
+        [DataRow(null, null, null, null, true, DisplayName = "Default Case without any customization")]
+        [DataRow(null, null, "true", null, true, DisplayName = "REST enabled without any methods explicitly configured")]
+        [DataRow(null, null, "book", null, true, DisplayName = "Custom REST path defined without any methods explictly configured")]
+        [DataRow(new string[] { "Get", "Post", "Patch" }, null, null, null, true, DisplayName = "REST methods defined without REST Path explicitly configured")]
+        [DataRow(new string[] { "Get", "Post", "Patch" }, null, "true", null, true, DisplayName = "REST enabled along with some methods")]
+        [DataRow(new string[] { "Get", "Post", "Patch" }, null, "book", null, true, DisplayName = "Custom REST path defined along with some methods")]
+        [DataRow(null, null, null, "true", true, DisplayName = "GraphQL enabled without any operation explicitly configured")]
+        [DataRow(null, null, null, "book", true, DisplayName = "Custom GraphQL Type defined without any operation explicitly configured")]
+        [DataRow(null, null, null, "book:books", true, DisplayName = "SingularPlural GraphQL Type enabled without any operation explicitly configured")]
+        [DataRow(null, "Query", null, "true", true, DisplayName = "GraphQL enabled with Query operation")]
+        [DataRow(null, "Query", null, "book", true, DisplayName = "Custom GraphQL Type defined along with Query operation")]
+        [DataRow(null, "Query", null, "book:books", true, DisplayName = "SingularPlural GraphQL Type defined along with Query operation")]
+        [DataRow(null, null, null, "true", true, DisplayName = "Both REST and GraphQL enabled without any methods and operations configured explicitly")]
+        [DataRow(new string[] { "Get" }, "Query", "true", "true", true, DisplayName = "Both REST and GraphQL enabled with custom REST methods and GraphQL operations")]
+        [DataRow(new string[] { "Post,Patch,Put" }, "Query", "book", "book:books", true, DisplayName = "Configuration with REST Path, Methods and GraphQL Type, Operation")]
+        [DataRow(null, "Mutation", "true", "false", false, DisplayName = "Conflicting configurations - GraphQL operation specified but entity is disabled for GraphQL")]
+        [DataRow(new string[] { "Get" }, null, "false", "true", false, DisplayName = "Conflicting configurations - REST methods specified but entity is disabled for REST")]
+        public void TestUpdateRestAndGraphQLSettingsForStoredProcedures(
+            IEnumerable<string>? restMethods,
+            string? graphQLOperation,
+            string? restRoute,
+            string? graphQLType,
+            bool expectSuccess)
+        {
+            UpdateOptions options = new(
+                source: null,
+                permissions: null,
+                entity: "MyEntity",
+                sourceType: null,
+                sourceParameters: null,
+                sourceKeyFields: null,
+                restRoute: restRoute,
+                graphQLType: graphQLType,
+                fieldsToInclude: new string[] { },
+                fieldsToExclude: new string[] { },
+                policyRequest: null,
+                policyDatabase: null,
+                relationship: null,
+                cardinality: null,
+                targetEntity: null,
+                linkingObject: null,
+                linkingSourceFields: new string[] { },
+                linkingTargetFields: new string[] { },
+                relationshipFields: new string[] { },
+                map: null,
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: restMethods,
+                graphQLOperationForStoredProcedure: graphQLOperation
+                );
+
+            string runtimeConfig = GetInitialConfigString() + "," + @"
+                    ""entities"": {
+                            ""MyEntity"": {
+                                ""source"": {
+                                    ""object"": ""MySp"",
+                                    ""type"": ""stored-procedure""
+                                },
+                                ""permissions"": [
+                                    {
+                                    ""role"": ""anonymous"",
+                                    ""actions"": [
+                                            ""execute""
+                                        ]
+                                    },
+                                    {
+                                    ""role"": ""authenticated"",
+                                    ""actions"": [
+                                            ""execute""
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    }";
+
+            Assert.AreEqual(expectSuccess, ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
         }
 
         #endregion

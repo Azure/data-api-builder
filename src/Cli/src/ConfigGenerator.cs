@@ -735,6 +735,13 @@ namespace Cli
             // no update is required.
             if (options.SourceType is not null)
             {
+                if( (entity.ObjectType is SourceType.StoredProcedure && !IsEntityStoredProcedure(options))
+                    || ( entity.ObjectType is not SourceType.StoredProcedure && IsEntityStoredProcedure(options)))
+                {
+                    _logger.LogError("Cannot convert from stored-procedure to table/view or vice-versa");
+                    return false;
+                }
+
                 if (!SourceTypeEnumConverter.TryGetSourceType(options.SourceType, out updatedSourceType))
                 {
                     _logger.LogError(
@@ -773,7 +780,7 @@ namespace Cli
                 return false;
             }
 
-            if (options.SourceKeyFields is not null)
+            if (options.SourceKeyFields is not null && options.SourceKeyFields.Any())
             {
                 updatedKeyFields = options.SourceKeyFields.ToArray();
             }

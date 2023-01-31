@@ -67,6 +67,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
 
+        [TestMethod]
+        public async Task TestStringFiltersEqWithMappings()
+        {
+            string msSqlQuery = @"
+                SELECT [__column1] AS [column1], [__column2] AS [column2]
+                FROM GQLMappings
+                WHERE [__column2] = 'Filtered Record'
+                ORDER BY [__column1] asc
+                FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            await TestStringFiltersEqWithMappings(msSqlQuery);
+        }
+
         /// <summary>
         /// Test Nested Filter for One-Many relationship
         /// </summary>

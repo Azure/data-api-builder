@@ -773,7 +773,7 @@
       "source": {
         "type": "view",
         "object": "books_view_with_mapping",
-        "key-fields": ["id"]
+        "key-fields": [ "id" ]
       },
       "rest": true,
       "permissions": [
@@ -1092,6 +1092,28 @@
         }
       ],
       "graphql": true
+    },
+    "GQLmappings": {
+      "source": {
+        "type": "table",
+        "object": "GQLmappings",
+        "key-fields": []
+      },
+      "graphql": true,
+      "mappings": {
+        "__column1": "column1",
+        "__column2": "column2"
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "*" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [ "*" ]
+        }
+      ]
     }
   }
 }

@@ -94,9 +94,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             foreach (KeyValuePair<string, object?> param in mutationParams)
             {
                 // primary keys used as predicates
-                if (sourceDefinition.PrimaryKey.Contains(param.Key))
+                string pkBackingColumn = param.Key;
+                if (sqlMetadataProvider.TryGetBackingColumn(entityName, param.Key, out string? name) && !string.IsNullOrWhiteSpace(name))
                 {
-                    Predicates.Add(CreatePredicateForParam(param));
+                    pkBackingColumn = name;
+                }
+
+                if (sourceDefinition.PrimaryKey.Contains(pkBackingColumn))
+                {
+                    Predicates.Add(CreatePredicateForParam(new KeyValuePair<string, object?>(pkBackingColumn, param.Value)));
                 }
                 else // Unpack the input argument type as columns to update
                 if (param.Key == UpdateMutationBuilder.INPUT_ARGUMENT_NAME)
@@ -106,9 +112,16 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                     foreach (KeyValuePair<string, object?> field in updateFields)
                     {
-                        if (columns.Contains(field.Key))
+                        string fieldBackingColumn = field.Key;
+                        if (sqlMetadataProvider.TryGetBackingColumn(entityName, field.Key, out string? resolvedBackingColumn)
+                            && !string.IsNullOrWhiteSpace(resolvedBackingColumn))
                         {
-                            UpdateOperations.Add(CreatePredicateForParam(field));
+                            fieldBackingColumn = resolvedBackingColumn;
+                        }
+
+                        if (columns.Contains(fieldBackingColumn))
+                        {
+                            UpdateOperations.Add(CreatePredicateForParam(new KeyValuePair<string, object?>(key: fieldBackingColumn, field.Value)));
                         }
                     }
                 }

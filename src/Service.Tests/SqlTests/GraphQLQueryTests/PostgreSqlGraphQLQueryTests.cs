@@ -25,6 +25,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await MultipleResultQuery(postgresQuery);
         }
 
+        [TestMethod]
+        public async Task MultipleResultQueryWithMappings()
+        {
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT __column1 AS column1, __column2 AS column2 FROM GQLMappings ORDER BY __column1 asc LIMIT 100) as table0";
+            await MultipleResultQueryWithMappings(postgresQuery);
+        }
+
         /// <summary>
         /// Gets array of results for querying a table containing computed columns.
         /// </summary>
@@ -130,6 +137,23 @@ FROM
             ";
 
             await QueryWithSingleColumnPrimaryKey(postgresQuery);
+        }
+
+        [TestMethod]
+        public async Task QueryWithSingleColumnPrimaryKeyAndMappings()
+        {
+            string postgresQuery = @"
+                SELECT to_jsonb(subq) AS data
+                FROM (
+                    SELECT table0.__column1 AS column1
+                    FROM GQLMappings AS table0
+                    WHERE __column1 = 1
+                    ORDER BY __column1 asc
+                    LIMIT 1
+                ) AS subq
+            ";
+
+            await QueryWithSingleColumnPrimaryKeyAndMappings(postgresQuery);
         }
 
         [TestMethod]

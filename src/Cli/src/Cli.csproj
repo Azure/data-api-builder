@@ -11,8 +11,18 @@
     <PackageOutputPath>./nupkg</PackageOutputPath>
     <BaseOutputPath>..\..\out\cli</BaseOutputPath>
     <RuntimeIdentifiers>win-x64;linux-x64;osx-x64</RuntimeIdentifiers>
-    <AssemblyName>dab</AssemblyName>
-    <PackageDescription>Data API Builder</PackageDescription>
+    <PackageId>Microsoft.DataApiBuilder</PackageId>
+    <Title>DataApiBuilder</Title>
+    <Authors>Microsoft</Authors>
+    <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/Azure/data-api-builder</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>microsoft rest graphql api azure sql mssql mysql pgsql nosql dataApiBuilder</PackageTags>
+    <AssemblyName>Microsoft.DataApiBuilder</AssemblyName>
+    <Description>Data API Builder</Description>
+    <PackageIcon>nuget_icon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
@@ -34,6 +44,11 @@
 
   <ItemGroup>
     <None Remove="dab.draft.schema.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\..\README.md" Pack="true" PackagePath="\"/>
+    <None Include="..\..\..\nuget_icon.png" Pack="true" PackagePath="\"/>
   </ItemGroup>
 
   <ItemGroup>

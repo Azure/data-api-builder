@@ -6,7 +6,7 @@ parameters:
 # Flag to indicate if we want to sign nuget package or not.
 - name: 'signNuget'
   type: boolean
-  default: true
+  default: false
 
 # We are splitting the signing between our code and OSS/Third party code
 # because they are using different signing key code.

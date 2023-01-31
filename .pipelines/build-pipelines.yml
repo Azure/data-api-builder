@@ -56,216 +56,197 @@ steps:
     feedsToUse: config
     nugetConfigPath: Nuget.config
 
-# - task: DotNetCoreCLI@2
-#   displayName: Check formatting
-#   inputs:
-#     command: custom
-#     custom: format
-#     projects: '$(solution)'
-#     arguments: '--verify-no-changes'
-
-# # Use dotnet pack command to build the project because we want to generate build output
-# # in the correct location that pack command will be using. This build output location
-# # will be used to do code signing so we need to do this first.
-# - task: DotNetCoreCLI@2
-#   displayName: Build
-#   inputs:
-#     command: custom
-#     custom: pack
-#     projects: '**/*.sln'
-#     arguments: '--configuration $(buildConfiguration) -p:Version=$(dabVersion)' 
-
-# - task: DotNetCoreCLI@2
-#   displayName: "Run Unit Tests"
-#   inputs:
-#     command: test
-#     projects: '**/*Tests*.csproj'
-#     arguments: '--filter "TestCategory!=CosmosDb_NoSql&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
-
-# - task: FileTransform@1.206.0
-#   displayName: 'Version stamp dab.draft.schema.json'
-#   inputs:
-#     folderPath: '$(System.DefaultWorkingDirectory)'
-#     fileType: 'json'
-#     targetFiles: 'schemas/dab.draft.schema.json'
- 
-# - task: CopyFiles@2
-#   displayName: 'Copy dab.draft.schema.json'
-#   inputs:
-#     sourceFolder: '$(Build.SourcesDirectory)/schemas'
-#     contents: 'dab.draft.schema.json'
-#     targetFolder: '$(Build.ArtifactStagingDirectory)'
-
-# - template: templates/code-signing.yml
-#   parameters:
-#     # This is the path that will be used for packing nuget package.
-#     # We will need to sign the binaries in this location.
-#     path: '$(Build.SourcesDirectory)/src/out/cli/$(buildConfiguration)/net6.0/publish' 
-
-# # Create nuget package after the binaries are signed. So that the binaries inside nuget package are signed.
-# - task: DotNetCoreCLI@2
-#   displayName: 'Creating Nuget Package'
-#   inputs:
-#     command: custom
-#     custom: pack
-#     projects: '**/Cli.csproj'
-#     arguments: '--configuration $(buildConfiguration) --no-build -p:Version=$(dabVersion) -o $(Build.ArtifactStagingDirectory)/nupkg'
-
-# # Now sign the nuget package itself.
-# - template: templates/code-signing.yml
-#   parameters:
-#     path: '$(Build.ArtifactStagingDirectory)/nupkg'
-#     signNuget: true
-
-# - task: PowerShell@2
-#   displayName: "Package DAB to multiple platforms"
-#   inputs:
-#     targetType: 'filePath'
-#     filePath: $(System.DefaultWorkingDirectory)/publish.ps1
-#     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) -Package
-
-# - task: PowerShell@2
-#   displayName: "Smoke Test for DAB CLI"
-#   inputs:
-#     targetType: 'filePath'
-#     filePath: $(System.DefaultWorkingDirectory)/dab-smoke-test-script.ps1
-#     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(Agent.OS)  $(dabVersion)
-
-# # Sign the binaries that were generated per platform
-# - template: templates/code-signing.yml
-#   parameters:
-#     path: '$(Build.ArtifactStagingDirectory)/publish'
-
-# # Zip the binaries after signing process.
-# - task: PowerShell@2
-#   displayName: "Zip the binaries after signing"
-#   inputs:
-#     targetType: 'filePath'
-#     filePath: $(System.DefaultWorkingDirectory)/publish.ps1
-#     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) -CreateZip
-
-# # Generating SBOM manifest for Dab files
-# - task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
-#   displayName: 'SBOM Generation Task'
-#   inputs:
-#       BuildDropPath: '$(Build.ArtifactStagingDirectory)'
-
-# # Generating Manifest File for generated Zip package
-# - task: PowerShell@2
-#   displayName: "Generate Manifest File"
-#   inputs:
-#     targetType: 'filePath'
-#     filePath: $(System.DefaultWorkingDirectory)/create_manifest_file.ps1
-#     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) $(isReleaseBuild)
-
-# # This code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
-# - task: PublishPipelineArtifact@1
-#   displayName: "Upload build artifacts"
-#   inputs:
-#     targetPath: '$(Build.ArtifactStagingDirectory)' 
-
-# - task: NuGetCommand@2
-#   displayName: 'Publish Nuget to Internal Feed'
-#   condition: eq(variables.isReleaseBuild, 'true')
-#   inputs:
-#     command: 'push'
-#     feedsToUse: 'select'
-#     packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
-#     nuGetFeedType: 'internal'
-#     publishVstsFeed: CosmosDB/DataApiBuilder
-#     versioningScheme: 'off'
-#     allowPackageConflicts: false
-
-# - task: PublishCodeCoverageResults@1
-#   displayName: 'Publish code coverage'
-#   inputs:
-#     codeCoverageTool: Cobertura
-#     summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
-
-# # Create a draft release with Assets
-# - task: GitHubRelease@1
-#   displayName: "Draft Github Release"
-#   condition: eq(variables.isReleaseBuild, 'true')
-#   inputs:
-#     gitHubConnection: 'DataApiBuilder'
-#     repositoryName: '$(Build.Repository.Name)'
-#     action: 'create'
-#     target: '$(Build.SourceVersion)'
-#     tagSource: 'userSpecifiedTag'
-#     tag: 'v$(dabVersion)-alpha'
-#     title: 'New Release: Data API Builder for Azure Databases'
-#     assets: |
-#       $(Build.ArtifactStagingDirectory)/**/*.nupkg
-#       $(Build.ArtifactStagingDirectory)/**/*.zip
-#       $(Build.ArtifactStagingDirectory)/**/dab-manifest.json
-#       $(Build.ArtifactStagingDirectory)/**/dab.draft.schema.json
-#     isDraft: true
-#     isPreRelease: true
-#     addChangeLog: false
-
-# # This task gets the current date and saves it to a variable so the docker task can use the build's
-# # date and time as a tag.
-# - task: PowerShell@2
-#   displayName: "Get date for Docker image Tag"
-#   inputs:
-#     targetType: 'inline'
-#     script: |
-#       Write-Host "Setting up the date and time as a build variable for the Docker tag"
-#       $date=$(Get-Date -format yyyyMMdd-HHmmss)
-#       Write-Host "##vso[task.setvariable variable=BuildDate]$date"
-
-# # Build a docker image and push it to the container registry.
-# - task: Docker@2
-#   displayName: "Build and push docker image to Azure Container Registry"
-#   condition: eq(variables.isReleaseBuild, 'false')
-#   inputs:
-#     containerRegistry: 'CosmosDB GraphQL/Hawaii'
-#     repository: 'dab/$(Build.SourceBranch)'
-#     command: 'buildAndPush'
-#     Dockerfile: '**/Dockerfile'
-#     tags: |
-#       $(BuildDate)-$(Build.SourceVersion)
-#       latest
-
-# # Build a docker image and push it to the container registry.
-# # Tag the image with the value of the releaseName variable and nuget release version.
-# - task: Docker@2
-#   displayName: "Build and push docker image to Azure Container Registry tagged with releaseName and nuget release version"
-#   condition: eq(variables.isReleaseBuild, 'true')
-#   inputs:
-#     containerRegistry: 'CosmosDB GraphQL/Hawaii'
-#     repository: 'dab'
-#     command: 'buildAndPush'
-#     Dockerfile: '**/Dockerfile'
-#     tags: |
-#       $(BuildDate)-$(Build.SourceVersion)
-#       $(releaseName)
-#       $(dabVersion)
-
-######################################
-- task: CopyFiles@2
-  displayName: 'Copy Test Package'
+- task: DotNetCoreCLI@2
+  displayName: Check formatting
   inputs:
-    sourceFolder: '$(Build.SourcesDirectory)'
-    contents: 'Microsoft.DataApiBuilder.Test.0.0.1.nupkg'
-    targetFolder: '$(Build.ArtifactStagingDirectory)/publish'
+    command: custom
+    custom: format
+    projects: '$(solution)'
+    arguments: '--verify-no-changes'
+
+# Use dotnet pack command to build the project because we want to generate build output
+# in the correct location that pack command will be using. This build output location
+# will be used to do code signing so we need to do this first.
+- task: DotNetCoreCLI@2
+  displayName: Build
+  inputs:
+    command: custom
+    custom: pack
+    projects: '**/*.sln'
+    arguments: '--configuration $(buildConfiguration) -p:Version=$(dabVersion)' 
+
+- task: DotNetCoreCLI@2
+  displayName: "Run Unit Tests"
+  inputs:
+    command: test
+    projects: '**/*Tests*.csproj'
+    arguments: '--filter "TestCategory!=CosmosDb_NoSql&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
+
+- task: FileTransform@1.206.0
+  displayName: 'Version stamp dab.draft.schema.json'
+  inputs:
+    folderPath: '$(System.DefaultWorkingDirectory)'
+    fileType: 'json'
+    targetFiles: 'schemas/dab.draft.schema.json'
+ 
+- task: CopyFiles@2
+  displayName: 'Copy dab.draft.schema.json'
+  inputs:
+    sourceFolder: '$(Build.SourcesDirectory)/schemas'
+    contents: 'dab.draft.schema.json'
+    targetFolder: '$(Build.ArtifactStagingDirectory)'
+
+- template: templates/code-signing.yml
+  parameters:
+    # This is the path that will be used for packing nuget package.
+    # We will need to sign the binaries in this location.
+    path: '$(Build.SourcesDirectory)/src/out/cli/$(buildConfiguration)/net6.0/publish' 
+
+# Create nuget package after the binaries are signed. So that the binaries inside nuget package are signed.
+- task: DotNetCoreCLI@2
+  displayName: 'Creating Nuget Package'
+  inputs:
+    command: custom
+    custom: pack
+    projects: '**/Cli.csproj'
+    arguments: '--configuration $(buildConfiguration) --no-build -p:Version=$(dabVersion) -o $(Build.ArtifactStagingDirectory)/nupkg'
+
+# Now sign the nuget package itself.
+- template: templates/code-signing.yml
+  parameters:
+    path: '$(Build.ArtifactStagingDirectory)/nupkg'
+    signNuget: true
+
+- task: PowerShell@2
+  displayName: "Package DAB to multiple platforms"
+  inputs:
+    targetType: 'filePath'
+    filePath: $(System.DefaultWorkingDirectory)/publish.ps1
+    arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) -Package
+
+- task: PowerShell@2
+  displayName: "Smoke Test for DAB CLI"
+  inputs:
+    targetType: 'filePath'
+    filePath: $(System.DefaultWorkingDirectory)/dab-smoke-test-script.ps1
+    arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(Agent.OS)  $(dabVersion)
 
 # Sign the binaries that were generated per platform
 - template: templates/code-signing.yml
   parameters:
-    path: '$(Build.ArtifactStagingDirectory)'
+    path: '$(Build.ArtifactStagingDirectory)/publish'
+
+# Zip the binaries after signing process.
+- task: PowerShell@2
+  displayName: "Zip the binaries after signing"
+  inputs:
+    targetType: 'filePath'
+    filePath: $(System.DefaultWorkingDirectory)/publish.ps1
+    arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) -CreateZip
+
+# Generating SBOM manifest for Dab files
+- task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
+  displayName: 'SBOM Generation Task'
+  inputs:
+      BuildDropPath: '$(Build.ArtifactStagingDirectory)'
+
+# Generating Manifest File for generated Zip package
+- task: PowerShell@2
+  displayName: "Generate Manifest File"
+  inputs:
+    targetType: 'filePath'
+    filePath: $(System.DefaultWorkingDirectory)/create_manifest_file.ps1
+    arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) $(isReleaseBuild)
 
 # This code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
 - task: PublishPipelineArtifact@1
   displayName: "Upload build artifacts"
   inputs:
-    targetPath: '$(Build.ArtifactStagingDirectory)/publish'
+    targetPath: '$(Build.ArtifactStagingDirectory)' 
 
 - task: NuGetCommand@2
-  displayName: 'Test NuGet push'
+  displayName: 'Publish Nuget to Internal Feed'
+  condition: eq(variables.isReleaseBuild, 'true')
+  inputs:
+    command: 'push'
+    feedsToUse: 'select'
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
+    nuGetFeedType: 'internal'
+    publishVstsFeed: CosmosDB/DataApiBuilder
+    versioningScheme: 'off'
+    allowPackageConflicts: false
+
+- task: NuGetCommand@2
+  displayName: 'Publish Nuget to Nuget.org'
   condition: eq(variables.isReleaseBuild, 'true')
   inputs:
     command: push
-    packagesToPush: '$(Build.ArtifactStagingDirectory)/publish/Microsoft.DataApiBuilder.Test.0.0.1.nupkg'
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
     nuGetFeedType: external
     publishFeedCredentials: Microsoft.DataApiBuilder
+
+- task: PublishCodeCoverageResults@1
+  displayName: 'Publish code coverage'
+  inputs:
+    codeCoverageTool: Cobertura
+    summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
+
+# Create a draft release with Assets
+- task: GitHubRelease@1
+  displayName: "Draft Github Release"
+  condition: eq(variables.isReleaseBuild, 'true')
+  inputs:
+    gitHubConnection: 'DataApiBuilder'
+    repositoryName: '$(Build.Repository.Name)'
+    action: 'create'
+    target: '$(Build.SourceVersion)'
+    tagSource: 'userSpecifiedTag'
+    tag: 'v$(dabVersion)-beta'
+    title: 'New Release: Data API Builder for Azure Databases'
+    assets: |
+      $(Build.ArtifactStagingDirectory)/**/*.nupkg
+      $(Build.ArtifactStagingDirectory)/**/*.zip
+      $(Build.ArtifactStagingDirectory)/**/dab-manifest.json
+      $(Build.ArtifactStagingDirectory)/**/dab.draft.schema.json
+    isDraft: true
+    isPreRelease: true
+    addChangeLog: false
+
+# This task gets the current date and saves it to a variable so the docker task can use the build's
+# date and time as a tag.
+- task: PowerShell@2
+  displayName: "Get date for Docker image Tag"
+  inputs:
+    targetType: 'inline'
+    script: |
+      Write-Host "Setting up the date and time as a build variable for the Docker tag"
+      $date=$(Get-Date -format yyyyMMdd-HHmmss)
+      Write-Host "##vso[task.setvariable variable=BuildDate]$date"
+
+# Build a docker image and push it to the container registry.
+- task: Docker@2
+  displayName: "Build and push docker image to Azure Container Registry"
+  condition: eq(variables.isReleaseBuild, 'false')
+  inputs:
+    containerRegistry: 'CosmosDB GraphQL/Hawaii'
+    repository: 'dab/$(Build.SourceBranch)'
+    command: 'buildAndPush'
+    Dockerfile: '**/Dockerfile'
+    tags: |
+      $(BuildDate)-$(Build.SourceVersion)
+      latest
+
+# Build a docker image and push it to the container registry.
+# Tag the image with the value of the releaseName variable and nuget release version.
+- task: Docker@2
+  displayName: "Build and push docker image to Azure Container Registry tagged with releaseName and nuget release version"
+  condition: eq(variables.isReleaseBuild, 'true')
+  inputs:
+    containerRegistry: 'CosmosDB GraphQL/Hawaii'
+    repository: 'dab'
+    command: 'buildAndPush'
+    Dockerfile: '**/Dockerfile'
+    tags: |
+      $(BuildDate)-$(Build.SourceVersion)
+      $(releaseName)
+      $(dabVersion)

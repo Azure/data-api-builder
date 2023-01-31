@@ -137,11 +137,11 @@ namespace Azure.DataApiBuilder.Config
                         {
                             string operationType = JsonSerializer.Deserialize<string>(operation)!;
 
-                            if (string.Equals(operationType, "mutation", StringComparison.OrdinalIgnoreCase) || string.Equals(operationType, string.Empty))
+                            if (string.Equals(operationType, GraphQLOperation.Mutation.ToString(), StringComparison.OrdinalIgnoreCase) || string.Equals(operationType, string.Empty))
                             {
                                 graphQLOperation = GraphQLOperation.Mutation;
                             }
-                            else if (string.Equals(operationType, "query", StringComparison.OrdinalIgnoreCase))
+                            else if (string.Equals(operationType, GraphQLOperation.Query.ToString(), StringComparison.OrdinalIgnoreCase))
                             {
                                 graphQLOperation = GraphQLOperation.Query;
                             }
@@ -427,7 +427,6 @@ namespace Azure.DataApiBuilder.Config
                     {
                         throw new JsonException("Unsupported Rest Path Type");
                     }
-
                 }
                 else
                 {
@@ -438,9 +437,7 @@ namespace Azure.DataApiBuilder.Config
             {
                 throw new JsonException("Unsupported Rest Type");
             }
-
         }
-
     }
 
     /// <summary>

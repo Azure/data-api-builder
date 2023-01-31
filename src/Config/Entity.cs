@@ -225,10 +225,10 @@ namespace Azure.DataApiBuilder.Config
         }
 
         /// <summary>
-        /// Gets the graphQL Type configured for the entity.
+        /// Gets an entity's GraphQL Type metadata by deserializing the JSON runtime configuration.
         /// </summary>
-        /// <returns>GraphQL Type configured for the entity</returns>
-        /// <exception cref="JsonException"></exception>
+        /// <returns>GraphQL Type configuration for the entity.</returns>
+        /// <exception cref="JsonException">Raised when unsupported GraphQL configuration is present on the property "type"</exception>
         public object? GetGraphQLType()
         {
             if (GraphQL is null)
@@ -265,7 +265,6 @@ namespace Azure.DataApiBuilder.Config
                     {
                         throw new JsonException("Unsupported GraphQL Type");
                     }
-
                 }
                 else
                 {
@@ -276,7 +275,6 @@ namespace Azure.DataApiBuilder.Config
             {
                 throw new JsonException("Unsupported GraphQL Type");
             }
-
         }
 
         /// <summary>

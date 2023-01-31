@@ -1004,7 +1004,7 @@ type Foo @model(name:""Foo"") {{
         }
 
         /// <summary>
-        /// Tests the GraphQL schema builder method MutationBuild.Build()'s behavior when processing stored procedure entity configuration
+        /// Tests the GraphQL schema builder method MutationBuilder.Build()'s behavior when processing stored procedure entity configuration
         /// which may explicitly define the field type(query/mutation) of the entity.
         /// Only attempt to get the mutation ObjectTypeDefinitionNode when a mutation root operation type exists.
         /// In this test, either a mutation is created or it is not, so only attempt to run GetMutationNode when a node is expected,
@@ -1049,6 +1049,8 @@ type Foo @model(name:""Foo"") {{
             const string FIELDNOTFOUND_ERROR = "The expected mutation field schema was not detected.";
             try
             {
+                // Gets the specific mutation field generated for GraphQL type 'StoredProcedureType' named 'executeMyStoredProcedure'
+                // from the schema root field 'Mutation'
                 ObjectTypeDefinitionNode mutation = GetMutationNode(mutationRoot);
 
                 // With a minimized configuration for this entity, the only field expected is the one that may be generated from this test.

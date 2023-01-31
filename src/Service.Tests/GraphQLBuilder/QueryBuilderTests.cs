@@ -370,7 +370,7 @@ type Table @model(name: ""table"") {
         }
 
         /// <summary>
-        /// Tests the GraphQL schema builder method QueryBuild.Build()'s behavior when processing stored procedure entity configuration
+        /// Tests the GraphQL schema builder method QueryBuilder.Build()'s behavior when processing stored procedure entity configuration
         /// which may explicitly define the field type(query/mutation) of the entity.
         /// </summary>
         /// <param name="graphQLOperation">Query or Mutation</param>

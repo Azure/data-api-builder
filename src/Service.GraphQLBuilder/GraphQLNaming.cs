@@ -145,21 +145,28 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             return false;
         }
 
+        /// <summary>
+        /// Gets the GraphQL type name from an entity's GraphQL configuration that exists as
+        /// GraphQLEntitySettings or GraphQLStoredProcedureEntityVerboseSettings.
+        /// </summary>
+        /// <param name="configEntity"></param>
+        /// <param name="graphQLName">Resolved GraphQL name</param>
+        /// <returns>True if an entity's GraphQL settings are populated and a GraphQL name was resolved. Otherwise, false.</returns>
         public static bool TryGetConfiguredGraphQLName(Entity configEntity, [NotNullWhen(true)] out string? graphQLName)
         {
             if (configEntity.GraphQL is not null && configEntity.GraphQL is GraphQLEntitySettings graphQLEntitySettings)
             {
-                if (graphQLEntitySettings is not null && graphQLEntitySettings.Type is string typeEntityName)
+                if (graphQLEntitySettings is not null && graphQLEntitySettings.Type is string graphQLTypeName)
                 {
-                    graphQLName = typeEntityName;
+                    graphQLName = graphQLTypeName;
                     return true;
                 }
             }
             else if (configEntity.GraphQL is not null && configEntity.GraphQL is GraphQLStoredProcedureEntityVerboseSettings graphQLSpEntityVerboseSettings)
             {
-                if (graphQLSpEntityVerboseSettings is not null && graphQLSpEntityVerboseSettings.Type is string typeEntityName)
+                if (graphQLSpEntityVerboseSettings is not null && graphQLSpEntityVerboseSettings.Type is string graphQLTypeName)
                 {
-                    graphQLName = typeEntityName;
+                    graphQLName = graphQLTypeName;
                     return true;
                 }
             }

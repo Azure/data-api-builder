@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Microsoft.Extensions.Logging;
@@ -850,6 +849,7 @@ namespace Azure.DataApiBuilder.Service.Services
                         EntityBackingColumnsToExposedNames[entityName].Add(columnName, columnName);
                         EntityExposedNamesToBackingColumnNames[entityName].Add(columnName, columnName);
                     }
+
                     if (!_runtimeConfigProvider.IsLateConfigured)
                     {
                         string? exposedPKeyName;

@@ -11,8 +11,6 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.Azure.Cosmos.Core.Collections;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {

@@ -248,7 +248,7 @@ namespace Azure.DataApiBuilder.Service.Services
             foreach (string entityName in _entities.Keys)
             {
                 SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
-                _logger.LogDebug($"Logging Primary Key information for Entity: {entityName}.");
+                _logger.LogDebug($"Logging primary key information for entity: {entityName}.");
                 foreach (string pK in sourceDefinition.PrimaryKey)
                 {
 
@@ -861,10 +861,8 @@ namespace Azure.DataApiBuilder.Service.Services
         /// the exposed names, and to translate between
         /// exposed name and backing column (or the reverse)
         /// when needed while processing the request.
-        ///
         /// For now, only do this for tables/views as Stored Procedures do not have a SourceDefinition
         /// In the future, mappings for SPs could be used for parameter renaming.
-        ///
         /// We also handle logging the primary key information here since this is when we first have
         /// the exposed names suitable for logging.
         /// </summary>

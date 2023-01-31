@@ -955,8 +955,6 @@ namespace Azure.DataApiBuilder.Service.Services
             }
 
             DataTable columnsInTable = await GetColumnsAsync(schemaName, tableName);
-            columnsInTable.
-
 
             PopulateColumnDefinitionWithHasDefault(
                 sourceDefinition,

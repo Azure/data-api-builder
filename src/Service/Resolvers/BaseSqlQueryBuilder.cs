@@ -201,7 +201,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Resolves the operand either as a column, another predicate,
         /// a SqlQueryStructure or returns it directly as string
         /// </summary>
-        protected string ResolveOperand(PredicateOperand operand)
+        protected string ResolveOperand(PredicateOperand? operand)
         {
             if (operand == null)
             {

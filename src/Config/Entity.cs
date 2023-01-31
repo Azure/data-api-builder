@@ -186,8 +186,11 @@ namespace Azure.DataApiBuilder.Config
         public string? GetGraphQLOperation()
         {
             string? operation = null;
-
-            if (GraphQL is GraphQLStoredProcedureEntityOperationSettings operationSettings)
+            if (GraphQL is true || GraphQL is false || GraphQL is GraphQLEntitySettings _)
+            {
+                operation = GraphQLOperation.Mutation.ToString();
+            }
+            else if (GraphQL is GraphQLStoredProcedureEntityOperationSettings operationSettings)
             {
                 operation = operationSettings.GraphQLOperation.ToString();
             }
@@ -205,12 +208,11 @@ namespace Azure.DataApiBuilder.Config
         /// <returns>Name of the graphQL operation as an Enum</returns>
         public GraphQLOperation? FetchGraphQLOperationEnum()
         {
-            if (GraphQL is null)
+            if (GraphQL is true || GraphQL is false || GraphQL is GraphQLEntitySettings _)
             {
-                return null;
+                return GraphQLOperation.Mutation;
             }
-
-            if (GraphQL is GraphQLStoredProcedureEntityOperationSettings operationSettings)
+            else if (GraphQL is GraphQLStoredProcedureEntityOperationSettings operationSettings)
             {
                 return operationSettings.GraphQLOperation;
             }
@@ -334,11 +336,21 @@ namespace Azure.DataApiBuilder.Config
         {
             if (Rest is not null && ((JsonElement)Rest).ValueKind is JsonValueKind.Object)
             {
-                JsonSerializerOptions options = RuntimeConfig.SerializerOptions;
-                RestEntitySettings? rest = JsonSerializer.Deserialize<RestEntitySettings>((JsonElement)Rest, options);
-                if (rest is not null && rest.RestMethods is not null)
+                if (((JsonElement)Rest).TryGetProperty("path", out JsonElement _))
                 {
-                    return new List<RestMethod>(rest.RestMethods);
+                    RestStoredProcedureEntitySettings? restSpSettings = JsonSerializer.Deserialize<RestStoredProcedureEntitySettings>((JsonElement)Rest, RuntimeConfig.SerializerOptions);
+                    if (restSpSettings is not null && restSpSettings.RestMethods is not null)
+                    {
+                        return new List<RestMethod>(restSpSettings.RestMethods);
+                    }
+                }
+                else
+                {
+                    RestStoredProcedureEntityVerboseSettings? restSpSettings = JsonSerializer.Deserialize<RestStoredProcedureEntityVerboseSettings>((JsonElement)Rest, RuntimeConfig.SerializerOptions);
+                    if (restSpSettings is not null && restSpSettings.RestMethods is not null)
+                    {
+                        return new List<RestMethod>(restSpSettings.RestMethods);
+                    }
                 }
             }
 
@@ -353,23 +365,37 @@ namespace Azure.DataApiBuilder.Config
         {
             if (Rest is not null && ((JsonElement)Rest).ValueKind is JsonValueKind.Object)
             {
-                JsonSerializerOptions options = RuntimeConfig.SerializerOptions;
-                RestEntitySettings? rest = JsonSerializer.Deserialize<RestEntitySettings>((JsonElement)Rest, options);
-                if (rest is not null && rest.RestMethods is not null)
+                if (((JsonElement)Rest).TryGetProperty("path", out JsonElement _))
                 {
-                    return rest.RestMethods;
+                    RestStoredProcedureEntitySettings? restSpSettings = JsonSerializer.Deserialize<RestStoredProcedureEntitySettings>((JsonElement)Rest, RuntimeConfig.SerializerOptions);
+                    if (restSpSettings is not null)
+                    {
+                        return restSpSettings.RestMethods;
+                    }
+
+                }
+                else
+                {
+                    RestStoredProcedureEntityVerboseSettings? restSpSettings = JsonSerializer.Deserialize<RestStoredProcedureEntityVerboseSettings>((JsonElement)Rest, RuntimeConfig.SerializerOptions);
+                    if (restSpSettings is not null)
+                    {
+                        return restSpSettings.RestMethods;
+                    }
                 }
             }
 
-            return null;
+            return new RestMethod[] { RestMethod.Post };
         }
 
         /// <summary>
-        /// Gets the REST API path configured for the entity.
+        /// Gets the REST API Path Settings for the entity.
+        /// When REST is enabled or disabled without a custom path definition, this
+        /// returns a boolean true/false respectively.
+        /// When a custom path is configured, this returns the custom path definition.
         /// </summary>
-        /// <returns>REST Path</returns>
+        /// <returns></returns>
         /// <exception cref="JsonException"></exception>
-        public object? GetRestPath()
+        public object? GetRestEnabledOrPathSettings()
         {
             if (Rest is null)
             {
@@ -538,8 +564,7 @@ namespace Azure.DataApiBuilder.Config
     /// at which the REST endpoint for this entity is exposed
     /// instead of using the entity-name. Can be a string type.
     /// </param>
-    public record RestEntitySettings(object? Path,
-                                     [property: JsonPropertyName("methods")] RestMethod[]? RestMethods = null);
+    public record RestEntitySettings(object? Path);
 
     /// <summary>
     /// Describes the REST settings specific to an entity backed by a stored procedure.

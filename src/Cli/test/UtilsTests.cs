@@ -21,8 +21,8 @@ namespace Cli.Tests
         /// various possible REST Path and Methods.
         /// </summary>
         [DataTestMethod]
-        [DataRow(true, null, typeof(bool), DisplayName = "REST Configuration - Boolean Path without Methods")]
-        [DataRow(false, null, typeof(bool), DisplayName = "REST Configuration - Boolean Path without Methods")]
+        [DataRow(true, null, typeof(bool), DisplayName = "REST Configuration - Rest Enabled without Methods")]
+        [DataRow(false, null, typeof(bool), DisplayName = "REST Configuration - Rest Disabled")]
         [DataRow("book", null, typeof(RestEntitySettings), DisplayName = "REST Configuration - Custom API Path without Methods")]
         [DataRow(null, new RestMethod[] { RestMethod.Get, RestMethod.Post }, typeof(RestStoredProcedureEntitySettings), DisplayName = "REST Configuration - Methods without Path configured")]
         [DataRow(true, new RestMethod[] { RestMethod.Get, RestMethod.Post }, typeof(RestStoredProcedureEntityVerboseSettings), DisplayName = "REST Configuration - Boolean Path with Methods configured")]

@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Microsoft.Extensions.Logging;
+using Microsoft.Identity.Client;
 using static Cli.Utils;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
@@ -245,7 +246,7 @@ namespace Cli
             object? restPathDetails = ConstructRestPathDetails(options.RestRoute);
             object? graphQLNamingConfig = ConstructGraphQLTypeDetails(options.GraphQLType);
 
-            if (restPathDetails is not null && restPathDetails is false)
+            if (restPathDetails is not null && (restPathDetails is true || restPathDetails is false))
             {
                 restMethods = null;
             }
@@ -997,7 +998,7 @@ namespace Cli
             }
 
             // Updated REST Route details
-            object? restPath = (options.RestRoute is not null) ? ConstructRestPathDetails(options.RestRoute) : entity.GetRestPath();
+            object? restPath = (options.RestRoute is not null) ? ConstructRestPathDetails(options.RestRoute) : entity.GetRestEnabledOrPathSettings();
 
             // Updated REST Methods info for stored procedures
             RestMethod[]? restMethods;

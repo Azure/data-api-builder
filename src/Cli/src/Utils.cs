@@ -47,62 +47,69 @@ namespace Cli
         /// or a RestEntitySettings object containing api route based on the input.
         /// Returns null when no REST configuration is provided.
         /// </summary>
-        public static object? GetRestDetails(object? rest_detail = null, RestMethod[]? restMethods = null)
+        public static object? GetRestDetails(object? restDetail = null, RestMethod[]? restMethods = null)
         {
-            if (rest_detail is null && restMethods is null)
+            if (restDetail is null && restMethods is null)
             {
                 return null;
             }
-            // Tables and Views 
-            else if (rest_detail is not null && restMethods is null)
+            // Tables, Views and Stored Procedures that are enabled for REST without custom
+            // path or methods.
+            else if (restDetail is not null && restMethods is null)
             {
-                if (rest_detail is true || rest_detail is false)
+                if (restDetail is true || restDetail is false)
                 {
-                    return rest_detail;
+                    return restDetail;
                 }
                 else
                 {
-                    return new RestEntitySettings(Path: rest_detail);
+                    return new RestEntitySettings(Path: restDetail);
                 }
             }
-            //Stored Procedures without any custom REST path
-            else if (restMethods is not null && rest_detail is null)
+            //Stored Procedures that have REST methods defined without a custom REST path definition
+            else if (restMethods is not null && restDetail is null)
             {
                 return new RestStoredProcedureEntitySettings(RestMethods: restMethods);
             }
 
-            //Stored Procedures with custom REST path
-            return new RestStoredProcedureEntityVerboseSettings(Path: rest_detail, RestMethods: restMethods!);
+            //Stored Procedures that have custom REST path and methods defined 
+            return new RestStoredProcedureEntityVerboseSettings(Path: restDetail, RestMethods: restMethods!);
         }
 
         /// <summary>
         /// Creates the graphql object which can be either a boolean value
         /// or a GraphQLEntitySettings object containing graphql type {singular, plural} based on the input
         /// </summary>
-        public static object? GetGraphQLDetails(object? graphQL_detail, GraphQLOperation? graphQLOperation = null)
+        public static object? GetGraphQLDetails(object? graphQLDetail, GraphQLOperation? graphQLOperation = null)
         {
 
-            if (graphQL_detail is null && graphQLOperation is null)
+            if (graphQLDetail is null && graphQLOperation is null)
             {
                 return null;
             }
-            else if (graphQL_detail is not null && graphQLOperation is null)
+            // Tables, view or stored procedures that are either enabled for graphQL without custom operation
+            // definitions and with/without a custom graphQL type definition.
+            else if (graphQLDetail is not null && graphQLOperation is null)
             {
-                if (graphQL_detail is true || graphQL_detail is false)
+                if (graphQLDetail is true || graphQLDetail is false)
                 {
-                    return graphQL_detail;
+                    return graphQLDetail;
                 }
                 else
                 {
-                    return new GraphQLEntitySettings(Type: graphQL_detail);
+                    return new GraphQLEntitySettings(Type: graphQLDetail);
                 }
             }
-            else if (graphQL_detail is null && graphQLOperation is not null)
+            // Stored procedures that are defined with custom graphQL operations but without
+            // custom type definitions.
+            else if (graphQLDetail is null && graphQLOperation is not null)
             {
                 return new GraphQLStoredProcedureEntityOperationSettings(GraphQLOperation: graphQLOperation);
             }
 
-            return new GraphQLStoredProcedureEntityVerboseSettings(Type: graphQL_detail, GraphQLOperation: graphQLOperation);
+            // Stored procedures that are defined with custom graphQL type definition and
+            // custom a graphQL operation.
+            return new GraphQLStoredProcedureEntityVerboseSettings(Type: graphQLDetail, GraphQLOperation: graphQLOperation);
 
         }
 
@@ -827,7 +834,7 @@ namespace Cli
         {
             if (!Enum.TryParse(method, ignoreCase: true, out restMethod))
             {
-                _logger.LogError("Invalid REST Method. Supported methods are GET, POST, PUT, PATCH and DELETE.");
+                _logger.LogError($"Invalid REST Method. Supported methods are {RestMethod.Get.ToString()}, {RestMethod.Post.ToString()} , {RestMethod.Put.ToString()}, {RestMethod.Patch.ToString()} and {RestMethod.Delete.ToString()}.");
                 return false;
             }
 
@@ -876,7 +883,7 @@ namespace Cli
         {
             if (!Enum.TryParse(operation, ignoreCase: true, out graphQLOperation))
             {
-                _logger.LogError("Invalid GrpahQL Operation. Supported operations are Query and Mutation.");
+                _logger.LogError($"Invalid GrpahQL Operation. Supported operations are {GraphQLOperation.Query.ToString()} and {GraphQLOperation.Mutation.ToString()}.");
                 return false;
             }
 

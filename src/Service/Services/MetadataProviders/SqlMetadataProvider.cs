@@ -223,7 +223,6 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
             GenerateDatabaseObjectForEntities();
-            GenerateExposedToBackingColumnMapsForEntities();
             await PopulateObjectDefinitionForEntities();
             GenerateRestPathToEntityMap();
             InitODataParser();
@@ -830,24 +829,19 @@ namespace Azure.DataApiBuilder.Service.Services
         /// For now, only do this for tables/views as Stored Procedures do not have a SourceDefinition
         /// In the future, mappings for SPs could be used for parameter renaming.
         /// </summary>
-        private void GenerateExposedToBackingColumnMapsForEntities()
+        private void GenerateExposedToBackingColumnMapsForEntities(string entityName, string columnName)
         {
-            foreach (string entityName in _entities.Keys)
-            {
                 // InCase of StoredProcedures, result set definitions becomes the column definition.
                 Dictionary<string, string>? mapping = GetMappingForEntity(entityName);
                 EntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();
                 EntityExposedNamesToBackingColumnNames[entityName] = EntityBackingColumnsToExposedNames[entityName].ToDictionary(x => x.Value, x => x.Key);
                 SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
-                foreach (string column in sourceDefinition.Columns.Keys)
+                
+                if (!EntityExposedNamesToBackingColumnNames[entityName].ContainsKey(columnName) && !EntityBackingColumnsToExposedNames[entityName].ContainsKey(columnName))
                 {
-                    if (!EntityExposedNamesToBackingColumnNames[entityName].ContainsKey(column) && !EntityBackingColumnsToExposedNames[entityName].ContainsKey(column))
-                    {
-                        EntityBackingColumnsToExposedNames[entityName].Add(column, column);
-                        EntityExposedNamesToBackingColumnNames[entityName].Add(column, column);
-                    }
+                    EntityBackingColumnsToExposedNames[entityName].Add(columnName, columnName);
+                    EntityExposedNamesToBackingColumnNames[entityName].Add(columnName, columnName);
                 }
-            }
         }
 
         /// <summary>
@@ -933,7 +927,15 @@ namespace Azure.DataApiBuilder.Service.Services
                     SystemType = (Type)columnInfoFromAdapter["DataType"]
                 };
 
-                // When IsLateConfigured is true we are in a hosted scenario and do not reveal primary key information.
+                
+
+                // Tests may try to add the same column simultaneously
+                // hence we use TryAdd here.
+                // If the addition fails, it is assumed the column definition
+                // has already been added and need not error out.
+                sourceDefinition.Columns.TryAdd(columnName, column);
+                GenerateExposedToBackingColumnMapsForEntities(entityName, columnName);
+
                 if (!_runtimeConfigProvider.IsLateConfigured)
                 {
 
@@ -947,12 +949,6 @@ namespace Azure.DataApiBuilder.Service.Services
 
                     }
                 }
-
-                // Tests may try to add the same column simultaneously
-                // hence we use TryAdd here.
-                // If the addition fails, it is assumed the column definition
-                // has already been added and need not error out.
-                sourceDefinition.Columns.TryAdd(columnName, column);
             }
 
             DataTable columnsInTable = await GetColumnsAsync(schemaName, tableName);

@@ -26,13 +26,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public string Container { get; internal set; }
         public string Database { get; internal set; }
         public string? Continuation { get; internal set; }
-        public int MaxItemCount { get; internal set; }
+        public int? MaxItemCount { get; internal set; }
         public string? PartitionKeyValue { get; internal set; }
         public List<OrderByColumn> OrderByColumns { get; internal set; }
 
         public CosmosQueryStructure(
             IMiddlewareContext context,
-            IDictionary<string, object> parameters,
+            IDictionary<string, object?> parameters,
             ISqlMetadataProvider metadataProvider,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser)
@@ -47,7 +47,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         [MemberNotNull(nameof(Container))]
         [MemberNotNull(nameof(Database))]
         [MemberNotNull(nameof(OrderByColumns))]
-        private void Init(IDictionary<string, object> queryParams)
+        private void Init(IDictionary<string, object?> queryParams)
         {
             IFieldSelection selection = _context.Selection;
             ObjectType underlyingType = GraphQLUtils.UnderlyingGraphQLEntityType(selection.Field.Type);
@@ -89,19 +89,19 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // TODO: Revisit 'first' while adding support for TOP queries
             if (queryParams.ContainsKey(QueryBuilder.PAGE_START_ARGUMENT_NAME))
             {
-                MaxItemCount = (int)queryParams[QueryBuilder.PAGE_START_ARGUMENT_NAME];
+                MaxItemCount = (int?)queryParams[QueryBuilder.PAGE_START_ARGUMENT_NAME];
                 queryParams.Remove(QueryBuilder.PAGE_START_ARGUMENT_NAME);
             }
 
             if (queryParams.ContainsKey(QueryBuilder.PAGINATION_TOKEN_ARGUMENT_NAME))
             {
-                Continuation = (string)queryParams[QueryBuilder.PAGINATION_TOKEN_ARGUMENT_NAME];
+                Continuation = (string?)queryParams[QueryBuilder.PAGINATION_TOKEN_ARGUMENT_NAME];
                 queryParams.Remove(QueryBuilder.PAGINATION_TOKEN_ARGUMENT_NAME);
             }
 
             if (queryParams.ContainsKey(QueryBuilder.PARTITION_KEY_FIELD_NAME))
             {
-                PartitionKeyValue = (string)queryParams[QueryBuilder.PARTITION_KEY_FIELD_NAME];
+                PartitionKeyValue = (string?)queryParams[QueryBuilder.PARTITION_KEY_FIELD_NAME];
                 queryParams.Remove(QueryBuilder.PARTITION_KEY_FIELD_NAME);
             }
 
@@ -140,7 +140,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else
             {
-                foreach (KeyValuePair<string, object> parameter in queryParams)
+                foreach (KeyValuePair<string, object?> parameter in queryParams)
                 {
                     Predicates.Add(new Predicate(
                         new PredicateOperand(new Column(tableSchema: string.Empty, _containerAlias, parameter.Key)),

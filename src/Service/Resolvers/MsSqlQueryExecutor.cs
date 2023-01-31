@@ -57,7 +57,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             : base(dbExceptionParser,
                   logger,
                   new SqlConnectionStringBuilder(
-                      runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString))
+                      runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString),
+                  runtimeConfigProvider)
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
 

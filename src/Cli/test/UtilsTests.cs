@@ -48,16 +48,16 @@ namespace Cli.Tests
         public void TestConstructGraphQLTypeDetails(string? graphQLType, object? expectedGraphQLType, bool isSingularPluralType)
         {
             object? actualGraphQLType = ConstructGraphQLTypeDetails(graphQLType);
-            if(! isSingularPluralType)
+            if (!isSingularPluralType)
             {
                 Assert.AreEqual(expectedGraphQLType, actualGraphQLType);
             }
             else
             {
-                SingularPlural expectedType = new(Singular:"book", Plural: "books");
+                SingularPlural expectedType = new(Singular: "book", Plural: "books");
                 Assert.AreEqual(expectedType, actualGraphQLType);
             }
-     
+
         }
 
         /// <summary>

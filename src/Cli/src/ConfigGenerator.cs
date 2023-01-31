@@ -735,8 +735,8 @@ namespace Cli
             // no update is required.
             if (options.SourceType is not null)
             {
-                if( (entity.ObjectType is SourceType.StoredProcedure && !IsEntityStoredProcedure(options))
-                    || ( entity.ObjectType is not SourceType.StoredProcedure && IsEntityStoredProcedure(options)))
+                if ((entity.ObjectType is SourceType.StoredProcedure && !IsEntityStoredProcedure(options))
+                    || (entity.ObjectType is not SourceType.StoredProcedure && IsEntityStoredProcedure(options)))
                 {
                     _logger.LogError("Cannot convert from stored-procedure to table/view or vice-versa");
                     return false;

@@ -927,8 +927,6 @@ namespace Azure.DataApiBuilder.Service.Services
                     SystemType = (Type)columnInfoFromAdapter["DataType"]
                 };
 
-                
-
                 // Tests may try to add the same column simultaneously
                 // hence we use TryAdd here.
                 // If the addition fails, it is assumed the column definition
@@ -938,7 +936,6 @@ namespace Azure.DataApiBuilder.Service.Services
 
                 if (!_runtimeConfigProvider.IsLateConfigured)
                 {
-
                     string? exposedPKeyName;
                     if (pKeySet.Contains(columnName) && TryGetExposedColumnName(entityName, columnName, out exposedPKeyName))
                     {

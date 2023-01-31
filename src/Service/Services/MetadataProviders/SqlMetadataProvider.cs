@@ -836,7 +836,7 @@ namespace Azure.DataApiBuilder.Service.Services
             EntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();
             EntityExposedNamesToBackingColumnNames[entityName] = EntityBackingColumnsToExposedNames[entityName].ToDictionary(x => x.Value, x => x.Key);
             SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
-                
+            
             if (!EntityExposedNamesToBackingColumnNames[entityName].ContainsKey(columnName) && !EntityBackingColumnsToExposedNames[entityName].ContainsKey(columnName))
             {
                 EntityBackingColumnsToExposedNames[entityName].Add(columnName, columnName);

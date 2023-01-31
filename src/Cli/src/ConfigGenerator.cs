@@ -204,14 +204,14 @@ namespace Cli
             // for stored procedures 
             if (options.GraphQLOperationForStoredProcedure is not null && !isStoredProcedure)
             {
-                _logger.LogError("--graphql.operation can be configured only for stored procedures");
+                _logger.LogError("--graphql.operation can be configured only for stored procedures.");
                 return false;
             }
 
             if ((options.RestMethodsForStoredProcedure is not null && options.RestMethodsForStoredProcedure.Any())
                 && !isStoredProcedure)
             {
-                _logger.LogError("--rest.methods can be configured only for stored procedures");
+                _logger.LogError("--rest.methods can be configured only for stored procedures.");
                 return false;
             }
 
@@ -470,7 +470,6 @@ namespace Cli
                     _logger.LogError("Conflicting Rest configurations found.");
                     return false;
                 }
-
             }
 
             object? updatedRestDetails = ConstructUpdatedRestDetails(entity, options);
@@ -942,9 +941,9 @@ namespace Cli
         /// Returns an array of RestMethods resolved from command line input (EntityOptions).
         /// When no methods are specified, the default "POST" is returned.
         /// </summary>
-        /// <param name="options"></param>
-        /// <param name="restMethods"></param>
-        /// <returns>True when the default or user provided stored procedure REST methods are supplied.
+        /// <param name="options">Entity configuration options received from command line input.</param>
+        /// <param name="restMethods">Rest methods to enable for stored procedure.</param>
+        /// <returns>True when the default (POST) or user provided stored procedure REST methods are supplied.
         /// Returns false and an empty array when an invalid REST method is provided.</returns>
         private static bool TryAddRestMethodsForStoredProcedure(EntityOptions options, [NotNullWhen(true)] out RestMethod[]? restMethods)
         {
@@ -994,7 +993,10 @@ namespace Cli
         /// </summary>
         /// <param name="entity">Entity for which the REST settings are updated</param>
         /// <param name="options">Input from update command</param>
-        /// <returns></returns>
+        /// <returns>Boolean -> when the entity's REST configuration is true/false.
+        /// RestEntitySettings -> when a non stored procedure entity is configured with granular REST settings (Path).
+        /// RestStoredProcedureEntitySettings -> when a stored procedure entity is configured with explicit RestMethods.
+        /// RestStoredProcedureEntityVerboseSettings-> when a stored procedure entity is configured with explicit RestMethods and Path settings.</returns>
         private static object? ConstructUpdatedRestDetails(Entity entity, EntityOptions options)
         {
 
@@ -1038,7 +1040,10 @@ namespace Cli
         /// </summary>
         /// <param name="entity">Entity for which GraphQL settings are updated</param>
         /// <param name="options">Input from update command</param>
-        /// <returns></returns>
+        /// <returns>Boolean -> when the entity's GraphQL configuration is true/false.
+        /// GraphQLEntitySettings -> when a non stored procedure entity is configured with granular GraphQL settings (Type/Singular/Plural).
+        /// GraphQLStoredProcedureEntitySettings -> when a stored procedure entity is configured with an explicit operation.
+        /// GraphQLStoredProcedureEntityVerboseSettings-> when a stored procedure entity is configured with explicit operation and type settings.</returns>
         private static object? ConstructUpdatedGraphQLDetails(Entity entity, EntityOptions options)
         {
             if (options.GraphQLType is null && options.GraphQLOperationForStoredProcedure is null)
@@ -1082,6 +1087,5 @@ namespace Cli
 
             return GetGraphQLDetails(graphQLType, graphQLOperation);
         }
-
     }
 }

@@ -4,9 +4,11 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
+using Azure.DataApiBuilder.Service.Configurations;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
 {
@@ -21,12 +23,20 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
     {
         private readonly RequestDelegate _nextMiddleware;
 
+        private ILogger<ClientRoleHeaderAuthenticationMiddleware> _logger;
+
+        private bool _isLateConfigured;
+
         // Identity provider used for identities added to the ClaimsPrincipal object for the current user by DAB.
         private const string INTERNAL_DAB_IDENTITY_PROVIDER = "DAB-VERIFIED";
 
-        public ClientRoleHeaderAuthenticationMiddleware(RequestDelegate next)
+        public ClientRoleHeaderAuthenticationMiddleware(RequestDelegate next,
+            ILogger<ClientRoleHeaderAuthenticationMiddleware> logger,
+            RuntimeConfigProvider runtimeConfigProvider)
         {
             _nextMiddleware = next;
+            _logger = logger;
+            _isLateConfigured = runtimeConfigProvider.IsLateConfigured;
         }
 
         /// <summary>
@@ -89,6 +99,18 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
                     // Override existing client role header value for anonymous requests.
                     httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]
                         = clientDefinedRole;
+                }
+            }
+
+            // Log the request authenticated status and role only in the non-hosted scenario.
+            if (!_isLateConfigured)
+            {
+                string requestAuthStatus = isAuthenticatedRequest ? AuthorizationType.Authenticated.ToString() :
+                    AuthorizationType.Anonymous.ToString();
+                _logger.LogDebug($"The request is evaluated as {requestAuthStatus} by the DAB engine");
+                if (isAuthenticatedRequest)
+                {
+                    _logger.LogDebug($"The request will be executed in the context of {clientDefinedRole} role");
                 }
             }
 

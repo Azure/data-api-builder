@@ -138,7 +138,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             string existsPredicate = $@"
                 EXISTS( SELECT 1
                         FROM {defaultSchema}[authors] AS [table1]
-                        INNER JOIN [dbo].[book_author_link] AS [table3]
+                        INNER JOIN {defaultSchema}[book_author_link] AS [table3]
                         ON [table3].[book_id] = [table0].[id]
                         WHERE [table1].[name] = 'Aaron'
                         AND [table3].[author_id] = [table1].[id])";
@@ -331,7 +331,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                     @": { or: [{
                         publishers: { name: { eq: ""TBD Publishing One"" } } }
                         { authors : {
-                          name: { eq: ""Aniruddh""}}} 
+                          name: { eq: ""Aniruddh""}}}
                       ]
                     })
                     {

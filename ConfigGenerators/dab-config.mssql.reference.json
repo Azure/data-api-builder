@@ -937,7 +937,7 @@
       },
       "rest": {
         "path": "GetBook",
-        "method": [ "GET" ]
+        "methods": [ "GET" ]
       },
       "graphql": false,
       "permissions": [
@@ -986,7 +986,7 @@
       },
       "rest": {
         "path": "InsertBook",
-        "method": [ "POST" ]
+        "methods": [ "POST" ]
       },
       "permissions": [
         {
@@ -1015,7 +1015,7 @@
       },
       "rest": {
         "path": "CountBooks",
-        "method": [ "GET" ]
+        "methods": [ "GET" ]
       },
       "permissions": [
         {
@@ -1044,7 +1044,7 @@
       },
       "rest": {
         "path": "DeleteLastInsertedBook",
-        "method": [ "DELETE" ]
+        "methods": [ "DELETE" ]
       },
       "permissions": [
         {
@@ -1077,7 +1077,7 @@
       },
       "rest": {
         "path": "UpdateBookTitle",
-        "method": [ "PUT", "PATCH" ]
+        "methods": [ "PUT", "PATCH" ]
       },
       "permissions": [
         {
@@ -1108,7 +1108,7 @@
       },
       "rest": {
         "path": "GetPublisher",
-        "method": [ "GET" ]
+        "methods": [ "GET" ]
       },
       "permissions": [
         {

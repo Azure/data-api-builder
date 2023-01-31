@@ -15,8 +15,7 @@ namespace Cli
         /// Main CLI entry point
         /// </summary>
         /// <param name="args">CLI arguments</param>
-        /// <returns>0 on success, -1 on failure.</returns>
-        public static int Main(string[] args)
+        public static void Main(string[] args)
         {
             Parser parser = new(settings =>
                 {
@@ -102,7 +101,6 @@ namespace Cli
                     }
                 });
 
-            return result is Parsed<object> ? 0 : -1;
         }
 
         /// <summary>

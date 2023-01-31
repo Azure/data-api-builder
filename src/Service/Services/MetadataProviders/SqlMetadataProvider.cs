@@ -829,6 +829,9 @@ namespace Azure.DataApiBuilder.Service.Services
         ///
         /// For now, only do this for tables/views as Stored Procedures do not have a SourceDefinition
         /// In the future, mappings for SPs could be used for parameter renaming.
+        ///
+        /// We also handle logging the primary key information here since this is when we first have
+        /// the exposed names suitable for logging.
         /// </summary>
         private void GenerateExposedToBackingColumnMapsForEntities()
         {
@@ -839,6 +842,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 EntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();
                 EntityExposedNamesToBackingColumnNames[entityName] = EntityBackingColumnsToExposedNames[entityName].ToDictionary(x => x.Value, x => x.Key);
                 SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
+                // HashSet used for performance.
                 HashSet<string> pKeySet = new(sourceDefinition.PrimaryKey);
                 _logger.LogDebug($"Logging Primary Key information for Entity: {entityName}.");
 
@@ -850,6 +854,7 @@ namespace Azure.DataApiBuilder.Service.Services
                         EntityExposedNamesToBackingColumnNames[entityName].Add(columnName, columnName);
                     }
 
+                    // When IsLateConfigured is true we are in a hosted scenario and do not reveal primary key information.
                     if (!_runtimeConfigProvider.IsLateConfigured)
                     {
                         string? exposedPKeyName;
@@ -924,10 +929,6 @@ namespace Azure.DataApiBuilder.Service.Services
             using DataTableReader reader = new(dataTable);
             DataTable schemaTable = reader.GetSchemaTable();
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
-            // InCase of StoredProcedures, result set definitions becomes the column definition.
-            Dictionary<string, string>? mapping = GetMappingForEntity(entityName);
-            EntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();
-            EntityExposedNamesToBackingColumnNames[entityName] = EntityBackingColumnsToExposedNames[entityName].ToDictionary(x => x.Value, x => x.Key);
             foreach (DataRow columnInfoFromAdapter in schemaTable.Rows)
             {
                 string columnName = columnInfoFromAdapter["ColumnName"].ToString()!;

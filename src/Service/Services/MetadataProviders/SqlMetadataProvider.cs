@@ -251,7 +251,6 @@ namespace Azure.DataApiBuilder.Service.Services
                 _logger.LogDebug($"Logging primary key information for entity: {entityName}.");
                 foreach (string pK in sourceDefinition.PrimaryKey)
                 {
-
                     string? exposedPKeyName;
                     column = sourceDefinition.Columns[pK];
                     if (TryGetExposedColumnName(entityName, pK, out exposedPKeyName))

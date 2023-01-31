@@ -159,9 +159,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             if (input is null)
             {
                 throw new InvalidDataException("Input Item field is invalid");
+            } 
+            else
+            {
+                return await container.ReplaceItemAsync<JObject>(input, id, new PartitionKey(partitionKey), new ItemRequestOptions());
             }
-
-            return await container.ReplaceItemAsync<JObject>(input!, id, new PartitionKey(partitionKey), new ItemRequestOptions());
         }
 
         /// <summary>

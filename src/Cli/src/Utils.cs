@@ -883,7 +883,7 @@ namespace Cli
         {
             if (!Enum.TryParse(operation, ignoreCase: true, out graphQLOperation))
             {
-                _logger.LogError($"Invalid GrpahQL Operation. Supported operations are {GraphQLOperation.Query.ToString()} and {GraphQLOperation.Mutation.ToString()}.");
+                _logger.LogError($"Invalid GraphQL Operation. Supported operations are {GraphQLOperation.Query.ToString()} and {GraphQLOperation.Mutation.ToString()}.");
                 return false;
             }
 

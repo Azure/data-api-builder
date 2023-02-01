@@ -399,7 +399,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Tries to resolve a JsonElement representing a variable to the appropriate type
         /// </summary>
         /// <param name="element">The Json element to convert from.</param>
-        /// <param name="scalarVariable">The scalar into which the element is represented as based on its ValueKind.</param>
+        /// <param name="scalarVariable">The scalar into which the element is resolved based on its ValueKind.</param>
         /// <returns>True when resolution is successful, false otherwise.</returns>
         public static bool TryResolveJsonElementToScalarVariable(
             JsonElement element,

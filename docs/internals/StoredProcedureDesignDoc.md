@@ -51,21 +51,21 @@ parameters can either be fixed as above or passed at runtime through
 
 ### Stored Procedure Permissions 
 
-Stored procedures have identical role/action permissions to any other entity. i.e. same familiar format:
+Stored procedure backed entities have similar role/action permissions to other entities. i.e. same familiar format:
 ```json
 "permissions": [
         {
             "role": "anonymous",
-            "actions": [ "read" ]
+            "actions": [ "execute" ]
             
         },
         {
             "role": "authenticated",
-            "actions": [ "create" ]
+            "actions": [ "execute" ]
         }
 ]
 ``` 
-However, the behavior of **column/field-level permissions** and **database policies** have not yet been designed/defined for procedures; as such, these will be **ignored**.
+However, stored procedures only accept the action **execute** and the behavior of **column/field-level permissions** and **database policies** have not yet been designed/defined for procedures; as such, these will be **ignored**.
 
 <a id='suggested-config'></a>
 > Why not simplify stored procedure permissions, if POST, PUT, PATCH, DELETE semantically identical?

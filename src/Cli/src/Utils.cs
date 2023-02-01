@@ -913,7 +913,7 @@ namespace Cli
 
         public static bool IsStoredProcedureConvertedToOtherTypes(Entity entity, EntityOptions options)
         {
-            if(options.SourceType is null)
+            if (options.SourceType is null)
             {
                 return false;
             }
@@ -925,7 +925,7 @@ namespace Cli
 
         public static bool IsEntityBeingConvertedToStoredProcedure(Entity entity, EntityOptions options)
         {
-            if(options.SourceType is null)
+            if (options.SourceType is null)
             {
                 return false;
             }

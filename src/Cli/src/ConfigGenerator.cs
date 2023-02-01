@@ -433,7 +433,7 @@ namespace Cli
                 _logger.LogError($"Entity:{options.Entity} not found. Please add the entity first.");
                 return false;
             }
-            
+
             if (!TryGetUpdatedSourceObjectWithOptions(options, entity, out object? updatedSource))
             {
                 _logger.LogError("Failed to update the source object.");
@@ -744,7 +744,7 @@ namespace Cli
                     return false;
                 }
 
-                if ( IsStoredProcedureConvertedToOtherTypes(entity,options) || IsEntityBeingConvertedToStoredProcedure(entity, options))
+                if (IsStoredProcedureConvertedToOtherTypes(entity, options) || IsEntityBeingConvertedToStoredProcedure(entity, options))
                 {
                     _logger.LogWarning($"Stored procedures can be configured only with {Operation.Execute.ToString()} action whereas tables/views are configured with CRUD actions. Update the actions configured for all the roles for this entity.");
                 }
@@ -1006,7 +1006,7 @@ namespace Cli
 
             // Updated REST Methods info for stored procedures
             RestMethod[]? restMethods;
-            if (!IsStoredProcedureConvertedToOtherTypes(entity,options)
+            if (!IsStoredProcedureConvertedToOtherTypes(entity, options)
                 && (IsStoredProcedure(entity) || IsStoredProcedure(options)))
             {
                 if (options.RestMethodsForStoredProcedure is null || !options.RestMethodsForStoredProcedure.Any())
@@ -1022,20 +1022,20 @@ namespace Cli
             {
                 restMethods = null;
             }
-            
+
             if (restPath is false)
             {
-                if(options.RestRoute is not null)
+                if (options.RestRoute is not null)
                 {
                     restMethods = null;
                 }
                 else
                 {
                     restPath = null;
-                }                
+                }
             }
 
-            if(IsEntityBeingConvertedToStoredProcedure(entity, options)
+            if (IsEntityBeingConvertedToStoredProcedure(entity, options)
                && (restMethods is null || restMethods.Length == 0))
             {
                 restMethods = new RestMethod[] { RestMethod.Post };
@@ -1088,7 +1088,7 @@ namespace Cli
 
             if (graphQLType is false)
             {
-                if(options.GraphQLType is not null)
+                if (options.GraphQLType is not null)
                 {
                     graphQLOperation = null;
                 }
@@ -1096,10 +1096,10 @@ namespace Cli
                 {
                     graphQLType = null;
                 }
-                
+
             }
 
-            if(IsEntityBeingConvertedToStoredProcedure(entity, options)
+            if (IsEntityBeingConvertedToStoredProcedure(entity, options)
               && graphQLOperation is null)
             {
                 graphQLOperation = GraphQLOperation.Mutation;

@@ -840,6 +840,12 @@ namespace Cli
                 args.Add(options.LogLevel.ToString()!);
             }
 
+            // This will disable automatic redirects to https
+            if (options.IsHttpsRedirectionDisabled)
+            {
+                args.Add("--no-https");
+            }
+
             return Azure.DataApiBuilder.Service.Program.StartEngine(args.ToArray());
         }
     }

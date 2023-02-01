@@ -70,7 +70,7 @@ public class CustomLoggerProvider : ILoggerProvider
             Console.Write($"{logLevel}:");
             Console.ForegroundColor = originalForeGroundColor;
             Console.BackgroundColor = originalBackGroundColor;
-            if(exception is not null )
+            if (exception is not null)
             {
                 Console.WriteLine($" {formatter(state, exception)}");
             }

@@ -13,10 +13,9 @@ namespace Cli
     /// </summary>
     public class ConfigGenerator
     {
-        #pragma warning disable CS8618
-        // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         private static ILogger<ConfigGenerator> _logger;
-        #pragma warning restore CS8618
+#pragma warning restore CS8618
 
         public static void SetLoggerForCliConfigGenerator(
             ILogger<ConfigGenerator> configGeneratorLoggerFactory)

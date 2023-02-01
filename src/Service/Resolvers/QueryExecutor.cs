@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -23,6 +24,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     {
         protected DbExceptionParser DbExceptionParser { get; }
         protected ILogger<QueryExecutor<TConnection>> QueryExecutorLogger { get; }
+        private RuntimeConfigProvider ConfigProvider { get; }
 
         // The maximum number of attempts that can be made to execute the query successfully in addition to the first attempt.
         // So to say in case of transient exceptions, the query will be executed (_maxRetryCount + 1) times at max.
@@ -34,11 +36,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         public QueryExecutor(DbExceptionParser dbExceptionParser,
                              ILogger<QueryExecutor<TConnection>> logger,
-                             DbConnectionStringBuilder connectionStringBuilder)
+                             DbConnectionStringBuilder connectionStringBuilder,
+                             RuntimeConfigProvider configProvider)
         {
             DbExceptionParser = dbExceptionParser;
             QueryExecutorLogger = logger;
             ConnectionStringBuilder = connectionStringBuilder;
+            ConfigProvider = configProvider;
             _retryPolicy = Polly.Policy
             .Handle<DbException>(DbExceptionParser.IsTransientException)
             .WaitAndRetryAsync(
@@ -84,6 +88,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         // This implies that the request got successfully executed during one of retry attempts.
                         QueryExecutorLogger.LogInformation($"Request executed successfully in {retryAttempt} attempt of" +
                             $"{_maxRetryCount + 1} available attempts.");
+                    }
+
+                    // When IsLateConfigured is true we are in a hosted scenario and do not reveal query information.
+                    if (!ConfigProvider.IsLateConfigured)
+                    {
+                        QueryExecutorLogger.LogDebug($"Query Executed: \n{sqltext}");
                     }
 
                     return result;

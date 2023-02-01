@@ -487,6 +487,28 @@ public class EndToEndTests
         process.Kill();
     }
 
+    [DataRow("--no-https", DisplayName = "Version printed with valid command start.")]
+    [DataRow("", DisplayName = "Version printed with valid command start.")]
+    [DataTestMethod]
+    public void TestDisablingHttpsRedirects(string options)
+    {
+        WriteJsonContentToFile(_testRuntimeConfig, INITIAL_CONFIG);
+
+        using Process process = ExecuteDabCommand(
+            command: "start",
+            flags: $"--config {_testRuntimeConfig} {options}"
+        );
+
+        string? output = process.StandardOutput.ReadLine();
+        Assert.IsNotNull(output);
+
+        // Version Info logged by dab irrespective of commands being parsed correctly.
+        Assert.IsTrue(output.Contains($"{Program.PRODUCT_NAME} {GetProductVersion()}"));
+
+        process.Kill();
+    }
+
+
     /// <summary>
     /// Test to verify that any parsing errors in the config
     /// are caught before starting the engine.

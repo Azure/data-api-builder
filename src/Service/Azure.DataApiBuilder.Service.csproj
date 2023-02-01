@@ -27,6 +27,15 @@
     <PropertyGroup Condition="'$(Configuration)'=='Docker'">
       <DebugType>none</DebugType>
     </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+      <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+      <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Docker|AnyCPU'">
+      <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
+    </PropertyGroup>
 
     <ItemGroup>
         <Content Update="appsettings*.json">
@@ -66,7 +75,7 @@
         <PackageReference Include="Newtonsoft.Json" />
         <PackageReference Include="Npgsql" />
         <PackageReference Include="Polly" />
-        <PackageReference Include="StyleCop.Analyzers" >
+        <PackageReference Include="StyleCop.Analyzers">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>

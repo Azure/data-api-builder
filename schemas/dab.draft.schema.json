@@ -278,7 +278,7 @@
                     "path": {
                       "type": "string"
                     },
-                    "method": {
+                    "methods": {
                       "type": "array",
                       "items": {
                         "type": "string",
@@ -300,7 +300,7 @@
                     },
                     {
                       "required": [
-                        "method"
+                        "methods"
                       ]
                     }
                   ]

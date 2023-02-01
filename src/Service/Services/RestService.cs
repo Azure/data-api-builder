@@ -94,7 +94,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 {
                     throw new DataApiBuilderException(
                         message: "This operation is not supported.",
-                        statusCode: HttpStatusCode.BadRequest,
+                        statusCode: HttpStatusCode.MethodNotAllowed,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
 

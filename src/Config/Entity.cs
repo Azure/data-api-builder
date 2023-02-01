@@ -339,7 +339,7 @@ namespace Azure.DataApiBuilder.Config
             {
                 if (((JsonElement)Rest).TryGetProperty("path", out JsonElement _))
                 {
-                    RestStoredProcedureEntitySettings? restSpSettings = JsonSerializer.Deserialize<RestStoredProcedureEntitySettings>((JsonElement)Rest, RuntimeConfig.SerializerOptions);
+                    RestStoredProcedureEntityVerboseSettings? restSpSettings = JsonSerializer.Deserialize<RestStoredProcedureEntityVerboseSettings>((JsonElement)Rest, RuntimeConfig.SerializerOptions);
                     if (restSpSettings is not null && restSpSettings.RestMethods is not null)
                     {
                         return new List<RestMethod>(restSpSettings.RestMethods);
@@ -347,7 +347,7 @@ namespace Azure.DataApiBuilder.Config
                 }
                 else
                 {
-                    RestStoredProcedureEntityVerboseSettings? restSpSettings = JsonSerializer.Deserialize<RestStoredProcedureEntityVerboseSettings>((JsonElement)Rest, RuntimeConfig.SerializerOptions);
+                    RestStoredProcedureEntitySettings? restSpSettings = JsonSerializer.Deserialize<RestStoredProcedureEntitySettings>((JsonElement)Rest, RuntimeConfig.SerializerOptions);
                     if (restSpSettings is not null && restSpSettings.RestMethods is not null)
                     {
                         return new List<RestMethod>(restSpSettings.RestMethods);

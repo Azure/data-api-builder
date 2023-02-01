@@ -125,7 +125,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         {
             bool executionPermitted = EntityPermissionsMap.TryGetValue(entityName, out EntityMetadata? entityMetadata)
                 && entityMetadata is not null
-                && entityMetadata.StoredProcedureHttpVerbs.Contains(httpVerb);
+                && entityMetadata.RoleToOperationMap.TryGetValue(roleName, out _);
 
             return executionPermitted;
         }

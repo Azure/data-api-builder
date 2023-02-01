@@ -100,7 +100,6 @@ namespace Cli
                         cliLogger.LogError("Failed to start the engine.");
                     }
                 });
-
         }
 
         /// <summary>

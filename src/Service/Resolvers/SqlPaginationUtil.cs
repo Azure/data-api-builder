@@ -417,9 +417,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 case JsonValueKind.Number:
                 {
-                    double value;
-                    resolved = element.TryGetDouble(out value);
-                    if (resolved)
+                    if (element.TryGetDouble(out double value))
                     {
                         scalarVariable = value;
                     }

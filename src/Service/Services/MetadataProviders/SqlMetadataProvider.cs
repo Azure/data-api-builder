@@ -229,12 +229,50 @@ namespace Azure.DataApiBuilder.Service.Services
             if (!_runtimeConfigProvider.IsLateConfigured)
             {
                 LogPrimaryKeys();
+                LogRelationships();
             }
 
             GenerateRestPathToEntityMap();
             InitODataParser();
             timer.Stop();
             _logger.LogTrace($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
+        }
+
+        /// <summary>
+        /// Log relationship data for a given entity. This includes source and target entity,
+        /// referenced and referencing tables, as well as the columns in the relationship.
+        /// </summary>
+        private void LogRelationships()
+        {
+            SourceDefinition sourceDefinition;
+            foreach (string entityName in _entities.Keys)
+            {
+                sourceDefinition = GetSourceDefinition(entityName);
+                _logger.LogDebug($"Logging relationship information for entity: {entityName}.");
+                foreach ((string sourceEntity, RelationshipMetadata relationshipData )in sourceDefinition.SourceEntityRelationshipMap)
+                {
+                    _logger.LogDebug($"Source entity: {sourceEntity}");
+                    foreach((string targetEntity, List<ForeignKeyDefinition> FkDefinitions) in relationshipData.TargetEntityToFkDefinitionMap)
+                    {
+                        _logger.LogDebug($"Target entity: {targetEntity}");
+                        foreach(ForeignKeyDefinition fKDef in FkDefinitions)
+                        {
+                            _logger.LogDebug($"Referenced table: {fKDef.Pair.ReferencedDbTable}");
+                            foreach(string referencedColumn in fKDef.ReferencedColumns)
+                            {
+                                _logger.LogDebug($"Referenced columns: {referencedColumn}");
+                            }
+
+                            _logger.LogDebug($"Referencing table: {fKDef.Pair.ReferencingDbTable}");
+                            foreach (string referencingColumn in fKDef.ReferencingColumns)
+                            {
+                                _logger.LogDebug($"Referenced columns: {referencingColumn}");
+                            }
+
+                        }
+                    }
+                }
+            }
         }
 
         /// <summary>

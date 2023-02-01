@@ -436,6 +436,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     scalarVariable = true;
                     break;
                 }
+                
                 case JsonValueKind.False:
                 {
                     scalarVariable = false;

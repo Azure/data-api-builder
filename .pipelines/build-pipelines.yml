@@ -176,6 +176,15 @@ steps:
     versioningScheme: 'off'
     allowPackageConflicts: false
 
+- task: NuGetCommand@2
+  displayName: 'Publish Nuget to Nuget.org'
+  condition: eq(variables.isReleaseBuild, 'true')
+  inputs:
+    command: push
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
+    nuGetFeedType: external
+    publishFeedCredentials: Microsoft.DataApiBuilder
+
 - task: PublishCodeCoverageResults@1
   displayName: 'Publish code coverage'
   inputs:

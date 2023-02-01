@@ -255,7 +255,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     column = sourceDefinition.Columns[pK];
                     if (TryGetExposedColumnName(entityName, pK, out exposedPKeyName))
                     {
-                        _logger.LogDebug($"Primary Key Backing Column: {pK}\n" +
+                        _logger.LogDebug($"Primary key column name: {pK}\n" +
                         $"Primary Key Exposed Name: {exposedPKeyName}\n" +
                         $"    Type: {column.SystemType.Name}\n" +
                         $"    IsNullable: {column.IsNullable.ToString()}\n" +

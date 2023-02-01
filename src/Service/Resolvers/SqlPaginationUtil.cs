@@ -79,7 +79,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         MakeCursorFromJsonElement(
                             lastElemInRoot,
                             paginationMetadata.Structure!.PrimaryKey(),
-                            paginationMetadata.Structure!.OrderByColumns));
+                            paginationMetadata.Structure!.OrderByColumns,
+                            paginationMetadata.Structure!.EntityName,
+                            paginationMetadata.Structure!.DatabaseObject.SchemaName,
+                            paginationMetadata.Structure!.DatabaseObject.Name,
+                            paginationMetadata.Structure!.MetadataProvider));
                 }
             }
 

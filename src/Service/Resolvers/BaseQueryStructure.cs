@@ -25,7 +25,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// The metadata provider of the respective database.
         /// </summary>
-        protected ISqlMetadataProvider MetadataProvider { get; }
+        public ISqlMetadataProvider MetadataProvider { get; }
 
         /// <summary>
         /// The DatabaseObject associated with the entity, represents the

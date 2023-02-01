@@ -182,7 +182,7 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <inheritdoc />
-        public bool TryGetBackingColumn(string entityName, string field, out string? name)
+        public bool TryGetBackingColumn(string entityName, string field, [NotNullWhen(true)] out string? name)
         {
             return EntityExposedNamesToBackingColumnNames[entityName].TryGetValue(field, out name);
         }

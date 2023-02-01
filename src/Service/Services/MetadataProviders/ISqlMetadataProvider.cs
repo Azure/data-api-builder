@@ -80,7 +80,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <param name="field">The field used for the lookup in the mapping.</param>
         /// <param name="name"/>Out parameter in which we will save backing column name.<param>
         /// <returns>True if exists, false otherwise.</returns>
-        bool TryGetBackingColumn(string entityName, string field, out string? name);
+        bool TryGetBackingColumn(string entityName, string field, [NotNullWhen(true)] out string? name);
 
         /// <summary>
         /// Try to obtain the name of the Entity that has the provided Path. If It

@@ -1031,7 +1031,10 @@ namespace Cli
                 }
                 else
                 {
-                    restPath = null;
+                    if (options.RestMethodsForStoredProcedure is not null && options.RestMethodsForStoredProcedure.Any())
+                    {
+                        restPath = null;
+                    }
                 }
             }
 
@@ -1094,9 +1097,11 @@ namespace Cli
                 }
                 else
                 {
-                    graphQLType = null;
+                    if (options.GraphQLOperationForStoredProcedure is not null)
+                    {
+                        graphQLType = null;
+                    }
                 }
-
             }
 
             if (IsEntityBeingConvertedToStoredProcedure(entity, options)

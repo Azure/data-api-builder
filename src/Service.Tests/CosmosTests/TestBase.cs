@@ -40,6 +40,7 @@ type Planet @model(name:""Planet"") {
     age : Int,
     dimension : String,
     stars: [Star]
+    tags: [String!]!
 }
 
 type Star @model(name:""StarAlias"") {

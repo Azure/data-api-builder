@@ -56,7 +56,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         /// For Find operations, parameters must be passed in query string
         /// </summary>
         [TestMethod]
-        [Ignore]
         public virtual async Task FindOneStoredProcedureTestUsingParameter()
         {
             await SetupAndRunRestApiTest(
@@ -1055,7 +1054,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         /// Expect a 400 Bad Request to be returned
         /// </summary>
         [TestMethod]
-        [Ignore]
         public virtual async Task FindStoredProcedureWithNonexistentParameter()
         {
             // On an entity that takes no parameters

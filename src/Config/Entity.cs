@@ -206,7 +206,7 @@ namespace Azure.DataApiBuilder.Config
         /// Fetches the name of the graphQL operation configured for the stored procedure
         /// </summary>
         /// <returns>Name of the graphQL operation as an Enum</returns>
-        public GraphQLOperation? FetchGraphQLOperationEnum()
+        public GraphQLOperation? FetchGraphQLOperation()
         {
             if (GraphQL is true || GraphQL is false || GraphQL is GraphQLEntitySettings _)
             {
@@ -555,10 +555,6 @@ namespace Azure.DataApiBuilder.Config
     /// Describes the REST settings specific to an entity.
     /// </summary>
     /// <param name="Path">Instructs the runtime to use this as the path
-    /// <param name="RestMethods">Defines the HTTP actions that are supported for stored procedures
-    /// at which the REST endpoint for this entity is exposed
-    /// instead of using the entity-name. Can be a string type.
-    /// </param>
     public record RestEntitySettings(object? Path);
 
     /// <summary>

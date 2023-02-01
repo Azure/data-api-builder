@@ -1517,13 +1517,14 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// 
+        /// Test to validate various updates to various combinations of
+        /// REST path, REST methods, GraphQL Type and GraphQL Operation are working as intended.
         /// </summary>
-        /// <param name="restMethods"></param>
-        /// <param name="graphQLOperation"></param>
-        /// <param name="restRoute"></param>
-        /// <param name="graphQLType"></param>
-        /// <param name="expectSuccess"></param>
+        /// <param name="restMethods">List of REST Methods that are configured for the entity</param>
+        /// <param name="graphQLOperation">GraphQL Operation configured for the entity</param>
+        /// <param name="restRoute">REST Path configured for the entity</param>
+        /// <param name="graphQLType">GraphQL Type configured for the entity</param>
+        /// <param name="expectSuccess">Should update with the options succeed</param>
         [DataTestMethod]
         [DataRow(null, null, null, null, true, DisplayName = "Default Case without any customization")]
         [DataRow(null, null, "true", null, true, DisplayName = "REST enabled without any methods explicitly configured")]

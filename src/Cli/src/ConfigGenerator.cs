@@ -1059,7 +1059,7 @@ namespace Cli
             {
                 if (options.GraphQLOperationForStoredProcedure is null)
                 {
-                    graphQLOperation = entity.FetchGraphQLOperationEnum();
+                    graphQLOperation = entity.FetchGraphQLOperation();
                     _logger.LogInformation("Inside null section for gql operation :" + graphQLOperation.ToString());
                 }
                 else

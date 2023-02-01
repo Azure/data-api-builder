@@ -120,9 +120,12 @@ namespace Azure.DataApiBuilder.Config
         {
             string? assemblyDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
-            // if assemblyDirectory is null, the below line of code will automatically throw an exception.
-            string? schemaPath = Path.Combine(assemblyDirectory!, "dab.draft.schema.json");
+            if (assemblyDirectory is null)
+            {
+                throw new Exception("Could not get the link for DAB draft schema.");
+            }
 
+            string? schemaPath = Path.Combine(assemblyDirectory, "dab.draft.schema.json");
             string schemaFileContent = File.ReadAllText(schemaPath);
             Dictionary<string, object>? jsonDictionary = JsonSerializer.Deserialize<Dictionary<string, object>>(schemaFileContent);
             Dictionary<string, string>? properties = JsonSerializer.Deserialize<Dictionary<string, string>>(jsonDictionary!["additionalProperties"].ToString()!);

@@ -117,7 +117,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     _gQLFilterParser);
 
                 string queryString = _queryBuilder.Build(structure);
-                _logger.LogInformation(queryString);
                 List<JsonDocument> jsonListResult =
                     await _queryExecutor.ExecuteQueryAsync(
                         queryString,
@@ -298,7 +297,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             // Open connection and execute query using _queryExecutor
             string queryString = _queryBuilder.Build(structure);
-            _logger.LogInformation(queryString);
             JsonDocument jsonDocument =
                 await _queryExecutor.ExecuteQueryAsync(
                     queryString,
@@ -316,7 +314,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private async Task<JsonDocument> ExecuteAsync(SqlExecuteStructure structure)
         {
             string queryString = _queryBuilder.Build(structure);
-            _logger.LogInformation(queryString);
 
             JsonArray resultArray =
                 await _queryExecutor.ExecuteQueryAsync(

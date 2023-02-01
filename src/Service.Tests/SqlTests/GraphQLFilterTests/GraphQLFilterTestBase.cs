@@ -47,6 +47,28 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         }
 
         /// <summary>
+        /// Tests eq of StringFilterInput when mappings are configured for GraphQL entity.
+        /// </summary>
+        [TestMethod]
+        public async Task TestStringFiltersEqWithMappings(string dbQuery)
+        {
+            string graphQLQueryName = "gQLmappings";
+            string gqlQuery = @"{
+                gQLmappings( " + QueryBuilder.FILTER_FIELD_NAME + @" : {column2: {eq: ""Filtered Record""}})
+                {
+                    items {
+                        column1
+                        column2
+                    }
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
         /// Tests neq of StringFilterInput
         /// </summary>
         [TestMethod]

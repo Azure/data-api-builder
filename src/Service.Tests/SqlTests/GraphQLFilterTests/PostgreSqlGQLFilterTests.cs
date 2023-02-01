@@ -157,6 +157,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             await TestNestedFilterWithOr(existsPredicate);
         }
 
+        [TestMethod]
+        public async Task TestStringFiltersEqWithMappings()
+        {
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT __column1 AS column1, __column2 AS column2 FROM GQLMappings WHERE __column2 = 'Filtered Record' ORDER BY __column1 asc LIMIT 100) as table0";
+
+            await TestStringFiltersEqWithMappings(postgresQuery);
+        }
+
         /// <summary>
         /// Gets the default schema for
         /// PostgreSql.

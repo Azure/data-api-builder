@@ -9,7 +9,7 @@ namespace Cli
     /// </summary>
     public class Program
     {
-        public const string PRODUCT_NAME = "Data API Builder";
+        public const string PRODUCT_NAME = "Microsoft.DataApiBuilder";
 
         /// <summary>
         /// Main CLI entry point
@@ -34,8 +34,6 @@ namespace Cli
             ILogger<Utils> cliUtilsLogger = loggerFactory.CreateLogger<Utils>();
             ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger);
             Utils.SetCliUtilsLogger(cliUtilsLogger);
-
-            cliLogger.LogInformation($"{PRODUCT_NAME} {GetProductVersion()}");
 
             // Parsing user arguments and executing required methods.
             ParserResult<object>? result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions>(args)
@@ -64,14 +62,14 @@ namespace Cli
                     bool isSuccess = ConfigGenerator.TryAddEntityToConfigWithOptions(options);
                     if (isSuccess)
                     {
-                        cliLogger.LogInformation($"Added new entity: {options.Entity} with source: {options.Source} to config: {options.Config}" +
-                            $" with permissions: {string.Join(SEPARATOR, options.Permissions.ToArray())}.");
+                        cliLogger.LogInformation($"Added new entity: {options.Entity} with source: {options.Source}" +
+                            $" and permissions: {string.Join(SEPARATOR, options.Permissions.ToArray())}.");
                         cliLogger.LogInformation($"SUGGESTION: Use 'dab update [entity-name] [options]' to update any entities in your config.");
                     }
                     else
                     {
-                        cliLogger.LogError($"Could not add entity: {options.Entity} source: {options.Source} to config: {options.Config}" +
-                            $" with permissions: {string.Join(SEPARATOR, options.Permissions.ToArray())}.");
+                        cliLogger.LogError($"Could not add entity: {options.Entity} with source: {options.Source}" +
+                            $" and permissions: {string.Join(SEPARATOR, options.Permissions.ToArray())}.");
                     }
                 })
                 .WithParsed<UpdateOptions>(options =>
@@ -86,7 +84,7 @@ namespace Cli
 
                     if (isSuccess)
                     {
-                        cliLogger.LogInformation($"Updated the entity: {options.Entity} in the config.");
+                        cliLogger.LogInformation($"Updated the entity: {options.Entity}.");
                     }
                     else
                     {
@@ -95,6 +93,7 @@ namespace Cli
                 })
                 .WithParsed<StartOptions>(options =>
                 {
+                    cliLogger.LogInformation($"{PRODUCT_NAME} {GetProductVersion()}");
                     bool isSuccess = ConfigGenerator.TryStartEngineWithOptions(options);
 
                     if (!isSuccess)

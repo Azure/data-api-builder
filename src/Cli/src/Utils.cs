@@ -22,7 +22,10 @@ namespace Cli
         public static readonly string SEPARATOR = ":";
         public const string DEFAULT_VERSION = "1.0.0";
 
+        #pragma warning disable CS8618
+        // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         private static ILogger<Utils> _logger;
+        #pragma warning restore CS8618
 
         public static void SetCliUtilsLogger(ILogger<Utils> cliUtilsLogger)
         {

@@ -118,13 +118,15 @@ namespace Azure.DataApiBuilder.Config
         /// </summary>
         public static string GetPublishedDraftSchemaLink()
         {
-            string assemblyDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            string schemaPath = Path.Combine(assemblyDirectory, "dab.draft.schema.json");
+            string? assemblyDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+
+            // if assemblyDirectory is null, the below line of code will automatically throw an exception.
+            string? schemaPath = Path.Combine(assemblyDirectory!, "dab.draft.schema.json");
 
             string schemaFileContent = File.ReadAllText(schemaPath);
-            Dictionary<string, object> jsonDictionary = JsonSerializer.Deserialize<Dictionary<string, object>>(schemaFileContent)!;
-            Dictionary<string, string> properties = JsonSerializer.Deserialize<Dictionary<string, string>>(jsonDictionary["additionalProperties"].ToString())!;
-            return properties["version"];
+            Dictionary<string, object>? jsonDictionary = JsonSerializer.Deserialize<Dictionary<string, object>>(schemaFileContent);
+            Dictionary<string, string>? properties = JsonSerializer.Deserialize<Dictionary<string, string>>(jsonDictionary!["additionalProperties"].ToString()!);
+            return properties!["version"];
         }
 
         /// <summary>

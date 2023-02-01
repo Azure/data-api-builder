@@ -1,7 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Config
@@ -122,7 +124,10 @@ namespace Azure.DataApiBuilder.Config
 
             if (assemblyDirectory is null)
             {
-                throw new Exception("Could not get the link for DAB draft schema.");
+                throw new DataApiBuilderException(
+                    message: "Could not get the link for DAB draft schema.",
+                    statusCode: HttpStatusCode.Forbidden,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
             string? schemaPath = Path.Combine(assemblyDirectory, "dab.draft.schema.json");
@@ -131,13 +136,19 @@ namespace Azure.DataApiBuilder.Config
 
             if (jsonDictionary is null)
             {
-                throw new Exception("The schema file is misconfigured. Please check the file formatting.");
+                throw new DataApiBuilderException(
+                    message: "The schema file is misconfigured. Please check the file formatting.",
+                    statusCode: HttpStatusCode.Forbidden,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
             object? additionalProperties;
             if (!jsonDictionary.TryGetValue("additionalProperties", out additionalProperties))
             {
-                throw new Exception("The schema file doesn't have the required field : additionalProperties");
+                throw new DataApiBuilderException(
+                    message: "The schema file doesn't have the required field : additionalProperties",
+                    statusCode: HttpStatusCode.Forbidden,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
             // properties cannot be null since the property additionalProperties exist in the schema file.
@@ -146,7 +157,9 @@ namespace Azure.DataApiBuilder.Config
             string? versionNum;
             if (!properties.TryGetValue("version", out versionNum))
             {
-                throw new Exception("Missing required property 'version' in additionalProperties section.");
+                throw new DataApiBuilderException(message: "Missing required property 'version' in additionalProperties section.",
+                    statusCode: HttpStatusCode.Forbidden,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
             return versionNum;

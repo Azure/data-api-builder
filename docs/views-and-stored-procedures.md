@@ -43,7 +43,7 @@ A view, from a GraphQL perspective, behaves like a table. All GraphQL operations
 
 ## Stored procedures
 
-Stored procedures can be used as objects related to entities exposed by Data API Builder. Stored Procedure usage must be defined specifying that the source type for the entity is `stored-procedure`.
+Entities can represent additional database object types like stored procedures. An entity's source configuration must denote the type `stored-procedure`.
 
 If you have a stored procedure, for example [`dbo.stp_get_all_cowritten_books_by_author`](../samples/getting-started/azure-sql-db/library.azure-sql.sql#L138) it can be exposed using the following `dab` command:
 
@@ -62,8 +62,12 @@ the `dab-config.json` file will look like the following:
       "searchType": "s"
     }
   },
-  "rest": true,
-  "graphql": true,
+  "rest": {
+    "methods": [ "POST" ]
+  },
+  "graphql": {
+    "operation": "Mutation"
+  },
   "permissions": [{
    "role": "anonymous",
     "actions": [ "read" ]
@@ -71,18 +75,22 @@ the `dab-config.json` file will look like the following:
 }
 ```
 
-The `parameters` defines which parameters should be exposed and to provide default values to be passed to the stored procedure parameters, if those are not provided in the HTTP request.
+The `parameters` defines which parameters should be exposed and to provide default values to be passed to the stored procedure parameters, if those are not provided in the HTTP request. Additionally, the `rest` and `graphql` sections defines the REST and GraphQL endpoint behavior of the entity, respectively.
 
 **ATTENTION**:
 
 1. Only the first result set returned by the stored procedure will be used by Data API Builder.
-1. If more than one CRUD action is specified in the config, runtime initialization will fail due to config validation error.
+2. Stored procedure backed entities only support the action **execute** and runtime initialization will fail when that constraint is not met.
 
-Please note that **you should configure the permission accordingly with the stored procedure behavior**. For example, if a Stored Procedure create a new item in the database, it is recommended to allow only the action `create` for such stored procedure. If, like in the sample, a stored procedure returns some data, it is recommended to allow only the action `read`. In general the recommendation is to align the allowed actions to what the stored procedure does, so to provide a consistent experience to the developer.
+Please note that **you should configure the permission accordingly with the stored procedure behavior**. 
+
+For example, for stored procedures that create new records in a database, consider restricting the allowed REST endpoint `methods` to **POST** and defining the GraphQL `operation` as **mutation.** If a stored procedure limits its functionality to only reading and returning existing records, consider restricting the allowed REST endpoint `methods` to **GET** and defining the GraphQL `operation` as **query.** 
+
+In general, align the REST and GraphQL endpoint configuration with the stored procedure's defined behavior.
 
 ### REST support for stored procedures
 
-Entities backed by a stored procedure, do not have all the capabilities automatically provided for entities backed by tables, collections or views. An entity using a stored procedure will not have support for pagination, ordering, filtering or for returning an item by specifying the primary key values.
+Entities backed by a stored procedure do not have all the capabilities automatically provided for entities backed by tables, collections or views. A stored procedure backed entity does not support result pagination, ordering, filtering, nor returning records identified by primary key values in the URL.
 
 If the stored procedure accepts parameters, those can be passed in the URL query string when calling the REST endpoint. For example:
 
@@ -94,11 +102,11 @@ If a parameter is specified both in the configuration file and in the URL query 
 
 ### GraphQL support for stored procedures
 
-Just like for REST, entities backed by a stored procedure, do not have all the capabilities automatically provided for entities backed by tables, collections or views. An entity using a stored procedure will not have support for pagination, ordering, filtering or for returning an item by specifying the primary key values.
+Just like for REST, entities backed by a stored procedure do not have all the capabilities automatically provided for entities backed by tables, collections or views. A stored procedure backed entity does not support result pagination, ordering, filtering, nor returning records identified by primary key values in the URL.
 
-Depending on the `action` defined in the configuration file a GraphQL query object will be generated - if `read` action has been specified - or a mutation object will be created - if `create`, `update` or `delete` action has been specified.
+Depending on the GraphQL `operation` defined in the runtime configuration, a different schema field will be generated. When the `operation` is `query` a query field is created and a mutation field is created when `operation` is `mutation`.
 
-If the stored procedure accepts parameters, those can be passed as parameter of the query or mutation. For example:
+If the stored procedure accepts parameters, the parameters can be passed as an input argument to the query or mutation. For example:
 
 ```graphql
 query {

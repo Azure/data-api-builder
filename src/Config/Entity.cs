@@ -105,7 +105,11 @@ namespace Azure.DataApiBuilder.Config
                     object? typeConfiguration = null;
                     if (configElement.TryGetProperty(propertyName: "type", out JsonElement nameTypeSettings))
                     {
-                        if (nameTypeSettings.ValueKind is JsonValueKind.String)
+                        if (nameTypeSettings.ValueKind is JsonValueKind.True || nameTypeSettings.ValueKind is JsonValueKind.False)
+                        {
+                            typeConfiguration = JsonSerializer.Deserialize<bool>(nameTypeSettings);
+                        }
+                        else if (nameTypeSettings.ValueKind is JsonValueKind.String)
                         {
                             typeConfiguration = JsonSerializer.Deserialize<string>(nameTypeSettings)!;
                         }
@@ -133,11 +137,11 @@ namespace Azure.DataApiBuilder.Config
                         {
                             string operationType = JsonSerializer.Deserialize<string>(operation)!;
 
-                            if (string.Equals(operationType, "mutation", StringComparison.OrdinalIgnoreCase) || string.Equals(operationType, string.Empty))
+                            if (string.Equals(operationType, GraphQLOperation.Mutation.ToString(), StringComparison.OrdinalIgnoreCase) || string.Equals(operationType, string.Empty))
                             {
                                 graphQLOperation = GraphQLOperation.Mutation;
                             }
-                            else if (string.Equals(operationType, "query", StringComparison.OrdinalIgnoreCase))
+                            else if (string.Equals(operationType, GraphQLOperation.Query.ToString(), StringComparison.OrdinalIgnoreCase))
                             {
                                 graphQLOperation = GraphQLOperation.Query;
                             }
@@ -175,10 +179,14 @@ namespace Azure.DataApiBuilder.Config
             return true;
         }
 
+        /// <summary>
+        /// Gets the graphQL operation that is configured for the stored procedure.
+        /// </summary>
+        /// <returns>Name of the graphQL operation as a string</returns>
         public string? GetGraphQLOperation()
         {
             string? operation = null;
-            if (GraphQL is bool enabled && enabled)
+            if (GraphQL is true || GraphQL is false || GraphQL is GraphQLEntitySettings _)
             {
                 operation = GraphQLOperation.Mutation.ToString();
             }
@@ -192,6 +200,81 @@ namespace Azure.DataApiBuilder.Config
             }
 
             return operation;
+        }
+
+        /// <summary>
+        /// Fetches the name of the graphQL operation configured for the stored procedure
+        /// </summary>
+        /// <returns>Name of the graphQL operation as an Enum</returns>
+        public GraphQLOperation? FetchGraphQLOperationEnum()
+        {
+            if (GraphQL is true || GraphQL is false || GraphQL is GraphQLEntitySettings _)
+            {
+                return GraphQLOperation.Mutation;
+            }
+            else if (GraphQL is GraphQLStoredProcedureEntityOperationSettings operationSettings)
+            {
+                return operationSettings.GraphQLOperation;
+            }
+            else if (GraphQL is GraphQLStoredProcedureEntityVerboseSettings verboseSettings)
+            {
+                return verboseSettings.GraphQLOperation;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Gets an entity's GraphQL Type metadata by deserializing the JSON runtime configuration.
+        /// </summary>
+        /// <returns>GraphQL Type configuration for the entity.</returns>
+        /// <exception cref="JsonException">Raised when unsupported GraphQL configuration is present on the property "type"</exception>
+        public object? GetGraphQLType()
+        {
+            if (GraphQL is null)
+            {
+                return null;
+            }
+
+            JsonElement graphQLConfigElement = (JsonElement)GraphQL;
+            if (graphQLConfigElement.ValueKind is JsonValueKind.True || graphQLConfigElement.ValueKind is JsonValueKind.False)
+            {
+                return JsonSerializer.Deserialize<bool>(graphQLConfigElement);
+            }
+            else if (graphQLConfigElement.ValueKind is JsonValueKind.String)
+            {
+                return JsonSerializer.Deserialize<string>(graphQLConfigElement);
+            }
+            else if (graphQLConfigElement.ValueKind is JsonValueKind.Object)
+            {
+                if (graphQLConfigElement.TryGetProperty("type", out JsonElement graphQLTypeElement))
+                {
+                    if (graphQLTypeElement.ValueKind is JsonValueKind.True || graphQLTypeElement.ValueKind is JsonValueKind.False)
+                    {
+                        return JsonSerializer.Deserialize<bool>(graphQLTypeElement);
+                    }
+                    else if (graphQLTypeElement.ValueKind is JsonValueKind.String)
+                    {
+                        return JsonSerializer.Deserialize<string>(graphQLTypeElement);
+                    }
+                    else if (graphQLTypeElement.ValueKind is JsonValueKind.Object)
+                    {
+                        return JsonSerializer.Deserialize<SingularPlural>(graphQLTypeElement);
+                    }
+                    else
+                    {
+                        throw new JsonException("Unsupported GraphQL Type");
+                    }
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            else
+            {
+                throw new JsonException("Unsupported GraphQL Type");
+            }
         }
 
         /// <summary>
@@ -251,15 +334,107 @@ namespace Azure.DataApiBuilder.Config
         {
             if (Rest is not null && ((JsonElement)Rest).ValueKind is JsonValueKind.Object)
             {
-                JsonSerializerOptions options = RuntimeConfig.SerializerOptions;
-                RestEntitySettings? rest = JsonSerializer.Deserialize<RestEntitySettings>((JsonElement)Rest, options);
-                if (rest is not null && rest.RestMethods is not null)
+                if (((JsonElement)Rest).TryGetProperty("path", out JsonElement _))
                 {
-                    return new List<RestMethod>(rest.RestMethods);
+                    RestStoredProcedureEntitySettings? restSpSettings = JsonSerializer.Deserialize<RestStoredProcedureEntitySettings>((JsonElement)Rest, RuntimeConfig.SerializerOptions);
+                    if (restSpSettings is not null && restSpSettings.RestMethods is not null)
+                    {
+                        return new List<RestMethod>(restSpSettings.RestMethods);
+                    }
+                }
+                else
+                {
+                    RestStoredProcedureEntityVerboseSettings? restSpSettings = JsonSerializer.Deserialize<RestStoredProcedureEntityVerboseSettings>((JsonElement)Rest, RuntimeConfig.SerializerOptions);
+                    if (restSpSettings is not null && restSpSettings.RestMethods is not null)
+                    {
+                        return new List<RestMethod>(restSpSettings.RestMethods);
+                    }
                 }
             }
 
             return new List<RestMethod>(new[] { RestMethod.Post });
+        }
+
+        /// <summary>
+        /// Gets the REST HTTP methods configured for the stored procedure
+        /// </summary>
+        /// <returns>An array of HTTP methods configured</returns>
+        public RestMethod[]? GetRestMethodsConfiguredForStoredProcedure()
+        {
+            if (Rest is not null && ((JsonElement)Rest).ValueKind is JsonValueKind.Object)
+            {
+                if (((JsonElement)Rest).TryGetProperty("path", out JsonElement _))
+                {
+                    RestStoredProcedureEntitySettings? restSpSettings = JsonSerializer.Deserialize<RestStoredProcedureEntitySettings>((JsonElement)Rest, RuntimeConfig.SerializerOptions);
+                    if (restSpSettings is not null)
+                    {
+                        return restSpSettings.RestMethods;
+                    }
+
+                }
+                else
+                {
+                    RestStoredProcedureEntityVerboseSettings? restSpSettings = JsonSerializer.Deserialize<RestStoredProcedureEntityVerboseSettings>((JsonElement)Rest, RuntimeConfig.SerializerOptions);
+                    if (restSpSettings is not null)
+                    {
+                        return restSpSettings.RestMethods;
+                    }
+                }
+            }
+
+            return new RestMethod[] { RestMethod.Post };
+        }
+
+        /// <summary>
+        /// Gets the REST API Path Settings for the entity.
+        /// When REST is enabled or disabled without a custom path definition, this
+        /// returns a boolean true/false respectively.
+        /// When a custom path is configured, this returns the custom path definition.
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="JsonException"></exception>
+        public object? GetRestEnabledOrPathSettings()
+        {
+            if (Rest is null)
+            {
+                return null;
+            }
+
+            JsonElement RestConfigElement = (JsonElement)Rest;
+            if (RestConfigElement.ValueKind is JsonValueKind.True || RestConfigElement.ValueKind is JsonValueKind.True)
+            {
+                return JsonSerializer.Deserialize<bool>(RestConfigElement);
+            }
+            else if (RestConfigElement.ValueKind is JsonValueKind.String)
+            {
+                return JsonSerializer.Deserialize<string>(RestConfigElement);
+            }
+            else if (RestConfigElement.ValueKind is JsonValueKind.Object)
+            {
+                if (RestConfigElement.TryGetProperty("path", out JsonElement restPathElement))
+                {
+                    if (restPathElement.ValueKind is JsonValueKind.True || restPathElement.ValueKind is JsonValueKind.False)
+                    {
+                        return JsonSerializer.Deserialize<bool>(restPathElement);
+                    }
+                    else if (restPathElement.ValueKind is JsonValueKind.String)
+                    {
+                        return JsonSerializer.Deserialize<string>(restPathElement);
+                    }
+                    else
+                    {
+                        throw new JsonException("Unsupported Rest Path Type");
+                    }
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            else
+            {
+                throw new JsonException("Unsupported Rest Type");
+            }
         }
     }
 
@@ -384,8 +559,7 @@ namespace Azure.DataApiBuilder.Config
     /// at which the REST endpoint for this entity is exposed
     /// instead of using the entity-name. Can be a string type.
     /// </param>
-    public record RestEntitySettings(object? Path,
-                                     [property: JsonPropertyName("methods")] RestMethod[]? RestMethods = null);
+    public record RestEntitySettings(object? Path);
 
     /// <summary>
     /// Describes the REST settings specific to an entity backed by a stored procedure.

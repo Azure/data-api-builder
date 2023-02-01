@@ -32,7 +32,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             {
                 Entity updatedEntity = new(entity.Source, entity.Rest,
                                            entity.GraphQL, entity.Permissions,
-                                           Relationships: null, Mappings: null);
+                                           Relationships: null, Mappings: entity.Mappings);
                 runtimeConfig.Entities.Remove(entityName);
                 runtimeConfig.Entities.Add(entityName, updatedEntity);
             }
@@ -189,9 +189,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// Helper method to get the HttpMethod based on the operation type.
         /// </summary>
         /// <param name="operationType">The operation to be executed on the entity.</param>
-        /// <returns></returns>
+        /// <returns>HttpMethod representing the passed in operationType.</returns>
         /// <exception cref="DataApiBuilderException"></exception>
-        public static HttpMethod GetHttpMethodFromOperation(Config.Operation operationType)
+        public static HttpMethod GetHttpMethodFromOperation(Config.Operation operationType, Config.RestMethod? restMethod = null)
         {
             switch (operationType)
             {
@@ -205,6 +205,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     return HttpMethod.Put;
                 case Config.Operation.UpsertIncremental:
                     return HttpMethod.Patch;
+                case Config.Operation.Execute:
+                    return ConvertRestMethodToHttpMethod(restMethod);
                 default:
                     throw new DataApiBuilderException(
                         message: "Operation not supported for the request.",
@@ -213,6 +215,28 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             }
         }
 
+        /// <summary>
+        /// Converts the provided RestMethod to the corresponding HttpMethod
+        /// </summary>
+        /// <param name="restMethod"></param>
+        /// <returns>HttpMethod corresponding the RestMethod provided as input.</returns>
+        private static HttpMethod ConvertRestMethodToHttpMethod(RestMethod? restMethod)
+        {
+            switch (restMethod)
+            {
+                case RestMethod.Get:
+                    return HttpMethod.Get;
+                case RestMethod.Put:
+                    return HttpMethod.Put;
+                case RestMethod.Patch:
+                    return HttpMethod.Patch;
+                case RestMethod.Delete:
+                    return HttpMethod.Delete;
+                case RestMethod.Post:
+                default:
+                    return HttpMethod.Post;
+            }
+        }
         /// <summary>
         /// Helper function handles the loading of the runtime config.
         /// </summary>

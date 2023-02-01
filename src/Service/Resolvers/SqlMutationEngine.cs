@@ -20,7 +20,6 @@ using HotChocolate.Resolvers;
 using HotChocolate.Types;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
@@ -36,7 +35,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private readonly IQueryBuilder _queryBuilder;
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly ILogger<SqlMutationEngine> _logger;
         private readonly GQLFilterParser _gQLFilterParser;
         public const string IS_FIRST_RESULT_SET = "IsFirstResultSet";
 
@@ -50,8 +48,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ISqlMetadataProvider sqlMetadataProvider,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
-            IHttpContextAccessor httpContextAccessor,
-            ILogger<SqlMutationEngine> logger)
+            IHttpContextAccessor httpContextAccessor)
         {
             _queryEngine = queryEngine;
             _queryExecutor = queryExecutor;
@@ -59,7 +56,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             _sqlMetadataProvider = sqlMetadataProvider;
             _authorizationResolver = authorizationResolver;
             _httpContextAccessor = httpContextAccessor;
-            _logger = logger;
             _gQLFilterParser = gQLFilterParser;
         }
 
@@ -96,7 +92,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 // compute the mutation result before removing the element,
                 // since typical GraphQL delete mutations return the metadata of the deleted item.
-                result = await _queryEngine.ExecuteAsync(context, parameters);
+                result = await _queryEngine.ExecuteAsync(context, GetBackingColumnsFromCollection(entityName, parameters));
 
                 Dictionary<string, object>? resultProperties =
                     await PerformDeleteOperation(
@@ -128,9 +124,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 if (resultRowAndProperties is not null && resultRowAndProperties.Item1 is not null
                     && !context.Selection.Type.IsScalarType())
                 {
+                    // Because the GraphQL mutation result set columns were exposed (mapped) column names,
+                    // the column names must be converted to backing (source) column names so the
+                    // PrimaryKeyPredicates created in the SqlQueryStructure created by the query engine
+                    // represent database column names.
                     result = await _queryEngine.ExecuteAsync(
                                 context,
-                                resultRowAndProperties.Item1);
+                                GetBackingColumnsFromCollection(entityName, resultRowAndProperties.Item1));
                 }
             }
 
@@ -143,6 +143,33 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// Converts exposed column names from the parameters provided to backing column names.
+        /// parameters.Value is not modified.
+        /// </summary>
+        /// <param name="entityName">Name of Entity</param>
+        /// <param name="parameters">Key/Value collection where only the key is converted.</param>
+        /// <returns>Dictionary where the keys now represent backing column names.</returns>
+        public Dictionary<string, object?> GetBackingColumnsFromCollection(string entityName, IDictionary<string, object?> parameters)
+        {
+            Dictionary<string, object?> backingRowParams = new();
+
+            foreach (KeyValuePair<string, object?> resultEntry in parameters)
+            {
+                _sqlMetadataProvider.TryGetBackingColumn(entityName, resultEntry.Key, out string? name);
+                if (!string.IsNullOrWhiteSpace(name))
+                {
+                    backingRowParams.Add(name, resultEntry.Value);
+                }
+                else
+                {
+                    backingRowParams.Add(resultEntry.Key, resultEntry.Value);
+                }
+            }
+
+            return backingRowParams;
         }
 
         /// <summary>
@@ -160,7 +187,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 _gQLFilterParser,
                 context.ResolvedParameters);
             string queryText = _queryBuilder.Build(executeQueryStructure);
-            _logger.LogInformation(queryText);
 
             JsonArray? resultArray =
                 await _queryExecutor.ExecuteQueryAsync(
@@ -464,30 +490,50 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     throw new NotSupportedException($"Unexpected mutation operation \" {operationType}\" requested.");
             }
 
-            _logger.LogInformation(queryString);
-
             Tuple<Dictionary<string, object?>?, Dictionary<string, object>>? resultRecord = null;
 
             if (context is not null && !context.Selection.Type.IsScalarType())
             {
                 SourceDefinition sourceDefinition = _sqlMetadataProvider.GetSourceDefinition(entityName);
 
-                // only extract pk columns
-                // since non pk columns can be null
+                // To support GraphQL field mappings (DB column aliases), convert the sourceDefinition
+                // primary key column names (backing columns) to the exposed (mapped) column names to
+                // identify primary key column names in the mutation result set.
+                List<string> primaryKeyExposedColumnNames = new();
+                foreach (string primaryKey in sourceDefinition.PrimaryKey)
+                {
+                    if (_sqlMetadataProvider.TryGetExposedColumnName(entityName, primaryKey, out string? name) && !string.IsNullOrWhiteSpace(name))
+                    {
+                        primaryKeyExposedColumnNames.Add(name);
+                    }
+                }
+
+                // Only extract pk columns since non pk columns can be null
                 // and the subsequent query would search with:
                 // nullParamName = NULL
                 // which would fail to get the mutated entry from the db
+                // When no exposed column names were resolved, it is safe to provide
+                // backing column names (sourceDefinition.Primary) as a list of arguments.
                 resultRecord =
                     await _queryExecutor.ExecuteQueryAsync(
                         queryString,
                         queryParameters,
                         _queryExecutor.ExtractRowFromDbDataReader,
                         _httpContextAccessor.HttpContext!,
-                        sourceDefinition.PrimaryKey);
+                        primaryKeyExposedColumnNames.Count > 0 ? primaryKeyExposedColumnNames : sourceDefinition.PrimaryKey);
 
                 if (resultRecord is not null && resultRecord.Item1 is null)
                 {
-                    string searchedPK = '<' + string.Join(", ", sourceDefinition.PrimaryKey.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
+                    string searchedPK;
+                    if (primaryKeyExposedColumnNames.Count > 0)
+                    {
+                        searchedPK = '<' + string.Join(", ", primaryKeyExposedColumnNames.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
+                    }
+                    else
+                    {
+                        searchedPK = '<' + string.Join(", ", sourceDefinition.PrimaryKey.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
+                    }
+
                     throw new DataApiBuilderException(
                         message: $"Could not find entity with {searchedPK}",
                         statusCode: HttpStatusCode.NotFound,
@@ -538,7 +584,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 _sqlMetadataProvider);
             queryString = _queryBuilder.Build(deleteStructure);
             queryParameters = deleteStructure.Parameters;
-            _logger.LogInformation(queryString);
 
             Dictionary<string, object>?
                 resultProperties = await _queryExecutor.ExecuteQueryAsync(

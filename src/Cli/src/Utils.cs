@@ -47,130 +47,70 @@ namespace Cli
         /// or a RestEntitySettings object containing api route based on the input.
         /// Returns null when no REST configuration is provided.
         /// </summary>
-        /// <param name="rest">string value of a boolean (true/false), otherwise the REST path.</param>
-        /// <param name="restMethods">Array of REST methods.</param>
-        /// <returns></returns>
-        public static object? GetRestDetails(string? rest, RestMethod[]? restMethods = null)
+        public static object? GetRestDetails(object? restDetail = null, RestMethod[]? restMethods = null)
         {
-            object? rest_detail;
-            if (rest is null)
-            {
-                rest_detail = null;
-            }
-            else
-            {
-                bool trueOrFalse;
-                if (bool.TryParse(rest, out trueOrFalse))
-                {
-                    rest_detail = trueOrFalse;
-                    if(! trueOrFalse)
-                    {
-                        restMethods = null;
-                    }
-                }
-                else
-                {
-                    rest_detail = "/" + rest;
-                }
-            }
-
-            if(rest_detail is null && restMethods is null)
+            if (restDetail is null && restMethods is null)
             {
                 return null;
             }
-            else if(restMethods is null)
+            // Tables, Views and Stored Procedures that are enabled for REST without custom
+            // path or methods.
+            else if (restDetail is not null && restMethods is null)
             {
-                if(rest_detail is true || rest_detail is false)
+                if (restDetail is true || restDetail is false)
                 {
-                    return rest_detail;
+                    return restDetail;
                 }
                 else
                 {
-                    return new RestEntitySettings(Path: rest_detail, RestMethods: restMethods);
+                    return new RestEntitySettings(Path: restDetail);
                 }
             }
-            else if(rest_detail is null)
+            //Stored Procedures that have REST methods defined without a custom REST path definition
+            else if (restMethods is not null && restDetail is null)
             {
-                return new RestEntitySettings(Path: null, RestMethods: restMethods);
-            }
-            else
-            {
-                return new RestEntitySettings(Path: rest_detail, RestMethods: restMethods);
+                return new RestStoredProcedureEntitySettings(RestMethods: restMethods);
             }
 
+            //Stored Procedures that have custom REST path and methods defined 
+            return new RestStoredProcedureEntityVerboseSettings(Path: restDetail, RestMethods: restMethods!);
         }
 
         /// <summary>
         /// Creates the graphql object which can be either a boolean value
         /// or a GraphQLEntitySettings object containing graphql type {singular, plural} based on the input
         /// </summary>
-        public static object? GetGraphQLDetails(string? graphQL, GraphQLOperation? graphQLOperation = null)
+        public static object? GetGraphQLDetails(object? graphQLDetail, GraphQLOperation? graphQLOperation = null)
         {
-            object? graphQL_detail;
-            bool trueOrFalse;
-            if (graphQL is null)
-            {
-                graphQL_detail = null;
-            }
-            else
-            {
-                if (bool.TryParse(graphQL, out trueOrFalse))
-                {
-                    graphQL_detail = trueOrFalse;
-                    if(! trueOrFalse)
-                    {
-                        graphQLOperation = null;   
-                    }
-                }
-                else
-                {
-                    string singular, plural;
-                    if (graphQL.Contains(SEPARATOR))
-                    {
-                        string[] arr = graphQL.Split(SEPARATOR);
-                        if (arr.Length != 2)
-                        {
-                            _logger.LogError($"Invalid format for --graphql. Accepted values are true/false," +
-                                                    "a string, or a pair of string in the format <singular>:<plural>");
-                            return null;
-                        }
 
-                        singular = arr[0];
-                        plural = arr[1];
-                    }
-                    else
-                    {
-                        singular = graphQL.Singularize(inputIsKnownToBePlural: false);
-                        plural = graphQL.Pluralize(inputIsKnownToBeSingular: false);
-                    }
-
-                    graphQL_detail = new SingularPlural(singular, plural);
-                }
-            }
-
-            if(graphQL_detail is null && graphQLOperation is null)
+            if (graphQLDetail is null && graphQLOperation is null)
             {
                 return null;
             }
-            else if(graphQL_detail is not null && graphQLOperation is null)
-            {   
-                if(graphQL_detail is true || graphQL_detail is false)
+            // Tables, view or stored procedures that are either enabled for graphQL without custom operation
+            // definitions and with/without a custom graphQL type definition.
+            else if (graphQLDetail is not null && graphQLOperation is null)
+            {
+                if (graphQLDetail is true || graphQLDetail is false)
                 {
-                    return graphQL_detail;
+                    return graphQLDetail;
                 }
                 else
                 {
-                    return new GraphQLEntitySettings(Type: graphQL_detail);
+                    return new GraphQLEntitySettings(Type: graphQLDetail);
                 }
             }
-            else if(graphQL_detail is null && graphQLOperation is not null)
+            // Stored procedures that are defined with custom graphQL operations but without
+            // custom type definitions.
+            else if (graphQLDetail is null && graphQLOperation is not null)
             {
                 return new GraphQLStoredProcedureEntityOperationSettings(GraphQLOperation: graphQLOperation);
             }
-            else
-            {
-                return new GraphQLStoredProcedureEntityVerboseSettings(Type: graphQL_detail, GraphQLOperation: graphQLOperation);
-            }
+
+            // Stored procedures that are defined with custom graphQL type definition and
+            // custom a graphQL operation.
+            return new GraphQLStoredProcedureEntityVerboseSettings(Type: graphQLDetail, GraphQLOperation: graphQLOperation);
+
         }
 
         /// <summary>
@@ -512,6 +452,7 @@ namespace Cli
             }
 
             bool containsWildcardOperation = false;
+            bool isStoredProcedure = sourceType is SourceType.StoredProcedure;
             foreach (string operation in uniqueOperations)
             {
                 if (TryConvertOperationNameToOperation(operation, out Operation op))
@@ -891,9 +832,9 @@ namespace Cli
         /// <returns></returns>
         public static bool TryConvertRestMethodNameToRestMethod(string? method, out RestMethod restMethod)
         {
-            if(! Enum.TryParse(method, ignoreCase: true ,out restMethod))
+            if (!Enum.TryParse(method, ignoreCase: true, out restMethod))
             {
-                _logger.LogError("Invalid REST Method. Supported methods are GET, POST, PUT, PATCH and DELETE.");
+                _logger.LogError($"Invalid REST Method. Supported methods are {RestMethod.Get.ToString()}, {RestMethod.Post.ToString()} , {RestMethod.Put.ToString()}, {RestMethod.Patch.ToString()} and {RestMethod.Delete.ToString()}.");
                 return false;
             }
 
@@ -912,10 +853,10 @@ namespace Cli
         {
             List<RestMethod> restMethods = new();
 
-            foreach(string method in methods)
+            foreach (string method in methods)
             {
                 RestMethod restMethod;
-                if(TryConvertRestMethodNameToRestMethod(method, out restMethod))
+                if (TryConvertRestMethodNameToRestMethod(method, out restMethod))
                 {
                     restMethods.Add(restMethod);
                 }
@@ -932,7 +873,7 @@ namespace Cli
 
         /// <summary>
         /// Utility method that converts the graphQL operation configured for the stored procedure to
-        /// GraphWLOperation Enum type.
+        /// GraphQLOperation Enum type.
         /// The metod returns true/false corresponding to successful/unsuccessful conversion.
         /// </summary>
         /// <param name="operation">GraphQL operation configured for the stored procedure</param>
@@ -942,7 +883,7 @@ namespace Cli
         {
             if (!Enum.TryParse(operation, ignoreCase: true, out graphQLOperation))
             {
-                _logger.LogError("Invalid GrpahQL Operation. Supported operations are Query and Mutation.");
+                _logger.LogError($"Invalid GraphQL Operation. Supported operations are {GraphQLOperation.Query.ToString()} and {GraphQLOperation.Mutation.ToString()}.");
                 return false;
             }
 
@@ -981,26 +922,8 @@ namespace Cli
         /// <returns></returns>
         public static bool CheckConflictingRestConfigurationForStoredProcedures(EntityOptions options)
         {
-            return IsEntityStoredProcedure(options) &&
-                   (options.RestRoute is not null && bool.TryParse(options.RestRoute, out bool restEnabled) && !restEnabled) &&
+            return (options.RestRoute is not null && bool.TryParse(options.RestRoute, out bool restEnabled) && !restEnabled) &&
                    (options.RestMethodsForStoredProcedure is not null && options.RestMethodsForStoredProcedure.Any());
-        }
-
-        /// <summary>
-        /// For stored procedure, the rest HTTP verbs to be supported can be configured using
-        /// --rest.methods option.
-        /// Validation to ensure that configuring REST methods for a stored procedure that is
-        /// not enabled for REST results in an error. This validation is run along with
-        /// update command.
-        /// </summary>
-        /// <param name="options">Options entered using update command</param>
-        /// <param name="entity">Stored Procedure Entity</param>
-        /// <returns></returns>
-        public static bool CheckConflictingRestConfigurationForStoredProcedures(EntityOptions options, Entity entity)
-        {
-            return CheckConflictingRestConfigurationForStoredProcedures(options) &&
-                   (entity.Rest is bool restEnabled && !restEnabled && 
-                   options.RestRoute is null && options.RestMethodsForStoredProcedure is not null && options.RestMethodsForStoredProcedure.Any());
         }
 
         /// <summary>
@@ -1014,26 +937,83 @@ namespace Cli
         /// <returns></returns>
         public static bool CheckConflictingGraphQLConfigurationForStoredProcedures(EntityOptions options)
         {
-            return IsEntityStoredProcedure(options) &&
-                   (options.GraphQLType is not null && bool.TryParse(options.GraphQLType, out bool graphQLEnabled) && !graphQLEnabled) &&
-                   (options.GraphQLOperationForStoredProcedure is not null);
+            return (options.GraphQLType is not null && bool.TryParse(options.GraphQLType, out bool graphQLEnabled) && !graphQLEnabled)
+                    && (options.GraphQLOperationForStoredProcedure is not null);
         }
 
         /// <summary>
-        /// For stored procedures, the graphql operation to be supported can be configured using
-        /// --graphql.operation.
-        /// Validation to ensure that configuring GraphQL operation for a stored procedure that is
-        /// not exposed for graphQL results in an error. This validation is run along with update
-        /// command
+        /// Constructs the REST Path using the add/update command --rest option  
         /// </summary>
-        /// <param name="options"></param>
-        /// <param name="entity"></param>
-        /// <returns></returns>
-        public static bool CheckConflictingGraphQLConfigurationForStoredProcedures(EntityOptions options, Entity entity)
+        /// <param name="restRoute">Input entered using --rest option</param>
+        /// <returns>Constructed REST Path</returns>
+        public static object? ConstructRestPathDetails(string? restRoute)
         {
-            return CheckConflictingGraphQLConfigurationForStoredProcedures(options) &&
-                   (entity.GraphQL is bool graphQLEnabled && !graphQLEnabled && options.GraphQLOperationForStoredProcedure is not null);
+            object? restPath;
+            if (restRoute is null)
+            {
+                restPath = null;
+            }
+            else
+            {
+                if (bool.TryParse(restRoute, out bool restEnabled))
+                {
+                    restPath = restEnabled;
+                }
+                else
+                {
+                    restPath = "/" + restRoute;
+                }
+            }
+
+            return restPath;
         }
 
+        /// <summary>
+        /// Constructs the graphQL Type from add/update command --graphql option
+        /// </summary>
+        /// <param name="graphQL">GraphQL type input from the CLI commands</param>
+        /// <returns>Constructed GraphQL Type</returns>
+        public static object? ConstructGraphQLTypeDetails(string? graphQL)
+        {
+            object? graphQLType;
+            bool graphQLEnabled;
+            if (graphQL is null)
+            {
+                graphQLType = null;
+            }
+            else
+            {
+                if (bool.TryParse(graphQL, out graphQLEnabled))
+                {
+                    graphQLType = graphQLEnabled;
+                }
+                else
+                {
+                    string singular, plural;
+                    if (graphQL.Contains(SEPARATOR))
+                    {
+                        string[] arr = graphQL.Split(SEPARATOR);
+                        if (arr.Length != 2)
+                        {
+                            _logger.LogError($"Invalid format for --graphql. Accepted values are true/false," +
+                                                    "a string, or a pair of string in the format <singular>:<plural>");
+                            return null;
+                        }
+
+                        singular = arr[0];
+                        plural = arr[1];
+                    }
+                    else
+                    {
+                        singular = graphQL.Singularize(inputIsKnownToBePlural: false);
+                        plural = graphQL.Pluralize(inputIsKnownToBeSingular: false);
+                    }
+
+                    graphQLType = new SingularPlural(singular, plural);
+                }
+            }
+
+            return graphQLType;
+        }
     }
 }

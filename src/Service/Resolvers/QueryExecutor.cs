@@ -7,7 +7,6 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
@@ -23,9 +22,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     public class QueryExecutor<TConnection> : IQueryExecutor
         where TConnection : DbConnection, new()
     {
-        protected string ConnectionString { get; }
         protected DbExceptionParser DbExceptionParser { get; }
         protected ILogger<QueryExecutor<TConnection>> QueryExecutorLogger { get; }
+        private RuntimeConfigProvider ConfigProvider { get; }
 
         // The maximum number of attempts that can be made to execute the query successfully in addition to the first attempt.
         // So to say in case of transient exceptions, the query will be executed (_maxRetryCount + 1) times at max.
@@ -33,14 +32,17 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         private AsyncRetryPolicy _retryPolicy;
 
-        public QueryExecutor(RuntimeConfigProvider runtimeConfigProvider,
-                             DbExceptionParser dbExceptionParser,
-                             ILogger<QueryExecutor<TConnection>> logger)
+        public virtual DbConnectionStringBuilder ConnectionStringBuilder { get; set; }
+
+        public QueryExecutor(DbExceptionParser dbExceptionParser,
+                             ILogger<QueryExecutor<TConnection>> logger,
+                             DbConnectionStringBuilder connectionStringBuilder,
+                             RuntimeConfigProvider configProvider)
         {
-            RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
-            ConnectionString = runtimeConfig.ConnectionString;
             DbExceptionParser = dbExceptionParser;
             QueryExecutorLogger = logger;
+            ConnectionStringBuilder = connectionStringBuilder;
+            ConfigProvider = configProvider;
             _retryPolicy = Polly.Policy
             .Handle<DbException>(DbExceptionParser.IsTransientException)
             .WaitAndRetryAsync(
@@ -64,7 +66,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             int retryAttempt = 0;
             using TConnection conn = new()
             {
-                ConnectionString = ConnectionString,
+                ConnectionString = ConnectionStringBuilder.ConnectionString,
             };
 
             await SetManagedIdentityAccessTokenIfAnyAsync(conn);
@@ -86,6 +88,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         // This implies that the request got successfully executed during one of retry attempts.
                         QueryExecutorLogger.LogInformation($"Request executed successfully in {retryAttempt} attempt of" +
                             $"{_maxRetryCount + 1} available attempts.");
+                    }
+
+                    // When IsLateConfigured is true we are in a hosted scenario and do not reveal query information.
+                    if (!ConfigProvider.IsLateConfigured)
+                    {
+                        QueryExecutorLogger.LogDebug($"Query Executed: \n{sqltext}");
                     }
 
                     return result;

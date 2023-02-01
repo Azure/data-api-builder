@@ -102,7 +102,7 @@ public class EndToEndTests
         Assert.IsTrue(runtimeConfig.Entities.ContainsKey("todo"));
         Entity entity = runtimeConfig.Entities["todo"];
         Assert.AreEqual("{\"path\":\"/todo\"}", JsonSerializer.Serialize(entity.Rest));
-        Assert.AreEqual("{\"type\":{\"singular\":\"todo\",\"plural\":\"todos\"},\"operation\":null}", JsonSerializer.Serialize(entity.GraphQL));
+        Assert.AreEqual("{\"type\":{\"singular\":\"todo\",\"plural\":\"todos\"}}", JsonSerializer.Serialize(entity.GraphQL));
         Assert.AreEqual(1, entity.Permissions.Length);
         Assert.AreEqual("anonymous", entity.Permissions[0].Role);
         Assert.AreEqual(1, entity.Permissions[0].Operations.Length);
@@ -272,8 +272,7 @@ public class EndToEndTests
                 ""param1"": 123,
                 ""param2"": ""hello"",
                 ""param3"": true
-            },
-            ""key-fields"": []
+            }
         }";
 
         actualSourceObject = JsonSerializer.Serialize(runtimeConfig.Entities["MyEntity"].Source);
@@ -281,8 +280,8 @@ public class EndToEndTests
     }
 
     /// <summary>
-    /// Test to validate that config json gets built correctly with the options
-    /// --rest.methods and --graphql.operations for stored procedures.
+    /// Validates that the built JSON configuration contains the explicit stored procedure entity settings
+    /// --rest.methods and --graphql.operations.
     /// </summary>
     [TestMethod]
     public void TestAddingStoredProcedureWithRestMethodsAndGraphQLOperations()
@@ -296,6 +295,31 @@ public class EndToEndTests
         string[] addArgs = { "add", "MyEntity", "-c", _testRuntimeConfig, "--source", "s001.book", "--permissions", "anonymous:execute", "--source.type", "stored-procedure", "--source.params", "param1:123,param2:hello,param3:true", "--rest.methods", "post,put,patch", "--graphql.operation", "query" };
         Program.Main(addArgs);
         string? expectedConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE_WITH_CUSTOM_REST_GRAPHQL_CONFIG);
+        Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfig), JObject.Parse(File.ReadAllText(_testRuntimeConfig))));
+    }
+
+    /// <summary>
+    /// Validates that CLI execution of the add/update commands results in a stored procedure entity
+    /// with explicit rest method GET and GraphQL endpoint disabled.
+    /// </summary>
+    [TestMethod]
+    public void TestUpdatingStoredProcedureWithRestMethodsAndGraphQLOperations()
+    {
+        string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql",
+            "--host-mode", "Development", "--connection-string", "testconnectionstring", "--set-session-context", "true" };
+        Program.Main(initArgs);
+        RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
+        Assert.IsNotNull(runtimeConfig);
+        Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
+
+        string[] addArgs = { "add", "MyEntity", "-c", _testRuntimeConfig, "--source", "s001.book", "--permissions", "anonymous:execute", "--source.type", "stored-procedure", "--source.params", "param1:123,param2:hello,param3:true", "--rest.methods", "post,put,patch", "--graphql.operation", "query" };
+        Program.Main(addArgs);
+        string? expectedConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE_WITH_CUSTOM_REST_GRAPHQL_CONFIG);
+        Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfig), JObject.Parse(File.ReadAllText(_testRuntimeConfig))));
+
+        string[] updateArgs = { "update", "MyEntity", "-c", _testRuntimeConfig, "--rest.methods", "get", "--graphql", "false" };
+        Program.Main(updateArgs);
+        expectedConfig = AddPropertiesToJson(INITIAL_CONFIG, STORED_PROCEDURE_WITH_REST_GRAPHQL_CONFIG);
         Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfig), JObject.Parse(File.ReadAllText(_testRuntimeConfig))));
     }
 
@@ -322,7 +346,6 @@ public class EndToEndTests
     /// It tests updating permissions as well as relationship
     /// </summary>
     [TestMethod]
-    [Ignore]
     public void TestUpdateEntity()
     {
         string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type",
@@ -455,7 +478,7 @@ public class EndToEndTests
     [DataTestMethod]
     [DataRow("", "", new string[] { "ERROR" }, DisplayName = "No flags provided.")]
     [DataRow("initialize", "", new string[] { "ERROR", "Verb 'initialize' is not recognized." }, DisplayName = "Wrong Command provided.")]
-    [DataRow("", "--version", new string[] { "dab 1.0.0" }, DisplayName = "Checking version.")]
+    [DataRow("", "--version", new string[] { "Microsoft.DataApiBuilder 1.0.0" }, DisplayName = "Checking version.")]
     [DataRow("", "--help", new string[] { "init", "add", "update", "start" }, DisplayName = "Checking output for --help.")]
     public void TestHelpWriterOutput(string command, string flags, string[] expectedOutputArray)
     {
@@ -466,11 +489,41 @@ public class EndToEndTests
 
         string? output = process.StandardOutput.ReadToEnd();
         Assert.IsNotNull(output);
+        Assert.IsTrue(output.Contains($"{Program.PRODUCT_NAME} {GetProductVersion()}"));
 
         foreach (string expectedOutput in expectedOutputArray)
         {
             Assert.IsTrue(output.Contains(expectedOutput));
         }
+
+        process.Kill();
+    }
+
+    /// <summary>
+    /// Test to verify that the version info is logged for both correct/incorrect command.
+    /// </summary>
+    [DataRow("", "--version", DisplayName = "Checking dab version with --version.")]
+    [DataRow("", "--help", DisplayName = "Checking version through --help option.")]
+    [DataRow("edit", "--new-option", DisplayName = "Version printed with invalid command edit.")]
+    [DataRow("init", "--database-type mssql", DisplayName = "Version printed with valid command init.")]
+    [DataRow("add", "MyEntity -s myentity --permissions \"anonymous:*\"", DisplayName = "Version printed with valid command add.")]
+    [DataRow("update", "MyEntity -s my_entity", DisplayName = "Version printed with valid command update.")]
+    [DataRow("start", "", DisplayName = "Version printed with valid command start.")]
+    [DataTestMethod]
+    public void TestVersionInfoIsCorrectlyDisplayedWithDifferentCommand(string command, string options)
+    {
+        WriteJsonContentToFile(_testRuntimeConfig, INITIAL_CONFIG);
+
+        using Process process = ExecuteDabCommand(
+            command: $"{command} ",
+            flags: $"--config {_testRuntimeConfig} {options}"
+        );
+
+        string? output = process.StandardOutput.ReadLine();
+        Assert.IsNotNull(output);
+
+        // Version Info logged by dab irrespective of commands being parsed correctly.
+        Assert.IsTrue(output.Contains($"{Program.PRODUCT_NAME} {GetProductVersion()}"));
 
         process.Kill();
     }
@@ -567,7 +620,6 @@ public class EndToEndTests
             return null;
         }
 
-        Console.WriteLine(jsonString);
         RuntimeConfig.TryGetDeserializedRuntimeConfig(jsonString, out RuntimeConfig? runtimeConfig, logger);
 
         if (runtimeConfig is null)

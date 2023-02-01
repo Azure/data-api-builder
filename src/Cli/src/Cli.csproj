@@ -15,12 +15,12 @@
     <Title>DataApiBuilder</Title>
     <Authors>Microsoft</Authors>
     <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
     <RepositoryUrl>https://github.com/Azure/data-api-builder</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageTags>microsoft rest graphql api azure sql mssql mysql pgsql nosql dataApiBuilder</PackageTags>
+    <PackageTags>microsoft rest graphql api azure sql mssql mysql pgsql nosql cosmosdb dataApiBuilder</PackageTags>
     <AssemblyName>Microsoft.DataApiBuilder</AssemblyName>
-    <Description>Data API Builder</Description>
+    <Description>Data API builder for Azure Databases provides modern REST and GraphQL endpoints to your Azure Databases.</Description>
     <PackageIcon>nuget_icon.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
@@ -49,6 +49,7 @@
   <ItemGroup>
     <None Include="..\..\..\README.md" Pack="true" PackagePath="\"/>
     <None Include="..\..\..\nuget_icon.png" Pack="true" PackagePath="\"/>
+    <None Include="..\..\..\LICENSE.txt" Pack="true" PackagePath="\"/>
   </ItemGroup>
 
   <ItemGroup>

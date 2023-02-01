@@ -82,7 +82,7 @@ public class CustomLoggerProvider : ILoggerProvider
         /// <inheritdoc/>
         public IDisposable BeginScope<TState>(TState state)
         {
-            return null!;
+            throw new NotImplementedException();
         }
     }
 }

@@ -102,18 +102,14 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
                 }
             }
 
-            // Log the request's authenticated status (anonymous/authenticated) only in the non-hosted scenario.
+            // Log the request's authenticated status (anonymous/authenticated) and user role,
+            // only in the non-hosted scenario.
             if (!_isLateConfigured)
             {
                 string requestAuthStatus = isAuthenticatedRequest ? AuthorizationType.Authenticated.ToString() :
                     AuthorizationType.Anonymous.ToString();
-                _logger.LogDebug($"The request is evaluated as {requestAuthStatus} by the DAB engine");
-
-                // Log the user role in whose context an authenticated request is executed.
-                if (isAuthenticatedRequest)
-                {
-                    _logger.LogDebug($"The request will be executed in the context of {clientDefinedRole} role");
-                }
+                _logger.LogDebug($"Request authentication state: {requestAuthStatus}.");
+                _logger.LogDebug($"The request will be executed in the context of {clientDefinedRole} role");
             }
 
             // When the user is not in the clientDefinedRole and the client role header

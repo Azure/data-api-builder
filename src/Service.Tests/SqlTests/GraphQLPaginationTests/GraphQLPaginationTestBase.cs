@@ -187,20 +187,74 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
         /// This is probably not a common use case, but it is necessary to test graphql's capabilites to only
         /// selectively retreive data
         /// </remarks>
+        [DataTestMethod]
+        [DataRow("id", 1, 4, "", "", DisplayName = "Test after token for primary key values.")]
+        [DataRow("byte_types", 0, 255, 2, 4, DisplayName = "Test after token for byte values.")]
+        [DataRow("short_types", -32768, 32767, 3, 4, DisplayName = "Test after token for short values.")]
+        [DataRow("int_types", -2147483648, 2147483647, 3, 4,
+            DisplayName = "Test after token for int values with mapped name.")]
+        [DataRow("long_types", -9223372036854775808, 9.223372036854776E+18, 3, 4,
+            DisplayName = "Test after token for long values.")]
+        [DataRow("string_types", "\"\"", "\"null\"", 1, 4,
+            DisplayName = "Test after token for string values.")]
+        [DataRow("single_types", -3.4E38, 3.4E38, 3, 4,
+            DisplayName = "Test after token for single values.")]
+        [DataRow("float_types", -1.7E308, 1.7E308, 3, 4,
+            DisplayName = "Test after token for float values.")]
+        [DataRow("decimal_types", 2.929292E-100, 2.929292E-100, 3, 4,
+            DisplayName = "Test after token for decimal values.")]
+        /*[DataRow("boolean_types", 0, )]
+        [DataRow("datetime_types", , )]
+        [DataRow("bytearray_types", , )]
+        [DataRow("guid_types", , )] */
         [TestMethod]
-        public async Task RequestAfterTokenOnly()
+        public async Task RequestAfterTokenOnly(
+            string exposedFieldName,
+            object afterValue,
+            object endCursorValue,
+            object afterIdValue,
+            object endCursorIdValue,
+            string defaultSchema = "dbo")
         {
-            string graphQLQueryName = "books";
-            string after = SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"ColumnName\":\"id\"}]");
+            string graphQLQueryName = "supportedTypes";
+            string after;
+            if ("id".Equals(exposedFieldName))
+            {
+                after = SqlPaginationUtil.Base64Encode(
+                    "[{\"Value\":" + afterValue + ", \"Direction\":0,\"TableSchema\":\"" + defaultSchema + "\", " +
+                    "\"TableName\":\"type_table\",\"ColumnName\":\"id\"}]");
+            }
+            else
+            {
+                after = SqlPaginationUtil.Base64Encode(
+                "[{\"Value\":" + afterValue + ",\"Direction\":0,\"TableSchema\":\"" + defaultSchema + "\", " +
+                "\"TableName\":\"type_table\",\"ColumnName\":\"" + exposedFieldName + "\"}," +
+                "{\"Value\":" + afterIdValue + ", \"Direction\":0,\"TableSchema\":\"" + defaultSchema + "\", " +
+                "\"TableName\":\"type_table\",\"ColumnName\":\"id\"}]");
+            }
+
             string graphQLQuery = @"{
-                books(first: 2," + $"after: \"{after}\")" + @"{
+                supportedTypes(first: 3," + $"after: \"{after}\" " +
+                 $"orderBy: {{ {exposedFieldName} : ASC }} )" + @"{
                     endCursor
                 }
             }";
 
             JsonElement root = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             string actual = SqlPaginationUtil.Base64Decode(root.GetProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME).GetString());
-            string expected = "[{\"Value\":3,\"Direction\":0, \"TableSchema\":\"\",\"TableName\":\"\", \"ColumnName\":\"id\"}]";
+            string expected;
+            if ("id".Equals(exposedFieldName))
+            {
+                expected = "[{\"Value\":" + endCursorValue + ", \"Direction\":0,\"TableSchema\":\"" + defaultSchema + "\", " +
+                    "\"TableName\":\"type_table\",\"ColumnName\":\"id\"}]";
+            }
+            else
+            {
+                expected = "[{\"Value\":" + endCursorValue + ", \"Direction\":0,\"TableSchema\":\"" + defaultSchema + "\", " +
+                    "\"TableName\":\"type_table\",\"ColumnName\":\"" + exposedFieldName + "\"}," +
+                    "{\"Value\":" + endCursorIdValue + ", \"Direction\":0,\"TableSchema\":\"" + defaultSchema + "\", " +
+                    "\"TableName\":\"type_table\",\"ColumnName\":\"id\"}]";
+            }
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }

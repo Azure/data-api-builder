@@ -1,4 +1,4 @@
-#nullable enable
+#nullable disable
 using System.Collections.Generic;
 using System.Net;
 using System.Text.Json;
@@ -70,8 +70,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void InvalidCRUDForStoredProcedure(
             string role1,
             object[] operationsRole1,
-            string? role2,
-            object[]? operationsRole2,
+            string role2,
+            object[] operationsRole2,
             bool isValid,
             bool differentOperationDifferentRoleFailure)
         {

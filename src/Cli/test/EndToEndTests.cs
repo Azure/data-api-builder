@@ -500,17 +500,21 @@ public class EndToEndTests
     }
 
     /// <summary>
-    /// Test to verify that the version info is logged for both correct/incorrect command.
+    /// Test to verify that the version info is logged for both correct/incorrect command,
+    /// and that the config name is displayed in the logs.
     /// </summary>
-    [DataRow("", "--version", DisplayName = "Checking dab version with --version.")]
-    [DataRow("", "--help", DisplayName = "Checking version through --help option.")]
-    [DataRow("edit", "--new-option", DisplayName = "Version printed with invalid command edit.")]
-    [DataRow("init", "--database-type mssql", DisplayName = "Version printed with valid command init.")]
-    [DataRow("add", "MyEntity -s myentity --permissions \"anonymous:*\"", DisplayName = "Version printed with valid command add.")]
-    [DataRow("update", "MyEntity -s my_entity", DisplayName = "Version printed with valid command update.")]
-    [DataRow("start", "", DisplayName = "Version printed with valid command start.")]
+    [DataRow("", "--version", false, DisplayName = "Checking dab version with --version.")]
+    [DataRow("", "--help", false, DisplayName = "Checking version through --help option.")]
+    [DataRow("edit", "--new-option", false, DisplayName = "Version printed with invalid command edit.")]
+    [DataRow("init", "--database-type mssql", true, DisplayName = "Version printed with valid command init.")]
+    [DataRow("add", "MyEntity -s my_entity --permissions \"anonymous:*\"", true, DisplayName = "Version printed with valid command add.")]
+    [DataRow("update", "MyEntity -s my_entity", true, DisplayName = "Version printed with valid command update.")]
+    [DataRow("start", "", true, DisplayName = "Version printed with valid command start.")]
     [DataTestMethod]
-    public void TestVersionInfoIsCorrectlyDisplayedWithDifferentCommand(string command, string options)
+    public void TestVersionInfoAndConfigIsCorrectlyDisplayedWithDifferentCommand(
+        string command,
+        string options,
+        bool isParsableDabCommandName)
     {
         WriteJsonContentToFile(_testRuntimeConfig, INITIAL_CONFIG);
 
@@ -519,11 +523,16 @@ public class EndToEndTests
             flags: $"--config {_testRuntimeConfig} {options}"
         );
 
-        string? output = process.StandardOutput.ReadLine();
+        string? output = process.StandardOutput.ReadToEnd();
         Assert.IsNotNull(output);
 
         // Version Info logged by dab irrespective of commands being parsed correctly.
         Assert.IsTrue(output.Contains($"{Program.PRODUCT_NAME} {GetProductVersion()}"));
+
+        if (isParsableDabCommandName)
+        {
+            Assert.IsTrue(output.Contains($"{_testRuntimeConfig}"));
+        }
 
         process.Kill();
     }

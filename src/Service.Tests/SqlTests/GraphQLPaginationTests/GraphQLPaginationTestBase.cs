@@ -211,6 +211,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             DisplayName = "Test after token for datetime values.")]
         [DataRow("bytearray_types", "\"AAAAAA==\"", "\"/////w==\"", 3, 4,
             DisplayName = "Test after token for bytearray values.")]
+        [TestMethod]
         public async Task RequestAfterTokenOnly(
             string exposedFieldName,
             object afterValue,

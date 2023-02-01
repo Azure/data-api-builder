@@ -249,16 +249,16 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 sourceDefinition = GetSourceDefinition(entityName);
                 _logger.LogDebug($"Logging relationship information for entity: {entityName}.");
-                foreach ((string sourceEntity, RelationshipMetadata relationshipData )in sourceDefinition.SourceEntityRelationshipMap)
+                foreach ((string sourceEntity, RelationshipMetadata relationshipData) in sourceDefinition.SourceEntityRelationshipMap)
                 {
                     _logger.LogDebug($"Source entity: {sourceEntity}");
-                    foreach((string targetEntity, List<ForeignKeyDefinition> FkDefinitions) in relationshipData.TargetEntityToFkDefinitionMap)
+                    foreach ((string targetEntity, List<ForeignKeyDefinition> FkDefinitions) in relationshipData.TargetEntityToFkDefinitionMap)
                     {
                         _logger.LogDebug($"Target entity: {targetEntity}");
-                        foreach(ForeignKeyDefinition fKDef in FkDefinitions)
+                        foreach (ForeignKeyDefinition fKDef in FkDefinitions)
                         {
                             _logger.LogDebug($"Referenced table: {fKDef.Pair.ReferencedDbTable}");
-                            foreach(string referencedColumn in fKDef.ReferencedColumns)
+                            foreach (string referencedColumn in fKDef.ReferencedColumns)
                             {
                                 _logger.LogDebug($"Referenced columns: {referencedColumn}");
                             }

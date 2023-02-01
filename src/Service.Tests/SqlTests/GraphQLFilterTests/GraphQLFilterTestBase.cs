@@ -705,9 +705,264 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
 
+        /// <summary>
+        /// Test Nested Filter for Many-One relationship.
+        /// </summary>
+        [TestMethod]
+        public async Task TestNestedFilterManyOne(string existsPredicate)
+        {
+            string graphQLQueryName = "comics";
+            // Gets all the comics that have their series name = 'Foundation'
+            string gqlQuery = @"{
+                comics (" + QueryBuilder.FILTER_FIELD_NAME + ": {" +
+                    @"myseries: { name: { eq: ""Foundation"" }}})
+                    {
+                      items {
+                        id
+                        title
+                      }
+                    }
+                }";
+
+            string dbQuery = MakeQueryOn(
+                table: "comics",
+                queriedColumns: new List<string> { "id", "title" },
+                existsPredicate,
+                GetDefaultSchema());
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(
+                gqlQuery,
+                graphQLQueryName,
+                isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Test Nested Filter for One-Many relationship
+        /// </summary>
+        [TestMethod]
+        public async Task TestNestedFilterOneMany(string existsPredicate)
+        {
+            string graphQLQueryName = "series";
+            // Gets the series that have comics with categoryName containing Fairy
+            string gqlQuery = @"{
+                series (" + QueryBuilder.FILTER_FIELD_NAME +
+                    @": { comics: { categoryName: { contains: ""Fairy"" }}} )
+                    {
+                      items {
+                        id
+                        name
+                      }
+                    }
+                }";
+
+            string dbQuery = MakeQueryOn(
+                table: "series",
+                queriedColumns: new List<string> { "id", "name" },
+                existsPredicate,
+                GetDefaultSchema());
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(
+                gqlQuery,
+                graphQLQueryName,
+                isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Test Nested Filter for Many-Many relationship
+        /// </summary>
+        [TestMethod]
+        public async Task TestNestedFilterManyMany(string existsPredicate)
+        {
+            string graphQLQueryName = "books";
+            // Gets the books that have been written by Aaron as author
+            string gqlQuery = @"{
+                books (" + QueryBuilder.FILTER_FIELD_NAME +
+                    @": { authors : { name: { eq: ""Aaron""}}} )
+                    {
+                      items {
+                        title
+                      }
+                    }
+                }";
+
+            string dbQuery = MakeQueryOn(
+                table: "books",
+                queriedColumns: new List<string> { "title" },
+                existsPredicate,
+                GetDefaultSchema());
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(
+                gqlQuery,
+                graphQLQueryName,
+                isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Test a field of the nested filter is null.
+        /// </summary>
+        [TestMethod]
+        public async Task TestNestedFilterFieldIsNull(string existsPredicate)
+        {
+            string graphQLQueryName = "stocks";
+            // Gets stocks which have a null price.
+            string gqlQuery = @"{
+                stocks (" + QueryBuilder.FILTER_FIELD_NAME +
+                    @": { stocks_price: { price: { isNull: true }}} )
+                    {
+                      items {
+                        categoryName
+                      }
+                    }
+                }";
+
+            string dbQuery = MakeQueryOn(
+                table: "stocks",
+                queriedColumns: new List<string> { "categoryName" },
+                existsPredicate,
+                GetDefaultSchema(),
+                pkColumns: new List<string> { "categoryid", "pieceid" });
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(
+                gqlQuery,
+                graphQLQueryName,
+                isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Tests nested filter having another nested filter.
+        /// </summary>
+        [TestMethod]
+        public async Task TestNestedFilterWithinNestedFilter(string existsPredicate)
+        {
+            string graphQLQueryName = "books";
+
+            // Gets all the books written by Aaron
+            // only if the title of one of his books contains 'Awesome'.
+            string gqlQuery = @"{
+                books (" + QueryBuilder.FILTER_FIELD_NAME +
+                    @": { authors: {
+                             books: { title: { contains: ""Awesome"" }}
+                             name: { eq: ""Aaron"" }
+                        }} )
+                    {
+                      items {
+                        title
+                      }
+                    }
+                }";
+
+            string dbQuery = MakeQueryOn(
+                table: "books",
+                queriedColumns: new List<string> { "title" },
+                existsPredicate,
+                GetDefaultSchema());
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(
+                gqlQuery,
+                graphQLQueryName,
+                isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Tests nested filter and an AND clause.
+        /// </summary>
+        [TestMethod]
+        public async Task TestNestedFilterWithAnd(string existsPredicate)
+        {
+            string graphQLQueryName = "books";
+
+            // Gets all the books written by Aniruddh and the publisher is 'Small Town Publisher'.
+            string gqlQuery = @"{
+                books (" + QueryBuilder.FILTER_FIELD_NAME +
+                    @": { authors:  {
+                          name: { eq: ""Aniruddh""}
+                          }
+                      and: {
+                       publishers: { name: { eq: ""Small Town Publisher"" } }
+                       }
+                    })
+                    {
+                      items {
+                        title
+                      }
+                    }
+                }";
+
+            string dbQuery = MakeQueryOn(
+                table: "books",
+                queriedColumns: new List<string> { "title" },
+                existsPredicate,
+                GetDefaultSchema());
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(
+                gqlQuery,
+                graphQLQueryName,
+                isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Tests nested filter alongwith an OR clause.
+        /// </summary>
+        [TestMethod]
+        public async Task TestNestedFilterWithOr(string existsPredicate)
+        {
+            string graphQLQueryName = "books";
+
+            // Gets all the books written by Aniruddh OR if their publisher is 'TBD Publishing One'.
+            string gqlQuery = @"{
+                books (" + QueryBuilder.FILTER_FIELD_NAME +
+                    @": { or: [{
+                        publishers: { name: { eq: ""TBD Publishing One"" } } }
+                        { authors : {
+                          name: { eq: ""Aniruddh""}}}
+                      ]
+                    })
+                    {
+                      items {
+                        title
+                      }
+                    }
+                }";
+
+            string dbQuery = MakeQueryOn(
+                table: "books",
+                queriedColumns: new List<string> { "title" },
+                existsPredicate,
+                GetDefaultSchema());
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(
+                gqlQuery,
+                graphQLQueryName,
+                isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
         #endregion
 
         protected abstract string GetDefaultSchema();
+
+        /// <summary>
+        /// Formats the default schema so that it can be
+        /// place right before the identity that it is qualifying
+        /// </summary>
+        protected string GetPreIndentDefaultSchema()
+        {
+            string defaultSchema = GetDefaultSchema();
+            return string.IsNullOrEmpty(defaultSchema) ? string.Empty : defaultSchema + ".";
+        }
 
         /// <remarks>
         /// This function does not escape special characters from column names so those might lead to errors

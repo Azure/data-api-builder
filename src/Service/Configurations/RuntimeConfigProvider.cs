@@ -290,7 +290,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
             await Task.WhenAll(configLoadedTasks);
 
-            IsLateConfigured = true;
+            IsLateConfigured = false;
 
             // Verify that all tasks succeeded. 
             return configLoadedTasks.All(x => x.Result);

@@ -128,8 +128,28 @@ namespace Azure.DataApiBuilder.Config
             string? schemaPath = Path.Combine(assemblyDirectory, "dab.draft.schema.json");
             string schemaFileContent = File.ReadAllText(schemaPath);
             Dictionary<string, object>? jsonDictionary = JsonSerializer.Deserialize<Dictionary<string, object>>(schemaFileContent);
-            Dictionary<string, string>? properties = JsonSerializer.Deserialize<Dictionary<string, string>>(jsonDictionary!["additionalProperties"].ToString()!);
-            return properties!["version"];
+
+            if (jsonDictionary is null)
+            {
+                throw new Exception("The schema file is misconfigured. Please check the file formatting.");
+            }
+
+            object? additionalProperties;
+            if (!jsonDictionary.TryGetValue("additionalProperties", out additionalProperties))
+            {
+                throw new Exception("The schema file doesn't have the required field : additionalProperties");
+            }
+
+            // properties cannot be null since the property additionalProperties exist in the schema file.
+            Dictionary<string, string> properties = JsonSerializer.Deserialize<Dictionary<string, string>>(additionalProperties.ToString()!)!;
+
+            string? versionNum;
+            if (!properties.TryGetValue("version", out versionNum))
+            {
+                throw new Exception("Missing required property 'version' in additionalProperties section.");
+            }
+
+            return versionNum;
         }
 
         /// <summary>

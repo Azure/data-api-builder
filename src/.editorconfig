@@ -308,7 +308,7 @@ dotnet_diagnostic.SA1641.severity = silent
 dotnet_diagnostic.SA1642.severity = silent
 dotnet_diagnostic.SA1643.severity = silent
 dotnet_diagnostic.SA1648.severity = silent
-dotnet_diagnostic.SA1649.severity = silent
+dotnet_diagnostic.SA1649.severity = none
 dotnet_diagnostic.SA1651.severity = silent
 dotnet_diagnostic.SA1500.severity = silent
 dotnet_diagnostic.SA1501.severity = silent
@@ -360,7 +360,7 @@ dotnet_diagnostic.SX1309.severity = silent
 dotnet_diagnostic.SX1309S.severity = silent
 dotnet_diagnostic.SA1200.severity = silent
 dotnet_diagnostic.SA1202.severity = silent
-dotnet_diagnostic.SA1201.severity = silent
+dotnet_diagnostic.SA1201.severity = none
 dotnet_diagnostic.SA1203.severity = silent
 dotnet_diagnostic.SA1205.severity = silent
 dotnet_diagnostic.SA1204.severity = silent
@@ -444,6 +444,7 @@ dotnet_diagnostic.SA1028.severity = silent
 dotnet_diagnostic.SA0001.severity = silent
 dotnet_diagnostic.SA0002.severity = silent
 dotnet_diagnostic.SA1600.severity = suggestion
+csharp_style_prefer_top_level_statements = true:silent
 
 [*.{cs,vb}]
 dotnet_diagnostic.CA1034.severity=suggestion

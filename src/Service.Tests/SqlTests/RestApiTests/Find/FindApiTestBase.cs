@@ -46,6 +46,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: string.Empty,
                 entityNameOrPath: _integrationProcedureFindMany_EntityName,
                 operationType: Config.Operation.Execute,
+                restHttpVerb: Config.RestMethod.Get,
                 sqlQuery: GetQuery("FindManyStoredProcedureTest"),
                 expectJson: false
                 );
@@ -1024,6 +1025,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 entityNameOrPath: _integrationProcedureFindMany_EntityName,
                 sqlQuery: string.Empty,
                 operationType: Config.Operation.Execute,
+                restHttpVerb: Config.RestMethod.Get,
                 exceptionExpected: true,
                 expectedErrorMessage: "Primary key route not supported for this entity.",
                 expectedStatusCode: HttpStatusCode.BadRequest
@@ -1043,6 +1045,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 entityNameOrPath: _integrationProcedureFindOne_EntityName,
                 sqlQuery: string.Empty,
                 operationType: Config.Operation.Execute,
+                restHttpVerb: Config.RestMethod.Get,
                 exceptionExpected: true,
                 expectedErrorMessage: $"Invalid request. Missing required procedure parameters: id for entity: {_integrationProcedureFindOne_EntityName}",
                 expectedStatusCode: HttpStatusCode.BadRequest

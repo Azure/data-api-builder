@@ -840,7 +840,7 @@ namespace Cli
                 args.Add(options.LogLevel.ToString()!);
             }
 
-            // This will disable automatic redirects to https
+            // This will add args to disable automatic redirects to https if specified by user
             if (options.IsHttpsRedirectionDisabled)
             {
                 args.Add("--no-https");

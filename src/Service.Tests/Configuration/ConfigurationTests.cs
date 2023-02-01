@@ -21,7 +21,6 @@ using Azure.DataApiBuilder.Service.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using HotChocolate;
-using HotChocolate.Types;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
@@ -583,30 +582,30 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 if (entity.Rest != null
                     && ((JsonElement)entity.Rest).ValueKind is JsonValueKind.Object)
                 {
-                    JsonElement restConfigElement = (JsonElement)entity.Rest; 
-                    if(!restConfigElement.TryGetProperty("methods", out JsonElement _))
+                    JsonElement restConfigElement = (JsonElement)entity.Rest;
+                    if (!restConfigElement.TryGetProperty("methods", out JsonElement _))
                     {
-                        RestEntitySettings rest = JsonSerializer.Deserialize<RestEntitySettings>(restConfigElement,RuntimeConfig.SerializerOptions);
+                        RestEntitySettings rest = JsonSerializer.Deserialize<RestEntitySettings>(restConfigElement, RuntimeConfig.SerializerOptions);
                         Assert.IsTrue(((JsonElement)rest.Path).ValueKind is JsonValueKind.String
                                      || ((JsonElement)rest.Path).ValueKind is JsonValueKind.True
                                      || ((JsonElement)rest.Path).ValueKind is JsonValueKind.False);
                     }
                     else
                     {
-                        if(!restConfigElement.TryGetProperty("path", out JsonElement _))
+                        if (!restConfigElement.TryGetProperty("path", out JsonElement _))
                         {
-                            RestStoredProcedureEntitySettings rest = JsonSerializer.Deserialize<RestStoredProcedureEntitySettings>(restConfigElement,RuntimeConfig.SerializerOptions);
+                            RestStoredProcedureEntitySettings rest = JsonSerializer.Deserialize<RestStoredProcedureEntitySettings>(restConfigElement, RuntimeConfig.SerializerOptions);
                             Assert.AreEqual(typeof(RestMethod[]), rest.RestMethods.GetType());
                         }
                         else
                         {
-                            RestStoredProcedureEntityVerboseSettings rest = JsonSerializer.Deserialize<RestStoredProcedureEntityVerboseSettings>(restConfigElement,RuntimeConfig.SerializerOptions);
+                            RestStoredProcedureEntityVerboseSettings rest = JsonSerializer.Deserialize<RestStoredProcedureEntityVerboseSettings>(restConfigElement, RuntimeConfig.SerializerOptions);
                             Assert.AreEqual(typeof(RestMethod[]), rest.RestMethods.GetType());
-                            Assert.IsTrue( (((JsonElement)rest.Path).ValueKind is JsonValueKind.String)
+                            Assert.IsTrue((((JsonElement)rest.Path).ValueKind is JsonValueKind.String)
                                         || (((JsonElement)rest.Path).ValueKind is JsonValueKind.True)
                                         || (((JsonElement)rest.Path).ValueKind is JsonValueKind.False));
                         }
-                        
+
                     }
 
                 }
@@ -617,7 +616,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     || entity.GraphQL.GetType() == typeof(GraphQLStoredProcedureEntityOperationSettings)
                     || entity.GraphQL.GetType() == typeof(GraphQLStoredProcedureEntityVerboseSettings));
 
-                if(entity.GraphQL is not null)
+                if (entity.GraphQL is not null)
                 {
                     if (entity.GraphQL.GetType() == typeof(GraphQLEntitySettings))
                     {
@@ -649,7 +648,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 {
                     foreach (object operation in permission.Operations)
                     {
-                        
+
                         Assert.IsTrue(((JsonElement)operation).ValueKind == JsonValueKind.String ||
                             ((JsonElement)operation).ValueKind == JsonValueKind.Object);
                         if (((JsonElement)operation).ValueKind == JsonValueKind.Object)

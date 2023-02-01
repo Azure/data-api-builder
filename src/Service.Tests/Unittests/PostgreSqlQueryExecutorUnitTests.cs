@@ -56,7 +56,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 }
                 else
                 {
-                    runtimeConfigProvider.Initialize(
+                    await runtimeConfigProvider.Initialize(
                         JsonSerializer.Serialize(runtimeConfigProvider.GetRuntimeConfiguration()),
                         schema: null,
                         connectionString: connectionString,

@@ -112,9 +112,11 @@ Stored procedure execution in GraphQL can be configured using the `graphql` opti
 For example, using the value `query` for the `operation` option results in the stored procedure resolving as a query field in the GraphQL schema
 
 CLI Usage:
-```sh
 
+```sh
+dab add GetCowrittenBooksByAuthor --source dbo.stp_get_all_cowritten_books_by_author --source.type "stored-procedure" source.params "searchType:s" --permissions "anonymous:execute" --rest.methods "GET" --graphql.operation "query"
 ```
+
 Runtime Configuration:
 
 ```json
@@ -146,7 +148,6 @@ type Query {
 
 Alternatively, `operation` can be set to `mutation` so that a mutation field represents the stored procedure in the GraphQL schema. A modified `dab` command to reflect the changed `operation`:
 
-```sh
 ```sh
 dab add GetCowrittenBooksByAuthor --source dbo.stp_get_all_cowritten_books_by_author --source.type "stored-procedure" source.params "searchType:s" --permissions "anonymous:execute" --rest.methods "POST" --graphql.operation "mutation"
 ```

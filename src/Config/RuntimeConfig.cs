@@ -126,7 +126,7 @@ namespace Azure.DataApiBuilder.Config
             {
                 throw new DataApiBuilderException(
                     message: "Could not get the link for DAB draft schema.",
-                    statusCode: HttpStatusCode.Forbidden,
+                    statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
@@ -138,7 +138,7 @@ namespace Azure.DataApiBuilder.Config
             {
                 throw new DataApiBuilderException(
                     message: "The schema file is misconfigured. Please check the file formatting.",
-                    statusCode: HttpStatusCode.Forbidden,
+                    statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
@@ -147,7 +147,7 @@ namespace Azure.DataApiBuilder.Config
             {
                 throw new DataApiBuilderException(
                     message: "The schema file doesn't have the required field : additionalProperties",
-                    statusCode: HttpStatusCode.Forbidden,
+                    statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
@@ -158,7 +158,7 @@ namespace Azure.DataApiBuilder.Config
             if (!properties.TryGetValue("version", out versionNum))
             {
                 throw new DataApiBuilderException(message: "Missing required property 'version' in additionalProperties section.",
-                    statusCode: HttpStatusCode.Forbidden,
+                    statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 

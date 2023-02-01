@@ -121,12 +121,12 @@ namespace Azure.DataApiBuilder.Service
                 if (args[i].Equals("--no-https"))
                 {
                     Console.WriteLine("Redirecting to https is disabled.");
-                    RuntimeConfigProvider.IsRedirectingToHttpsEnabled=false;
+                    RuntimeConfigProvider.IsRedirectingToHttpsEnabled = false;
                     return;
                 }
             }
 
-            RuntimeConfigProvider.IsRedirectingToHttpsEnabled=true;
+            RuntimeConfigProvider.IsRedirectingToHttpsEnabled = true;
         }
 
         // This is used for testing purposes only. The test web server takes in a

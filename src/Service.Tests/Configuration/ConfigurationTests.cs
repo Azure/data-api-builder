@@ -144,7 +144,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             string[] args,
             bool expectedIsHttpsRedirectionEnabled)
         {
-            TestServer server = new(Program.CreateWebHostBuilder(args));
+            _ = new(Program.CreateWebHostBuilder(args));
             Assert.AreEqual(RuntimeConfigProvider.IsRedirectingToHttpsEnabled, expectedIsHttpsRedirectionEnabled);
         }
 

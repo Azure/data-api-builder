@@ -4,9 +4,11 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
+using Azure.DataApiBuilder.Service.Configurations;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
 {
@@ -21,12 +23,20 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
     {
         private readonly RequestDelegate _nextMiddleware;
 
+        private ILogger<ClientRoleHeaderAuthenticationMiddleware> _logger;
+
+        private bool _isLateConfigured;
+
         // Identity provider used for identities added to the ClaimsPrincipal object for the current user by DAB.
         private const string INTERNAL_DAB_IDENTITY_PROVIDER = "DAB-VERIFIED";
 
-        public ClientRoleHeaderAuthenticationMiddleware(RequestDelegate next)
+        public ClientRoleHeaderAuthenticationMiddleware(RequestDelegate next,
+            ILogger<ClientRoleHeaderAuthenticationMiddleware> logger,
+            RuntimeConfigProvider runtimeConfigProvider)
         {
             _nextMiddleware = next;
+            _logger = logger;
+            _isLateConfigured = runtimeConfigProvider.IsLateConfigured;
         }
 
         /// <summary>
@@ -90,6 +100,16 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
                     httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]
                         = clientDefinedRole;
                 }
+            }
+
+            // Log the request's authenticated status (anonymous/authenticated) and user role,
+            // only in the non-hosted scenario.
+            if (!_isLateConfigured)
+            {
+                string requestAuthStatus = isAuthenticatedRequest ? AuthorizationType.Authenticated.ToString() :
+                    AuthorizationType.Anonymous.ToString();
+                _logger.LogDebug($"Request authentication state: {requestAuthStatus}.");
+                _logger.LogDebug($"The request will be executed in the context of {clientDefinedRole} role");
             }
 
             // When the user is not in the clientDefinedRole and the client role header

@@ -895,7 +895,7 @@ namespace Cli
         /// </summary>
         /// <param name="options"></param>
         /// <returns></returns>
-        public static bool IsEntityStoredProcedure(EntityOptions options)
+        public static bool IsStoredProcedure(EntityOptions options)
         {
             SourceTypeEnumConverter.TryGetSourceType(options.SourceType, out SourceType sourceObjectType);
             return sourceObjectType is SourceType.StoredProcedure;
@@ -906,9 +906,33 @@ namespace Cli
         /// </summary>
         /// <param name="entity"></param>
         /// <returns></returns>
-        public static bool IsEntityStoredProcedure(Entity entity)
+        public static bool IsStoredProcedure(Entity entity)
         {
             return entity.ObjectType is SourceType.StoredProcedure;
+        }
+
+        public static bool IsStoredProcedureConvertedToOtherTypes(Entity entity, EntityOptions options)
+        {
+            if(options.SourceType is null)
+            {
+                return false;
+            }
+
+            bool isCurrentEntityStoredProcedure = IsStoredProcedure(entity);
+            bool doOptionsRepresentStoredProcedure = options.SourceType is not null && IsStoredProcedure(options);
+            return isCurrentEntityStoredProcedure && !doOptionsRepresentStoredProcedure;
+        }
+
+        public static bool IsEntityBeingConvertedToStoredProcedure(Entity entity, EntityOptions options)
+        {
+            if(options.SourceType is null)
+            {
+                return false;
+            }
+
+            bool isCurrentEntityStoredProcedure = IsStoredProcedure(entity);
+            bool doOptionsRepresentStoredProcedure = options.SourceType is not null && IsStoredProcedure(options);
+            return !isCurrentEntityStoredProcedure && doOptionsRepresentStoredProcedure;
         }
 
         /// <summary>

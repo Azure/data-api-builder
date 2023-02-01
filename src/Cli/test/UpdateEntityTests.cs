@@ -1020,7 +1020,6 @@ namespace Cli.Tests
         /// Updating Table with all supported CRUD action to Stored-Procedure should fail.
         /// </summary>
         [DataTestMethod]
-        [Ignore]
         [DataRow(SINGLE_ENTITY_WITH_ONLY_READ_PERMISSION, "stored-procedure", new string[] { "param1:123", "param2:hello", "param3:true" },
             null, SINGLE_ENTITY_WITH_STORED_PROCEDURE, new string[] { "anonymous", "execute" }, false, true,
             DisplayName = "PASS:Convert table to stored-procedure with valid parameters.")]

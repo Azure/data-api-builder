@@ -199,7 +199,7 @@ namespace Cli
                 return false;
             }
 
-            bool isStoredProcedure = IsEntityStoredProcedure(options);
+            bool isStoredProcedure = IsStoredProcedure(options);
             // Validations to ensure that REST methods and GraphQL operations can be configured only
             // for stored procedures 
             if (options.GraphQLOperationForStoredProcedure is not null && !isStoredProcedure)
@@ -433,31 +433,33 @@ namespace Cli
                 _logger.LogError($"Entity:{options.Entity} not found. Please add the entity first.");
                 return false;
             }
-
+            
             if (!TryGetUpdatedSourceObjectWithOptions(options, entity, out object? updatedSource))
             {
                 _logger.LogError("Failed to update the source object.");
                 return false;
             }
 
-            bool isStoredProcedure = IsEntityStoredProcedure(entity) || IsEntityStoredProcedure(options);
+            bool isCurrentEntityStoredProcedure = IsStoredProcedure(entity);
+            bool doOptionsRepresentStoredProcedure = options.SourceType is not null && IsStoredProcedure(options);
 
             // Validations to ensure that REST methods and GraphQL operations can be configured only
             // for stored procedures 
-            if (options.GraphQLOperationForStoredProcedure is not null && !isStoredProcedure)
+            if (options.GraphQLOperationForStoredProcedure is not null &&
+                !(isCurrentEntityStoredProcedure || doOptionsRepresentStoredProcedure))
             {
                 _logger.LogError("--graphql.operation can be configured only for stored procedures.");
                 return false;
             }
 
             if ((options.RestMethodsForStoredProcedure is not null && options.RestMethodsForStoredProcedure.Any())
-                && !isStoredProcedure)
+                && !(isCurrentEntityStoredProcedure || doOptionsRepresentStoredProcedure))
             {
                 _logger.LogError("--rest.methods can be configured only for stored procedures.");
                 return false;
             }
 
-            if (isStoredProcedure)
+            if (isCurrentEntityStoredProcedure || doOptionsRepresentStoredProcedure)
             {
                 if (CheckConflictingGraphQLConfigurationForStoredProcedures(options))
                 {
@@ -734,13 +736,6 @@ namespace Cli
             // no update is required.
             if (options.SourceType is not null)
             {
-                if ((entity.ObjectType is SourceType.StoredProcedure && !IsEntityStoredProcedure(options))
-                    || (entity.ObjectType is not SourceType.StoredProcedure && IsEntityStoredProcedure(options)))
-                {
-                    _logger.LogError("Cannot convert from stored-procedure to table/view or vice-versa");
-                    return false;
-                }
-
                 if (!SourceTypeEnumConverter.TryGetSourceType(options.SourceType, out updatedSourceType))
                 {
                     _logger.LogError(
@@ -748,6 +743,12 @@ namespace Cli
                     );
                     return false;
                 }
+
+                if ( IsStoredProcedureConvertedToOtherTypes(entity,options) || IsEntityBeingConvertedToStoredProcedure(entity, options))
+                {
+                    _logger.LogWarning($"Stored procedures can be configured only with {Operation.Execute.ToString()} action whereas tables/views are configured with CRUD actions. Update the actions configured for all the roles for this entity.");
+                }
+
             }
 
             if (!VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
@@ -1000,17 +1001,13 @@ namespace Cli
         private static object? ConstructUpdatedRestDetails(Entity entity, EntityOptions options)
         {
 
-            if (options.RestRoute is null && (options.RestMethodsForStoredProcedure is null || !options.RestMethodsForStoredProcedure.Any()))
-            {
-                return entity.Rest;
-            }
-
             // Updated REST Route details
             object? restPath = (options.RestRoute is not null) ? ConstructRestPathDetails(options.RestRoute) : entity.GetRestEnabledOrPathSettings();
 
             // Updated REST Methods info for stored procedures
             RestMethod[]? restMethods;
-            if (IsEntityStoredProcedure(entity) || IsEntityStoredProcedure(options))
+            if (!IsStoredProcedureConvertedToOtherTypes(entity,options)
+                && (IsStoredProcedure(entity) || IsStoredProcedure(options)))
             {
                 if (options.RestMethodsForStoredProcedure is null || !options.RestMethodsForStoredProcedure.Any())
                 {
@@ -1025,10 +1022,23 @@ namespace Cli
             {
                 restMethods = null;
             }
-
+            
             if (restPath is false)
             {
-                restMethods = null;
+                if(options.RestRoute is not null)
+                {
+                    restMethods = null;
+                }
+                else
+                {
+                    restPath = null;
+                }                
+            }
+
+            if(IsEntityBeingConvertedToStoredProcedure(entity, options)
+               && (restMethods is null || restMethods.Length == 0))
+            {
+                restMethods = new RestMethod[] { RestMethod.Post };
             }
 
             return GetRestDetails(restPath, restMethods);
@@ -1046,16 +1056,12 @@ namespace Cli
         /// GraphQLStoredProcedureEntityVerboseSettings-> when a stored procedure entity is configured with explicit operation and type settings.</returns>
         private static object? ConstructUpdatedGraphQLDetails(Entity entity, EntityOptions options)
         {
-            if (options.GraphQLType is null && options.GraphQLOperationForStoredProcedure is null)
-            {
-                return entity.GraphQL;
-            }
-
             //Updated GraphQL Type
             object? graphQLType = (options.GraphQLType is not null) ? ConstructGraphQLTypeDetails(options.GraphQLType) : entity.GetGraphQLType();
             GraphQLOperation? graphQLOperation;
 
-            if (IsEntityStoredProcedure(entity) || IsEntityStoredProcedure(options))
+            if (!IsStoredProcedureConvertedToOtherTypes(entity, options)
+                && (IsStoredProcedure(entity) || IsStoredProcedure(options)))
             {
                 if (options.GraphQLOperationForStoredProcedure is null)
                 {
@@ -1082,7 +1088,21 @@ namespace Cli
 
             if (graphQLType is false)
             {
-                graphQLOperation = null;
+                if(options.GraphQLType is not null)
+                {
+                    graphQLOperation = null;
+                }
+                else
+                {
+                    graphQLType = null;
+                }
+                
+            }
+
+            if(IsEntityBeingConvertedToStoredProcedure(entity, options)
+              && graphQLOperation is null)
+            {
+                graphQLOperation = GraphQLOperation.Mutation;
             }
 
             return GetGraphQLDetails(graphQLType, graphQLOperation);

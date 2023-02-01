@@ -36,7 +36,7 @@ namespace Azure.DataApiBuilder.Auth
         public Dictionary<Operation, List<string>> OperationToRolesMap { get; set; } = new();
 
         /// <summary>
-        /// List of Http verbs enabled for Stored Procedure entities that have their REST endpoint enabled.
+        /// Set of Http verbs enabled for Stored Procedure entities that have their REST endpoint enabled.
         /// </summary>
         public HashSet<RestMethod> StoredProcedureHttpVerbs { get; set; } = new();
 

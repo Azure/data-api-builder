@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace Azure.DataApiBuilder.Config
 {
     /// <summary>
-    /// Defines which operations (CRUD) are permitted for a given role.
+    /// Defines which operations (Creat, Read, Update, Delete, Execute) are permitted for a given role.
     /// </summary>
     public class PermissionSetting
     {

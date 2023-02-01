@@ -355,7 +355,6 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 if (runtimeConfig.Entities.TryGetValue(key: entityName, out Entity? entity) && entity is not null)
                 {
-                    // if entity.Rest is null or true we just use entity name
                     httpVerbs = entity.GetStoredProcedureRESTVerbs();
                     return true;
                 }

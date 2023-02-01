@@ -136,9 +136,11 @@ namespace Azure.DataApiBuilder.Config
                         if (configElement.TryGetProperty(propertyName: "operation", out JsonElement operation)
                             && (operation.ValueKind is JsonValueKind.Number || operation.ValueKind is JsonValueKind.String))
                         {
-                            string operationType = (operation.ValueKind is JsonValueKind.Number)
+                            string operationType = JsonSerializer.Deserialize<string>(operation)!;
+
+/*                            string operationType = (operation.ValueKind is JsonValueKind.Number)
                                                    ? JsonSerializer.Deserialize<GraphQLOperation>(operation)!.ToString()
-                                                   : JsonSerializer.Deserialize<string>(operation)!;
+                                                   : JsonSerializer.Deserialize<string>(operation)!;*/
 
                             if (string.Equals(operationType, GraphQLOperation.Mutation.ToString(), StringComparison.OrdinalIgnoreCase) || string.Equals(operationType, string.Empty))
                             {
@@ -558,15 +560,15 @@ namespace Azure.DataApiBuilder.Config
     /// Describes the REST settings specific to an entity.
     /// </summary>
     /// <param name="Path">Instructs the runtime to use this as the path
+    /// at which the REST endpoint for this entity is exposed
+    /// instead of using the entity-name. Can be a string type.
+    /// </param>
     public record RestEntitySettings(object? Path);
 
     /// <summary>
     /// Describes the REST settings specific to an entity backed by a stored procedure.
     /// </summary>
-    /// <param name="RestMethods">Defines the HTTP actions that are supported for stored procedures
-    /// at which the REST endpoint for this entity is exposed
-    /// instead of using the entity-name. Can be a string type.
-    /// </param>
+    /// <param name="RestMethods">Defines the HTTP actions that are supported for stored procedures.</param>
     public record RestStoredProcedureEntitySettings([property: JsonPropertyName("methods")] RestMethod[]? RestMethods = null);
 
     /// <summary>
@@ -574,10 +576,10 @@ namespace Azure.DataApiBuilder.Config
     /// Both path overrides and methods overrides can be defined.
     /// </summary>
     /// <param name="Path">Instructs the runtime to use this as the path
-    /// <param name="RestMethods">Defines the HTTP actions that are supported for stored procedures
     /// at which the REST endpoint for this entity is exposed
     /// instead of using the entity-name. Can be a string type.
     /// </param>
+    /// <param name="RestMethods">Defines the HTTP actions that are supported for stored procedures.</param>
     public record RestStoredProcedureEntityVerboseSettings(object? Path,
                                      [property: JsonPropertyName("methods")] RestMethod[]? RestMethods = null);
 
@@ -587,9 +589,8 @@ namespace Azure.DataApiBuilder.Config
     /// <param name="Type">Defines the name of the GraphQL type.
     /// Can be a string or Singular-Plural type.
     /// If string, a default plural route will be added as per the rules at
-    /// <param name="Operation"/>Explicity defines the GraphQL operation
-    /// for a stored procedure entity.
-    /// <href="https://engdic.org/singular-and-plural-noun-rules-definitions-examples/" /></param>
+    /// </param>
+    /// <seealso cref="<https://engdic.org/singular-and-plural-noun-rules-definitions-examples/"/>
     public record GraphQLEntitySettings([property: JsonPropertyName("type")] object? Type = null);
 
     /// <summary>

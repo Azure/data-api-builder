@@ -118,7 +118,7 @@ update Journal --config "dab-config.MsSql.json" --permissions "authorizationHand
 update ArtOfWar --config "dab-config.MsSql.json" --permissions "authenticated:*" --map "DetailAssessmentAndPlanning:始計,WagingWar:作戰,StrategicAttack:謀攻,NoteNum:┬─┬ノ( º _ ºノ)"
 update GetBook --config "dab-config.MsSql.json" --permissions "authenticated:execute"
 update GetPublisher --config "dab-config.MsSql.json" --permissions "authenticated:execute"
-update GetBooks --config "dab-config.MsSql.json" --permissions "authenticated:execute"
+update GetBooks --config "dab-config.MsSql.json" --permissions "authenticated:execute" --graphql.operation "Query"
 update InsertBook --config "dab-config.MsSql.json" --permissions "authenticated:execute"
 update CountBooks --config "dab-config.MsSql.json" --permissions "authenticated:execute"
 update DeleteLastInsertedBook --config "dab-config.MsSql.json" --permissions "authenticated:execute"

@@ -121,7 +121,8 @@ namespace Azure.DataApiBuilder.Config
         public string? Database { get; set; }
     }
 
-    public enum RestMethod {
+    public enum RestMethod
+    {
         Get,
         Post,
         Put,
@@ -129,9 +130,9 @@ namespace Azure.DataApiBuilder.Config
         Delete
     };
 
-    public enum GraphQLOperation {
+    public enum GraphQLOperation
+    {
         Query,
         Mutation
     };
-
 }

@@ -139,13 +139,13 @@ namespace Cli
         [Option("rest", Required = false, HelpText = "Route for rest api.")]
         public string? RestRoute { get; }
 
-        [Option("rest.methods", Required = false, Separator = ',',  HelpText = "HTTP actions to be supported for stored procedure. Specify the actions as a comma separated list.")]
+        [Option("rest.methods", Required = false, Separator = ',', HelpText = "HTTP actions to be supported for stored procedure. Specify the actions as a comma separated list. Valid HTTP actions are : [GET, POST, PUT, PATCH, DELETE]")]
         public IEnumerable<string>? RestMethodsForStoredProcedure { get; }
 
         [Option("graphql", Required = false, HelpText = "Type of graphQL.")]
         public string? GraphQLType { get; }
 
-        [Option("graphql.operation", Required = false, HelpText = "GraphQL operation to be supported for stored procedure.")]
+        [Option("graphql.operation", Required = false, HelpText = $"GraphQL operation to be supported for stored procedure. Valid operations are : [Query, Mutation] ")]
         public string? GraphQLOperationForStoredProcedure { get; }
 
         [Option("fields.include", Required = false, Separator = ',', HelpText = "Fields that are allowed access to permission.")]

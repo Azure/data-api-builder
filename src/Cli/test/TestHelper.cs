@@ -287,6 +287,37 @@ namespace Cli.Tests
                   }
           }";
 
+        public const string STORED_PROCEDURE_WITH_REST_GRAPHQL_CONFIG = @"
+          {
+              ""entities"": {
+              ""MyEntity"": {
+                ""source"": {
+                  ""type"": ""stored-procedure"",
+                  ""object"": ""s001.book"",
+                  ""parameters"": {
+                      ""param1"": 123,
+                      ""param2"": ""hello"",
+                      ""param3"": true
+                  }
+                },
+                ""permissions"": [
+                  {
+                    ""role"": ""anonymous"",
+                    ""actions"": [
+                      ""execute""
+                    ]
+                  }
+                ],
+                ""rest"": {	
+                    ""methods"": [	
+                      ""get""
+                    ]	
+                  },	
+                  ""graphql"": false
+                    }
+                  }
+          }";
+
         public const string SINGLE_ENTITY_WITH_SOURCE_AS_TABLE = @"
           {
               ""entities"": {

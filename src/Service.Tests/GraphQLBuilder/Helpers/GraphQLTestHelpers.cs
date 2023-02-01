@@ -85,12 +85,12 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         }
 
         /// <summary>
-        /// Creates an Entity object using the provided metadata to represent a stored procedure.
+        /// Creates a stored procedure backed entity using the provided metadata.
         /// </summary>
         /// <param name="graphQLTypeName">Desired GraphQL type name.</param>
         /// <param name="graphQLOperation">Query or Mutation</param>
         /// <param name="permissionOperations">Collection of permission operations (CRUD+Execute)</param>
-        /// <returns>Entity object.</returns>
+        /// <returns>Stored procedure backed entity.</returns>
         public static Entity GenerateStoredProcedureEntity(string graphQLTypeName, GraphQLOperation graphQLOperation, string[] permissionOperations)
         {
             Entity entity = new(Source: new DatabaseObjectSource(SourceType.StoredProcedure, Name: "foo", Parameters: null, KeyFields: null),

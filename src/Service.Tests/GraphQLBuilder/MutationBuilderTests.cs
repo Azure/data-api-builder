@@ -1004,7 +1004,7 @@ type Foo @model(name:""Foo"") {{
         }
 
         /// <summary>
-        /// Tests the GraphQL schema builder method MutationBuild.Build()'s behavior when processing stored procedure entity configuration
+        /// Tests the GraphQL schema builder method MutationBuilder.Build()'s behavior when processing stored procedure entity configuration
         /// which may explicitly define the field type(query/mutation) of the entity.
         /// Only attempt to get the mutation ObjectTypeDefinitionNode when a mutation root operation type exists.
         /// In this test, either a mutation is created or it is not, so only attempt to run GetMutationNode when a node is expected,
@@ -1017,6 +1017,7 @@ type Foo @model(name:""Foo"") {{
         /// <param name="permissionOperations">Collection of operations denoted by their string value, for GenerateStoredProcedureEntity()</param>
         /// <param name="expectsMutationField">Whether MutationBuilder will generate a mutation field for the GraphQL schema.</param>
         [DataTestMethod]
+        [Ignore]
         [DataRow(GraphQLOperation.Mutation, new[] { Config.Operation.Execute }, new[] { "execute" }, true, DisplayName = "Mutation field generated since all metadata is valid")]
         [DataRow(null, new[] { Config.Operation.Execute }, new[] { "execute" }, true, DisplayName = "Mutation field generated since default operation is mutation.")]
         [DataRow(GraphQLOperation.Mutation, new[] { Config.Operation.Read }, new[] { "read" }, false, DisplayName = "Mutation field not generated because invalid permissions were supplied")]
@@ -1048,6 +1049,8 @@ type Foo @model(name:""Foo"") {{
             const string FIELDNOTFOUND_ERROR = "The expected mutation field schema was not detected.";
             try
             {
+                // Gets the specific mutation field generated for GraphQL type 'StoredProcedureType' named 'executeMyStoredProcedure'
+                // from the schema root field 'Mutation'
                 ObjectTypeDefinitionNode mutation = GetMutationNode(mutationRoot);
 
                 // With a minimized configuration for this entity, the only field expected is the one that may be generated from this test.

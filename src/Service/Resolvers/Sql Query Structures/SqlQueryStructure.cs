@@ -809,7 +809,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             foreach (string column in primaryKeyExtraColumns)
             {
                 MetadataProvider.TryGetExposedColumnName(EntityName, column, out string? exposedColumnName);
-                AddColumn(column, labelName: exposedColumnName!) ;
+                AddColumn(column, labelName: exposedColumnName!);
             }
 
             // Add any other left over orderBy columns to the select clause apart from those
@@ -820,7 +820,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             foreach (string column in orderByExtraColumns)
             {
                 MetadataProvider.TryGetExposedColumnName(EntityName, column, out string? exposedColumnName);
-                AddColumn(column, labelName: exposedColumnName!) ;
+                AddColumn(column, labelName: exposedColumnName!);
             }
         }
 

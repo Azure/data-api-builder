@@ -12,7 +12,7 @@
     <BaseOutputPath>..\..\out\cli</BaseOutputPath>
     <RuntimeIdentifiers>win-x64;linux-x64;osx-x64</RuntimeIdentifiers>
     <PackageId>Microsoft.DataApiBuilder</PackageId>
-    <Title>DataApiBuilder</Title>
+    <Title>Microsoft.DataApiBuilder</Title>
     <Authors>Microsoft</Authors>
     <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
     <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>

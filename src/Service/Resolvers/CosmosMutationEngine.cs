@@ -109,6 +109,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 input = (JObject?)ParseInlineInputItem(item);
             }
 
+            if (input is null)
+            {
+                throw new InvalidDataException("Input Item field is invalid");
+            }
+
             return await container.CreateItemAsync(input);
         }
 
@@ -151,7 +156,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 input = (JObject?)ParseInlineInputItem(item);
             }
 
-            return await container.ReplaceItemAsync<JObject>(input, id, new PartitionKey(partitionKey), new ItemRequestOptions());
+            if (input is null)
+            {
+                throw new InvalidDataException("Input Item field is invalid");
+            }
+            else
+            {
+                return await container.ReplaceItemAsync<JObject>(input, id, new PartitionKey(partitionKey), new ItemRequestOptions());
+            }
         }
 
         /// <summary>

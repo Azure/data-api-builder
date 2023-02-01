@@ -181,14 +181,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
         }
 
         /// <summary>
-        /// Request only after from the pagination
+        /// Request only after from the pagination for different data types.
         /// </summary>
         /// <remarks>
         /// This is probably not a common use case, but it is necessary to test graphql's capabilites to only
-        /// selectively retreive data
+        /// selectively retreive data.
         /// </remarks>
         [DataTestMethod]
-        [DataRow("id", 1, 4, "", "", DisplayName = "Test after token for primary key values.")]
+        [DataRow("id", 1, 4, "", "",
+            DisplayName = "Test after token for primary key values.")]
         [DataRow("byte_types", 0, 255, 2, 4, DisplayName = "Test after token for byte values.")]
         [DataRow("short_types", -32768, 32767, 3, 4, DisplayName = "Test after token for short values.")]
         [DataRow("int_types", -2147483648, 2147483647, 3, 4,
@@ -201,23 +202,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             DisplayName = "Test after token for single values.")]
         [DataRow("float_types", -1.7E308, 1.7E308, 3, 4,
             DisplayName = "Test after token for float values.")]
-        [DataRow("decimal_types", 2.929292E-100, 2.929292E-100, 3, 4,
+        [DataRow("decimal_types", -9.292929, 0.333333, 2, 1,
             DisplayName = "Test after token for decimal values.")]
-        /*[DataRow("boolean_types", 0, )]
-        [DataRow("datetime_types", , )]
-        [DataRow("bytearray_types", , )]
-        [DataRow("guid_types", , )] */
-        [TestMethod]
+        [DataRow("boolean_types", "false", "true", 2, 4,
+            DisplayName = "Test after token for boolean values.")]
+        [DataRow("datetime_types", "\"1753-01-01T00:00:00.000\"",
+            "\"9999-12-31T23:59:59.997\"", 3, 4,
+            DisplayName = "Test after token for datetime values.")]
+        [DataRow("bytearray_types", "\"AAAAAA==\"", "\"/////w==\"", 3, 4,
+            DisplayName = "Test after token for bytearray values.")]
         public async Task RequestAfterTokenOnly(
             string exposedFieldName,
             object afterValue,
             object endCursorValue,
             object afterIdValue,
-            object endCursorIdValue,
-            string defaultSchema = "dbo")
+            object endCursorIdValue)
         {
             string graphQLQueryName = "supportedTypes";
             string after;
+            string defaultSchema = _sqlMetadataProvider.GetDefaultSchemaName();
             if ("id".Equals(exposedFieldName))
             {
                 after = SqlPaginationUtil.Base64Encode(

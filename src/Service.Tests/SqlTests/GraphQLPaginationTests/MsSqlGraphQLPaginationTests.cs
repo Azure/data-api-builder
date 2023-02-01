@@ -19,6 +19,5 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             DatabaseEngine = TestCategory.MSSQL;
             await InitializeTestFixture(context);
         }
-
     }
 }

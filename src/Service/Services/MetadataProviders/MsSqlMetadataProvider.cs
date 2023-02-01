@@ -26,7 +26,7 @@ namespace Azure.DataApiBuilder.Service.Services
         {
         }
 
-        protected override string GetDefaultSchemaName()
+        public override string GetDefaultSchemaName()
         {
             return "dbo";
         }

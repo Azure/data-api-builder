@@ -429,7 +429,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// each derived class should override this method.
         /// </summary>
         /// <exception cref="NotSupportedException"></exception>
-        protected virtual string GetDefaultSchemaName()
+        public virtual string GetDefaultSchemaName()
         {
             throw new NotSupportedException($"Cannot get default schema " +
                 $"name for database type {_databaseType}");

@@ -147,5 +147,10 @@ namespace Azure.DataApiBuilder.Service.Services
 
             return databaseObject;
         }
+
+        /// <summary>
+        /// Retrieves the default schema name for this metadata provider.
+        /// </summary>
+        public string GetDefaultSchemaName();
     }
 }

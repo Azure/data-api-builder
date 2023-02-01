@@ -224,5 +224,11 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
 
             return entityName!;
         }
+
+        /// <inheritdoc />
+        public string GetDefaultSchemaName()
+        {
+            return string.Empty;
+        }
     }
 }

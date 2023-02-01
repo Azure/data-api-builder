@@ -136,7 +136,7 @@ CREATE TABLE type_table(
     string_types varchar(max),
     single_types real,
     float_types float,
-    decimal_types decimal,
+    decimal_types decimal(38, 19),
     boolean_types bit,
     datetime_types datetime,
     bytearray_types varbinary(max),
@@ -315,8 +315,8 @@ SET IDENTITY_INSERT type_table ON
 INSERT INTO type_table(id, byte_types, short_types, int_types, long_types, string_types, single_types, float_types, decimal_types, boolean_types, datetime_types, bytearray_types) VALUES
     (1, 1, 1, 1, 1, '', 0.33, 0.33, 0.333333, 1, '1999-01-08 10:23:54', 0xABCDEF0123),
     (2, 0, -1, -1, -1, 'lksa;jdflasdf;alsdflksdfkldj', -9.2, -9.2, -9.292929, 0, '1999-01-08 10:23:00', 0x98AB7511AABB1234),
-    (3, 0, -32768, -2147483648, -9223372036854775808, 'null', -3.4E38, -1.7E308, 2.929292E-100, 1, '1999-01-08 10:23:00', 0xFFFFFFFF),
-    (4, 255, 32767, 2147483647, 9223372036854775807, 'null', 3.4E38, 1.7E308, 2.929292E-100, 1, '1999-01-08 10:23:00', 0xFFFFFFFF),
+    (3, 0, -32768, -2147483648, -9223372036854775808, 'null', -3.4E38, -1.7E308, 2.929292E-19, 1, '1753-01-01 00:00:00.000', 0x00000000),
+    (4, 255, 32767, 2147483647, 9223372036854775807, 'null', 3.4E38, 1.7E308, 2.929292E-14, 1, '9999-12-31 23:59:59.997', 0xFFFFFFFF),
     (5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 SET IDENTITY_INSERT type_table OFF
 

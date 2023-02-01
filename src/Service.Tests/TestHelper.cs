@@ -54,7 +54,7 @@ namespace Azure.DataApiBuilder.Service.Tests
                 = new(configPath,
                       configProviderLogger.Object)
                 {
-                    IsLateConfigured = false
+                    IsLateConfigured = true
                 };
 
             return runtimeConfigProvider;

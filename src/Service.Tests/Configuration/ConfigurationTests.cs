@@ -140,12 +140,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [DataRow(new string[] { "" }, true, DisplayName = "Https redirection allowed")]
         [DataRow(new string[] { "--no-https" }, false, DisplayName = "Http redirection disabled")]
         [TestMethod("Validates that https redirection is disabled when --no-https option is used when engine is started through CLI")]
-        public void TestDisablingHttpsRedirection(
+        public async Task TestDisablingHttpsRedirection(
             string[] args,
             bool expectedIsHttpsRedirectionEnabled)
         {
-            TestServer server = new(Program.CreateWebHostBuilder(args));
+            Microsoft.AspNetCore.Hosting.IWebHost webHost = Program.CreateWebHostBuilder(args).Build();
+            webHost.Start();
             Assert.AreEqual(RuntimeConfigProvider.IsRedirectingToHttpsEnabled, expectedIsHttpsRedirectionEnabled);
+            await webHost.StopAsync();
         }
 
         /// <summary>

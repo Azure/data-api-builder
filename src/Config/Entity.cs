@@ -133,9 +133,12 @@ namespace Azure.DataApiBuilder.Config
                     if (ObjectType is SourceType.StoredProcedure)
                     {
                         GraphQLOperation? graphQLOperation;
-                        if (configElement.TryGetProperty(propertyName: "operation", out JsonElement operation) && operation.ValueKind is JsonValueKind.String)
+                        if (configElement.TryGetProperty(propertyName: "operation", out JsonElement operation)
+                            && (operation.ValueKind is JsonValueKind.Number || operation.ValueKind is JsonValueKind.String))
                         {
-                            string operationType = JsonSerializer.Deserialize<string>(operation)!;
+                            string operationType = (operation.ValueKind is JsonValueKind.Number)
+                                                   ? JsonSerializer.Deserialize<GraphQLOperation>(operation)!.ToString()
+                                                   : JsonSerializer.Deserialize<string>(operation)!;
 
                             if (string.Equals(operationType, GraphQLOperation.Mutation.ToString(), StringComparison.OrdinalIgnoreCase) || string.Equals(operationType, string.Empty))
                             {
@@ -152,7 +155,7 @@ namespace Azure.DataApiBuilder.Config
                         }
                         else
                         {
-                            graphQLOperation = GraphQLOperation.Query;
+                            graphQLOperation = GraphQLOperation.Mutation;
                         }
 
                         if (typeConfiguration is null)

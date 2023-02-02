@@ -15,6 +15,7 @@ namespace Cli
         /// Main CLI entry point
         /// </summary>
         /// <param name="args">CLI arguments</param>
+        /// <returns>0 on success, -1 on failure.</returns>
         public static int Main(string[] args)
         {
             Parser parser = new(settings =>

@@ -3,8 +3,8 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Microsoft.Extensions.Logging;
-using static Cli.Utils;
 using static Azure.DataApiBuilder.Service.Startup;
+using static Cli.Utils;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
 namespace Cli

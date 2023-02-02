@@ -132,7 +132,7 @@ namespace Azure.DataApiBuilder.Config
                     // for non stored procedure entity types.
                     if (ObjectType is SourceType.StoredProcedure)
                     {
-                        GraphQLOperation? graphQLOperation = null;
+                        GraphQLOperation? graphQLOperation;
                         if (configElement.TryGetProperty(propertyName: "operation", out JsonElement operation)
                             && operation.ValueKind is JsonValueKind.String)
                         {
@@ -143,13 +143,13 @@ namespace Azure.DataApiBuilder.Config
                                 {
                                     graphQLOperation = GraphQLOperation.Mutation;
                                 }
-
-                                if (Enum.TryParse(deserializedOperation, ignoreCase: true, out GraphQLOperation resolvedOperation))
+                                else if (Enum.TryParse(deserializedOperation, ignoreCase: true, out GraphQLOperation resolvedOperation))
                                 {
                                     graphQLOperation = resolvedOperation;
                                 }
                                 else
                                 {
+                                    throw new JsonException(message: $"Unsupported GraphQL operation type: {operation}");
                                 }
                             }
                             catch (Exception error) when (

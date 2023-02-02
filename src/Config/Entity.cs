@@ -227,7 +227,7 @@ namespace Azure.DataApiBuilder.Config
         /// </summary>
         /// <returns>GraphQL Type configuration for the entity.</returns>
         /// <exception cref="JsonException">Raised when unsupported GraphQL configuration is present on the property "type"</exception>
-        public object? GetGraphQLType()
+        public object? GetGraphQLEnabledOrPath()
         {
             if (GraphQL is null)
             {

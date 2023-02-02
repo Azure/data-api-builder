@@ -15,7 +15,7 @@ namespace Cli
         /// Main CLI entry point
         /// </summary>
         /// <param name="args">CLI arguments</param>
-        public static void Main(string[] args)
+        public static int Main(string[] args)
         {
             Parser parser = new(settings =>
                 {
@@ -34,8 +34,11 @@ namespace Cli
             ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger);
             Utils.SetCliUtilsLogger(cliUtilsLogger);
 
+            // To know if `--help` or `--version` was requested.
+            bool isHelpOrVersionRequested = false;
+
             // Parsing user arguments and executing required methods.
-            ParserResult<object>? result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions>(args)
+            ParserResult<object>? result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions, VersionRequestedError>(args)
                 .WithParsed<InitOptions>(options =>
                 {
                     cliLogger.LogInformation($"{PRODUCT_NAME} {GetProductVersion()}");
@@ -99,7 +102,26 @@ namespace Cli
                     {
                         cliLogger.LogError("Failed to start the engine.");
                     }
+                })
+                .WithNotParsed(err =>
+                {
+                    /// System.CommandLine considers --help and --version as NonParsed Errors
+                    /// ref: https://github.com/commandlineparser/commandline/issues/630
+                    /// This is a workaround to make sure our app exits with exit code 0,
+                    /// when user does --help or --versions.
+                    /// dab --help -> ErrorType.HelpVerbRequestedError
+                    /// dab add --help -> ErrorType.HelpRequestedError
+                    /// dab --version -> ErrorType.VersionRequestedError
+                    List<Error> errors = err.ToList();
+                    if (errors.Any(e => e.Tag == ErrorType.VersionRequestedError
+                                        || e.Tag == ErrorType.HelpRequestedError
+                                        || e.Tag == ErrorType.HelpVerbRequestedError))
+                    {
+                        isHelpOrVersionRequested = true;
+                    }
                 });
+            
+            return ((result is Parsed<Object>) || (isHelpOrVersionRequested))? 0 : -1;
         }
 
         /// <summary>

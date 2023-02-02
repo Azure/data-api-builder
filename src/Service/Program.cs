@@ -61,7 +61,7 @@ namespace Azure.DataApiBuilder.Service
                         });
                     ILogger<Startup>? startupLogger = loggerFactory.CreateLogger<Startup>();
                     ILogger<RuntimeConfigProvider>? configProviderLogger = loggerFactory.CreateLogger<RuntimeConfigProvider>();
-                    CheckForHttpsRedirection(args);
+                    DisableHttpsRedirectionIfNeeded(args);
                     webBuilder.UseStartup(builder =>
                     {
                         return new Startup(builder.Configuration, startupLogger, configProviderLogger);
@@ -114,7 +114,7 @@ namespace Azure.DataApiBuilder.Service
         /// By Default it is enabled.
         /// </summary>
         /// <param name="args">array that may contain flag to disable https redirection.</param>
-        private static void CheckForHttpsRedirection(string[] args)
+        private static void DisableHttpsRedirectionIfNeeded(string[] args)
         {
             for (int i = 0; i < args.Length; i++)
             {
@@ -137,7 +137,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 IHostEnvironment env = hostingContext.HostingEnvironment;
                 AddConfigurationProviders(env, builder, args);
-                CheckForHttpsRedirection(args);
+                DisableHttpsRedirectionIfNeeded(args);
             }).UseStartup<Startup>();
 
         // This is used for testing purposes only. The test web server takes in a

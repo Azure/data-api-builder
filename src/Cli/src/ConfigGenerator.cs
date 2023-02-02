@@ -1106,7 +1106,11 @@ namespace Cli
                 }
                 else
                 {
-                    if (options.GraphQLOperationForStoredProcedure is not null)
+                    if (options.GraphQLOperationForStoredProcedure is null)
+                    {
+                        graphQLOperation = null;
+                    }
+                    else
                     {
                         graphQLType = null;
                     }

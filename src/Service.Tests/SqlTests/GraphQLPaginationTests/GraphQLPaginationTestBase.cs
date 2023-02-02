@@ -201,7 +201,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             DisplayName = "Test after token for long values.")]
         [DataRow("string_types", "\"\"", "\"null\"", 1, 4,
             DisplayName = "Test after token for string values.")]
-        [DataRow("single_types", -3.4E38, 3.4E38, 3, 4,
+        [DataRow("single_types", -3.39E38, 3.4E38, 3, 4,
             DisplayName = "Test after token for single values.")]
         [DataRow("float_types", -1.7E308, 1.7E308, 3, 4,
             DisplayName = "Test after token for float values.")]

@@ -282,7 +282,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: null,
                 entityNameOrPath: _integrationProcedureInsertOneAndDisplay_EntityName,
                 sqlQuery: GetQuery(queryName),
-                operationType: Config.Operation.Insert,
+                operationType: Config.Operation.Execute,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: _integrationProcedureInsertOneAndDisplay_EntityName,

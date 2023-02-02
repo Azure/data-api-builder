@@ -445,14 +445,13 @@ namespace Cli
             }
 
             // Currently, Stored Procedures can be configured with only Execute Operation.
-            if (sourceType is SourceType.StoredProcedure
-                    && !VerifyExecuteOperationForStoredProcedure(operations))
+            bool isStoredProcedure = sourceType is SourceType.StoredProcedure;
+            if (isStoredProcedure && !VerifyExecuteOperationForStoredProcedure(operations))
             {
                 return false;
             }
 
             bool containsWildcardOperation = false;
-            bool isStoredProcedure = sourceType is SourceType.StoredProcedure;
             foreach (string operation in uniqueOperations)
             {
                 if (TryConvertOperationNameToOperation(operation, out Operation op))
@@ -844,10 +843,9 @@ namespace Cli
         /// <summary>
         /// Utility method that converts list of REST HTTP verbs configured for a
         /// stored procedure into an array of RestMethod Enum type.
-        /// When no value is specified by the user, POST method is configured by default.
         /// If any invalid REST methods are supplied, an empty array is returned.
         /// </summary>
-        /// <param name="method">List of REST HTTP verbs configured for the stored procedure</param>
+        /// <param name="methods">Collection of REST HTTP verbs configured for the stored procedure</param>
         /// <returns>REST methods as an array of RestMethod Enum type.</returns>
         public static RestMethod[] CreateRestMethods(IEnumerable<string> methods)
         {

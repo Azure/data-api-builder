@@ -1023,6 +1023,7 @@ namespace Cli
                 restMethods = null;
             }
 
+            // Non-stored procedure scenario when the REST endpoint is disabled for the entity.
             if (restPath is false)
             {
                 if (options.RestRoute is not null)
@@ -1069,7 +1070,6 @@ namespace Cli
                 if (options.GraphQLOperationForStoredProcedure is null)
                 {
                     graphQLOperation = entity.FetchGraphQLOperation();
-                    _logger.LogInformation("Inside null section for gql operation :" + graphQLOperation.ToString());
                 }
                 else
                 {

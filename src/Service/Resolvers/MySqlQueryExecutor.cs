@@ -28,6 +28,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public DefaultAzureCredential AzureCredential { get; set; } = new();
 
         /// <summary>
+        /// The MySql specific connection string builder.
+        /// </summary>
+        public override MySqlConnectionStringBuilder ConnectionStringBuilder
+            => (MySqlConnectionStringBuilder)base.ConnectionStringBuilder;
+
+        /// <summary>
         /// The saved cached access token obtained from DefaultAzureCredentials
         /// representing a managed identity. 
         /// </summary>
@@ -39,11 +45,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             RuntimeConfigProvider runtimeConfigProvider,
             DbExceptionParser dbExceptionParser,
             ILogger<QueryExecutor<MySqlConnection>> logger)
-            : base(runtimeConfigProvider, dbExceptionParser, logger)
+            : base(dbExceptionParser,
+                  logger,
+                  new MySqlConnectionStringBuilder(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString),
+                  runtimeConfigProvider)
         {
             _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
             _attemptToSetAccessToken =
-                ShouldManagedIdentityAccessBeAttempted(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString);
+                ShouldManagedIdentityAccessBeAttempted();
         }
 
         /// <summary>
@@ -87,11 +96,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// a System.InvalidOperationException.
         /// 2. It is NOT a Windows Integrated Security scenario.
         /// </summary>
-        private static bool ShouldManagedIdentityAccessBeAttempted(string connString)
+        private bool ShouldManagedIdentityAccessBeAttempted()
         {
-            MySqlConnectionStringBuilder connStringBuilder = new(connString);
-            return !string.IsNullOrEmpty(connStringBuilder.UserID) &&
-                string.IsNullOrEmpty(connStringBuilder.Password);
+            return !string.IsNullOrEmpty(ConnectionStringBuilder.UserID) &&
+                string.IsNullOrEmpty(ConnectionStringBuilder.Password);
         }
 
         /// <summary>

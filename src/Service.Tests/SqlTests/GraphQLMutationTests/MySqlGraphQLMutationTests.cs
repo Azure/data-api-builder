@@ -118,6 +118,26 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
+        /// Demonstrates that using mapped column names for fields within the GraphQL mutatation results in successful engine processing.
+        /// </summary>
+        [TestMethod]
+        public async Task InsertMutationWithVariablesAndMappings()
+        {
+            string mySqlQuery = @"
+                SELECT JSON_OBJECT('column1', `subq`.`column1`, 'column2', `subq`.`column2`) AS `data`
+                FROM (
+                    SELECT `table0`.`__column1` AS `column1`,
+                        `table0`.`__column2` AS `column2`
+                    FROM `GQLmappings` AS `table0`
+                    WHERE `table0`.`__column1` = 2
+                    ORDER BY `table0`.`__column1` asc LIMIT 1
+                    ) AS `subq`
+            ";
+
+            await InsertMutationWithVariablesAndMappings(mySqlQuery);
+        }
+
+        /// <summary>
         /// <code>Do: </code> Inserts new review with default content for a Review and return its id and content
         /// <code>Check: </code> If book with the given id is present in the database then
         /// the mutation query will return the review Id with the content of the review added
@@ -210,6 +230,58 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             ";
 
             await UpdateMutationForComputedColumns(mySqlQuery);
+        }
+
+        /// <summary>
+        /// Demonstrates that using mapped column names for fields within the GraphQL mutatation results in successful engine processing
+        /// of the column2 value update for the record where column1 = $id.
+        /// </summary>
+        [TestMethod]
+        public async Task UpdateMutationWithVariablesAndMappings()
+        {
+            string mySqlQuery = @"
+                SELECT JSON_OBJECT('column1', `subq2`.`column1`, 'column2', `subq2`.`column2`) AS `data`
+                FROM (
+                    SELECT `table0`.`__column1` AS `column1`,
+                        `table0`.`__column2` AS `column2`
+                    FROM `GQLmappings` AS `table0`
+                    WHERE `table0`.`__column1` = 3
+                    AND `table0`.`__column2` = 'Updated Value of Mapped Column'
+                    ORDER BY `table0`.`__column1` asc LIMIT 1
+                    ) AS `subq2`
+            ";
+
+            await UpdateMutationWithVariablesAndMappings(mySqlQuery);
+        }
+
+        /// <summary>
+        /// Demonstrates that using mapped column names for fields within the GraphQL mutatation results in successful engine processing
+        /// of removal of the record where column1 = $id and the returned object representing the deleting record utilizes the mapped column values.
+        /// </summary>
+        [TestMethod]
+        public async Task DeleteMutationWithVariablesAndMappings()
+        {
+            string mySqlQueryForResult = @"
+                SELECT JSON_OBJECT('column1', `subq2`.`column1`, 'column2', `subq2`.`column2`) AS `data`
+                FROM (
+                    SELECT `table0`.`__column1` AS `column1`,
+                        `table0`.`__column2` AS `column2`
+                    FROM `GQLmappings` AS `table0`
+                    WHERE `table0`.`__column1` = 4
+                    ORDER BY `table0`.`__column1` asc LIMIT 1
+                    ) AS `subq2`
+            ";
+
+            string mySqlQueryToVerifyDeletion = @"
+                SELECT JSON_OBJECT('count', `subq`.`count`) AS `data`
+                FROM (
+                    SELECT COUNT(*) AS `count`
+                    FROM `GQLmappings` AS `table0`
+                    WHERE `__column1` = 4
+                    ) AS `subq`
+            ";
+
+            await DeleteMutationWithVariablesAndMappings(mySqlQueryForResult, mySqlQueryToVerifyDeletion);
         }
 
         /// <summary>

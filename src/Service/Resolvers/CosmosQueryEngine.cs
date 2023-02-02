@@ -193,10 +193,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public IEnumerable<JsonDocument> ResolveListType(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
+        public object ResolveListType(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
         {
             //TODO: Try to avoid additional deserialization/serialization here.
-            return JsonSerializer.Deserialize<List<JsonDocument>>(element.ToString());
+            return JsonSerializer.Deserialize(element, fieldSchema.RuntimeType);
         }
 
         /// <summary>

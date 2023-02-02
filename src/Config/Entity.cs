@@ -206,7 +206,7 @@ namespace Azure.DataApiBuilder.Config
         /// <returns>Name of the graphQL operation as an enum or null if parsing of the enum fails.</returns>
         public GraphQLOperation? FetchGraphQLOperation()
         {
-            if (GraphQL is true || GraphQL is null || GraphQL is GraphQLEntitySettings _)
+            if (GraphQL is true || GraphQL is GraphQLEntitySettings _)
             {
                 return GraphQLOperation.Mutation;
             }
@@ -227,52 +227,22 @@ namespace Azure.DataApiBuilder.Config
         /// </summary>
         /// <returns>GraphQL Type configuration for the entity.</returns>
         /// <exception cref="JsonException">Raised when unsupported GraphQL configuration is present on the property "type"</exception>
-        public object? GetGraphQLEnabledOrPath()
+        public object? FetchGraphQLEnabledOrPath()
         {
-            if (GraphQL is null)
+            if(GraphQL is bool graphQLEnabled)
             {
-                return null;
+                return graphQLEnabled;
+            }
+            else if(GraphQL is GraphQLEntitySettings graphQLEntitySettings)
+            {
+                return graphQLEntitySettings.Type;
+            }
+            else if(GraphQL is GraphQLStoredProcedureEntityVerboseSettings graphQLSpSettings)
+            {
+                return graphQLSpSettings.Type;
             }
 
-            JsonElement graphQLConfigElement = (JsonElement)GraphQL;
-            if (graphQLConfigElement.ValueKind is JsonValueKind.True || graphQLConfigElement.ValueKind is JsonValueKind.False)
-            {
-                return JsonSerializer.Deserialize<bool>(graphQLConfigElement);
-            }
-            else if (graphQLConfigElement.ValueKind is JsonValueKind.String)
-            {
-                return JsonSerializer.Deserialize<string>(graphQLConfigElement);
-            }
-            else if (graphQLConfigElement.ValueKind is JsonValueKind.Object)
-            {
-                if (graphQLConfigElement.TryGetProperty("type", out JsonElement graphQLTypeElement))
-                {
-                    if (graphQLTypeElement.ValueKind is JsonValueKind.True || graphQLTypeElement.ValueKind is JsonValueKind.False)
-                    {
-                        return JsonSerializer.Deserialize<bool>(graphQLTypeElement);
-                    }
-                    else if (graphQLTypeElement.ValueKind is JsonValueKind.String)
-                    {
-                        return JsonSerializer.Deserialize<string>(graphQLTypeElement);
-                    }
-                    else if (graphQLTypeElement.ValueKind is JsonValueKind.Object)
-                    {
-                        return JsonSerializer.Deserialize<SingularPlural>(graphQLTypeElement);
-                    }
-                    else
-                    {
-                        throw new JsonException("Unsupported GraphQL Type");
-                    }
-                }
-                else
-                {
-                    return null;
-                }
-            }
-            else
-            {
-                throw new JsonException("Unsupported GraphQL Type");
-            }
+            return null;
         }
 
         /// <summary>
@@ -361,48 +331,22 @@ namespace Azure.DataApiBuilder.Config
         /// </summary>
         /// <returns></returns>
         /// <exception cref="JsonException"></exception>
-        public object? GetRestEnabledOrPathSettings()
+        public object? FetchRestEnabledOrPathSettings()
         {
-            if (Rest is null)
+            if(Rest is bool restEnabled)
             {
-                return null;
+                return restEnabled;
+            }
+            else if(Rest is RestEntitySettings restEntitySettings)
+            {
+                return restEntitySettings.Path;
+            }
+            else if(Rest is RestStoredProcedureEntityVerboseSettings restSpSettings)
+            {
+                return restSpSettings.Path;         
             }
 
-            JsonElement RestConfigElement = (JsonElement)Rest;
-            if (RestConfigElement.ValueKind is JsonValueKind.True || RestConfigElement.ValueKind is JsonValueKind.True)
-            {
-                return JsonSerializer.Deserialize<bool>(RestConfigElement);
-            }
-            else if (RestConfigElement.ValueKind is JsonValueKind.String)
-            {
-                return JsonSerializer.Deserialize<string>(RestConfigElement);
-            }
-            else if (RestConfigElement.ValueKind is JsonValueKind.Object)
-            {
-                if (RestConfigElement.TryGetProperty("path", out JsonElement restPathElement))
-                {
-                    if (restPathElement.ValueKind is JsonValueKind.True || restPathElement.ValueKind is JsonValueKind.False)
-                    {
-                        return JsonSerializer.Deserialize<bool>(restPathElement);
-                    }
-                    else if (restPathElement.ValueKind is JsonValueKind.String)
-                    {
-                        return JsonSerializer.Deserialize<string>(restPathElement);
-                    }
-                    else
-                    {
-                        throw new JsonException("Unsupported Rest Path Type");
-                    }
-                }
-                else
-                {
-                    return null;
-                }
-            }
-            else
-            {
-                throw new JsonException("Unsupported Rest Type");
-            }
+            return null;
         }
     }
 

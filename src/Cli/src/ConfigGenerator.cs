@@ -252,9 +252,19 @@ namespace Cli
                 restMethods = null;
             }
 
+            if(restPathDetails is null && restMethods is not null)
+            {
+                restPathDetails = true;
+            }
+
             if (graphQLNamingConfig is not null && graphQLNamingConfig is false)
             {
                 graphQLOperationsForStoredProcedures = null;
+            }
+
+            if(graphQLNamingConfig is null && graphQLOperationsForStoredProcedures is not null )
+            {
+                graphQLNamingConfig = true;
             }
 
             // Create new entity.
@@ -1002,9 +1012,9 @@ namespace Cli
         /// RestStoredProcedureEntityVerboseSettings-> when a stored procedure entity is configured with explicit RestMethods and Path settings.</returns>
         private static object? ConstructUpdatedRestDetails(Entity entity, EntityOptions options)
         {
-
             // Updated REST Route details
-            object? restPath = (options.RestRoute is not null) ? ConstructRestPathDetails(options.RestRoute) : entity.GetRestEnabledOrPathSettings();
+            object? restPath = (options.RestRoute is not null) ? ConstructRestPathDetails(options.RestRoute) : entity.FetchRestEnabledOrPathSettings();
+            
 
             // Updated REST Methods info for stored procedures
             RestMethod[]? restMethods;
@@ -1063,7 +1073,7 @@ namespace Cli
         private static object? ConstructUpdatedGraphQLDetails(Entity entity, EntityOptions options)
         {
             //Updated GraphQL Type
-            object? graphQLType = (options.GraphQLType is not null) ? ConstructGraphQLTypeDetails(options.GraphQLType) : entity.GetGraphQLEnabledOrPath();
+            object? graphQLType = (options.GraphQLType is not null) ? ConstructGraphQLTypeDetails(options.GraphQLType) : entity.FetchGraphQLEnabledOrPath();
             GraphQLOperation? graphQLOperation;
 
             if (!IsStoredProcedureConvertedToOtherTypes(entity, options)

@@ -627,12 +627,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     else if (entity.GraphQL.GetType() == typeof(GraphQLStoredProcedureEntityOperationSettings))
                     {
                         GraphQLStoredProcedureEntityOperationSettings graphQL = (GraphQLStoredProcedureEntityOperationSettings)entity.GraphQL;
-                        Assert.AreEqual(typeof(GraphQLOperation), graphQL.GraphQLOperation.GetType());
+                        Assert.AreEqual(typeof(string), graphQL.GraphQLOperation.GetType());
                     }
                     else if (entity.GraphQL.GetType() == typeof(GraphQLStoredProcedureEntityVerboseSettings))
                     {
                         GraphQLStoredProcedureEntityVerboseSettings graphQL = (GraphQLStoredProcedureEntityVerboseSettings)entity.GraphQL;
-                        Assert.AreEqual(typeof(GraphQLOperation), graphQL.GraphQLOperation.GetType());
+                        Assert.AreEqual(typeof(string), graphQL.GraphQLOperation.GetType());
                         Assert.IsTrue(graphQL.Type.GetType() == typeof(bool)
                                     || graphQL.Type.GetType() == typeof(string)
                                     || graphQL.Type.GetType() == typeof(SingularPlural));

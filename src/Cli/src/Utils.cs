@@ -186,7 +186,7 @@ namespace Cli
         /// </summary>
         /// <param name="operations">Array of operations which is of type JsonElement.</param>
         /// <returns>Dictionary of operations</returns>
-        public static IDictionary<Operation, PermissionOperation> ConvertOperationArrayToIEnumerable(object[] operations)
+        public static IDictionary<Operation, PermissionOperation> ConvertOperationArrayToIEnumerable(object[] operations, SourceType sourceType)
         {
             Dictionary<Operation, PermissionOperation> result = new();
             foreach (object operation in operations)
@@ -217,11 +217,10 @@ namespace Cli
                     if (ac.Name is Operation.All)
                     {
                         // Expand wildcard to all valid operations except execute.
-                        foreach (Operation validOp in PermissionOperation.ValidPermissionOperations)
+                        HashSet<Operation> resolvedOperations = sourceType is SourceType.StoredProcedure ? PermissionOperation.ValidPermissionOperations : PermissionOperation.ValidStoredProcedurePermissionOperations;
+                        foreach (Operation validOp in resolvedOperations)
                         {
-                            result.Add(
-                                validOp,
-                                new PermissionOperation(validOp, Policy: ac.Policy, Fields: ac.Fields));
+                            result.Add(validOp, new PermissionOperation(validOp, Policy: ac.Policy, Fields: ac.Fields));
                         }
                     }
                     else

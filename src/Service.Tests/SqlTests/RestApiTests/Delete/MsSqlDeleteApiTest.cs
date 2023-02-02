@@ -74,7 +74,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Delete
                     queryString: null,
                     entityNameOrPath: _integrationProcedureDeleteOne_EntityName,
                     sqlQuery: GetQuery(nameof(DeleteOneWithStoredProcedureTest)),
-                    operationType: Config.Operation.Delete,
+                    operationType: Config.Operation.Execute,
                     requestBody: null,
                     expectedStatusCode: HttpStatusCode.NoContent
                 );

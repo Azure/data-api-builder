@@ -237,6 +237,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     return HttpMethod.Post;
             }
         }
+
         /// <summary>
         /// Helper function handles the loading of the runtime config.
         /// </summary>

@@ -25,7 +25,6 @@ namespace Azure.DataApiBuilder.Config
     public record Entity(
         [property: JsonPropertyName("source")]
         object Source,
-        [property: JsonPropertyName("rest")]
         object? Rest,
         object? GraphQL,
         [property: JsonPropertyName("permissions")]
@@ -48,6 +47,9 @@ namespace Azure.DataApiBuilder.Config
 
         [JsonIgnore]
         public string[]? KeyFields { get; private set; }
+
+        [property: JsonPropertyName("rest")]
+        public object? Rest { get; set; } = Rest;
 
         [property: JsonPropertyName("graphql")]
         public object? GraphQL { get; set; } = GraphQL;
@@ -76,12 +78,12 @@ namespace Azure.DataApiBuilder.Config
         }
 
         /// <summary>
-        /// Processes per entity GraphQL Naming Settings
-        /// Top Level: true | false
-        /// Alternatives: string, SingularPlural object
-        /// returns true on successfull processing
-        /// else false.
+        /// Processes per entity GraphQL runtime configuration JSON:
+        /// (bool) GraphQL enabled for entity true | false
+        /// (JSON Object) Alternative Naming: string, SingularPlural object
+        /// (JSON Object) Explicit Stored Procedure operation type "query" or "mutation"
         /// </summary>
+        /// <returns>True when processed successfully, otherwise false.</returns>
         public bool TryProcessGraphQLNamingConfig()
         {
             if (GraphQL is null)
@@ -97,25 +99,87 @@ namespace Azure.DataApiBuilder.Config
                 }
                 else if (configElement.ValueKind is JsonValueKind.Object)
                 {
-                    JsonElement nameTypeSettings = configElement.GetProperty("type");
-                    object nameConfiguration;
+                    // Hydrate the ObjectType field with metadata from database source.
+                    TryPopulateSourceFields();
 
-                    if (nameTypeSettings.ValueKind is JsonValueKind.String)
+                    object? typeConfiguration = null;
+                    if (configElement.TryGetProperty(propertyName: "type", out JsonElement nameTypeSettings))
                     {
-                        nameConfiguration = JsonSerializer.Deserialize<string>(nameTypeSettings)!;
+                        if (nameTypeSettings.ValueKind is JsonValueKind.True || nameTypeSettings.ValueKind is JsonValueKind.False)
+                        {
+                            typeConfiguration = JsonSerializer.Deserialize<bool>(nameTypeSettings);
+                        }
+                        else if (nameTypeSettings.ValueKind is JsonValueKind.String)
+                        {
+                            typeConfiguration = JsonSerializer.Deserialize<string>(nameTypeSettings)!;
+                        }
+                        else if (nameTypeSettings.ValueKind is JsonValueKind.Object)
+                        {
+                            typeConfiguration = JsonSerializer.Deserialize<SingularPlural>(nameTypeSettings)!;
+                        }
+                        else
+                        {
+                            // Not Supported Type
+                            return false;
+                        }
                     }
-                    else if (nameTypeSettings.ValueKind is JsonValueKind.Object)
+
+                    // Only stored procedure configuration can override the GraphQL operation type.
+                    // When the entity is a stored procedure, GraphQL metadata will either be:
+                    // - GraphQLStoredProcedureEntityOperationSettings when only operation is configured.
+                    // - GraphQLStoredProcedureEntityVerboseSettings when both type and operation are configured.
+                    // This verbosity is necessary to ensure the operation key/value pair is not persisted in the runtime config
+                    // for non stored procedure entity types.
+                    if (ObjectType is SourceType.StoredProcedure)
                     {
-                        nameConfiguration = JsonSerializer.Deserialize<SingularPlural>(nameTypeSettings)!;
+                        GraphQLOperation? graphQLOperation;
+                        if (configElement.TryGetProperty(propertyName: "operation", out JsonElement operation)
+                            && operation.ValueKind is JsonValueKind.String)
+                        {
+                            try
+                            {
+                                string? deserializedOperation = JsonSerializer.Deserialize<string>(operation);
+                                if (string.IsNullOrWhiteSpace(deserializedOperation))
+                                {
+                                    graphQLOperation = GraphQLOperation.Mutation;
+                                }
+                                else if (Enum.TryParse(deserializedOperation, ignoreCase: true, out GraphQLOperation resolvedOperation))
+                                {
+                                    graphQLOperation = resolvedOperation;
+                                }
+                                else
+                                {
+                                    throw new JsonException(message: $"Unsupported GraphQL operation type: {operation}");
+                                }
+                            }
+                            catch (Exception error) when (
+                                error is JsonException ||
+                                error is ArgumentNullException ||
+                                error is NotSupportedException ||
+                                error is InvalidOperationException ||
+                                error is ArgumentException)
+                            {
+                                throw new JsonException(message: $"Unsupported GraphQL operation type: {operation}", innerException: error);
+                            }
+                        }
+                        else
+                        {
+                            graphQLOperation = GraphQLOperation.Mutation;
+                        }
+
+                        if (typeConfiguration is null)
+                        {
+                            GraphQL = new GraphQLStoredProcedureEntityOperationSettings(GraphQLOperation: graphQLOperation.ToString());
+                        }
+                        else
+                        {
+                            GraphQL = new GraphQLStoredProcedureEntityVerboseSettings(Type: typeConfiguration, GraphQLOperation: graphQLOperation.ToString());
+                        }
                     }
                     else
                     {
-                        // Not Supported Type
-                        return false;
+                        GraphQL = new GraphQLEntitySettings(Type: typeConfiguration);
                     }
-
-                    GraphQLEntitySettings graphQLEntitySettings = new(Type: nameConfiguration);
-                    GraphQL = graphQLEntitySettings;
                 }
             }
             else
@@ -125,6 +189,90 @@ namespace Azure.DataApiBuilder.Config
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Returns the GraphQL operation that is configured for the stored procedure as a string.
+        /// </summary>
+        /// <returns>Name of the graphQL operation as a string or null if no operation type is resolved.</returns>
+        public string? GetGraphQLOperationAsString()
+        {
+            return FetchGraphQLOperation().ToString();
+        }
+
+        /// <summary>
+        /// Fetches the name of the graphQL operation configured for the stored procedure as an enum.
+        /// </summary>
+        /// <returns>Name of the graphQL operation as an enum or null if parsing of the enum fails.</returns>
+        public GraphQLOperation? FetchGraphQLOperation()
+        {
+            if (GraphQL is true || GraphQL is null || GraphQL is GraphQLEntitySettings _)
+            {
+                return GraphQLOperation.Mutation;
+            }
+            else if (GraphQL is GraphQLStoredProcedureEntityOperationSettings operationSettings)
+            {
+                return Enum.TryParse(operationSettings.GraphQLOperation, ignoreCase: true, out GraphQLOperation operation) ? operation : null;
+            }
+            else if (GraphQL is GraphQLStoredProcedureEntityVerboseSettings verboseSettings)
+            {
+                return Enum.TryParse(verboseSettings.GraphQLOperation, ignoreCase: true, out GraphQLOperation operation) ? operation : null;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Gets an entity's GraphQL Type metadata by deserializing the JSON runtime configuration.
+        /// </summary>
+        /// <returns>GraphQL Type configuration for the entity.</returns>
+        /// <exception cref="JsonException">Raised when unsupported GraphQL configuration is present on the property "type"</exception>
+        public object? GetGraphQLEnabledOrPath()
+        {
+            if (GraphQL is null)
+            {
+                return null;
+            }
+
+            JsonElement graphQLConfigElement = (JsonElement)GraphQL;
+            if (graphQLConfigElement.ValueKind is JsonValueKind.True || graphQLConfigElement.ValueKind is JsonValueKind.False)
+            {
+                return JsonSerializer.Deserialize<bool>(graphQLConfigElement);
+            }
+            else if (graphQLConfigElement.ValueKind is JsonValueKind.String)
+            {
+                return JsonSerializer.Deserialize<string>(graphQLConfigElement);
+            }
+            else if (graphQLConfigElement.ValueKind is JsonValueKind.Object)
+            {
+                if (graphQLConfigElement.TryGetProperty("type", out JsonElement graphQLTypeElement))
+                {
+                    if (graphQLTypeElement.ValueKind is JsonValueKind.True || graphQLTypeElement.ValueKind is JsonValueKind.False)
+                    {
+                        return JsonSerializer.Deserialize<bool>(graphQLTypeElement);
+                    }
+                    else if (graphQLTypeElement.ValueKind is JsonValueKind.String)
+                    {
+                        return JsonSerializer.Deserialize<string>(graphQLTypeElement);
+                    }
+                    else if (graphQLTypeElement.ValueKind is JsonValueKind.Object)
+                    {
+                        return JsonSerializer.Deserialize<SingularPlural>(graphQLTypeElement);
+                    }
+                    else
+                    {
+                        throw new JsonException("Unsupported GraphQL Type");
+                    }
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            else
+            {
+                throw new JsonException("Unsupported GraphQL Type");
+            }
         }
 
         /// <summary>
@@ -172,6 +320,88 @@ namespace Azure.DataApiBuilder.Config
             else
             {
                 throw new JsonException(message: $"Source not one of string or object");
+            }
+        }
+
+        /// <summary>
+        /// Gets the REST HTTP methods configured for the stored procedure
+        /// </summary>
+        /// <returns>An array of HTTP methods configured</returns>
+        public RestMethod[]? GetRestMethodsConfiguredForStoredProcedure()
+        {
+            if (Rest is not null && ((JsonElement)Rest).ValueKind is JsonValueKind.Object)
+            {
+                if (((JsonElement)Rest).TryGetProperty("path", out JsonElement _))
+                {
+                    RestStoredProcedureEntitySettings? restSpSettings = JsonSerializer.Deserialize<RestStoredProcedureEntitySettings>((JsonElement)Rest, RuntimeConfig.SerializerOptions);
+                    if (restSpSettings is not null)
+                    {
+                        return restSpSettings.RestMethods;
+                    }
+
+                }
+                else
+                {
+                    RestStoredProcedureEntityVerboseSettings? restSpSettings = JsonSerializer.Deserialize<RestStoredProcedureEntityVerboseSettings>((JsonElement)Rest, RuntimeConfig.SerializerOptions);
+                    if (restSpSettings is not null)
+                    {
+                        return restSpSettings.RestMethods;
+                    }
+                }
+            }
+
+            return new RestMethod[] { RestMethod.Post };
+        }
+
+        /// <summary>
+        /// Gets the REST API Path Settings for the entity.
+        /// When REST is enabled or disabled without a custom path definition, this
+        /// returns a boolean true/false respectively.
+        /// When a custom path is configured, this returns the custom path definition.
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="JsonException"></exception>
+        public object? GetRestEnabledOrPathSettings()
+        {
+            if (Rest is null)
+            {
+                return null;
+            }
+
+            JsonElement RestConfigElement = (JsonElement)Rest;
+            if (RestConfigElement.ValueKind is JsonValueKind.True || RestConfigElement.ValueKind is JsonValueKind.True)
+            {
+                return JsonSerializer.Deserialize<bool>(RestConfigElement);
+            }
+            else if (RestConfigElement.ValueKind is JsonValueKind.String)
+            {
+                return JsonSerializer.Deserialize<string>(RestConfigElement);
+            }
+            else if (RestConfigElement.ValueKind is JsonValueKind.Object)
+            {
+                if (RestConfigElement.TryGetProperty("path", out JsonElement restPathElement))
+                {
+                    if (restPathElement.ValueKind is JsonValueKind.True || restPathElement.ValueKind is JsonValueKind.False)
+                    {
+                        return JsonSerializer.Deserialize<bool>(restPathElement);
+                    }
+                    else if (restPathElement.ValueKind is JsonValueKind.String)
+                    {
+                        return JsonSerializer.Deserialize<string>(restPathElement);
+                    }
+                    else
+                    {
+                        throw new JsonException("Unsupported Rest Path Type");
+                    }
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            else
+            {
+                throw new JsonException("Unsupported Rest Type");
             }
         }
     }
@@ -296,16 +526,53 @@ namespace Azure.DataApiBuilder.Config
     /// at which the REST endpoint for this entity is exposed
     /// instead of using the entity-name. Can be a string type.
     /// </param>
-    public record RestEntitySettings(object Path);
+    public record RestEntitySettings(object? Path);
+
+    /// <summary>
+    /// Describes the REST settings specific to an entity backed by a stored procedure.
+    /// </summary>
+    /// <param name="RestMethods">Defines the HTTP actions that are supported for stored procedures.</param>
+    public record RestStoredProcedureEntitySettings([property: JsonPropertyName("methods")] RestMethod[]? RestMethods = null);
+
+    /// <summary>
+    /// Describes the verbose REST settings specific to an entity backed by a stored procedure.
+    /// Both path overrides and methods overrides can be defined.
+    /// </summary>
+    /// <param name="Path">Instructs the runtime to use this as the path
+    /// at which the REST endpoint for this entity is exposed
+    /// instead of using the entity-name. Can be a string type.
+    /// </param>
+    /// <param name="RestMethods">Defines the HTTP actions that are supported for stored procedures.</param>
+    public record RestStoredProcedureEntityVerboseSettings(object? Path,
+                                     [property: JsonPropertyName("methods")] RestMethod[]? RestMethods = null);
 
     /// <summary>
     /// Describes the GraphQL settings specific to an entity.
     /// </summary>
-    /// <param name="Type">Defines the name of the GraphQL type
-    /// that will be used for this entity.Can be a string or Singular-Plural type.
+    /// <param name="Type">Defines the name of the GraphQL type.
+    /// Can be a string or Singular-Plural type.
     /// If string, a default plural route will be added as per the rules at
-    /// <href="https://engdic.org/singular-and-plural-noun-rules-definitions-examples/" /></param>
-    public record GraphQLEntitySettings([property: JsonPropertyName("type")] object? Type);
+    /// </param>
+    /// <seealso cref="<https://engdic.org/singular-and-plural-noun-rules-definitions-examples/"/>
+    public record GraphQLEntitySettings([property: JsonPropertyName("type")] object? Type = null);
+
+    /// <summary>
+    /// Describes the GraphQL settings applicable to an entity which is backed by a stored procedure.
+    /// The GraphQL Operation denotes the field type generated for the stored procedure: mutation or query.
+    /// </summary>
+    /// <param name="GraphQLOperation">Defines the graphQL operation (mutation/query) that is supported for stored procedures 
+    /// that will be used for this entity."</param>
+    public record GraphQLStoredProcedureEntityOperationSettings([property: JsonPropertyName("operation")] string? GraphQLOperation = null);
+
+    /// <summary>
+    /// Describes the GraphQL settings applicable to an entity which is backed by a stored procedure.
+    /// The GraphQL Operation denotes the field type generated for the stored procedure: mutation or query.
+    /// </summary>
+    /// <param name="Type">Defines the name of the GraphQL type
+    /// <param name="GraphQLOperation">Defines the graphQL operation (mutation/query) that is supported for stored procedures 
+    /// that will be used for this entity."</param>
+    public record GraphQLStoredProcedureEntityVerboseSettings([property: JsonPropertyName("type")] object? Type = null,
+        [property: JsonPropertyName("operation")] string? GraphQLOperation = null);
 
     /// <summary>
     /// Defines a name or route as singular (required) or

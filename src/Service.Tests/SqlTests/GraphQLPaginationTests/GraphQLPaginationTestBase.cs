@@ -55,7 +55,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
               ],
               ""endCursor"": """ +
-              SqlPaginationUtil.Base64Encode("[{\"Value\":3,\"Direction\":0,\"TableSchema\":\""+ defaultSchema + "\",\"TableName\":\"books\",\"ColumnName\":\"id\"}]") + @""",
+              SqlPaginationUtil.Base64Encode("[{\"Value\":3,\"Direction\":0,\"TableSchema\":\"" + defaultSchema + "\",\"TableName\":\"books\",\"ColumnName\":\"id\"}]") + @""",
               ""hasNextPage"": true
             }";
 

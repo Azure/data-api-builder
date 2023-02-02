@@ -23,6 +23,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
         public async Task RequestFullConnection()
         {
             string graphQLQueryName = "books";
+            string defaultSchema = _sqlMetadataProvider.GetDefaultSchemaName();
             string after = SqlPaginationUtil.Base64Encode("[{\"Value\":1,\"Direction\":0,\"ColumnName\":\"id\"}]");
             string graphQLQuery = @"{
                 books(first: 2," + $"after: \"{after}\")" + @"{
@@ -53,7 +54,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                   }
                 }
               ],
-              ""endCursor"": """ + SqlPaginationUtil.Base64Encode("[{\"Value\":3,\"Direction\":0,\"TableSchema\":\"\",\"TableName\":\"\",\"ColumnName\":\"id\"}]") + @""",
+              ""endCursor"": """ +
+              SqlPaginationUtil.Base64Encode("[{\"Value\":3,\"Direction\":0,\"TableSchema\":\""+ defaultSchema + "\",\"TableName\":\"books\",\"ColumnName\":\"id\"}]") + @""",
               ""hasNextPage"": true
             }";
 

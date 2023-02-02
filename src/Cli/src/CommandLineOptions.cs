@@ -299,7 +299,7 @@ namespace Cli
             "see: https://learn.microsoft.com/en-us/dotnet/api/microsoft.extensions.logging.loglevel?view=dotnet-plat-ext-7.0")]
         public LogLevel? LogLevel { get; }
 
-        [Option("no-https-redirect", Required = false, HelpText = "Specify relationship between two entities.")]
+        [Option("no-https-redirect", Required = false, HelpText = "Disables automatic https redirects.")]
         public bool IsHttpsRedirectionDisabled { get; }
     }
 }

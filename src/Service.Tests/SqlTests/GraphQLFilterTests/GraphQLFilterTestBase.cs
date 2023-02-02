@@ -978,7 +978,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
 
         /// <summary>
         /// Formats the default schema so that it can be
-        /// place right before the identity that it is qualifying
+        /// placed right before the identity that it is qualifying
         /// </summary>
         protected string GetPreIndentDefaultSchema()
         {

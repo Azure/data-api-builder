@@ -94,7 +94,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
 
             // Table aliases and param names are created using the same
             // Counter hence the following intermixed naming:
-            // [table0]:books
+            // [table0]: books
             // [table1]: authors
             // [table2]: books
             // [param3]: 'Awesome'

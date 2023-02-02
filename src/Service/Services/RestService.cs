@@ -215,7 +215,6 @@ namespace Azure.DataApiBuilder.Service.Services
                 case Config.Operation.UpdateIncremental:
                 case Config.Operation.Upsert:
                 case Config.Operation.UpsertIncremental:
-                case Config.Operation.Execute:
                     return await DispatchMutation(context);
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");

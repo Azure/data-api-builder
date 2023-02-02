@@ -229,7 +229,8 @@ namespace Azure.DataApiBuilder.Service.Authorization
                     ObjectType = entity.ObjectType
                 };
 
-                if (entity.ObjectType is SourceType.StoredProcedure)
+                bool isStoredProcedureEntity = entity.ObjectType is SourceType.StoredProcedure;
+                if (isStoredProcedureEntity)
                 {
                     entityToRoleMap.StoredProcedureHttpVerbs = new(entity.GetStoredProcedureRESTVerbs());
                 }
@@ -321,7 +322,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                         // so that it doesn't need to be evaluated per request.
                         PopulateAllowedExposedColumns(operationToColumn.AllowedExposedColumns, entityName, allowedColumns);
 
-                        IEnumerable<Config.Operation> operations = GetAllOperations(operation);
+                        IEnumerable<Config.Operation> operations = GetAllOperationsForObjectType(operation, entity.ObjectType);
                         foreach (Config.Operation crudOperation in operations)
                         {
                             // Try to add the opElement to the map if not present.
@@ -333,7 +334,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
 
                             foreach (string allowedColumn in allowedColumns)
                             {
-                                entityToRoleMap.FieldToRolesMap.TryAdd(key: allowedColumn, CreateOperationToRoleMap());
+                                entityToRoleMap.FieldToRolesMap.TryAdd(key: allowedColumn, CreateOperationToRoleMap(entity.ObjectType));
                                 entityToRoleMap.FieldToRolesMap[allowedColumn][crudOperation].Add(role);
                             }
 
@@ -403,13 +404,20 @@ namespace Azure.DataApiBuilder.Service.Authorization
         }
 
         /// <summary>
-        /// Helper method to create a list consisting of the given operation types.
+        /// Returns a list of all possible operations depending on the provided SourceType.
+        /// Stored procedures only support Operation.Execute.
         /// In case the operation is Operation.All (wildcard), it gets resolved to a set of CRUD operations.
         /// </summary>
         /// <param name="operation">operation type.</param>
+        /// <param name="sourceType">Type of database object: Table, View, or Stored Procedure.</param>
         /// <returns>IEnumerable of all available operations.</returns>
-        public static IEnumerable<Config.Operation> GetAllOperations(Config.Operation operation)
+        public static IEnumerable<Config.Operation> GetAllOperationsForObjectType(Config.Operation operation, SourceType sourceType)
         {
+            if (sourceType is SourceType.StoredProcedure)
+            {
+                return new List<Config.Operation> { Config.Operation.Execute };
+            }
+
             return operation is Config.Operation.All ? PermissionOperation.ValidPermissionOperations : new List<Config.Operation> { operation };
         }
 
@@ -669,15 +677,22 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// There are only five possible operations
         /// </summary>
         /// <returns>Dictionary: Key - Operation | Value - List of roles.</returns>
-        private static Dictionary<Config.Operation, List<string>> CreateOperationToRoleMap()
+        private static Dictionary<Config.Operation, List<string>> CreateOperationToRoleMap(SourceType sourceType)
         {
+            if (sourceType is SourceType.StoredProcedure)
+            {
+                return new Dictionary<Config.Operation, List<string>>()
+                {
+                    { Config.Operation.Execute, new List<string>()}
+                };
+            }
+
             return new Dictionary<Config.Operation, List<string>>()
             {
                 { Config.Operation.Create, new List<string>()},
                 { Config.Operation.Read, new List<string>()},
                 { Config.Operation.Update, new List<string>()},
-                { Config.Operation.Delete, new List<string>()},
-                { Config.Operation.Execute, new List<string>()}
+                { Config.Operation.Delete, new List<string>()}
             };
         }
 

@@ -95,7 +95,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         {
             Entity entity = new(Source: new DatabaseObjectSource(SourceType.StoredProcedure, Name: "foo", Parameters: null, KeyFields: null),
                               Rest: null,
-                              GraphQL: JsonSerializer.SerializeToElement(new GraphQLStoredProcedureEntityVerboseSettings(Type: graphQLTypeName, GraphQLOperation: graphQLOperation)),
+                              GraphQL: JsonSerializer.SerializeToElement(new GraphQLStoredProcedureEntityVerboseSettings(Type: graphQLTypeName, GraphQLOperation: graphQLOperation.ToString())),
                               Permissions: new[] { new PermissionSetting(role: "anonymous", operations: permissionOperations) },
                               Relationships: new(),
                               Mappings: new());

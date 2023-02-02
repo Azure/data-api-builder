@@ -246,7 +246,7 @@ namespace Cli.Tests
                     ]	
                   },	
                   ""graphql"": {	
-                    ""operation"": ""mutation""	
+                    ""operation"": ""Mutation""	
                       }
                     }
                   }
@@ -281,7 +281,7 @@ namespace Cli.Tests
                     ]	
                   },	
                   ""graphql"": {	
-                    ""operation"": ""query""	
+                    ""operation"": ""Query""	
                       }
                     }
                   }

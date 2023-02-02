@@ -104,12 +104,12 @@ namespace Cli
             // custom type definitions.
             else if (graphQLDetail is null && graphQLOperation is not null)
             {
-                return new GraphQLStoredProcedureEntityOperationSettings(GraphQLOperation: graphQLOperation);
+                return new GraphQLStoredProcedureEntityOperationSettings(GraphQLOperation: graphQLOperation.ToString());
             }
 
             // Stored procedures that are defined with custom graphQL type definition and
             // custom a graphQL operation.
-            return new GraphQLStoredProcedureEntityVerboseSettings(Type: graphQLDetail, GraphQLOperation: graphQLOperation);
+            return new GraphQLStoredProcedureEntityVerboseSettings(Type: graphQLDetail, GraphQLOperation: graphQLOperation.ToString());
 
         }
 

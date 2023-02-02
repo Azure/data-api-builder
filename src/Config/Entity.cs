@@ -132,27 +132,34 @@ namespace Azure.DataApiBuilder.Config
                     // for non stored procedure entity types.
                     if (ObjectType is SourceType.StoredProcedure)
                     {
-                        GraphQLOperation? graphQLOperation;
+                        GraphQLOperation? graphQLOperation = null;
                         if (configElement.TryGetProperty(propertyName: "operation", out JsonElement operation)
-                            && (operation.ValueKind is JsonValueKind.Number || operation.ValueKind is JsonValueKind.String))
+                            && operation.ValueKind is JsonValueKind.String)
                         {
-                            string operationType = JsonSerializer.Deserialize<string>(operation)!;
+                            try
+                            {
+                                string? deserializedOperation = JsonSerializer.Deserialize<string>(operation);
+                                if (string.IsNullOrWhiteSpace(deserializedOperation))
+                                {
+                                    graphQLOperation = GraphQLOperation.Mutation;
+                                }
 
-/*                            string operationType = (operation.ValueKind is JsonValueKind.Number)
-                                                   ? JsonSerializer.Deserialize<GraphQLOperation>(operation)!.ToString()
-                                                   : JsonSerializer.Deserialize<string>(operation)!;*/
-
-                            if (string.Equals(operationType, GraphQLOperation.Mutation.ToString(), StringComparison.OrdinalIgnoreCase) || string.Equals(operationType, string.Empty))
-                            {
-                                graphQLOperation = GraphQLOperation.Mutation;
+                                if (Enum.TryParse(deserializedOperation, ignoreCase: true, out GraphQLOperation resolvedOperation))
+                                {
+                                    graphQLOperation = resolvedOperation;
+                                }
+                                else
+                                {
+                                }
                             }
-                            else if (string.Equals(operationType, GraphQLOperation.Query.ToString(), StringComparison.OrdinalIgnoreCase))
+                            catch (Exception error) when (
+                                error is JsonException ||
+                                error is ArgumentNullException ||
+                                error is NotSupportedException ||
+                                error is InvalidOperationException ||
+                                error is ArgumentException)
                             {
-                                graphQLOperation = GraphQLOperation.Query;
-                            }
-                            else
-                            {
-                                throw new JsonException(message: $"Unsupported GraphQL operation type: {operationType}");
+                                throw new JsonException(message: $"Unsupported GraphQL operation type: {operation}", innerException: error);
                             }
                         }
                         else
@@ -162,11 +169,11 @@ namespace Azure.DataApiBuilder.Config
 
                         if (typeConfiguration is null)
                         {
-                            GraphQL = new GraphQLStoredProcedureEntityOperationSettings(GraphQLOperation: graphQLOperation);
+                            GraphQL = new GraphQLStoredProcedureEntityOperationSettings(GraphQLOperation: graphQLOperation.ToString());
                         }
                         else
                         {
-                            GraphQL = new GraphQLStoredProcedureEntityVerboseSettings(Type: typeConfiguration, GraphQLOperation: graphQLOperation);
+                            GraphQL = new GraphQLStoredProcedureEntityVerboseSettings(Type: typeConfiguration, GraphQLOperation: graphQLOperation.ToString());
                         }
                     }
                     else
@@ -185,45 +192,31 @@ namespace Azure.DataApiBuilder.Config
         }
 
         /// <summary>
-        /// Gets the graphQL operation that is configured for the stored procedure.
+        /// Returns the GraphQL operation that is configured for the stored procedure as a string.
         /// </summary>
-        /// <returns>Name of the graphQL operation as a string</returns>
-        public string? GetGraphQLOperation()
+        /// <returns>Name of the graphQL operation as a string or null if no operation type is resolved.</returns>
+        public string? GetGraphQLOperationAsString()
         {
-            string? operation = null;
-            if (GraphQL is true || GraphQL is false || GraphQL is GraphQLEntitySettings _)
-            {
-                operation = GraphQLOperation.Mutation.ToString();
-            }
-            else if (GraphQL is GraphQLStoredProcedureEntityOperationSettings operationSettings)
-            {
-                operation = operationSettings.GraphQLOperation.ToString();
-            }
-            else if (GraphQL is GraphQLStoredProcedureEntityVerboseSettings operationVerboseSettings)
-            {
-                operation = operationVerboseSettings.GraphQLOperation.ToString();
-            }
-
-            return operation;
+            return FetchGraphQLOperation().ToString();
         }
 
         /// <summary>
-        /// Fetches the name of the graphQL operation configured for the stored procedure
+        /// Fetches the name of the graphQL operation configured for the stored procedure as an enum.
         /// </summary>
-        /// <returns>Name of the graphQL operation as an Enum</returns>
+        /// <returns>Name of the graphQL operation as an enum or null if parsing of the enum fails.</returns>
         public GraphQLOperation? FetchGraphQLOperation()
         {
-            if (GraphQL is true || GraphQL is false || GraphQL is GraphQLEntitySettings _)
+            if (GraphQL is true || GraphQL is null || GraphQL is GraphQLEntitySettings _)
             {
                 return GraphQLOperation.Mutation;
             }
             else if (GraphQL is GraphQLStoredProcedureEntityOperationSettings operationSettings)
             {
-                return operationSettings.GraphQLOperation;
+                return Enum.TryParse(operationSettings.GraphQLOperation, ignoreCase: true, out GraphQLOperation operation) ? operation : null;
             }
             else if (GraphQL is GraphQLStoredProcedureEntityVerboseSettings verboseSettings)
             {
-                return verboseSettings.GraphQLOperation;
+                return Enum.TryParse(verboseSettings.GraphQLOperation, ignoreCase: true, out GraphQLOperation operation) ? operation : null;
             }
 
             return null;
@@ -599,7 +592,7 @@ namespace Azure.DataApiBuilder.Config
     /// </summary>
     /// <param name="GraphQLOperation">Defines the graphQL operation (mutation/query) that is supported for stored procedures 
     /// that will be used for this entity."</param>
-    public record GraphQLStoredProcedureEntityOperationSettings([property: JsonPropertyName("operation")] GraphQLOperation? GraphQLOperation = null);
+    public record GraphQLStoredProcedureEntityOperationSettings([property: JsonPropertyName("operation")] string? GraphQLOperation = null);
 
     /// <summary>
     /// Describes the GraphQL settings applicable to an entity which is backed by a stored procedure.
@@ -609,7 +602,7 @@ namespace Azure.DataApiBuilder.Config
     /// <param name="GraphQLOperation">Defines the graphQL operation (mutation/query) that is supported for stored procedures 
     /// that will be used for this entity."</param>
     public record GraphQLStoredProcedureEntityVerboseSettings([property: JsonPropertyName("type")] object? Type = null,
-        [property: JsonPropertyName("operation")] GraphQLOperation? GraphQLOperation = null);
+        [property: JsonPropertyName("operation")] string? GraphQLOperation = null);
 
     /// <summary>
     /// Defines a name or route as singular (required) or

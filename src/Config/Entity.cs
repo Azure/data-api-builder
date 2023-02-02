@@ -229,13 +229,13 @@ namespace Azure.DataApiBuilder.Config
         /// <returns>Name of the graphQL operation as an enum or null if parsing of the enum fails.</returns>
         public GraphQLOperation? FetchGraphQLOperation()
         {
-            if(GraphQL is null)
+            if (GraphQL is null)
             {
                 return null;
             }
 
             JsonElement graphQLConfigElement = (JsonElement)GraphQL;
-            if (graphQLConfigElement.ValueKind is JsonValueKind.True 
+            if (graphQLConfigElement.ValueKind is JsonValueKind.True
                 || graphQLConfigElement.ValueKind is JsonValueKind.False
                 || graphQLConfigElement.ValueKind is JsonValueKind.String)
             {
@@ -248,7 +248,7 @@ namespace Azure.DataApiBuilder.Config
                     string? graphQLOperationString = JsonSerializer.Deserialize<string>(graphQLOperationElement, RuntimeConfig.SerializerOptions);
                     if (graphQLOperationString is not null)
                     {
-                        if(Enum.TryParse(graphQLOperationString,out GraphQLOperation operation))
+                        if (Enum.TryParse(graphQLOperationString, out GraphQLOperation operation))
                         {
                             return operation;
                         }
@@ -265,7 +265,7 @@ namespace Azure.DataApiBuilder.Config
             else
             {
                 throw new JsonException("Unsupported GraphQL Operation");
-            }            
+            }
         }
 
         /// <summary>

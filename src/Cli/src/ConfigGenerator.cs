@@ -1011,7 +1011,6 @@ namespace Cli
         {
             // Updated REST Route details
             object? restPath = (options.RestRoute is not null) ? ConstructRestPathDetails(options.RestRoute) : entity.GetRestEnabledOrPathSettings();
-            
 
             // Updated REST Methods info for stored procedures
             RestMethod[]? restMethods;

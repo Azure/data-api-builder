@@ -198,8 +198,9 @@ namespace Cli
                     {
                         if (op is Operation.All)
                         {
+                            HashSet<Operation> resolvedOperations = sourceType is SourceType.StoredProcedure ? PermissionOperation.ValidPermissionOperations : PermissionOperation.ValidStoredProcedurePermissionOperations;
                             // Expand wildcard to all valid operations (except execute)
-                            foreach (Operation validOp in PermissionOperation.ValidPermissionOperations)
+                            foreach (Operation validOp in resolvedOperations)
                             {
                                 result.Add(validOp, new PermissionOperation(validOp, null, null));
                             }

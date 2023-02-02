@@ -411,7 +411,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindTestWithPrimaryKeyContainingForeignKey",
                 @"
-                    SELECT JSON_OBJECT('id', id, 'content', content) AS data
+                    SELECT JSON_OBJECT('id', id, 'book_id', book_id, 'content', content) AS data
                     FROM (
                         SELECT id, content
                         FROM reviews" + @"

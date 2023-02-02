@@ -253,19 +253,9 @@ namespace Cli
                 restMethods = null;
             }
 
-            if(restPathDetails is null && restMethods is not null)
-            {
-                restPathDetails = true;
-            }
-
             if (graphQLNamingConfig is not null && graphQLNamingConfig is false)
             {
                 graphQLOperationsForStoredProcedures = null;
-            }
-
-            if(graphQLNamingConfig is null && graphQLOperationsForStoredProcedures is not null )
-            {
-                graphQLNamingConfig = true;
             }
 
             // Create new entity.

@@ -201,6 +201,29 @@ namespace Azure.DataApiBuilder.Config
         }
 
         /// <summary>
+        /// Gets the graphQL operation that is configured
+        /// when the entity is of the type stored procedure
+        /// </summary>
+        /// <returns>GraphQL operation as an Enum</returns>
+        public GraphQLOperation? FetchConfiguredGraphQLOperation()
+        {
+            if (GraphQL is true || GraphQL is null || GraphQL is GraphQLEntitySettings _)
+            {
+                return GraphQLOperation.Mutation;
+            }
+            else if (GraphQL is GraphQLStoredProcedureEntityOperationSettings operationSettings)
+            {
+                return Enum.TryParse(operationSettings.GraphQLOperation, ignoreCase: true, out GraphQLOperation operation) ? operation : null;
+            }
+            else if (GraphQL is GraphQLStoredProcedureEntityVerboseSettings verboseSettings)
+            {
+                return Enum.TryParse(verboseSettings.GraphQLOperation, ignoreCase: true, out GraphQLOperation operation) ? operation : null;
+            }
+
+            return null;
+        }
+
+        /// <summary>
         /// Fetches the name of the graphQL operation configured for the stored procedure as an enum.
         /// </summary>
         /// <returns>Name of the graphQL operation as an enum or null if parsing of the enum fails.</returns>
@@ -222,7 +245,17 @@ namespace Azure.DataApiBuilder.Config
             {
                 if (graphQLConfigElement.TryGetProperty("operation", out JsonElement graphQLOperationElement))
                 {
-                    return JsonSerializer.Deserialize<GraphQLOperation>(graphQLOperationElement, RuntimeConfig.SerializerOptions);
+                    string? graphQLOperationString = JsonSerializer.Deserialize<string>(graphQLOperationElement, RuntimeConfig.SerializerOptions);
+                    if (graphQLOperationString is not null)
+                    {
+                        if(Enum.TryParse(graphQLOperationString,out GraphQLOperation operation))
+                        {
+                            return operation;
+                        }
+
+                    }
+
+                    return null;
                 }
                 else
                 {
@@ -231,7 +264,7 @@ namespace Azure.DataApiBuilder.Config
             }
             else
             {
-                throw new JsonException("Unsupported GraphQL Type");
+                throw new JsonException("Unsupported GraphQL Operation");
             }            
         }
 
@@ -242,21 +275,6 @@ namespace Azure.DataApiBuilder.Config
         /// <exception cref="JsonException">Raised when unsupported GraphQL configuration is present on the property "type"</exception>
         public object? FetchGraphQLEnabledOrPath()
         {
-            // if(GraphQL is bool graphQLEnabled)
-            // {
-            //     return graphQLEnabled;
-            // }
-            // else if(GraphQL is GraphQLEntitySettings graphQLEntitySettings)
-            // {
-            //     return graphQLEntitySettings.Type;
-            // }
-            // else if(GraphQL is GraphQLStoredProcedureEntityVerboseSettings graphQLSpSettings)
-            // {
-            //     return graphQLSpSettings.Type;
-            // }
-
-            // return null;
-
             if (GraphQL is null)
             {
                 return null;
@@ -392,20 +410,50 @@ namespace Azure.DataApiBuilder.Config
         /// <exception cref="JsonException"></exception>
         public object? FetchRestEnabledOrPathSettings()
         {
-            if(Rest is bool restEnabled)
+            if (Rest is null)
             {
-                return restEnabled;
-            }
-            else if(Rest is RestEntitySettings restEntitySettings)
-            {
-                return restEntitySettings.Path;
-            }
-            else if(Rest is RestStoredProcedureEntityVerboseSettings restSpSettings)
-            {
-                return restSpSettings.Path;         
+                return null;
             }
 
-            return null;
+            JsonElement RestConfigElement = (JsonElement)Rest;
+            if (RestConfigElement.ValueKind is JsonValueKind.True || RestConfigElement.ValueKind is JsonValueKind.False)
+            {
+                return JsonSerializer.Deserialize<bool>(RestConfigElement);
+            }
+            else if (RestConfigElement.ValueKind is JsonValueKind.String)
+            {
+                return JsonSerializer.Deserialize<string>(RestConfigElement);
+            }
+            else if (RestConfigElement.ValueKind is JsonValueKind.Array)
+            {
+                return true;
+            }
+            else if (RestConfigElement.ValueKind is JsonValueKind.Object)
+            {
+                if (RestConfigElement.TryGetProperty("path", out JsonElement restPathElement))
+                {
+                    if (restPathElement.ValueKind is JsonValueKind.True || restPathElement.ValueKind is JsonValueKind.False)
+                    {
+                        return JsonSerializer.Deserialize<bool>(restPathElement);
+                    }
+                    else if (restPathElement.ValueKind is JsonValueKind.String)
+                    {
+                        return JsonSerializer.Deserialize<string>(restPathElement);
+                    }
+                    else
+                    {
+                        throw new JsonException("Unsupported Rest Path Type");
+                    }
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            else
+            {
+                throw new JsonException("Unsupported Rest Type");
+            }
         }
     }
 

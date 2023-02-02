@@ -52,6 +52,7 @@ parameters can either be fixed as above or passed at runtime through
 ### Stored Procedure Permissions 
 
 Stored procedure backed entities have similar role/action permissions to other entities. i.e. same familiar format:
+
 ```json
 "permissions": [
         {
@@ -64,8 +65,9 @@ Stored procedure backed entities have similar role/action permissions to other e
             "actions": [ "execute" ]
         }
 ]
-``` 
-However, stored procedures only accept the action **execute** and the behavior of **column/field-level permissions** and **database policies** have not yet been designed/defined for procedures; as such, these will be **ignored**.
+```
+
+However, stored procedures only accept the action **execute**. **Column/field-level permissions** and **database policies** are not supported.
 
 <a id='suggested-config'></a>
 > Why not simplify stored procedure permissions, if POST, PUT, PATCH, DELETE semantically identical?
@@ -75,6 +77,7 @@ Justification **against** supporting all CRUD operations:
 - Other solutions usually limit to `POST`: https://learn.microsoft.com/rest/api/cosmos-db/execute-a-stored-procedure
     - [PostgREST](https://postgrest.org/en/stable/api.html#stored-procedures) support `POST` and `GET` if marked `IMMUTABLE` or `STABLE`
 - Proposed permission:
+
 ```json
 "permissions": [
         {
@@ -87,6 +90,7 @@ Justification **against** supporting all CRUD operations:
         }
 ]
 ```
+
 Justification **for** allowing permission configuration for all CRUD operations:
 - Davide: the "simplification" would complicate authorization with no real benefit. True in that the authorization logic would need to change conditioned on whether the entity source was a stored procedure.
 - Aniruddh: we should leave the responsibility for the developer to properly configure hawaii; it's not our fault if they configure against the API guidelines

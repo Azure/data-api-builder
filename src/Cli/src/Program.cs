@@ -38,7 +38,7 @@ namespace Cli
             bool isHelpOrVersionRequested = false;
 
             // Parsing user arguments and executing required methods.
-            ParserResult<object>? result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions, VersionRequestedError>(args)
+            ParserResult<object>? result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions>(args)
                 .WithParsed<InitOptions>(options =>
                 {
                     cliLogger.LogInformation($"{PRODUCT_NAME} {GetProductVersion()}");
@@ -120,8 +120,8 @@ namespace Cli
                         isHelpOrVersionRequested = true;
                     }
                 });
-            
-            return ((result is Parsed<Object>) || (isHelpOrVersionRequested))? 0 : -1;
+
+            return ((result is Parsed<object>) || (isHelpOrVersionRequested)) ? 0 : -1;
         }
 
         /// <summary>

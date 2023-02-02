@@ -324,36 +324,6 @@ namespace Azure.DataApiBuilder.Config
         }
 
         /// <summary>
-        /// Gets the list of HTTP methods defined for entities representing stored procedures.
-        /// When no explicit configuration is present, the default method "POST" is returned.
-        /// </summary>
-        /// <returns>List of HTTP verbs</returns>
-        public List<RestMethod> GetStoredProcedureRESTVerbs()
-        {
-            if (Rest is not null && ((JsonElement)Rest).ValueKind is JsonValueKind.Object)
-            {
-                if (((JsonElement)Rest).TryGetProperty("path", out JsonElement _))
-                {
-                    RestStoredProcedureEntityVerboseSettings? restSpSettings = JsonSerializer.Deserialize<RestStoredProcedureEntityVerboseSettings>((JsonElement)Rest, RuntimeConfig.SerializerOptions);
-                    if (restSpSettings is not null && restSpSettings.RestMethods is not null)
-                    {
-                        return new List<RestMethod>(restSpSettings.RestMethods);
-                    }
-                }
-                else
-                {
-                    RestStoredProcedureEntitySettings? restSpSettings = JsonSerializer.Deserialize<RestStoredProcedureEntitySettings>((JsonElement)Rest, RuntimeConfig.SerializerOptions);
-                    if (restSpSettings is not null && restSpSettings.RestMethods is not null)
-                    {
-                        return new List<RestMethod>(restSpSettings.RestMethods);
-                    }
-                }
-            }
-
-            return new List<RestMethod>(new[] { RestMethod.Post });
-        }
-
-        /// <summary>
         /// Gets the REST HTTP methods configured for the stored procedure
         /// </summary>
         /// <returns>An array of HTTP methods configured</returns>

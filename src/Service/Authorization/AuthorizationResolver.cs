@@ -232,7 +232,11 @@ namespace Azure.DataApiBuilder.Service.Authorization
                 bool isStoredProcedureEntity = entity.ObjectType is SourceType.StoredProcedure;
                 if (isStoredProcedureEntity)
                 {
-                    entityToRoleMap.StoredProcedureHttpVerbs = new(entity.GetStoredProcedureRESTVerbs());
+                    RestMethod[]? methods = entity.GetRestMethodsConfiguredForStoredProcedure();
+                    if (methods is not null)
+                    {
+                        entityToRoleMap.StoredProcedureHttpVerbs = new(methods);
+                    }
                 }
 
                 // Store the allowedColumns for anonymous role.

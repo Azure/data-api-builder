@@ -133,6 +133,22 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
+        /// Verify that https redirection is disabled when --no-https-redirect flag is passed  through CLI.
+        /// We check if IsHttpsRedirectionDisabled is set to true with --no-https-redirect flag.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(new string[] { "" }, false, DisplayName = "Https redirection allowed")]
+        [DataRow(new string[] { Startup.NO_HTTPS_REDIRECT_FLAG }, true, DisplayName = "Http redirection disabled")]
+        [TestMethod("Validates that https redirection is disabled when --no-https-redirect option is used when engine is started through CLI")]
+        public void TestDisablingHttpsRedirection(
+            string[] args,
+            bool expectedIsHttpsRedirectionDisabled)
+        {
+            Program.CreateWebHostBuilder(args).Build();
+            Assert.AreEqual(RuntimeConfigProvider.IsHttpsRedirectionDisabled, expectedIsHttpsRedirectionDisabled);
+        }
+
+        /// <summary>
         /// Checks correct serialization and deserialization of Source Type from 
         /// Enum to String and vice-versa.
         /// Consider both cases for source as an object and as a string

@@ -354,7 +354,8 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 if (runtimeConfig.Entities.TryGetValue(key: entityName, out Entity? entity) && entity is not null)
                 {
-                    httpVerbs = entity.GetStoredProcedureRESTVerbs();
+                    RestMethod[]? methods = entity.GetRestMethodsConfiguredForStoredProcedure();
+                    httpVerbs = methods is not null ? new List<RestMethod>(methods) : new();
                     return true;
                 }
             }

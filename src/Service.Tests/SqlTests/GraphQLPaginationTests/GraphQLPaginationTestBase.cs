@@ -713,7 +713,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
               ],
               ""endCursor"": """ + SqlPaginationUtil.Base64Encode(
                   "[{\"Value\":1,\"Direction\":1,\"TableSchema\":\"" + _sqlMetadataProvider.GetDefaultSchemaName() + "\",\"TableName\":\"stocks\",\"ColumnName\":\"pieceid\"}," +
-                  "{\"Value\":0,\"Direction\":0,\"TableSchema\":\"" + _sqlMetadataProvider.GetDefaultSchemaName() + " \",\"TableName\":\"stocks\",\"ColumnName\":\"categoryid\"}]") + @""",
+                  "{\"Value\":0,\"Direction\":0,\"TableSchema\":\"" + _sqlMetadataProvider.GetDefaultSchemaName() + "\",\"TableName\":\"stocks\",\"ColumnName\":\"categoryid\"}]") + @""",
               ""hasNextPage"": true
             }";
 

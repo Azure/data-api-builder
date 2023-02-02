@@ -247,7 +247,7 @@ namespace Cli
             object? restPathDetails = ConstructRestPathDetails(options.RestRoute);
             object? graphQLNamingConfig = ConstructGraphQLTypeDetails(options.GraphQLType);
 
-            if (restPathDetails is not null && (restPathDetails is true || restPathDetails is false))
+            if (restPathDetails is not null && restPathDetails is false)
             {
                 restMethods = null;
             }

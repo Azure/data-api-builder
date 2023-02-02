@@ -902,7 +902,8 @@ namespace Cli
         }
 
         /// <summary>
-        /// Method to check if an entity is a stored procedure
+        /// Method to determine whether the type of an entity is being converted from stored-procedure to
+        /// table/view.
         /// </summary>
         /// <param name="entity"></param>
         /// <returns></returns>
@@ -911,6 +912,13 @@ namespace Cli
             return entity.ObjectType is SourceType.StoredProcedure;
         }
 
+        /// <summary>
+        /// Method to determine if the type of the entity is being converted from
+        /// stored-procedure to table/view.  
+        /// </summary>
+        /// <param name="entity">Entity for which the source type conversion is being determined</param>
+        /// <param name="options">Options from the CLI commands</param>
+        /// <returns>True when an entity of type stored-procedure is converted to a table/view</returns>
         public static bool IsStoredProcedureConvertedToOtherTypes(Entity entity, EntityOptions options)
         {
             if (options.SourceType is null)
@@ -923,6 +931,13 @@ namespace Cli
             return isCurrentEntityStoredProcedure && !doOptionsRepresentStoredProcedure;
         }
 
+        /// <summary>
+        /// Method to determine whether the type of an entity is being changed from
+        /// table/view to stored-procedure.
+        /// </summary>
+        /// <param name="entity">Entity for which the source type conversion is being determined</param>
+        /// <param name="options">Options from the CLI commands</param>
+        /// <returns>True when an entity of type table/view is converted to a stored-procedure</returns>
         public static bool IsEntityBeingConvertedToStoredProcedure(Entity entity, EntityOptions options)
         {
             if (options.SourceType is null)
@@ -943,7 +958,7 @@ namespace Cli
         /// with add command.
         /// </summary>
         /// <param name="options">Options entered using add command</param>
-        /// <returns></returns>
+        /// <returns>True for invalid conflicting REST options. False when the options are valid</returns>
         public static bool CheckConflictingRestConfigurationForStoredProcedures(EntityOptions options)
         {
             return (options.RestRoute is not null && bool.TryParse(options.RestRoute, out bool restEnabled) && !restEnabled) &&
@@ -958,7 +973,7 @@ namespace Cli
         /// command
         /// </summary>
         /// <param name="options"></param>
-        /// <returns></returns>
+        /// <returns>True for invalid conflicting graphQL options. False when the options are not conflicting</returns>
         public static bool CheckConflictingGraphQLConfigurationForStoredProcedures(EntityOptions options)
         {
             return (options.GraphQLType is not null && bool.TryParse(options.GraphQLType, out bool graphQLEnabled) && !graphQLEnabled)

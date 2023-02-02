@@ -14,6 +14,6 @@ See issue [#479](https://github.com/Azure/data-api-builder/issues/479)
 
 ## Knowns issues with MySQL 
 Here are some known issues when using UPDATE action with MySQL database. 
-- Update Fails on tables with Computed columns · [Issue #1001](https://github.com/Azure/data-api-builder/issues/1001)
+- Update fails on tables with Computed columns · [Issue #1001](https://github.com/Azure/data-api-builder/issues/1001)
 - Update fails on views · [Issue #938](https://github.com/Azure/data-api-builder/issues/938)
 - Support for CREATE/UPDATE actions on view  [Issue #894](https://github.com/Azure/data-api-builder/issues/894)

@@ -34,6 +34,8 @@ namespace Azure.DataApiBuilder.Service
         private ILogger<Startup> _logger;
         private ILogger<RuntimeConfigProvider> _configProviderLogger;
 
+        public const string NO_HTTPS_REDIRECT_FLAG = "--no-https-redirect";
+
         public Startup(IConfiguration configuration,
             ILogger<Startup> logger,
             ILogger<RuntimeConfigProvider> configProviderLogger)
@@ -289,7 +291,10 @@ namespace Azure.DataApiBuilder.Service
                 app.UseDeveloperExceptionPage();
             }
 
-            app.UseHttpsRedirection();
+            if (!RuntimeConfigProvider.IsHttpsRedirectionDisabled)
+            {
+                app.UseHttpsRedirection();
+            }
 
             // URL Rewrite middleware MUST be called prior to UseRouting().
             // https://andrewlock.net/understanding-pathbase-in-aspnetcore/#placing-usepathbase-in-the-correct-location

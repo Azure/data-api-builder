@@ -301,11 +301,12 @@ namespace Cli
     [Verb("start", isDefault: false, HelpText = "Start Data Api Builder Engine", Hidden = false)]
     public class StartOptions : Options
     {
-        public StartOptions(bool verbose, LogLevel? logLevel, string config)
+        public StartOptions(bool verbose, LogLevel? logLevel, bool isHttpsRedirectionDisabled, string config)
             : base(config)
         {
             // When verbose is true we set LogLevel to information.
             LogLevel = verbose is true ? Microsoft.Extensions.Logging.LogLevel.Information : logLevel;
+            IsHttpsRedirectionDisabled = isHttpsRedirectionDisabled;
         }
 
         // SetName defines mutually exclusive sets, ie: can not have
@@ -315,5 +316,8 @@ namespace Cli
         [Option("LogLevel", SetName = "LogLevel", Required = false, HelpText = "Specify logging level as provided value, " +
             "see: https://learn.microsoft.com/en-us/dotnet/api/microsoft.extensions.logging.loglevel?view=dotnet-plat-ext-7.0")]
         public LogLevel? LogLevel { get; }
+
+        [Option("no-https-redirect", Required = false, HelpText = "Disables automatic https redirects.")]
+        public bool IsHttpsRedirectionDisabled { get; }
     }
 }

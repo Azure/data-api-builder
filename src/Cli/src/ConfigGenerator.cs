@@ -1025,9 +1025,9 @@ namespace Cli
                 restMethods = null;
             }
 
-            // Non-stored procedure scenario when the REST endpoint is disabled for the entity.
             if (restPath is false)
             {
+                // Non-stored procedure scenario when the REST endpoint is disabled for the entity.
                 if (options.RestRoute is not null)
                 {
                     restMethods = null;

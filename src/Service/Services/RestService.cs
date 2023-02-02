@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Net;
 using System.Text.Json;
@@ -65,7 +67,14 @@ namespace Azure.DataApiBuilder.Service.Services
             RequestValidator.ValidateEntity(entityName, _sqlMetadataProvider.EntityToDatabaseObject.Keys);
             DatabaseObject dbObject = _sqlMetadataProvider.EntityToDatabaseObject[entityName];
 
-            await AuthorizationCheckForRequirementAsync(resource: entityName, requirement: new EntityRoleOperationPermissionsRequirement());
+            if (dbObject.SourceType is not SourceType.StoredProcedure)
+            {
+                await AuthorizationCheckForRequirementAsync(resource: entityName, requirement: new EntityRoleOperationPermissionsRequirement());
+            }
+            else
+            {
+                await AuthorizationCheckForRequirementAsync(resource: entityName, requirement: new StoredProcedurePermissionsRequirement());
+            }
 
             QueryString? query = GetHttpContext().Request.QueryString;
             string queryString = query is null ? string.Empty : GetHttpContext().Request.QueryString.ToString();
@@ -81,7 +90,16 @@ namespace Azure.DataApiBuilder.Service.Services
             // If request has resolved to a stored procedure entity, initialize and validate appropriate request context
             if (dbObject.SourceType is SourceType.StoredProcedure)
             {
-                PopulateStoredProcedureContext(operationType,
+                if (!IsHttpMethodAllowedForStoredProcedure(entityName))
+                {
+                    throw new DataApiBuilderException(
+                        message: "This operation is not supported.",
+                        statusCode: HttpStatusCode.MethodNotAllowed,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                }
+
+                PopulateStoredProcedureContext(
+                    operationType,
                     dbObject,
                     entityName,
                     queryString,
@@ -231,9 +249,12 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Helper method to populate the context in case the database object for this request is a stored procedure
+        /// Populates the request context when the representative database object is a stored procedure.
+        /// Stored procedures support arbitrary keys in the query string, so the read operation behaves differently
+        /// than for requests on non-stored procedure entities.
         /// </summary>
-        private void PopulateStoredProcedureContext(Config.Operation operationType,
+        private void PopulateStoredProcedureContext(
+            Config.Operation operationType,
             DatabaseObject dbObject,
             string entityName,
             string queryString,
@@ -279,9 +300,10 @@ namespace Azure.DataApiBuilder.Service.Services
                         operationType);
                     break;
                 default:
-                    throw new DataApiBuilderException(message: "This operation is not supported.",
-                                                   statusCode: HttpStatusCode.BadRequest,
-                                                   subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    throw new DataApiBuilderException(
+                        message: "This operation is not supported.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
 
             // Throws bad request if primaryKeyRoute set
@@ -291,8 +313,55 @@ namespace Azure.DataApiBuilder.Service.Services
             ((StoredProcedureRequestContext)context).PopulateResolvedParameters();
 
             // Validate the request parameters
-            RequestValidator.ValidateStoredProcedureRequestContext(
-                (StoredProcedureRequestContext)context, _sqlMetadataProvider);
+            RequestValidator.ValidateStoredProcedureRequestContext((StoredProcedureRequestContext)context, _sqlMetadataProvider);
+        }
+
+        /// <summary>
+        /// Returns whether the stored procedure backed entity allows the
+        /// request's HTTP method. e.g. when an entity is only configured for "GET"
+        /// and the request method is "POST" this method will return false.
+        /// </summary>
+        /// <param name="entityName">Name of the entity.</param>
+        /// <returns>True if the operation is allowed. False, otherwise.</returns>
+        private bool IsHttpMethodAllowedForStoredProcedure(string entityName)
+        {
+            if (TryGetStoredProcedureRESTVerbs(entityName, out List<RestMethod>? httpVerbs))
+            {
+                HttpContext? httpContext = _httpContextAccessor.HttpContext;
+                if (httpContext is not null
+                    && Enum.TryParse(httpContext.Request.Method, ignoreCase: true, out RestMethod method)
+                    && httpVerbs.Contains(method))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Gets the list of HTTP methods defined for entities representing stored procedures.
+        /// When no explicit REST method configuration is present for a stored procedure entity,
+        /// the default method "POST" is populated in httpVerbs.
+        /// </summary>
+        /// <param name="entityName">Name of the entity.</param>
+        /// <param name="httpVerbs">Out Param: List of httpverbs configured for stored procedure backed entity.</param>
+        /// <returns>True, with a list of HTTP verbs. False, when entity is not found in config
+        /// or entity is not a stored procedure, and httpVerbs will be null.</returns>
+        private bool TryGetStoredProcedureRESTVerbs(string entityName, [NotNullWhen(true)] out List<RestMethod>? httpVerbs)
+        {
+            if (_runtimeConfigProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
+            {
+                if (runtimeConfig.Entities.TryGetValue(key: entityName, out Entity? entity) && entity is not null)
+                {
+                    RestMethod[]? methods = entity.GetRestMethodsConfiguredForStoredProcedure();
+                    httpVerbs = methods is not null ? new List<RestMethod>(methods) : new();
+                    return true;
+                }
+            }
+
+            httpVerbs = null;
+            return false;
         }
 
         /// <summary>

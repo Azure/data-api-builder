@@ -440,7 +440,7 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Validates that the entity in the request is valid.
+        /// Validates that the request denoted entity is defined in the runtime configuration.
         /// </summary>
         /// <param name="entityName">entity in the request.</param>
         /// <param name="entities">collection of valid entities.</param>

@@ -473,6 +473,23 @@ public class EndToEndTests
     }
 
     /// <summary>
+    /// Test to verify that `--help` and `--version` along with know command/option produce the exit code 0,
+    /// while unknown commands/options have exit code -1.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow(new string[] { "--version" }, 0, DisplayName = "Checking version should have exit code 0.")]
+    [DataRow(new string[] { "--help" }, 0, DisplayName = "Checking commands with help should have exit code 0.")]
+    [DataRow(new string[] { "add", "--help" }, 0, DisplayName = "Checking options with help should have exit code 0.")]
+    [DataRow(new string[] { "initialize" }, -1, DisplayName = "Invalid Command should have exit code -1.")]
+    [DataRow(new string[] { "init", "--database-name", "mssql" }, -1, DisplayName = "Invalid Options should have exit code -1.")]
+    [DataRow(new string[] { "init", "--database-type", "mssql", "-c", "dab-config-test.json" }, 0,
+        DisplayName = "Correct command with correct options should have exit code 0.")]
+    public void VerifyExitCodeForCli(string[] cliArguments, int expectedErrorCode)
+    {
+        Assert.AreEqual(Cli.Program.Main(cliArguments), expectedErrorCode);
+    }
+
+    /// <summary>
     /// Test to verify that help writer window generates output on the console.
     /// </summary>
     [DataTestMethod]

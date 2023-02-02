@@ -252,8 +252,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         [TestMethod]
         public async Task InsertOneInViewBadRequestTest()
         {
-            _ = $"View or function '{_defaultSchemaName}.{_composite_subset_bookPub}' is not updatable " +
+            string expectedErrorMessage = $"View or function '{_defaultSchemaName}.{_composite_subset_bookPub}' is not updatable " +
                                           $"because the modification affects multiple base tables.";
+            await base.InsertOneInViewBadRequestTest(expectedErrorMessage, isExpectedErrorMsgSubstr: false);
         }
 
         /// <summary>

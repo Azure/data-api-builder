@@ -584,5 +584,5 @@ namespace Azure.DataApiBuilder.Config
     /// <href="https://engdic.org/singular-and-plural-noun-rules-definitions-examples/" /></param>
     public record SingularPlural(
             [property: JsonPropertyName("singular")] string Singular,
-            [property: JsonPropertyName("plural")] string Plural);
+            [property: JsonPropertyName("plural")] string? Plural);
 }

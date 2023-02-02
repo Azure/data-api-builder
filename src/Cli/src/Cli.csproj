@@ -29,6 +29,14 @@
     <DebugType>none</DebugType>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="CommandLineParser" />
     <PackageReference Include="Humanizer.Core" />
@@ -47,9 +55,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\..\..\README.md" Pack="true" PackagePath="\"/>
-    <None Include="..\..\..\nuget_icon.png" Pack="true" PackagePath="\"/>
-    <None Include="..\..\..\LICENSE.txt" Pack="true" PackagePath="\"/>
+    <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\..\nuget_icon.png" Pack="true" PackagePath="\" />
+    <None Include="..\..\..\LICENSE.txt" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <ItemGroup>

@@ -48,7 +48,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
 
             return new(
                 location: null,
-                new NameNode(GenerateStoredProcedureQueryName(name.Value, entity)),
+                new NameNode(GenerateStoredProcedureGraphQLFieldName(name.Value, entity)),
                 new StringValueNode($"Execute Stored-Procedure {name.Value} and get results from the database"),
                 inputValues,
                 new NonNullTypeNode(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(name)))),

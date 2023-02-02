@@ -61,6 +61,7 @@ namespace Azure.DataApiBuilder.Service
                         });
                     ILogger<Startup>? startupLogger = loggerFactory.CreateLogger<Startup>();
                     ILogger<RuntimeConfigProvider>? configProviderLogger = loggerFactory.CreateLogger<RuntimeConfigProvider>();
+                    DisableHttpsRedirectionIfNeeded(args);
                     webBuilder.UseStartup(builder =>
                     {
                         return new Startup(builder.Configuration, startupLogger, configProviderLogger);
@@ -107,6 +108,27 @@ namespace Azure.DataApiBuilder.Service
             return LogLevel.Error;
         }
 
+        /// <summary>
+        /// Iterate through args from cli and check for the flag `--no-https-redirect`.
+        /// If it is present, https redirection is disabled.
+        /// By Default it is enabled.
+        /// </summary>
+        /// <param name="args">array that may contain flag to disable https redirection.</param>
+        private static void DisableHttpsRedirectionIfNeeded(string[] args)
+        {
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (args[i].Equals(Startup.NO_HTTPS_REDIRECT_FLAG))
+                {
+                    Console.WriteLine("Redirecting to https is disabled.");
+                    RuntimeConfigProvider.IsHttpsRedirectionDisabled = true;
+                    return;
+                }
+            }
+
+            RuntimeConfigProvider.IsHttpsRedirectionDisabled = false;
+        }
+
         // This is used for testing purposes only. The test web server takes in a
         // IWebHostbuilder, instead of a IHostBuilder.
         public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
@@ -115,6 +137,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 IHostEnvironment env = hostingContext.HostingEnvironment;
                 AddConfigurationProviders(env, builder, args);
+                DisableHttpsRedirectionIfNeeded(args);
             }).UseStartup<Startup>();
 
         // This is used for testing purposes only. The test web server takes in a

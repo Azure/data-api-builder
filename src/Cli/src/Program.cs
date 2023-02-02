@@ -35,6 +35,9 @@ namespace Cli
             ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger);
             Utils.SetCliUtilsLogger(cliUtilsLogger);
 
+            // To know if `--help` or `--version` was requested.
+            bool isHelpOrVersionRequested = false;
+
             // Parsing user arguments and executing required methods.
             ParserResult<object>? result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions>(args)
                 .WithParsed<InitOptions>(options =>
@@ -100,9 +103,26 @@ namespace Cli
                     {
                         cliLogger.LogError("Failed to start the engine.");
                     }
+                })
+                .WithNotParsed(err =>
+                {
+                    /// System.CommandLine considers --help and --version as NonParsed Errors
+                    /// ref: https://github.com/commandlineparser/commandline/issues/630
+                    /// This is a workaround to make sure our app exits with exit code 0,
+                    /// when user does --help or --versions.
+                    /// dab --help -> ErrorType.HelpVerbRequestedError
+                    /// dab [command-name] --help -> ErrorType.HelpRequestedError
+                    /// dab --version -> ErrorType.VersionRequestedError
+                    List<Error> errors = err.ToList();
+                    if (errors.Any(e => e.Tag == ErrorType.VersionRequestedError
+                                        || e.Tag == ErrorType.HelpRequestedError
+                                        || e.Tag == ErrorType.HelpVerbRequestedError))
+                    {
+                        isHelpOrVersionRequested = true;
+                    }
                 });
 
-            return result is Parsed<object> ? 0 : -1;
+            return ((result is Parsed<object>) || (isHelpOrVersionRequested)) ? 0 : -1;
         }
 
         /// <summary>

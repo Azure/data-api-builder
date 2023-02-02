@@ -240,13 +240,13 @@ namespace Cli.Tests
                     ]
                   }
                 ],
-                ""rest"": {	
-                    ""methods"": [	
-                      ""post""	
-                    ]	
-                  },	
-                  ""graphql"": {	
-                    ""operation"": ""Mutation""	
+                ""rest"": {
+                    ""methods"": [
+                      ""post""
+                    ]
+                  },
+                  ""graphql"": {
+                    ""operation"": ""Mutation""
                       }
                     }
                   }

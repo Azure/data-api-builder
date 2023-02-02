@@ -206,20 +206,33 @@ namespace Azure.DataApiBuilder.Config
         /// <returns>Name of the graphQL operation as an enum or null if parsing of the enum fails.</returns>
         public GraphQLOperation? FetchGraphQLOperation()
         {
-            if (GraphQL is true || GraphQL is GraphQLEntitySettings _)
+            if(GraphQL is null)
+            {
+                return null;
+            }
+
+            JsonElement graphQLConfigElement = (JsonElement)GraphQL;
+            if (graphQLConfigElement.ValueKind is JsonValueKind.True 
+                || graphQLConfigElement.ValueKind is JsonValueKind.False
+                || graphQLConfigElement.ValueKind is JsonValueKind.String)
             {
                 return GraphQLOperation.Mutation;
             }
-            else if (GraphQL is GraphQLStoredProcedureEntityOperationSettings operationSettings)
+            else if (graphQLConfigElement.ValueKind is JsonValueKind.Object)
             {
-                return Enum.TryParse(operationSettings.GraphQLOperation, ignoreCase: true, out GraphQLOperation operation) ? operation : null;
+                if (graphQLConfigElement.TryGetProperty("operation", out JsonElement graphQLOperationElement))
+                {
+                    return JsonSerializer.Deserialize<GraphQLOperation>(graphQLOperationElement, RuntimeConfig.SerializerOptions);
+                }
+                else
+                {
+                    return null;
+                }
             }
-            else if (GraphQL is GraphQLStoredProcedureEntityVerboseSettings verboseSettings)
+            else
             {
-                return Enum.TryParse(verboseSettings.GraphQLOperation, ignoreCase: true, out GraphQLOperation operation) ? operation : null;
-            }
-
-            return null;
+                throw new JsonException("Unsupported GraphQL Type");
+            }            
         }
 
         /// <summary>
@@ -229,20 +242,66 @@ namespace Azure.DataApiBuilder.Config
         /// <exception cref="JsonException">Raised when unsupported GraphQL configuration is present on the property "type"</exception>
         public object? FetchGraphQLEnabledOrPath()
         {
-            if(GraphQL is bool graphQLEnabled)
+            // if(GraphQL is bool graphQLEnabled)
+            // {
+            //     return graphQLEnabled;
+            // }
+            // else if(GraphQL is GraphQLEntitySettings graphQLEntitySettings)
+            // {
+            //     return graphQLEntitySettings.Type;
+            // }
+            // else if(GraphQL is GraphQLStoredProcedureEntityVerboseSettings graphQLSpSettings)
+            // {
+            //     return graphQLSpSettings.Type;
+            // }
+
+            // return null;
+
+            if (GraphQL is null)
             {
-                return graphQLEnabled;
-            }
-            else if(GraphQL is GraphQLEntitySettings graphQLEntitySettings)
-            {
-                return graphQLEntitySettings.Type;
-            }
-            else if(GraphQL is GraphQLStoredProcedureEntityVerboseSettings graphQLSpSettings)
-            {
-                return graphQLSpSettings.Type;
+                return null;
             }
 
-            return null;
+            JsonElement graphQLConfigElement = (JsonElement)GraphQL;
+            if (graphQLConfigElement.ValueKind is JsonValueKind.True || graphQLConfigElement.ValueKind is JsonValueKind.False)
+            {
+                return JsonSerializer.Deserialize<bool>(graphQLConfigElement);
+            }
+            else if (graphQLConfigElement.ValueKind is JsonValueKind.String)
+            {
+                return JsonSerializer.Deserialize<string>(graphQLConfigElement);
+            }
+            else if (graphQLConfigElement.ValueKind is JsonValueKind.Object)
+            {
+                if (graphQLConfigElement.TryGetProperty("type", out JsonElement graphQLTypeElement))
+                {
+                    if (graphQLTypeElement.ValueKind is JsonValueKind.True || graphQLTypeElement.ValueKind is JsonValueKind.False)
+                    {
+                        return JsonSerializer.Deserialize<bool>(graphQLTypeElement);
+                    }
+                    else if (graphQLTypeElement.ValueKind is JsonValueKind.String)
+                    {
+                        return JsonSerializer.Deserialize<string>(graphQLTypeElement);
+                    }
+                    else if (graphQLTypeElement.ValueKind is JsonValueKind.Object)
+                    {
+                        return JsonSerializer.Deserialize<SingularPlural>(graphQLTypeElement);
+                    }
+                    else
+                    {
+                        throw new JsonException("Unsupported GraphQL Type");
+                    }
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            else
+            {
+                throw new JsonException("Unsupported GraphQL Type");
+            }
+
         }
 
         /// <summary>

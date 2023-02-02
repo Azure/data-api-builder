@@ -110,7 +110,7 @@ namespace Cli
                     /// This is a workaround to make sure our app exits with exit code 0,
                     /// when user does --help or --versions.
                     /// dab --help -> ErrorType.HelpVerbRequestedError
-                    /// dab add --help -> ErrorType.HelpRequestedError
+                    /// dab [command-name] --help -> ErrorType.HelpRequestedError
                     /// dab --version -> ErrorType.VersionRequestedError
                     List<Error> errors = err.ToList();
                     if (errors.Any(e => e.Tag == ErrorType.VersionRequestedError

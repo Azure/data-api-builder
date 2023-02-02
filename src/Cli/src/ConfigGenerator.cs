@@ -1010,7 +1010,7 @@ namespace Cli
         private static object? ConstructUpdatedRestDetails(Entity entity, EntityOptions options)
         {
             // Updated REST Route details
-            object? restPath = (options.RestRoute is not null) ? ConstructRestPathDetails(options.RestRoute) : entity.FetchRestEnabledOrPathSettings();
+            object? restPath = (options.RestRoute is not null) ? ConstructRestPathDetails(options.RestRoute) : entity.GetRestEnabledOrPathSettings();
             
 
             // Updated REST Methods info for stored procedures
@@ -1070,7 +1070,7 @@ namespace Cli
         private static object? ConstructUpdatedGraphQLDetails(Entity entity, EntityOptions options)
         {
             //Updated GraphQL Type
-            object? graphQLType = (options.GraphQLType is not null) ? ConstructGraphQLTypeDetails(options.GraphQLType) : entity.FetchGraphQLEnabledOrPath();
+            object? graphQLType = (options.GraphQLType is not null) ? ConstructGraphQLTypeDetails(options.GraphQLType) : entity.GetGraphQLEnabledOrPath();
             GraphQLOperation? graphQLOperation;
 
             if (!IsStoredProcedureConvertedToOtherTypes(entity, options)

@@ -273,7 +273,7 @@ namespace Azure.DataApiBuilder.Config
         /// </summary>
         /// <returns>GraphQL Type configuration for the entity.</returns>
         /// <exception cref="JsonException">Raised when unsupported GraphQL configuration is present on the property "type"</exception>
-        public object? FetchGraphQLEnabledOrPath()
+        public object? GetGraphQLEnabledOrPath()
         {
             if (GraphQL is null)
             {
@@ -408,7 +408,7 @@ namespace Azure.DataApiBuilder.Config
         /// </summary>
         /// <returns></returns>
         /// <exception cref="JsonException"></exception>
-        public object? FetchRestEnabledOrPathSettings()
+        public object? GetRestEnabledOrPathSettings()
         {
             if (Rest is null)
             {

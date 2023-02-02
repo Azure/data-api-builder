@@ -48,7 +48,8 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                     {
                         name = name + "_star"
                     }
-                }
+                },
+                tags = new[] { "tag1", "tag2" }
             };
         }
     }

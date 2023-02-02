@@ -84,8 +84,6 @@ The `parameters` defines which parameters should be exposed and to provide defau
 3. For both REST and GraphQL endpoints: when a stored procedure parameter is specified both in the configuration file and in the URL query string, the parameter in the URL query string will take precedence.
 4. Entities backed by a stored procedure do not have all the capabilities automatically provided for entities backed by tables, collections or views. Stored procedure backed entities do not support pagination, ordering, or filtering. Nor do such entities support returning items specified by primary key values.
 
-Please note that **you should configure the permission accordingly with the stored procedure behavior**. For example, if a Stored Procedure create a new item in the database, it is recommended to allow only the action `create` for such stored procedure. If, like in the sample, a stored procedure returns some data, it is recommended to allow only the action `read`. In general the recommendation is to align the allowed actions to what the stored procedure does, so to provide a consistent experience to the developer.
-
 ### REST support for stored procedures
 
 The REST endpoint behavior for a stored procedure backed entity can be configured to be available for one or multiple HTTP verbs (GET, POST, PUT, PATCH, DELETE). The REST section of the entity would look like the following:

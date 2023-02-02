@@ -4,6 +4,7 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Microsoft.Extensions.Logging;
 using static Cli.Utils;
+using static Azure.DataApiBuilder.Service.Startup;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
 namespace Cli
@@ -843,7 +844,7 @@ namespace Cli
             // This will add args to disable automatic redirects to https if specified by user
             if (options.IsHttpsRedirectionDisabled)
             {
-                args.Add("--no-https");
+                args.Add(NO_HTTPS_REDIRECT_FLAG);
             }
 
             return Azure.DataApiBuilder.Service.Program.StartEngine(args.ToArray());

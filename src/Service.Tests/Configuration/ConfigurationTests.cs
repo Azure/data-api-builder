@@ -133,21 +133,19 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// Verify that https redirection is disabled when --no-https flag is passed  through CLI.
-        /// We check that IsRedirectingToHttpsEnabled is set to false with --no-https flag.
+        /// Verify that https redirection is disabled when --no-https-redirect flag is passed  through CLI.
+        /// We check if IsHttpsRedirectionDisabled is set to true with --no-https-redirect flag.
         /// </summary>
         [DataTestMethod]
-        [DataRow(new string[] { "" }, true, DisplayName = "Https redirection allowed")]
-        [DataRow(new string[] { "--no-https" }, false, DisplayName = "Http redirection disabled")]
-        [TestMethod("Validates that https redirection is disabled when --no-https option is used when engine is started through CLI")]
-        public async Task TestDisablingHttpsRedirection(
+        [DataRow(new string[] { "" }, false, DisplayName = "Https redirection allowed")]
+        [DataRow(new string[] { Startup.NO_HTTPS_REDIRECT_FLAG}, true, DisplayName = "Http redirection disabled")]
+        [TestMethod("Validates that https redirection is disabled when --no-https-redirect option is used when engine is started through CLI")]
+        public void TestDisablingHttpsRedirection(
             string[] args,
-            bool expectedIsHttpsRedirectionEnabled)
+            bool expectedIsHttpsRedirectionDisabled)
         {
             Microsoft.AspNetCore.Hosting.IWebHost webHost = Program.CreateWebHostBuilder(args).Build();
-            webHost.Start();
-            Assert.AreEqual(RuntimeConfigProvider.IsRedirectingToHttpsEnabled, expectedIsHttpsRedirectionEnabled);
-            await webHost.StopAsync();
+            Assert.AreEqual(RuntimeConfigProvider.IsHttpsRedirectionDisabled, expectedIsHttpsRedirectionDisabled);
         }
 
         /// <summary>

@@ -94,7 +94,7 @@ The REST endpoint behavior for a stored procedure backed entity can be configure
 ```
 
 Any REST requests for the entity will fail with **HTTP 405 Method Not Allowed** when an HTTP method not listed in the configuration is used. e.g. executing a PUT request will fail with error code 405.
-If the `methods` section is excluded from the entity's REST configuration, the default method **POST** will be inferred. To disable the REST endpoint for this entity, configure `"rest": false` and any REST requests on the stored procedure entity will fail with **HTTP 404 Not Found**. Alternatively, the entity could be configured with an empty `methods` array, and the REST endpoint would fail for all REST requests with HTTP 405 Method Not Allowed, because the `methods` section was explicitly defined with no methods.
+If the `methods` section is excluded from the entity's REST configuration, the default method **POST** will be inferred. To disable the REST endpoint for this entity, configure `"rest": false` and any REST requests on the stored procedure entity will fail with **HTTP 404 Not Found**.
 
 If the stored procedure accepts parameters, those can be passed in the URL query string when calling the REST endpoint. For example:
 
@@ -104,14 +104,15 @@ http://<dab-server>/api/GetCowrittenBooksByAuthor?author=isaac%20asimov
 
 ### GraphQL support for stored procedures
 
-Stored procedure execution in GraphQL can be configured using the `graphql` option of a stored procedure backed entity. Explicitly setting the operation of the entity allows you to represent a stored procedure in the GraphQL schema in a way that aligns with the stored procedures behavior.
+Stored procedure execution in GraphQL can be configured using the `graphql` option of a stored procedure backed entity. Explicitly setting the operation of the entity allows you to represent a stored procedure in the GraphQL schema in a way that aligns with the behavior of the stored procedure.
+Not setting any value for the operation will result in the creation of a `mutation` operation.
 
 For example, using the value `query` for the `operation` option results in the stored procedure resolving as a query field in the GraphQL schema
 
 CLI Usage:
 
 ```sh
-dab add GetCowrittenBooksByAuthor --source dbo.stp_get_all_cowritten_books_by_author --source.type "stored-procedure" source.params "searchType:s" --permissions "anonymous:execute" --rest.methods "GET" --graphql.operation "query"
+dab add GetCowrittenBooksByAuthor --source dbo.stp_get_all_cowritten_books_by_author --source.type "stored-procedure" --source.params "searchType:s" --permissions "anonymous:execute" --rest.methods "GET" --graphql.operation "query"
 ```
 
 Runtime Configuration:
@@ -130,6 +131,8 @@ type GetCowrittenBooksByAuthor {
   title: String
 }
 
+In the schema, both query and mutation operations for stored procedures will have `execute` as a prefix. For the above stored procedure the exact query name field generated would be `executeGetCowrittenBooksByAuthor`
+
 type Query {
   """
   Execute Stored-Procedure GetCowrittenBooksByAuthor and get results from the database
@@ -143,10 +146,10 @@ type Query {
 }
 ```
 
-Alternatively, `operation` can be set to `mutation` so that a mutation field represents the stored procedure in the GraphQL schema. A modified `dab` command to reflect the changed `operation`:
+Alternatively, `operation` can be set to `mutation` so that a mutation field represents the stored procedure in the GraphQL schema. The below `dab update` command can be used to change the `operation`:
 
 ```sh
-dab add GetCowrittenBooksByAuthor --source dbo.stp_get_all_cowritten_books_by_author --source.type "stored-procedure" source.params "searchType:s" --permissions "anonymous:execute" --rest.methods "POST" --graphql.operation "mutation"
+dab update GetCowrittenBooksByAuthor --graphql.operation "mutation"
 ```
 
 Runtime configuration:

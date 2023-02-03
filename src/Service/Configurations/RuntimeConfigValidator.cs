@@ -593,8 +593,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         if (!_runtimeConfigProvider.IsLateConfigured)
                         {
                             LoggingRelationMessage(linked: true);
-                            string sourceDBOName = entity.SourceName;
-                            string targetDBOName = runtimeConfig.Entities[relationship.TargetEntity].SourceName;
+                            string sourceDBOName = sqlMetadataProvider.EntityToDatabaseObject[entityName].FullName;
+                            string targetDBOName = sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity].FullName;
                             string cardinality = relationship.Cardinality.ToString().ToLower();
                             RelationShipPair linkedSourceRelationshipPair = new(linkingDatabaseObject, sourceDatabaseObject);
                             RelationShipPair linkedTargetRelationshipPair = new(linkingDatabaseObject, targetDatabaseObject);
@@ -629,8 +629,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         LoggingRelationMessage();
                         RelationShipPair sourceTargetRelationshipPair = new(sourceDatabaseObject, targetDatabaseObject);
                         RelationShipPair targetSourceRelationshipPair = new(targetDatabaseObject, sourceDatabaseObject);
-                        string sourceDBOName = entity.SourceName;
-                        string targetDBOName = runtimeConfig.Entities[relationship.TargetEntity].SourceName;
+                        string sourceDBOName = sqlMetadataProvider.EntityToDatabaseObject[entityName].FullName;
+                        string targetDBOName = sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity].FullName;
                         string cardinality = relationship.Cardinality.ToString().ToLower();
                         ForeignKeyDefinition fKDef;
                         string sourceColumns;

@@ -1651,6 +1651,15 @@ namespace Cli.Tests
             Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfiguration), JObject.Parse(runtimeConfig)));
         }
 
+        /// <summary>
+        /// Validates that updating an entity with conflicting options such as disabling an entity
+        /// for GraphQL but specifying GraphQL Operations results in a failure. Likewise for REST Path and
+        /// Methods.
+        /// </summary>
+        /// <param name="restMethods"></param>
+        /// <param name="graphQLOperation"></param>
+        /// <param name="restRoute"></param>
+        /// <param name="graphQLType"></param>
         [DataTestMethod]
         [DataRow(null, "Mutation", "true", "false", DisplayName = "Conflicting configurations during update - GraphQL operation specified but entity is disabled for GraphQL")]
         [DataRow(new string[] { "Get" }, null, "false", "true", DisplayName = "Conflicting configurations during update - REST methods specified but entity is disabled for REST")]
@@ -1688,7 +1697,6 @@ namespace Cli.Tests
                 );
 
             string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_METHODS_GRAPHQL_OPERATION);
-            ;
             Assert.IsFalse(ConfigGenerator.TryUpdateExistingEntity(options, ref initialConfiguration));
         }
 

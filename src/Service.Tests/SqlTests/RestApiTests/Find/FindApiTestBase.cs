@@ -545,7 +545,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$select=id,int_types&$orderby=int_types",
+                queryString: "?$select=typeid,int_types&$orderby=int_types",
                 entityNameOrPath: _integrationTypeEntity,
                 sqlQuery: GetQuery(nameof(FindTestWithIntTypeNullValuesOrderByAsc))
             );

@@ -76,6 +76,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 retryAttempt++;
                 try
                 {
+                    // When IsLateConfigured is true we are in a hosted scenario and do not reveal query information.
+                    if (!ConfigProvider.IsLateConfigured)
+                    {
+                        QueryExecutorLogger.LogDebug($"Executing query: \n{sqltext}");
+                    }
+
                     TResult? result =
                         await ExecuteQueryAgainstDbAsync(conn,
                             sqltext,
@@ -88,12 +94,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         // This implies that the request got successfully executed during one of retry attempts.
                         QueryExecutorLogger.LogInformation($"Request executed successfully in {retryAttempt} attempt of" +
                             $"{_maxRetryCount + 1} available attempts.");
-                    }
-
-                    // When IsLateConfigured is true we are in a hosted scenario and do not reveal query information.
-                    if (!ConfigProvider.IsLateConfigured)
-                    {
-                        QueryExecutorLogger.LogDebug($"Query Executed: \n{sqltext}");
                     }
 
                     return result;

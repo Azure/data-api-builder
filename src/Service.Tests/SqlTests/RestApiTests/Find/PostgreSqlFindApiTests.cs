@@ -782,38 +782,38 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await ResetDbStateAsync();
         }
 
-        // Pending Stored Procedure Support
+        // TODO: IMPLEMENT THIS
         [TestMethod]
         [Ignore]
-        public override Task FindManyStoredProcedureTest()
+        public override Task FindManyDatabaseExecutableTest()
         {
             throw new NotImplementedException();
         }
 
         [TestMethod]
         [Ignore]
-        public override Task FindOneStoredProcedureTestUsingParameter()
+        public override Task FindOneDatabaseExecutableTestUsingParameter()
         {
             throw new NotImplementedException();
         }
 
         [TestMethod]
         [Ignore]
-        public override Task FindStoredProcedureWithNonEmptyPrimaryKeyRoute()
+        public override Task FindDatabaseExecutableWithNonEmptyPrimaryKeyRoute()
         {
             throw new NotImplementedException();
         }
 
         [TestMethod]
         [Ignore]
-        public override Task FindStoredProcedureWithMissingParameter()
+        public override Task FindDatabaseExecutableWithMissingParameter()
         {
             throw new NotImplementedException();
         }
 
         [TestMethod]
         [Ignore]
-        public override Task FindStoredProcedureWithNonexistentParameter()
+        public override Task FindDatabaseExecutableWithNonexistentParameter()
         {
             throw new NotImplementedException();
         }

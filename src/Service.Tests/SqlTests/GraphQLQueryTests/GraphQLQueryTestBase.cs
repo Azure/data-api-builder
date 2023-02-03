@@ -1020,9 +1020,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
-        /// Simple Stored Procedure to check SELECT query returning single row
+        /// Simple Stored Procedure/Function to check SELECT query returning single row
         /// </summary>
-        public async Task TestStoredProcedureQueryForGettingSingleRow(string dbQuery)
+        public async Task TestDatabaseExecutableQueryForGettingSingleRow(string dbQuery)
         {
             string graphQLQueryName = "getPublisher";
             string graphQLQuery = @"{
@@ -1039,9 +1039,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
-        /// Simple Stored Procedure to check SELECT query returning multiple rows
+        /// Simple Stored Procedure/Function to check SELECT query returning multiple rows
         /// </summary>
-        public async Task TestStoredProcedureQueryForGettingMultipleRows(string dbQuery)
+        public async Task TestDatabaseExecutableQueryForGettingMultipleRows(string dbQuery)
         {
             string graphQLQueryName = "getBooks";
             string graphQLQuery = @"{
@@ -1059,9 +1059,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
-        /// Simple Stored Procedure to check COUNT operation
+        /// Simple Stored Procedure/Function to check COUNT operation
         /// </summary>
-        public async Task TestStoredProcedureQueryForGettingTotalNumberOfRows(string dbQuery)
+        public async Task TestDatabaseExecutableQueryForGettingTotalNumberOfRows(string dbQuery)
         {
             string graphQLQueryName = "countBooks";
             string graphQLQuery = @"{
@@ -1077,11 +1077,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
-        /// Test to verify Stored Procedure can handle nullable result columns
+        /// Test to verify Stored Procedure/Function can handle nullable result columns
         /// The result will contain a row which has columns containing null value.
         /// Columns:[first_publish_year and total_books_published] in the result set are nullable.
         /// </summary>
-        public async Task TestStoredProcedureQueryWithResultsContainingNull(string dbQuery)
+        public async Task TestDatabaseExecutableQueryWithResultsContainingNull(string dbQuery)
         {
             string graphQLQueryName = "searchAuthorByFirstName";
             string graphQLQuery = @"{
@@ -1231,7 +1231,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// <summary>
         /// Checks failure on providing invalid arguments in graphQL Query
         /// </summary>
-        public async Task TestStoredProcedureQueryWithInvalidArgumentType()
+        public async Task TestDatabaseExecutableQueryWithInvalidArgumentType()
         {
             string graphQLQueryName = "GetBook";
             string graphQLQuery = @"{

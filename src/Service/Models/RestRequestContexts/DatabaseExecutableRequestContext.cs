@@ -6,21 +6,22 @@ using Azure.DataApiBuilder.Config;
 namespace Azure.DataApiBuilder.Service.Models
 {
     /// <summary>
-    /// StoredProcedureRequestContext provides all needed request context for a stored procedure query.
+    /// DatabaseExecutableRequestContext provides all needed request context for stored procedure and function queries.
     /// For Find requests, parameters will be passed in the query string, which we can access from the base class's
     /// ParsedQueryString field; for all other Operation types, we can populate and use the FieldValuePairsInBody
     /// </summary>
-    public class StoredProcedureRequestContext : RestRequestContext
+    public class DatabaseExecutableRequestContext : RestRequestContext
     {
         /// <summary>
-        /// Represents the parameters that this request is calling the stored procedure with
+        /// Represents the parameters that this request is calling the stored procedure or function with
         /// </summary>
         public Dictionary<string, object?> ResolvedParameters { get; private set; } = new();
 
         /// <summary>
-        /// Represents a request to execute a stored procedure. At the time of construction, populates the FieldValuePairsInBody
+        /// Represents a request to execute a stored procedure or function.
+        /// At the time of construction, populates the FieldValuePairsInBody
         /// </summary>
-        public StoredProcedureRequestContext(
+        public DatabaseExecutableRequestContext(
             string entityName,
             DatabaseObject dbo,
             JsonElement? requestPayloadRoot,

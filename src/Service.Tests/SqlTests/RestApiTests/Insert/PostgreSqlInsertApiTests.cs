@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
@@ -241,6 +242,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString(),
                 isExpectedErrorMsgSubstr: true
             );
+        }
+
+        /// <inheritdoc/>
+        [Ignore]
+        [TestMethod]
+        public override Task InsertOneAndVerifyReturnedRowsWithDatabaseExecutableTest(
+            string publisherName,
+            string queryName,
+            bool expectJson)
+        {
+            throw new NotImplementedException();
         }
 
         #endregion

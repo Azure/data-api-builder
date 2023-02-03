@@ -78,10 +78,10 @@ namespace Azure.DataApiBuilder.Service.Services
 
             RestRequestContext context;
 
-            // If request has resolved to a stored procedure entity, initialize and validate appropriate request context
-            if (dbObject.SourceType is SourceType.StoredProcedure)
+            // If request has resolved to a stored procedure or function entity, initialize and validate appropriate request context
+            if (dbObject.SourceType.IsDatabaseExecutableType())
             {
-                PopulateStoredProcedureContext(operationType,
+                PopulateDatabaseExecutableContext(operationType,
                     dbObject,
                     entityName,
                     queryString,
@@ -181,8 +181,8 @@ namespace Azure.DataApiBuilder.Service.Services
             RequestValidator.ValidateRequestContext(context, _sqlMetadataProvider);
 
             // The final authorization check on columns occurs after the request is fully parsed and validated.
-            // Stored procedures do not yet have semantics defined for column-level permissions
-            if (dbObject.SourceType is not SourceType.StoredProcedure)
+            // Stored procedures and Functions do not yet have semantics defined for column-level permissions
+            if (dbObject.SourceType.IsDatabaseExecutableType())
             {
                 await AuthorizationCheckForRequirementAsync(resource: context, requirement: new ColumnsPermissionsRequirement());
             }
@@ -205,35 +205,35 @@ namespace Azure.DataApiBuilder.Service.Services
 
         /// <summary>
         /// Dispatch execution of a request context to the query engine
-        /// The two overloads to ExecuteAsync take FindRequestContext and StoredProcedureRequestContext
+        /// The two overloads to ExecuteAsync take FindRequestContext and DatabaseExecutableRequestContext
         /// </summary>
         private Task<IActionResult> DispatchQuery(RestRequestContext context)
         {
             return context switch
             {
                 FindRequestContext => _queryEngine.ExecuteAsync((FindRequestContext)context),
-                StoredProcedureRequestContext => _queryEngine.ExecuteAsync((StoredProcedureRequestContext)context),
+                DatabaseExecutableRequestContext => _queryEngine.ExecuteAsync((DatabaseExecutableRequestContext)context),
                 _ => throw new NotSupportedException("This operation is not yet supported."),
             };
         }
 
         /// <summary>
         /// Dispatch execution of a request context to the mutation engine
-        /// The two overloads to ExecuteAsync take StoredProcedureRequestContext and RestRequestContext
+        /// The two overloads to ExecuteAsync take DatabaseExecutableRequestContext and RestRequestContext
         /// </summary>
         private Task<IActionResult?> DispatchMutation(RestRequestContext context)
         {
             return context switch
             {
-                StoredProcedureRequestContext => _mutationEngine.ExecuteAsync((StoredProcedureRequestContext)context),
+                DatabaseExecutableRequestContext => _mutationEngine.ExecuteAsync((DatabaseExecutableRequestContext)context),
                 _ => _mutationEngine.ExecuteAsync(context)
             };
         }
 
         /// <summary>
-        /// Helper method to populate the context in case the database object for this request is a stored procedure
+        /// Helper method to populate the context in case the database object for this request is a stored procedure or function
         /// </summary>
-        private void PopulateStoredProcedureContext(Config.Operation operationType,
+        private void PopulateDatabaseExecutableContext(Config.Operation operationType,
             DatabaseObject dbObject,
             string entityName,
             string queryString,
@@ -246,7 +246,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
                 case Config.Operation.Read:
                     // Parameters passed in query string, request body is ignored for find requests
-                    context = new StoredProcedureRequestContext(
+                    context = new DatabaseExecutableRequestContext(
                         entityName,
                         dbo: dbObject,
                         requestPayloadRoot: null,
@@ -268,11 +268,11 @@ namespace Azure.DataApiBuilder.Service.Services
                 case Config.Operation.UpdateIncremental:
                 case Config.Operation.Upsert:
                 case Config.Operation.UpsertIncremental:
-                    // Stored procedure call is semantically identical for all methods except Find, so we can
-                    // effectively reuse the ValidateInsertRequest - throws error if query string is nonempty
+                    // Stored procedure and Function calls are semantically identical for all methods except Find,
+                    // so we can effectively reuse the ValidateInsertRequest - throws error if query string is nonempty
                     // and parses the body into json
                     JsonElement requestPayloadRoot = RequestValidator.ValidateInsertRequest(queryString, requestBody);
-                    context = new StoredProcedureRequestContext(
+                    context = new DatabaseExecutableRequestContext(
                         entityName,
                         dbo: dbObject,
                         requestPayloadRoot,
@@ -285,14 +285,14 @@ namespace Azure.DataApiBuilder.Service.Services
             }
 
             // Throws bad request if primaryKeyRoute set
-            RequestValidator.ValidateStoredProcedureRequest(primaryKeyRoute);
+            RequestValidator.ValidateDatabaseExecutableRequest(primaryKeyRoute);
 
             // At this point, either query string or request body is populated with params, so resolve which will be passed
-            ((StoredProcedureRequestContext)context).PopulateResolvedParameters();
+            ((DatabaseExecutableRequestContext)context).PopulateResolvedParameters();
 
             // Validate the request parameters
-            RequestValidator.ValidateStoredProcedureRequestContext(
-                (StoredProcedureRequestContext)context, _sqlMetadataProvider);
+            RequestValidator.ValidateDatabaseExecutableRequestContext(
+                (DatabaseExecutableRequestContext)context, _sqlMetadataProvider);
         }
 
         /// <summary>

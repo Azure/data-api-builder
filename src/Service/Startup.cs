@@ -517,7 +517,7 @@ namespace Azure.DataApiBuilder.Service
                     runtimeConfigValidator.ValidateRelationshipsInConfig(runtimeConfig, sqlMetadataProvider!);
                 }
 
-                runtimeConfigValidator.ValidateStoredProceduresInConfig(runtimeConfig, sqlMetadataProvider!);
+                runtimeConfigValidator.ValidateDatabaseExecutablesInConfig(runtimeConfig, sqlMetadataProvider!);
 
                 _logger.LogInformation($"Successfully completed runtime initialization.");
                 return true;

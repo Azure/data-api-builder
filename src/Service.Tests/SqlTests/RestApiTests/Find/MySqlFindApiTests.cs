@@ -95,8 +95,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   FROM (
                       SELECT *
                       FROM " + _composite_subset_bookPub + @"
-                      WHERE id = 2 AND title = 'Also Awesome book' AND 
-                      pub_id = 1234 AND name = 'Big Company' 
+                      WHERE id = 2 AND title = 'Also Awesome book' AND
+                      pub_id = 1234 AND name = 'Big Company'
                       ORDER BY id asc
                       LIMIT 1
                   ) AS subq"
@@ -808,38 +808,38 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             return _queryMap[key];
         }
 
-        // Pending Stored Procedure Support
+        // Pending Stored Procedure/Function Support
         [TestMethod]
         [Ignore]
-        public override Task FindManyStoredProcedureTest()
+        public override Task FindManyDatabaseExecutableTest()
         {
             throw new NotImplementedException();
         }
 
         [TestMethod]
         [Ignore]
-        public override Task FindOneStoredProcedureTestUsingParameter()
+        public override Task FindOneDatabaseExecutableTestUsingParameter()
         {
             throw new NotImplementedException();
         }
 
         [TestMethod]
         [Ignore]
-        public override Task FindStoredProcedureWithNonEmptyPrimaryKeyRoute()
+        public override Task FindDatabaseExecutableWithNonEmptyPrimaryKeyRoute()
         {
             throw new NotImplementedException();
         }
 
         [TestMethod]
         [Ignore]
-        public override Task FindStoredProcedureWithMissingParameter()
+        public override Task FindDatabaseExecutableWithMissingParameter()
         {
             throw new NotImplementedException();
         }
 
         [TestMethod]
         [Ignore]
-        public override Task FindStoredProcedureWithNonexistentParameter()
+        public override Task FindDatabaseExecutableWithNonexistentParameter()
         {
             throw new NotImplementedException();
         }

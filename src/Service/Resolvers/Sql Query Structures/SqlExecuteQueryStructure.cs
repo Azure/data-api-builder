@@ -14,16 +14,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     ///</summary>
     public class SqlExecuteStructure : BaseSqlQueryStructure
     {
-        // Holds the final, resolved parameters that will be passed when building the execute stored procedure query
-        // Keys are the stored procedure arguments (e.g. @id, @username...)
-        // Values are the engine-generated referencing parameters (e.g. @param0, @param1...)
-        public Dictionary<string, object> ProcedureParameters { get; set; }
-
         /// <summary>
-        /// Constructs a structure with all needed components to build an EXECUTE stored procedure call
+        /// Constructs a structure with all needed components to build an EXECUTE stored procedure/function call
         /// requestParams will be resolved from either the request querystring or body by this point
         /// Construct the ProcedureParameters dictionary through resolving requestParams and defaults from config/metadata
-        /// Also performs type checking at this stage instead of in RequestValidator to prevent code duplication 
+        /// Also performs type checking at this stage instead of in RequestValidator to prevent code duplication
         /// </summary>
         public SqlExecuteStructure(
             string entityName,
@@ -33,9 +28,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             IDictionary<string, object?> requestParams)
         : base(sqlMetadataProvider, authorizationResolver, gQLFilterParser, entityName: entityName)
         {
-            StoredProcedureDefinition storedProcedureDefinition = GetUnderlyingStoredProcedureDefinition();
-            ProcedureParameters = new();
-            foreach ((string paramKey, ParameterDefinition paramDefinition) in storedProcedureDefinition.Parameters)
+            DatabaseExecutableDefinition DatabaseExecutableDefinition = GetUnderlyingDatabaseExecutableDefinition();
+            foreach ((string paramKey, ParameterDefinition paramDefinition) in DatabaseExecutableDefinition.Parameters)
             {
                 // Populate with request param if able
                 if (requestParams.TryGetValue(paramKey, out object? requestParamValue))
@@ -45,7 +39,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     {
                         string parameterizedName = MakeParamWithValue(requestParamValue is null ? null :
                             GetParamAsProcedureParameterType(requestParamValue.ToString()!, paramKey));
-                        ProcedureParameters.Add(paramKey, $"@{parameterizedName}");
+                        Parameters.Add(paramKey, $"@{parameterizedName}");
                     }
                     catch (ArgumentException ex)
                     {
@@ -64,7 +58,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     if (paramDefinition.HasConfigDefault)
                     {
                         string parameterizedName = MakeParamWithValue(paramDefinition.ConfigDefaultValue);
-                        ProcedureParameters.Add(paramKey, $"@{parameterizedName}");
+                        Parameters.Add(paramKey, $"@{parameterizedName}");
                     }
                     else
                     {
@@ -79,12 +73,24 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
-        /// Gets the value of the parameter cast as the system type
-        /// of the stored procedure parameter this parameter is associated with
+        /// Gets the source type of the database executable
+        /// This is useful to distinguish between stored procedures and functions
+        /// for query building, error reporting etc.
         /// </summary>
-        private object GetParamAsProcedureParameterType(string param, string procParamName)
+        public SourceType GetSourceType()
         {
-            Type systemType = GetUnderlyingStoredProcedureDefinition().Parameters[procParamName].SystemType!;
+            return MetadataProvider.GetDatabaseObjectForGraphQLType(EntityName).SourceType;
+        }
+
+        /// <summary>
+        /// Gets the value of the parameter cast as the system type
+        /// of the stored procedure/function parameter this parameter is associated with
+        /// </summary>
+        private object GetParamAsProcedureParameterType(string param, string executableParamName)
+        {
+            DatabaseExecutableDefinition definition = GetUnderlyingDatabaseExecutableDefinition();
+            Type systemType = definition.Parameters[executableParamName].SystemType!;
+
             try
             {
                 return ParseParamAsSystemType(param, systemType);
@@ -95,8 +101,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     e is ArgumentNullException ||
                     e is OverflowException)
                 {
-                    throw new ArgumentException($@"Parameter ""{param}"" cannot be resolved as stored procedure parameter ""{procParamName}"" " +
-                        $@"with type ""{systemType.Name}"".", innerException: e);
+                    throw new ArgumentException(
+                        $@"Parameter ""{param}"" cannot be resolved as {GetSourceType()} " +
+                        $@"parameter ""{executableParamName}"" with type ""{systemType.Name}"".", innerException: e);
                 }
 
                 throw;

@@ -256,11 +256,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
-        /// Return the StoredProcedureDefinition associated with this database object
+        /// Return the DatabaseExecutableDefinition associated with this database object
         /// </summary>
-        protected StoredProcedureDefinition GetUnderlyingStoredProcedureDefinition()
+        protected DatabaseExecutableDefinition GetUnderlyingDatabaseExecutableDefinition()
         {
-            return MetadataProvider.GetStoredProcedureDefinition(EntityName);
+            return MetadataProvider.GetDatabaseExecutableDefinition(EntityName);
         }
 
         /// <summary>

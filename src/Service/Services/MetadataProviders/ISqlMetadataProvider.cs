@@ -41,16 +41,16 @@ namespace Azure.DataApiBuilder.Service.Services
         SourceDefinition GetSourceDefinition(string entityName);
 
         /// <summary>
-        /// Obtains the underlying StoredProcedureDefinition for the given entity name.
+        /// Obtains the underlying DatabaseExecutableDefinition for the given entity name.
         /// </summary>
-        StoredProcedureDefinition GetStoredProcedureDefinition(string entityName);
+        DatabaseExecutableDefinition GetDatabaseExecutableDefinition(string entityName);
 
         Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; }
 
         /// <summary>
-        /// Contains mapping of exposed graphQL names of StoredProcedure to EntityName defined in the config.
+        /// Contains mapping of exposed graphQL names of StoredProcedure/Function to EntityName defined in the config.
         /// </summary>
-        Dictionary<string, string> GraphQLStoredProcedureExposedNameToEntityNameMap { get; set; }
+        Dictionary<string, string> GraphQLDatabaseExecutableExposedNameToEntityNameMap { get; set; }
 
         /// <summary>
         /// Obtains the underlying OData parser.
@@ -119,7 +119,7 @@ namespace Azure.DataApiBuilder.Service.Services
         void SetPartitionKeyPath(string database, string container, string partitionKeyPath);
 
         /// <summary>
-        /// The GraphQL type is expected to either match the top level entity name from runtime config or the name specified in the singular property 
+        /// The GraphQL type is expected to either match the top level entity name from runtime config or the name specified in the singular property
         /// The entities dictionary should always be using the top level entity name
         /// First try to check if the GraphQL type is matching any key in the entities dictionary
         /// If no match found, then use the GraphQL singular type in the runtime config to look up the top-level entity name from a GraphQLSingularTypeToEntityNameMap

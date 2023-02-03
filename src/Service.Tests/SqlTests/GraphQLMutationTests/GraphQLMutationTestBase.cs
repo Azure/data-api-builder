@@ -114,7 +114,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// <code>Check: </code> If the new book is inserted into the DB and
         /// verifies the response.
         /// </summary>
-        public async Task TestStoredProcedureMutationForInsertion(string dbQuery)
+        public async Task TestDatabaseExecutableMutationForInsertion(string dbQuery)
         {
             string graphQLMutationName = "insertBook";
             string graphQLMutation = @"
@@ -130,7 +130,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             Assert.AreEqual(currentResult.RootElement.GetProperty("count").GetInt64(), 0);
             JsonElement graphQLResponse = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
 
-            // Stored Procedure didn't return anything
+            // Stored Procedure/Function didn't return anything
             SqlTestHelper.PerformTestEqualJsonStrings("[]", graphQLResponse.ToString());
 
             // check to verify new element is inserted
@@ -144,7 +144,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// <code>Check: </code> If the intended book is deleted from the DB and
         /// verifies the response.
         /// </summary>
-        public async Task TestStoredProcedureMutationForDeletion(string dbQueryToVerifyDeletion)
+        public async Task TestDatabaseExecutableMutationForDeletion(string dbQueryToVerifyDeletion)
         {
             string graphQLMutationName = "deleteLastInsertedBook";
             string graphQLMutation = @"
@@ -160,7 +160,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             Assert.AreEqual(currentResult.RootElement.GetProperty("maxId").GetInt64(), 14);
             JsonElement graphQLResponse = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
 
-            // Stored Procedure didn't return anything
+            // Stored Procedure/Function didn't return anything
             SqlTestHelper.PerformTestEqualJsonStrings("[]", graphQLResponse.ToString());
 
             // check to verify new element is inserted
@@ -175,7 +175,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// <code>Check: </code> If the intended book is inserted into the DB and
         /// verifies the non-empty response.
         /// </summary>
-        public async Task TestStoredProcedureMutationNonEmptyResponse(string dbQuery)
+        public async Task TestDatabaseExecutableMutationNonEmptyResponse(string dbQuery)
         {
             string graphQLMutationName = "insertAndDisplayAllBooksUnderGivenPublisher";
             string graphQLMutation = @"
@@ -199,7 +199,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// <code>Check: </code> The book title should be updated with the given id
         /// DB is queried to verify the result.
         /// </summary>
-        public async Task TestStoredProcedureMutationForUpdate(string dbQuery)
+        public async Task TestDatabaseExecutableMutationForUpdate(string dbQuery)
         {
             string graphQLMutationName = "updateBookTitle";
             string graphQLMutation = @"
@@ -220,7 +220,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// <code>Do: </code> Inserts new stock price with default current timestamp as the value of 
+        /// <code>Do: </code> Inserts new stock price with default current timestamp as the value of
         /// 'instant' column and returns the inserted row.
         /// <code>Check: </code> If stock price with the given (category, piece id) is successfully inserted
         /// in the database by the mutation with a default value for 'instant'.

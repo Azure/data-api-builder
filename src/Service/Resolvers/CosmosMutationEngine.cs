@@ -270,7 +270,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc/>
-        public Task<IActionResult?> ExecuteAsync(StoredProcedureRequestContext context)
+        public Task<IActionResult?> ExecuteAsync(DatabaseExecutableRequestContext context)
         {
             throw new NotImplementedException();
         }

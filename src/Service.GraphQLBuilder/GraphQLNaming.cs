@@ -77,7 +77,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <summary>
         /// Per GraphQL specification (October2021):
         /// "Any Name within a GraphQL type system must not start with two underscores '__'."
-        /// because such types and fields are reserved by GraphQL's introspection system 
+        /// because such types and fields are reserved by GraphQL's introspection system
         /// This helper function identifies whether the provided name is prefixed with double
         /// underscores.
         /// </summary>
@@ -225,11 +225,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         }
 
         /// <summary>
-        /// Generates the query name of a stored procedure exposed for GraphQL.
+        /// Generates the query name of a stored procedure or function exposed for GraphQL.
         /// </summary>
         /// <param name="entityName">Name of the entity</param>
         /// <returns>Name of the list query</returns>
-        public static string GenerateStoredProcedureQueryName(string entityName, Entity entity)
+        public static string GenerateDatabaseExecutableQueryName(string entityName, Entity entity)
         {
             return FormatNameForField(GetDefinedSingularName(entityName, entity));
         }

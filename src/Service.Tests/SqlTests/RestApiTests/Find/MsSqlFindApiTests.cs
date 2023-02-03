@@ -24,11 +24,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
-                "FindManyStoredProcedureTest",
+                "FindManyDatabaseExecutableTest",
                 $"EXECUTE {_integrationProcedureFindMany_ProcName}"
             },
             {
-                "FindOneStoredProcedureTestUsingParameter",
+                "FindOneDatabaseExecutableTestUsingParameter",
                 $"EXECUTE {_integrationProcedureFindOne_ProcName} @id = 1"
             },
             {

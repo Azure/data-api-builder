@@ -181,10 +181,10 @@ namespace Azure.DataApiBuilder.Config
     /// database object source.
     /// </summary>
     /// <param name="Type"> Type of the database object.
-    /// Should be one of [table, view, stored-procedure]. </param>
+    /// Should be one of [table, view, stored-procedure, function]. </param>
     /// <param name="Name"> The name of the database object. </param>
-    /// <param name="Parameters"> If Type is SourceType.StoredProcedure,
-    /// Parameters to be passed as defaults to the procedure call </param>
+    /// <param name="Parameters"> If Type is SourceType.(StoredProcedure|Function),
+    /// Parameters to be passed as defaults to the procedure/function call </param>
     /// <param name="KeyFields"> The field(s) to be used as primary keys.
     public record DatabaseObjectSource(
         [property: JsonConverter(typeof(SourceTypeEnumConverter))]
@@ -225,8 +225,7 @@ namespace Azure.DataApiBuilder.Config
         /// <inheritdoc/>
         public override void Write(Utf8JsonWriter writer, SourceType value, JsonSerializerOptions options)
         {
-            string valueToWrite = value is SourceType.StoredProcedure ? STORED_PROCEDURE : value.ToString().ToLower();
-            writer.WriteStringValue(valueToWrite);
+            writer.WriteStringValue(value.GetConfigValue());
         }
 
         /// <summary>
@@ -286,7 +285,34 @@ namespace Azure.DataApiBuilder.Config
         [Description("view")]
         View,
         [Description("stored-procedure")]
-        StoredProcedure
+        StoredProcedure,
+        [Description("function")]
+        Function
+    }
+
+    /// <summary>
+    /// Defines an extension method of SourceType enum to get the description of the
+    /// enum value
+    /// </summary>
+    public static class SourceTypeHelper
+    {
+        /// <summary>
+        /// Gets the DAB config value for the source type
+        /// </summary>
+        public static string GetConfigValue(this SourceType sourceType)
+        {
+            return sourceType is SourceType.StoredProcedure ?
+                    SourceTypeEnumConverter.STORED_PROCEDURE :
+                    sourceType.ToString().ToLower();
+        }
+
+        /// <summary>
+        /// Check if the source type is stored-procedure or a function
+        /// </summary>
+        public static bool IsDatabaseExecutableType(this SourceType sourceType)
+        {
+            return sourceType is SourceType.StoredProcedure || sourceType is SourceType.Function;
+        }
     }
 
     /// <summary>

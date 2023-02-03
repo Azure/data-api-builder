@@ -35,17 +35,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
-        /// Tests the REST Api for find many operation on stored procedure
-        /// Stored procedure result is not necessarily json.
+        /// Tests the REST Api for find many operation on stored procedure/function
+        /// Stored procedure/Function result is not necessarily json.
         /// </summary>
         [TestMethod]
-        public virtual async Task FindManyStoredProcedureTest()
+        public virtual async Task FindManyDatabaseExecutableTest()
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
                 entityNameOrPath: _integrationProcedureFindMany_EntityName,
-                sqlQuery: GetQuery("FindManyStoredProcedureTest"),
+                sqlQuery: GetQuery("FindManyDatabaseExecutableTest"),
                 expectJson: false
                 );
         }
@@ -55,13 +55,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         /// For Find operations, parameters must be passed in query string
         /// </summary>
         [TestMethod]
-        public virtual async Task FindOneStoredProcedureTestUsingParameter()
+        public virtual async Task FindOneDatabaseExecutableTestUsingParameter()
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?id=1",
                 entityNameOrPath: _integrationProcedureFindOne_EntityName,
-                sqlQuery: GetQuery("FindOneStoredProcedureTestUsingParameter"),
+                sqlQuery: GetQuery("FindOneDatabaseExecutableTestUsingParameter"),
                 expectJson: false
                 );
         }
@@ -1008,12 +1008,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         #region Negative Tests
 
         /// <summary>
-        /// Tests the REST Api for Find operation on a stored procedure with a
+        /// Tests the REST Api for Find operation on a stored procedure/function with a
         /// non-empty primary key route
         /// Expect a 400 Bad Request to be returned
         /// </summary>
         [TestMethod]
-        public virtual async Task FindStoredProcedureWithNonEmptyPrimaryKeyRoute()
+        public virtual async Task FindDatabaseExecutableWithNonEmptyPrimaryKeyRoute()
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/1",
@@ -1027,11 +1027,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
-        /// Tests the REST Api for Find operations on a stored procedure missing a required parameter
+        /// Tests the REST Api for Find operations on a stored procedure/function missing a required parameter
         /// Expect a 400 Bad Request to be returned
         /// </summary>
         [TestMethod]
-        public virtual async Task FindStoredProcedureWithMissingParameter()
+        public virtual async Task FindDatabaseExecutableWithMissingParameter()
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
@@ -1045,11 +1045,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
-        /// Tests the REST Api for Find operations on a stored procedure with extraneous parameters supplied
+        /// Tests the REST Api for Find operations on a stored procedure/function with
+        /// extraneous parameters supplied
         /// Expect a 400 Bad Request to be returned
         /// </summary>
         [TestMethod]
-        public virtual async Task FindStoredProcedureWithNonexistentParameter()
+        public virtual async Task FindDatabaseExecutableWithNonexistentParameter()
         {
             // On an entity that takes no parameters
             await SetupAndRunRestApiTest(

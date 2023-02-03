@@ -15,7 +15,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLStoredProcedureBuilder;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLDatabaseExecutableBuilder;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
@@ -93,7 +93,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
-            if (_sqlMetadataProvider.GraphQLStoredProcedureExposedNameToEntityNameMap.TryGetValue(context.Selection.Field.Name.Value, out string entityName))
+            if (_sqlMetadataProvider.GraphQLDatabaseExecutableExposedNameToEntityNameMap.TryGetValue(context.Selection.Field.Name.Value, out string entityName))
             {
                 SqlExecuteStructure sqlExecuteStructure = new(
                     entityName,
@@ -103,7 +103,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     parameters);
 
                 return new Tuple<IEnumerable<JsonDocument>, IMetadata>(
-                        FormatStoredProcedureResultAsJsonList(await ExecuteAsync(sqlExecuteStructure)),
+                        FormatDatabaseExecutableResultAsJsonList(await ExecuteAsync(sqlExecuteStructure)),
                         PaginationMetadata.MakeEmptyPaginationMetadata());
             }
             else
@@ -154,10 +154,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
-        /// Given the StoredProcedureRequestContext, obtains the query text and executes it against the backend. Useful for REST API scenarios.
-        /// Only the first result set will be returned, regardless of the contents of the stored procedure.
+        /// Given the DatabaseExecutableRequestContext, obtains the query text and executes it against the backend. Useful for REST API scenarios.
+        /// Only the first result set will be returned, regardless of the contents of the stored procedure/function.
         /// </summary>
-        public async Task<IActionResult> ExecuteAsync(StoredProcedureRequestContext context)
+        public async Task<IActionResult> ExecuteAsync(DatabaseExecutableRequestContext context)
         {
             SqlExecuteStructure structure = new(
                 context.EntityName,
@@ -309,7 +309,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         // <summary>
         // Given the SqlExecuteStructure structure, obtains the query text and executes it against the backend.
         // Unlike a normal query, result from database may not be JSON. Instead we treat output as SqlMutationEngine does (extract by row).
-        // As such, this could feasibly be moved to the mutation engine. 
+        // As such, this could feasibly be moved to the mutation engine.
         // </summary>
         private async Task<JsonDocument> ExecuteAsync(SqlExecuteStructure structure)
         {

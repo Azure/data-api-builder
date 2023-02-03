@@ -30,9 +30,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public Task<IActionResult?> ExecuteAsync(RestRequestContext context);
 
         /// <summary>
-        /// Executes the stored procedure as a mutation query and returns result as JSON asynchronously.
+        /// Executes the stored procedure or function as a mutation query and returns result as JSON asynchronously.
         /// Execution will be identical regardless of mutation operation, but result returned will differ
         /// </summary>
-        public Task<IActionResult?> ExecuteAsync(StoredProcedureRequestContext context);
+        public Task<IActionResult?> ExecuteAsync(DatabaseExecutableRequestContext context);
     }
 }

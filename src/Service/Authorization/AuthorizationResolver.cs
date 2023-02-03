@@ -546,7 +546,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// Note: With many access token issuers, token claims are strings or string representations
         /// of other data types such as dates and GUIDs.
         /// Note: System.Security.Claim.ValueType defaults to ClaimValueTypes.String if the code calling
-        /// the constructor for Claim does not explicitly provide a value type. 
+        /// the constructor for Claim does not explicitly provide a value type.
         /// </summary>
         /// <param name="claim">The claim whose value is to be returned.</param>
         /// <returns>Processed claim value based on its data type.</returns>
@@ -641,7 +641,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                 return new List<string>();
             }
 
-            // Table definition is null on stored procedure entities
+            // Table definition is null on stored procedure and function entities
             SourceDefinition? sourceDefinition = _metadataProvider.GetSourceDefinition(entityName);
             return sourceDefinition is null ? new List<string>() : sourceDefinition.Columns.Keys;
         }

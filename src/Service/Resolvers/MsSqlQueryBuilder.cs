@@ -92,7 +92,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public string Build(SqlExecuteStructure structure)
         {
             return $"EXECUTE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
-                $"{BuildProcedureParameterList(structure.ProcedureParameters)}";
+                $"{BuildProcedureParameterList(structure.Parameters)}";
         }
 
         /// <summary>
@@ -180,14 +180,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
-        /// Builds the parameter list for the stored procedure execute call
-        /// paramKeys are the user-generated procedure parameter names
+        /// Builds the parameter list for the stored procedure or function execute call
+        /// paramKeys are the user-generated procedure/function parameter names
         /// paramValues are the auto-generated, parameterized values (@param0, @param1..)
         /// </summary>
-        private static string BuildProcedureParameterList(Dictionary<string, object> procedureParameters)
+        private static string BuildProcedureParameterList(Dictionary<string, object?> procedureParameters)
         {
             StringBuilder sb = new();
-            foreach ((string paramKey, object paramValue) in procedureParameters)
+            foreach ((string paramKey, object? paramValue) in procedureParameters)
             {
                 sb.Append($"@{paramKey} = {paramValue}, ");
             }
@@ -205,7 +205,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// varchar(100) and varchar(max) would be varchar.
         /// is_nullable is a boolean value to know if the result column is nullable or not.
         /// </summary>
-        public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName)
+        public string BuildDatabaseExecutableResultDetailsQuery(string databaseObjectName)
         {
             string query = "SELECT " +
                             "name as result_field_name, TYPE_NAME(system_type_id) as result_type, is_nullable " +

@@ -55,11 +55,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
 
                     if (rolesAllowedForRead.Count() > 0)
                     {
-                        if (entity.ObjectType is SourceType.StoredProcedure)
+                        if (entity.ObjectType.IsDatabaseExecutableType())
                         {
-                            // This assignment prevents the generation of pagination fields in the schema for stored procedures
+                            // This assignment prevents the generation of pagination fields in the schema for stored procedures and functions
                             paginationReturnType = null;
-                            queryFields.Add(GraphQLStoredProcedureBuilder.GenerateStoredProcedureSchema(name, entity, rolesAllowedForRead));
+                            queryFields.Add(GraphQLDatabaseExecutableBuilder.GenerateDatabaseExecutableSchema(name, entity, rolesAllowedForRead));
                         }
                         else
                         {

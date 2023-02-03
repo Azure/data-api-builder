@@ -22,7 +22,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         private Dictionary<string, string> _graphQLSingularTypeToEntityNameMap = new();
 
         /// <inheritdoc />
-        public Dictionary<string, string> GraphQLStoredProcedureExposedNameToEntityNameMap { get; set; } = new();
+        public Dictionary<string, string> GraphQLDatabaseExecutableExposedNameToEntityNameMap { get; set; } = new();
 
         /// <inheritdoc />
         public Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } = new(StringComparer.InvariantCultureIgnoreCase);
@@ -110,7 +110,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             return new SourceDefinition();
         }
 
-        public StoredProcedureDefinition GetStoredProcedureDefinition(string entityName)
+        public DatabaseExecutableDefinition GetDatabaseExecutableDefinition(string entityName)
         {
             // There's a lot of unimplemented methods here, maybe need to rethink the current interface implementation
             throw new NotSupportedException("Cosmos backends (probably) don't support direct stored procedure definitions, either.");

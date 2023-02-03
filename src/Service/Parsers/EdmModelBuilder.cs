@@ -48,9 +48,9 @@ namespace Azure.DataApiBuilder.Service.Parsers
             // account for these potential aliases in our EDM Model.
             foreach (KeyValuePair<string, DatabaseObject> entityAndDbObject in sqlMetadataProvider.GetEntityNamesAndDbObjects())
             {
-                // Do not add stored procedures, which do not have table definitions or conventional columns, to edm model
-                // As of now, no ODataFilterParsing will be supported for stored procedure result sets
-                if (entityAndDbObject.Value.SourceType is not SourceType.StoredProcedure)
+                // Do not add stored procedures and functions, which do not have table definitions or conventional columns, to edm model
+                // As of now, no ODataFilterParsing will be supported for stored procedure and function result sets
+                if (!entityAndDbObject.Value.SourceType.IsDatabaseExecutableType())
                 {
                     // given an entity Publisher with schema.table of dbo.publishers
                     // entitySourceName = dbo.publishers
@@ -161,12 +161,11 @@ namespace Azure.DataApiBuilder.Service.Parsers
             // that has a key, then an entity set can be thought of as a table made up of those rows.
             foreach (KeyValuePair<string, DatabaseObject> entityAndDbObject in sqlMetadataProvider.GetEntityNamesAndDbObjects())
             {
-                if (entityAndDbObject.Value.SourceType != SourceType.StoredProcedure)
+                if (entityAndDbObject.Value.SourceType.IsDatabaseExecutableType())
                 {
                     string entityName = $"{entityAndDbObject.Value.FullName}";
                     container.AddEntitySet(name: $"{entityAndDbObject.Key}.{entityName}", _entities[$"{entityAndDbObject.Key}.{entityName}"]);
                 }
-
             }
 
             return this;

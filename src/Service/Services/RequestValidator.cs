@@ -101,13 +101,13 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Validates a stored procedure request does not specify a primary key route.
-        /// Applies to all stored procedure requests, both Queries and Mutations
+        /// Validates a stored procedure or function request does not specify a primary key route.
+        /// Applies to all stored procedure/function requests, both Queries and Mutations
         /// Mutations also validated using ValidateInsertRequestContext call in RestService
         /// </summary>
         /// <param name="primaryKeyRoute">Primary key route from the url.</param>
         /// <exception cref="DataApiBuilderException"></exception>
-        public static void ValidateStoredProcedureRequest(string? primaryKeyRoute)
+        public static void ValidateDatabaseExecutableRequest(string? primaryKeyRoute)
         {
             if (!string.IsNullOrWhiteSpace(primaryKeyRoute))
             {
@@ -123,16 +123,16 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Checks query string for Find operations, body for all other operations
         /// Defers type checking until parameterizing stage to prevent duplicating work
         /// </summary>
-        public static void ValidateStoredProcedureRequestContext(
-            StoredProcedureRequestContext spRequestCtx,
+        public static void ValidateDatabaseExecutableRequestContext(
+            DatabaseExecutableRequestContext spRequestCtx,
             ISqlMetadataProvider sqlMetadataProvider)
         {
-            StoredProcedureDefinition storedProcedureDefinition =
-                TryGetStoredProcedureDefinition(spRequestCtx.EntityName, sqlMetadataProvider);
+            DatabaseExecutableDefinition databaseExecutableDefinition =
+                TryGetDatabaseExecutableDefinition(spRequestCtx.EntityName, sqlMetadataProvider);
 
             HashSet<string> missingFields = new();
             HashSet<string> extraFields = new(spRequestCtx.ResolvedParameters.Keys);
-            foreach ((string paramKey, ParameterDefinition paramDefinition) in storedProcedureDefinition.Parameters)
+            foreach ((string paramKey, ParameterDefinition paramDefinition) in databaseExecutableDefinition.Parameters)
             {
                 // If parameter not specified in request OR config
                 if (!spRequestCtx.ResolvedParameters!.ContainsKey(paramKey)
@@ -140,7 +140,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 {
                     // Ideally should check if a default is set in sql, but no easy way to do so - would have to parse procedure's object definition
                     // See https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-parameters-transact-sql?view=sql-server-ver16#:~:text=cursor%2Dreference%20parameter.-,has_default_value,-bit
-                    // For SQL Server not populating this metadata for us; MySQL doesn't seem to allow parameter defaults so not relevant. 
+                    // For SQL Server not populating this metadata for us; MySQL doesn't seem to allow parameter defaults so not relevant.
                     missingFields.Add(paramKey);
                 }
                 else
@@ -485,15 +485,15 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Tries to get the stored procedure definition for the given entity
+        /// Tries to get the stored procedure or function definition for the given entity
         /// Throws a DataApiBuilderException to return Bad Request to client instead of Unexpected Error
         /// Useful for accessing the definition within the request pipeline
         /// </summary>
-        private static StoredProcedureDefinition TryGetStoredProcedureDefinition(string entityName, ISqlMetadataProvider sqlMetadataProvider)
+        private static DatabaseExecutableDefinition TryGetDatabaseExecutableDefinition(string entityName, ISqlMetadataProvider sqlMetadataProvider)
         {
             try
             {
-                return sqlMetadataProvider.GetStoredProcedureDefinition(entityName);
+                return sqlMetadataProvider.GetDatabaseExecutableDefinition(entityName);
             }
             catch (InvalidCastException ex)
             {

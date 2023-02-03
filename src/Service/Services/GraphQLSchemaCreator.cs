@@ -173,7 +173,7 @@ namespace Azure.DataApiBuilder.Service.Services
                             rolesAllowedForFields
                         );
 
-                        if (databaseObject.SourceType is not SourceType.StoredProcedure)
+                        if (databaseObject.SourceType.IsDatabaseExecutableType())
                         {
                             InputTypeBuilder.GenerateInputTypesForObjectType(node, inputObjects);
                         }

@@ -37,9 +37,9 @@ namespace Azure.DataApiBuilder.Service.Services
         // Dictionary mapping singular graphql types to entity name keys in the configuration
         private readonly Dictionary<string, string> _graphQLSingularTypeToEntityNameMap = new();
 
-        // Dictionary containing mapping of graphQL stored procedure exposed query/mutation name
+        // Dictionary containing mapping of graphQL stored procedure/function exposed query/mutation name
         // to their corresponding entity names defined in the config.
-        public Dictionary<string, string> GraphQLStoredProcedureExposedNameToEntityNameMap { get; set; } = new();
+        public Dictionary<string, string> GraphQLDatabaseExecutableExposedNameToEntityNameMap { get; set; } = new();
 
         // Contains all the referencing and referenced columns for each pair
         // of referencing and referenced tables.
@@ -163,16 +163,16 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <inheritdoc />
-        public StoredProcedureDefinition GetStoredProcedureDefinition(string entityName)
+        public DatabaseExecutableDefinition GetDatabaseExecutableDefinition(string entityName)
         {
             if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
             {
-                throw new DataApiBuilderException(message: $"Stored Procedure Definition for {entityName} has not been inferred.",
+                throw new DataApiBuilderException(message: $"{_entities[entityName].ObjectType} Definition for {entityName} has not been inferred.",
                     statusCode: HttpStatusCode.InternalServerError,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
 
-            return ((DatabaseStoredProcedure)databaseObject).StoredProcedureDefinition;
+            return ((DatabaseExecutable)databaseObject).DatabaseExecutableDefinition;
         }
 
         /// <inheritdoc />
@@ -266,14 +266,14 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Verify that the stored procedure exists in the database schema, then populate its database object parameters accordingly
+        /// Verify that the stored procedure or function exists in the database schema, then populate its database object parameters accordingly
         /// </summary>
-        private async Task FillSchemaForStoredProcedureAsync(
+        private async Task FillSchemaForDatabaseExecutableAsync(
             Entity procedureEntity,
             string entityName,
             string schemaName,
-            string storedProcedureSourceName,
-            StoredProcedureDefinition storedProcedureDefinition)
+            string databaseExecutableSourceName,
+            DatabaseExecutableDefinition databaseExecutableDefinition)
         {
             using ConnectionT conn = new();
             conn.ConnectionString = ConnectionString;
@@ -287,7 +287,7 @@ namespace Azure.DataApiBuilder.Service.Services
             // To restrict the parameters for the current stored procedure, specify its name
             procedureRestrictions[0] = conn.Database;
             procedureRestrictions[1] = schemaName;
-            procedureRestrictions[2] = storedProcedureSourceName;
+            procedureRestrictions[2] = databaseExecutableSourceName;
 
             DataTable procedureMetadata = await conn.GetSchemaAsync(collectionName: "Procedures", restrictionValues: procedureRestrictions);
 
@@ -295,7 +295,7 @@ namespace Azure.DataApiBuilder.Service.Services
             if (procedureMetadata.Rows.Count == 0)
             {
                 throw new DataApiBuilderException(
-                    message: $"No stored procedure definition found for the given database object {storedProcedureSourceName}",
+                    message: $"No stored procedure definition found for the given database object {databaseExecutableSourceName}",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
@@ -303,11 +303,11 @@ namespace Azure.DataApiBuilder.Service.Services
             // Each row in the procedureParams DataTable corresponds to a single parameter
             DataTable parameterMetadata = await conn.GetSchemaAsync(collectionName: "ProcedureParameters", restrictionValues: procedureRestrictions);
 
-            // For each row/parameter, add an entry to StoredProcedureDefinition.Parameters dictionary
+            // For each row/parameter, add an entry to DatabaseExecutableDefinition.Parameters dictionary
             foreach (DataRow row in parameterMetadata.Rows)
             {
                 // Add to parameters dictionary without the leading @ sign
-                storedProcedureDefinition.Parameters.TryAdd(((string)row["PARAMETER_NAME"])[1..],
+                databaseExecutableDefinition.Parameters.TryAdd(((string)row["PARAMETER_NAME"])[1..],
                     new()
                     {
                         SystemType = SqlToCLRType((string)row["DATA_TYPE"]),
@@ -323,10 +323,10 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 foreach ((string configParamKey, object configParamValue) in configParameters)
                 {
-                    if (!storedProcedureDefinition.Parameters.TryGetValue(configParamKey, out ParameterDefinition? parameterDefinition))
+                    if (!databaseExecutableDefinition.Parameters.TryGetValue(configParamKey, out ParameterDefinition? parameterDefinition))
                     {
                         throw new DataApiBuilderException(
-                            message: $"Could not find parameter \"{configParamKey}\" specified in config for procedure \"{schemaName}.{storedProcedureSourceName}\"",
+                            message: $"Could not find parameter \"{configParamKey}\" specified in config for procedure \"{schemaName}.{databaseExecutableSourceName}\"",
                             statusCode: HttpStatusCode.ServiceUnavailable,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                     }
@@ -339,7 +339,7 @@ namespace Azure.DataApiBuilder.Service.Services
             }
 
             // Generating exposed stored-procedure query/mutation name and adding to the dictionary mapping it to its entity name.
-            GraphQLStoredProcedureExposedNameToEntityNameMap.TryAdd(GenerateStoredProcedureQueryName(entityName, procedureEntity), entityName);
+            GraphQLDatabaseExecutableExposedNameToEntityNameMap.TryAdd(GenerateDatabaseExecutableQueryName(entityName, procedureEntity), entityName);
         }
 
         /// <summary>
@@ -496,16 +496,16 @@ namespace Azure.DataApiBuilder.Service.Services
                         // parse source name into a tuple of (schemaName, databaseObjectName)
                         (schemaName, dbObjectName) = ParseSchemaAndDbTableName(entity.SourceName)!;
 
-                        // if specified as stored procedure in config,
-                        // initialize DatabaseObject as DatabaseStoredProcedure,
+                        // if specified as stored procedure or function in config,
+                        // initialize DatabaseObject as DatabaseExecutable,
                         // else with DatabaseTable (for tables) / DatabaseView (for views).
 
-                        if (entity.ObjectType is SourceType.StoredProcedure)
+                        if (entity.ObjectType.IsDatabaseExecutableType())
                         {
-                            sourceObject = new DatabaseStoredProcedure(schemaName, dbObjectName)
+                            sourceObject = new DatabaseExecutable(schemaName, dbObjectName)
                             {
                                 SourceType = entity.ObjectType,
-                                StoredProcedureDefinition = new()
+                                DatabaseExecutableDefinition = new()
                             };
                         }
                         else if (entity.ObjectType is SourceType.Table)
@@ -750,28 +750,28 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Enrich the entities in the runtime config with the
         /// object definition information needed by the runtime to serve requests.
         /// Populates table definition for entities specified as tables or views
-        /// Populates procedure definition for entities specified as stored procedures
+        /// Populates database executable definition for entities specified as stored procedures or functions
         /// </summary>
         private async Task PopulateObjectDefinitionForEntities()
         {
             foreach ((string entityName, Entity entity) in _entities)
             {
                 SourceType entitySourceType = entity.ObjectType;
-                if (entitySourceType is SourceType.StoredProcedure)
+                if (entitySourceType.IsDatabaseExecutableType())
                 {
-                    await FillSchemaForStoredProcedureAsync(
+                    await FillSchemaForDatabaseExecutableAsync(
                         entity,
                         entityName,
                         GetSchemaName(entityName),
                         GetDatabaseObjectName(entityName),
-                        GetStoredProcedureDefinition(entityName));
+                        GetDatabaseExecutableDefinition(entityName));
 
                     if (GetDatabaseType() == DatabaseType.mssql)
                     {
-                        await PopulateResultSetDefinitionsForStoredProcedureAsync(
+                        await PopulateResultSetDefinitionsForDatabaseExececutable(
                             GetSchemaName(entityName),
                             GetDatabaseObjectName(entityName),
-                            GetStoredProcedureDefinition(entityName));
+                            GetDatabaseExecutableDefinition(entityName));
                     }
                 }
                 else if (entitySourceType is SourceType.Table)
@@ -801,18 +801,19 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <summary>
         /// Queries DB to get the result fields name and type to
         /// populate the result set definition for entities specified as stored procedures
+        /// or functions
         /// </summary>
-        private async Task PopulateResultSetDefinitionsForStoredProcedureAsync(
+        private async Task PopulateResultSetDefinitionsForDatabaseExececutable(
             string schemaName,
-            string storedProcedureName,
+            string databaseExecutionName,
             SourceDefinition sourceDefinition)
         {
-            StoredProcedureDefinition storedProcedureDefinition = (StoredProcedureDefinition)sourceDefinition;
-            string dbStoredProcedureName = $"{schemaName}.{storedProcedureName}";
+            DatabaseExecutableDefinition databaseExecutableDefinition = (DatabaseExecutableDefinition)sourceDefinition;
+            string dbDatabaseExecutableName = $"{schemaName}.{databaseExecutionName}";
             // Generate query to get result set details
-            // of the stored procedure.
-            string queryForResultSetDetails = SqlQueryBuilder.BuildStoredProcedureResultDetailsQuery(
-                dbStoredProcedureName);
+            // of the stored procedure or function.
+            string queryForResultSetDetails = SqlQueryBuilder.BuildDatabaseExecutableResultDetailsQuery(
+                dbDatabaseExecutableName);
 
             // Execute the query to get columns' details.
             JsonArray? resultArray = await QueryExecutor.ExecuteQueryAsync(
@@ -830,7 +831,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 bool isResultFieldNullable = element.GetProperty("is_nullable").GetBoolean();
 
                 // Store the dictionary containing result set field with its type as Columns
-                storedProcedureDefinition.Columns.TryAdd(resultFieldName, new(resultFieldType) { IsNullable = isResultFieldNullable });
+                databaseExecutableDefinition.Columns.TryAdd(resultFieldName, new(resultFieldType) { IsNullable = isResultFieldNullable });
             }
         }
 
@@ -860,7 +861,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// the exposed names, and to translate between
         /// exposed name and backing column (or the reverse)
         /// when needed while processing the request.
-        /// For now, only do this for tables/views as Stored Procedures do not have a SourceDefinition
+        /// For now, only do this for tables/views as Stored Procedures/Functions do not have a SourceDefinition
         /// In the future, mappings for SPs could be used for parameter renaming.
         /// We also handle logging the primary key information here since this is when we first have
         /// the exposed names suitable for logging.
@@ -869,7 +870,7 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             foreach (string entityName in _entities.Keys)
             {
-                // InCase of StoredProcedures, result set definitions becomes the column definition.
+                // InCase of StoredProcedures and Functions, result set definitions becomes the column definition.
                 Dictionary<string, string>? mapping = GetMappingForEntity(entityName);
                 EntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();
                 EntityExposedNamesToBackingColumnNames[entityName] = EntityBackingColumnsToExposedNames[entityName].ToDictionary(x => x.Value, x => x.Key);
@@ -1249,9 +1250,9 @@ namespace Azure.DataApiBuilder.Service.Services
             Dictionary<string, SourceDefinition> sourceNameToSourceDefinition = new();
             foreach ((string entityName, DatabaseObject dbObject) in EntityToDatabaseObject)
             {
-                // Ensure we're only doing this on tables, not stored procedures which have no table definition,
-                // not views whose underlying base table's foreign key constraints are taken care of
-                // by database itself.
+                // Ensure we're only doing this on tables, not stored procedures or functions which have
+                // no table definition, not views whose underlying base table's foreign key constraints
+                // are taken care of by database itself.
                 if (dbObject.SourceType is SourceType.Table)
                 {
                     if (!sourceNameToSourceDefinition.ContainsKey(dbObject.Name))

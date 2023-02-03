@@ -105,7 +105,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
         /// <summary>
         /// Throws exception if database type is incorrectly configured
-        /// in the config. 
+        /// in the config.
         /// </summary>
         public static void ValidateDatabaseType(
             RuntimeConfig runtimeConfig,
@@ -188,12 +188,12 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 }
 
                 bool containsDuplicateOperationNames = false;
-                if (entity.ObjectType is SourceType.StoredProcedure)
+                if (entity.ObjectType.IsDatabaseExecutableType())
                 {
-                    // For Stored Procedures a single query/mutation is generated.
-                    string storedProcedureQueryName = GenerateStoredProcedureQueryName(entityName, entity);
+                    // For Stored Procedures and Functions a single query/mutation is generated.
+                    string databaseExecutableQueryName = GenerateDatabaseExecutableQueryName(entityName, entity);
 
-                    if (!graphQLOperationNames.Add(storedProcedureQueryName))
+                    if (!graphQLOperationNames.Add(databaseExecutableQueryName))
                     {
                         containsDuplicateOperationNames = true;
                     }
@@ -457,16 +457,16 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         totalSupportedOperationsFromAllRoles.Add(actionOp);
                     }
 
-                    // Only one of the CRUD actions is allowed for stored procedure.
+                    // Only one of the CRUD actions is allowed for stored procedures and functions.
                     // All the roles should have the same CRUD action.
-                    if (entity.ObjectType is SourceType.StoredProcedure)
+                    if (entity.ObjectType.IsDatabaseExecutableType())
                     {
                         if ((operationsList.Count > 1)
                             || (operationsList.Count is 1 && operationsList[0] is Config.Operation.All))
                         {
                             throw new DataApiBuilderException(
                                 message: $"Invalid Operations for Entity: {entityName}. " +
-                                    $"StoredProcedure can process only one CRUD (Create/Read/Update/Delete) operation.",
+                                    $"{entity.ObjectType} can process only one CRUD (Create/Read/Update/Delete) operation.",
                                 statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                         }
@@ -475,7 +475,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         {
                             throw new DataApiBuilderException(
                                 message: $"Invalid Operations for Entity: {entityName}. " +
-                                    $"StoredProcedure should have the same single CRUD action specified for every role.",
+                                    $"{entity.ObjectType} should have the same single CRUD action specified for every role.",
                                 statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                         }
@@ -606,9 +606,9 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
         /// <summary>
         /// Validates the parameters given in the config are consistent with the DB i.e., config has all
-        /// the parameters that are specified for the stored procedure in DB.
+        /// the parameters that are specified for the stored procedure or function in DB.
         /// </summary>
-        public void ValidateStoredProceduresInConfig(RuntimeConfig runtimeConfig, ISqlMetadataProvider sqlMetadataProvider)
+        public void ValidateDatabaseExecutablesInConfig(RuntimeConfig runtimeConfig, ISqlMetadataProvider sqlMetadataProvider)
         {
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
@@ -616,18 +616,18 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 // so if the schema is not correct we will halt the engine
                 // but for rest we can do it when a request is made and only fail that particular request.
                 entity.TryPopulateSourceFields();
-                if (entity.ObjectType is SourceType.StoredProcedure &&
+                if (entity.ObjectType.IsDatabaseExecutableType() &&
                     entity.GraphQL is not null && !(entity.GraphQL is bool graphQLEnabled && !graphQLEnabled))
                 {
                     DatabaseObject dbObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
-                    StoredProcedureRequestContext sqRequestContext = new(
+                    DatabaseExecutableRequestContext sqRequestContext = new(
                                                                             entityName,
                                                                             dbObject,
                                                                             JsonSerializer.SerializeToElement(entity.Parameters),
                                                                             Config.Operation.All);
                     try
                     {
-                        RequestValidator.ValidateStoredProcedureRequestContext(sqRequestContext, sqlMetadataProvider);
+                        RequestValidator.ValidateDatabaseExecutableRequestContext(sqRequestContext, sqlMetadataProvider);
                     }
                     catch (DataApiBuilderException e)
                     {

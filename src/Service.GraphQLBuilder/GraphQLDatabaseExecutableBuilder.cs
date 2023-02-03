@@ -7,14 +7,14 @@ using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLUtils;
 
 namespace Azure.DataApiBuilder.Service.GraphQLBuilder
 {
-    public static class GraphQLStoredProcedureBuilder
+    public static class GraphQLDatabaseExecutableBuilder
     {
         /// <summary>
-        /// Helper function to create StoredProcedure Schema for GraphQL.
+        /// Helper function to create StoredProcedure or Function Schema for GraphQL.
         /// It uses the parameters to build the arguments and returns a list
-        /// of the StoredProcedure GraphQL object.
+        /// of the StoredProcedure or Function GraphQL object.
         /// </summary>
-        public static FieldDefinitionNode GenerateStoredProcedureSchema(
+        public static FieldDefinitionNode GenerateDatabaseExecutableSchema(
             NameNode name,
             Entity entity,
             IEnumerable<string>? rolesAllowed = null)
@@ -31,7 +31,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                         new(
                             location: null,
                             new(param),
-                            new StringValueNode($"parameters for {name.Value} stored-procedure"),
+                            new StringValueNode($"parameters for {name.Value} {entity.ObjectType.GetConfigValue()}"),
                             new NamedTypeNode(defaultGraphQLValue.Item1),
                             defaultValue: defaultGraphQLValue.Item2,
                             new List<DirectiveNode>())
@@ -48,8 +48,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
 
             return new(
                 location: null,
-                new NameNode(GenerateStoredProcedureQueryName(name.Value, entity)),
-                new StringValueNode($"Execute Stored-Procedure {name.Value} and get results from the database"),
+                new NameNode(GenerateDatabaseExecutableQueryName(name.Value, entity)),
+                new StringValueNode($"Execute {entity.ObjectType.GetConfigValue()} {name.Value} and get results from the database"),
                 inputValues,
                 new NonNullTypeNode(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(name)))),
                 fieldDefinitionNodeDirectives
@@ -60,10 +60,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// Takes the result from DB as JsonDocument and formats it in a way that can be filtered by column
         /// name. It parses the Json document into a list of Dictionary with key as result_column_name
         /// with it's corresponding value.
-        /// returns an empty list in case of no result 
-        /// or stored-procedure is trying to read from DB without READ permission.
+        /// returns an empty list in case of no result
+        /// or stored-procedure/function is trying to read from DB without READ permission.
         /// </summary>
-        public static List<JsonDocument> FormatStoredProcedureResultAsJsonList(JsonDocument jsonDocument)
+        public static List<JsonDocument> FormatDatabaseExecutableResultAsJsonList(JsonDocument jsonDocument)
         {
             if (jsonDocument is null)
             {
@@ -81,15 +81,15 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         }
 
         /// <summary>
-        /// Helper method to create a default result field for stored-procedure which does not
-        /// return any row.
+        /// Helper method to create a default result field for stored-procedure or function
+        /// which does not return any row.
         /// </summary>
-        public static FieldDefinitionNode GetDefaultResultFieldForStoredProcedure()
+        public static FieldDefinitionNode GetDefaultResultFieldForDatabaseExecutable(SourceType executableSourceType)
         {
             return new(
                 location: null,
                 new("result"),
-                description: new StringValueNode("Contains output of stored-procedure execution"),
+                description: new StringValueNode($"Contains output of {executableSourceType.GetConfigValue()} execution"),
                 new List<InputValueDefinitionNode>(),
                 new StringType().ToTypeNode(),
                 new List<DirectiveNode>());

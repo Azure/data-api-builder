@@ -64,7 +64,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
         /// <summary>
         /// Takes a string version of a PostgreSql data type and returns its .NET common language runtime (CLR) counterpart
-        /// TODO: For PostgreSql stored procedure support, this needs to be implemented.
+        /// TODO: IMPLEMENT THIS
         /// </summary>
         public override Type SqlToCLRType(string sqlType)
         {

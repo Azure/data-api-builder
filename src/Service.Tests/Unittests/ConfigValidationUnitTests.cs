@@ -65,7 +65,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("anonymous", new object[] { "delete", "read", "update" }, null, null, false, false, DisplayName = "Stored-procedure with delete-read-update permission")]
         [DataRow("anonymous", new object[] { "create" }, "authenticated", new object[] { "create" }, true, false, DisplayName = "Stored-procedure with only create permission")]
         [DataRow("anonymous", new object[] { "read" }, "authenticated", new object[] { "create" }, false, true, DisplayName = "Stored-procedure with only read permission")]
-        public void InvalidCRUDForStoredProcedure(
+        public void InvalidCRUDForDatabaseExecutable(
             string role1,
             object[] operationsRole1,
             string role2,
@@ -121,12 +121,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 if (differentOperationDifferentRoleFailure)
                 {
                     Assert.AreEqual("Invalid Operations for Entity: SampleEntity. " +
-                        $"StoredProcedure should have the same single CRUD action specified for every role.", ex.Message);
+                        $"DatabaseExecutable should have the same single CRUD action specified for every role.", ex.Message);
                 }
                 else
                 {
                     Assert.AreEqual("Invalid Operations for Entity: SampleEntity. " +
-                        $"StoredProcedure can process only one CRUD (Create/Read/Update/Delete) operation.", ex.Message);
+                        $"DatabaseExecutable can process only one CRUD (Create/Read/Update/Delete) operation.", ex.Message);
                 }
 
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
@@ -916,7 +916,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// }
         /// </summary>
         [TestMethod]
-        public void ValidateStoredProcedureAndTableGeneratedDuplicateQueries()
+        public void ValidateDatabaseExecutableAndTableGeneratedDuplicateQueries()
         {
             // Entity Name: Book
             // Entity Type: table
@@ -927,13 +927,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Entity Name: book_by_pk
             // Entity Type: Stored Procedure
-            // StoredProcedure Query: book_by_pk
-            Entity bookByPkStoredProcedure = GraphQLTestHelpers.GenerateEmptyEntity(sourceType: SourceType.StoredProcedure);
-            bookByPkStoredProcedure.GraphQL = new GraphQLEntitySettings(true);
+            // DatabaseExecutable Query: book_by_pk
+            Entity bookByPkDatabaseExecutable = GraphQLTestHelpers.GenerateEmptyEntity(sourceType: SourceType.StoredProcedure);
+            bookByPkDatabaseExecutable.GraphQL = new GraphQLEntitySettings(true);
 
             SortedDictionary<string, Entity> entityCollection = new();
             entityCollection.Add("Book", bookTable);
-            entityCollection.Add("book_by_pk", bookByPkStoredProcedure);
+            entityCollection.Add("book_by_pk", bookByPkDatabaseExecutable);
             ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_by_pk");
         }
 
@@ -959,7 +959,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// }
         /// </summary>
         [TestMethod]
-        public void ValidateStoredProcedureAndTableGeneratedDuplicateMutation()
+        public void ValidateDatabaseExecutableAndTableGeneratedDuplicateMutation()
         {
             // Entity Name: Book
             // Entity Type: table
@@ -969,14 +969,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Entity Name: AddBook
             // Entity Type: Stored Procedure
-            // StoredProcedure mutation: createBook
-            Entity addBookStoredProcedure = GraphQLTestHelpers.GenerateEntityWithStringType(
+            // DatabaseExecutable mutation: createBook
+            Entity addBookDatabaseExecutable = GraphQLTestHelpers.GenerateEntityWithStringType(
                                                 type: "createBook",
                                                 sourceType: SourceType.StoredProcedure);
 
             SortedDictionary<string, Entity> entityCollection = new();
             entityCollection.Add("Book", bookTable);
-            entityCollection.Add("AddBook", addBookStoredProcedure);
+            entityCollection.Add("AddBook", addBookDatabaseExecutable);
             ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "Book");
         }
 

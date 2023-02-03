@@ -219,7 +219,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc/>
-        public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName)
+        public string BuildDatabaseExecutableResultDetailsQuery(string databaseObjectName)
         {
             throw new NotImplementedException();
         }

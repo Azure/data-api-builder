@@ -65,7 +65,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 // Only Stored-Procedure has ListType as returnType for Mutation
                 if (context.Selection.Type.IsListType())
                 {
-                    // Both Query and Mutation execute the same SQL statement for Stored Procedure.
+                    // Both Query and Mutation execute the same SQL statement for Stored Procedures and Functions.
                     Tuple<IEnumerable<JsonDocument>, IMetadata> result = await _queryEngine.ExecuteListAsync(context, parameters);
                     context.Result = result.Item1;
                     SetNewMetadata(context, result.Item2);

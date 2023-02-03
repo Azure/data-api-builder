@@ -30,7 +30,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private readonly IAuthorizationResolver _authorizationResolver;
 
         /// <summary>
-        /// Constructor 
+        /// Constructor
         /// </summary>
         public CosmosQueryEngine(
             CosmosClientProvider clientProvider,
@@ -180,7 +180,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public Task<IActionResult> ExecuteAsync(StoredProcedureRequestContext context)
+        public Task<IActionResult> ExecuteAsync(DatabaseExecutableRequestContext context)
         {
             throw new NotImplementedException();
         }
@@ -200,7 +200,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
-        /// Query cosmos container using a single partition key, returns a single document. 
+        /// Query cosmos container using a single partition key, returns a single document.
         /// </summary>
         /// <param name="container"></param>
         /// <param name="idValue"></param>

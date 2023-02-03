@@ -111,7 +111,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
         /// <summary>
         /// Takes a string version of a MySql data type and returns its .NET common language runtime (CLR) counterpart
-        /// TODO: For MySql stored procedure support, this needs to be implemented.
+        /// TODO: For MySql stored procedure/function support, this needs to be implemented.
         /// </summary>
         public override Type SqlToCLRType(string sqlType)
         {

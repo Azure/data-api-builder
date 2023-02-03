@@ -21,7 +21,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Delete
                 $"WHERE id = 5 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "DeleteOneWithStoredProcedureTest",
+                "DeleteOneWithDatabaseExecutableTest",
                 // This query is used to confirm that the item no longer exists, not the
                 // actual delete query.
                 $"SELECT [id] FROM { _integrationTableName } " +
@@ -59,25 +59,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Delete
             string expectedErrorMessage = $"View or function '{_defaultSchemaName}.{_composite_subset_bookPub}' is not updatable " +
                                            "because the modification affects multiple base tables.";
             await base.DeleteOneInViewBadRequestTest(expectedErrorMessage);
-        }
-
-        /// <summary>
-        /// Delete the last inserted row (row with max id) from books.
-        /// Verify that the row doesn't exist anymore.
-        /// </summary>
-        [TestMethod]
-        public async Task DeleteOneWithStoredProcedureTest()
-        {
-            // Delete one from stored-procedure based on books table.
-            await SetupAndRunRestApiTest(
-                    primaryKeyRoute: null,
-                    queryString: null,
-                    entityNameOrPath: _integrationProcedureDeleteOne_EntityName,
-                    sqlQuery: GetQuery(nameof(DeleteOneWithStoredProcedureTest)),
-                    operationType: Config.Operation.Delete,
-                    requestBody: null,
-                    expectedStatusCode: HttpStatusCode.NoContent
-                );
         }
 
         #region RestApiTestBase Overrides

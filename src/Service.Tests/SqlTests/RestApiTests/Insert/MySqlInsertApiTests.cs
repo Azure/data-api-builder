@@ -231,6 +231,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             throw new NotImplementedException();
         }
 
+        /// <inheritdoc/>
+        [Ignore]
+        [TestMethod]
+        public override Task InsertOneAndVerifyReturnedRowsWithDatabaseExecutableTest(
+            string publisherName,
+            string queryName,
+            bool expectJson)
+        {
+            throw new NotImplementedException();
+        }
+
         #endregion
 
         #region Test Fixture Setup

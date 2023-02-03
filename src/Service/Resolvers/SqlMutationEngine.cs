@@ -175,11 +175,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         /// <summary>
         /// Executes the REST mutation query and returns IActionResult asynchronously.
-        /// Result error cases differ for Stored Procedure requests than normal mutation requests
+        /// Result error cases differ for Stored Procedure and Function requests than normal mutation requests
         /// QueryStructure built does not depend on Operation enum, thus not useful to use
         /// PerformMutationOperation method.
         /// </summary>
-        public async Task<IActionResult?> ExecuteAsync(StoredProcedureRequestContext context)
+        public async Task<IActionResult?> ExecuteAsync(DatabaseExecutableRequestContext context)
         {
             SqlExecuteStructure executeQueryStructure = new(
                 context.EntityName,
@@ -196,19 +196,19 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     _queryExecutor.GetJsonArrayAsync,
                     _httpContextAccessor.HttpContext!);
 
-            // A note on returning stored procedure results:
-            // We can't infer what the stored procedure actually did beyond the HasRows and RecordsAffected attributes
+            // A note on returning stored procedure/function results:
+            // We can't infer what the stored procedure/function actually did beyond the HasRows and RecordsAffected attributes
             // of the DbDataReader. For example, we can't enforce that an UPDATE command outputs a result set using an OUTPUT
             // clause. As such, for this iteration we are just returning the success condition of the operation type that maps
             // to each action, with data always from the first result set, as there may be arbitrarily many.
             switch (context.OperationType)
             {
                 case Config.Operation.Delete:
-                    // Returns a 204 No Content so long as the stored procedure executes without error
+                    // Returns a 204 No Content so long as the stored procedure/function executes without error
                     return new NoContentResult();
                 case Config.Operation.Insert:
                     // Returns a 201 Created with whatever the first result set is returned from the procedure
-                    // A "correctly" configured stored procedure would INSERT INTO ... OUTPUT ... VALUES as the result set
+                    // A "correctly" configured stored procedure/function would INSERT INTO ... OUTPUT ... VALUES as the result set
                     if (resultArray is not null && resultArray.Count > 0)
                     {
                         using (JsonDocument jsonDocument = JsonDocument.Parse(resultArray.ToJsonString()))
@@ -231,7 +231,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 case Config.Operation.Upsert:
                 case Config.Operation.UpsertIncremental:
                     // Since we cannot check if anything was created, just return a 200 Ok response with first result set output
-                    // A "correctly" configured stored procedure would UPDATE ... SET ... OUTPUT as the result set
+                    // A "correctly" configured stored procedure/function would UPDATE ... SET ... OUTPUT as the result set
                     if (resultArray is not null && resultArray.Count > 0)
                     {
                         using (JsonDocument jsonDocument = JsonDocument.Parse(resultArray.ToJsonString()))

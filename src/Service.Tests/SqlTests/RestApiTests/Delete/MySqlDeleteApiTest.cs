@@ -30,6 +30,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Delete
             throw new NotImplementedException();
         }
 
+        #region overridden tests
+
+        /// <inheritdoc/>
+        [Ignore]
+        [TestMethod]
+        public override async Task DeleteOneWithDatabaseExecutableTest()
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion
+
         #region Test Fixture Setup
 
         /// <summary>

@@ -268,6 +268,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             ;
         }
 
+        /// <summary>
+        /// Delete the last inserted row (row with max id) from books.
+        /// Verify that the row doesn't exist anymore.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task DeleteOneWithDatabaseExecutableTest()
+        {
+            // Delete one from stored-procedure based on books table.
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: null,
+                    queryString: null,
+                    entityNameOrPath: _integrationProcedureDeleteOne_EntityName,
+                    sqlQuery: GetQuery(nameof(DeleteOneWithDatabaseExecutableTest)),
+                    operationType: Config.Operation.Delete,
+                    requestBody: null,
+                    expectedStatusCode: HttpStatusCode.NoContent
+                );
+        }
+
         #endregion
     }
 }

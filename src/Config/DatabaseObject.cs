@@ -1,7 +1,7 @@
 namespace Azure.DataApiBuilder.Config
 {
     /// <summary>
-    /// Represents a database object - which could be a view, table, or stored procedure.
+    /// Represents a database object - which could be a view, table, stored procedure, or function.
     /// </summary>
     public abstract class DatabaseObject
     {
@@ -55,9 +55,10 @@ namespace Azure.DataApiBuilder.Config
                 {
                     SourceType.Table => ((DatabaseTable)this).TableDefinition,
                     SourceType.View => ((DatabaseView)this).ViewDefinition,
-                    SourceType.StoredProcedure => ((DatabaseStoredProcedure)this).StoredProcedureDefinition,
+                    SourceType.StoredProcedure => ((DatabaseExecutable)this).DatabaseExecutableDefinition,
+                    SourceType.Function => ((DatabaseExecutable)this).DatabaseExecutableDefinition,
                     _ => throw new Exception(
-                            message: $"Unsupported SourceType. It can either be Table,View, or Stored Procedure.")
+                            message: $"Unsupported SourceType. It can either be Table, View, Stored Procedure, or Function.")
                 };
             }
         }
@@ -86,16 +87,16 @@ namespace Azure.DataApiBuilder.Config
     }
 
     /// <summary>
-    /// Sub-class of DatabaseObject class, represents a stored procedure in the database.
+    /// Sub-class of DatabaseObject class, represents a stored procedure or function in the database.
     /// </summary>
-    public class DatabaseStoredProcedure : DatabaseObject
+    public class DatabaseExecutable : DatabaseObject
     {
-        public DatabaseStoredProcedure(string schemaName, string tableName)
+        public DatabaseExecutable(string schemaName, string tableName)
             : base(schemaName, tableName) { }
-        public StoredProcedureDefinition StoredProcedureDefinition { get; set; } = null!;
+        public DatabaseExecutableDefinition DatabaseExecutableDefinition { get; set; } = null!;
     }
 
-    public class StoredProcedureDefinition : SourceDefinition
+    public class DatabaseExecutableDefinition : SourceDefinition
     {
         /// <summary>
         /// The list of input parameters
@@ -131,7 +132,7 @@ namespace Azure.DataApiBuilder.Config
         /// <summary>
         /// A dictionary mapping all the source entities to their relationship metadata.
         /// All these entities share this source definition
-        /// as their underlying database object. 
+        /// as their underlying database object.
         /// </summary>
         public Dictionary<string, RelationshipMetadata> SourceEntityRelationshipMap { get; private set; } =
             new(StringComparer.InvariantCultureIgnoreCase);

@@ -137,7 +137,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// <code>Check: </code>if the intended book is inserted in books table
         /// </summary>
         [TestMethod]
-        public async Task TestStoredProcedureMutationForInsertion()
+        public async Task TestDatabaseExecutableMutationForInsertion()
         {
             string msSqlQuery = @"
                 SELECT COUNT(*) AS [count]
@@ -149,7 +149,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            await TestStoredProcedureMutationForInsertion(msSqlQuery);
+            await TestDatabaseExecutableMutationForInsertion(msSqlQuery);
         }
 
         /// <summary>
@@ -157,7 +157,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// <code>Check: </code>the intended book is deleted
         /// </summary>
         [TestMethod]
-        public async Task TestStoredProcedureMutationForDeletion()
+        public async Task TestDatabaseExecutableMutationForDeletion()
         {
             string dbQueryToVerifyDeletion = @"
                 SELECT MAX(table0.id) AS [maxId]
@@ -167,7 +167,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            await TestStoredProcedureMutationForDeletion(dbQueryToVerifyDeletion);
+            await TestDatabaseExecutableMutationForDeletion(dbQueryToVerifyDeletion);
         }
 
         /// <summary>
@@ -176,7 +176,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// are returned as response.
         /// </summary>
         [TestMethod]
-        public async Task TestStoredProcedureMutationNonEmptyResponse()
+        public async Task TestDatabaseExecutableMutationNonEmptyResponse()
         {
             string dbQuery = @"
                 SELECT [table0].id, [table0].title
@@ -191,7 +191,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                     INCLUDE_NULL_VALUES
             ";
 
-            await TestStoredProcedureMutationNonEmptyResponse(dbQuery);
+            await TestDatabaseExecutableMutationNonEmptyResponse(dbQuery);
         }
 
         /// <summary>
@@ -199,12 +199,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// <code>Check: </code>if the result returned from the mutation is correct
         /// </summary>
         [TestMethod]
-        public async Task TestStoredProcedureMutationForUpdate()
+        public async Task TestDatabaseExecutableMutationForUpdate()
         {
             string dbQuery = @"
                 SELECT id, title, publisher_id
                 FROM [books] AS [table0]
-                WHERE 
+                WHERE
                     [table0].[id] = 14
                     AND [table0].[publisher_id] = 1234
                 FOR JSON PATH,
@@ -212,7 +212,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            await TestStoredProcedureMutationForUpdate(dbQuery);
+            await TestDatabaseExecutableMutationForUpdate(dbQuery);
         }
 
         /// <inheritdoc/>

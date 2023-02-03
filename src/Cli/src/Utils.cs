@@ -269,7 +269,7 @@ namespace Cli
                 WriteIndented = true,
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
                 PropertyNamingPolicy = new LowerCaseNamingPolicy(),
-                // As of .NET Core 7, JsonDocument and JsonSerializer only support skipping or disallowing 
+                // As of .NET Core 7, JsonDocument and JsonSerializer only support skipping or disallowing
                 // of comments; they do not support loading them. If we set JsonCommentHandling.Allow for either,
                 // it will throw an exception.
                 ReadCommentHandling = JsonCommentHandling.Skip
@@ -448,9 +448,9 @@ namespace Cli
                 return false;
             }
 
-            // Currently, Stored Procedures can be configured with only 1 CRUD Operation.
-            if (sourceType is SourceType.StoredProcedure
-                    && !VerifySingleOperationForStoredProcedure(operations))
+            // Currently, database executable types can be configured with only 1 CRUD Operation.
+            if (sourceType.IsDatabaseExecutableType()
+                    && !VerifySingleOperationForDatabaseExecutable(operations))
             {
                 return false;
             }
@@ -579,11 +579,11 @@ namespace Cli
         }
 
         /// <summary>
-        /// This method checks that parameter is only used with Stored Procedure, while
+        /// This method checks that parameter is only used with Stored Procedure/Function, while
         /// key-fields only with table/views.
         /// </summary>
         /// <param name="sourceType">type of the source object.</param>
-        /// <param name="parameters">IEnumerable string containing parameters for stored-procedure.</param>
+        /// <param name="parameters">IEnumerable string containing parameters for stored-procedure/function.</param>
         /// <param name="keyFields">IEnumerable string containing key columns for table/view.</param>
         /// <returns> Returns true when successful else on failure, returns false.</returns>
         public static bool VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
@@ -591,11 +591,11 @@ namespace Cli
             IEnumerable<string>? parameters,
             IEnumerable<string>? keyFields)
         {
-            if (SourceType.StoredProcedure.Equals(sourceType))
+            if (sourceType.IsDatabaseExecutableType())
             {
                 if (keyFields is not null && keyFields.Any())
                 {
-                    _logger.LogError("Stored Procedures don't support keyfields.");
+                    _logger.LogError($"{sourceType} don't support keyfields.");
                     return false;
                 }
             }
@@ -692,15 +692,15 @@ namespace Cli
         }
 
         /// <summary>
-        /// This method loops through every role specified for stored-procedure entity
-        ///  and checks if it has only one CRUD operation.
+        /// This method loops through every role specified for stored-procedure/function
+        /// entity and checks if it has only one CRUD operation.
         /// </summary>
-        public static bool VerifyPermissionOperationsForStoredProcedures(
+        public static bool VerifyPermissionOperationsForDatabaseExecutable(
             PermissionSetting[] permissionSettings)
         {
             foreach (PermissionSetting permissionSetting in permissionSettings)
             {
-                if (!VerifySingleOperationForStoredProcedure(permissionSetting.Operations))
+                if (!VerifySingleOperationForDatabaseExecutable(permissionSetting.Operations))
                 {
                     return false;
                 }
@@ -710,16 +710,16 @@ namespace Cli
         }
 
         /// <summary>
-        /// This method checks that stored-procedure entity
+        /// This method checks that stored-procedure/function entity
         /// has only one CRUD operation.
         /// </summary>
-        private static bool VerifySingleOperationForStoredProcedure(object[] operations)
+        private static bool VerifySingleOperationForDatabaseExecutable(object[] operations)
         {
             if (operations.Length > 1
                 || !TryGetOperationName(operations.First(), out Operation operationName)
                 || Operation.All.Equals(operationName))
             {
-                _logger.LogError("Stored Procedure supports only 1 CRUD operation.");
+                _logger.LogError("Stored Procedure and Functions supports only 1 CRUD operation.");
                 return false;
             }
 

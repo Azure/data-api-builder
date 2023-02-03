@@ -429,8 +429,8 @@ namespace Cli
                     return false;
                 }
 
-                if (updatedSourceType is SourceType.StoredProcedure &&
-                    !VerifyPermissionOperationsForStoredProcedures(entity.Permissions))
+                if (updatedSourceType.IsDatabaseExecutableType() &&
+                    !VerifyPermissionOperationsForDatabaseExecutable(entity.Permissions))
                 {
                     return false;
                 }
@@ -521,7 +521,7 @@ namespace Cli
                 if (permission.Role.Equals(newRole))
                 {
                     role_found = true;
-                    if (sourceType is SourceType.StoredProcedure)
+                    if (sourceType.IsDatabaseExecutableType())
                     {
                         // Since, Stored-Procedures can have only 1 CRUD action. So, when update is requested with new action, we simply replace it.
                         updatedPermissionsList.Add(CreatePermissions(newRole, newOperationArray.First(), policy: null, fields: null));
@@ -666,11 +666,11 @@ namespace Cli
                 return false;
             }
 
-            // Changing source object from stored-procedure to table/view
+            // Changing source object from stored-procedure/function to table/view
             // should automatically update the parameters to be null.
             // Similarly from table/view to stored-procedure, key-fields
             // should be marked null.
-            if (SourceType.StoredProcedure.Equals(updatedSourceType))
+            if (updatedSourceType.IsDatabaseExecutableType())
             {
                 updatedKeyFields = null;
             }

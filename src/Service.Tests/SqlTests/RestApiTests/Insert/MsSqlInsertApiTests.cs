@@ -148,7 +148,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "InsertOneAndReturnSingleRowWithStoredProcedureTest",
+                "InsertOneAndReturnSingleRowWithDatabaseExecutableTest",
                 // This query attempts retrieval of the stored procedure insert operation result,
                 // and is explicitly not representative of the engine generated insert statement.
                 $"SELECT table0.[id], table0.[title], table0.[publisher_id] FROM books AS table0 " +
@@ -157,7 +157,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "InsertOneAndReturnMultipleRowsWithStoredProcedureTest",
+                "InsertOneAndReturnMultipleRowsWithDatabaseExecutableTest",
                 // This query attempts retrieval of the stored procedure insert operation result,
                 // and is explicitly not representative of the engine generated insert statement.
                 $"SELECT table0.[id], table0.[title], table0.[publisher_id] FROM books AS table0 " +
@@ -255,39 +255,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             string expectedErrorMessage = $"View or function '{_defaultSchemaName}.{_composite_subset_bookPub}' is not updatable " +
                                           $"because the modification affects multiple base tables.";
             await base.InsertOneInViewBadRequestTest(expectedErrorMessage, isExpectedErrorMsgSubstr: false);
-        }
-
-        /// <summary>
-        /// Tests the Insert one and returns either single or multiple rows functionality with a REST POST request
-        /// using stored procedure.
-        /// The request executes a stored procedure which attempts to insert a book for a given publisher
-        /// and then returns all books under that publisher.
-        /// </summary>
-        [DataRow("The First Publisher", "InsertOneAndReturnSingleRowWithStoredProcedureTest", true, DisplayName = "Test Single row result")]
-        [DataRow("Big Company", "InsertOneAndReturnMultipleRowsWithStoredProcedureTest", false, DisplayName = "Test multiple row result")]
-        [DataTestMethod]
-        public async Task InsertOneAndVerifyReturnedRowsWithStoredProcedureTest(
-            string publisherName,
-            string queryName,
-            bool expectJson)
-        {
-            string requestBody = @"
-            {
-                ""title"": ""Happy New Year"",
-                ""publisher_name"": """ + $"{publisherName}" + @"""" +
-            "}";
-
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: null,
-                queryString: null,
-                entityNameOrPath: _integrationProcedureInsertOneAndDisplay_EntityName,
-                sqlQuery: GetQuery(queryName),
-                operationType: Config.Operation.Insert,
-                requestBody: requestBody,
-                expectedStatusCode: HttpStatusCode.Created,
-                expectedLocationHeader: _integrationProcedureInsertOneAndDisplay_EntityName,
-                expectJson: expectJson
-            );
         }
 
         #region RestApiTestBase Overrides

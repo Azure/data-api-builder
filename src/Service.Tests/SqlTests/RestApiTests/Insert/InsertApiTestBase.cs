@@ -591,6 +591,39 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         }
 
         /// <summary>
+        /// Tests the Insert one and returns either single or multiple rows functionality with a REST POST request
+        /// using stored procedure.
+        /// The request executes a stored procedure which attempts to insert a book for a given publisher
+        /// and then returns all books under that publisher.
+        /// </summary>
+        [DataRow("The First Publisher", "InsertOneAndReturnSingleRowWithDatabaseExecutableTest", true, DisplayName = "Test Single row result")]
+        [DataRow("Big Company", "InsertOneAndReturnMultipleRowsWithDatabaseExecutableTest", false, DisplayName = "Test multiple row result")]
+        [DataTestMethod]
+        public virtual async Task InsertOneAndVerifyReturnedRowsWithDatabaseExecutableTest(
+            string publisherName,
+            string queryName,
+            bool expectJson)
+        {
+            string requestBody = @"
+            {
+                ""title"": ""Happy New Year"",
+                ""publisher_name"": """ + $"{publisherName}" + @"""" +
+            "}";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _integrationProcedureInsertOneAndDisplay_EntityName,
+                sqlQuery: GetQuery(queryName),
+                operationType: Config.Operation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: _integrationProcedureInsertOneAndDisplay_EntityName,
+                expectJson: expectJson
+            );
+        }
+
+        /// <summary>
         /// Abstract method overridden in each of the child classes as each database has its own specific error message.
         /// Validates request failure (HTTP 400) when an invalid foreign key is provided with an insertion.
         /// </summary>

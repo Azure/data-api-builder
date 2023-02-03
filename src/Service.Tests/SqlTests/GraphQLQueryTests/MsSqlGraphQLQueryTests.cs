@@ -300,40 +300,40 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// Test to execute stored-procedure in graphQL that returns a single row
         /// </summary>
         [TestMethod]
-        public async Task TestStoredProcedureQueryForGettingSingleRow()
+        public async Task TestDatabaseExecutableQueryForGettingSingleRow()
         {
             string msSqlQuery = $"EXEC dbo.get_publisher_by_id @id=1234";
-            await TestStoredProcedureQueryForGettingSingleRow(msSqlQuery);
+            await TestDatabaseExecutableQueryForGettingSingleRow(msSqlQuery);
         }
 
         /// <summary>
         /// Test to execute stored-procedure in graphQL that returns a list(multiple rows)
         /// </summary>
         [TestMethod]
-        public async Task TestStoredProcedureQueryForGettingMultipleRows()
+        public async Task TestDatabaseExecutableQueryForGettingMultipleRows()
         {
             string msSqlQuery = $"EXEC dbo.get_books";
-            await TestStoredProcedureQueryForGettingMultipleRows(msSqlQuery);
+            await TestDatabaseExecutableQueryForGettingMultipleRows(msSqlQuery);
         }
 
         /// <summary>
         /// Test to execute stored-procedure in graphQL that counts the total number of rows
         /// </summary>
         [TestMethod]
-        public async Task TestStoredProcedureQueryForGettingTotalNumberOfRows()
+        public async Task TestDatabaseExecutableQueryForGettingTotalNumberOfRows()
         {
             string msSqlQuery = $"EXEC dbo.count_books";
-            await TestStoredProcedureQueryForGettingTotalNumberOfRows(msSqlQuery);
+            await TestDatabaseExecutableQueryForGettingTotalNumberOfRows(msSqlQuery);
         }
 
         /// <summary>
         /// Test to execute stored-procedure in graphQL that contains null in the result set.
         /// </summary>
         [TestMethod]
-        public async Task TestStoredProcedureQueryWithResultsContainingNull()
+        public async Task TestDatabaseExecutableQueryWithResultsContainingNull()
         {
             string msSqlQuery = $"EXEC dbo.get_authors_history_by_first_name @firstName='Aaron'";
-            await TestStoredProcedureQueryWithResultsContainingNull(msSqlQuery);
+            await TestDatabaseExecutableQueryWithResultsContainingNull(msSqlQuery);
         }
 
         [TestMethod]

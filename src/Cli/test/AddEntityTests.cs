@@ -305,20 +305,20 @@ namespace Cli.Tests
         /// <param name="testType">Scenario that is tested. It is used for constructing the expected JSON.</param>
         [DataTestMethod]
         [DataRow(null, null, null, null, "NoOptions", DisplayName = "Default Case without any customization")]
-        [DataRow(null, null, "true", null, "RestEnabled" ,DisplayName = "REST enabled without any methods explicitly configured")]
-        [DataRow(null, null, "book", null, "CustomRestPath" , DisplayName = "Custom REST path defined without any methods explictly configured")]
+        [DataRow(null, null, "true", null, "RestEnabled", DisplayName = "REST enabled without any methods explicitly configured")]
+        [DataRow(null, null, "book", null, "CustomRestPath", DisplayName = "Custom REST path defined without any methods explictly configured")]
         [DataRow(new string[] { "Get", "Post", "Patch" }, null, null, null, "RestMethods", DisplayName = "REST methods defined without REST Path explicitly configured")]
-        [DataRow(new string[] { "Get", "Post", "Patch" }, null, "true", null, "RestEnabledWithMethods" ,DisplayName = "REST enabled along with some methods")]
-        [DataRow(new string[] { "Get", "Post", "Patch" }, null, "book", null, "CustomRestPathWithMethods" , DisplayName = "Custom REST path defined along with some methods")]
+        [DataRow(new string[] { "Get", "Post", "Patch" }, null, "true", null, "RestEnabledWithMethods", DisplayName = "REST enabled along with some methods")]
+        [DataRow(new string[] { "Get", "Post", "Patch" }, null, "book", null, "CustomRestPathWithMethods", DisplayName = "Custom REST path defined along with some methods")]
         [DataRow(null, null, null, "true", "GQLEnabled", DisplayName = "GraphQL enabled without any operation explicitly configured")]
-        [DataRow(null, null, null, "book", "GQLCustomType" , DisplayName = "Custom GraphQL Type defined without any operation explicitly configured")]
-        [DataRow(null, null, null, "book:books", "GQLSingularPluralCustomType" ,DisplayName = "SingularPlural GraphQL Type enabled without any operation explicitly configured")]
+        [DataRow(null, null, null, "book", "GQLCustomType", DisplayName = "Custom GraphQL Type defined without any operation explicitly configured")]
+        [DataRow(null, null, null, "book:books", "GQLSingularPluralCustomType", DisplayName = "SingularPlural GraphQL Type enabled without any operation explicitly configured")]
         [DataRow(null, "Query", null, "true", "GQLEnabledWithCustomOperation", DisplayName = "GraphQL enabled with Query operation")]
-        [DataRow(null, "Query", null, "book", "GQLCustomTypeAndOperation" ,DisplayName = "Custom GraphQL Type defined along with Query operation")]
-        [DataRow(null, "Query", null, "book:books", "GQLSingularPluralTypeAndOperation" ,DisplayName = "SingularPlural GraphQL Type defined along with Query operation")]
+        [DataRow(null, "Query", null, "book", "GQLCustomTypeAndOperation", DisplayName = "Custom GraphQL Type defined along with Query operation")]
+        [DataRow(null, "Query", null, "book:books", "GQLSingularPluralTypeAndOperation", DisplayName = "SingularPlural GraphQL Type defined along with Query operation")]
         [DataRow(null, null, "true", "true", "RestAndGQLEnabled", DisplayName = "Both REST and GraphQL enabled without any methods and operations configured explicitly")]
-        [DataRow(new string[] { "Get" }, "Query", "true", "true", "CustomRestMethodAndGqlOperation" , DisplayName = "Both REST and GraphQL enabled with custom REST methods and GraphQL operations")]
-        [DataRow(new string[] { "Post","Patch","Put" }, "Query", "book", "book:books", "CustomRestAndGraphQLAll" ,DisplayName = "Configuration with REST Path, Methods and GraphQL Type, Operation")]
+        [DataRow(new string[] { "Get" }, "Query", "true", "true", "CustomRestMethodAndGqlOperation", DisplayName = "Both REST and GraphQL enabled with custom REST methods and GraphQL operations")]
+        [DataRow(new string[] { "Post", "Patch", "Put" }, "Query", "book", "book:books", "CustomRestAndGraphQLAll", DisplayName = "Configuration with REST Path, Methods and GraphQL Type, Operation")]
         public void TestAddNewSpWithDifferentRestAndGraphQLOptions(
                 IEnumerable<string>? restMethods,
                 string? graphQLOperation,
@@ -346,67 +346,80 @@ namespace Cli.Tests
                 );
 
             string initialConfiguration = INITIAL_CONFIG;
-            
-                string expectedConfiguration = "";
-                switch(testType)
+
+            string expectedConfiguration = "";
+            switch (testType)
+            {
+                case "NoOptions":
                 {
-                    case "NoOptions": {
-                                        expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_METHODS_GRAPHQL_OPERATION); 
-                                        break;
-                                        }
-                    case "RestEnabled": {
-                                            expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_ENABLED);
-                                            break;
-                                        }
-                    case "CustomRestPath": {
-                                            expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_PATH);
-                                            break;
-                                        }
-                    case "RestMethods": {
-                                            expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_METHODS);
-                                            break;
-                                        }
-                    case "RestEnabledWithMethods": {
-                                            expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_REST_ENABLED_WITH_CUSTOM_REST_METHODS);
-                                            break;
-                                        }
-                    case "CustomRestPathWithMethods": {
-                                            expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_PATH_WITH_CUSTOM_REST_METHODS);
-                                            break;
-                                        }
-                    case "GQLEnabled":{
-                                            expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_GRAPHQL_ENABLED);
-                                            break;
-                                        }
-                    case "GQLCustomType": 
-                    case "GQLSingularPluralCustomType": {
-                                            expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_GRAPHQL_CUSTOM_TYPE);
-                                            break;
-                                        }
-                    case "GQLEnabledWithCustomOperation": {
-                                            expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_GRAPHQL_ENABLED_WITH_CUSTOM_OPERATION);
-                                            break;
-                                        }
-                    case "GQLCustomTypeAndOperation": 
-                    case "GQLSingularPluralTypeAndOperation":{
-                                            expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_GRAPHQL_ENABLED_WITH_CUSTOM_TYPE_OPERATION);
-                                            break;
-                                        }
-                    case "RestAndGQLEnabled": {
-                                            expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_REST_GRAPHQL_ENABLED);
-                                            break;
-                                        }
-                    case "CustomRestMethodAndGqlOperation":{
-                                            expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_METHOD_GRAPHQL_OPERATION);
-                                            break;
-                                        }
-                    case "CustomRestAndGraphQLAll": {
-                                            expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_GRAPHQL_ALL);
-                                            break;
-                                        }
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_METHODS_GRAPHQL_OPERATION);
+                    break;
                 }
-                
-                RunTest(options, initialConfiguration, expectedConfiguration);
+                case "RestEnabled":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_ENABLED);
+                    break;
+                }
+                case "CustomRestPath":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_PATH);
+                    break;
+                }
+                case "RestMethods":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_METHODS);
+                    break;
+                }
+                case "RestEnabledWithMethods":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_REST_ENABLED_WITH_CUSTOM_REST_METHODS);
+                    break;
+                }
+                case "CustomRestPathWithMethods":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_PATH_WITH_CUSTOM_REST_METHODS);
+                    break;
+                }
+                case "GQLEnabled":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_GRAPHQL_ENABLED);
+                    break;
+                }
+                case "GQLCustomType":
+                case "GQLSingularPluralCustomType":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_GRAPHQL_CUSTOM_TYPE);
+                    break;
+                }
+                case "GQLEnabledWithCustomOperation":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_GRAPHQL_ENABLED_WITH_CUSTOM_OPERATION);
+                    break;
+                }
+                case "GQLCustomTypeAndOperation":
+                case "GQLSingularPluralTypeAndOperation":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_GRAPHQL_ENABLED_WITH_CUSTOM_TYPE_OPERATION);
+                    break;
+                }
+                case "RestAndGQLEnabled":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_REST_GRAPHQL_ENABLED);
+                    break;
+                }
+                case "CustomRestMethodAndGqlOperation":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_METHOD_GRAPHQL_OPERATION);
+                    break;
+                }
+                case "CustomRestAndGraphQLAll":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_GRAPHQL_ALL);
+                    break;
+                }
+            }
+
+            RunTest(options, initialConfiguration, expectedConfiguration);
         }
 
         [DataTestMethod]

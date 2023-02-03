@@ -1539,7 +1539,7 @@ namespace Cli.Tests
         [DataRow(null, null, "true", "true", "RestAndGQLEnabled", DisplayName = "Both REST and GraphQL enabled without any methods and operations configured explicitly")]
         [DataRow(null, null, "false", "false", "RestAndGQLDisabled", DisplayName = "Both REST and GraphQL disabled without any methods and operations configured explicitly")]
         [DataRow(new string[] { "Get" }, "Query", "true", "true", "CustomRestMethodAndGqlOperation", DisplayName = "Both REST and GraphQL enabled with custom REST methods and GraphQL operations")]
-        [DataRow(new string[] { "Post","Patch","Put" }, "Query", "book", "book:books", "CustomRestAndGraphQLAll", DisplayName = "Configuration with REST Path, Methods and GraphQL Type, Operation")]
+        [DataRow(new string[] { "Post", "Patch", "Put" }, "Query", "book", "book:books", "CustomRestAndGraphQLAll", DisplayName = "Configuration with REST Path, Methods and GraphQL Type, Operation")]
         public void TestUpdateRestAndGraphQLSettingsForStoredProcedures(
             IEnumerable<string>? restMethods,
             string? graphQLOperation,
@@ -1574,74 +1574,88 @@ namespace Cli.Tests
                 );
 
             string runtimeConfig = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_METHODS_GRAPHQL_OPERATION);
-        
-            string expectedConfiguration="";
-            switch(testType)
+
+            string expectedConfiguration = "";
+            switch (testType)
+            {
+                case "NoOptions":
                 {
-                    case "NoOptions": {
-                                        expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_METHODS_GRAPHQL_OPERATION); 
-                                        break;
-                                        }
-                    case "RestEnabled": {
-                                            expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_ENABLED);
-                                            break;
-                                        }
-                    case "CustomRestPath": {
-                                            expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_PATH);
-                                            break;
-                                        }
-                    case "RestMethods": {
-                                            expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_METHODS);
-                                            break;
-                                        }
-                    case "RestEnabledWithMethods": {
-                                            expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_REST_ENABLED_WITH_CUSTOM_REST_METHODS);
-                                            break;
-                                        }
-                    case "CustomRestPathWithMethods": {
-                                            expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_PATH_WITH_CUSTOM_REST_METHODS);
-                                            break;
-                                        }
-                    case "GQLEnabled":{
-                                            expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_GRAPHQL_ENABLED);
-                                            break;
-                                        }
-                    case "GQLCustomType": 
-                    case "GQLSingularPluralCustomType": {
-                                            expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_GRAPHQL_CUSTOM_TYPE);
-                                            break;
-                                        }
-                    case "GQLEnabledWithCustomOperation": {
-                                            expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_GRAPHQL_ENABLED_WITH_CUSTOM_OPERATION);
-                                            break;
-                                        }
-                    case "GQLCustomTypeAndOperation": 
-                    case "GQLSingularPluralTypeAndOperation":{
-                                            expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_GRAPHQL_ENABLED_WITH_CUSTOM_TYPE_OPERATION);
-                                            break;
-                                        }
-                    case "RestAndGQLEnabled": {
-                                            expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_REST_GRAPHQL_ENABLED);
-                                            break;
-                                        }
-                    case "RestAndGQLDisabled": {
-                                            expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_REST_GRAPHQL_DISABLED);
-                                            break;
-                                            }
-                    case "CustomRestMethodAndGqlOperation":{
-                                            expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_METHOD_GRAPHQL_OPERATION);
-                                            break;
-                                        }
-                    case "CustomRestAndGraphQLAll": {
-                                            expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_GRAPHQL_ALL);
-                                            break;
-                                        }
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_METHODS_GRAPHQL_OPERATION);
+                    break;
                 }
+                case "RestEnabled":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_ENABLED);
+                    break;
+                }
+                case "CustomRestPath":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_PATH);
+                    break;
+                }
+                case "RestMethods":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_METHODS);
+                    break;
+                }
+                case "RestEnabledWithMethods":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_REST_ENABLED_WITH_CUSTOM_REST_METHODS);
+                    break;
+                }
+                case "CustomRestPathWithMethods":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_PATH_WITH_CUSTOM_REST_METHODS);
+                    break;
+                }
+                case "GQLEnabled":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_GRAPHQL_ENABLED);
+                    break;
+                }
+                case "GQLCustomType":
+                case "GQLSingularPluralCustomType":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_GRAPHQL_CUSTOM_TYPE);
+                    break;
+                }
+                case "GQLEnabledWithCustomOperation":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_GRAPHQL_ENABLED_WITH_CUSTOM_OPERATION);
+                    break;
+                }
+                case "GQLCustomTypeAndOperation":
+                case "GQLSingularPluralTypeAndOperation":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_GRAPHQL_ENABLED_WITH_CUSTOM_TYPE_OPERATION);
+                    break;
+                }
+                case "RestAndGQLEnabled":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_REST_GRAPHQL_ENABLED);
+                    break;
+                }
+                case "RestAndGQLDisabled":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_REST_GRAPHQL_DISABLED);
+                    break;
+                }
+                case "CustomRestMethodAndGqlOperation":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_METHOD_GRAPHQL_OPERATION);
+                    break;
+                }
+                case "CustomRestAndGraphQLAll":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_GRAPHQL_ALL);
+                    break;
+                }
+            }
 
             Assert.IsTrue(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
             Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfiguration), JObject.Parse(runtimeConfig)));
         }
-        
+
         [DataTestMethod]
         [DataRow(null, "Mutation", "true", "false", DisplayName = "Conflicting configurations - GraphQL operation specified but entity is disabled for GraphQL")]
         [DataRow(new string[] { "Get" }, null, "false", "true", DisplayName = "Conflicting configurations - REST methods specified but entity is disabled for REST")]
@@ -1678,12 +1692,11 @@ namespace Cli.Tests
                 graphQLOperationForStoredProcedure: graphQLOperation
                 );
 
-            string runtimeConfig = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_METHODS_GRAPHQL_OPERATION);
+            _ = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_METHODS_GRAPHQL_OPERATION);
 
             string initialConfiguration = INITIAL_CONFIG;
             Assert.IsFalse(ConfigGenerator.TryUpdateExistingEntity(options, ref initialConfiguration));
         }
-
 
         #endregion
 

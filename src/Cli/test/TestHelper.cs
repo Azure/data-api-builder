@@ -279,7 +279,7 @@ namespace Cli.Tests
                   }
           }";
 
-          public const string SP_GRAPHQL_ENABLED = @"{
+        public const string SP_GRAPHQL_ENABLED = @"{
               ""entities"": {
               ""MyEntity"": {
                 ""source"": {
@@ -338,7 +338,7 @@ namespace Cli.Tests
                   }
           }";
 
-          public const string SP_GRAPHQL_ENABLED_WITH_CUSTOM_OPERATION = @"{
+        public const string SP_GRAPHQL_ENABLED_WITH_CUSTOM_OPERATION = @"{
               ""entities"": {
               ""MyEntity"": {
                 ""source"": {
@@ -426,7 +426,7 @@ namespace Cli.Tests
                   }
           }";
 
-          public const string SP_REST_GRAPHQL_DISABLED = @"{
+        public const string SP_REST_GRAPHQL_DISABLED = @"{
               ""entities"": {
               ""MyEntity"": {
                 ""source"": {
@@ -447,7 +447,7 @@ namespace Cli.Tests
               }
           }";
 
-          public const string SP_CUSTOM_REST_METHOD_GRAPHQL_OPERATION = @"{
+        public const string SP_CUSTOM_REST_METHOD_GRAPHQL_OPERATION = @"{
               ""entities"": {
               ""MyEntity"": {
                 ""source"": {
@@ -625,7 +625,7 @@ namespace Cli.Tests
                   }
           }";
 
-                  public const string SP_CUSTOM_REST_PATH_WITH_CUSTOM_REST_METHODS = @"{
+        public const string SP_CUSTOM_REST_PATH_WITH_CUSTOM_REST_METHODS = @"{
               ""entities"": {
               ""MyEntity"": {
                 ""source"": {

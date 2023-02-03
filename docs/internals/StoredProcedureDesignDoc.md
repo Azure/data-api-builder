@@ -2,7 +2,7 @@
 
 ## Design/Spec Summary
 ### Entity Source Object Config
-Currently, the `source` attribute is always a string. With the addition of stored procedure support and the next version of the JSON schema: [here](https://github.com/Azure/project-hawaii/blob/db619b4175719c83d540bc30ef5acc5faa6faa6d/playground/hawaii.draft-02.schema.json), the `source` attribute is now optionally an object with attributes like so:
+Currently, the `source` attribute is always a string. With the addition of stored procedure support and the next version of the JSON schema: [here](https://dataapibuilder.azureedge.net/schemas/v0.4.11-alpha/dab.draft.schema.json), the `source` attribute is now optionally an object with attributes like so:
 ```json
 "type": {
     "type": "string",                                            
@@ -51,21 +51,23 @@ parameters can either be fixed as above or passed at runtime through
 
 ### Stored Procedure Permissions 
 
-Stored procedures have identical role/action permissions to any other entity. i.e. same familiar format:
+Stored procedure backed entities have similar role/action permissions to other entities. i.e. same familiar format:
+
 ```json
 "permissions": [
         {
             "role": "anonymous",
-            "actions": [ "read" ]
+            "actions": [ "execute" ]
             
         },
         {
             "role": "authenticated",
-            "actions": [ "create" ]
+            "actions": [ "execute" ]
         }
 ]
-``` 
-However, the behavior of **column/field-level permissions** and **database policies** have not yet been designed/defined for procedures; as such, these will be **ignored**.
+```
+
+However, stored procedures only accept the action **execute**. **Column/field-level permissions** and **database policies** are not supported.
 
 <a id='suggested-config'></a>
 > Why not simplify stored procedure permissions, if POST, PUT, PATCH, DELETE semantically identical?
@@ -75,6 +77,7 @@ Justification **against** supporting all CRUD operations:
 - Other solutions usually limit to `POST`: https://learn.microsoft.com/rest/api/cosmos-db/execute-a-stored-procedure
     - [PostgREST](https://postgrest.org/en/stable/api.html#stored-procedures) support `POST` and `GET` if marked `IMMUTABLE` or `STABLE`
 - Proposed permission:
+
 ```json
 "permissions": [
         {
@@ -87,11 +90,13 @@ Justification **against** supporting all CRUD operations:
         }
 ]
 ```
-Justification **for** allowing permission configuration for all CRUD operations:
-- Davide: the "simplification" would complicate authorization with no real benefit. True in that the authorization logic would need to change conditioned on whether the entity source was a stored procedure.
-- Aniruddh: we should leave the responsibility for the developer to properly configure hawaii; it's not our fault if they configure against the API guidelines
 
-Users can provide only one CRUD operation for stored-procedure. 
+Justification **for** allowing permission configuration for all CRUD operations:
+
+- Davide: the "simplification" would complicate authorization with no real benefit. True in that the authorization logic would need to change conditioned on whether the entity source was a stored procedure.
+- Aniruddh: we should leave the responsibility for the developer to properly configure Data API Builder; it's not our fault if they configure against the API guidelines
+
+Users can provide only one CRUD operation for stored-procedure.
 CREATE/UPDATE/DELETE(CUD) action will create mutation operation, while READ will create a Query operation for GraphQL.
 Providing more than one (CRUD) operation would throw an error and the engine will fail to start during initialization.
 

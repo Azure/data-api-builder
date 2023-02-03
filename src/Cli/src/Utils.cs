@@ -555,8 +555,9 @@ namespace Cli
         /// json config into runtime config object.
         /// Also checks that connection-string is not null or empty whitespace
         /// </summary>
-        public static bool CanParseConfigCorrectly(string configFile)
+        public static bool CanParseConfigCorrectly(string configFile, out RuntimeConfig? deserializedRuntimeConfig)
         {
+            deserializedRuntimeConfig = null;
             if (!TryReadRuntimeConfig(configFile, out string runtimeConfigJson))
             {
                 _logger.LogError($"Failed to read the config file: {configFile}.");
@@ -565,7 +566,7 @@ namespace Cli
 
             if (!RuntimeConfig.TryGetDeserializedRuntimeConfig(
                     runtimeConfigJson,
-                    out RuntimeConfig? deserializedRuntimeConfig,
+                    out deserializedRuntimeConfig,
                     logger: null))
             {
                 _logger.LogError($"Failed to parse the config file: {configFile}.");

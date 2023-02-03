@@ -916,15 +916,18 @@ namespace Cli
             }
 
             // Validates that config file has data and follows the correct json schema
-            if (!CanParseConfigCorrectly(runtimeConfigFile))
+            if (!CanParseConfigCorrectly(runtimeConfigFile, out RuntimeConfig? deserializedRuntimeConfig))
             {
                 return false;
             }
 
-            /// This will start the runtime engine with project name, config file, and if defined then
-            /// a  valid LogLevel.
+            /// This will add arguments to start the runtime engine with the config file.
             List<string> args = new()
             { "--" + nameof(RuntimeConfigPath.ConfigFileName), runtimeConfigFile };
+
+            /// Add arguments for LogLevel. Checks if LogLevel is overridden with option `--LogLevel`.
+            /// If not provided, Default minimum LogLevel is Debug for Development mode and Error for Production mode.
+            LogLevel minimumLogLevel;
             if (options.LogLevel is not null)
             {
                 if (options.LogLevel is < LogLevel.Trace or > LogLevel.None)
@@ -934,9 +937,25 @@ namespace Cli
                     return false;
                 }
 
-                args.Add("--LogLevel");
-                args.Add(options.LogLevel.ToString()!);
+                minimumLogLevel = (LogLevel)options.LogLevel;
+                _logger.LogInformation($"Setting minimum LogLevel: {minimumLogLevel}.");
             }
+            else
+            {
+                HostModeType hostModeType = deserializedRuntimeConfig!.HostGlobalSettings.Mode;
+                if (hostModeType == HostModeType.Development)
+                {
+                    minimumLogLevel = LogLevel.Debug;
+                }
+                else
+                {
+                    minimumLogLevel = LogLevel.Error;
+                }
+
+                _logger.LogInformation($"Setting default minimum LogLevel: {minimumLogLevel} for {hostModeType} mode.");
+            }
+            args.Add("--LogLevel");
+            args.Add(minimumLogLevel.ToString());
 
             // This will add args to disable automatic redirects to https if specified by user
             if (options.IsHttpsRedirectionDisabled)

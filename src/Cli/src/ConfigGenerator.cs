@@ -1022,7 +1022,6 @@ namespace Cli
         /// RestStoredProcedureEntityVerboseSettings-> when a stored procedure entity is configured with explicit RestMethods and Path settings.</returns>
         private static object? ConstructUpdatedRestDetails(Entity entity, EntityOptions options)
         {
-
             // Updated REST Route details
             object? restPath = (options.RestRoute is not null) ? ConstructRestPathDetails(options.RestRoute) : entity.GetRestEnabledOrPathSettings();
 
@@ -1119,7 +1118,11 @@ namespace Cli
                 }
                 else
                 {
-                    if (options.GraphQLOperationForStoredProcedure is not null)
+                    if (options.GraphQLOperationForStoredProcedure is null)
+                    {
+                        graphQLOperation = null;
+                    }
+                    else
                     {
                         graphQLType = null;
                     }

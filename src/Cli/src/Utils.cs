@@ -959,8 +959,8 @@ namespace Cli
         /// <summary>
         /// For stored procedures and functions, the graphql operation to be supported can be configured using
         /// --graphql.operation.
-        /// Validation to ensure that configuring GraphQL operation for a stored procedur or function
-        /// e that is not exposed for graphQL results in an error. This validation is run along with
+        /// Validation to ensure that configuring GraphQL operation for a stored procedure or function
+        /// that is not exposed for graphQL results in an error. This validation is run along with
         /// add command
         /// </summary>
         /// <param name="options"></param>

@@ -592,10 +592,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
                         if (!_runtimeConfigProvider.IsLateConfigured)
                         {
-                            _logger.LogDebug($"Logging relationship information in the form:\n" +
-                                $"<entity>: <entity.source.object>(<entity columns from relationship>) is related to <cardinality> " +
-                                $"<target.entity: <target.entity.source.object(<target.entity columns from relationship>) by <linking.object>" +
-                                $"(linking.source.fields: <linking.source.fields>), (linking.target.fields: <linking.target.fields>)");
+                            LoggingRelationMessage(linked: true);
                             string sourceDBOName = entity.SourceName;
                             string targetDBOName = runtimeConfig.Entities[relationship.TargetEntity].SourceName;
                             string cardinality = relationship.Cardinality.ToString().ToLower();
@@ -629,9 +626,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
                     if (relationship.LinkingObject is null && !_runtimeConfigProvider.IsLateConfigured)
                     {
-                        _logger.LogDebug($"Logging relationship information in the form:\n" +
-                                $"<entity>: <entity.source.object>(<entity columns from relationship>) is related to <cardinality> " +
-                                $"<target.entity: <target.entity.source.object(<target.entity columns from relationship>)");
+                        LoggingRelationMessage();
                         RelationShipPair sourceTargetRelationshipPair = new(sourceDatabaseObject, targetDatabaseObject);
                         RelationShipPair targetSourceRelationshipPair = new(targetDatabaseObject, sourceDatabaseObject);
                         string sourceDBOName = entity.SourceName;
@@ -657,9 +652,26 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             _logger.LogDebug($"{entityName}: {sourceDBOName}({sourceColumns}) is related to {cardinality} " +
                                 $"{relationship.TargetEntity}: {targetDBOName}({targetColumns}).");
                         }
+
+                        if (relationship.SourceFields is not null && relationship.TargetFields is not null)
+                        {
+                            sourceColumns = string.Join(",", relationship.SourceFields);
+                            targetColumns = string.Join(",", relationship.TargetFields);
+                            _logger.LogDebug($"{entityName}: {sourceDBOName}({sourceColumns}) is related to {cardinality} " +
+                                $"{relationship.TargetEntity}: {targetDBOName}({targetColumns}).");
+                        }
                     }
                 }
             }
+        }
+
+        private void LoggingRelationMessage(bool linked = false)
+        {
+            string linkedMessage = linked ? " by <linking.object>(linking.source.fields: <linking.source.fields>), (linking.target.fields: <linking.target.fields>)" :
+                string.Empty;
+            _logger.LogDebug($"Logging relationship information in the form:\n" +
+                             $"<entity>: <entity.source.object>(<source.fields>) is related to <cardinality> " +
+                             $"<target.entity: <target.entity.source.object(<target.fields>){linkedMessage}.");
         }
 
         /// <summary>

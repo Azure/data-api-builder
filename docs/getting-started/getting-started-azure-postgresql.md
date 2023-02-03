@@ -20,7 +20,7 @@ If you are connecting to Azure Database for PostgreSQL Single Server, the connec
 `Server={your_server}.postgres.database.azure.com;Database={your_database};Port=5432;User Id={your_username}@{your_server};Password={your_password};Ssl Mode=Require;`
 ```
 
-To connect to a local PostgreSQL Server, the connection string look like:
+To connect to a local PostgreSQL Server, the connection string looks like:
 
 ```text
 `Server={your_server};Database={your_database};Port=5432;User Id={your_username};Password={your_password};Ssl Mode=Require;`

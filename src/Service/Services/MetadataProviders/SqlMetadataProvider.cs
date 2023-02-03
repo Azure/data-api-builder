@@ -182,7 +182,7 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <inheritdoc />
-        public bool TryGetBackingColumn(string entityName, string field, out string? name)
+        public bool TryGetBackingColumn(string entityName, string field, [NotNullWhen(true)] out string? name)
         {
             return EntityExposedNamesToBackingColumnNames[entityName].TryGetValue(field, out name);
         }
@@ -466,7 +466,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// each derived class should override this method.
         /// </summary>
         /// <exception cref="NotSupportedException"></exception>
-        protected virtual string GetDefaultSchemaName()
+        public virtual string GetDefaultSchemaName()
         {
             throw new NotSupportedException($"Cannot get default schema " +
                 $"name for database type {_databaseType}");

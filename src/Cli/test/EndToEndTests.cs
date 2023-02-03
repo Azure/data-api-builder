@@ -280,8 +280,8 @@ public class EndToEndTests
     }
 
     /// <summary>
-    /// Validates that the built JSON configuration contains the explicit stored procedure entity settings
-    /// --rest.methods and --graphql.operations.
+    /// Validates the config json generated when a stored procedure is added with both 
+    /// --rest.methods and --graphql.operation options.
     /// </summary>
     [TestMethod]
     public void TestAddingStoredProcedureWithRestMethodsAndGraphQLOperations()
@@ -294,7 +294,7 @@ public class EndToEndTests
         Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
         string[] addArgs = { "add", "MyEntity", "-c", _testRuntimeConfig, "--source", "s001.book", "--permissions", "anonymous:execute", "--source.type", "stored-procedure", "--source.params", "param1:123,param2:hello,param3:true", "--rest.methods", "post,put,patch", "--graphql.operation", "query" };
         Program.Main(addArgs);
-        string? expectedConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE_WITH_CUSTOM_REST_GRAPHQL_CONFIG);
+        string? expectedConfig = AddPropertiesToJson(INITIAL_CONFIG, STORED_PROCEDURE_WITH_BOTH_REST_METHODS_GRAPHQL_OPERATION);
         Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfig), JObject.Parse(File.ReadAllText(_testRuntimeConfig))));
     }
 
@@ -314,7 +314,7 @@ public class EndToEndTests
 
         string[] addArgs = { "add", "MyEntity", "-c", _testRuntimeConfig, "--source", "s001.book", "--permissions", "anonymous:execute", "--source.type", "stored-procedure", "--source.params", "param1:123,param2:hello,param3:true", "--rest.methods", "post,put,patch", "--graphql.operation", "query" };
         Program.Main(addArgs);
-        string? expectedConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE_WITH_CUSTOM_REST_GRAPHQL_CONFIG);
+        string? expectedConfig = AddPropertiesToJson(INITIAL_CONFIG, STORED_PROCEDURE_WITH_BOTH_REST_METHODS_GRAPHQL_OPERATION);
         Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfig), JObject.Parse(File.ReadAllText(_testRuntimeConfig))));
 
         string[] updateArgs = { "update", "MyEntity", "-c", _testRuntimeConfig, "--rest.methods", "get", "--graphql", "false" };

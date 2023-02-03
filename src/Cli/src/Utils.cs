@@ -553,7 +553,9 @@ namespace Cli
         /// <summary>
         /// Checks if config can be correctly parsed by deserializing the
         /// json config into runtime config object.
-        /// Also checks that connection-string is not null or empty whitespace
+        /// Also checks that connection-string is not null or empty whitespace.
+        /// If parsing is successful and the config has valid connection-string, it
+        /// returns true with out as deserializedConfig, else returns false.
         /// </summary>
         public static bool CanParseConfigCorrectly(string configFile, out RuntimeConfig? deserializedRuntimeConfig)
         {

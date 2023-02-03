@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using static Azure.DataApiBuilder.Service.Startup;
 
 namespace Azure.DataApiBuilder.Service
 {
@@ -48,8 +47,8 @@ namespace Azure.DataApiBuilder.Service
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    _minimumLogLevel = GetLogLevel(args);
-                    ILoggerFactory? loggerFactory = GetLoggerFactoryForLogLevel(_minimumLogLevel);
+                    Startup.MinimumLogLevel = GetLogLevelFromCommandLineArgs(args, out Startup.IsLogLevelOverriddenByCli);
+                    ILoggerFactory? loggerFactory = GetLoggerFactoryForLogLevel(Startup.MinimumLogLevel);
                     ILogger<Startup>? startupLogger = loggerFactory.CreateLogger<Startup>();
                     ILogger<RuntimeConfigProvider>? configProviderLogger = loggerFactory.CreateLogger<RuntimeConfigProvider>();
                     DisableHttpsRedirectionIfNeeded(args);
@@ -69,8 +68,9 @@ namespace Azure.DataApiBuilder.Service
         /// to this change.
         /// </summary>
         /// <param name="args">array that may contain log level information.</param>
+        /// <param name="isLogLevelOverridenByCli">sets if log level is found in the args.</param>
         /// <returns>Appropriate log level.</returns>
-        private static LogLevel GetLogLevel(string[] args)
+        private static LogLevel GetLogLevelFromCommandLineArgs(string[] args, out bool isLogLevelOverridenByCli)
         {
             for (int i = 0; i < args.Length; i++)
             {
@@ -83,7 +83,7 @@ namespace Azure.DataApiBuilder.Service
 
                     if (Enum.TryParse(args[i + 1], out LogLevel logLevel))
                     {
-                        isLogLevelOverriddenByCli = true;
+                        isLogLevelOverridenByCli = true;
                         return logLevel;
                     }
                     else
@@ -97,6 +97,7 @@ namespace Azure.DataApiBuilder.Service
                 }
             }
 
+            isLogLevelOverridenByCli = false;
             return LogLevel.Error;
         }
 

@@ -2,8 +2,8 @@ using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service;
 using Microsoft.Extensions.Logging;
-using static Azure.DataApiBuilder.Service.Startup;
 using static Cli.Utils;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
@@ -942,8 +942,8 @@ namespace Cli
             }
             else
             {
-                minimumLogLevel = GetDefaultLogLevel(deserializedRuntimeConfig!);
-                HostModeType hostModeType = deserializedRuntimeConfig!.HostGlobalSettings.Mode;
+                minimumLogLevel = Startup.GetLogLevelBasedOnMode(deserializedRuntimeConfig);
+                HostModeType hostModeType = deserializedRuntimeConfig.HostGlobalSettings.Mode;
 
                 _logger.LogInformation($"Setting default minimum LogLevel: {minimumLogLevel} for {hostModeType} mode.");
             }
@@ -954,7 +954,7 @@ namespace Cli
             // This will add args to disable automatic redirects to https if specified by user
             if (options.IsHttpsRedirectionDisabled)
             {
-                args.Add(NO_HTTPS_REDIRECT_FLAG);
+                args.Add(Startup.NO_HTTPS_REDIRECT_FLAG);
             }
 
             return Azure.DataApiBuilder.Service.Program.StartEngine(args.ToArray());

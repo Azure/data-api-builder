@@ -557,7 +557,9 @@ namespace Cli
         /// If parsing is successful and the config has valid connection-string, it
         /// returns true with out as deserializedConfig, else returns false.
         /// </summary>
-        public static bool CanParseConfigCorrectly(string configFile, out RuntimeConfig? deserializedRuntimeConfig)
+        public static bool CanParseConfigCorrectly(
+            string configFile,
+            [NotNullWhen(true)] out RuntimeConfig? deserializedRuntimeConfig)
         {
             deserializedRuntimeConfig = null;
             if (!TryReadRuntimeConfig(configFile, out string runtimeConfigJson))

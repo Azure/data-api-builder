@@ -35,9 +35,9 @@ namespace Azure.DataApiBuilder.Service
         private ILogger<Startup> _logger;
         private ILogger<RuntimeConfigProvider> _configProviderLogger;
 
-        public static LogLevel _minimumLogLevel = LogLevel.Error;
+        public static LogLevel MinimumLogLevel = LogLevel.Error;
 
-        public static bool isLogLevelOverriddenByCli;
+        public static bool IsLogLevelOverriddenByCli;
 
         public const string NO_HTTPS_REDIRECT_FLAG = "--no-https-redirect";
 
@@ -61,7 +61,7 @@ namespace Azure.DataApiBuilder.Service
             RuntimeConfigProvider runtimeConfigurationProvider = new(runtimeConfigPath, _configProviderLogger);
             services.AddSingleton(runtimeConfigurationProvider);
 
-            services.AddSingleton<ILogger<RuntimeConfigValidator>>(implementationFactory: (serviceProvider) =>
+            services.AddSingleton(implementationFactory: (serviceProvider) =>
             {
                 ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
                 return loggerFactory.CreateLogger<RuntimeConfigValidator>();
@@ -440,7 +440,7 @@ namespace Azure.DataApiBuilder.Service
         /// If host mode is Development, return `LogLevel.Debug`, else
         /// for production returns `LogLevel.Error`.
         /// </summary>
-        public static LogLevel GetDefaultLogLevel(RuntimeConfig runtimeConfig)
+        public static LogLevel GetLogLevelBasedOnMode(RuntimeConfig runtimeConfig)
         {
             if (runtimeConfig.HostGlobalSettings.Mode == HostModeType.Development)
             {
@@ -451,15 +451,25 @@ namespace Azure.DataApiBuilder.Service
         }
 
         /// <summary>
-        /// It creates a LoggerFactory based on the cli input. In Case of hosted scenario,
+        /// Determines the log level It creates a LoggerFactory
         /// it finds out the default logLevel based on the host mode configured in the runtime config.
         /// </summary>
         public static ILoggerFactory CreateLoggerFactoryForHostedAndNonHostedScenario(IServiceProvider serviceProvider)
         {
-            RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-            RuntimeConfig runtimeConfig = configProvider.GetRuntimeConfiguration();
-            LogLevel logLevel = isLogLevelOverriddenByCli ? _minimumLogLevel : GetDefaultLogLevel(runtimeConfig);
-            return Program.GetLoggerFactoryForLogLevel(logLevel);
+            if (!IsLogLevelOverriddenByCli)
+            {
+                // If the log level is not overridden by command line arguments specified through CLI,
+                // attempt to get the runtime config to determine the loglevel based on host.mode.
+                // If runtime config is available, set the loglevel to Error if host.mode is Production,
+                // Debug if it is Development.
+                RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+                if (configProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
+                {
+                    MinimumLogLevel = GetLogLevelBasedOnMode(runtimeConfig);
+                }
+            }
+
+            return Program.GetLoggerFactoryForLogLevel(MinimumLogLevel);
         }
 
         /// <summary>

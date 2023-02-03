@@ -182,7 +182,7 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <inheritdoc />
-        public bool TryGetBackingColumn(string entityName, string field, out string? name)
+        public bool TryGetBackingColumn(string entityName, string field, [NotNullWhen(true)] out string? name)
         {
             return EntityExposedNamesToBackingColumnNames[entityName].TryGetValue(field, out name);
         }
@@ -339,7 +339,7 @@ namespace Azure.DataApiBuilder.Service.Services
             }
 
             // Generating exposed stored-procedure query/mutation name and adding to the dictionary mapping it to its entity name.
-            GraphQLDatabaseExecutableExposedNameToEntityNameMap.TryAdd(GenerateDatabaseExecutableQueryName(entityName, procedureEntity), entityName);
+            GraphQLDatabaseExecutableExposedNameToEntityNameMap.TryAdd(GenerateDatabaseExecutableGraphQLFieldName(entityName, procedureEntity), entityName);
         }
 
         /// <summary>
@@ -420,8 +420,45 @@ namespace Azure.DataApiBuilder.Service.Services
             // otherwise we have to convert each part of the Rest property we want into correct objects
             // they are json element so this means deserializing at each step with case insensitivity
             JsonSerializerOptions options = RuntimeConfig.SerializerOptions;
-            RestEntitySettings rest = JsonSerializer.Deserialize<RestEntitySettings>((JsonElement)entity.Rest, options)!;
-            return JsonSerializer.Deserialize<string>((JsonElement)rest.Path, options)!;
+            JsonElement restConfigElement = (JsonElement)entity.Rest;
+            if (entity.ObjectType.IsDatabaseExecutableType())
+            {
+                if (restConfigElement.TryGetProperty("path", out JsonElement path))
+                {
+                    if (path.ValueKind is JsonValueKind.True || path.ValueKind is JsonValueKind.False)
+                    {
+                        bool restEnabled = JsonSerializer.Deserialize<bool>(path, options)!;
+                        if (restEnabled)
+                        {
+                            return entityName;
+                        }
+                        else
+                        {
+                            return string.Empty;
+                        }
+                    }
+                    else
+                    {
+                        return JsonSerializer.Deserialize<string>(path, options)!;
+                    }
+                }
+                else
+                {
+                    return entityName;
+                }
+            }
+            else
+            {
+                RestEntitySettings rest = JsonSerializer.Deserialize<RestEntitySettings>((JsonElement)restConfigElement, options)!;
+                if (rest.Path is not null)
+                {
+                    return JsonSerializer.Deserialize<string>((JsonElement)rest.Path, options)!;
+                }
+                else
+                {
+                    return entityName;
+                }
+            }
         }
 
         /// <summary>
@@ -429,7 +466,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// each derived class should override this method.
         /// </summary>
         /// <exception cref="NotSupportedException"></exception>
-        protected virtual string GetDefaultSchemaName()
+        public virtual string GetDefaultSchemaName()
         {
             throw new NotSupportedException($"Cannot get default schema " +
                 $"name for database type {_databaseType}");

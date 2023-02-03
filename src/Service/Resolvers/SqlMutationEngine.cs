@@ -83,8 +83,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             Tuple<JsonDocument, IMetadata>? result = null;
-            Config.Operation mutationOperation =
-                MutationBuilder.DetermineMutationOperationTypeBasedOnInputType(graphqlMutationName);
+            Config.Operation mutationOperation = MutationBuilder.DetermineMutationOperationTypeBasedOnInputType(graphqlMutationName);
 
             // If authorization fails, an exception will be thrown and request execution halts.
             AuthorizeMutationFields(context, parameters, entityName, mutationOperation);
@@ -727,9 +726,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="context"></param>
         /// <param name="parameters"></param>
         /// <param name="entityName"></param>
-        /// <param name="graphQLMutationName"></param>
         /// <param name="mutationOperation"></param>
-        /// <returns></returns>
         /// <exception cref="DataApiBuilderException"></exception>
         public void AuthorizeMutationFields(
             IMiddlewareContext context,
@@ -738,9 +735,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             Config.Operation mutationOperation)
         {
             string role = string.Empty;
-            if (context.ContextData.TryGetValue(key: AuthorizationResolver.CLIENT_ROLE_HEADER, out object? value))
+            if (context.ContextData.TryGetValue(key: AuthorizationResolver.CLIENT_ROLE_HEADER, out object? value) && value is StringValues stringVals)
             {
-                role = (StringValues)value!.ToString();
+                role = stringVals.ToString();
             }
 
             if (string.IsNullOrEmpty(role))
@@ -769,12 +766,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     isAuthorized = _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: role, operation: Config.Operation.Update, inputArgumentKeys);
                     break;
                 case Config.Operation.Create:
-                    isAuthorized = _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: role, operation: Config.Operation.Create, inputArgumentKeys);
+                    isAuthorized = _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: role, operation: mutationOperation, inputArgumentKeys);
                     break;
+                case Config.Operation.Execute:
                 case Config.Operation.Delete:
-                    // Delete operations are not checked for authorization on field level,
-                    // and instead at the mutation level and would be rejected before this time in the pipeline.
-                    // Continuing on with operation.
+                    // Authorization is not performed for the 'execute' operation because stored procedure
+                    // backed entities do not support column level authorization.
+                    // Field level authorization is not supported for delete mutations. A requestor must be authorized
+                    // to perform the delete operation on the entity to reach this point.
                     isAuthorized = true;
                     break;
                 default:

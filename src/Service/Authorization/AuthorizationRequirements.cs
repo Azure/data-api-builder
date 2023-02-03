@@ -15,7 +15,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
     /// Instructs the authorization handler to check that:
     ///     - The entity has an entry for the role defined in the client role header.
     ///     - The discovered role entry has an entry for the operationtype of the request.
-    /// 
+    ///
     /// Implements IAuthorizationRequirement, which is an empty marker interface.
     /// https://docs.microsoft.com/aspnet/core/security/authorization/policies?view=aspnetcore-6.0#requirements
     /// </summary>
@@ -31,4 +31,13 @@ namespace Azure.DataApiBuilder.Service.Authorization
     /// https://docs.microsoft.com/aspnet/core/security/authorization/policies?view=aspnetcore-6.0#requirements
     /// </summary>
     public class ColumnsPermissionsRequirement : IAuthorizationRequirement { }
+
+    /// <summary>
+    /// Instructs the authorization handler to check that:
+    ///     - The stored procedure/function that has been requested to execute is allowed to be accessed by the authenticated user.
+    ///
+    /// Implements IAuthorizationRequirement, which is an empty marker interface.
+    /// https://docs.microsoft.com/aspnet/core/security/authorization/policies?view=aspnetcore-6.0#requirements
+    /// </summary>
+    public class DatabaseExecutablePermissionsRequirement : IAuthorizationRequirement { }
 }

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -37,7 +38,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// <summary>
         /// Executed by the internal ASP.NET authorization engine
         /// whenever client code calls authorizationService.AuthorizeAsync()
-        /// Execution of this method calls either 
+        /// Execution of this method calls either
         ///     .Succeed(IRequirement)
         ///     .Failure()
         /// To set the result of authorization. If Faiure() is called, this
@@ -207,6 +208,38 @@ namespace Azure.DataApiBuilder.Service.Authorization
                     {
                         context.Succeed(requirement);
                     }
+                }
+            }
+            else if (requirement is DatabaseExecutablePermissionsRequirement)
+            {
+                if (context.Resource is not null)
+                {
+                    string? entityName = context.Resource as string;
+
+                    if (entityName is null)
+                    {
+                        throw new DataApiBuilderException(
+                            message: "restContext Resource Null, Something went wrong",
+                            statusCode: HttpStatusCode.Unauthorized,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError
+                        );
+                    }
+
+                    string roleName = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
+                    Enum.TryParse<RestMethod>(httpContext.Request.Method, ignoreCase: true, out RestMethod httpVerb);
+                    bool isAuthorized = _authorizationResolver.IsDatabaseExecutableExecutionPermitted(entityName, roleName, httpVerb);
+                    if (!isAuthorized)
+                    {
+                        context.Fail();
+                    }
+                    else
+                    {
+                        context.Succeed(requirement);
+                    }
+                }
+                else
+                {
+                    context.Fail();
                 }
             }
 

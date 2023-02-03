@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Microsoft.Extensions.Logging;
+using static Azure.DataApiBuilder.Service.Startup;
 using static Cli.Utils;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
@@ -201,12 +202,68 @@ namespace Cli
                 return false;
             }
 
+            bool isDatabaseExecutable = IsDatabaseExecutable(options);
+            // Validations to ensure that REST methods and GraphQL operations can be configured only
+            // for stored procedures and functions
+            if (options.GraphQLOperationForDatabaseExecutable is not null && !isDatabaseExecutable)
+            {
+                _logger.LogError("--graphql.operation can be configured only for stored procedures and functions.");
+                return false;
+            }
+
+            if ((options.RestMethodsForDatabaseExecutable is not null && options.RestMethodsForDatabaseExecutable.Any())
+                && !isDatabaseExecutable)
+            {
+                _logger.LogError("--rest.methods can be configured only for stored procedures and functions.");
+                return false;
+            }
+
+            GraphQLOperation? graphQLOperationsForDatabaseExecutable = null;
+            RestMethod[]? restMethods = null;
+            if (isDatabaseExecutable)
+            {
+                if (CheckConflictingGraphQLConfigurationForDatabaseExecutable(options))
+                {
+                    _logger.LogError("Conflicting GraphQL configurations found.");
+                    return false;
+                }
+
+                if (!TryAddGraphQLOperationForDatabaseExecutable(options, out graphQLOperationsForDatabaseExecutable))
+                {
+                    return false;
+                }
+
+                if (CheckConflictingRestConfigurationForDatabaseExecutable(options))
+                {
+                    _logger.LogError("Conflicting Rest configurations found.");
+                    return false;
+                }
+
+                if (!TryAddRestMethodsForDatabaseExecutable(options, out restMethods))
+                {
+                    return false;
+                }
+            }
+
+            object? restPathDetails = ConstructRestPathDetails(options.RestRoute);
+            object? graphQLNamingConfig = ConstructGraphQLTypeDetails(options.GraphQLType);
+
+            if (restPathDetails is not null && restPathDetails is false)
+            {
+                restMethods = null;
+            }
+
+            if (graphQLNamingConfig is not null && graphQLNamingConfig is false)
+            {
+                graphQLOperationsForDatabaseExecutable = null;
+            }
+
             // Create new entity.
             //
             Entity entity = new(
                 source!,
-                GetRestDetails(options.RestRoute),
-                GetGraphQLDetails(options.GraphQLType),
+                GetRestDetails(restPathDetails, restMethods),
+                GetGraphQLDetails(graphQLNamingConfig, graphQLOperationsForDatabaseExecutable),
                 permissionSettings,
                 Relationships: null,
                 Mappings: null);
@@ -307,7 +364,6 @@ namespace Cli
             // Parse the SourceType.
             // Parsing won't fail as this check is already done during source object creation.
             SourceTypeEnumConverter.TryGetSourceType(sourceType, out SourceType sourceObjectType);
-
             // Check if provided operations are valid
             if (!VerifyOperations(operations!.Split(","), sourceObjectType))
             {
@@ -387,8 +443,42 @@ namespace Cli
                 return false;
             }
 
-            object? updatedRestDetails = options.RestRoute is null ? entity!.Rest : GetRestDetails(options.RestRoute);
-            object? updatedGraphQLDetails = options.GraphQLType is null ? entity!.GraphQL : GetGraphQLDetails(options.GraphQLType);
+            bool isCurrentEntityDatabaseExecutable = entity.ObjectType.IsDatabaseExecutableType();
+            bool doOptionsRepresentDatabaseExecutable = options.SourceType is not null && IsDatabaseExecutable(options);
+
+            // Validations to ensure that REST methods and GraphQL operations can be configured only
+            // for stored procedures and functions
+            if (options.GraphQLOperationForDatabaseExecutable is not null &&
+                !(isCurrentEntityDatabaseExecutable || doOptionsRepresentDatabaseExecutable))
+            {
+                _logger.LogError("--graphql.operation can be configured only for stored procedures or functions.");
+                return false;
+            }
+
+            if ((options.RestMethodsForDatabaseExecutable is not null && options.RestMethodsForDatabaseExecutable.Any())
+                && !(isCurrentEntityDatabaseExecutable || doOptionsRepresentDatabaseExecutable))
+            {
+                _logger.LogError("--rest.methods can be configured only for stored procedures or functions.");
+                return false;
+            }
+
+            if (isCurrentEntityDatabaseExecutable || doOptionsRepresentDatabaseExecutable)
+            {
+                if (CheckConflictingGraphQLConfigurationForDatabaseExecutable(options))
+                {
+                    _logger.LogError("Conflicting GraphQL configurations found.");
+                    return false;
+                }
+
+                if (CheckConflictingRestConfigurationForDatabaseExecutable(options))
+                {
+                    _logger.LogError("Conflicting Rest configurations found.");
+                    return false;
+                }
+            }
+
+            object? updatedRestDetails = ConstructUpdatedRestDetails(entity, options);
+            object? updatedGraphQLDetails = ConstructUpdatedGraphQLDetails(entity, options);
             PermissionSetting[]? updatedPermissions = entity!.Permissions;
             Dictionary<string, Relationship>? updatedRelationships = entity.Relationships;
             Dictionary<string, string>? updatedMappings = entity.Mappings;
@@ -534,7 +624,7 @@ namespace Cli
                     else
                     {
                         // User didn't use WILDCARD, and wants to update some of the operations.
-                        IDictionary<Operation, PermissionOperation> existingOperations = ConvertOperationArrayToIEnumerable(permission.Operations);
+                        IDictionary<Operation, PermissionOperation> existingOperations = ConvertOperationArrayToIEnumerable(permission.Operations, entityToUpdate.ObjectType);
 
                         // Merge existing operations with new operations
                         object[] updatedOperationArray = GetUpdatedOperationArray(newOperationArray, policy, fields, existingOperations);
@@ -656,6 +746,12 @@ namespace Cli
                     );
                     return false;
                 }
+
+                if (IsDatabaseExecutableConvertedToOtherTypes(entity, options) || IsEntityBeingConvertedToDatabaseExecutable(entity, options))
+                {
+                    _logger.LogWarning($"Stored procedures/Functions can be configured only with {Operation.Execute.ToString()} action whereas tables/views are configured with CRUD actions. Update the actions configured for all the roles for this entity.");
+                }
+
             }
 
             if (!VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
@@ -687,7 +783,7 @@ namespace Cli
                 return false;
             }
 
-            if (options.SourceKeyFields is not null)
+            if (options.SourceKeyFields is not null && options.SourceKeyFields.Any())
             {
                 updatedKeyFields = options.SourceKeyFields.ToArray();
             }
@@ -842,7 +938,188 @@ namespace Cli
                 args.Add(options.LogLevel.ToString()!);
             }
 
+            // This will add args to disable automatic redirects to https if specified by user
+            if (options.IsHttpsRedirectionDisabled)
+            {
+                args.Add(NO_HTTPS_REDIRECT_FLAG);
+            }
+
             return Azure.DataApiBuilder.Service.Program.StartEngine(args.ToArray());
+        }
+
+        /// <summary>
+        /// Returns an array of RestMethods resolved from command line input (EntityOptions).
+        /// When no methods are specified, the default "POST" is returned.
+        /// </summary>
+        /// <param name="options">Entity configuration options received from command line input.</param>
+        /// <param name="restMethods">Rest methods to enable for stored procedure/function.</param>
+        /// <returns>True when the default (POST) or user provided stored procedure/function REST methods are supplied.
+        /// Returns false and an empty array when an invalid REST method is provided.</returns>
+        private static bool TryAddRestMethodsForDatabaseExecutable(EntityOptions options, [NotNullWhen(true)] out RestMethod[]? restMethods)
+        {
+            if (options.RestMethodsForDatabaseExecutable is null || !options.RestMethodsForDatabaseExecutable.Any())
+            {
+                restMethods = new RestMethod[] { RestMethod.Post };
+            }
+            else
+            {
+                restMethods = CreateRestMethods(options.RestMethodsForDatabaseExecutable);
+            }
+
+            return restMethods.Length > 0;
+        }
+
+        /// <summary>
+        /// Identifies the graphQL operations configured for the stored procedure/function from add command.
+        /// When no value is specified, the stored procedure/function is configured with a mutation operation.
+        /// Returns true/false corresponding to a successful/unsuccessful conversion of the operations.
+        /// </summary>
+        /// <param name="options">GraphQL operations configured for the Stored Procedure/function using add command</param>
+        /// <param name="graphQLOperationForDatabaseExecutable">GraphQL Operations as Enum type</param>
+        /// <returns>True when a user declared GraphQL operation on a stored procedure/function backed entity is supported. False, otherwise.</returns>
+        private static bool TryAddGraphQLOperationForDatabaseExecutable(EntityOptions options, [NotNullWhen(true)] out GraphQLOperation? graphQLOperationForDatabaseExecutable)
+        {
+            if (options.GraphQLOperationForDatabaseExecutable is null)
+            {
+                graphQLOperationForDatabaseExecutable = GraphQLOperation.Mutation;
+            }
+            else
+            {
+                if (!TryConvertGraphQLOperationNameToGraphQLOperation(options.GraphQLOperationForDatabaseExecutable, out GraphQLOperation operation))
+                {
+                    graphQLOperationForDatabaseExecutable = null;
+                    return false;
+                }
+
+                graphQLOperationForDatabaseExecutable = operation;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Constructs the updated REST settings based on the input from update command and
+        /// existing REST configuration for an entity
+        /// </summary>
+        /// <param name="entity">Entity for which the REST settings are updated</param>
+        /// <param name="options">Input from update command</param>
+        /// <returns>Boolean -> when the entity's REST configuration is true/false.
+        /// RestEntitySettings -> when a non stored procedure/function entity is configured with granular REST settings (Path).
+        /// RestDatabaseExecutableEntitySettings -> when a stored procedure/function entity is configured with explicit RestMethods.
+        /// RestDatabaseExecutableEntityVerboseSettings-> when a stored procedure entity/function is configured with explicit RestMethods and Path settings.</returns>
+        private static object? ConstructUpdatedRestDetails(Entity entity, EntityOptions options)
+        {
+
+            // Updated REST Route details
+            object? restPath = (options.RestRoute is not null) ? ConstructRestPathDetails(options.RestRoute) : entity.GetRestEnabledOrPathSettings();
+
+            // Updated REST Methods info for stored procedures/functions
+            RestMethod[]? restMethods;
+            if (!IsDatabaseExecutableConvertedToOtherTypes(entity, options)
+                && (entity.ObjectType.IsDatabaseExecutableType() || IsDatabaseExecutable(options)))
+            {
+                if (options.RestMethodsForDatabaseExecutable is null || !options.RestMethodsForDatabaseExecutable.Any())
+                {
+                    restMethods = entity.GetRestMethodsConfiguredForDatabaseExecutable();
+                }
+                else
+                {
+                    restMethods = CreateRestMethods(options.RestMethodsForDatabaseExecutable);
+                }
+            }
+            else
+            {
+                restMethods = null;
+            }
+
+            if (restPath is false)
+            {
+                // Non-stored procedure and non-function scenario when the REST endpoint is disabled for the entity.
+                if (options.RestRoute is not null)
+                {
+                    restMethods = null;
+                }
+                else
+                {
+                    if (options.RestMethodsForDatabaseExecutable is not null && options.RestMethodsForDatabaseExecutable.Any())
+                    {
+                        restPath = null;
+                    }
+                }
+            }
+
+            if (IsEntityBeingConvertedToDatabaseExecutable(entity, options)
+               && (restMethods is null || restMethods.Length == 0))
+            {
+                restMethods = new RestMethod[] { RestMethod.Post };
+            }
+
+            return GetRestDetails(restPath, restMethods);
+        }
+
+        /// <summary>
+        /// Constructs the updated GraphQL settings based on the input from update command and
+        /// existing graphQL configuration for an entity
+        /// </summary>
+        /// <param name="entity">Entity for which GraphQL settings are updated</param>
+        /// <param name="options">Input from update command</param>
+        /// <returns>Boolean -> when the entity's GraphQL configuration is true/false.
+        /// GraphQLEntitySettings -> when a non stored procedure/function entity is configured with granular GraphQL settings (Type/Singular/Plural).
+        /// GraphQLDatabaseExecutableEntitySettings -> when a stored procedure/function entity is configured with an explicit operation.
+        /// GraphQLDatabaseExecutableEntityVerboseSettings-> when a stored procedure/function entity is configured with explicit operation and type settings.</returns>
+        private static object? ConstructUpdatedGraphQLDetails(Entity entity, EntityOptions options)
+        {
+            //Updated GraphQL Type
+            object? graphQLType = (options.GraphQLType is not null) ? ConstructGraphQLTypeDetails(options.GraphQLType) : entity.GetGraphQLEnabledOrPath();
+            GraphQLOperation? graphQLOperation;
+
+            if (!IsDatabaseExecutableConvertedToOtherTypes(entity, options)
+                && (entity.ObjectType.IsDatabaseExecutableType() || IsDatabaseExecutable(options)))
+            {
+                if (options.GraphQLOperationForDatabaseExecutable is null)
+                {
+                    graphQLOperation = entity.FetchGraphQLOperation();
+                }
+                else
+                {
+                    GraphQLOperation operation;
+                    if (TryConvertGraphQLOperationNameToGraphQLOperation(options.GraphQLOperationForDatabaseExecutable, out operation))
+                    {
+                        graphQLOperation = operation;
+                    }
+                    else
+                    {
+                        graphQLOperation = null;
+                    }
+                }
+            }
+            else
+            {
+                graphQLOperation = null;
+            }
+
+            if (graphQLType is false)
+            {
+                if (options.GraphQLType is not null)
+                {
+                    graphQLOperation = null;
+                }
+                else
+                {
+                    if (options.GraphQLOperationForDatabaseExecutable is not null)
+                    {
+                        graphQLType = null;
+                    }
+                }
+            }
+
+            if (IsEntityBeingConvertedToDatabaseExecutable(entity, options)
+              && graphQLOperation is null)
+            {
+                graphQLOperation = GraphQLOperation.Mutation;
+            }
+
+            return GetGraphQLDetails(graphQLType, graphQLOperation);
         }
     }
 }

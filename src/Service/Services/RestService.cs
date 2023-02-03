@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Net;
 using System.Text.Json;
@@ -65,7 +67,14 @@ namespace Azure.DataApiBuilder.Service.Services
             RequestValidator.ValidateEntity(entityName, _sqlMetadataProvider.EntityToDatabaseObject.Keys);
             DatabaseObject dbObject = _sqlMetadataProvider.EntityToDatabaseObject[entityName];
 
-            await AuthorizationCheckForRequirementAsync(resource: entityName, requirement: new EntityRoleOperationPermissionsRequirement());
+            if (!dbObject.SourceType.IsDatabaseExecutableType())
+            {
+                await AuthorizationCheckForRequirementAsync(resource: entityName, requirement: new EntityRoleOperationPermissionsRequirement());
+            }
+            else
+            {
+                await AuthorizationCheckForRequirementAsync(resource: entityName, requirement: new DatabaseExecutablePermissionsRequirement());
+            }
 
             QueryString? query = GetHttpContext().Request.QueryString;
             string queryString = query is null ? string.Empty : GetHttpContext().Request.QueryString.ToString();
@@ -81,7 +90,16 @@ namespace Azure.DataApiBuilder.Service.Services
             // If request has resolved to a stored procedure or function entity, initialize and validate appropriate request context
             if (dbObject.SourceType.IsDatabaseExecutableType())
             {
-                PopulateDatabaseExecutableContext(operationType,
+                if (!IsHttpMethodAllowedForDatabaseExecutable(entityName))
+                {
+                    throw new DataApiBuilderException(
+                        message: "This operation is not supported.",
+                        statusCode: HttpStatusCode.MethodNotAllowed,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                }
+
+                PopulateDatabaseExecutableContext(
+                    operationType,
                     dbObject,
                     entityName,
                     queryString,
@@ -231,9 +249,12 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Helper method to populate the context in case the database object for this request is a stored procedure or function
+        /// Populates the request context when the representative database object is a stored procedure or function.
+        /// Stored procedures and functions support arbitrary keys in the query string, so the read operation behaves
+        /// differently than for requests on non stored procedure/function entities.
         /// </summary>
-        private void PopulateDatabaseExecutableContext(Config.Operation operationType,
+        private void PopulateDatabaseExecutableContext(
+            Config.Operation operationType,
             DatabaseObject dbObject,
             string entityName,
             string queryString,
@@ -279,9 +300,10 @@ namespace Azure.DataApiBuilder.Service.Services
                         operationType);
                     break;
                 default:
-                    throw new DataApiBuilderException(message: "This operation is not supported.",
-                                                   statusCode: HttpStatusCode.BadRequest,
-                                                   subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    throw new DataApiBuilderException(
+                        message: "This operation is not supported.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
 
             // Throws bad request if primaryKeyRoute set
@@ -291,8 +313,55 @@ namespace Azure.DataApiBuilder.Service.Services
             ((DatabaseExecutableRequestContext)context).PopulateResolvedParameters();
 
             // Validate the request parameters
-            RequestValidator.ValidateDatabaseExecutableRequestContext(
-                (DatabaseExecutableRequestContext)context, _sqlMetadataProvider);
+            RequestValidator.ValidateDatabaseExecutableRequestContext((DatabaseExecutableRequestContext)context, _sqlMetadataProvider);
+        }
+
+        /// <summary>
+        /// Returns whether the stored procedure/function backed entity allows the
+        /// request's HTTP method. e.g. when an entity is only configured for "GET"
+        /// and the request method is "POST" this method will return false.
+        /// </summary>
+        /// <param name="entityName">Name of the entity.</param>
+        /// <returns>True if the operation is allowed. False, otherwise.</returns>
+        private bool IsHttpMethodAllowedForDatabaseExecutable(string entityName)
+        {
+            if (TryGetDatabaseExecutableRESTVerbs(entityName, out List<RestMethod>? httpVerbs))
+            {
+                HttpContext? httpContext = _httpContextAccessor.HttpContext;
+                if (httpContext is not null
+                    && Enum.TryParse(httpContext.Request.Method, ignoreCase: true, out RestMethod method)
+                    && httpVerbs.Contains(method))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Gets the list of HTTP methods defined for entities representing stored procedures or function.
+        /// When no explicit REST method configuration is present for a stored procedure or function entity,
+        /// the default method "POST" is populated in httpVerbs.
+        /// </summary>
+        /// <param name="entityName">Name of the entity.</param>
+        /// <param name="httpVerbs">Out Param: List of httpverbs configured for stored procedure/function backed entity.</param>
+        /// <returns>True, with a list of HTTP verbs. False, when entity is not found in config
+        /// or entity is not a stored procedure or a function, and httpVerbs will be null.</returns>
+        private bool TryGetDatabaseExecutableRESTVerbs(string entityName, [NotNullWhen(true)] out List<RestMethod>? httpVerbs)
+        {
+            if (_runtimeConfigProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
+            {
+                if (runtimeConfig.Entities.TryGetValue(key: entityName, out Entity? entity) && entity is not null)
+                {
+                    RestMethod[]? methods = entity.GetRestMethodsConfiguredForDatabaseExecutable();
+                    httpVerbs = methods is not null ? new List<RestMethod>(methods) : new();
+                    return true;
+                }
+            }
+
+            httpVerbs = null;
+            return false;
         }
 
         /// <summary>

@@ -174,7 +174,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         /// <param name="field">Name of the database field.</param>
         /// <param name="name">Mapped name, which for CosmosDB is the value provided for field."</param>
         /// <returns>True, with out variable set as the value of the input "field" value.</returns>
-        public bool TryGetBackingColumn(string entityName, string field, out string? name)
+        public bool TryGetBackingColumn(string entityName, string field, [NotNullWhen(true)] out string? name)
         {
             name = field;
             return true;
@@ -223,6 +223,12 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             }
 
             return entityName!;
+        }
+
+        /// <inheritdoc />
+        public string GetDefaultSchemaName()
+        {
+            return string.Empty;
         }
     }
 }

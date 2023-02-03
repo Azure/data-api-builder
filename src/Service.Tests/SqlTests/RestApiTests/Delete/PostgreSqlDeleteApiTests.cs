@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -36,7 +37,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Delete
         /// <inheritdoc/>
         [Ignore]
         [TestMethod]
-        public override async Task DeleteOneWithDatabaseExecutableTest()
+        public override Task DeleteOneWithDatabaseExecutableTest()
         {
             throw new NotImplementedException();
         }

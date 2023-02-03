@@ -133,11 +133,28 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// Checks correct serialization and deserialization of Source Type from 
+        /// Verify that https redirection is disabled when --no-https-redirect flag is passed  through CLI.
+        /// We check if IsHttpsRedirectionDisabled is set to true with --no-https-redirect flag.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(new string[] { "" }, false, DisplayName = "Https redirection allowed")]
+        [DataRow(new string[] { Startup.NO_HTTPS_REDIRECT_FLAG }, true, DisplayName = "Http redirection disabled")]
+        [TestMethod("Validates that https redirection is disabled when --no-https-redirect option is used when engine is started through CLI")]
+        public void TestDisablingHttpsRedirection(
+            string[] args,
+            bool expectedIsHttpsRedirectionDisabled)
+        {
+            Program.CreateWebHostBuilder(args).Build();
+            Assert.AreEqual(RuntimeConfigProvider.IsHttpsRedirectionDisabled, expectedIsHttpsRedirectionDisabled);
+        }
+
+        /// <summary>
+        /// Checks correct serialization and deserialization of Source Type from
         /// Enum to String and vice-versa.
         /// Consider both cases for source as an object and as a string
         /// </summary>
         [DataTestMethod]
+        [DataRow(true, SourceType.Function, "function", DisplayName = "source is a function")]
         [DataRow(true, SourceType.StoredProcedure, "stored-procedure", DisplayName = "source is a stored-procedure")]
         [DataRow(true, SourceType.Table, "table", DisplayName = "source is a table")]
         [DataRow(true, SourceType.View, "view", DisplayName = "source is a view")]
@@ -572,29 +589,83 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             foreach (Entity entity in runtimeConfig.Entities.Values)
             {
-                Assert.IsTrue(((JsonElement)entity.Source).ValueKind == JsonValueKind.String
-                    || ((JsonElement)entity.Source).ValueKind == JsonValueKind.Object);
+                Assert.IsTrue(((JsonElement)entity.Source).ValueKind is JsonValueKind.String
+                    || ((JsonElement)entity.Source).ValueKind is JsonValueKind.Object);
 
-                Assert.IsTrue(entity.Rest == null
-                    || ((JsonElement)entity.Rest).ValueKind == JsonValueKind.True
-                    || ((JsonElement)entity.Rest).ValueKind == JsonValueKind.False
-                    || ((JsonElement)entity.Rest).ValueKind == JsonValueKind.Object);
+                Assert.IsTrue(entity.Rest is null
+                    || ((JsonElement)entity.Rest).ValueKind is JsonValueKind.True
+                    || ((JsonElement)entity.Rest).ValueKind is JsonValueKind.False
+                    || ((JsonElement)entity.Rest).ValueKind is JsonValueKind.Object);
                 if (entity.Rest != null
-                    && ((JsonElement)entity.Rest).ValueKind == JsonValueKind.Object)
+                    && ((JsonElement)entity.Rest).ValueKind is JsonValueKind.Object)
                 {
-                    RestEntitySettings rest =
-                        ((JsonElement)entity.Rest).Deserialize<RestEntitySettings>(RuntimeConfig.SerializerOptions);
-                    Assert.IsTrue(((JsonElement)rest.Path).ValueKind == JsonValueKind.String);
+                    JsonElement restConfigElement = (JsonElement)entity.Rest;
+                    if (!restConfigElement.TryGetProperty("methods", out JsonElement _))
+                    {
+                        RestEntitySettings rest = JsonSerializer.Deserialize<RestEntitySettings>(restConfigElement, RuntimeConfig.SerializerOptions);
+                        Assert.IsTrue(((JsonElement)rest.Path).ValueKind is JsonValueKind.String
+                                     || ((JsonElement)rest.Path).ValueKind is JsonValueKind.True
+                                     || ((JsonElement)rest.Path).ValueKind is JsonValueKind.False);
+                    }
+                    else
+                    {
+                        if (!restConfigElement.TryGetProperty("path", out JsonElement _))
+                        {
+                            RestDatabaseExecutableEntitySettings rest = JsonSerializer.Deserialize<RestDatabaseExecutableEntitySettings>(restConfigElement, RuntimeConfig.SerializerOptions);
+                            Assert.AreEqual(typeof(RestMethod[]), rest.RestMethods.GetType());
+                        }
+                        else
+                        {
+                            RestDatabaseExecutableEntityVerboseSettings rest = JsonSerializer.Deserialize<RestDatabaseExecutableEntityVerboseSettings>(restConfigElement, RuntimeConfig.SerializerOptions);
+                            Assert.AreEqual(typeof(RestMethod[]), rest.RestMethods.GetType());
+                            Assert.IsTrue((((JsonElement)rest.Path).ValueKind is JsonValueKind.String)
+                                        || (((JsonElement)rest.Path).ValueKind is JsonValueKind.True)
+                                        || (((JsonElement)rest.Path).ValueKind is JsonValueKind.False));
+                        }
+
+                    }
+
+                }
+
+                Assert.IsTrue(entity.GraphQL is null
+                    || entity.GraphQL.GetType() == typeof(bool)
+                    || entity.GraphQL.GetType() == typeof(GraphQLEntitySettings)
+                    || entity.GraphQL.GetType() == typeof(GraphQLDatabaseExecutableEntityOperationSettings)
+                    || entity.GraphQL.GetType() == typeof(GraphQLDatabaseExecutableEntityVerboseSettings));
+
+                if (entity.GraphQL is not null)
+                {
+                    if (entity.GraphQL.GetType() == typeof(GraphQLEntitySettings))
+                    {
+                        GraphQLEntitySettings graphQL = (GraphQLEntitySettings)entity.GraphQL;
+                        Assert.IsTrue(graphQL.Type.GetType() == typeof(string)
+                                     || graphQL.Type.GetType() == typeof(SingularPlural));
+                    }
+                    else if (entity.GraphQL.GetType() == typeof(GraphQLDatabaseExecutableEntityOperationSettings))
+                    {
+                        GraphQLDatabaseExecutableEntityOperationSettings graphQL = (GraphQLDatabaseExecutableEntityOperationSettings)entity.GraphQL;
+                        Assert.AreEqual(typeof(string), graphQL.GraphQLOperation.GetType());
+                    }
+                    else if (entity.GraphQL.GetType() == typeof(GraphQLDatabaseExecutableEntityVerboseSettings))
+                    {
+                        GraphQLDatabaseExecutableEntityVerboseSettings graphQL = (GraphQLDatabaseExecutableEntityVerboseSettings)entity.GraphQL;
+                        Assert.AreEqual(typeof(string), graphQL.GraphQLOperation.GetType());
+                        Assert.IsTrue(graphQL.Type.GetType() == typeof(bool)
+                                    || graphQL.Type.GetType() == typeof(string)
+                                    || graphQL.Type.GetType() == typeof(SingularPlural));
+                    }
                 }
 
                 Assert.IsInstanceOfType(entity.Permissions, typeof(PermissionSetting[]));
+
+                HashSet<Config.Operation> allowedActions =
+                            new() { Config.Operation.All, Config.Operation.Create, Config.Operation.Read,
+                                Config.Operation.Update, Config.Operation.Delete, Config.Operation.Execute };
                 foreach (PermissionSetting permission in entity.Permissions)
                 {
                     foreach (object operation in permission.Operations)
                     {
-                        HashSet<Config.Operation> allowedActions =
-                            new() { Config.Operation.All, Config.Operation.Create, Config.Operation.Read,
-                                Config.Operation.Update, Config.Operation.Delete };
+
                         Assert.IsTrue(((JsonElement)operation).ValueKind == JsonValueKind.String ||
                             ((JsonElement)operation).ValueKind == JsonValueKind.Object);
                         if (((JsonElement)operation).ValueKind == JsonValueKind.Object)

@@ -98,7 +98,7 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <inheritdoc />
-        protected override string GetDefaultSchemaName()
+        public override string GetDefaultSchemaName()
         {
             return string.Empty;
         }

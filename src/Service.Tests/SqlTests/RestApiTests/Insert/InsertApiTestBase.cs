@@ -592,8 +592,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
 
         /// <summary>
         /// Tests the Insert one and returns either single or multiple rows functionality with a REST POST request
-        /// using stored procedure.
-        /// The request executes a stored procedure which attempts to insert a book for a given publisher
+        /// using stored procedure/function.
+        /// The request executes a stored procedure/function which attempts to insert a book for a given publisher
         /// and then returns all books under that publisher.
         /// </summary>
         [DataRow("The First Publisher", "InsertOneAndReturnSingleRowWithDatabaseExecutableTest", true, DisplayName = "Test Single row result")]

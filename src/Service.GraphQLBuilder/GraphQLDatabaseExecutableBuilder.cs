@@ -48,7 +48,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
 
             return new(
                 location: null,
-                new NameNode(GenerateDatabaseExecutableQueryName(name.Value, entity)),
+                new NameNode(GenerateDatabaseExecutableGraphQLFieldName(name.Value, entity)),
                 new StringValueNode($"Execute {entity.ObjectType.GetConfigValue()} {name.Value} and get results from the database"),
                 inputValues,
                 new NonNullTypeNode(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(name)))),

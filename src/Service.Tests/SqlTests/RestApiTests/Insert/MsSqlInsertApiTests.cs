@@ -258,7 +258,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         }
 
         #region RestApiTestBase Overrides
-
         public override string GetQuery(string key)
         {
             return _queryMap[key];

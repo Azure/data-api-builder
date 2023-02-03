@@ -21,6 +21,7 @@ namespace Azure.DataApiBuilder.Config
     {
         // Set of allowed operations for a request.
         public static readonly HashSet<Operation> ValidPermissionOperations = new() { Operation.Create, Operation.Read, Operation.Update, Operation.Delete };
+        public static readonly HashSet<Operation> ValidDatabaseExecutablePermissionOperations = new() { Operation.Execute };
     }
 
     /// <summary>
@@ -59,8 +60,10 @@ namespace Azure.DataApiBuilder.Config
     public enum Operation
     {
         None,
+
         // *
         All,
+
         // Common Operations
         Delete, Read,
 
@@ -71,7 +74,10 @@ namespace Azure.DataApiBuilder.Config
         Insert, Update, UpdateGraphQL,
 
         // Additional
-        UpsertIncremental, UpdateIncremental
+        UpsertIncremental, UpdateIncremental,
+
+        // Only valid operation for stored procedures and functions
+        Execute
     }
 
     /// <summary>
@@ -96,7 +102,7 @@ namespace Azure.DataApiBuilder.Config
 
     /// <summary>
     /// Details the item-level security rules.
-    /// </summary> 
+    /// </summary>
     /// <param name="Request">A rule to be checked before
     /// sending any request to the database.</param>
     /// <param name="Database">An OData style filter rule
@@ -114,4 +120,19 @@ namespace Azure.DataApiBuilder.Config
         [property: JsonPropertyName("database")]
         public string? Database { get; set; }
     }
+
+    public enum RestMethod
+    {
+        Get,
+        Post,
+        Put,
+        Patch,
+        Delete
+    };
+
+    public enum GraphQLOperation
+    {
+        Query,
+        Mutation
+    };
 }

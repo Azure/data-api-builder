@@ -51,21 +51,37 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         /// <summary>
         /// Test method to validate that only 1 CRUD operation is supported for stored procedure
-        /// and every role has that same single operation.
+        /// and function and every role has that same single operation.
         /// </summary>
         [DataTestMethod]
-        [DataRow("anonymous", new object[] { "create", "read" }, null, null, false, false, DisplayName = "Stored-procedure with create-read permission")]
-        [DataRow("anonymous", new object[] { "update", "read" }, null, null, false, false, DisplayName = "Stored-procedure with update-read permission")]
-        [DataRow("anonymous", new object[] { "delete", "read" }, null, null, false, false, DisplayName = "Stored-procedure with delete-read permission")]
-        [DataRow("anonymous", new object[] { "create" }, null, null, true, false, DisplayName = "Stored-procedure with only create permission")]
-        [DataRow("anonymous", new object[] { "read" }, null, null, true, false, DisplayName = "Stored-procedure with only read permission")]
-        [DataRow("anonymous", new object[] { "update" }, null, null, true, false, DisplayName = "Stored-procedure with only update permission")]
-        [DataRow("anonymous", new object[] { "delete" }, null, null, true, false, DisplayName = "Stored-procedure with only delete permission")]
-        [DataRow("anonymous", new object[] { "update", "create" }, null, null, false, false, DisplayName = "Stored-procedure with update-create permission")]
-        [DataRow("anonymous", new object[] { "delete", "read", "update" }, null, null, false, false, DisplayName = "Stored-procedure with delete-read-update permission")]
-        [DataRow("anonymous", new object[] { "create" }, "authenticated", new object[] { "create" }, true, false, DisplayName = "Stored-procedure with only create permission")]
-        [DataRow("anonymous", new object[] { "read" }, "authenticated", new object[] { "create" }, false, true, DisplayName = "Stored-procedure with only read permission")]
-        public void InvalidCRUDForDatabaseExecutable(
+        [DataRow(SourceType.StoredProcedure, "anonymous", new object[] { "execute" }, null, null, true, false, DisplayName = "Stored-procedure with valid execute permission only")]
+        [DataRow(SourceType.StoredProcedure, "anonymous", new object[] { "execute", "read" }, null, null, false, false, DisplayName = "Invalidly define operation in excess of execute")]
+        [DataRow(SourceType.StoredProcedure, "anonymous", new object[] { "create", "read" }, null, null, false, false, DisplayName = "Stored-procedure with create-read permission")]
+        [DataRow(SourceType.StoredProcedure, "anonymous", new object[] { "update", "read" }, null, null, false, false, DisplayName = "Stored-procedure with update-read permission")]
+        [DataRow(SourceType.StoredProcedure, "anonymous", new object[] { "delete", "read" }, null, null, false, false, DisplayName = "Stored-procedure with delete-read permission")]
+        [DataRow(SourceType.StoredProcedure, "anonymous", new object[] { "create" }, null, null, false, false, DisplayName = "Stored-procedure with invalid create permission")]
+        [DataRow(SourceType.StoredProcedure, "anonymous", new object[] { "read" }, null, null, false, false, DisplayName = "Stored-procedure with invalid read permission")]
+        [DataRow(SourceType.StoredProcedure, "anonymous", new object[] { "update" }, null, null, false, false, DisplayName = "Stored-procedure with invalid update permission")]
+        [DataRow(SourceType.StoredProcedure, "anonymous", new object[] { "delete" }, null, null, false, false, DisplayName = "Stored-procedure with invalid delete permission")]
+        [DataRow(SourceType.StoredProcedure, "anonymous", new object[] { "update", "create" }, null, null, false, false, DisplayName = "Stored-procedure with update-create permission")]
+        [DataRow(SourceType.StoredProcedure, "anonymous", new object[] { "delete", "read", "update" }, null, null, false, false, DisplayName = "Stored-procedure with delete-read-update permission")]
+        [DataRow(SourceType.StoredProcedure, "anonymous", new object[] { "execute" }, "authenticated", new object[] { "execute" }, true, false, DisplayName = "Stored-procedure with valid execute permission on all roles")]
+        [DataRow(SourceType.StoredProcedure, "anonymous", new object[] { "execute" }, "authenticated", new object[] { "create" }, false, true, DisplayName = "Stored-procedure with valid execute and invalid create permission")]
+        [DataRow(SourceType.Function, "anonymous", new object[] { "execute" }, null, null, true, false, DisplayName = "Stored-procedure with valid execute permission only")]
+        [DataRow(SourceType.Function, "anonymous", new object[] { "execute", "read" }, null, null, false, false, DisplayName = "Invalidly define operation in excess of execute")]
+        [DataRow(SourceType.Function, "anonymous", new object[] { "create", "read" }, null, null, false, false, DisplayName = "Stored-procedure with create-read permission")]
+        [DataRow(SourceType.Function, "anonymous", new object[] { "update", "read" }, null, null, false, false, DisplayName = "Stored-procedure with update-read permission")]
+        [DataRow(SourceType.Function, "anonymous", new object[] { "delete", "read" }, null, null, false, false, DisplayName = "Stored-procedure with delete-read permission")]
+        [DataRow(SourceType.Function, "anonymous", new object[] { "create" }, null, null, false, false, DisplayName = "Stored-procedure with invalid create permission")]
+        [DataRow(SourceType.Function, "anonymous", new object[] { "read" }, null, null, false, false, DisplayName = "Stored-procedure with invalid read permission")]
+        [DataRow(SourceType.Function, "anonymous", new object[] { "update" }, null, null, false, false, DisplayName = "Stored-procedure with invalid update permission")]
+        [DataRow(SourceType.Function, "anonymous", new object[] { "delete" }, null, null, false, false, DisplayName = "Stored-procedure with invalid delete permission")]
+        [DataRow(SourceType.Function, "anonymous", new object[] { "update", "create" }, null, null, false, false, DisplayName = "Stored-procedure with update-create permission")]
+        [DataRow(SourceType.Function, "anonymous", new object[] { "delete", "read", "update" }, null, null, false, false, DisplayName = "Stored-procedure with delete-read-update permission")]
+        [DataRow(SourceType.Function, "anonymous", new object[] { "execute" }, "authenticated", new object[] { "execute" }, true, false, DisplayName = "Stored-procedure with valid execute permission on all roles")]
+        [DataRow(SourceType.Function, "anonymous", new object[] { "execute" }, "authenticated", new object[] { "create" }, false, true, DisplayName = "Stored-procedure with valid execute and invalid create permission")]
+        public void InvalidCRUDForStoredProcedure(
+            SourceType sourceType,
             string role1,
             object[] operationsRole1,
             string role2,
@@ -93,7 +109,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
 
             object entitySource = new DatabaseObjectSource(
-                    Type: SourceType.StoredProcedure,
+                    Type: sourceType,
                     Name: "sourceName",
                     Parameters: null,
                     KeyFields: null
@@ -118,17 +134,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             catch (DataApiBuilderException ex)
             {
                 Assert.AreEqual(false, isValid);
-                if (differentOperationDifferentRoleFailure)
-                {
-                    Assert.AreEqual("Invalid Operations for Entity: SampleEntity. " +
-                        $"DatabaseExecutable should have the same single CRUD action specified for every role.", ex.Message);
-                }
-                else
-                {
-                    Assert.AreEqual("Invalid Operations for Entity: SampleEntity. " +
-                        $"DatabaseExecutable can process only one CRUD (Create/Read/Update/Delete) operation.", ex.Message);
-                }
-
+                Assert.AreEqual(expected: $"Invalid operation for Entity: {AuthorizationHelpers.TEST_ENTITY}. " +
+                            $"{testEntity.ObjectType} can only be configured with the 'execute' operation.", actual: ex.Message);
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
             }
@@ -902,13 +909,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// generated by the entity definitions.
         /// This test declares entities with the following graphQL
         /// definitions
-        /// "Book" {
+        /// "ExecuteBook" {
         ///     "source" :{
         ///         "type": "table"
         ///    }
         ///     "graphQL": true
         /// }
-        /// "book_by_pk" {
+        /// "Book_by_pk" {
         ///     "source" :{
         ///         "type": "stored-procedure"
         ///    }
@@ -918,23 +925,23 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [TestMethod]
         public void ValidateDatabaseExecutableAndTableGeneratedDuplicateQueries()
         {
-            // Entity Name: Book
+            // Entity Name: ExecuteBook
             // Entity Type: table
-            // pk_query: book_by_pk
-            // List Query: books
+            // pk_query: executebook_by_pk
+            // List Query: executebooks
             Entity bookTable = GraphQLTestHelpers.GenerateEmptyEntity(sourceType: SourceType.Table);
             bookTable.GraphQL = new GraphQLEntitySettings(true);
 
             // Entity Name: book_by_pk
             // Entity Type: Stored Procedure
-            // DatabaseExecutable Query: book_by_pk
-            Entity bookByPkDatabaseExecutable = GraphQLTestHelpers.GenerateEmptyEntity(sourceType: SourceType.StoredProcedure);
-            bookByPkDatabaseExecutable.GraphQL = new GraphQLEntitySettings(true);
+            // StoredProcedure Query: executebook_by_pk
+            Entity bookByPkStoredProcedure = GraphQLTestHelpers.GenerateEmptyEntity(sourceType: SourceType.StoredProcedure);
+            bookByPkStoredProcedure.GraphQL = new GraphQLEntitySettings(true);
 
             SortedDictionary<string, Entity> entityCollection = new();
-            entityCollection.Add("Book", bookTable);
-            entityCollection.Add("book_by_pk", bookByPkDatabaseExecutable);
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_by_pk");
+            entityCollection.Add("executeBook", bookTable);
+            entityCollection.Add("Book_by_pk", bookByPkStoredProcedure);
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "executeBook");
         }
 
         /// <summary>
@@ -943,7 +950,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// generated by the entity definitions.
         /// This test declares entities with the following graphQL
         /// definitions
-        /// "Book" {
+        /// "ExecuteBooks" {
         ///     "source" :{
         ///         "type": "table"
         ///    }
@@ -954,7 +961,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         ///         "type": "stored-procedure"
         ///    }
         ///     "graphQL": {
-        ///         "type": "createBook"
+        ///         "type": "Books"
         ///     }
         /// }
         /// </summary>
@@ -969,15 +976,15 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Entity Name: AddBook
             // Entity Type: Stored Procedure
-            // DatabaseExecutable mutation: createBook
-            Entity addBookDatabaseExecutable = GraphQLTestHelpers.GenerateEntityWithStringType(
-                                                type: "createBook",
+            // StoredProcedure mutation: createBook
+            Entity addBookStoredProcedure = GraphQLTestHelpers.GenerateEntityWithStringType(
+                                                type: "Books",
                                                 sourceType: SourceType.StoredProcedure);
 
             SortedDictionary<string, Entity> entityCollection = new();
-            entityCollection.Add("Book", bookTable);
-            entityCollection.Add("AddBook", addBookDatabaseExecutable);
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "Book");
+            entityCollection.Add("ExecuteBooks", bookTable);
+            entityCollection.Add("AddBook", addBookStoredProcedure);
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "ExecuteBooks");
         }
 
         /// <summary>

@@ -46,7 +46,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                         // check graphql sp config
                         string entityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
                         Entity entity = entities[entityName];
-                        bool isSPDefinedAsMutation = entity.FetchGraphQLOperation() is GraphQLOperation.Mutation;
+                        bool isSPDefinedAsMutation = entity.FetchConfiguredGraphQLOperation() is GraphQLOperation.Mutation;
 
                         if (isSPDefinedAsMutation)
                         {

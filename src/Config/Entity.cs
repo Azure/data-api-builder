@@ -201,10 +201,11 @@ namespace Azure.DataApiBuilder.Config
         }
 
         /// <summary>
-        /// Fetches the name of the graphQL operation configured for the stored procedure or function as an enum.
+        /// Gets the graphQL operation that is configured
+        /// when the entity is of the type stored procedure or function
         /// </summary>
-        /// <returns>Name of the graphQL operation as an enum or null if parsing of the enum fails.</returns>
-        public GraphQLOperation? FetchGraphQLOperation()
+        /// <returns>GraphQL operation as an Enum</returns>
+        public GraphQLOperation? FetchConfiguredGraphQLOperation()
         {
             if (GraphQL is true || GraphQL is null || GraphQL is GraphQLEntitySettings _)
             {
@@ -220,6 +221,46 @@ namespace Azure.DataApiBuilder.Config
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Fetches the name of the graphQL operation configured for the stored procedure as an enum.
+        /// </summary>
+        /// <returns>Name of the graphQL operation as an enum or null if parsing of the enum fails.</returns>
+        public GraphQLOperation? FetchGraphQLOperation()
+        {
+            if (GraphQL is null)
+            {
+                return null;
+            }
+
+            JsonElement graphQLConfigElement = (JsonElement)GraphQL;
+            if (graphQLConfigElement.ValueKind is JsonValueKind.True
+                || graphQLConfigElement.ValueKind is JsonValueKind.False)
+            {
+                return GraphQLOperation.Mutation;
+            }
+            else if (graphQLConfigElement.ValueKind is JsonValueKind.Object)
+            {
+                if (graphQLConfigElement.TryGetProperty("operation", out JsonElement graphQLOperationElement))
+                {
+                    string? graphQLOperationString = JsonSerializer.Deserialize<string>(graphQLOperationElement, RuntimeConfig.SerializerOptions);
+                    if (graphQLOperationString is not null && Enum.TryParse(graphQLOperationString, out GraphQLOperation operation))
+                    {
+                        return operation;
+                    }
+
+                    return null;
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            else
+            {
+                throw new JsonException("Unsupported GraphQL Operation");
+            }
         }
 
         /// <summary>
@@ -273,6 +314,7 @@ namespace Azure.DataApiBuilder.Config
             {
                 throw new JsonException("Unsupported GraphQL Type");
             }
+
         }
 
         /// <summary>
@@ -369,13 +411,17 @@ namespace Azure.DataApiBuilder.Config
             }
 
             JsonElement RestConfigElement = (JsonElement)Rest;
-            if (RestConfigElement.ValueKind is JsonValueKind.True || RestConfigElement.ValueKind is JsonValueKind.True)
+            if (RestConfigElement.ValueKind is JsonValueKind.True || RestConfigElement.ValueKind is JsonValueKind.False)
             {
                 return JsonSerializer.Deserialize<bool>(RestConfigElement);
             }
             else if (RestConfigElement.ValueKind is JsonValueKind.String)
             {
                 return JsonSerializer.Deserialize<string>(RestConfigElement);
+            }
+            else if (RestConfigElement.ValueKind is JsonValueKind.Array)
+            {
+                return true;
             }
             else if (RestConfigElement.ValueKind is JsonValueKind.Object)
             {

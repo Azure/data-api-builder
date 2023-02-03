@@ -93,9 +93,9 @@ namespace Cli
             // definitions and with/without a custom graphQL type definition.
             else if (graphQLDetail is not null && graphQLOperation is null)
             {
-                if (graphQLDetail is true || graphQLDetail is false)
+                if (graphQLDetail is bool graphQLEnabled)
                 {
-                    return graphQLDetail;
+                    return graphQLEnabled;
                 }
                 else
                 {
@@ -1006,14 +1006,13 @@ namespace Cli
         public static object? ConstructGraphQLTypeDetails(string? graphQL)
         {
             object? graphQLType;
-            bool graphQLEnabled;
             if (graphQL is null)
             {
                 graphQLType = null;
             }
             else
             {
-                if (bool.TryParse(graphQL, out graphQLEnabled))
+                if (bool.TryParse(graphQL, out bool graphQLEnabled))
                 {
                     graphQLType = graphQLEnabled;
                 }

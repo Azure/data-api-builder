@@ -200,7 +200,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
             // The final authorization check on columns occurs after the request is fully parsed and validated.
             // Stored procedures and Functions do not yet have semantics defined for column-level permissions
-            if (dbObject.SourceType.IsDatabaseExecutableType())
+            if (!dbObject.SourceType.IsDatabaseExecutableType())
             {
                 await AuthorizationCheckForRequirementAsync(resource: context, requirement: new ColumnsPermissionsRequirement());
             }

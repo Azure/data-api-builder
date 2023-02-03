@@ -240,7 +240,7 @@ namespace Cli.Tests
                 );
 
             string initialConfiguration = INITIAL_CONFIG;
-            string expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE_WITH_CUSTOM_REST_GRAPHQL_CONFIG);
+            string expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, STORED_PROCEDURE_WITH_BOTH_REST_METHODS_GRAPHQL_OPERATION);
             RunTest(options, initialConfiguration, expectedConfiguration);
         }
 
@@ -302,37 +302,35 @@ namespace Cli.Tests
         /// <param name="graphQLOperation">Explicitly configured GraphQL operation for stored procedure (Query/Mutation).</param>
         /// <param name="restRoute">Custom REST route</param>
         /// <param name="graphQLType">Whether GraphQL is explicitly enabled/disabled on the entity.</param>
-        /// <param name="expectSuccess">Whether adding the specified option is expected to succeed. (True/false).</param>
+        /// <param name="testType">Scenario that is tested. It is used for constructing the expected JSON.</param>
         [DataTestMethod]
-        [DataRow(null, null, null, null, true, DisplayName = "Default Case without any customization")]
-        [DataRow(null, null, "true", null, true, DisplayName = "REST enabled without any methods explicitly configured")]
-        [DataRow(null, null, "book", null, true, DisplayName = "Custom REST path defined without any methods explictly configured")]
-        [DataRow(new string[] { "Get", "Post", "Patch" }, null, null, null, true, DisplayName = "REST methods defined without REST Path explicitly configured")]
-        [DataRow(new string[] { "Get", "Post", "Patch" }, null, "true", null, true, DisplayName = "REST enabled along with some methods")]
-        [DataRow(new string[] { "Get", "Post", "Patch" }, null, "book", null, true, DisplayName = "Custom REST path defined along with some methods")]
-        [DataRow(null, null, null, "true", true, DisplayName = "GraphQL enabled without any operation explicitly configured")]
-        [DataRow(null, null, null, "book", true, DisplayName = "Custom GraphQL Type defined without any operation explicitly configured")]
-        [DataRow(null, null, null, "book:books", true, DisplayName = "SingularPlural GraphQL Type enabled without any operation explicitly configured")]
-        [DataRow(null, "Query", null, "true", true, DisplayName = "GraphQL enabled with Query operation")]
-        [DataRow(null, "Query", null, "book", true, DisplayName = "Custom GraphQL Type defined along with Query operation")]
-        [DataRow(null, "Query", null, "book:books", true, DisplayName = "SingularPlural GraphQL Type defined along with Query operation")]
-        [DataRow(null, null, null, "true", true, DisplayName = "Both REST and GraphQL enabled without any methods and operations configured explicitly")]
-        [DataRow(new string[] { "Get" }, "Query", "true", "true", true, DisplayName = "Both REST and GraphQL enabled with custom REST methods and GraphQL operations")]
-        [DataRow(new string[] { "Post,Patch,Put" }, "Query", "book", "book:books", true, DisplayName = "Configuration with REST Path, Methods and GraphQL Type, Operation")]
-        [DataRow(null, "Mutation", "true", "false", false, DisplayName = "Conflicting configurations - GraphQL operation specified but entity is disabled for GraphQL")]
-        [DataRow(new string[] { "Get" }, null, "false", "true", false, DisplayName = "Conflicting configurations - REST methods specified but entity is disabled for REST")]
+        [DataRow(null, null, null, null, "NoOptions", DisplayName = "Default Case without any customization")]
+        [DataRow(null, null, "true", null, "RestEnabled", DisplayName = "REST enabled without any methods explicitly configured")]
+        [DataRow(null, null, "book", null, "CustomRestPath", DisplayName = "Custom REST path defined without any methods explictly configured")]
+        [DataRow(new string[] { "Get", "Post", "Patch" }, null, null, null, "RestMethods", DisplayName = "REST methods defined without REST Path explicitly configured")]
+        [DataRow(new string[] { "Get", "Post", "Patch" }, null, "true", null, "RestEnabledWithMethods", DisplayName = "REST enabled along with some methods")]
+        [DataRow(new string[] { "Get", "Post", "Patch" }, null, "book", null, "CustomRestPathWithMethods", DisplayName = "Custom REST path defined along with some methods")]
+        [DataRow(null, null, null, "true", "GQLEnabled", DisplayName = "GraphQL enabled without any operation explicitly configured")]
+        [DataRow(null, null, null, "book", "GQLCustomType", DisplayName = "Custom GraphQL Type defined without any operation explicitly configured")]
+        [DataRow(null, null, null, "book:books", "GQLSingularPluralCustomType", DisplayName = "SingularPlural GraphQL Type enabled without any operation explicitly configured")]
+        [DataRow(null, "Query", null, "true", "GQLEnabledWithCustomOperation", DisplayName = "GraphQL enabled with Query operation")]
+        [DataRow(null, "Query", null, "book", "GQLCustomTypeAndOperation", DisplayName = "Custom GraphQL Type defined along with Query operation")]
+        [DataRow(null, "Query", null, "book:books", "GQLSingularPluralTypeAndOperation", DisplayName = "SingularPlural GraphQL Type defined along with Query operation")]
+        [DataRow(null, null, "true", "true", "RestAndGQLEnabled", DisplayName = "Both REST and GraphQL enabled without any methods and operations configured explicitly")]
+        [DataRow(new string[] { "Get" }, "Query", "true", "true", "CustomRestMethodAndGqlOperation", DisplayName = "Both REST and GraphQL enabled with custom REST methods and GraphQL operations")]
+        [DataRow(new string[] { "Post", "Patch", "Put" }, "Query", "book", "book:books", "CustomRestAndGraphQLAll", DisplayName = "Configuration with REST Path, Methods and GraphQL Type, Operation")]
         public void TestAddNewSpWithDifferentRestAndGraphQLOptions(
                 IEnumerable<string>? restMethods,
                 string? graphQLOperation,
                 string? restRoute,
                 string? graphQLType,
-                bool expectSuccess
+                string testType
             )
         {
             AddOptions options = new(
-                source: "testSource",
+                source: "s001.book",
                 permissions: new string[] { "anonymous", "execute" },
-                entity: "book",
+                entity: "MyEntity",
                 sourceType: "stored-procedure",
                 sourceParameters: null,
                 sourceKeyFields: null,
@@ -347,8 +345,113 @@ namespace Cli.Tests
                 graphQLOperationForDatabaseExecutable: graphQLOperation
                 );
 
-            string runtimeConfig = INITIAL_CONFIG;
-            Assert.AreEqual(expectSuccess, ConfigGenerator.TryAddNewEntity(options, ref runtimeConfig));
+            string initialConfiguration = INITIAL_CONFIG;
+
+            string expectedConfiguration = "";
+            switch (testType)
+            {
+                case "NoOptions":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_METHODS_GRAPHQL_OPERATION);
+                    break;
+                }
+                case "RestEnabled":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_ENABLED);
+                    break;
+                }
+                case "CustomRestPath":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_PATH);
+                    break;
+                }
+                case "RestMethods":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_METHODS);
+                    break;
+                }
+                case "RestEnabledWithMethods":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_REST_ENABLED_WITH_CUSTOM_REST_METHODS);
+                    break;
+                }
+                case "CustomRestPathWithMethods":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_PATH_WITH_CUSTOM_REST_METHODS);
+                    break;
+                }
+                case "GQLEnabled":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_GRAPHQL_ENABLED);
+                    break;
+                }
+                case "GQLCustomType":
+                case "GQLSingularPluralCustomType":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_GRAPHQL_CUSTOM_TYPE);
+                    break;
+                }
+                case "GQLEnabledWithCustomOperation":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_GRAPHQL_ENABLED_WITH_CUSTOM_OPERATION);
+                    break;
+                }
+                case "GQLCustomTypeAndOperation":
+                case "GQLSingularPluralTypeAndOperation":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_GRAPHQL_ENABLED_WITH_CUSTOM_TYPE_OPERATION);
+                    break;
+                }
+                case "RestAndGQLEnabled":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_REST_GRAPHQL_ENABLED);
+                    break;
+                }
+                case "CustomRestMethodAndGqlOperation":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_METHOD_GRAPHQL_OPERATION);
+                    break;
+                }
+                case "CustomRestAndGraphQLAll":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_GRAPHQL_ALL);
+                    break;
+                }
+            }
+
+            RunTest(options, initialConfiguration, expectedConfiguration);
+        }
+
+        [DataTestMethod]
+        [DataRow(null, "Mutation", "true", "false", DisplayName = "Conflicting configurations - GraphQL operation specified but entity is disabled for GraphQL")]
+        [DataRow(new string[] { "Get" }, null, "false", "true", DisplayName = "Conflicting configurations - REST methods specified but entity is disabled for REST")]
+        public void TestAddStoredProcedureWithConflictingRestGraphQLOptions(
+            IEnumerable<string>? restMethods,
+                string? graphQLOperation,
+                string? restRoute,
+                string? graphQLType
+                )
+        {
+            AddOptions options = new(
+                source: "s001.book",
+                permissions: new string[] { "anonymous", "execute" },
+                entity: "MyEntity",
+                sourceType: "stored-procedure",
+                sourceParameters: null,
+                sourceKeyFields: null,
+                restRoute: restRoute,
+                graphQLType: graphQLType,
+                fieldsToInclude: new string[] { },
+                fieldsToExclude: new string[] { },
+                policyRequest: null,
+                policyDatabase: null,
+                config: _testRuntimeConfig,
+                restMethodsForDatabaseExecutable: restMethods,
+                graphQLOperationForDatabaseExecutable: graphQLOperation
+                );
+
+            string initialConfiguration = INITIAL_CONFIG;
+            Assert.IsFalse(ConfigGenerator.TryAddNewEntity(options, ref initialConfiguration));
         }
 
         /// <summary>

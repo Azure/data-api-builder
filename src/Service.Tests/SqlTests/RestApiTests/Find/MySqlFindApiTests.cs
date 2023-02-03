@@ -492,7 +492,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindTestWithIntTypeNullValuesOrderByAsc",
                 @"
-                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', typeid, 'int_types', int_types)) AS data
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('typeid', id, 'int_types', int_types)) AS data
                   FROM (
                       SELECT id, int_types
                       FROM " + _integrationTypeTable + @"

@@ -426,6 +426,27 @@ namespace Cli.Tests
                   }
           }";
 
+          public const string SP_REST_GRAPHQL_DISABLED = @"{
+              ""entities"": {
+              ""MyEntity"": {
+                ""source"": {
+                  ""type"": ""stored-procedure"",
+                  ""object"": ""s001.book""
+                },
+                ""permissions"": [
+                  {
+                    ""role"": ""anonymous"",
+                    ""actions"": [
+                      ""execute""
+                    ]
+                  }
+                ],
+                ""rest"": false,	
+                ""graphql"": false
+                }
+              }
+          }";
+
           public const string SP_CUSTOM_REST_METHOD_GRAPHQL_OPERATION = @"{
               ""entities"": {
               ""MyEntity"": {

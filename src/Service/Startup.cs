@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Service.AuthenticationHelpers;
 using Azure.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimulator;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Parsers;
@@ -34,6 +35,10 @@ namespace Azure.DataApiBuilder.Service
         private ILogger<Startup> _logger;
         private ILogger<RuntimeConfigProvider> _configProviderLogger;
 
+        public static LogLevel _minimumLogLevel = LogLevel.Error;
+
+        public static bool isLogLevelOverriddenByCli;
+
         public const string NO_HTTPS_REDIRECT_FLAG = "--no-https-redirect";
 
         public Startup(IConfiguration configuration,
@@ -55,10 +60,28 @@ namespace Azure.DataApiBuilder.Service
 
             RuntimeConfigProvider runtimeConfigurationProvider = new(runtimeConfigPath, _configProviderLogger);
             services.AddSingleton(runtimeConfigurationProvider);
+
+            services.AddSingleton<ILogger<RuntimeConfigValidator>>(implementationFactory: (serviceProvider) =>
+            {
+                RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+                RuntimeConfig runtimeConfig = configProvider.GetRuntimeConfiguration();
+                LogLevel logLevel = isLogLevelOverriddenByCli ? _minimumLogLevel : GetDefaultLogLevel(runtimeConfig);
+                ILoggerFactory? loggerFactory = Program.GetLoggerFactoryForLogLevel(logLevel);
+                return loggerFactory.CreateLogger<RuntimeConfigValidator>();
+            });
             services.AddSingleton<RuntimeConfigValidator>();
 
             services.AddSingleton<CosmosClientProvider>();
             services.AddHealthChecks();
+
+            services.AddSingleton<ILogger<SqlQueryEngine>>(implementationFactory: (serviceProvider) =>
+            {
+                RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+                RuntimeConfig runtimeConfig = configProvider.GetRuntimeConfiguration();
+                LogLevel logLevel = isLogLevelOverriddenByCli ? _minimumLogLevel : GetDefaultLogLevel(runtimeConfig);
+                ILoggerFactory? loggerFactory = Program.GetLoggerFactoryForLogLevel(logLevel);
+                return loggerFactory.CreateLogger<SqlQueryEngine>();
+            });
 
             services.AddSingleton<IQueryEngine>(implementationFactory: (serviceProvider) =>
             {
@@ -96,6 +119,14 @@ namespace Azure.DataApiBuilder.Service
                 }
             });
 
+            services.AddSingleton<ILogger<IQueryExecutor>>(implementationFactory: (serviceProvider) =>
+            {
+                RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+                RuntimeConfig runtimeConfig = configProvider.GetRuntimeConfiguration();
+                LogLevel logLevel = isLogLevelOverriddenByCli ? _minimumLogLevel : GetDefaultLogLevel(runtimeConfig);
+                ILoggerFactory? loggerFactory = Program.GetLoggerFactoryForLogLevel(logLevel);
+                return loggerFactory.CreateLogger<IQueryExecutor>();
+            });
             services.AddSingleton<IQueryExecutor>(implementationFactory: (serviceProvider) =>
             {
                 RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
@@ -135,6 +166,15 @@ namespace Azure.DataApiBuilder.Service
                     default:
                         throw new NotSupportedException(runtimeConfig.DatabaseTypeNotSupportedMessage);
                 }
+            });
+
+            services.AddSingleton<ILogger<ISqlMetadataProvider>>(implementationFactory: (serviceProvider) =>
+            {
+                RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+                RuntimeConfig runtimeConfig = configProvider.GetRuntimeConfiguration();
+                LogLevel logLevel = isLogLevelOverriddenByCli ? _minimumLogLevel : GetDefaultLogLevel(runtimeConfig);
+                ILoggerFactory? loggerFactory = Program.GetLoggerFactoryForLogLevel(logLevel);
+                return loggerFactory.CreateLogger<ISqlMetadataProvider>();
             });
 
             services.AddSingleton<ISqlMetadataProvider>(implementationFactory: (serviceProvider) =>
@@ -182,12 +222,55 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<RestService>();
             services.AddSingleton<IFileSystem, FileSystem>();
 
+            services.AddSingleton<ILogger<RestController>>(implementationFactory: (serviceProvider) =>
+            {
+                RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+                RuntimeConfig runtimeConfig = configProvider.GetRuntimeConfiguration();
+                LogLevel logLevel = isLogLevelOverriddenByCli ? _minimumLogLevel : GetDefaultLogLevel(runtimeConfig);
+                ILoggerFactory? loggerFactory = Program.GetLoggerFactoryForLogLevel(logLevel);
+                return loggerFactory.CreateLogger<RestController>();
+            });
+
+            services.AddSingleton<ILogger<ClientRoleHeaderAuthenticationMiddleware>>(implementationFactory: (serviceProvider) =>
+            {
+                RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+                RuntimeConfig runtimeConfig = configProvider.GetRuntimeConfiguration();
+                LogLevel logLevel = isLogLevelOverriddenByCli ? _minimumLogLevel : GetDefaultLogLevel(runtimeConfig);
+                ILoggerFactory? loggerFactory = Program.GetLoggerFactoryForLogLevel(logLevel);
+                return loggerFactory.CreateLogger<ClientRoleHeaderAuthenticationMiddleware>();
+            });
+
+            services.AddSingleton<ILogger<ConfigurationController>>(implementationFactory: (serviceProvider) =>
+            {
+                RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+                RuntimeConfig runtimeConfig = configProvider.GetRuntimeConfiguration();
+                LogLevel logLevel = isLogLevelOverriddenByCli ? _minimumLogLevel : GetDefaultLogLevel(runtimeConfig);
+                ILoggerFactory? loggerFactory = Program.GetLoggerFactoryForLogLevel(logLevel);
+                return loggerFactory.CreateLogger<ConfigurationController>();
+            });
+
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();
 
             ConfigureAuthentication(services, runtimeConfigurationProvider);
 
             services.AddAuthorization();
+            services.AddSingleton<ILogger<IAuthorizationHandler>>(implementationFactory: (serviceProvider) =>
+            {
+                RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+                RuntimeConfig runtimeConfig = configProvider.GetRuntimeConfiguration();
+                LogLevel logLevel = isLogLevelOverriddenByCli ? _minimumLogLevel : GetDefaultLogLevel(runtimeConfig);
+                ILoggerFactory? loggerFactory = Program.GetLoggerFactoryForLogLevel(logLevel);
+                return loggerFactory.CreateLogger<IAuthorizationHandler>();
+            });
+            services.AddSingleton<ILogger<IAuthorizationResolver>>(implementationFactory: (serviceProvider) =>
+            {
+                RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+                RuntimeConfig runtimeConfig = configProvider.GetRuntimeConfiguration();
+                LogLevel logLevel = isLogLevelOverriddenByCli ? _minimumLogLevel : GetDefaultLogLevel(runtimeConfig);
+                ILoggerFactory? loggerFactory = Program.GetLoggerFactoryForLogLevel(logLevel);
+                return loggerFactory.CreateLogger<IAuthorizationResolver>();
+            });
             services.AddSingleton<IAuthorizationHandler, RestAuthorizationHandler>();
             services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
 
@@ -377,6 +460,16 @@ namespace Azure.DataApiBuilder.Service
 
                 endpoints.MapHealthChecks("/");
             });
+        }
+
+        public LogLevel GetDefaultLogLevel(RuntimeConfig runtimeConfig)
+        {
+            if (runtimeConfig.HostGlobalSettings.Mode == HostModeType.Development)
+            {
+                return LogLevel.Debug;
+            }
+
+            return LogLevel.Error;
         }
 
         /// <summary>

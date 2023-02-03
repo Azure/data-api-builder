@@ -46,7 +46,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public PostgreSqlQueryExecutor(
             RuntimeConfigProvider runtimeConfigProvider,
             DbExceptionParser dbExceptionParser,
-            ILogger<QueryExecutor<NpgsqlConnection>> logger)
+            ILogger<IQueryExecutor> logger)
             : base(dbExceptionParser,
                   logger,
                   new NpgsqlConnectionStringBuilder(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString),

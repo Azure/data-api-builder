@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using static Azure.DataApiBuilder.Service.Startup;
 
 namespace Azure.DataApiBuilder.Service
 {
@@ -47,18 +48,8 @@ namespace Azure.DataApiBuilder.Service
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    ILoggerFactory? loggerFactory = LoggerFactory
-                        .Create(builder =>
-                        {
-                            LogLevel logLevel = GetLogLevel(args);
-                            // Category defines the namespace we will log from,
-                            // including all sub-domains. ie: "Azure" includes
-                            // "Azure.DataApiBuilder.Service"
-                            builder.AddFilter(category: "Microsoft", logLevel);
-                            builder.AddFilter(category: "Azure", logLevel);
-                            builder.AddFilter(category: "Default", logLevel);
-                            builder.AddConsole();
-                        });
+                    _minimumLogLevel = GetLogLevel(args);
+                    ILoggerFactory? loggerFactory = GetLoggerFactoryForLogLevel(_minimumLogLevel);
                     ILogger<Startup>? startupLogger = loggerFactory.CreateLogger<Startup>();
                     ILogger<RuntimeConfigProvider>? configProviderLogger = loggerFactory.CreateLogger<RuntimeConfigProvider>();
                     DisableHttpsRedirectionIfNeeded(args);
@@ -92,6 +83,7 @@ namespace Azure.DataApiBuilder.Service
 
                     if (Enum.TryParse(args[i + 1], out LogLevel logLevel))
                     {
+                        isLogLevelOverriddenByCli = true;
                         return logLevel;
                     }
                     else
@@ -106,6 +98,25 @@ namespace Azure.DataApiBuilder.Service
             }
 
             return LogLevel.Error;
+        }
+
+        /// <summary>
+        /// Creates a LoggerFactory and add filter with the given LogLevel.
+        /// </summary>
+        /// <param name="logLevel">minimum log level.</param>
+        public static ILoggerFactory GetLoggerFactoryForLogLevel(LogLevel logLevel)
+        {
+            return LoggerFactory
+                .Create(builder =>
+                {
+                    // Category defines the namespace we will log from,
+                    // including all sub-domains. ie: "Azure" includes
+                    // "Azure.DataApiBuilder.Service"
+                    builder.AddFilter(category: "Microsoft", logLevel);
+                    builder.AddFilter(category: "Azure", logLevel);
+                    builder.AddFilter(category: "Default", logLevel);
+                    builder.AddConsole();
+                });
         }
 
         /// <summary>

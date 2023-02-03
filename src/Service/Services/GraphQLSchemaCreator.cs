@@ -174,7 +174,7 @@ namespace Azure.DataApiBuilder.Service.Services
                             rolesAllowedForFields
                         );
 
-                        if (databaseObject.SourceType.IsDatabaseExecutableType())
+                        if (!databaseObject.SourceType.IsDatabaseExecutableType())
                         {
                             InputTypeBuilder.GenerateInputTypesForObjectType(node, inputObjects);
                         }

@@ -1525,21 +1525,21 @@ namespace Cli.Tests
         /// <param name="graphQLType">GraphQL Type configured for the entity</param>
         /// <param name="testType">Scenario that is tested. It is also used to construct the expected JSON.</param>
         [DataTestMethod]
-        [DataRow(null, null, "true", null, "RestEnabled", DisplayName = "REST enabled without any methods explicitly configured")]
-        [DataRow(null, null, "book", null, "CustomRestPath", DisplayName = "Custom REST path defined without any methods explictly configured")]
-        [DataRow(new string[] { "Get", "Post", "Patch" }, null, null, null, "RestMethods", DisplayName = "REST methods defined without REST Path explicitly configured")]
-        [DataRow(new string[] { "Get", "Post", "Patch" }, null, "true", null, "RestEnabledWithMethods", DisplayName = "REST enabled along with some methods")]
-        [DataRow(new string[] { "Get", "Post", "Patch" }, null, "book", null, "CustomRestPathWithMethods", DisplayName = "Custom REST path defined along with some methods")]
-        [DataRow(null, null, null, "true", "GQLEnabled", DisplayName = "GraphQL enabled without any operation explicitly configured")]
-        [DataRow(null, null, null, "book", "GQLCustomType", DisplayName = "Custom GraphQL Type defined without any operation explicitly configured")]
-        [DataRow(null, null, null, "book:books", "GQLSingularPluralCustomType", DisplayName = "SingularPlural GraphQL Type enabled without any operation explicitly configured")]
-        [DataRow(null, "Query", null, "true", "GQLEnabledWithCustomOperation", DisplayName = "GraphQL enabled with Query operation")]
-        [DataRow(null, "Query", null, "book", "GQLCustomTypeAndOperation", DisplayName = "Custom GraphQL Type defined along with Query operation")]
-        [DataRow(null, "Query", null, "book:books", "GQLSingularPluralTypeAndOperation", DisplayName = "SingularPlural GraphQL Type defined along with Query operation")]
-        [DataRow(null, null, "true", "true", "RestAndGQLEnabled", DisplayName = "Both REST and GraphQL enabled without any methods and operations configured explicitly")]
-        [DataRow(null, null, "false", "false", "RestAndGQLDisabled", DisplayName = "Both REST and GraphQL disabled without any methods and operations configured explicitly")]
-        [DataRow(new string[] { "Get" }, "Query", "true", "true", "CustomRestMethodAndGqlOperation", DisplayName = "Both REST and GraphQL enabled with custom REST methods and GraphQL operations")]
-        [DataRow(new string[] { "Post", "Patch", "Put" }, "Query", "book", "book:books", "CustomRestAndGraphQLAll", DisplayName = "Configuration with REST Path, Methods and GraphQL Type, Operation")]
+        [DataRow(null, null, "true", null, "RestEnabled", DisplayName = "Entity Update - REST enabled without any methods explicitly configured")]
+        [DataRow(null, null, "book", null, "CustomRestPath", DisplayName = "Entity Update - Custom REST path defined without any methods explictly configured")]
+        [DataRow(new string[] { "Get", "Post", "Patch" }, null, null, null, "RestMethods", DisplayName = "Entity Update - REST methods defined without REST Path explicitly configured")]
+        [DataRow(new string[] { "Get", "Post", "Patch" }, null, "true", null, "RestEnabledWithMethods", DisplayName = "Entity Update - REST enabled along with some methods")]
+        [DataRow(new string[] { "Get", "Post", "Patch" }, null, "book", null, "CustomRestPathWithMethods", DisplayName = "Entity Update - Custom REST path defined along with some methods")]
+        [DataRow(null, null, null, "true", "GQLEnabled", DisplayName = "Entity Update - GraphQL enabled without any operation explicitly configured")]
+        [DataRow(null, null, null, "book", "GQLCustomType", DisplayName = "Entity Update - Custom GraphQL Type defined without any operation explicitly configured")]
+        [DataRow(null, null, null, "book:books", "GQLSingularPluralCustomType", DisplayName = "Entity Update - SingularPlural GraphQL Type enabled without any operation explicitly configured")]
+        [DataRow(null, "Query", null, "true", "GQLEnabledWithCustomOperation", DisplayName = "Entity Update - GraphQL enabled with Query operation")]
+        [DataRow(null, "Query", null, "book", "GQLCustomTypeAndOperation", DisplayName = "Entity Update - Custom GraphQL Type defined along with Query operation")]
+        [DataRow(null, "Query", null, "book:books", "GQLSingularPluralTypeAndOperation", DisplayName = "Entity Update - SingularPlural GraphQL Type defined along with Query operation")]
+        [DataRow(null, null, "true", "true", "RestAndGQLEnabled", DisplayName = "Entity Update - Both REST and GraphQL enabled without any methods and operations configured explicitly")]
+        [DataRow(null, null, "false", "false", "RestAndGQLDisabled", DisplayName = "Entity Update - Both REST and GraphQL disabled without any methods and operations configured explicitly")]
+        [DataRow(new string[] { "Get" }, "Query", "true", "true", "CustomRestMethodAndGqlOperation", DisplayName = "Entity Update - Both REST and GraphQL enabled with custom REST methods and GraphQL operations")]
+        [DataRow(new string[] { "Post", "Patch", "Put" }, "Query", "book", "book:books", "CustomRestAndGraphQLAll", DisplayName = "Entity Update - Configuration with REST Path, Methods and GraphQL Type, Operation")]
         public void TestUpdateRestAndGraphQLSettingsForStoredProcedures(
             IEnumerable<string>? restMethods,
             string? graphQLOperation,
@@ -1657,8 +1657,8 @@ namespace Cli.Tests
         }
 
         [DataTestMethod]
-        [DataRow(null, "Mutation", "true", "false", DisplayName = "Conflicting configurations - GraphQL operation specified but entity is disabled for GraphQL")]
-        [DataRow(new string[] { "Get" }, null, "false", "true", DisplayName = "Conflicting configurations - REST methods specified but entity is disabled for REST")]
+        [DataRow(null, "Mutation", "true", "false", DisplayName = "Conflicting configurations during update - GraphQL operation specified but entity is disabled for GraphQL")]
+        [DataRow(new string[] { "Get" }, null, "false", "true", DisplayName = "Conflicting configurations during update - REST methods specified but entity is disabled for REST")]
         public void TestUpdatetoredProcedureWithConflictingRestGraphQLOptions(
             IEnumerable<string>? restMethods,
                 string? graphQLOperation,
@@ -1692,7 +1692,8 @@ namespace Cli.Tests
                 graphQLOperationForStoredProcedure: graphQLOperation
                 );
 
-            string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_METHODS_GRAPHQL_OPERATION);;
+            string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_METHODS_GRAPHQL_OPERATION);
+            ;
             Assert.IsFalse(ConfigGenerator.TryUpdateExistingEntity(options, ref initialConfiguration));
         }
 

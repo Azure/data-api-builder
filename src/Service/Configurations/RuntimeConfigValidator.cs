@@ -598,16 +598,18 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             string cardinality = relationship.Cardinality.ToString().ToLower();
                             RelationShipPair linkedSourceRelationshipPair = new(linkingDatabaseObject, sourceDatabaseObject);
                             RelationShipPair linkedTargetRelationshipPair = new(linkingDatabaseObject, targetDatabaseObject);
-                            ForeignKeyDefinition linkedSourceFKDef = sqlMetadataProvider.PairToFkDefinition![linkedSourceRelationshipPair];
                             ForeignKeyDefinition linkedTargetFKDef = sqlMetadataProvider.PairToFkDefinition![linkedTargetRelationshipPair];
-                            string referencedSourceColumns = string.Join(",", linkedSourceFKDef.ReferencedColumns);
-                            string referencingSourceColumns = string.Join(",", linkedSourceFKDef.ReferencingColumns);
-                            string referencedTargetColumns = string.Join(",", linkedTargetFKDef.ReferencedColumns);
-                            string referencingTargetColumns = string.Join(",", linkedTargetFKDef.ReferencingColumns);
+                            string referencedSourceColumns = relationship.SourceFields is not null ? string.Join(",", relationship.SourceFields) :
+                                string.Join(",", sqlMetadataProvider.PairToFkDefinition![linkedSourceRelationshipPair].ReferencedColumns);
+                            string referencingSourceColumns = relationship.LinkingSourceFields is not null ? string.Join(",", relationship.LinkingSourceFields) :
+                                string.Join(",", sqlMetadataProvider.PairToFkDefinition![linkedSourceRelationshipPair].ReferencingColumns);
+                            string referencedTargetColumns = relationship.TargetFields is not null ? string.Join(",", relationship.TargetFields) :
+                                string.Join(",", sqlMetadataProvider.PairToFkDefinition![linkedTargetRelationshipPair].ReferencedColumns);
+                            string referencingTargetColumns = relationship.LinkingTargetFields is not null ? string.Join(",", relationship.LinkingTargetFields) :
+                                string.Join(",", sqlMetadataProvider.PairToFkDefinition![linkedTargetRelationshipPair].ReferencingColumns);
                             _logger.LogDebug($"{entityName}: {sourceDBOName}({referencedSourceColumns}) related to {cardinality} " +
                                 $"{relationship.TargetEntity}: {targetDBOName}({referencedTargetColumns}) by " +
                                 $"{relationship.LinkingObject}(linking.source.fields: {referencingSourceColumns}), (linking.target.fields: {referencingTargetColumns})");
-
                         }
 
                     }
@@ -632,39 +634,25 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         string sourceDBOName = sqlMetadataProvider.EntityToDatabaseObject[entityName].FullName;
                         string targetDBOName = sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity].FullName;
                         string cardinality = relationship.Cardinality.ToString().ToLower();
-                        ForeignKeyDefinition fKDef;
-                        string sourceColumns;
-                        string targetColumns;
-                        if (sqlMetadataProvider.PairToFkDefinition!.ContainsKey(sourceTargetRelationshipPair))
-                        {
-                            fKDef = sqlMetadataProvider.PairToFkDefinition[sourceTargetRelationshipPair];
-                            sourceColumns = string.Join(",", fKDef.ReferencingColumns);
-                            targetColumns = string.Join(",", fKDef.ReferencedColumns);
-                            _logger.LogDebug($"{entityName}: {sourceDBOName}({sourceColumns}) is related to {cardinality} " +
-                                $"{relationship.TargetEntity}: {targetDBOName}({targetColumns}).");
-                        }
-
-                        if (sqlMetadataProvider.PairToFkDefinition!.ContainsKey(targetSourceRelationshipPair))
-                        {
-                            fKDef = sqlMetadataProvider.PairToFkDefinition[targetSourceRelationshipPair];
-                            sourceColumns = string.Join(",", fKDef.ReferencedColumns);
-                            targetColumns = string.Join(",", fKDef.ReferencingColumns);
-                            _logger.LogDebug($"{entityName}: {sourceDBOName}({sourceColumns}) is related to {cardinality} " +
-                                $"{relationship.TargetEntity}: {targetDBOName}({targetColumns}).");
-                        }
-
-                        if (relationship.SourceFields is not null && relationship.TargetFields is not null)
-                        {
-                            sourceColumns = string.Join(",", relationship.SourceFields);
-                            targetColumns = string.Join(",", relationship.TargetFields);
-                            _logger.LogDebug($"{entityName}: {sourceDBOName}({sourceColumns}) is related to {cardinality} " +
-                                $"{relationship.TargetEntity}: {targetDBOName}({targetColumns}).");
-                        }
+                        string sourceColumns = relationship.SourceFields is not null ? string.Join(",", relationship.SourceFields) :
+                            sqlMetadataProvider.PairToFkDefinition!.ContainsKey(sourceTargetRelationshipPair) ?
+                            string.Join(",", sqlMetadataProvider.PairToFkDefinition![sourceTargetRelationshipPair].ReferencingColumns) :
+                            string.Join(",", sqlMetadataProvider.PairToFkDefinition[targetSourceRelationshipPair].ReferencedColumns);
+                        string targetColumns = relationship.TargetFields is not null ? string.Join(",", relationship.TargetFields) :
+                            sqlMetadataProvider.PairToFkDefinition!.ContainsKey(sourceTargetRelationshipPair) ?
+                            string.Join(",", sqlMetadataProvider.PairToFkDefinition![sourceTargetRelationshipPair].ReferencedColumns) :
+                            string.Join(",", sqlMetadataProvider.PairToFkDefinition[targetSourceRelationshipPair].ReferencingColumns);
+                        _logger.LogDebug($"{entityName}: {sourceDBOName}({sourceColumns}) is related to {cardinality} " +
+                            $"{relationship.TargetEntity}: {targetDBOName}({targetColumns}).");
                     }
                 }
             }
         }
 
+        /// <summary>
+        /// Helper function simply logs the header we display before logging relationship information.
+        /// </summary>
+        /// <param name="linked"></param>
         private void LoggingRelationshipHeader(bool linked = false)
         {
             string linkedMessage = linked ? " by <linking.object>(linking.source.fields: <linking.source.fields>), (linking.target.fields: <linking.target.fields>)" :

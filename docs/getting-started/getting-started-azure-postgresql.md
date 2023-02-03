@@ -51,7 +51,7 @@ dab init
     --host-mode "Development"
 ```
 
-The command will generate a config file called `dab-config.json` looking like this:
+The command will generate a config file called `dab-config.json` which looks like this:
 
 ```json
 {

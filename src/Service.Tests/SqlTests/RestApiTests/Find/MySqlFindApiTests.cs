@@ -413,7 +413,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                     SELECT JSON_OBJECT('id', id, 'book_id', book_id, 'content', content) AS data
                     FROM (
-                        SELECT id, content
+                        SELECT id, book_id, content
                         FROM reviews" + @"
                         WHERE id = 567 AND book_id = 1
                         ORDER BY id asc
@@ -701,9 +701,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindTestWithSingleMappedFieldsToBeReturned",
                 @"
-                  SELECT JSON_ARRAYAGG(JSON_OBJECT('Scientific Name', species)) AS data
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'Scientific Name', species)) AS data
                   FROM (
-                      SELECT species
+                      SELECT treeId, species
                       FROM " + _integrationMappingTable + @"
                   ) AS subq"
             },

@@ -22,12 +22,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
 
         /// <inheritdoc />
         [DataTestMethod]
-        [DataRow("id", 1, 4, "", "",
-            DisplayName = "Test after token for primary key values.")]
+        [DataRow("typeid", 1, 4, "", "",
+            DisplayName = "Test after token for primary key with mapped name.")]
         [DataRow("byte_types", 0, 255, 2, 4, DisplayName = "Test after token for byte values.")]
         [DataRow("short_types", -32768, 32767, 3, 4, DisplayName = "Test after token for short values.")]
         [DataRow("int_types", -2147483648, 2147483647, 3, 4,
-            DisplayName = "Test after token for int values with mapped name.")]
+            DisplayName = "Test after token for int values.")]
         [DataRow("long_types", -9223372036854775808, 9.223372036854776E+18, 3, 4,
             DisplayName = "Test after token for long values.")]
         [DataRow("string_types", "\"\"", "\"null\"", 1, 4,

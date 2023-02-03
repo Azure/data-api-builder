@@ -200,11 +200,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             string graphQLQueryName = "supportedTypes";
             string after;
             string defaultSchema = _sqlMetadataProvider.GetDefaultSchemaName();
-            if ("id".Equals(exposedFieldName))
+            if ("typeid".Equals(exposedFieldName))
             {
                 after = SqlPaginationUtil.Base64Encode(
                     "[{\"Value\":" + afterValue + ", \"Direction\":0,\"TableSchema\":\"" + defaultSchema + "\", " +
-                    "\"TableName\":\"type_table\",\"ColumnName\":\"id\"}]");
+                    "\"TableName\":\"type_table\",\"ColumnName\":\"typeid\"}]");
             }
             else
             {
@@ -212,7 +212,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 "[{\"Value\":" + afterValue + ",\"Direction\":0,\"TableSchema\":\"" + defaultSchema + "\", " +
                 "\"TableName\":\"type_table\",\"ColumnName\":\"" + exposedFieldName + "\"}," +
                 "{\"Value\":" + afterIdValue + ", \"Direction\":0,\"TableSchema\":\"" + defaultSchema + "\", " +
-                "\"TableName\":\"type_table\",\"ColumnName\":\"id\"}]");
+                "\"TableName\":\"type_table\",\"ColumnName\":\"typeid\"}]");
             }
 
             string graphQLQuery = @"{
@@ -225,17 +225,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             JsonElement root = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             string actual = SqlPaginationUtil.Base64Decode(root.GetProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME).GetString());
             string expected;
-            if ("id".Equals(exposedFieldName))
+            if ("typeid".Equals(exposedFieldName))
             {
                 expected = "[{\"Value\":" + endCursorValue + ", \"Direction\":0,\"TableSchema\":\"" + defaultSchema + "\", " +
-                    "\"TableName\":\"type_table\",\"ColumnName\":\"id\"}]";
+                    "\"TableName\":\"type_table\",\"ColumnName\":\"typeid\"}]";
             }
             else
             {
                 expected = "[{\"Value\":" + endCursorValue + ", \"Direction\":0,\"TableSchema\":\"" + defaultSchema + "\", " +
                     "\"TableName\":\"type_table\",\"ColumnName\":\"" + exposedFieldName + "\"}," +
                     "{\"Value\":" + endCursorIdValue + ", \"Direction\":0,\"TableSchema\":\"" + defaultSchema + "\", " +
-                    "\"TableName\":\"type_table\",\"ColumnName\":\"id\"}]";
+                    "\"TableName\":\"type_table\",\"ColumnName\":\"typeid\"}]";
             }
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());

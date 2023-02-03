@@ -22,12 +22,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
 
         /// <inheritdoc />
         [DataTestMethod]
-        [DataRow("id", 1, 4, "", "",
-            DisplayName = "Test after token for primary key values.")]
+        [DataRow("typeid", 1, 4, "", "",
+            DisplayName = "Test after token for primary key with mapped name.")]
         [DataRow("byte_types", 0, 255, 2, 4, DisplayName = "Test after token for byte values.")]
         [DataRow("short_types", -32768, 32767, 3, 4, DisplayName = "Test after token for short values.")]
         [DataRow("int_types", -2147483648, 2147483647, 3, 4,
-            DisplayName = "Test after token for int values with mapped name.")]
+            DisplayName = "Test after token for int values.")]
         [DataRow("long_types", -9223372036854775808, 9.223372036854776E+18, 3, 4,
             DisplayName = "Test after token for long values.")]
         [DataRow("string_types", "\"\"", "\"null\"", 1, 4,
@@ -41,7 +41,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
         [DataRow("boolean_types", "false", "true", 2, 4,
             DisplayName = "Test after token for boolean values.")]
         [DataRow("datetime_types", "\"1753-01-01T00:00:00.000\"",
-            "\"9999-12-31T23:59:59.997\"", 3, 4,
+            "\"9999-12-31T23:59:59\"", 3, 4,
             DisplayName = "Test after token for datetime values.")]
         [DataRow("bytearray_types", "\"AAAAAA==\"", "\"/////w==\"", 3, 4,
             DisplayName = "Test after token for bytearray values.")]

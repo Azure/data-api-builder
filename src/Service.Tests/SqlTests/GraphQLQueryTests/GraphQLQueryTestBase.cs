@@ -1024,9 +1024,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// </summary>
         public async Task TestStoredProcedureQueryForGettingSingleRow(string dbQuery)
         {
-            string graphQLQueryName = "getPublisher";
-            string graphQLQuery = @"{
-                getPublisher(id: 1234) {
+            string graphQLQueryName = "executeGetPublisher";
+            string graphQLQuery = @"mutation {
+                executeGetPublisher(id: 1234) {
                     id
                     name
                 }
@@ -1043,9 +1043,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// </summary>
         public async Task TestStoredProcedureQueryForGettingMultipleRows(string dbQuery)
         {
-            string graphQLQueryName = "getBooks";
+            string graphQLQueryName = "executeGetBooks";
             string graphQLQuery = @"{
-                getBooks {
+                executeGetBooks {
                     id
                     title
                     publisher_id
@@ -1063,9 +1063,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// </summary>
         public async Task TestStoredProcedureQueryForGettingTotalNumberOfRows(string dbQuery)
         {
-            string graphQLQueryName = "countBooks";
-            string graphQLQuery = @"{
-                countBooks {
+            string graphQLQueryName = "executeCountBooks";
+            string graphQLQuery = @"mutation {
+                executeCountBooks {
                     total_books
                 }
             }";
@@ -1083,9 +1083,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// </summary>
         public async Task TestStoredProcedureQueryWithResultsContainingNull(string dbQuery)
         {
-            string graphQLQueryName = "searchAuthorByFirstName";
-            string graphQLQuery = @"{
-                searchAuthorByFirstName(firstName: ""Aaron"") {
+            string graphQLQueryName = "executeSearchAuthorByFirstName";
+            string graphQLQuery = @"mutation {
+                executeSearchAuthorByFirstName(firstName: ""Aaron"") {
                     author_name
                     first_publish_year
                     total_books_published

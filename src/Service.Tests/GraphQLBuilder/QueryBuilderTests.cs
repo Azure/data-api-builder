@@ -369,6 +369,64 @@ type Table @model(name: ""table"") {
             Assert.AreEqual(expectedAllQueryDescription, allItemsQueryFieldNode.Description.Value);
         }
 
+        /// <summary>
+        /// Tests the GraphQL schema builder method QueryBuilder.Build()'s behavior when processing stored procedure entity configuration
+        /// which may explicitly define the field type(query/mutation) of the entity.
+        /// </summary>
+        /// <param name="graphQLOperation">Query or Mutation</param>
+        /// <param name="operations">CRUD + Execute -> for EntityPermissionsMap </param>
+        /// <param name="permissionOperations">CRUD + Execute -> for Entity.Permissions</param>
+        /// <param name="expectsQueryField">Whether QueryBuilder will generate a query field for the GraphQL schema.</param>
+        [DataTestMethod]
+        [DataRow(GraphQLOperation.Query, new[] { Config.Operation.Execute }, new[] { "execute" }, true, DisplayName = "Query field generated since all metadata is valid")]
+        [DataRow(null, new[] { Config.Operation.Execute }, new[] { "execute" }, false, DisplayName = "Query field not generated since default operation is mutation.")]
+        [DataRow(GraphQLOperation.Query, new[] { Config.Operation.Read }, new[] { "read" }, false, DisplayName = "Query field not generated because invalid permissions were supplied")]
+        [DataRow(GraphQLOperation.Mutation, new[] { Config.Operation.Execute }, new[] { "execute" }, false, DisplayName = "Query field not generated because the configured operation is mutation.")]
+        public void StoredProcedureEntityAsQueryField(GraphQLOperation? graphQLOperation, Config.Operation[] operations, string[] permissionOperations, bool expectsQueryField)
+        {
+            string gql =
+            @"
+            type StoredProcedureType @model(name:""MyStoredProcedure"") {
+                field1: string
+            }
+            ";
+
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            _entityPermissions = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
+                    new string[] { "MyStoredProcedure" },
+                    operations,
+                    new string[] { "anonymous", "authenticated" }
+                    );
+            Entity entity = GraphQLTestHelpers.GenerateStoredProcedureEntity(graphQLTypeName: "StoredProcedureType", graphQLOperation, permissionOperations);
+
+            DocumentNode queryRoot = QueryBuilder.Build(
+                root,
+                DatabaseType.mssql,
+                new Dictionary<string, Entity> { { "MyStoredProcedure", entity } },
+                inputTypes: new(),
+                entityPermissionsMap: _entityPermissions
+                );
+
+            ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
+
+            // With a minimized configuration for this entity, the only field expected is the one that may be generated from this test.
+            const string FIELDNOTFOUND_ERROR = "The expected query field definition was not detected.";
+
+            if (expectsQueryField)
+            {
+                Assert.IsTrue(query.Fields.Any(), message: FIELDNOTFOUND_ERROR);
+                FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"executeStoredProcedureType");
+                Assert.IsNotNull(field, message: FIELDNOTFOUND_ERROR);
+                string actualQueryType = field.Type.ToString();
+                Assert.AreEqual(expected: "[StoredProcedureType!]!", actual: actualQueryType, message: $"Incorrect query field type: {actualQueryType}");
+            }
+            else
+            {
+                Assert.IsTrue(!query.Fields.Any(), message: FIELDNOTFOUND_ERROR);
+            }
+
+        }
+
         public static ObjectTypeDefinitionNode GetQueryNode(DocumentNode queryRoot)
         {
             return (ObjectTypeDefinitionNode)queryRoot.Definitions.First(d => d is ObjectTypeDefinitionNode node && node.Name.Value == "Query");

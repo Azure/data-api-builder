@@ -56,7 +56,7 @@ public class CustomLoggerProvider : ILoggerProvider
         /// <summary>
         /// Creates Log message by setting console message color based on LogLevel.
         /// </summary>
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
             if (!IsEnabled(logLevel) || logLevel < _minimumLogLevel)
             {
@@ -82,7 +82,7 @@ public class CustomLoggerProvider : ILoggerProvider
         /// <inheritdoc/>
         public IDisposable BeginScope<TState>(TState state)
         {
-            return null;
+            throw new NotImplementedException();
         }
     }
 }

@@ -35,6 +35,9 @@ namespace Cli
             ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger);
             Utils.SetCliUtilsLogger(cliUtilsLogger);
 
+            // To know if `--help` or `--version` was requested.
+            bool isHelpOrVersionRequested = false;
+
             // Parsing user arguments and executing required methods.
             ParserResult<object>? result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions>(args)
                 .WithParsed<InitOptions>(options =>
@@ -62,14 +65,14 @@ namespace Cli
                     bool isSuccess = ConfigGenerator.TryAddEntityToConfigWithOptions(options);
                     if (isSuccess)
                     {
-                        cliLogger.LogInformation($"Added new entity: {options.Entity} with source: {options.Source} to config: {options.Config}" +
-                            $" with permissions: {string.Join(SEPARATOR, options.Permissions.ToArray())}.");
+                        cliLogger.LogInformation($"Added new entity: {options.Entity} with source: {options.Source}" +
+                            $" and permissions: {string.Join(SEPARATOR, options.Permissions.ToArray())}.");
                         cliLogger.LogInformation($"SUGGESTION: Use 'dab update [entity-name] [options]' to update any entities in your config.");
                     }
                     else
                     {
-                        cliLogger.LogError($"Could not add entity: {options.Entity} source: {options.Source} to config: {options.Config}" +
-                            $" with permissions: {string.Join(SEPARATOR, options.Permissions.ToArray())}.");
+                        cliLogger.LogError($"Could not add entity: {options.Entity} with source: {options.Source}" +
+                            $" and permissions: {string.Join(SEPARATOR, options.Permissions.ToArray())}.");
                     }
                 })
                 .WithParsed<UpdateOptions>(options =>
@@ -84,7 +87,7 @@ namespace Cli
 
                     if (isSuccess)
                     {
-                        cliLogger.LogInformation($"Updated the entity: {options.Entity} in the config.");
+                        cliLogger.LogInformation($"Updated the entity: {options.Entity}.");
                     }
                     else
                     {
@@ -100,9 +103,26 @@ namespace Cli
                     {
                         cliLogger.LogError("Failed to start the engine.");
                     }
+                })
+                .WithNotParsed(err =>
+                {
+                    /// System.CommandLine considers --help and --version as NonParsed Errors
+                    /// ref: https://github.com/commandlineparser/commandline/issues/630
+                    /// This is a workaround to make sure our app exits with exit code 0,
+                    /// when user does --help or --versions.
+                    /// dab --help -> ErrorType.HelpVerbRequestedError
+                    /// dab [command-name] --help -> ErrorType.HelpRequestedError
+                    /// dab --version -> ErrorType.VersionRequestedError
+                    List<Error> errors = err.ToList();
+                    if (errors.Any(e => e.Tag == ErrorType.VersionRequestedError
+                                        || e.Tag == ErrorType.HelpRequestedError
+                                        || e.Tag == ErrorType.HelpVerbRequestedError))
+                    {
+                        isHelpOrVersionRequested = true;
+                    }
                 });
 
-            return result is Parsed<object> ? 0 : -1;
+            return ((result is Parsed<object>) || (isHelpOrVersionRequested)) ? 0 : -1;
         }
 
         /// <summary>

@@ -52,10 +52,14 @@ namespace Azure.DataApiBuilder.Service.Tests
             Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
             RuntimeConfigProvider runtimeConfigProvider
                 = new(configPath,
-                      configProviderLogger.Object)
-                {
-                    IsLateConfigured = true
-                };
+                      configProviderLogger.Object);
+
+            // Only set IsLateConfigured for MsSQL for now to do certificate validation.
+            // For Pg/MySQL databases, set this after SSL connections are enabled for testing.
+            if (runtimeConfigProvider.GetRuntimeConfiguration().DatabaseType == DatabaseType.mssql)
+            {
+                runtimeConfigProvider.IsLateConfigured = true;
+            }
 
             return runtimeConfigProvider;
         }
@@ -72,10 +76,15 @@ namespace Azure.DataApiBuilder.Service.Tests
             Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
             RuntimeConfigProvider runtimeConfigProvider
                 = new(config,
-                      configProviderLogger.Object)
-                {
-                    IsLateConfigured = true
-                };
+                      configProviderLogger.Object);
+
+            // Only set IsLateConfigured for MsSQL for now to do certificate validation.
+            // For Pg/MySQL databases, set this after SSL connections are enabled for testing.
+            if (runtimeConfigProvider.GetRuntimeConfiguration().DatabaseType == DatabaseType.mssql)
+            {
+                runtimeConfigProvider.IsLateConfigured = true;
+            }
+
             return runtimeConfigProvider;
         }
 

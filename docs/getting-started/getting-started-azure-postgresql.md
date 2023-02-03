@@ -60,9 +60,6 @@ The command will generate a config file called `dab-config.json` which looks lik
     "database-type": "postgresql",
     "connection-string": "Server=ReplaceMe.postgres.database.azure.com;Database=PlaygroundDB;User ID=ReplaceMe;Password=ReplaceMe;Ssl Mode=Require;"
   },
-  "mssql": {
-    "set-session-context": true
-  },
   "runtime": {
     "rest": {
       "enabled": true,

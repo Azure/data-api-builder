@@ -954,6 +954,7 @@ namespace Cli
 
                 _logger.LogInformation($"Setting default minimum LogLevel: {minimumLogLevel} for {hostModeType} mode.");
             }
+
             args.Add("--LogLevel");
             args.Add(minimumLogLevel.ToString());
 

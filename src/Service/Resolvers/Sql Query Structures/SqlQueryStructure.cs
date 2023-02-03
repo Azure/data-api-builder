@@ -799,7 +799,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// It is formed using the column values from the last row returned as a JsonElement.
         /// Hence, in addition to the requested fields, we need to add any extraneous primary keys
         /// and order by columns to the list of columns in the select clause.
-        /// When adding to the columns of the select clause, we make sure to use exposed column names.
+        /// When adding to the columns of the select clause, we make sure to use exposed column names as the label.
         /// </summary>
         private void AddColumnsForEndCursor()
         {

@@ -42,8 +42,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// Verify the correct string is parsed from the
         /// provided filter with eq and null on right side.
         /// </summary>
-        [DataRow("id eq 2147483647", "([id] = @param1)", DisplayName = "Equate int types.")]
-        [DataRow("id eq null", "([id] IS NULL)", DisplayName = "Equate int to null.")]
+        [DataRow("typeid eq 2147483647", "([id] = @param1)", DisplayName = "Equate int types.")]
+        [DataRow("typeid eq null", "([id] IS NULL)", DisplayName = "Equate int to null.")]
         [DataRow("byte_types eq 127", "([byte_types] = @param1)", DisplayName = "Equate byte types.")]
         [DataRow("short_types eq 255", "([short_types] = @param1)", DisplayName = "Equate short types.")]
         [DataRow("long_types eq 9223372036854775807", "([long_types] = @param1)", DisplayName = "Equate long types.")]
@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 entityName: DEFAULT_ENTITY,
                 schemaName: DEFAULT_SCHEMA_NAME,
                 tableName: DEFAULT_TABLE_NAME,
-                filterString: "?$filter=id ne null",
+                filterString: "?$filter=typeid ne null",
                 expected: "([id] IS NOT NULL)"
                 );
         }
@@ -94,7 +94,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 entityName: DEFAULT_ENTITY,
                 schemaName: DEFAULT_SCHEMA_NAME,
                 tableName: DEFAULT_TABLE_NAME,
-                filterString: "?$filter=null eq id",
+                filterString: "?$filter=null eq typeid",
                 expected: "([id] IS NULL)"
                 );
         }
@@ -110,7 +110,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 entityName: DEFAULT_ENTITY,
                 schemaName: DEFAULT_SCHEMA_NAME,
                 tableName: DEFAULT_TABLE_NAME,
-                filterString: "?$filter=id gt null",
+                filterString: "?$filter=typeid gt null",
                 expected: "([id] > NULL)"
                 );
         }
@@ -240,7 +240,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 entityName: DEFAULT_ENTITY,
                 schemaName: DEFAULT_SCHEMA_NAME,
                 tableName: DEFAULT_TABLE_NAME,
-                filterString: "?$filter=id eq (id gt 1)",
+                filterString: "?$filter=typeid eq (typeid gt 1)",
                 expected: string.Empty
                 ));
 
@@ -257,7 +257,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 entityName: DEFAULT_ENTITY,
                 schemaName: DEFAULT_SCHEMA_NAME,
                 tableName: DEFAULT_TABLE_NAME,
-                filterString: "?$filter=id eq (id add 1)",
+                filterString: "?$filter=typeid eq (typeid add 1)",
                 expected: string.Empty
                 ));
 

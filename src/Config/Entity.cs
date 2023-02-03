@@ -236,8 +236,7 @@ namespace Azure.DataApiBuilder.Config
 
             JsonElement graphQLConfigElement = (JsonElement)GraphQL;
             if (graphQLConfigElement.ValueKind is JsonValueKind.True
-                || graphQLConfigElement.ValueKind is JsonValueKind.False
-                || graphQLConfigElement.ValueKind is JsonValueKind.String)
+                || graphQLConfigElement.ValueKind is JsonValueKind.False)
             {
                 return GraphQLOperation.Mutation;
             }

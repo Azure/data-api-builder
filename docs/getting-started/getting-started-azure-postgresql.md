@@ -36,7 +36,7 @@ Create the database tables needed to represent Authors, Books and the many-to-ma
 - `books`: Table containing books
 - `books_authors`: Table associating books with respective authors
 
-Execute the script in the PostgreSQL Server or Azure Database for PostgreSQL you decided to use, so that the tables with sample data are created and populated.
+Execute the script in the PostgreSQL Server or Azure Database for PostgreSQL as needed, so that the tables with sample data are created and populated.
 
 ## Creating a configuration file for DAB
 

@@ -57,7 +57,7 @@ namespace Azure.DataApiBuilder.Service.Services
             return string.IsNullOrEmpty(schemaName) ? false : true;
         }
 
-        protected override string GetDefaultSchemaName()
+        public override string GetDefaultSchemaName()
         {
             return "public";
         }

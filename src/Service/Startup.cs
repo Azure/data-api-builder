@@ -273,7 +273,7 @@ namespace Azure.DataApiBuilder.Service
 
                     throw new ApplicationException(
                         "Could not initialize the engine with the runtime config file: " +
-                        $"{runtimeConfigProvider.RuntimeConfigPath!.ConfigFileName}");
+                        $"{runtimeConfigProvider.RuntimeConfigPath?.ConfigFileName}");
                 }
             }
             else

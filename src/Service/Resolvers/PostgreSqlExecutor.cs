@@ -55,6 +55,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
             _attemptToSetAccessToken =
                 ShouldManagedIdentityAccessBeAttempted();
+
+            if (runtimeConfigProvider.IsLateConfigured)
+            {
+                ConnectionStringBuilder.SslMode = SslMode.VerifyFull;
+            }
         }
 
         /// <summary>

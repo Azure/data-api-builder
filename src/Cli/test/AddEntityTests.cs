@@ -503,8 +503,6 @@ namespace Cli.Tests
 
             JObject expectedJson = JObject.Parse(expectedConfig);
             JObject actualJson = JObject.Parse(initialConfig);
-            // Console.WriteLine("Expected : " + expectedJson);
-            // Console.WriteLine("Actual : " + actualJson);
             Assert.IsTrue(JToken.DeepEquals(expectedJson, actualJson));
         }
 

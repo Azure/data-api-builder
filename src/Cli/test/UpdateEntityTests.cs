@@ -1692,9 +1692,7 @@ namespace Cli.Tests
                 graphQLOperationForStoredProcedure: graphQLOperation
                 );
 
-            _ = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_METHODS_GRAPHQL_OPERATION);
-
-            string initialConfiguration = INITIAL_CONFIG;
+            string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_METHODS_GRAPHQL_OPERATION);;
             Assert.IsFalse(ConfigGenerator.TryUpdateExistingEntity(options, ref initialConfiguration));
         }
 

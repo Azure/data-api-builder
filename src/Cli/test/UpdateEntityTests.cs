@@ -1641,6 +1641,49 @@ namespace Cli.Tests
             Assert.IsTrue(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
             Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfiguration), JObject.Parse(runtimeConfig)));
         }
+        
+        [DataTestMethod]
+        [DataRow(null, "Mutation", "true", "false", DisplayName = "Conflicting configurations - GraphQL operation specified but entity is disabled for GraphQL")]
+        [DataRow(new string[] { "Get" }, null, "false", "true", DisplayName = "Conflicting configurations - REST methods specified but entity is disabled for REST")]
+        public void TestUpdatetoredProcedureWithConflictingRestGraphQLOptions(
+            IEnumerable<string>? restMethods,
+                string? graphQLOperation,
+                string? restRoute,
+                string? graphQLType
+                )
+        {
+            UpdateOptions options = new(
+                source: null,
+                permissions: null,
+                entity: "MyEntity",
+                sourceType: null,
+                sourceParameters: null,
+                sourceKeyFields: null,
+                restRoute: restRoute,
+                graphQLType: graphQLType,
+                fieldsToInclude: new string[] { },
+                fieldsToExclude: new string[] { },
+                policyRequest: null,
+                policyDatabase: null,
+                relationship: null,
+                cardinality: null,
+                targetEntity: null,
+                linkingObject: null,
+                linkingSourceFields: new string[] { },
+                linkingTargetFields: new string[] { },
+                relationshipFields: new string[] { },
+                map: null,
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: restMethods,
+                graphQLOperationForStoredProcedure: graphQLOperation
+                );
+
+            string runtimeConfig = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_METHODS_GRAPHQL_OPERATION);
+
+            string initialConfiguration = INITIAL_CONFIG;
+            Assert.IsFalse(ConfigGenerator.TryUpdateExistingEntity(options, ref initialConfiguration));
+        }
+
 
         #endregion
 

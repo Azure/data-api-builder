@@ -1578,11 +1578,6 @@ namespace Cli.Tests
             string expectedConfiguration = "";
             switch (testType)
             {
-                case "NoOptions":
-                {
-                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_METHODS_GRAPHQL_OPERATION);
-                    break;
-                }
                 case "RestEnabled":
                 {
                     expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_ENABLED);

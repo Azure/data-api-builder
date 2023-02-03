@@ -93,7 +93,7 @@ With the configuration file in place, it's time to start defining which entities
 
 ## Add Book and Author entities
 
-Now, you'll want to expose the `books` and the `authors` table as REST or GraphQL endpoints. To do that, add the following information to the `entities` section of the configuration file.
+Now, we have to expose the entities, `books` and `authors` table as REST or GraphQL endpoints. To do that, add the following information to the `entities` section of the configuration file.
 
 You can do this either using the CLI:
 

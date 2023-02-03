@@ -57,7 +57,7 @@ namespace Azure.DataApiBuilder.Service.Tests
             // Only set IsLateConfigured for MsSQL for now to do certificate validation.
             // For Pg/MySQL databases, set this after SSL connections are enabled for testing.
             if (runtimeConfigProvider.TryGetRuntimeConfiguration(out RuntimeConfig runtimeConfig)
-                && runtimeConfig.DatabaseType == DatabaseType.mssql)
+                && runtimeConfig.DatabaseType is DatabaseType.mssql)
             {
                 runtimeConfigProvider.IsLateConfigured = true;
             }
@@ -81,7 +81,7 @@ namespace Azure.DataApiBuilder.Service.Tests
 
             // Only set IsLateConfigured for MsSQL for now to do certificate validation.
             // For Pg/MySQL databases, set this after SSL connections are enabled for testing.
-            if (config is not null && config.DatabaseType == DatabaseType.mssql)
+            if (config is not null && config.DatabaseType is DatabaseType.mssql)
             {
                 runtimeConfigProvider.IsLateConfigured = true;
             }

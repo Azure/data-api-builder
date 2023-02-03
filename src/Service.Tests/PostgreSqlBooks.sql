@@ -120,7 +120,7 @@ CREATE TABLE type_table(
     string_types text,
     single_types real,
     float_types float,
-    decimal_types decimal,
+    decimal_types decimal(38, 19),
     boolean_types boolean,
     datetime_types timestamp,
     bytearray_types bytea,
@@ -271,8 +271,8 @@ INSERT INTO stocks_price(categoryid, pieceid, price, is_wholesale_price) VALUES 
 INSERT INTO type_table(id, short_types, int_types, long_types, string_types, single_types, float_types, decimal_types, boolean_types, datetime_types, bytearray_types) VALUES
     (1, 1, 1, 1, '', 0.33, 0.33, 0.333333, true, '1999-01-08 10:23:54', '\xABCDEF0123'),
     (2, -1, -1, -1, 'lksa;jdflasdf;alsdflksdfkldj', -9.2, -9.2, -9.292929, false, '19990108 10:23:00', '\x98AB7511AABB1234'),
-    (3, -32768, -2147483648, -9223372036854775808, '', -3.4E38, -1.7E308, 2.929292E-100, true, '990108 102300', '\xFFFFFFFF'),
-    (4, 32767, 2147483647, 9223372036854775807, 'null', 3.4E38, 1.7E308, 2.929292E-100, true, '990108 102300', '\xFFFFFFFF'),
+    (3, -32768, -2147483648, -9223372036854775808, '', -3.4E38, -1.7E308, 2.929292E-19, true, '1753-01-01 00:00:00.000', '\x00000000'),
+    (4, 32767, 2147483647, 9223372036854775807, 'null', 3.4E38, 1.7E308, 2.929292E-14, true, '9999-12-31 23:59:59.997', '\xFFFFFFFF'),
     (5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO trees("treeId", species, region, height) VALUES (1, 'Tsuga terophylla', 'Pacific Northwest', '30m'), (2, 'Pseudotsuga menziesii', 'Pacific Northwest', '40m');
 INSERT INTO fungi(speciesid, region) VALUES (1, 'northeast'), (2, 'southwest');

@@ -30,6 +30,14 @@ namespace Azure.DataApiBuilder.Service.Configurations
         public static ILogger<RuntimeConfigProvider>? ConfigProviderLogger;
 
         /// <summary>
+        /// The IsHttpsRedirectionDisabled is a static member because we use it in static methods
+        /// like StartEngine.
+        /// By Default automatic https redirection is enabled, can be disabled with cli using option `--no-https-redirect`.
+        /// </summary>
+        /// <defaultValue>false</defaultValue>
+        public static bool IsHttpsRedirectionDisabled;
+
+        /// <summary>
         /// Represents the path to the runtime configuration file.
         /// </summary>
         public RuntimeConfigPath? RuntimeConfigPath { get; private set; }

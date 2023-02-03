@@ -592,7 +592,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
                         if (!_runtimeConfigProvider.IsLateConfigured)
                         {
-                            LoggingRelationMessage(linked: true);
+                            LoggingRelationshipHeader(linked: true);
                             string sourceDBOName = sqlMetadataProvider.EntityToDatabaseObject[entityName].FullName;
                             string targetDBOName = sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity].FullName;
                             string cardinality = relationship.Cardinality.ToString().ToLower();
@@ -626,7 +626,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
                     if (relationship.LinkingObject is null && !_runtimeConfigProvider.IsLateConfigured)
                     {
-                        LoggingRelationMessage();
+                        LoggingRelationshipHeader();
                         RelationShipPair sourceTargetRelationshipPair = new(sourceDatabaseObject, targetDatabaseObject);
                         RelationShipPair targetSourceRelationshipPair = new(targetDatabaseObject, sourceDatabaseObject);
                         string sourceDBOName = sqlMetadataProvider.EntityToDatabaseObject[entityName].FullName;
@@ -665,7 +665,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             }
         }
 
-        private void LoggingRelationMessage(bool linked = false)
+        private void LoggingRelationshipHeader(bool linked = false)
         {
             string linkedMessage = linked ? " by <linking.object>(linking.source.fields: <linking.source.fields>), (linking.target.fields: <linking.target.fields>)" :
                 string.Empty;

@@ -53,7 +53,6 @@ dab start --verbose
 dab start --LogLevel 0
 ```
 
-
 ## Get started using `dab` CLI
 
 To quickly get started using the CLI, make sure you have read the [Getting Started](./getting-started/getting-started.md) guide to become familiar with basic Data API builder concepts and then use the [Getting started with Data API Builder (`dab`) CLI](./getting-started/getting-started-dab-cli.md) to learn how to use the CLI tool.

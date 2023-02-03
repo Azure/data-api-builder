@@ -4,7 +4,6 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
 {

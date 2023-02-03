@@ -55,7 +55,7 @@ The command will generate a config file called `dab-config.json` which looks lik
 
 ```json
 {
-  "$schema": "dab.draft-01.schema.json",
+  "$schema": "https://dataapibuilder.azureedge.net/schemas/v{dab-version}-beta/dab.draft.schema.json",
   "data-source": {
     "database-type": "postgresql",
     "connection-string": "Server=ReplaceMe.postgres.database.azure.com;Database=PlaygroundDB;User ID=ReplaceMe;Password=ReplaceMe;Ssl Mode=Require;"

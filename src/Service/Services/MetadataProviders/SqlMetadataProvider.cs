@@ -43,7 +43,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
         // Contains all the referencing and referenced columns for each pair
         // of referencing and referenced tables.
-        private Dictionary<RelationShipPair, ForeignKeyDefinition>? _pairToFkDefinition;
+        public Dictionary<RelationShipPair, ForeignKeyDefinition>? PairToFkDefinition { get; set; }
 
         protected IQueryExecutor QueryExecutor { get; }
 
@@ -229,50 +229,12 @@ namespace Azure.DataApiBuilder.Service.Services
             if (!_runtimeConfigProvider.IsLateConfigured)
             {
                 LogPrimaryKeys();
-                LogRelationships();
             }
 
             GenerateRestPathToEntityMap();
             InitODataParser();
             timer.Stop();
             _logger.LogTrace($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
-        }
-
-        /// <summary>
-        /// Log relationship data for a given entity. This includes source and target entity,
-        /// referenced and referencing tables, as well as the columns in the relationship.
-        /// </summary>
-        private void LogRelationships()
-        {
-            SourceDefinition sourceDefinition;
-            foreach (string entityName in _entities.Keys)
-            {
-                sourceDefinition = GetSourceDefinition(entityName);
-                _logger.LogDebug($"Logging relationship information for entity: {entityName}.");
-                foreach ((string sourceEntity, RelationshipMetadata relationshipData) in sourceDefinition.SourceEntityRelationshipMap)
-                {
-                    _logger.LogDebug($"Source entity: {sourceEntity}");
-                    foreach ((string targetEntity, List<ForeignKeyDefinition> FkDefinitions) in relationshipData.TargetEntityToFkDefinitionMap)
-                    {
-                        _logger.LogDebug($"Target entity: {targetEntity}");
-                        foreach (ForeignKeyDefinition fKDef in FkDefinitions)
-                        {
-                            _logger.LogDebug($"Referenced table: {fKDef.Pair.ReferencedDbTable}");
-                            foreach (string referencedColumn in fKDef.ReferencedColumns)
-                            {
-                                _logger.LogDebug($"Referenced columns: {referencedColumn}");
-                            }
-
-                            _logger.LogDebug($"Referencing table: {fKDef.Pair.ReferencingDbTable}");
-                            foreach (string referencingColumn in fKDef.ReferencingColumns)
-                            {
-                                _logger.LogDebug($"Referenced columns: {referencingColumn}");
-                            }
-
-                        }
-                    }
-                }
-            }
         }
 
         /// <summary>
@@ -1264,9 +1226,9 @@ namespace Azure.DataApiBuilder.Service.Services
 
             // Gather all the referencing and referenced columns for each pair
             // of referencing and referenced tables.
-            _pairToFkDefinition = await QueryExecutor.ExecuteQueryAsync(queryForForeignKeyInfo, parameters, SummarizeFkMetadata);
+            PairToFkDefinition = await QueryExecutor.ExecuteQueryAsync(queryForForeignKeyInfo, parameters, SummarizeFkMetadata);
 
-            if (_pairToFkDefinition is not null)
+            if (PairToFkDefinition is not null)
             {
                 FillInferredFkInfo(dbEntitiesToBePopulatedWithFK);
             }
@@ -1440,7 +1402,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
                             // Add the referencing and referenced columns for this foreign key definition
                             // for the target.
-                            if (_pairToFkDefinition is not null && _pairToFkDefinition.TryGetValue(
+                            if (PairToFkDefinition is not null && PairToFkDefinition.TryGetValue(
                                     fk.Pair, out ForeignKeyDefinition? inferredDefinition))
                             {
                                 // Only add the referencing columns if they have not been
@@ -1471,7 +1433,7 @@ namespace Azure.DataApiBuilder.Service.Services
             DatabaseTable databaseTableA,
             DatabaseTable databaseTableB)
         {
-            if (_pairToFkDefinition is null)
+            if (PairToFkDefinition is null)
             {
                 return false;
             }
@@ -1479,7 +1441,7 @@ namespace Azure.DataApiBuilder.Service.Services
             RelationShipPair pairAB = new(databaseTableA, databaseTableB);
             RelationShipPair pairBA = new(databaseTableB, databaseTableA);
 
-            return (_pairToFkDefinition.ContainsKey(pairAB) || _pairToFkDefinition.ContainsKey(pairBA));
+            return (PairToFkDefinition.ContainsKey(pairAB) || PairToFkDefinition.ContainsKey(pairBA));
         }
 
         /// <summary>

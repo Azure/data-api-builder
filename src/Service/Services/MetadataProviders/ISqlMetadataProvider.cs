@@ -45,6 +45,10 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         StoredProcedureDefinition GetStoredProcedureDefinition(string entityName);
 
+        // Contains all the referencing and referenced columns for each pair
+        // of referencing and referenced tables.
+        public Dictionary<RelationShipPair, ForeignKeyDefinition>? PairToFkDefinition { get; }
+
         Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; }
 
         /// <summary>

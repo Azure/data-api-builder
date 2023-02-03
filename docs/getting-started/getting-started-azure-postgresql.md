@@ -14,7 +14,7 @@ If you are connecting to Azure Database for PostgreSQL Flexible Server, the conn
 `Server={your_server}.postgres.database.azure.com;Database={your_database};Port=5432;User Id={your_username};Password={your_password};Ssl Mode=Require;`
 ```
 
-If you are connecting to Azure Database for PostgreSQL Single Server, the connection string look like:
+If you are connecting to Azure Database for PostgreSQL Single Server, the connection string looks like:
 
 ```text
 `Server={your_server}.postgres.database.azure.com;Database={your_database};Port=5432;User Id={your_username}@{your_server};Password={your_password};Ssl Mode=Require;`

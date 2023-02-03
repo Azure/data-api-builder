@@ -600,7 +600,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             string targetDBOName = runtimeConfig.Entities[relationship.TargetEntity].SourceName;
                             string cardinality = relationship.Cardinality.ToString().ToLower();
                             RelationShipPair linkedSourceRelationshipPair = new(linkingDatabaseObject, sourceDatabaseObject);
-                            RelationShipPair linkedTargetRelationshipPair = new(linkingDatabaseObject, sourceDatabaseObject);
+                            RelationShipPair linkedTargetRelationshipPair = new(linkingDatabaseObject, targetDatabaseObject);
                             ForeignKeyDefinition linkedSourceFKDef = sqlMetadataProvider.PairToFkDefinition![linkedSourceRelationshipPair];
                             ForeignKeyDefinition linkedTargetFKDef = sqlMetadataProvider.PairToFkDefinition![linkedTargetRelationshipPair];
                             string referencedSourceColumns = string.Join(",", linkedSourceFKDef.ReferencedColumns);

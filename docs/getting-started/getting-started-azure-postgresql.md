@@ -117,7 +117,7 @@ or by adding the `Author` entity manually to the config file:
 }
 ```
 
-within the `entities` object you can create any entity with any name (as long as it is valid for REST and GraphQL). The name `Author`, in this case, will be used to build the REST path and the GraphQL type. Within the entity you have the `source` element that specifies which table contains the entity data. In our case, it is `authors`.
+within the `entities` object you can create any entity with any name (as long as it is valid for REST and GraphQL). The name `Author`, in this case, will be used to build the REST path and the GraphQL type. Within the entity you have the `source` element that specifies which table in the database contains the entity data. In our case, it is `authors`.
 
 > **NOTE**: Entities names are case sensitive, and they will be exposed via REST and GraphQL as you have typed them. Take a look at the [Best Practices](../best-practices.md) document to learn the best practices on entities names.
 

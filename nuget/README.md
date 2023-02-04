@@ -1,10 +1,10 @@
-# Data API builder for Azure Databases
+# Microsoft Data API builder for Azure Databases
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 ## About
 
-**Data API builder for Azure Databases provides modern REST and GraphQL endpoints to your Azure Databases.**
+**Microsoft Data API builder for Azure Databases provides modern REST and GraphQL endpoints to your Azure Databases.**
 
 With Data API builder, database objects can be exposed via REST or GraphQL endpoints so that your data can be accessed using modern techniques on any platform, any language, and any device. With an integrated and flexible policy engine, granular security is assured; integrated with Azure SQL, SQL Server, PostgreSQL, MySQL and Cosmos DB, gives developers an efficiency boost like never seen before.
 

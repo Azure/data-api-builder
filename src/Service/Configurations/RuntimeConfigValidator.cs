@@ -559,6 +559,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                     }
 
+                    DatabaseTable sourceDatabaseObject = (DatabaseTable)sqlMetadataProvider.EntityToDatabaseObject[entityName];
+                    DatabaseTable targetDatabaseObject = (DatabaseTable)sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity];
                     if (relationship.LinkingObject is not null)
                     {
                         (string linkingTableSchema, string linkingTableName) = sqlMetadataProvider.ParseSchemaAndDbTableName(relationship.LinkingObject)!;
@@ -566,8 +568,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
                         if (relationship.LinkingSourceFields is null || relationship.SourceFields is null)
                         {
-                            if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(linkingDatabaseObject,
-                                (DatabaseTable)sqlMetadataProvider.EntityToDatabaseObject[entityName]))
+                            if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(linkingDatabaseObject, sourceDatabaseObject))
                             {
                                 throw new DataApiBuilderException(
                                 message: $"Could not find relationship between Linking Object: {relationship.LinkingObject}" +
@@ -579,8 +580,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
                         if (relationship.LinkingTargetFields is null || relationship.TargetFields is null)
                         {
-                            if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(linkingDatabaseObject,
-                                (DatabaseTable)sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity]))
+                            if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(linkingDatabaseObject, targetDatabaseObject))
                             {
                                 throw new DataApiBuilderException(
                                 message: $"Could not find relationship between Linking Object: {relationship.LinkingObject}" +
@@ -589,15 +589,38 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                             }
                         }
+
+                        if (!_runtimeConfigProvider.IsLateConfigured)
+                        {
+                            LoggingRelationshipHeader(linked: true);
+                            string sourceDBOName = sqlMetadataProvider.EntityToDatabaseObject[entityName].FullName;
+                            string targetDBOName = sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity].FullName;
+                            string cardinality = relationship.Cardinality.ToString().ToLower();
+                            RelationShipPair linkedSourceRelationshipPair = new(linkingDatabaseObject, sourceDatabaseObject);
+                            RelationShipPair linkedTargetRelationshipPair = new(linkingDatabaseObject, targetDatabaseObject);
+                            ForeignKeyDefinition? fKDef;
+                            string referencedSourceColumns = relationship.SourceFields is not null ? string.Join(",", relationship.SourceFields) :
+                                sqlMetadataProvider.PairToFkDefinition!.TryGetValue(linkedSourceRelationshipPair, out fKDef) ?
+                                string.Join(",", fKDef.ReferencedColumns) : string.Empty;
+                            string referencingSourceColumns = relationship.LinkingSourceFields is not null ? string.Join(",", relationship.LinkingSourceFields) :
+                                sqlMetadataProvider.PairToFkDefinition!.TryGetValue(linkedSourceRelationshipPair, out fKDef) ?
+                                string.Join(",", fKDef.ReferencingColumns) : string.Empty;
+                            string referencedTargetColumns = relationship.TargetFields is not null ? string.Join(",", relationship.TargetFields) :
+                                sqlMetadataProvider.PairToFkDefinition!.TryGetValue(linkedTargetRelationshipPair, out fKDef) ?
+                                string.Join(",", fKDef.ReferencedColumns) : string.Empty;
+                            string referencingTargetColumns = relationship.LinkingTargetFields is not null ? string.Join(",", relationship.LinkingTargetFields) :
+                                sqlMetadataProvider.PairToFkDefinition!.TryGetValue(linkedTargetRelationshipPair, out fKDef) ?
+                                string.Join(",", fKDef.ReferencingColumns) : string.Empty;
+                            _logger.LogDebug($"{entityName}: {sourceDBOName}({referencedSourceColumns}) related to {cardinality} " +
+                                $"{relationship.TargetEntity}: {targetDBOName}({referencedTargetColumns}) by " +
+                                $"{relationship.LinkingObject}(linking.source.fields: {referencingSourceColumns}), (linking.target.fields: {referencingTargetColumns})");
+                        }
                     }
 
                     if (relationship.LinkingObject is null
                         && (relationship.SourceFields is null || relationship.TargetFields is null))
                     {
-                        if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(
-                                (DatabaseTable)sqlMetadataProvider.EntityToDatabaseObject[entityName],
-                                (DatabaseTable)sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity])
-                            )
+                        if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(sourceDatabaseObject, targetDatabaseObject))
                         {
                             throw new DataApiBuilderException(
                             message: $"Could not find relationship between entities: {entityName} and {relationship.TargetEntity}.",
@@ -605,8 +628,44 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                         }
                     }
+
+                    if (relationship.LinkingObject is null && !_runtimeConfigProvider.IsLateConfigured)
+                    {
+                        LoggingRelationshipHeader();
+                        RelationShipPair sourceTargetRelationshipPair = new(sourceDatabaseObject, targetDatabaseObject);
+                        RelationShipPair targetSourceRelationshipPair = new(targetDatabaseObject, sourceDatabaseObject);
+                        string sourceDBOName = sqlMetadataProvider.EntityToDatabaseObject[entityName].FullName;
+                        string targetDBOName = sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity].FullName;
+                        string cardinality = relationship.Cardinality.ToString().ToLower();
+                        ForeignKeyDefinition? fKDef;
+                        string sourceColumns = relationship.SourceFields is not null ? string.Join(",", relationship.SourceFields) :
+                            sqlMetadataProvider.PairToFkDefinition!.TryGetValue(sourceTargetRelationshipPair, out fKDef) ?
+                            string.Join(",", fKDef.ReferencingColumns) :
+                            sqlMetadataProvider.PairToFkDefinition!.TryGetValue(targetSourceRelationshipPair, out fKDef) ?
+                            string.Join(",", fKDef.ReferencedColumns) : string.Empty;
+                        string targetColumns = relationship.TargetFields is not null ? string.Join(",", relationship.TargetFields) :
+                            sqlMetadataProvider.PairToFkDefinition!.TryGetValue(sourceTargetRelationshipPair, out fKDef) ?
+                            string.Join(",", fKDef.ReferencedColumns) :
+                            sqlMetadataProvider.PairToFkDefinition!.TryGetValue(targetSourceRelationshipPair, out fKDef) ?
+                            string.Join(",", fKDef.ReferencingColumns) : string.Empty;
+                        _logger.LogDebug($"{entityName}: {sourceDBOName}({sourceColumns}) is related to {cardinality} " +
+                            $"{relationship.TargetEntity}: {targetDBOName}({targetColumns}).");
+                    }
                 }
             }
+        }
+
+        /// <summary>
+        /// Helper function simply logs the header we display before logging relationship information.
+        /// </summary>
+        /// <param name="linked"></param>
+        private void LoggingRelationshipHeader(bool linked = false)
+        {
+            string linkedMessage = linked ? " by <linking.object>(linking.source.fields: <linking.source.fields>), (linking.target.fields: <linking.target.fields>)" :
+                string.Empty;
+            _logger.LogDebug($"Logging relationship information in the form:\n" +
+                             $"<entity>: <entity.source.object>(<source.fields>) is related to <cardinality> " +
+                             $"<target.entity: <target.entity.source.object(<target.fields>){linkedMessage}.");
         }
 
         /// <summary>

@@ -43,7 +43,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
         // Contains all the referencing and referenced columns for each pair
         // of referencing and referenced tables.
-        private Dictionary<RelationShipPair, ForeignKeyDefinition>? _pairToFkDefinition;
+        public Dictionary<RelationShipPair, ForeignKeyDefinition>? PairToFkDefinition { get; set; }
 
         protected IQueryExecutor QueryExecutor { get; }
 
@@ -1263,9 +1263,9 @@ namespace Azure.DataApiBuilder.Service.Services
 
             // Gather all the referencing and referenced columns for each pair
             // of referencing and referenced tables.
-            _pairToFkDefinition = await QueryExecutor.ExecuteQueryAsync(queryForForeignKeyInfo, parameters, SummarizeFkMetadata);
+            PairToFkDefinition = await QueryExecutor.ExecuteQueryAsync(queryForForeignKeyInfo, parameters, SummarizeFkMetadata);
 
-            if (_pairToFkDefinition is not null)
+            if (PairToFkDefinition is not null)
             {
                 FillInferredFkInfo(dbEntitiesToBePopulatedWithFK);
             }
@@ -1439,7 +1439,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
                             // Add the referencing and referenced columns for this foreign key definition
                             // for the target.
-                            if (_pairToFkDefinition is not null && _pairToFkDefinition.TryGetValue(
+                            if (PairToFkDefinition is not null && PairToFkDefinition.TryGetValue(
                                     fk.Pair, out ForeignKeyDefinition? inferredDefinition))
                             {
                                 // Only add the referencing columns if they have not been
@@ -1470,7 +1470,7 @@ namespace Azure.DataApiBuilder.Service.Services
             DatabaseTable databaseTableA,
             DatabaseTable databaseTableB)
         {
-            if (_pairToFkDefinition is null)
+            if (PairToFkDefinition is null)
             {
                 return false;
             }
@@ -1478,7 +1478,7 @@ namespace Azure.DataApiBuilder.Service.Services
             RelationShipPair pairAB = new(databaseTableA, databaseTableB);
             RelationShipPair pairBA = new(databaseTableB, databaseTableA);
 
-            return (_pairToFkDefinition.ContainsKey(pairAB) || _pairToFkDefinition.ContainsKey(pairBA));
+            return (PairToFkDefinition.ContainsKey(pairAB) || PairToFkDefinition.ContainsKey(pairBA));
         }
 
         /// <summary>

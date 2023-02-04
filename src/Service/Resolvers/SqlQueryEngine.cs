@@ -29,7 +29,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private readonly IQueryBuilder _queryBuilder;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationResolver _authorizationResolver;
-        private readonly ILogger<SqlQueryEngine> _logger;
+        private readonly ILogger<IQueryEngine> _logger;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private readonly GQLFilterParser _gQLFilterParser;
 
@@ -43,7 +43,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             IHttpContextAccessor httpContextAccessor,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
-            ILogger<SqlQueryEngine> logger,
+            ILogger<IQueryEngine> logger,
             RuntimeConfigProvider runtimeConfigProvider)
         {
             _queryExecutor = queryExecutor;

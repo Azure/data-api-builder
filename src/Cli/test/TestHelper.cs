@@ -46,6 +46,7 @@ namespace Cli.Tests
 
             // The new process should not be exited after triggering the start command.
             Assert.IsFalse(process.HasExited);
+
             return process;
         }
 

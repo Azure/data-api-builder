@@ -553,10 +553,15 @@ namespace Cli
         /// <summary>
         /// Checks if config can be correctly parsed by deserializing the
         /// json config into runtime config object.
-        /// Also checks that connection-string is not null or empty whitespace
+        /// Also checks that connection-string is not null or empty whitespace.
+        /// If parsing is successful and the config has valid connection-string, it
+        /// returns true with out as deserializedConfig, else returns false.
         /// </summary>
-        public static bool CanParseConfigCorrectly(string configFile)
+        public static bool CanParseConfigCorrectly(
+            string configFile,
+            [NotNullWhen(true)] out RuntimeConfig? deserializedRuntimeConfig)
         {
+            deserializedRuntimeConfig = null;
             if (!TryReadRuntimeConfig(configFile, out string runtimeConfigJson))
             {
                 _logger.LogError($"Failed to read the config file: {configFile}.");
@@ -565,7 +570,7 @@ namespace Cli
 
             if (!RuntimeConfig.TryGetDeserializedRuntimeConfig(
                     runtimeConfigJson,
-                    out RuntimeConfig? deserializedRuntimeConfig,
+                    out deserializedRuntimeConfig,
                     logger: null))
             {
                 _logger.LogError($"Failed to parse the config file: {configFile}.");

@@ -583,6 +583,9 @@ public class EndToEndTests
         Assert.IsNotNull(output);
         if (expectSuccess)
         {
+            Assert.IsTrue(output.Contains($"Setting default minimum LogLevel:"));
+            output = process.StandardOutput.ReadLine();
+            Assert.IsNotNull(output);
             Assert.IsTrue(output.Contains("Starting the runtime engine..."));
         }
         else

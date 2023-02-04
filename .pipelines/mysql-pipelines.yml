@@ -32,7 +32,7 @@ jobs:
     inputs:
       restoreSolution: '$(solution)'
       feedsToUse: config
-      nugetConfigPath: nuget.config
+      nugetConfigPath: Nuget.config
 
   - task: DockerInstaller@0
     displayName: Docker Installer

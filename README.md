@@ -8,7 +8,7 @@ Latest version of Data API builder is  **0.4.11** [What's new?](./docs/whats-new
 
 **Data API builder for Azure Databases provides modern REST and GraphQL endpoints to your Azure Databases.**
 
-With Data API builder, database objects can be exposed via REST or GraphQL endpoints so that your data can be accessed using modern techniques on any platform, any language, and any device. With an integrated and flexible policy engine, granular security is assured; integrated with Azure SQL, SQL Server, PostgreSQL, MySQL, MariaDB and Cosmos DB, gives developers an efficiency boost like never seen before.
+With Data API builder, database objects can be exposed via REST or GraphQL endpoints so that your data can be accessed using modern techniques on any platform, any language, and any device. With an integrated and flexible policy engine, granular security is assured; integrated with Azure SQL, SQL Server, PostgreSQL, MySQL and Cosmos DB, gives developers an efficiency boost like never seen before.
 
 ![Data API Builder Architecture Overview Diagram](./docs/media/data-api-builder-overview.png)
 

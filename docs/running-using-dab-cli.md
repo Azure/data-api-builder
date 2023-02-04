@@ -53,7 +53,7 @@ dab start --verbose
 dab start --LogLevel 0
 ```
 
-This will log the information as follow:
+This will log the information as follows:
 
 - At startup 
   - what configuration file is being used (Level: Information)

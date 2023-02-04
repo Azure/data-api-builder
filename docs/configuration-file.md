@@ -139,7 +139,7 @@ This section contains options that will affect the runtime behavior and/or all e
 
 #### Host
 
-`mode`: Define if the engine should run in `production` mode or in `development` mode. Only when running in development mode the underlying database errors will be exposed in detail. Optional. Default value is `production`.
+`mode`: Define if the engine should run in `production` mode or in `development` mode. Only when running in development mode the underlying database errors will be exposed in detail. Optional. Default value is `production`. With `production` mode, the default `--LogLevel` is `Error` whereas with `development` mode it is `Debug`. These default log levels can be overridden by starting the engine through `dab` cli as mentioned [here](./running-using-dab-cli.md#run-engine-using-dab-cli).
 
 `cors`: CORS configuration
 

@@ -68,7 +68,7 @@ This will log the information as follows:
   - the generated queries sent to the database (Level: Debug)
 
 - Internal behavior
-  - view which queries are generated (any query, not only those necessarily related to a request) and sent to the database (Level: Debug)
+  - view which queries are generated (any query, not just those necessarily related to a request) and sent to the database (Level: Debug)
 
 
 ## Get started using `dab` CLI

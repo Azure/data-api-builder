@@ -23,7 +23,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         where TConnection : DbConnection, new()
     {
         protected DbExceptionParser DbExceptionParser { get; }
-        protected ILogger<QueryExecutor<TConnection>> QueryExecutorLogger { get; }
+        protected ILogger<IQueryExecutor> QueryExecutorLogger { get; }
         private RuntimeConfigProvider ConfigProvider { get; }
 
         // The maximum number of attempts that can be made to execute the query successfully in addition to the first attempt.
@@ -35,7 +35,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public virtual DbConnectionStringBuilder ConnectionStringBuilder { get; set; }
 
         public QueryExecutor(DbExceptionParser dbExceptionParser,
-                             ILogger<QueryExecutor<TConnection>> logger,
+                             ILogger<IQueryExecutor> logger,
                              DbConnectionStringBuilder connectionStringBuilder,
                              RuntimeConfigProvider configProvider)
         {

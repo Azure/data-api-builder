@@ -53,7 +53,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public MsSqlQueryExecutor(
             RuntimeConfigProvider runtimeConfigProvider,
             DbExceptionParser dbExceptionParser,
-            ILogger<QueryExecutor<SqlConnection>> logger)
+            ILogger<IQueryExecutor> logger)
             : base(dbExceptionParser,
                   logger,
                   new SqlConnectionStringBuilder(

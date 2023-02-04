@@ -52,7 +52,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         protected static RuntimeConfig _runtimeConfig;
         protected static ILogger<ISqlMetadataProvider> _sqlMetadataLogger;
         protected static ILogger<SqlMutationEngine> _mutationEngineLogger;
-        protected static ILogger<SqlQueryEngine> _queryEngineLogger;
+        protected static ILogger<IQueryEngine> _queryEngineLogger;
         protected static ILogger<RestController> _restControllerLogger;
         protected static GQLFilterParser _gQLFilterParser;
         protected const string MSSQL_DEFAULT_DB_NAME = "master";
@@ -73,7 +73,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         protected static async Task InitializeTestFixture(TestContext context, List<string> customQueries = null,
             List<string[]> customEntities = null)
         {
-            _queryEngineLogger = new Mock<ILogger<SqlQueryEngine>>().Object;
+            _queryEngineLogger = new Mock<ILogger<IQueryEngine>>().Object;
             _mutationEngineLogger = new Mock<ILogger<SqlMutationEngine>>().Object;
             _restControllerLogger = new Mock<ILogger<RestController>>().Object;
 

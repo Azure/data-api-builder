@@ -44,7 +44,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public MySqlQueryExecutor(
             RuntimeConfigProvider runtimeConfigProvider,
             DbExceptionParser dbExceptionParser,
-            ILogger<QueryExecutor<MySqlConnection>> logger)
+            ILogger<IQueryExecutor> logger)
             : base(dbExceptionParser,
                   logger,
                   new MySqlConnectionStringBuilder(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString),

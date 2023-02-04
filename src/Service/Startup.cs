@@ -451,8 +451,9 @@ namespace Azure.DataApiBuilder.Service
         }
 
         /// <summary>
-        /// Determines the log level It creates a LoggerFactory
-        /// it finds out the default logLevel based on the host mode configured in the runtime config.
+        /// If LogLevel is NOT overridden by CLI, attempts to find the 
+        /// minimum log level based on host.mode in the runtime config if available.
+        /// Creates a logger factory with the minimum log level.
         /// </summary>
         public static ILoggerFactory CreateLoggerFactoryForHostedAndNonHostedScenario(IServiceProvider serviceProvider)
         {

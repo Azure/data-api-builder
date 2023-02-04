@@ -581,11 +581,11 @@ public class EndToEndTests
         Assert.IsTrue(output.Contains($"User provided config file: {_testRuntimeConfig}"));
         output = process.StandardOutput.ReadLine();
         Assert.IsNotNull(output);
-        Assert.IsTrue(output.Contains($"Setting default minimum LogLevel:"));
-        output = process.StandardOutput.ReadLine();
-        Assert.IsNotNull(output);
         if (expectSuccess)
         {
+            Assert.IsTrue(output.Contains($"Setting default minimum LogLevel:"));
+            output = process.StandardOutput.ReadLine();
+            Assert.IsNotNull(output);
             Assert.IsTrue(output.Contains("Starting the runtime engine..."));
         }
         else

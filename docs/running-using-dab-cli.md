@@ -53,6 +53,24 @@ dab start --verbose
 dab start --LogLevel 0
 ```
 
+This will log the information as follow:
+
+- At startup 
+  - what configuration file is being used (Level: Information)
+
+- During the (in-memory schema generation)
+  - what entities have been loaded (names, paths) (Level: Information)
+  - automatically identified relationships columns (Level: Debug)
+  - automatically identified primary keys, column types etc (Level: Debug)
+
+- Whenever a request is received
+  - if request has been authenticated or not and which role has been assigned (Level: Debug)
+  - the generated queries sent to the database (Level: Debug)
+
+- Internal behavior
+  - view which queries are generated (any query, not only those necessarily related to a request) and sent to the database (Level: Debug)
+
+
 ## Get started using `dab` CLI
 
 To quickly get started using the CLI, make sure you have read the [Getting Started](./getting-started/getting-started.md) guide to become familiar with basic Data API builder concepts and then use the [Getting started with Data API Builder (`dab`) CLI](./getting-started/getting-started-dab-cli.md) to learn how to use the CLI tool.

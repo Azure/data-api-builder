@@ -123,7 +123,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<DbExceptionParser> dbExceptionParser = new(runtimeConfigProvider);
             Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
             Mock<ILogger<ISqlMetadataProvider>> sqlMetadataLogger = new();
-            Mock<ILogger<SqlQueryEngine>> queryEngineLogger = new();
+            Mock<ILogger<IQueryEngine>> queryEngineLogger = new();
             Mock<ILogger<SqlMutationEngine>> mutationEngingLogger = new();
             Mock<ILogger<AuthorizationResolver>> authLogger = new();
 

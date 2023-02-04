@@ -54,7 +54,7 @@ steps:
   inputs:
     restoreSolution: '$(solution)'
     feedsToUse: config
-    nugetConfigPath: nuget/Nuget.config
+    nugetConfigPath: nuget.config
 
 - task: DotNetCoreCLI@2
   displayName: Check formatting

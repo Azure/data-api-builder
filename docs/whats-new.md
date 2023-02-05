@@ -8,7 +8,7 @@ Details on how to install the latest version are here: [Installing DAB CLI](./ge
 
 ## Version 0.5.0
 
-The full list of release notes for this version is available here: [version 0.5.0 release notes](https://github.com/Azure/data-api-builder/releases/tag/v0.5.1-beta)
+The full list of release notes for this version is available here: [version 0.5.0 release notes](https://github.com/Azure/data-api-builder/releases/tag/v0.5.0-beta)
 
 ## Version 0.4.11
 

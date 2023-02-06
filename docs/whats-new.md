@@ -7,7 +7,6 @@
 Details on how to install the latest version are here: [Installing DAB CLI](./getting-started/getting-started.md#installing-dab-cli)
 
 ## Version 0.5.0
-
 - [Public Microsoft.DataApiBuilder nuget](./whats-new-0.5.0.md#public-microsoft.dataapibuilder-nuget)
 - [Public JSON Schema](./whats-new-0.5.0.md#public-json-schema)
 - [New `execute` action for stored procedures in Azure SQL](./whats-new-0.5.0.md#new-execute-action-for-stored-procedures-in-azure-sql)

@@ -24,7 +24,7 @@ dotnet tool install --global  Microsoft.DataApiBuilder
 
 ## Public JSON Schema
 
-JSON Schema has been published here:
+The Json schema is available here:
 
 ```text
 https://dataapibuilder.azureedge.net/schemas/v0.5.0-beta/dab.draft.schema.json
@@ -37,8 +37,7 @@ This will give you intellisense if you are using an IDE, like VS Code, that supp
 A new `execute` action is introduced as the only allowed action in the `permissions` section of the configuration file only when an entity is backed by a source type of `stored-procedure`. By default, only `POST` method is allowed for such entities and only the GraphQL `mutation` operation is configured with the prefix `execute` added to their name. This behavior can be overridden by explicitly specifying the allowed `methods` in the `rest` section of the configuration file. Similarly, for GraphQL, the `operation` in the `graphql` section, can be overridden to be `query` instead. For more details, see [here.](./views-and-stored-procedures.md/#stored-procedures)
 
 ## New `mappings` section
-
-In the `mappings` section are defined the mappings between database fields and the exposed GraphQL type and REST endpoint fields.
+In the `mappings` section, the mappings between database object field names and their corresponding exposed field names are defined for both GraphQL and REST endpoints.
 
 The format is:
 
@@ -58,7 +57,6 @@ means the `title` field in the related database object will be mapped to `descri
 To enable an additional layer of Security (eg. Row Level Security aka RLS), DAB now supports sending data to the underlying Sql Server database via SESSION_CONTEXT. For more details, please refer to this detailed document on SESSION_CONTEXT : [Runtime to Database Authorization](./runtime-to-database-authorization.md).  
 
 ## Support for filter on nested objects within a document in PostgreSQL
-
 With PostgreSQL, you can now use the object or array relationship defined in your schema which enables to do filter operations on the nested objects just like Azure SQL.
 
 ```graphql
@@ -74,7 +72,6 @@ query {
 ```
 
 ## Support scalar list in CosmosDB NoSQL
-
 The ability to query `List` of Scalars is now added for Cosmos DB.
 
 Consider the below type definition
@@ -108,7 +105,6 @@ query ($id: ID, $partitionKeyValue: String) {
 - In CLI, the Microsoft.DataAPIBuilder's version is logged along with the logs associated with the respective command's execution.
 
 ## Updated CLI
-
 - `--no-https-redirect` option is added to `start` command. Using this option, the automatic redirection of requests from `http` to `https` can be prevented.
 - In MsSql, session context can be enabled using `--set-session-context true` in the `init` command. A sample command is shown below
   - `dab init --database-type mssql --connection-string "Connection String" --set-session-context true` 

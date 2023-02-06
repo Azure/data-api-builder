@@ -130,9 +130,11 @@ type GetCowrittenBooksByAuthor {
   id: Int!
   title: String
 }
+```
 
 In the schema, both query and mutation operations for stored procedures will have `execute` as a prefix. For the above stored procedure the exact query name field generated would be `executeGetCowrittenBooksByAuthor`
 
+```
 type Query {
   """
   Execute Stored-Procedure GetCowrittenBooksByAuthor and get results from the database
@@ -161,6 +163,7 @@ Runtime configuration:
 ```
 GraphQL Schema Components: type and mutation field:
 
+```graphql
 type Mutation {
   type GetCowrittenBooksByAuthor {
     id: Int!
@@ -177,6 +180,7 @@ type Mutation {
     searchType: String = "S"
   ): [GetCowrittenBooksByAuthor!]!
 }
+```
 
 If the stored procedure accepts parameters, those can be passed as parameter of the query or mutation. For example:
 

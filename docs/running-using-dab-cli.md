@@ -1,18 +1,13 @@
 # Running Data API Builder for Azure Databases using CLI
 
-The easiest option that doesn't require cloning the repo is to use the `dab` [CLI tool](./dab-cli.md) that you can find in the `Release` tab:
+The easiest option that doesn't require cloning the repo is to use the `dab` [CLI tool](./dab-cli.md) that you can find in the `Microsoft.DataApiBuilder` nuget package [here.](https://www.nuget.org/packages/Microsoft.DataApiBuilder)
 
 ## Install `dab` CLI
 
-You can install the `dab` CLI using [.NET tools](https://learn.microsoft.com/dotnet/core/tools/global-tools):
-
-- Download the latest version of the package: [dab.<version_number>.nupkg](https://github.com/Azure/data-api-builder/releases/)
-- Navigate to the folder where the package file is downloaded.
-
-then, to install this tool globally, use:
+You can install the latest `dab` CLI using [.NET tools](https://learn.microsoft.com/dotnet/core/tools/global-tools):
 
 ```bash
-dotnet tool install -g --add-source ./ dab --version <version_number>
+dotnet tool install --global  Microsoft.DataApiBuilder
 ```
 
 > **ATTENTION**: if you are running on Linux or MacOS, you may need to add .NET global tools to your PATH to call `dab` directly. Once installed run:
@@ -23,7 +18,7 @@ dotnet tool install -g --add-source ./ dab --version <version_number>
 If you already have an older version of `dab` CLI installed, update the tool using:
 
 ```bash
-dotnet tool update -g --add-source ./ dab --version <version_number>
+dotnet tool update -g Microsoft.DatApiBuilder --version <version_number>
 ```
 
 ### Validate the Install
@@ -36,7 +31,7 @@ dab --version
 
 ## Run engine using `dab` CLI
 
-To start the Data API builder engine, use the `start` action:
+To start the Data API builder engine, use the `start` action if you have the configuration file `dab-config.json` as described [here](./configuration-file.md) in the current directory:
 
 ```bash
 dab start
@@ -80,5 +75,5 @@ To quickly get started using the CLI, make sure you have read the [Getting Start
 For any reason, if you need to uninstall `dab` cli, simply do:
 
 ```bash
-dotnet tool uninstall -g dab
+dotnet tool uninstall -g Microsoft.DataApiBuilder
 ```

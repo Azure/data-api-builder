@@ -43,7 +43,7 @@ The `data-source` section in the configuration file has been updated to be consi
 }
 ```
 
-The elements available in the `options` section will depends on the chosen `database-type`.
+The elements available in the `options` section will depend on the chosen `database-type`.
 
 ## Support for filter on nested objects within a document in Azure SQL and SQL Server
 

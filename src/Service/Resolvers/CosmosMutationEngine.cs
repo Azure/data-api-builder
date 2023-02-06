@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
@@ -32,7 +31,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             _metadataProvider = metadataProvider;
         }
 
-        private async Task<JsonObject> ExecuteAsync(IDictionary<string, object?> queryArgs, CosmosOperationMetadata resolver)
+        private async Task<JObject> ExecuteAsync(IDictionary<string, object?> queryArgs, CosmosOperationMetadata resolver)
         {
             // TODO: add support for all mutation types
             // we only support CreateOrUpdate (Upsert) for now
@@ -55,7 +54,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             Container container = client.GetDatabase(resolver.DatabaseName)
                                         .GetContainer(resolver.ContainerName);
 
-            ItemResponse<JsonObject>? response = resolver.OperationType switch
+            ItemResponse<JObject>? response = resolver.OperationType switch
             {
                 Config.Operation.UpdateGraphQL => await HandleUpdateAsync(queryArgs, container),
                 Config.Operation.Create => await HandleCreateAsync(queryArgs, container),
@@ -66,7 +65,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return response.Resource;
         }
 
-        private static async Task<ItemResponse<JsonObject>> HandleDeleteAsync(IDictionary<string, object?> queryArgs, Container container)
+        private static async Task<ItemResponse<JObject>> HandleDeleteAsync(IDictionary<string, object?> queryArgs, Container container)
         {
             string? partitionKey = null;
             string? id = null;
@@ -91,23 +90,23 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 throw new InvalidDataException("Partition Key field is mandatory");
             }
 
-            return await container.DeleteItemAsync<JsonObject>(id, new PartitionKey(partitionKey));
+            return await container.DeleteItemAsync<JObject>(id, new PartitionKey(partitionKey));
         }
 
-        private static async Task<ItemResponse<JsonObject>> HandleCreateAsync(IDictionary<string, object?> queryArgs, Container container)
+        private static async Task<ItemResponse<JObject>> HandleCreateAsync(IDictionary<string, object?> queryArgs, Container container)
         {
             object? item = queryArgs[CreateMutationBuilder.INPUT_ARGUMENT_NAME];
 
-            JsonObject? input;
+            JObject? input;
             // Variables were provided to the mutation
             if (item is Dictionary<string, object?>)
             {
-                input = (JsonObject?)ParseVariableInputItem(item);
+                input = (JObject?)ParseVariableInputItem(item);
             }
             else
             {
                 // An inline argument was set
-                input = (JsonObject?)ParseInlineInputItem(item);
+                input = (JObject?)ParseInlineInputItem(item);
             }
 
             if (input is null)
@@ -118,7 +117,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return await container.CreateItemAsync(input);
         }
 
-        private static async Task<ItemResponse<JsonObject>> HandleUpdateAsync(IDictionary<string, object?> queryArgs, Container container)
+        private static async Task<ItemResponse<JObject>> HandleUpdateAsync(IDictionary<string, object?> queryArgs, Container container)
         {
             string? partitionKey = null;
             string? id = null;
@@ -145,16 +144,16 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             object? item = queryArgs[CreateMutationBuilder.INPUT_ARGUMENT_NAME];
 
-            JsonObject? input;
+            JObject? input;
             // Variables were provided to the mutation
             if (item is Dictionary<string, object?>)
             {
-                input = (JsonObject?)ParseVariableInputItem(item);
+                input = (JObject?)ParseVariableInputItem(item);
             }
             else
             {
                 // An inline argument was set
-                input = (JsonObject?)ParseInlineInputItem(item);
+                input = (JObject?)ParseInlineInputItem(item);
             }
 
             if (input is null)
@@ -163,7 +162,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else
             {
-                return await container.ReplaceItemAsync<JsonObject>(input, id, new PartitionKey(partitionKey), new ItemRequestOptions());
+                return await container.ReplaceItemAsync<JObject>(input, id, new PartitionKey(partitionKey), new ItemRequestOptions());
             }
         }
 
@@ -176,13 +175,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             if (item is Dictionary<string, object?> inputItem)
             {
-                JsonObject? createInput = new();
+                JObject? createInput = new();
 
                 foreach (string key in inputItem.Keys)
                 {
-                    if (inputItem.TryGetValue(key, out object? value) && value is not null)
+                    if (inputItem.TryGetValue(key, out object? value) && value != null)
                     {
-                        createInput.Add(key, JsonNode.Parse(inputItem.GetValueOrDefault(key)!.ToString()!));
+                        createInput.Add(new JProperty(key, JToken.FromObject(inputItem.GetValueOrDefault(key)!)));
                     }
                 }
 
@@ -199,12 +198,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <returns>In the form of JObject</returns>
         private static object? ParseInlineInputItem(object? item)
         {
-            JsonObject? createInput = new();
+            JObject? createInput = new();
 
             if (item is ObjectFieldNode node)
             {
-                Object? value = ParseInlineInputItem(node.Value.Value);
-                createInput.Add(node.Name.Value, value == null ? null : value.ToString());
+                createInput.Add(new JProperty(node.Name.Value, ParseInlineInputItem(node.Value.Value)));
                 return createInput;
             }
 
@@ -212,8 +210,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 foreach (ObjectFieldNode subfield in nodeList)
                 {
-                    Object? value = ParseInlineInputItem(subfield.Value.Value);
-                    createInput.Add(subfield.Name.Value, value == null ? null : value.ToString());
+                    createInput.Add(new JProperty(subfield.Name.Value, ParseInlineInputItem(subfield.Value.Value)));
                 }
 
                 return createInput;
@@ -222,7 +219,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // For nested array objects
             if (item is List<IValueNode> nodeArray)
             {
-                JsonArray jarrayObj = new();
+                JArray jarrayObj = new();
 
                 foreach (IValueNode subfield in nodeArray)
                 {
@@ -256,7 +253,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             CosmosOperationMetadata mutation = new(databaseName, containerName, mutationOperation);
             // TODO: we are doing multiple round of serialization/deserialization
             // fixme
-            JsonObject jObject = await ExecuteAsync(parameters, mutation);
+            JObject jObject = await ExecuteAsync(parameters, mutation);
 #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
             return new Tuple<JsonDocument, IMetadata>((jObject is null) ? null! : JsonDocument.Parse(jObject.ToString()), null);
 #pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.

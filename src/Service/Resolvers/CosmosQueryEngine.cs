@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
@@ -157,16 +156,16 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 querySpec = querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value);
             }
 
-            FeedIterator<JsonObject> resultSetIterator = container.GetItemQueryIterator<JsonObject>(querySpec);
+            FeedIterator<JObject> resultSetIterator = container.GetItemQueryIterator<JObject>(querySpec);
 
             List<JsonDocument> resultsAsList = new();
             while (resultSetIterator.HasMoreResults)
             {
-                FeedResponse<JsonObject> nextPage = await resultSetIterator.ReadNextAsync();
-                IEnumerator<JsonObject> enumerator = nextPage.GetEnumerator();
+                FeedResponse<JObject> nextPage = await resultSetIterator.ReadNextAsync();
+                IEnumerator<JObject> enumerator = nextPage.GetEnumerator();
                 while (enumerator.MoveNext())
                 {
-                    JsonObject item = enumerator.Current;
+                    JObject item = enumerator.Current;
                     resultsAsList.Add(JsonDocument.Parse(item.ToString()));
                 }
             }

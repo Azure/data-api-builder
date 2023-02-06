@@ -1,13 +1,13 @@
 using System;
 using System.Data;
 using System.IO;
+using System.Text.Json.Nodes;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
@@ -66,9 +66,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             SetEnvVariables();
             string expectedJson = RuntimeConfigPath.ParseConfigJsonAndReplaceEnvVariables(GetModifiedJsonString(repValues));
             string actualJson = RuntimeConfigPath.ParseConfigJsonAndReplaceEnvVariables(GetModifiedJsonString(repKeys));
-            JObject expected = JObject.Parse(expectedJson);
-            JObject actual = JObject.Parse(actualJson);
-            Assert.IsTrue(JToken.DeepEquals(expected, actual));
+            JsonNode expected = JsonNode.Parse(expectedJson);
+            JsonNode actual = JsonNode.Parse(actualJson);
+            Assert.IsTrue(JsonNode.Equals(expected, actual));
         }
 
         /// <summary>

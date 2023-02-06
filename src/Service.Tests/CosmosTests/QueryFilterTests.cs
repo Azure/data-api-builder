@@ -1,11 +1,11 @@
 using System;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Newtonsoft.Json.Linq;
 using QueryBuilder = Azure.DataApiBuilder.Service.GraphQLBuilder.Queries.QueryBuilder;
 
 namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
@@ -62,7 +62,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         {
             Assert.IsNotNull(expected);
             Assert.IsNotNull(actual);
-            Assert.IsTrue(JToken.DeepEquals(JToken.Parse(actual.ToString()), JToken.Parse(expected.ToString())));
+            Assert.IsTrue(JsonNode.Equals(JsonNode.Parse(actual.ToString()), JsonNode.Parse(expected.ToString())));
         }
 
         /// <summary>
@@ -401,7 +401,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             }";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQueryName, query: gqlQuery);
-            Assert.IsTrue(JToken.DeepEquals(actual.GetProperty("items").ToString(), "[]"));
+            Assert.IsTrue(JsonNode.Equals(JsonNode.Parse(actual.GetProperty("items").ToString()), JsonNode.Parse("[]")));
         }
 
         /// <summary>
@@ -421,7 +421,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             }";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQueryName, query: gqlQuery);
-            Assert.IsTrue(JToken.DeepEquals(actual.GetProperty("items").ToString(), "[]"));
+            Assert.IsTrue(JsonNode.Equals(JsonNode.Parse(actual.GetProperty("items").ToString()), JsonNode.Parse("[]")));
         }
 
         /// <summary>

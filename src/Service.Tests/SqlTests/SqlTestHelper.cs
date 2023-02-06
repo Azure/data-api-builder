@@ -5,13 +5,13 @@ using System.Net;
 using System.Net.Http;
 using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Data.SqlClient;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 {
@@ -56,7 +56,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         public static bool JsonStringsDeepEqual(string jsonString1, string jsonString2)
         {
             return string.IsNullOrEmpty(jsonString1) && string.IsNullOrEmpty(jsonString2) ||
-                JToken.DeepEquals(JToken.Parse(jsonString1), JToken.Parse(jsonString2));
+                JsonNode.Equals(JsonNode.Parse(jsonString1), JsonNode.Parse(jsonString2));
         }
 
         /// <summary>
@@ -160,7 +160,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 // Json Property in error which the holds the actual exception properties. 
                 string PARENT_PROPERTY_ERROR = "error";
 
-                // Generate actual and expected error JObjects to assert that they are equal.
+                // Generate actual and expected error JsonElement to assert that they are equal.
                 JsonElement expectedErrorObj = JsonDocument.Parse(expected).RootElement.GetProperty(PARENT_PROPERTY_ERROR);
                 JsonElement actualErrorObj = JsonDocument.Parse(responseBody).RootElement.GetProperty(PARENT_PROPERTY_ERROR);
 

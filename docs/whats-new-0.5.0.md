@@ -54,9 +54,8 @@ For example:
 ```
 means the `title` field in the related database object will be mapped to `description` field in the GraphQL type or in the REST request and response payload.
 
-## Set session context in Azure SQL
-
-
+## Support for Session Context in Azure SQL
+To enable an additional layer of Security (eg. Row Level Security aka RLS), DAB now supports sending data to the underlying Sql Server database via SESSION_CONTEXT. For more details, please refer to this detailed document on SESSION_CONTEXT : [Runtime to Database Authorization](./runtime-to-database-authorization.md).  
 
 ## Support for filter on nested objects within a document in PostgreSQL
 

@@ -100,6 +100,12 @@ query ($id: ID, $partitionKeyValue: String) {
 ```
 
 ## Enhanced logging support using loglevel
+- The default log levels for the engine in `Production` and `Development` are updated to `Error` and `Debug` respectively.
+- During engine start-up, for every entity, information such as exposed names, type, whether it is auto-generated, etc. about the primary key is logged.
+- In the local execution scenario, all the queries that are generated and executed during engine start-up are logged at `Debug` level.
+- For every entity, relationship fields such as `source.fields`, `target.fields` and `cardinality` are logged. Incase of many-many relationships, `linking.object`, `linking.source.fields` and `linking.target.fields` are fetched from the config file and logged.
+- For every incoming request, the role and the authentication status of the request are logged. This is not applicable for hosted scenario.
+- In CLI, the Microsoft.DataAPIBuilder's version is logged along with the logs associated with the respective command's execution.
 
 ## Updated CLI
 

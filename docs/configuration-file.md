@@ -21,6 +21,7 @@
     + [Permissions](#permissions)
       + [Roles](#roles)
       + [Actions](#actions)
+    + [Mappings](#mappings)
 
 ## Summary
 
@@ -477,3 +478,21 @@ Data API Builder will take the value of the claim named `UserId` and it will com
 
 + Binary operators [BinaryOperatorKind - Microsoft Learn](https://learn.microsoft.com/dotnet/api/microsoft.odata.uriparser.binaryoperatorkind?view=odata-core-7.0) such as `and`, `or`, `eq`, `gt`, `lt`, and more.
 + Unary operators [UnaryOperatorKind - Microsoft Learn](https://learn.microsoft.com/dotnet/api/microsoft.odata.uriparser.unaryoperatorkind?view=odata-core-7.0) such as the negate (`-`) and `not` operators.
+
+### Mappings
+
+In the `mappings` section are defined the mappings between database fields and the exposed GraphQL type and REST endpoint fields.
+
+The format is:
+
+`<database_field>: <entity_field>`
+
+For example:
+
+```json
+  "mappings":{
+    "title": "descriptions",
+    "completed": "done"
+  }
+```
+means the `title` field in the related database object will be mapped to `description` field in the GraphQL type or in the REST request and response payload.

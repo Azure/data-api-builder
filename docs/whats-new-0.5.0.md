@@ -38,7 +38,25 @@ A new `execute` action is introduced as the only allowed action in the `permissi
 
 ## New `mappings` section
 
+In the `mappings` section are defined the mappings between database fields and the exposed GraphQL type and REST endpoint fields.
+
+The format is:
+
+`<database_field>: <entity_field>`
+
+For example:
+
+```json
+  "mappings":{
+    "title": "descriptions",
+    "completed": "done"
+  }
+```
+means the `title` field in the related database object will be mapped to `description` field in the GraphQL type or in the REST request and response payload.
+
 ## Set session context in Azure SQL
+
+
 
 ## Support for filter on nested objects within a document in PostgreSQL
 
@@ -57,6 +75,30 @@ query {
 ```
 
 ## Support scalar list in CosmosDB NoSQL
+
+The ability to query `List` of Scalars is now added for Cosmos DB.
+
+Consider the below type definition
+
+```json
+type Planet @model(name:""Planet"") {
+    id : ID,
+    name : String,
+    dimension : String,
+    stars: [Star]
+    tags: [String!]
+}
+```
+
+It is now possible to run a query that fetches a List such as 
+
+```json
+query ($id: ID, $partitionKeyValue: String) {
+    planet_by_pk (id: $id, _partitionKeyValue: $partitionKeyValue) {
+        tags
+    }
+}
+```
 
 ## Enhanced logging support using loglevel
 

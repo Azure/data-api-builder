@@ -4,7 +4,6 @@ using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
 using System.Net.Http;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
@@ -143,17 +142,17 @@ type Star @model(name:""StarAlias"") {
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
             Container c = cosmosClient.GetContainer(DATABASE_NAME, containerName);
             QueryDefinition queryDef = new(query);
-            FeedIterator<JsonObject> resultSetIterator = c.GetItemQueryIterator<JsonObject>(queryDef, continuationToken, options);
-            FeedResponse<JsonObject> firstPage = await resultSetIterator.ReadNextAsync();
-            JsonArray jarray = new();
-            IEnumerator<JsonObject> enumerator = firstPage.GetEnumerator();
+            FeedIterator<JObject> resultSetIterator = c.GetItemQueryIterator<JObject>(queryDef, continuationToken, options);
+            FeedResponse<JObject> firstPage = await resultSetIterator.ReadNextAsync();
+            JArray jarray = new();
+            IEnumerator<JObject> enumerator = firstPage.GetEnumerator();
             while (enumerator.MoveNext())
             {
-                JsonObject item = enumerator.Current;
+                JObject item = enumerator.Current;
                 jarray.Add(item);
             }
 
-            return JsonDocument.Parse(jarray.ToJsonString().Trim());
+            return JsonDocument.Parse(jarray.ToString().Trim());
         }
 
         private static Dictionary<string, EntityMetadata> GetEntityPermissionsMap(string[] entities)

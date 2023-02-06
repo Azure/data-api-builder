@@ -20,6 +20,8 @@ Depending on the permission defined on the entity in the configuration file, the
 - [PATCH](#patch): Update an item
 - [DELETE](#delete): Delete an item
 
+> **Attention!**: the URL path (entities and query parameters) is case sensitive
+
 ## Result set format
 
 The returned result is a JSON object with this format:
@@ -69,7 +71,7 @@ http://localhost:5000/api/book/id/1001
 
 ### Query parameters
 
-REST endpoints support the following query parameters to control the returned items:
+REST endpoints support the following query parameters (case sensitive) to control the returned items:
 
 - [`$select`](#select): returns only the selected columns
 - [`$filter`](#filter): filters the returned items

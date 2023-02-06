@@ -1,3 +1,4 @@
+#nullable disable
 using System.Collections.Generic;
 using System.Net;
 using System.Text.Json;
@@ -49,28 +50,49 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Test method to validate that only 1 CRUD operation is supported for stored procedure.
+        /// Test method to validate that only 1 CRUD operation is supported for stored procedure
+        /// and every role has that same single operation.
         /// </summary>
         [DataTestMethod]
-        [DataRow(new object[] { "create", "read" }, false, DisplayName = "Stored-procedure with create-read permission")]
-        [DataRow(new object[] { "update", "read" }, false, DisplayName = "Stored-procedure with update-read permission")]
-        [DataRow(new object[] { "delete", "read" }, false, DisplayName = "Stored-procedure with delete-read permission")]
-        [DataRow(new object[] { "create" }, true, DisplayName = "Stored-procedure with only create permission")]
-        [DataRow(new object[] { "read" }, true, DisplayName = "Stored-procedure with only read permission")]
-        [DataRow(new object[] { "update" }, true, DisplayName = "Stored-procedure with only update permission")]
-        [DataRow(new object[] { "delete" }, true, DisplayName = "Stored-procedure with only delete permission")]
-        [DataRow(new object[] { "update", "create" }, false, DisplayName = "Stored-procedure with update-create permission")]
-        [DataRow(new object[] { "delete", "read", "update" }, false, DisplayName = "Stored-procedure with delete-read-update permission")]
-        public void InvalidCRUDForStoredProcedure(object[] operations, bool isValid)
+        [DataRow("anonymous", new object[] { "execute" }, null, null, true, false, DisplayName = "Stored-procedure with valid execute permission only")]
+        [DataRow("anonymous", new object[] { "execute", "read" }, null, null, false, false, DisplayName = "Invalidly define operation in excess of execute")]
+        [DataRow("anonymous", new object[] { "create", "read" }, null, null, false, false, DisplayName = "Stored-procedure with create-read permission")]
+        [DataRow("anonymous", new object[] { "update", "read" }, null, null, false, false, DisplayName = "Stored-procedure with update-read permission")]
+        [DataRow("anonymous", new object[] { "delete", "read" }, null, null, false, false, DisplayName = "Stored-procedure with delete-read permission")]
+        [DataRow("anonymous", new object[] { "create" }, null, null, false, false, DisplayName = "Stored-procedure with invalid create permission")]
+        [DataRow("anonymous", new object[] { "read" }, null, null, false, false, DisplayName = "Stored-procedure with invalid read permission")]
+        [DataRow("anonymous", new object[] { "update" }, null, null, false, false, DisplayName = "Stored-procedure with invalid update permission")]
+        [DataRow("anonymous", new object[] { "delete" }, null, null, false, false, DisplayName = "Stored-procedure with invalid delete permission")]
+        [DataRow("anonymous", new object[] { "update", "create" }, null, null, false, false, DisplayName = "Stored-procedure with update-create permission")]
+        [DataRow("anonymous", new object[] { "delete", "read", "update" }, null, null, false, false, DisplayName = "Stored-procedure with delete-read-update permission")]
+        [DataRow("anonymous", new object[] { "execute" }, "authenticated", new object[] { "execute" }, true, false, DisplayName = "Stored-procedure with valid execute permission on all roles")]
+        [DataRow("anonymous", new object[] { "execute" }, "authenticated", new object[] { "create" }, false, true, DisplayName = "Stored-procedure with valid execute and invalid create permission")]
+        public void InvalidCRUDForStoredProcedure(
+            string role1,
+            object[] operationsRole1,
+            string role2,
+            object[] operationsRole2,
+            bool isValid,
+            bool differentOperationDifferentRoleFailure)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
                 roleName: AuthorizationHelpers.TEST_ROLE
             );
 
-            PermissionSetting permissionForEntity = new(
-                role: AuthorizationHelpers.TEST_ROLE,
-                operations: operations);
+            List<PermissionSetting> permissionSettings = new();
+
+            permissionSettings.Add(new(
+                role: role1,
+                operations: operationsRole1));
+
+            // Adding another role for the entity.
+            if (role2 is not null && operationsRole2 is not null)
+            {
+                permissionSettings.Add(new(
+                    role: role2,
+                    operations: operationsRole2));
+            }
 
             object entitySource = new DatabaseObjectSource(
                     Type: SourceType.StoredProcedure,
@@ -83,7 +105,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Source: entitySource,
                 Rest: true,
                 GraphQL: true,
-                Permissions: new PermissionSetting[] { permissionForEntity },
+                Permissions: permissionSettings.ToArray(),
                 Relationships: null,
                 Mappings: null
             );
@@ -98,8 +120,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             catch (DataApiBuilderException ex)
             {
                 Assert.AreEqual(false, isValid);
-                Assert.AreEqual("Invalid Operations for Entity: SampleEntity. " +
-                    $"StoredProcedure can process only one CRUD (Create/Read/Update/Delete) operation.", ex.Message);
+                Assert.AreEqual(expected: $"Invalid operation for Entity: {AuthorizationHelpers.TEST_ENTITY}. " +
+                            $"Stored procedures can only be configured with the 'execute' operation.", actual: ex.Message);
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
             }
@@ -786,6 +808,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("Entity^Name", true, DisplayName = "Invalid body character ^")]
         [DataRow("Entity&Name", true, DisplayName = "Invalid body character &")]
         [DataRow("Entity name", true, DisplayName = "Invalid body character whitespace")]
+        [DataRow("__introspectionField", true, DisplayName = "Invalid double underscore reserved for introspection fields.")]
         public void ValidateGraphQLTypeNamesFromConfig(string entityNameFromConfig, bool expectsException)
         {
             Dictionary<string, Entity> entityCollection = new();
@@ -864,6 +887,90 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             entityCollection.Add("book", book);
             entityCollection.Add("Book", bookWithUpperCase);
             ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "Book");
+        }
+
+        /// <summary>
+        /// Validates that an exception is thrown when
+        /// there is a collision in the graphQL queries
+        /// generated by the entity definitions.
+        /// This test declares entities with the following graphQL
+        /// definitions
+        /// "ExecuteBook" {
+        ///     "source" :{
+        ///         "type": "table"
+        ///    }
+        ///     "graphQL": true
+        /// }
+        /// "Book_by_pk" {
+        ///     "source" :{
+        ///         "type": "stored-procedure"
+        ///    }
+        ///     "graphQL": true
+        /// }
+        /// </summary>
+        [TestMethod]
+        public void ValidateStoredProcedureAndTableGeneratedDuplicateQueries()
+        {
+            // Entity Name: ExecuteBook
+            // Entity Type: table
+            // pk_query: executebook_by_pk
+            // List Query: executebooks
+            Entity bookTable = GraphQLTestHelpers.GenerateEmptyEntity(sourceType: SourceType.Table);
+            bookTable.GraphQL = new GraphQLEntitySettings(true);
+
+            // Entity Name: book_by_pk
+            // Entity Type: Stored Procedure
+            // StoredProcedure Query: executebook_by_pk
+            Entity bookByPkStoredProcedure = GraphQLTestHelpers.GenerateEmptyEntity(sourceType: SourceType.StoredProcedure);
+            bookByPkStoredProcedure.GraphQL = new GraphQLEntitySettings(true);
+
+            SortedDictionary<string, Entity> entityCollection = new();
+            entityCollection.Add("executeBook", bookTable);
+            entityCollection.Add("Book_by_pk", bookByPkStoredProcedure);
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "executeBook");
+        }
+
+        /// <summary>
+        /// Validates that an exception is thrown when
+        /// there is a collision in the graphQL mutation
+        /// generated by the entity definitions.
+        /// This test declares entities with the following graphQL
+        /// definitions
+        /// "ExecuteBooks" {
+        ///     "source" :{
+        ///         "type": "table"
+        ///    }
+        ///     "graphQL": true
+        /// }
+        /// "AddBook" {
+        ///     "source" :{
+        ///         "type": "stored-procedure"
+        ///    }
+        ///     "graphQL": {
+        ///         "type": "Books"
+        ///     }
+        /// }
+        /// </summary>
+        [TestMethod]
+        public void ValidateStoredProcedureAndTableGeneratedDuplicateMutation()
+        {
+            // Entity Name: Book
+            // Entity Type: table
+            // mutation generated: createBook, updateBook, deleteBook
+            Entity bookTable = GraphQLTestHelpers.GenerateEmptyEntity(sourceType: SourceType.Table);
+            bookTable.GraphQL = new GraphQLEntitySettings(true);
+
+            // Entity Name: AddBook
+            // Entity Type: Stored Procedure
+            // StoredProcedure mutation: createBook
+            Entity addBookStoredProcedure = GraphQLTestHelpers.GenerateEntityWithStringType(
+                                                type: "Books",
+                                                sourceType: SourceType.StoredProcedure);
+
+            SortedDictionary<string, Entity> entityCollection = new();
+            entityCollection.Add("ExecuteBooks", bookTable);
+            entityCollection.Add("AddBook", addBookStoredProcedure);
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "ExecuteBooks");
         }
 
         /// <summary>
@@ -1058,7 +1165,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             entityCollection.Add("BooK", bookWithDifferentCase);
             entityCollection.Add("BOOK", bookWithAllUpperCase);
             entityCollection.Add("Book_alt", book_alt_upperCase);
-            RuntimeConfigValidator.ValidateEntitiesDoNotGenerateDuplicateQueries(entityCollection);
+            RuntimeConfigValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(entityCollection);
         }
 
         /// <summary>
@@ -1115,9 +1222,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         private static void ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(SortedDictionary<string, Entity> entityCollection, string entityName)
         {
             DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
-               action: () => RuntimeConfigValidator.ValidateEntitiesDoNotGenerateDuplicateQueries(entityCollection));
+               action: () => RuntimeConfigValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(entityCollection));
 
-            Assert.AreEqual(expected: $"Entity {entityName} generates queries that already exist", actual: dabException.Message);
+            Assert.AreEqual(expected: $"Entity {entityName} generates queries/mutation that already exist", actual: dabException.Message);
             Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
             Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
         }

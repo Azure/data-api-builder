@@ -1,7 +1,11 @@
 using System;
+using System.Collections.Generic;
+using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Linq;
 using System.Net;
+using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
@@ -14,7 +18,9 @@ namespace Azure.DataApiBuilder.Service.Configurations
     /// </summary>
     public class RuntimeConfigProvider
     {
-        public event EventHandler<RuntimeConfig>? RuntimeConfigLoaded;
+        public delegate Task<bool> RuntimeConfigLoadedHandler(RuntimeConfigProvider sender, RuntimeConfig config);
+
+        public List<RuntimeConfigLoadedHandler> RuntimeConfigLoadedHandlers { get; } = new List<RuntimeConfigLoadedHandler>();
 
         /// <summary>
         /// The config provider logger is a static member because we use it in static methods
@@ -22,6 +28,14 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// to be used by tests.
         /// </summary>
         public static ILogger<RuntimeConfigProvider>? ConfigProviderLogger;
+
+        /// <summary>
+        /// The IsHttpsRedirectionDisabled is a static member because we use it in static methods
+        /// like StartEngine.
+        /// By Default automatic https redirection is enabled, can be disabled with cli using option `--no-https-redirect`.
+        /// </summary>
+        /// <defaultValue>false</defaultValue>
+        public static bool IsHttpsRedirectionDisabled;
 
         /// <summary>
         /// Represents the path to the runtime configuration file.
@@ -42,6 +56,11 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// The access token representing a Managed Identity to connect to the database.
         /// </summary>
         public string? ManagedIdentityAccessToken { get; private set; }
+
+        /// <summary>
+        /// Specifies whether configuration was provided late.
+        /// </summary>
+        public virtual bool IsLateConfigured { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RuntimeConfigProvider"/> class.
@@ -214,12 +233,11 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <param name="accessToken">The string representation of a managed identity access token
         /// <param name="Database"> The name of the database to be used for Cosmos</param>
         /// useful to connect to the database.</param>
-        public void Initialize(
+        public async Task<bool> Initialize(
             string configuration,
             string? schema,
             string connectionString,
-            string? accessToken,
-            string? database = null)
+            string? accessToken)
         {
             if (string.IsNullOrEmpty(connectionString))
             {
@@ -230,6 +248,14 @@ namespace Azure.DataApiBuilder.Service.Configurations
             {
                 throw new ArgumentException($"'{nameof(configuration)}' cannot be null or empty.", nameof(configuration));
             }
+
+            DbConnectionStringBuilder dbConnectionStringBuilder = new()
+            {
+                ConnectionString = connectionString
+            };
+
+            // SWA may provide cosmosdb database name in connectionString 
+            string? database = dbConnectionStringBuilder.ContainsKey("Database") ? (string)dbConnectionStringBuilder["Database"] : null;
 
             if (RuntimeConfig.TryGetDeserializedRuntimeConfig(
                     configuration,
@@ -261,11 +287,21 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
             ManagedIdentityAccessToken = accessToken;
 
-            EventHandler<RuntimeConfig>? handlers = RuntimeConfigLoaded;
-            if (handlers is not null && RuntimeConfiguration is not null)
+            List<Task<bool>> configLoadedTasks = new();
+            if (RuntimeConfiguration is not null)
             {
-                handlers(this, RuntimeConfiguration);
+                foreach (RuntimeConfigLoadedHandler configLoadedHandler in RuntimeConfigLoadedHandlers)
+                {
+                    configLoadedTasks.Add(configLoadedHandler(this, RuntimeConfiguration));
+                }
             }
+
+            await Task.WhenAll(configLoadedTasks);
+
+            IsLateConfigured = true;
+
+            // Verify that all tasks succeeded. 
+            return configLoadedTasks.All(x => x.Result);
         }
 
         public virtual RuntimeConfig GetRuntimeConfiguration()
@@ -304,25 +340,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
         public virtual bool IsIntrospectionAllowed()
         {
             return RuntimeConfiguration is not null && RuntimeConfiguration.GraphQLGlobalSettings.AllowIntrospection;
-        }
-
-        /// <summary>
-        /// When in development mode, honor the authenticate-devmode-requests
-        /// feature switch value specified in the config file. This gives us the ability to
-        /// simulate a request's authenticated/anonymous authentication state in development mode.
-        /// Requires:
-        /// - HostGlobalSettings.Mode is Development
-        /// </summary>
-        /// <returns>True when authenticate-devmode-requests is enabled</returns>
-        public virtual bool IsAuthenticatedDevModeRequest()
-        {
-            if (RuntimeConfiguration?.AuthNConfig == null)
-            {
-                return false;
-            }
-
-            return IsDeveloperMode() &&
-                RuntimeConfiguration.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated is true;
         }
     }
 }

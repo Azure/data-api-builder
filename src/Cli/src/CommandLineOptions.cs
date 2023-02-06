@@ -9,7 +9,7 @@ namespace Cli
     /// </summary>
     public class Options
     {
-        public Options(string config)
+        public Options(string? config)
         {
             Config = config;
         }
@@ -32,10 +32,13 @@ namespace Cli
             string? cosmosNoSqlDatabase,
             string? cosmosNoSqlContainer,
             string? graphQLSchemaPath,
+            bool setSessionContext,
             HostModeType hostMode,
             IEnumerable<string>? corsOrigin,
-            string config,
-            string? devModeDefaultAuth)
+            string authenticationProvider,
+            string? audience = null,
+            string? issuer = null,
+            string? config = null)
             : base(config)
         {
             DatabaseType = databaseType;
@@ -43,9 +46,12 @@ namespace Cli
             CosmosNoSqlDatabase = cosmosNoSqlDatabase;
             CosmosNoSqlContainer = cosmosNoSqlContainer;
             GraphQLSchemaPath = graphQLSchemaPath;
+            SetSessionContext = setSessionContext;
             HostMode = hostMode;
             CorsOrigin = corsOrigin;
-            DevModeDefaultAuth = devModeDefaultAuth;
+            AuthenticationProvider = authenticationProvider;
+            Audience = audience;
+            Issuer = issuer;
         }
 
         [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmosdb_nosql, cosmosdb_postgresql, mysql, postgresql")]
@@ -63,15 +69,23 @@ namespace Cli
         [Option("graphql-schema", Required = false, HelpText = "GraphQL schema Path.")]
         public string? GraphQLSchemaPath { get; }
 
+        [Option("set-session-context", Default = false, Required = false, HelpText = "Enable sending data to MsSql using session context.")]
+        public bool SetSessionContext { get; }
+
         [Option("host-mode", Default = HostModeType.Production, Required = false, HelpText = "Specify the Host mode - Development or Production")]
         public HostModeType HostMode { get; }
 
         [Option("cors-origin", Separator = ',', Required = false, HelpText = "Specify the list of allowed origins.")]
         public IEnumerable<string>? CorsOrigin { get; }
 
-        [Option("authenticate-devmode-requests", Default = null, Required = false,
-            HelpText = "boolean. Optional. Use when host-mode = Development. Treats all requests as authenticated in devmode when set to true.")]
-        public string? DevModeDefaultAuth { get; }
+        [Option("auth.provider", Default = "StaticWebApps", Required = false, HelpText = "Specify the Identity Provider.")]
+        public string AuthenticationProvider { get; }
+
+        [Option("auth.audience", Required = false, HelpText = "Identifies the recipients that the JWT is intended for.")]
+        public string? Audience { get; }
+
+        [Option("auth.issuer", Required = false, HelpText = "Specify the party that issued the jwt token.")]
+        public string? Issuer { get; }
     }
 
     /// <summary>
@@ -85,12 +99,14 @@ namespace Cli
             IEnumerable<string>? sourceParameters,
             IEnumerable<string>? sourceKeyFields,
             string? restRoute,
+            IEnumerable<string>? restMethodsForStoredProcedure,
             string? graphQLType,
+            string? graphQLOperationForStoredProcedure,
             IEnumerable<string>? fieldsToInclude,
             IEnumerable<string>? fieldsToExclude,
             string? policyRequest,
             string? policyDatabase,
-            string config)
+            string? config)
             : base(config)
         {
             Entity = entity;
@@ -98,14 +114,17 @@ namespace Cli
             SourceParameters = sourceParameters;
             SourceKeyFields = sourceKeyFields;
             RestRoute = restRoute;
+            RestMethodsForStoredProcedure = restMethodsForStoredProcedure;
             GraphQLType = graphQLType;
+            GraphQLOperationForStoredProcedure = graphQLOperationForStoredProcedure;
             FieldsToInclude = fieldsToInclude;
             FieldsToExclude = fieldsToExclude;
             PolicyRequest = policyRequest;
             PolicyDatabase = policyDatabase;
         }
 
-        [Value(0, MetaName = "Entity", Required = true, HelpText = "Name of the entity.")]
+        // Entity is required but we have made required as false to have custom error message (more user friendly), if not provided.
+        [Value(0, MetaName = "Entity", Required = false, HelpText = "Name of the entity.")]
         public string Entity { get; }
 
         [Option("source.type", Required = false, HelpText = "Type of the database object.Must be one of: [table, view, stored-procedure]")]
@@ -120,8 +139,14 @@ namespace Cli
         [Option("rest", Required = false, HelpText = "Route for rest api.")]
         public string? RestRoute { get; }
 
+        [Option("rest.methods", Required = false, Separator = ',', HelpText = "HTTP actions to be supported for stored procedure. Specify the actions as a comma separated list. Valid HTTP actions are : [GET, POST, PUT, PATCH, DELETE]")]
+        public IEnumerable<string>? RestMethodsForStoredProcedure { get; }
+
         [Option("graphql", Required = false, HelpText = "Type of graphQL.")]
         public string? GraphQLType { get; }
+
+        [Option("graphql.operation", Required = false, HelpText = $"GraphQL operation to be supported for stored procedure. Valid operations are : [Query, Mutation] ")]
+        public string? GraphQLOperationForStoredProcedure { get; }
 
         [Option("fields.include", Required = false, Separator = ',', HelpText = "Fields that are allowed access to permission.")]
         public IEnumerable<string>? FieldsToInclude { get; }
@@ -150,18 +175,22 @@ namespace Cli
             IEnumerable<string>? sourceParameters,
             IEnumerable<string>? sourceKeyFields,
             string? restRoute,
+            IEnumerable<string>? restMethodsForStoredProcedure,
             string? graphQLType,
+            string? graphQLOperationForStoredProcedure,
             IEnumerable<string>? fieldsToInclude,
             IEnumerable<string>? fieldsToExclude,
             string? policyRequest,
             string? policyDatabase,
-            string config)
+            string? config)
             : base(entity,
                   sourceType,
                   sourceParameters,
                   sourceKeyFields,
                   restRoute,
+                  restMethodsForStoredProcedure,
                   graphQLType,
+                  graphQLOperationForStoredProcedure,
                   fieldsToInclude,
                   fieldsToExclude,
                   policyRequest,
@@ -201,7 +230,9 @@ namespace Cli
             IEnumerable<string>? sourceParameters,
             IEnumerable<string>? sourceKeyFields,
             string? restRoute,
+            IEnumerable<string>? restMethodsForStoredProcedure,
             string? graphQLType,
+            string? graphQLOperationForStoredProcedure,
             IEnumerable<string>? fieldsToInclude,
             IEnumerable<string>? fieldsToExclude,
             string? policyRequest,
@@ -212,7 +243,9 @@ namespace Cli
                   sourceParameters,
                   sourceKeyFields,
                   restRoute,
+                  restMethodsForStoredProcedure,
                   graphQLType,
+                  graphQLOperationForStoredProcedure,
                   fieldsToInclude,
                   fieldsToExclude,
                   policyRequest,
@@ -268,11 +301,12 @@ namespace Cli
     [Verb("start", isDefault: false, HelpText = "Start Data Api Builder Engine", Hidden = false)]
     public class StartOptions : Options
     {
-        public StartOptions(bool verbose, LogLevel? logLevel, string config)
+        public StartOptions(bool verbose, LogLevel? logLevel, bool isHttpsRedirectionDisabled, string config)
             : base(config)
         {
             // When verbose is true we set LogLevel to information.
             LogLevel = verbose is true ? Microsoft.Extensions.Logging.LogLevel.Information : logLevel;
+            IsHttpsRedirectionDisabled = isHttpsRedirectionDisabled;
         }
 
         // SetName defines mutually exclusive sets, ie: can not have
@@ -282,5 +316,8 @@ namespace Cli
         [Option("LogLevel", SetName = "LogLevel", Required = false, HelpText = "Specify logging level as provided value, " +
             "see: https://learn.microsoft.com/en-us/dotnet/api/microsoft.extensions.logging.loglevel?view=dotnet-plat-ext-7.0")]
         public LogLevel? LogLevel { get; }
+
+        [Option("no-https-redirect", Required = false, HelpText = "Disables automatic https redirects.")]
+        public bool IsHttpsRedirectionDisabled { get; }
     }
 }

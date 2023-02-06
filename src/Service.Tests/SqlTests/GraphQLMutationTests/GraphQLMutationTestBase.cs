@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -115,10 +116,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         public async Task TestStoredProcedureMutationForInsertion(string dbQuery)
         {
-            string graphQLMutationName = "InsertBook";
+            string graphQLMutationName = "executeInsertBook";
             string graphQLMutation = @"
                 mutation {
-                    InsertBook(title: ""Random Book"", publisher_id: 1234 ) {
+                    executeInsertBook(title: ""Random Book"", publisher_id: 1234 ) {
                         result
                     }
                 }
@@ -145,10 +146,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         public async Task TestStoredProcedureMutationForDeletion(string dbQueryToVerifyDeletion)
         {
-            string graphQLMutationName = "DeleteLastInsertedBook";
+            string graphQLMutationName = "executeDeleteLastInsertedBook";
             string graphQLMutation = @"
                 mutation {
-                    DeleteLastInsertedBook {
+                    executeDeleteLastInsertedBook {
                         result
                     }
                 }
@@ -169,6 +170,30 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
+        /// <code>Do: </code> Insert a new book with a given title and publisher name.
+        /// and returns all the books under the given publisher.
+        /// <code>Check: </code> If the intended book is inserted into the DB and
+        /// verifies the non-empty response.
+        /// </summary>
+        public async Task TestStoredProcedureMutationNonEmptyResponse(string dbQuery)
+        {
+            string graphQLMutationName = "executeInsertAndDisplayAllBooksUnderGivenPublisher";
+            string graphQLMutation = @"
+                mutation{
+                    executeInsertAndDisplayAllBooksUnderGivenPublisher(title: ""Orange Tomato"" publisher_name: ""Big Company""){
+                        id
+                        title
+                    }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
         /// <code>Do: </code> updates a book title from the books table with given id
         /// and new title.
         /// <code>Check: </code> The book title should be updated with the given id
@@ -176,11 +201,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         public async Task TestStoredProcedureMutationForUpdate(string dbQuery)
         {
-            string graphQLMutationName = "UpdateBookTitle";
+            string graphQLMutationName = "executeUpdateBookTitle";
             string graphQLMutation = @"
                 mutation {
-                    UpdateBookTitle(id: 14, title: ""Before Midnight"") {
-                        result
+                    executeUpdateBookTitle(id: 14, title: ""Before Midnight"") {
+                        id
+                        title
+                        publisher_id
                     }
                 }
             ";
@@ -188,9 +215,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             string beforeUpdate = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings("{\"id\":14,\"title\":\"Before Sunset\",\"publisher_id\":1234}", beforeUpdate);
             JsonElement graphQLResponse = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
-            SqlTestHelper.PerformTestEqualJsonStrings("[]", graphQLResponse.ToString());
             string afterUpdate = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings("{\"id\":14,\"title\":\"Before Midnight\",\"publisher_id\":1234}", afterUpdate);
+            SqlTestHelper.PerformTestEqualJsonStrings(afterUpdate.ToString(), graphQLResponse.EnumerateArray().First().ToString());
         }
 
         /// <summary>
@@ -542,6 +568,76 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Demonstrates that using mapped column names for fields within the GraphQL mutatation results in successful engine processing.
+        /// </summary>
+        public async Task InsertMutationWithVariablesAndMappings(string dbQuery)
+        {
+            string graphQLMutationName = "createGQLmappings";
+            string graphQLMutation = @"
+                mutation($id: Int!, $col2Value: String) {
+                    createGQLmappings(item: { column1: $id, column2: $col2Value }) {
+                        column1
+                        column2
+                    }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true, new() { { "id", 2 }, { "col2Value", "My New Value" } });
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Demonstrates that using mapped column names for fields within the GraphQL mutatation results in successful engine processing
+        /// of the column2 value update for the record where column1 = $id.
+        /// </summary>
+        public async Task UpdateMutationWithVariablesAndMappings(string dbQuery)
+        {
+            string graphQLMutationName = "updateGQLmappings";
+            string graphQLMutation = @"
+                mutation($id: Int!, $col2Value: String) {
+                    updateGQLmappings(column1: $id, item: { column2: $col2Value }) {
+                        column1
+                        column2
+                    }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true, new() { { "id", 3 }, { "col2Value", "Updated Value of Mapped Column" } });
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Demonstrates that using mapped column names for fields within the GraphQL mutatation results in successful engine processing
+        /// of removal of the record where column1 = $id and the returned object representing the deleting record utilizes the mapped column values.
+        /// </summary>
+        public async Task DeleteMutationWithVariablesAndMappings(string dbQuery, string dbQueryToVerifyDeletion)
+        {
+            string graphQLMutationName = "deleteGQLmappings";
+            string graphQLMutation = @"
+                mutation($id: Int!) {
+                    deleteGQLmappings(column1: $id) {
+                        column1
+                        column2
+                    }
+                }
+            ";
+
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true, new() { { "id", 4 } });
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+
+            string dbResponse = await GetDatabaseResultAsync(dbQueryToVerifyDeletion);
+
+            using JsonDocument result = JsonDocument.Parse(dbResponse);
+            Assert.AreEqual(result.RootElement.GetProperty("count").GetInt64(), 0);
         }
 
         #endregion

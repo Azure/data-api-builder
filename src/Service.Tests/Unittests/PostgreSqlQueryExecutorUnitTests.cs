@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.Core;
@@ -37,7 +36,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestCategory.POSTGRESQL);
             runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString = connectionString;
-            Mock<DbExceptionParser> dbExceptionParser = new(runtimeConfigProvider, new HashSet<string>());
+            Mock<DbExceptionParser> dbExceptionParser = new(runtimeConfigProvider);
             Mock<ILogger<PostgreSqlQueryExecutor>> queryExecutorLogger = new();
             PostgreSqlQueryExecutor postgreSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser.Object, queryExecutorLogger.Object);
 
@@ -57,7 +56,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 }
                 else
                 {
-                    runtimeConfigProvider.Initialize(
+                    await runtimeConfigProvider.Initialize(
                         JsonSerializer.Serialize(runtimeConfigProvider.GetRuntimeConfiguration()),
                         schema: null,
                         connectionString: connectionString,

@@ -45,6 +45,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
                 entityNameOrPath: _integrationProcedureFindMany_EntityName,
+                operationType: Config.Operation.Execute,
+                restHttpVerb: Config.RestMethod.Get,
                 sqlQuery: GetQuery("FindManyStoredProcedureTest"),
                 expectJson: false
                 );
@@ -61,6 +63,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 primaryKeyRoute: string.Empty,
                 queryString: "?id=1",
                 entityNameOrPath: _integrationProcedureFindOne_EntityName,
+                operationType: Config.Operation.Execute,
+                restHttpVerb: Config.RestMethod.Get,
                 sqlQuery: GetQuery("FindOneStoredProcedureTestUsingParameter"),
                 expectJson: false
                 );
@@ -541,7 +545,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$select=id,int_types&$orderby=int_types",
+                queryString: "?$select=typeid,int_types&$orderby=int_types",
                 entityNameOrPath: _integrationTypeEntity,
                 sqlQuery: GetQuery(nameof(FindTestWithIntTypeNullValuesOrderByAsc))
             );
@@ -992,6 +996,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 sqlQuery: GetQuery(nameof(FindTestWithDifferentMappingAfterSingleKeyPaginationAndOrderBy))
             );
         }
+
+        /// <summary>
+        /// Tests that the FIND operation can only read the rows which are accessible after applying the
+        /// security policy which uses data from session context.
+        /// </summary>
+        [TestMethod]
+        public virtual Task FindTestOnTableWithSecurityPolicy()
+        {
+            return Task.CompletedTask;
+        }
+
         #endregion
 
         #region Negative Tests
@@ -1009,6 +1024,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: string.Empty,
                 entityNameOrPath: _integrationProcedureFindMany_EntityName,
                 sqlQuery: string.Empty,
+                operationType: Config.Operation.Execute,
+                restHttpVerb: Config.RestMethod.Get,
                 exceptionExpected: true,
                 expectedErrorMessage: "Primary key route not supported for this entity.",
                 expectedStatusCode: HttpStatusCode.BadRequest
@@ -1027,6 +1044,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: string.Empty,
                 entityNameOrPath: _integrationProcedureFindOne_EntityName,
                 sqlQuery: string.Empty,
+                operationType: Config.Operation.Execute,
+                restHttpVerb: Config.RestMethod.Get,
                 exceptionExpected: true,
                 expectedErrorMessage: $"Invalid request. Missing required procedure parameters: id for entity: {_integrationProcedureFindOne_EntityName}",
                 expectedStatusCode: HttpStatusCode.BadRequest
@@ -1046,6 +1065,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?param=value",
                 entityNameOrPath: _integrationProcedureFindMany_EntityName,
                 sqlQuery: string.Empty,
+                operationType: Config.Operation.Execute,
+                restHttpVerb: Config.RestMethod.Get,
                 exceptionExpected: true,
                 expectedErrorMessage: $"Invalid request. Contained unexpected fields: param for entity: {_integrationProcedureFindMany_EntityName}",
                 expectedStatusCode: HttpStatusCode.BadRequest
@@ -1057,6 +1078,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?id=1&param=value",
                 entityNameOrPath: _integrationProcedureFindOne_EntityName,
                 sqlQuery: string.Empty,
+                operationType: Config.Operation.Execute,
+                restHttpVerb: Config.RestMethod.Get,
                 exceptionExpected: true,
                 expectedErrorMessage: $"Invalid request. Contained unexpected fields: param for entity: {_integrationProcedureFindOne_EntityName}",
                 expectedStatusCode: HttpStatusCode.BadRequest

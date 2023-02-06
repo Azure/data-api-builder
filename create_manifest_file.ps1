@@ -13,7 +13,7 @@ $maxVersionCount = 3
 
 if ($isReleaseBuild -eq 'true')
 {
-    $versionTag = "v" + $versionId + "-alpha"
+    $versionTag = "v" + $versionId + "-beta"
     $releaseType = "released"
 }
 
@@ -41,6 +41,13 @@ foreach ($RID in $RIDs) {
     }
 }
 
+# Generating hash for nuget
+$nugetFileName = "Microsoft.DataApiBuilder.$DabVersion.nupkg"
+$nugetFilePath = "$BuildOutputDir/nupkg/$nugetFileName"
+$fileHashInfo = Get-FileHash $nugetFilePath
+$nuget_file_hash = $fileHashInfo.Hash
+$download_url_nuget = "https://dataapibuilder.azureedge.net/releases/download/$versionTag/$nugetFileName"
+
 # Creating new block to insert latest version 
 $latestBlock = @'
 {
@@ -60,6 +67,10 @@ $latestBlock = @'
         "osx-x64":{
             "url": "${download_url_osx}",
             "sha": "${osx_file_hash}"
+        },
+        "nuget": {
+            "url": "${download_url_nuget}",
+            "sha": "${nuget_file_hash}"
         }
     }
 }

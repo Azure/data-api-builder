@@ -1,8 +1,15 @@
+using System.Collections.Generic;
 using System.Data.Common;
+using System.Security.Claims;
+using System.Text;
 using System.Threading.Tasks;
 using Azure.Core;
+using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Service.Models;
 using Azure.Identity;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 
@@ -25,6 +32,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         private readonly string? _accessTokenFromController;
 
+        /// <summary>
+        /// The MsSql specific connection string builder.
+        /// </summary>
+        public override SqlConnectionStringBuilder ConnectionStringBuilder
+            => (SqlConnectionStringBuilder)base.ConnectionStringBuilder;
+
         public DefaultAzureCredential AzureCredential { get; set; } = new();
 
         /// <summary>
@@ -35,15 +48,30 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         private bool _attemptToSetAccessToken;
 
+        private bool _isSessionContextEnabled;
+
         public MsSqlQueryExecutor(
             RuntimeConfigProvider runtimeConfigProvider,
             DbExceptionParser dbExceptionParser,
-            ILogger<QueryExecutor<SqlConnection>> logger)
-            : base(runtimeConfigProvider, dbExceptionParser, logger)
+            ILogger<IQueryExecutor> logger)
+            : base(dbExceptionParser,
+                  logger,
+                  new SqlConnectionStringBuilder(
+                      runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString),
+                  runtimeConfigProvider)
         {
+            RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
+
+            if (runtimeConfigProvider.IsLateConfigured)
+            {
+                ConnectionStringBuilder.Encrypt = SqlConnectionEncryptOption.Mandatory;
+                ConnectionStringBuilder.TrustServerCertificate = false;
+            }
+
+            MsSqlOptions? msSqlOptions = runtimeConfig.DataSource.MsSql;
+            _isSessionContextEnabled = msSqlOptions is null ? false : msSqlOptions.SetSessionContext;
             _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
-            _attemptToSetAccessToken =
-                ShouldManagedIdentityAccessBeAttempted(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString);
+            _attemptToSetAccessToken = ShouldManagedIdentityAccessBeAttempted();
         }
 
         /// <summary>
@@ -84,13 +112,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// a System.InvalidOperationException.
         /// 2. It is NOT a Windows Integrated Security scenario.
         /// </summary>
-        private static bool ShouldManagedIdentityAccessBeAttempted(string connString)
+        private bool ShouldManagedIdentityAccessBeAttempted()
         {
-            SqlConnectionStringBuilder connStringBuilder = new(connString);
-            return string.IsNullOrEmpty(connStringBuilder.UserID) &&
-                string.IsNullOrEmpty(connStringBuilder.Password) &&
-                connStringBuilder.Authentication == SqlAuthenticationMethod.NotSpecified &&
-                !connStringBuilder.IntegratedSecurity;
+            return string.IsNullOrEmpty(ConnectionStringBuilder.UserID) &&
+                string.IsNullOrEmpty(ConnectionStringBuilder.Password) &&
+                ConnectionStringBuilder.Authentication == SqlAuthenticationMethod.NotSpecified &&
+                !ConnectionStringBuilder.IntegratedSecurity;
         }
 
         /// <summary>
@@ -125,6 +152,41 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             return _defaultAccessToken?.Token;
+        }
+
+        /// <summary>
+        /// Method to generate the query to send user data to the underlying database via SESSION_CONTEXT which might be used
+        /// for additional security (eg. using Security Policies) at the database level. The max payload limit for SESSION_CONTEXT is 1MB.
+        /// </summary>
+        /// <param name="httpContext">Current user httpContext.</param>
+        /// <param name="parameters">Dictionary of parameters/value required to execute the query.</param>
+        /// <returns>empty string / query to set session parameters for the connection.</returns>
+        /// <seealso cref="https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-set-session-context-transact-sql?view=sql-server-ver16"/>
+        public override string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, object?> parameters)
+        {
+            if (httpContext is null || !_isSessionContextEnabled)
+            {
+                return string.Empty;
+            }
+
+            // Dictionary containing all the claims belonging to the user, to be used as session parameters.
+            Dictionary<string, Claim> sessionParams = AuthorizationResolver.GetAllUserClaims(httpContext);
+
+            // Counter to generate different param name for each of the sessionParam.
+            IncrementingInteger counter = new();
+            const string paramNamePrefix = "session_param";
+            StringBuilder sessionMapQuery = new();
+
+            foreach ((string claimType, Claim claim) in sessionParams)
+            {
+                string paramName = $"{paramNamePrefix}{counter.Next()}";
+                parameters.Add(paramName, claim.Value);
+                // Append statement to set read only param value - can be set only once for a connection.
+                string statementToSetReadOnlyParam = "EXEC sp_set_session_context " + $"'{claimType}', @" + paramName + ", @read_only = 1;";
+                sessionMapQuery = sessionMapQuery.Append(statementToSetReadOnlyParam);
+            }
+
+            return sessionMapQuery.ToString();
         }
     }
 }

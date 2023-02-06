@@ -1,4 +1,6 @@
 BEGIN TRANSACTION
+DROP SECURITY POLICY IF EXISTS revenuesSecPolicy;
+DROP FUNCTION IF EXISTS revenuesPredicate;
 DROP VIEW IF EXISTS books_view_all;
 DROP VIEW IF EXISTS books_view_with_mapping;
 DROP VIEW IF EXISTS stocks_view_selected;
@@ -12,6 +14,7 @@ DROP PROCEDURE IF EXISTS count_books;
 DROP PROCEDURE IF EXISTS delete_last_inserted_book;
 DROP PROCEDURE IF EXISTS update_book_title;
 DROP PROCEDURE IF EXISTS get_authors_history_by_first_name;
+DROP PROCEDURE IF EXISTS insert_and_display_all_books_for_given_publisher;
 DROP TABLE IF EXISTS book_author_link;
 DROP TABLE IF EXISTS reviews;
 DROP TABLE IF EXISTS authors;
@@ -34,6 +37,9 @@ DROP TABLE IF EXISTS aow;
 DROP TABLE IF EXISTS series;
 DROP TABLE IF EXISTS sales;
 DROP TABLE IF EXISTS authors_history;
+DROP TABLE IF EXISTS revenues;
+DROP TABLE IF EXISTS graphql_incompatible;
+DROP TABLE IF EXISTS GQLmappings;
 DROP SCHEMA IF EXISTS [foo];
 COMMIT;
 
@@ -130,7 +136,7 @@ CREATE TABLE type_table(
     string_types varchar(max),
     single_types real,
     float_types float,
-    decimal_types decimal,
+    decimal_types decimal(38, 19),
     boolean_types bit,
     datetime_types datetime,
     bytearray_types varbinary(max),
@@ -195,6 +201,24 @@ CREATE TABLE authors_history (
     books_published int
 );
 
+CREATE TABLE revenues(
+    id int PRIMARY KEY,
+    category varchar(max) NOT NULL,
+    revenue int,
+    accessible_role varchar(max) NOT NULL
+);
+
+CREATE TABLE graphql_incompatible (
+    __typeName int PRIMARY KEY,
+    conformingName varchar(12)
+);
+
+CREATE TABLE GQLmappings (
+    __column1 int PRIMARY KEY,
+    __column2 varchar(max),
+    column3 varchar(max)
+)
+
 ALTER TABLE books
 ADD CONSTRAINT book_publisher_fk
 FOREIGN KEY (publisher_id)
@@ -247,12 +271,17 @@ ALTER TABLE sales
 ADD total AS (subtotal + tax) PERSISTED;
 
 SET IDENTITY_INSERT publishers ON
-INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd'), (1940, 'Policy Publisher 01'), (1941, 'Policy Publisher 02');
+INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd'), (1940, 'Policy Publisher 01'), (1941, 'Policy Publisher 02'), (1156, 'The First Publisher');
 SET IDENTITY_INSERT publishers OFF
 
 SET IDENTITY_INSERT authors ON
 INSERT INTO authors(id, name, birthdate) VALUES (123, 'Jelte', '2001-01-01'), (124, 'Aniruddh', '2002-02-02'), (125, 'Aniruddh', '2001-01-01'), (126, 'Aaron', '2001-01-01');
 SET IDENTITY_INSERT authors OFF
+
+INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (1, 'Incompatible GraphQL Name', 'Compatible GraphQL Name');
+INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (3, 'Old Value', 'Record to be Updated');
+INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (4, 'Lost Record', 'Record to be Deleted');
+INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (5, 'Filtered Record', 'Record to be Filtered on Find');
 
 SET IDENTITY_INSERT books ON
 INSERT INTO books(id, title, publisher_id)
@@ -286,8 +315,8 @@ SET IDENTITY_INSERT type_table ON
 INSERT INTO type_table(id, byte_types, short_types, int_types, long_types, string_types, single_types, float_types, decimal_types, boolean_types, datetime_types, bytearray_types) VALUES
     (1, 1, 1, 1, 1, '', 0.33, 0.33, 0.333333, 1, '1999-01-08 10:23:54', 0xABCDEF0123),
     (2, 0, -1, -1, -1, 'lksa;jdflasdf;alsdflksdfkldj', -9.2, -9.2, -9.292929, 0, '1999-01-08 10:23:00', 0x98AB7511AABB1234),
-    (3, 0, -32768, -2147483648, -9223372036854775808, 'null', -3.4E38, -1.7E308, 2.929292E-100, 1, '1999-01-08 10:23:00', 0xFFFFFFFF),
-    (4, 255, 32767, 2147483647, 9223372036854775807, 'null', -3.4E38, 1.7E308, 2.929292E-100, 1, '1999-01-08 10:23:00', 0xFFFFFFFF),
+    (3, 0, -32768, -2147483648, -9223372036854775808, 'null', -3.4E38, -1.7E308, 2.929292E-19, 1, '1753-01-01 00:00:00.000', 0x00000000),
+    (4, 255, 32767, 2147483647, 9223372036854775807, 'null', 3.4E38, 1.7E308, 2.929292E-14, 1, '9999-12-31 23:59:59', 0xFFFFFFFF),
     (5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 SET IDENTITY_INSERT type_table OFF
 
@@ -329,6 +358,9 @@ VALUES
 (9, 'Aaron', null, 'Mitchells', 2001, 1),
 (10, 'Aaron', 'F.', 'Burtle', null, null)
 SET IDENTITY_INSERT authors_history OFF
+
+INSERT INTO revenues(id, category, revenue, accessible_role) VALUES (1, 'Book', 5000, 'Anonymous'), (2, 'Comics', 10000, 'Anonymous'),
+(3, 'Journals', 20000, 'Authenticated'), (4, 'Series', 40000, 'Authenticated');
 
 EXEC('CREATE VIEW books_view_all AS SELECT * FROM dbo.books');
 EXEC('CREATE VIEW books_view_with_mapping AS SELECT * FROM dbo.books');
@@ -379,3 +411,26 @@ EXEC('CREATE PROCEDURE get_authors_history_by_first_name @firstName varchar(100)
         GROUP BY
           concat(first_name, '' '', (middle_name + '' ''), last_name)
       END');
+EXEC('CREATE PROCEDURE insert_and_display_all_books_for_given_publisher @title varchar(max), @publisher_name varchar(max) AS
+      BEGIN
+        DECLARE @publisher_id AS INT;
+        SET @publisher_id = (SELECT id FROM dbo.publishers WHERE name = @publisher_name);
+        INSERT INTO dbo.books(title, publisher_id)
+        VALUES(@title, @publisher_id);
+
+        SELECT * FROM dbo.books WHERE publisher_id = @publisher_id;
+      END');
+
+-- Create a function to be used as a filter predicate by the security policy to restrict access to rows in the table for SELECT,UPDATE,DELETE operations.
+-- Users with roles(claim value) = @accessible_role(column value) or,
+-- Users with roles(claim value) = null and @accessible_role(column value) = 'Anonymous',
+-- will be able to access a particular row.
+EXEC('CREATE FUNCTION dbo.revenuesPredicate(@accessible_role varchar(20))
+    RETURNS TABLE
+    WITH SCHEMABINDING
+    AS RETURN SELECT 1 AS fn_securitypredicate_result
+    WHERE @accessible_role = CAST(SESSION_CONTEXT(N''roles'') AS varchar(20)) or (SESSION_CONTEXT(N''roles'') is null and @accessible_role=''Anonymous'')');
+
+-- Adding a security policy which would restrict access to the rows in revenues table for
+-- SELECT,UPDATE,DELETE operations using the filter predicate dbo.revenuesPredicate.
+EXEC('CREATE SECURITY POLICY dbo.revenuesSecPolicy ADD FILTER PREDICATE dbo.revenuesPredicate(accessible_role) ON dbo.revenues;');

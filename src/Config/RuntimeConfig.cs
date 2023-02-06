@@ -1,6 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Config
@@ -68,6 +71,10 @@ namespace Azure.DataApiBuilder.Config
         public readonly static JsonSerializerOptions SerializerOptions = new()
         {
             PropertyNameCaseInsensitive = true,
+            // As of .NET Core 7, JsonDocument and JsonSerializer only support skipping or disallowing 
+            // of comments; they do not support loading them. If we set JsonCommentHandling.Allow for either,
+            // it will throw an exception.
+            ReadCommentHandling = JsonCommentHandling.Skip,
             Converters =
                 {
                     new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
@@ -105,6 +112,57 @@ namespace Azure.DataApiBuilder.Config
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// This method reads the dab.draft.schema.json which contains the link for online published
+        /// schema for dab, based on the version of dab being used to generate the runtime config.
+        /// </summary>
+        public static string GetPublishedDraftSchemaLink()
+        {
+            string? assemblyDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+
+            if (assemblyDirectory is null)
+            {
+                throw new DataApiBuilderException(
+                    message: "Could not get the link for DAB draft schema.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            string? schemaPath = Path.Combine(assemblyDirectory, "dab.draft.schema.json");
+            string schemaFileContent = File.ReadAllText(schemaPath);
+            Dictionary<string, object>? jsonDictionary = JsonSerializer.Deserialize<Dictionary<string, object>>(schemaFileContent);
+
+            if (jsonDictionary is null)
+            {
+                throw new DataApiBuilderException(
+                    message: "The schema file is misconfigured. Please check the file formatting.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            object? additionalProperties;
+            if (!jsonDictionary.TryGetValue("additionalProperties", out additionalProperties))
+            {
+                throw new DataApiBuilderException(
+                    message: "The schema file doesn't have the required field : additionalProperties",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            // properties cannot be null since the property additionalProperties exist in the schema file.
+            Dictionary<string, string> properties = JsonSerializer.Deserialize<Dictionary<string, string>>(additionalProperties.ToString()!)!;
+
+            string? versionNum;
+            if (!properties.TryGetValue("version", out versionNum))
+            {
+                throw new DataApiBuilderException(message: "Missing required property 'version' in additionalProperties section.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            return versionNum;
         }
 
         /// <summary>

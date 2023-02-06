@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             {
                 ValidateGlobalEndpointRouteConfig(runtimeConfig);
                 ValidateEntityNamesInConfig(runtimeConfig.Entities);
-                ValidateEntitiesDoNotGenerateDuplicateQueries(runtimeConfig.Entities);
+                ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(runtimeConfig.Entities);
             }
         }
 
@@ -168,37 +168,64 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// All these entities will create queries with the following field names
         /// pk query name: book_by_pk
         /// List query name: books
-        /// NOTE: we don't do this check for storedProcedure, because the name of the query is same
-        /// as that provided in the config, and two different entity can't have same name in the config.
+        /// create mutation name: createBook
+        /// update mutation name: updateBook
+        /// delete mutation name: deleteBook
         /// </summary>
         /// <param name="entityCollection">Entity definitions</param>
         /// <exception cref="DataApiBuilderException"></exception>
-        public static void ValidateEntitiesDoNotGenerateDuplicateQueries(IDictionary<string, Entity> entityCollection)
+        public static void ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(IDictionary<string, Entity> entityCollection)
         {
-            HashSet<string> graphQLQueries = new();
+            HashSet<string> graphQLOperationNames = new();
 
             foreach ((string entityName, Entity entity) in entityCollection)
             {
                 entity.TryPopulateSourceFields();
-                if (
-                    entity.ObjectType is SourceType.StoredProcedure ||
-                    entity.GraphQL is null
+                if (entity.GraphQL is null
                     || (entity.GraphQL is bool graphQLEnabled && !graphQLEnabled))
                 {
                     continue;
                 }
 
-                // For entities that have graphQL exposed, two queries would be generated.
-                // Primary Key Query: For fetching an item using its primary key.
-                // List Query: To fetch a paginated list of items
-                // Query names for both these queries are determined.
-                string pkQueryName = GenerateByPKQueryName(entityName, entity);
-                string listQueryName = GenerateListQueryName(entityName, entity);
+                bool containsDuplicateOperationNames = false;
+                if (entity.ObjectType is SourceType.StoredProcedure)
+                {
+                    // For Stored Procedures a single query/mutation is generated.
+                    string storedProcedureQueryName = GenerateStoredProcedureGraphQLFieldName(entityName, entity);
 
-                if (!graphQLQueries.Add(pkQueryName) || !graphQLQueries.Add(listQueryName))
+                    if (!graphQLOperationNames.Add(storedProcedureQueryName))
+                    {
+                        containsDuplicateOperationNames = true;
+                    }
+                }
+                else
+                {
+                    // For entities (table/view) that have graphQL exposed, two queries and three mutations would be generated.
+                    // Primary Key Query: For fetching an item using its primary key.
+                    // List Query: To fetch a paginated list of items.
+                    // Query names for both these queries are determined.
+                    string pkQueryName = GenerateByPKQueryName(entityName, entity);
+                    string listQueryName = GenerateListQueryName(entityName, entity);
+
+                    // Mutations names for the exposed entities are determined.
+                    string createMutationName = $"create{GetDefinedSingularName(entityName, entity)}";
+                    string updateMutationName = $"update{GetDefinedSingularName(entityName, entity)}";
+                    string deleteMutationName = $"delete{GetDefinedSingularName(entityName, entity)}";
+
+                    if (!graphQLOperationNames.Add(pkQueryName)
+                        || !graphQLOperationNames.Add(listQueryName)
+                        || !graphQLOperationNames.Add(createMutationName)
+                        || !graphQLOperationNames.Add(updateMutationName)
+                        || !graphQLOperationNames.Add(deleteMutationName))
+                    {
+                        containsDuplicateOperationNames = true;
+                    }
+                }
+
+                if (containsDuplicateOperationNames)
                 {
                     throw new DataApiBuilderException(
-                        message: $"Entity {entityName} generates queries that already exist",
+                        message: $"Entity {entityName} generates queries/mutation that already exist",
                         statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }
@@ -234,19 +261,34 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 }
                 else if (entity.GraphQL is GraphQLEntitySettings graphQLSettings)
                 {
-                    if (graphQLSettings.Type is string graphQLName)
-                    {
-                        ValidateNameRequirements(graphQLName);
-                    }
-                    else if (graphQLSettings.Type is SingularPlural singularPluralSettings)
-                    {
-                        ValidateNameRequirements(singularPluralSettings.Singular);
+                    ValidateGraphQLEntitySettings(graphQLSettings.Type);
+                }
+                else if (entity.GraphQL is GraphQLStoredProcedureEntityVerboseSettings graphQLVerboseSettings)
+                {
+                    ValidateGraphQLEntitySettings(graphQLVerboseSettings.Type);
+                }
+            }
+        }
 
-                        if (singularPluralSettings.Plural is not null)
-                        {
-                            ValidateNameRequirements(singularPluralSettings.Plural);
-                        }
-                    }
+        /// <summary>
+        /// Validates a GraphQL entity's Type configuration, which involves checking
+        /// whether the string value, if present, is a valid GraphQL name
+        /// whether the SingularPlural value, if present, are valid GraphQL names.
+        /// </summary>
+        /// <param name="graphQLEntitySettingsType">object which is a string or a SingularPlural type.</param>
+        private static void ValidateGraphQLEntitySettings(object? graphQLEntitySettingsType)
+        {
+            if (graphQLEntitySettingsType is string graphQLName)
+            {
+                ValidateNameRequirements(graphQLName);
+            }
+            else if (graphQLEntitySettingsType is SingularPlural singularPluralSettings)
+            {
+                ValidateNameRequirements(singularPluralSettings.Singular);
+
+                if (singularPluralSettings.Plural is not null)
+                {
+                    ValidateNameRequirements(singularPluralSettings.Plural);
                 }
             }
         }
@@ -292,19 +334,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
         {
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
 
-            // Validate that the user has not set the devmode-authenticate-all-requests
-            // feature switch when hostmode is production.
-
-            if (runtimeConfig.HostGlobalSettings.Mode == HostModeType.Production
-                && runtimeConfig.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated is not null
-                && runtimeConfig.HostGlobalSettings.IsDevModeDefaultRequestAuthenticated is true)
-            {
-                throw new DataApiBuilderException(
-                    message: $"Default state of authentication cannot be set for requests in production mode.",
-                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
-            }
-
             bool isAudienceSet =
                 runtimeConfig.AuthNConfig is not null &&
                 runtimeConfig.AuthNConfig.Jwt is not null &&
@@ -327,21 +356,21 @@ namespace Azure.DataApiBuilder.Service.Configurations
         }
 
         /// <summary>
-        /// Method to perform all the different validations related to the semantic correctness of the
-        /// runtime configuration, focusing on the permissions section of the entity.
+        /// Validates the semantic correctness of the permissions defined for each entity within runtime configuration.
         /// </summary>
-        /// <exception cref="DataApiBuilderException">Throws exception whenever some validation fails.</exception>
+        /// <exception cref="DataApiBuilderException">Throws exception when permission validation fails.</exception>
         public void ValidatePermissionsInConfig(RuntimeConfig runtimeConfig)
         {
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
                 entity.TryPopulateSourceFields();
+                HashSet<Config.Operation> totalSupportedOperationsFromAllRoles = new();
                 foreach (PermissionSetting permissionSetting in entity.Permissions)
                 {
                     string roleName = permissionSetting.Role;
-                    Object[] actions = permissionSetting.Operations;
+                    object[] actions = permissionSetting.Operations;
                     List<Config.Operation> operationsList = new();
-                    foreach (Object action in actions)
+                    foreach (object action in actions)
                     {
                         if (action is null)
                         {
@@ -351,7 +380,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         // Evaluate actionOp as the current operation to be validated.
                         Config.Operation actionOp;
                         JsonElement actionJsonElement = JsonSerializer.SerializeToElement(action);
-                        if ((actionJsonElement!).ValueKind is JsonValueKind.String)
+                        if (actionJsonElement!.ValueKind is JsonValueKind.String)
                         {
                             string actionName = action.ToString()!;
                             if (AuthorizationResolver.WILDCARD.Equals(actionName))
@@ -359,7 +388,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                 actionOp = Config.Operation.All;
                             }
                             else if (!Enum.TryParse<Config.Operation>(actionName, ignoreCase: true, out actionOp) ||
-                                !IsValidPermissionAction(actionOp))
+                                !IsValidPermissionAction(actionOp, entity, entityName))
                             {
                                 throw GetInvalidActionException(entityName, roleName, actionName);
                             }
@@ -369,13 +398,13 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             PermissionOperation configOperation;
                             try
                             {
-                                configOperation = JsonSerializer.Deserialize<Config.PermissionOperation>(action.ToString()!)!;
+                                configOperation = JsonSerializer.Deserialize<PermissionOperation>(action.ToString()!)!;
                             }
                             catch (Exception e)
                             {
                                 throw new DataApiBuilderException(
                                     message: $"One of the action specified for entity:{entityName} is not well formed.",
-                                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                    statusCode: HttpStatusCode.ServiceUnavailable,
                                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError,
                                     innerException: e);
                             }
@@ -383,7 +412,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             actionOp = configOperation.Name;
                             // If we have reached this point, it means that we don't have any invalid
                             // data type in actions. However we need to ensure that the actionOp is valid.
-                            if (!IsValidPermissionAction(actionOp))
+                            if (!IsValidPermissionAction(actionOp, entity, entityName))
                             {
                                 bool isActionPresent = ((JsonElement)action).TryGetProperty(_actionKey,
                                     out JsonElement actionElement);
@@ -391,7 +420,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                 {
                                     throw new DataApiBuilderException(
                                         message: $"action cannot be omitted for entity: {entityName}, role:{roleName}",
-                                        statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                        statusCode: HttpStatusCode.ServiceUnavailable,
                                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                                 }
 
@@ -410,10 +439,11 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                     string misconfiguredColumnSet = configOperation.Fields.Include.Contains(AuthorizationResolver.WILDCARD)
                                         && configOperation.Fields.Include.Count > 1 ? "included" : "excluded";
                                     string actionName = actionOp is Config.Operation.All ? "*" : actionOp.ToString();
+
                                     throw new DataApiBuilderException(
                                             message: $"No other field can be present with wildcard in the {misconfiguredColumnSet} set for:" +
                                             $" entity:{entityName}, role:{permissionSetting.Role}, action:{actionName}",
-                                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                            statusCode: HttpStatusCode.ServiceUnavailable,
                                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                                 }
 
@@ -439,18 +469,19 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         }
 
                         operationsList.Add(actionOp);
+                        totalSupportedOperationsFromAllRoles.Add(actionOp);
                     }
 
-                    // Only one of the CRUD actions is allowed for stored procedure.
+                    // Stored procedures only support the "execute" operation.
                     if (entity.ObjectType is SourceType.StoredProcedure)
                     {
                         if ((operationsList.Count > 1)
-                            || (operationsList.Count is 1 && operationsList[0] is Config.Operation.All))
+                            || (operationsList.Count is 1 && operationsList[0] is not Config.Operation.Execute))
                         {
                             throw new DataApiBuilderException(
                                 message: $"Invalid Operations for Entity: {entityName}. " +
-                                    $"StoredProcedure can process only one CRUD (Create/Read/Update/Delete) operation.",
-                                statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                    $"Stored procedures can only be configured with the 'execute' operation.",
+                                statusCode: HttpStatusCode.ServiceUnavailable,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                         }
                     }
@@ -465,7 +496,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// such as "WHERE name = 'xyz'"
         /// </summary>
         /// <param name="permission"></param>
-        /// <returns></returns>
+        /// <returns>True/False</returns>
         public bool IsValidDatabasePolicyForAction(PermissionOperation permission)
         {
             return !(permission.Policy?.Database != null && permission.Name == Config.Operation.Create);
@@ -528,6 +559,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                     }
 
+                    DatabaseTable sourceDatabaseObject = (DatabaseTable)sqlMetadataProvider.EntityToDatabaseObject[entityName];
+                    DatabaseTable targetDatabaseObject = (DatabaseTable)sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity];
                     if (relationship.LinkingObject is not null)
                     {
                         (string linkingTableSchema, string linkingTableName) = sqlMetadataProvider.ParseSchemaAndDbTableName(relationship.LinkingObject)!;
@@ -535,8 +568,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
                         if (relationship.LinkingSourceFields is null || relationship.SourceFields is null)
                         {
-                            if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(linkingDatabaseObject,
-                                (DatabaseTable)sqlMetadataProvider.EntityToDatabaseObject[entityName]))
+                            if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(linkingDatabaseObject, sourceDatabaseObject))
                             {
                                 throw new DataApiBuilderException(
                                 message: $"Could not find relationship between Linking Object: {relationship.LinkingObject}" +
@@ -548,8 +580,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
                         if (relationship.LinkingTargetFields is null || relationship.TargetFields is null)
                         {
-                            if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(linkingDatabaseObject,
-                                (DatabaseTable)sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity]))
+                            if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(linkingDatabaseObject, targetDatabaseObject))
                             {
                                 throw new DataApiBuilderException(
                                 message: $"Could not find relationship between Linking Object: {relationship.LinkingObject}" +
@@ -558,15 +589,38 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                             }
                         }
+
+                        if (!_runtimeConfigProvider.IsLateConfigured)
+                        {
+                            LoggingRelationshipHeader(linked: true);
+                            string sourceDBOName = sqlMetadataProvider.EntityToDatabaseObject[entityName].FullName;
+                            string targetDBOName = sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity].FullName;
+                            string cardinality = relationship.Cardinality.ToString().ToLower();
+                            RelationShipPair linkedSourceRelationshipPair = new(linkingDatabaseObject, sourceDatabaseObject);
+                            RelationShipPair linkedTargetRelationshipPair = new(linkingDatabaseObject, targetDatabaseObject);
+                            ForeignKeyDefinition? fKDef;
+                            string referencedSourceColumns = relationship.SourceFields is not null ? string.Join(",", relationship.SourceFields) :
+                                sqlMetadataProvider.PairToFkDefinition!.TryGetValue(linkedSourceRelationshipPair, out fKDef) ?
+                                string.Join(",", fKDef.ReferencedColumns) : string.Empty;
+                            string referencingSourceColumns = relationship.LinkingSourceFields is not null ? string.Join(",", relationship.LinkingSourceFields) :
+                                sqlMetadataProvider.PairToFkDefinition!.TryGetValue(linkedSourceRelationshipPair, out fKDef) ?
+                                string.Join(",", fKDef.ReferencingColumns) : string.Empty;
+                            string referencedTargetColumns = relationship.TargetFields is not null ? string.Join(",", relationship.TargetFields) :
+                                sqlMetadataProvider.PairToFkDefinition!.TryGetValue(linkedTargetRelationshipPair, out fKDef) ?
+                                string.Join(",", fKDef.ReferencedColumns) : string.Empty;
+                            string referencingTargetColumns = relationship.LinkingTargetFields is not null ? string.Join(",", relationship.LinkingTargetFields) :
+                                sqlMetadataProvider.PairToFkDefinition!.TryGetValue(linkedTargetRelationshipPair, out fKDef) ?
+                                string.Join(",", fKDef.ReferencingColumns) : string.Empty;
+                            _logger.LogDebug($"{entityName}: {sourceDBOName}({referencedSourceColumns}) related to {cardinality} " +
+                                $"{relationship.TargetEntity}: {targetDBOName}({referencedTargetColumns}) by " +
+                                $"{relationship.LinkingObject}(linking.source.fields: {referencingSourceColumns}), (linking.target.fields: {referencingTargetColumns})");
+                        }
                     }
 
                     if (relationship.LinkingObject is null
                         && (relationship.SourceFields is null || relationship.TargetFields is null))
                     {
-                        if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(
-                                (DatabaseTable)sqlMetadataProvider.EntityToDatabaseObject[entityName],
-                                (DatabaseTable)sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity])
-                            )
+                        if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(sourceDatabaseObject, targetDatabaseObject))
                         {
                             throw new DataApiBuilderException(
                             message: $"Could not find relationship between entities: {entityName} and {relationship.TargetEntity}.",
@@ -574,8 +628,44 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                         }
                     }
+
+                    if (relationship.LinkingObject is null && !_runtimeConfigProvider.IsLateConfigured)
+                    {
+                        LoggingRelationshipHeader();
+                        RelationShipPair sourceTargetRelationshipPair = new(sourceDatabaseObject, targetDatabaseObject);
+                        RelationShipPair targetSourceRelationshipPair = new(targetDatabaseObject, sourceDatabaseObject);
+                        string sourceDBOName = sqlMetadataProvider.EntityToDatabaseObject[entityName].FullName;
+                        string targetDBOName = sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity].FullName;
+                        string cardinality = relationship.Cardinality.ToString().ToLower();
+                        ForeignKeyDefinition? fKDef;
+                        string sourceColumns = relationship.SourceFields is not null ? string.Join(",", relationship.SourceFields) :
+                            sqlMetadataProvider.PairToFkDefinition!.TryGetValue(sourceTargetRelationshipPair, out fKDef) ?
+                            string.Join(",", fKDef.ReferencingColumns) :
+                            sqlMetadataProvider.PairToFkDefinition!.TryGetValue(targetSourceRelationshipPair, out fKDef) ?
+                            string.Join(",", fKDef.ReferencedColumns) : string.Empty;
+                        string targetColumns = relationship.TargetFields is not null ? string.Join(",", relationship.TargetFields) :
+                            sqlMetadataProvider.PairToFkDefinition!.TryGetValue(sourceTargetRelationshipPair, out fKDef) ?
+                            string.Join(",", fKDef.ReferencedColumns) :
+                            sqlMetadataProvider.PairToFkDefinition!.TryGetValue(targetSourceRelationshipPair, out fKDef) ?
+                            string.Join(",", fKDef.ReferencingColumns) : string.Empty;
+                        _logger.LogDebug($"{entityName}: {sourceDBOName}({sourceColumns}) is related to {cardinality} " +
+                            $"{relationship.TargetEntity}: {targetDBOName}({targetColumns}).");
+                    }
                 }
             }
+        }
+
+        /// <summary>
+        /// Helper function simply logs the header we display before logging relationship information.
+        /// </summary>
+        /// <param name="linked"></param>
+        private void LoggingRelationshipHeader(bool linked = false)
+        {
+            string linkedMessage = linked ? " by <linking.object>(linking.source.fields: <linking.source.fields>), (linking.target.fields: <linking.target.fields>)" :
+                string.Empty;
+            _logger.LogDebug($"Logging relationship information in the form:\n" +
+                             $"<entity>: <entity.source.object>(<source.fields>) is related to <cardinality> " +
+                             $"<target.entity: <target.entity.source.object(<target.fields>){linkedMessage}.");
         }
 
         /// <summary>
@@ -803,14 +893,44 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
         /// <summary>
         /// Returns whether the action is a valid
-        /// - Create, Read, Update, Delete (CRUD) operation
+        /// Valid non stored procedure actions:
+        /// - Create, Read, Update, Delete (CRUD)
         /// - All (*)
+        /// Valid stored procedure  actions:
+        /// - Execute
         /// </summary>
-        /// <param name="action"></param>
+        /// <param name="action">Compared against valid actions to determine validity.</param>
+        /// <param name="entity">Used to identify entity's representative object type.</param>
+        /// <param name="entityName">Used to supplement error messages.</param>
         /// <returns>Boolean value indicating whether the action is valid or not.</returns>
-        public static bool IsValidPermissionAction(Config.Operation action)
+        public static bool IsValidPermissionAction(Config.Operation action, Entity entity, string entityName)
         {
-            return action is Config.Operation.All || PermissionOperation.ValidPermissionOperations.Contains(action);
+            if (entity.ObjectType is SourceType.StoredProcedure)
+            {
+                if (!PermissionOperation.ValidStoredProcedurePermissionOperations.Contains(action))
+                {
+                    throw new DataApiBuilderException(
+                        message: $"Invalid operation for Entity: {entityName}. " +
+                            $"Stored procedures can only be configured with the 'execute' operation.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                }
+
+                return true;
+            }
+            else
+            {
+                if (action is Config.Operation.Execute)
+                {
+                    throw new DataApiBuilderException(
+                        message: $"Invalid operation for Entity: {entityName}. " +
+                            $"The 'execute' operation can only be configured for entities backed by stored procedures.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                }
+
+                return action is Config.Operation.All || PermissionOperation.ValidPermissionOperations.Contains(action);
+            }
         }
     }
 }

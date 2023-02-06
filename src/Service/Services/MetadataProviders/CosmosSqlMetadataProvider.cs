@@ -22,7 +22,12 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         private Dictionary<string, string> _graphQLSingularTypeToEntityNameMap = new();
 
         /// <inheritdoc />
+        public Dictionary<string, string> GraphQLStoredProcedureExposedNameToEntityNameMap { get; set; } = new();
+
+        /// <inheritdoc />
         public Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } = new(StringComparer.InvariantCultureIgnoreCase);
+
+        public Dictionary<RelationShipPair, ForeignKeyDefinition>? PairToFkDefinition => throw new NotImplementedException();
 
         public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, IFileSystem fileSystem)
         {
@@ -163,9 +168,18 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             throw new NotImplementedException();
         }
 
-        public bool TryGetBackingColumn(string entityName, string field, out string? name)
+        /// <summary>
+        /// Mapped column are not yet supported for Cosmos.
+        /// Returns the value of the field provided.
+        /// </summary>
+        /// <param name="entityName">Name of the entity.</param>
+        /// <param name="field">Name of the database field.</param>
+        /// <param name="name">Mapped name, which for CosmosDB is the value provided for field."</param>
+        /// <returns>True, with out variable set as the value of the input "field" value.</returns>
+        public bool TryGetBackingColumn(string entityName, string field, [NotNullWhen(true)] out string? name)
         {
-            throw new NotImplementedException();
+            name = field;
+            return true;
         }
 
         public IDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects()
@@ -211,6 +225,12 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             }
 
             return entityName!;
+        }
+
+        /// <inheritdoc />
+        public string GetDefaultSchemaName()
+        {
+            return string.Empty;
         }
     }
 }

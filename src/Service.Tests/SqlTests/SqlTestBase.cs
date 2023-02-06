@@ -52,7 +52,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         protected static RuntimeConfig _runtimeConfig;
         protected static ILogger<ISqlMetadataProvider> _sqlMetadataLogger;
         protected static ILogger<SqlMutationEngine> _mutationEngineLogger;
-        protected static ILogger<SqlQueryEngine> _queryEngineLogger;
+        protected static ILogger<IQueryEngine> _queryEngineLogger;
         protected static ILogger<RestController> _restControllerLogger;
         protected static GQLFilterParser _gQLFilterParser;
         protected const string MSSQL_DEFAULT_DB_NAME = "master";
@@ -73,7 +73,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         protected static async Task InitializeTestFixture(TestContext context, List<string> customQueries = null,
             List<string[]> customEntities = null)
         {
-            _queryEngineLogger = new Mock<ILogger<SqlQueryEngine>>().Object;
+            _queryEngineLogger = new Mock<ILogger<IQueryEngine>>().Object;
             _mutationEngineLogger = new Mock<ILogger<SqlMutationEngine>>().Object;
             _restControllerLogger = new Mock<ILogger<RestController>>().Object;
 
@@ -151,8 +151,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                                     _sqlMetadataProvider,
                                     _authorizationResolver,
                                     _gQLFilterParser,
-                                    ActivatorUtilities.GetServiceOrCreateInstance<IHttpContextAccessor>(serviceProvider),
-                                    _mutationEngineLogger);
+                                    ActivatorUtilities.GetServiceOrCreateInstance<IHttpContextAccessor>(serviceProvider));
                         });
                         services.AddSingleton(_sqlMetadataProvider);
                         services.AddSingleton(_authorizationResolver);
@@ -340,6 +339,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="expectedStatusCode">int represents the returned http status code</param>
         /// <param name="expectedSubStatusCode">enum represents the returned sub status code</param>
         /// <param name="expectedLocationHeader">The expected location header in the response (if any)</param>
+        /// <param name="isExpectedErrorMsgSubstr">When set to true, will look for a substring 'expectedErrorMessage'
+        /// in the actual error message to verify the test result. This is helpful when the actual error message is dynamic and changes
+        /// on every single run of the test.</param>
         /// <returns></returns>
         protected static async Task SetupAndRunRestApiTest(
             string primaryKeyRoute,
@@ -353,12 +355,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             bool exceptionExpected = false,
             string expectedErrorMessage = "",
             HttpStatusCode expectedStatusCode = HttpStatusCode.OK,
+            RestMethod? restHttpVerb = null,
             string expectedSubStatusCode = "BadRequest",
             string expectedLocationHeader = null,
             string expectedAfterQueryString = "",
             bool paginated = false,
             int verifyNumRecords = -1,
-            bool expectJson = true)
+            bool expectJson = true,
+            bool isExpectedErrorMsgSubstr = false)
         {
             // Create the rest endpoint using the path and entity name.
             string restEndPoint = restPath + "/" + entityNameOrPath;
@@ -387,7 +391,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             };
 
             // Get the httpMethod based on the operation to be executed.
-            HttpMethod httpMethod = SqlTestHelper.GetHttpMethodFromOperation(operationType);
+            HttpMethod httpMethod = SqlTestHelper.GetHttpMethodFromOperation(operationType, restHttpVerb);
 
             // Create the request to be sent to the engine.
             HttpRequestMessage request;
@@ -466,7 +470,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 exceptionExpected: exceptionExpected,
                 httpMethod: httpMethod,
                 expectedLocationHeader: expectedLocationHeader,
-                verifyNumRecords: verifyNumRecords);
+                verifyNumRecords: verifyNumRecords,
+                isExpectedErrorMsgSubstr: isExpectedErrorMsgSubstr);
         }
 
         /// <summary>

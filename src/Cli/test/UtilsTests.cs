@@ -7,80 +7,57 @@ namespace Cli.Tests
     public class UtilsTests
     {
         /// <summary>
-        /// Test to check if it successfully creates the rest object
-        /// which can be either a boolean value
-        /// or a RestEntitySettings object
+        /// Setup the logger for CLI
         /// </summary>
-        [TestMethod]
-        public void TestGetRestDetails()
+        [TestInitialize]
+        public void SetupLoggerForCLI()
         {
-            // When the rest is a boolean object
-            object? restDetails = GetRestDetails("true");
-            Assert.IsNotNull(restDetails);
-            Assert.IsInstanceOfType(restDetails, typeof(bool));
-            Assert.IsTrue((bool)restDetails);
-
-            restDetails = GetRestDetails("True");
-            Assert.IsNotNull(restDetails);
-            Assert.IsInstanceOfType(restDetails, typeof(bool));
-            Assert.IsTrue((bool)restDetails);
-
-            restDetails = GetRestDetails("false");
-            Assert.IsNotNull(restDetails);
-            Assert.IsInstanceOfType(restDetails, typeof(bool));
-            Assert.IsFalse((bool)restDetails);
-
-            restDetails = GetRestDetails("False");
-            Assert.IsNotNull(restDetails);
-            Assert.IsInstanceOfType(restDetails, typeof(bool));
-            Assert.IsFalse((bool)restDetails);
-
-            // When rest is non-boolean string
-            restDetails = GetRestDetails("book");
-            Assert.AreEqual(new RestEntitySettings(Path: "/book"), restDetails);
+            Mock<ILogger<Utils>> utilsLogger = new();
+            Utils.SetCliUtilsLogger(utilsLogger.Object);
         }
 
         /// <summary>
-        /// Test to check if it successfully creates the graphql object which can be either a boolean value
-        /// or a GraphQLEntitySettings object containing graphql type {singular, plural} based on the input
+        /// Test to validate the REST Path constructed from the input entered using
+        /// --rest option  
         /// </summary>
-        [TestMethod]
-        public void TestGetGraphQLDetails()
+        /// <param name="restRoute">REST Route input from the --rest option</param>
+        /// <param name="expectedRestPath">Expected REST path to be constructed</param>
+        [DataTestMethod]
+        [DataRow(null, null, DisplayName = "No Rest Path definition")]
+        [DataRow("true", true, DisplayName = "REST enabled for the entity")]
+        [DataRow("false", false, DisplayName = "REST disabled for the entity")]
+        [DataRow("customPath", "/customPath", DisplayName = "Custom REST path defined for the entity")]
+        public void TestContructRestPathDetails(string? restRoute, object? expectedRestPath)
         {
-            object? graphQlDetails = GetGraphQLDetails("true");
-            Assert.IsNotNull(graphQlDetails);
-            Assert.IsInstanceOfType(graphQlDetails, typeof(bool));
-            Assert.IsTrue((bool)graphQlDetails);
+            object? actualRestPathDetails = ConstructRestPathDetails(restRoute);
+            Assert.AreEqual(expectedRestPath, actualRestPathDetails);
+        }
 
-            graphQlDetails = GetGraphQLDetails("True");
-            Assert.IsNotNull(graphQlDetails);
-            Assert.IsInstanceOfType(graphQlDetails, typeof(bool));
-            Assert.IsTrue((bool)graphQlDetails);
+        /// <summary>
+        /// Test to validate the GraphQL Type constructed from the input entered using
+        /// --graphql option
+        /// </summary>
+        /// <param name="graphQLType">GraphQL Type input from --graphql option</param>
+        /// <param name="expectedGraphQLType">Expected GraphQL Type to be constructed</param>
+        [DataTestMethod]
+        [DataRow(null, null, false, DisplayName = "No GraphQL Type definition")]
+        [DataRow("true", true, false, DisplayName = "GraphQL enabled for the entity")]
+        [DataRow("false", false, false, DisplayName = "GraphQL disabled for the entity")]
+        [DataRow("book", null, true, DisplayName = "Custom GraphQL type - Singular value defined")]
+        [DataRow("book:books", null, true, DisplayName = "Custom GraphQL type - Singular and Plural values defined")]
+        public void TestConstructGraphQLTypeDetails(string? graphQLType, object? expectedGraphQLType, bool isSingularPluralType)
+        {
+            object? actualGraphQLType = ConstructGraphQLTypeDetails(graphQLType);
+            if (!isSingularPluralType)
+            {
+                Assert.AreEqual(expectedGraphQLType, actualGraphQLType);
+            }
+            else
+            {
+                SingularPlural expectedType = new(Singular: "book", Plural: "books");
+                Assert.AreEqual(expectedType, actualGraphQLType);
+            }
 
-            graphQlDetails = GetGraphQLDetails("false");
-            Assert.IsNotNull(graphQlDetails);
-            Assert.IsInstanceOfType(graphQlDetails, typeof(bool));
-            Assert.IsFalse((bool)graphQlDetails);
-
-            graphQlDetails = GetGraphQLDetails("False");
-            Assert.IsNotNull(graphQlDetails);
-            Assert.IsInstanceOfType(graphQlDetails, typeof(bool));
-            Assert.IsFalse((bool)graphQlDetails);
-
-            //when graphql is null
-            Assert.IsNull(GetGraphQLDetails(null));
-
-            // When graphql is non-boolean string
-            graphQlDetails = GetGraphQLDetails("book");
-            Assert.AreEqual(new GraphQLEntitySettings(Type: new SingularPlural(Singular: "book", Plural: "books")), graphQlDetails);
-
-            // When graphql is a pair of string for custom singular, plural string.
-            graphQlDetails = GetGraphQLDetails("book:plural_books");
-            Assert.AreEqual(new GraphQLEntitySettings(Type: new SingularPlural(Singular: "book", Plural: "plural_books")), graphQlDetails);
-
-            // Invalid graphql string
-            graphQlDetails = GetGraphQLDetails("book:plural_books:ads");
-            Assert.IsNull(graphQlDetails);
         }
 
         /// <summary>
@@ -128,11 +105,14 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Test to verify that stored-procedures contain only 1 CRUD operation.
+        /// Validates permissions operations are valid for the provided source type.
         /// </summary>
+        /// <param name="operations">CRUD + Execute + *</param>
+        /// <param name="sourceType">Table, StoredProcedure, View</param>
+        /// <param name="isSuccess">True/False</param>
         [DataTestMethod]
         [DataRow(new string[] { "*" }, SourceType.StoredProcedure, false, DisplayName = "FAIL: Stored-Procedure with wildcard CRUD operation.")]
-        [DataRow(new string[] { "create" }, SourceType.StoredProcedure, true, DisplayName = "PASS: Stored-Procedure with 1 CRUD operation.")]
+        [DataRow(new string[] { "execute" }, SourceType.StoredProcedure, true, DisplayName = "PASS: Stored-Procedure with execute operation only.")]
         [DataRow(new string[] { "create", "read" }, SourceType.StoredProcedure, false, DisplayName = "FAIL: Stored-Procedure with more than 1 CRUD operation.")]
         [DataRow(new string[] { "*" }, SourceType.Table, true, DisplayName = "PASS: Table with wildcard CRUD operation.")]
         [DataRow(new string[] { "create" }, SourceType.Table, true, DisplayName = "PASS: Table with 1 CRUD operation.")]
@@ -167,6 +147,40 @@ namespace Cli.Tests
             {
                 Assert.AreEqual(operationTypeName, expectedOperationTypeName);
             }
+        }
+
+        /// <summary>
+        /// Test to verify that both Audience and Issuer is mandatory when Authentication Provider is 
+        /// neither EasyAuthType or Simulator. If Authentication Provider is either EasyAuth or Simulator
+        /// audience and issuer are ignored.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("StaticWebApps", "aud-xxx", "issuer-xxx", true, DisplayName = "PASS: Audience and Issuer ignored with StaticWebApps.")]
+        [DataRow("StaticWebApps", null, "issuer-xxx", true, DisplayName = "PASS: Issuer ignored with StaticWebApps.")]
+        [DataRow("StaticWebApps", "aud-xxx", null, true, DisplayName = "PASS: Audience ignored with StaticWebApps.")]
+        [DataRow("StaticWebApps", null, null, true, DisplayName = "PASS: StaticWebApps correctly configured with neither audience nor issuer.")]
+        [DataRow("AppService", "aud-xxx", "issuer-xxx", true, DisplayName = "PASS: Audience and Issuer ignored with AppService.")]
+        [DataRow("AppService", null, "issuer-xxx", true, DisplayName = "PASS: Issuer ignored with AppService.")]
+        [DataRow("AppService", "aud-xxx", null, true, DisplayName = "PASS: Audience ignored with AppService.")]
+        [DataRow("AppService", null, null, true, DisplayName = "PASS: AppService correctly configured with neither audience nor issuer.")]
+        [DataRow("Simulator", "aud-xxx", "issuer-xxx", true, DisplayName = "PASS: Audience and Issuer ignored with Simulator.")]
+        [DataRow("Simulator", null, "issuer-xxx", true, DisplayName = "PASS: Issuer ignored with Simulator.")]
+        [DataRow("Simulator", "aud-xxx", null, true, DisplayName = "PASS: Audience ignored with Simulator.")]
+        [DataRow("Simulator", null, null, true, DisplayName = "PASS: Simulator correctly configured with neither audience nor issuer.")]
+        [DataRow("AzureAD", "aud-xxx", "issuer-xxx", true, DisplayName = "PASS: AzureAD correctly configured with both audience and issuer.")]
+        [DataRow("AzureAD", null, "issuer-xxx", false, DisplayName = "FAIL: AzureAD incorrectly configured with no audience specified.")]
+        [DataRow("AzureAD", "aud-xxx", null, false, DisplayName = "FAIL: AzureAD incorrectly configured with no issuer specified.")]
+        [DataRow("AzureAD", null, null, false, DisplayName = "FAIL: AzureAD incorrectly configured with no audience or issuer specified.")]
+        public void TestValidateAudienceAndIssuerForAuthenticationProvider(
+            string authenticationProvider,
+            string? audience,
+            string? issuer,
+            bool expectSuccess)
+        {
+            Assert.AreEqual(
+                expectSuccess,
+                ValidateAudienceAndIssuerForJwtProvider(authenticationProvider, audience, issuer)
+            );
         }
 
         [ClassCleanup]

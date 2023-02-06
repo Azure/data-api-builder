@@ -7,9 +7,9 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Retry;
@@ -22,9 +22,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     public class QueryExecutor<TConnection> : IQueryExecutor
         where TConnection : DbConnection, new()
     {
-        protected string ConnectionString { get; }
         protected DbExceptionParser DbExceptionParser { get; }
-        protected ILogger<QueryExecutor<TConnection>> QueryExecutorLogger { get; }
+        protected ILogger<IQueryExecutor> QueryExecutorLogger { get; }
+        private RuntimeConfigProvider ConfigProvider { get; }
 
         // The maximum number of attempts that can be made to execute the query successfully in addition to the first attempt.
         // So to say in case of transient exceptions, the query will be executed (_maxRetryCount + 1) times at max.
@@ -32,15 +32,17 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         private AsyncRetryPolicy _retryPolicy;
 
-        public QueryExecutor(RuntimeConfigProvider runtimeConfigProvider,
-                             DbExceptionParser dbExceptionParser,
-                             ILogger<QueryExecutor<TConnection>> logger)
-        {
-            RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
+        public virtual DbConnectionStringBuilder ConnectionStringBuilder { get; set; }
 
-            ConnectionString = runtimeConfig.ConnectionString;
+        public QueryExecutor(DbExceptionParser dbExceptionParser,
+                             ILogger<IQueryExecutor> logger,
+                             DbConnectionStringBuilder connectionStringBuilder,
+                             RuntimeConfigProvider configProvider)
+        {
             DbExceptionParser = dbExceptionParser;
             QueryExecutorLogger = logger;
+            ConnectionStringBuilder = connectionStringBuilder;
+            ConfigProvider = configProvider;
             _retryPolicy = Polly.Policy
             .Handle<DbException>(DbExceptionParser.IsTransientException)
             .WaitAndRetryAsync(
@@ -58,12 +60,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string sqltext,
             IDictionary<string, object?> parameters,
             Func<DbDataReader, List<string>?, Task<TResult?>>? dataReaderHandler,
+            HttpContext? httpContext = null,
             List<string>? args = null)
         {
             int retryAttempt = 0;
             using TConnection conn = new()
             {
-                ConnectionString = ConnectionString,
+                ConnectionString = ConnectionStringBuilder.ConnectionString,
             };
 
             await SetManagedIdentityAccessTokenIfAnyAsync(conn);
@@ -73,11 +76,18 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 retryAttempt++;
                 try
                 {
+                    // When IsLateConfigured is true we are in a hosted scenario and do not reveal query information.
+                    if (!ConfigProvider.IsLateConfigured)
+                    {
+                        QueryExecutorLogger.LogDebug($"Executing query: \n{sqltext}");
+                    }
+
                     TResult? result =
                         await ExecuteQueryAgainstDbAsync(conn,
                             sqltext,
                             parameters,
                             dataReaderHandler,
+                            httpContext,
                             args);
                     if (retryAttempt > 1)
                     {
@@ -114,6 +124,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="parameters">The parameters used to execute the SQL text.</param>
         /// <param name="dataReaderHandler">The function to invoke to handle the results
         /// in the DbDataReader obtained after executing the query.</param>
+        /// <param name="httpContext">Current user httpContext.</param>
         /// <param name="args">List of string arguments to the DbDataReader handler.</param>
         /// <returns>An object formed using the results of the query as returned by the given handler.</returns>
         public virtual async Task<TResult?> ExecuteQueryAgainstDbAsync<TResult>(
@@ -121,13 +132,20 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string sqltext,
             IDictionary<string, object?> parameters,
             Func<DbDataReader, List<string>?, Task<TResult?>>? dataReaderHandler,
+            HttpContext? httpContext,
             List<string>? args = null)
         {
             await conn.OpenAsync();
             DbCommand cmd = conn.CreateCommand();
-            cmd.CommandText = sqltext;
             cmd.CommandType = CommandType.Text;
-            if (parameters != null)
+
+            // Add query to send user data from DAB to the underlying database to enable additional security the user might have configured
+            // at the database level.
+            string sessionParamsQuery = GetSessionParamsQuery(httpContext, parameters);
+            //"EXEC sp_set_session_context 'roles', 'Anonymous', @read_only =1 ;";
+
+            cmd.CommandText = sessionParamsQuery + sqltext;
+            if (parameters is not null)
             {
                 foreach (KeyValuePair<string, object?> parameterEntry in parameters)
                 {
@@ -156,6 +174,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 QueryExecutorLogger.LogError(e.StackTrace);
                 throw DbExceptionParser.Parse(e);
             }
+        }
+
+        /// <inheritdoc />
+        public virtual string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, object?> parameters)
+        {
+            return string.Empty;
         }
 
         /// <inheritdoc />

@@ -6,7 +6,6 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
@@ -16,7 +15,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using static Azure.DataApiBuilder.Service.Authorization.AuthorizationResolver;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLStoredProcedureBuilder;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
@@ -31,7 +29,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private readonly IQueryBuilder _queryBuilder;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationResolver _authorizationResolver;
-        private readonly ILogger<SqlQueryEngine> _logger;
+        private readonly ILogger<IQueryEngine> _logger;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private readonly GQLFilterParser _gQLFilterParser;
 
@@ -45,7 +43,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             IHttpContextAccessor httpContextAccessor,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
-            ILogger<SqlQueryEngine> logger,
+            ILogger<IQueryEngine> logger,
             RuntimeConfigProvider runtimeConfigProvider)
         {
             _queryExecutor = queryExecutor;
@@ -95,23 +93,17 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
-            _sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(context.Field.Name.Value, out DatabaseObject databaseObject);
-            if (databaseObject is not null && databaseObject.SourceType is SourceType.StoredProcedure)
+            if (_sqlMetadataProvider.GraphQLStoredProcedureExposedNameToEntityNameMap.TryGetValue(context.Selection.Field.Name.Value, out string entityName))
             {
                 SqlExecuteStructure sqlExecuteStructure = new(
-                    context.FieldSelection.Name.Value,
+                    entityName,
                     _sqlMetadataProvider,
                     _authorizationResolver,
                     _gQLFilterParser,
                     parameters);
 
-                // checking if role has read permission on the result
-                _authorizationResolver.EntityPermissionsMap.TryGetValue(context.Field.Name.Value, out EntityMetadata entityMetadata);
-                string role = context.ContextData[CLIENT_ROLE_HEADER].ToString();
-                bool IsReadAllowed = entityMetadata.RoleToOperationMap[role].OperationToColumnMap.ContainsKey(Config.Operation.Read);
-
                 return new Tuple<IEnumerable<JsonDocument>, IMetadata>(
-                        FormatStoredProcedureResultAsJsonList(IsReadAllowed, await ExecuteAsync(sqlExecuteStructure)),
+                        FormatStoredProcedureResultAsJsonList(await ExecuteAsync(sqlExecuteStructure)),
                         PaginationMetadata.MakeEmptyPaginationMetadata());
             }
             else
@@ -125,12 +117,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     _gQLFilterParser);
 
                 string queryString = _queryBuilder.Build(structure);
-                _logger.LogInformation(queryString);
                 List<JsonDocument> jsonListResult =
                     await _queryExecutor.ExecuteQueryAsync(
                         queryString,
                         structure.Parameters,
-                        _queryExecutor.GetJsonResultAsync<List<JsonDocument>>);
+                        _queryExecutor.GetJsonResultAsync<List<JsonDocument>>,
+                        _httpContextAccessor.HttpContext!);
 
                 if (jsonListResult is null)
                 {
@@ -288,7 +280,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public IEnumerable<JsonDocument> ResolveListType(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
+        public object ResolveListType(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
         {
             PaginationMetadata parentMetadata = (PaginationMetadata)metadata;
             PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name.Value];
@@ -305,12 +297,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             // Open connection and execute query using _queryExecutor
             string queryString = _queryBuilder.Build(structure);
-            _logger.LogInformation(queryString);
             JsonDocument jsonDocument =
                 await _queryExecutor.ExecuteQueryAsync(
                     queryString,
                     structure.Parameters,
-                    _queryExecutor.GetJsonResultAsync<JsonDocument>);
+                    _queryExecutor.GetJsonResultAsync<JsonDocument>,
+                    _httpContextAccessor.HttpContext!);
             return jsonDocument;
         }
 
@@ -322,13 +314,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private async Task<JsonDocument> ExecuteAsync(SqlExecuteStructure structure)
         {
             string queryString = _queryBuilder.Build(structure);
-            _logger.LogInformation(queryString);
 
             JsonArray resultArray =
                 await _queryExecutor.ExecuteQueryAsync(
                     queryString,
                     structure.Parameters,
-                    _queryExecutor.GetJsonArrayAsync);
+                    _queryExecutor.GetJsonArrayAsync,
+                    _httpContextAccessor.HttpContext!);
 
             JsonDocument jsonDocument = null;
 

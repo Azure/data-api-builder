@@ -15,17 +15,22 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     {
         public const string GENERIC_DB_EXCEPTION_MESSAGE = "While processing your request the database ran into an error.";
         private readonly bool _developerMode;
-        protected HashSet<string> BadRequestErrorCodes;
+        protected HashSet<string> BadRequestExceptionCodes;
 
         /*A transient error, also known as a transient fault, has an underlying cause that soon resolves itself.
          * An occasional cause of transient errors can be reconfiguration events. Most of these reconfiguration
          * events finish in less than 60 seconds. During this reconfiguration time span, we might have issues with
          * connecting to your database in SQL Database.*/
-        protected HashSet<string>? TransientErrorCodes;
-        public DbExceptionParser(RuntimeConfigProvider configProvider, HashSet<string> badRequestErrorCodes)
+        protected HashSet<string> TransientExceptionCodes;
+        protected HashSet<string> ConflictExceptionCodes;
+
+        public DbExceptionParser(RuntimeConfigProvider configProvider)
         {
             _developerMode = configProvider.IsDeveloperMode();
-            BadRequestErrorCodes = badRequestErrorCodes;
+            BadRequestExceptionCodes = new();
+            TransientExceptionCodes = new();
+            ConflictExceptionCodes = new();
+            ;
         }
 
         /// <summary>
@@ -48,7 +53,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// Helper method to determine whether an exception thrown by database is to be considered as transient.
         /// Each of the databases has their own way of classifying an exception as transient and hence the method will
-        /// be overriden in each of the subclasses.
+        /// be overridden in each of the subclasses.
         /// </summary>
         /// <param name="e">Exception to be classified as transient/non-transient.</param>
         /// <returns></returns>
@@ -59,10 +64,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         /// <param name="e">The exception thrown as a result of execution of the request.</param>
         /// <returns>status code to be returned in the response.</returns>
-        public virtual HttpStatusCode GetHttpStatusCodeForException(DbException e)
-        {
-            return e.SqlState is not null && BadRequestErrorCodes.Contains(e.SqlState) ?
-                HttpStatusCode.BadRequest : HttpStatusCode.InternalServerError;
-        }
+        public abstract HttpStatusCode GetHttpStatusCodeForException(DbException e);
     }
 }

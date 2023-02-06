@@ -8,7 +8,7 @@ This CLI tool is part of [.NET global tools](https://www.nuget.org/packages?pack
 
 ## Install CLI
 
-Make sure you have installed the `dab` CLI tool as described here: [Running Data API Builder for Azure Databases using CLI](../running-using-dab-cli.md)
+Make sure you have installed the `dab` CLI tool as described here: [Running Data API Builder for Azure Databases using CLI](../running-using-dab-cli.md/#install-dab-cli)
 
 ## Generate the config file
 

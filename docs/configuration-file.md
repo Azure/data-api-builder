@@ -68,16 +68,16 @@ The configuration file has a `$schema` property as the first property in the con
 "$schema": "..."
 ```
 
-From version 0.3.7 schema is available at:
+From version 0.4.11-alpha schema is available at:
 
 ```txt
-https://dataapibuilder.blob.core.windows.net/schemas/<VERSION>-alpha/dab.draft.schema.json
+https://dataapibuilder.azureedge.net/schemas/<VERSION>-<suffix>/dab.draft.schema.json
 ```
 
-make sure to replace the **VERSION** placeholder with the version you want to use, for example:
+make sure to replace the **VERSION-suffix** placeholder with the version you want to use, for example:
 
 ```txt
-https://dataapibuilder.blob.core.windows.net/schemas/v0.3.7-alpha/dab.draft.schema.json
+https://dataapibuilder.azureedge.net/schemas/v0.4.11-alpha/dab.draft.schema.json
 ```
 
 ### Data Source
@@ -139,7 +139,7 @@ This section contains options that will affect the runtime behavior and/or all e
 
 #### Host
 
-`mode`: Define if the engine should run in `production` mode or in `development` mode. Only when running in development mode the underlying database errors will be exposed in detail. Optional. Default value is `production`.
+`mode`: Define if the engine should run in `production` mode or in `development` mode. Only when running in development mode the underlying database errors will be exposed in detail. Optional. Default value is `production`. With `production` mode, the default `--LogLevel` is `Error` whereas with `development` mode it is `Debug`. These default log levels can be overridden by starting the engine through `dab` cli as mentioned [here](./running-using-dab-cli.md#run-engine-using-dab-cli).
 
 `cors`: CORS configuration
 

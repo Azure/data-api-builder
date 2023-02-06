@@ -1,13 +1,13 @@
 {
-  "$schema": "dab.draft-01.schema.json",
+  "$schema": "https://dataapibuilder.azureedge.net/schemas/v0.4.11-alpha/dab.draft.schema.json",
   "data-source": {
-    "database-type": "cosmos",
-    "connection-string": "Connection String"
-  },
-  "cosmos": {
-    "database": "graphqldb",
-    "container": "planet",
-    "schema": "schema.gql"
+    "database-type": "cosmosdb_nosql",
+    "connection-string": "Connection String",
+    "options": {
+      "database": "graphqldb",
+      "container": "planet",
+      "schema": "schema.gql"
+    }
   },
   "runtime": {
     "rest": {
@@ -18,7 +18,6 @@
     },
     "host": {
       "mode": "development",
-      "authenticate-devmode-requests": false,
       "cors": {
         "origins": [
           "http://localhost:5000"

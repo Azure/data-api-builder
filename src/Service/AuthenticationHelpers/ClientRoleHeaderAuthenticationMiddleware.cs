@@ -8,6 +8,7 @@ using Azure.DataApiBuilder.Service.Configurations;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
 {
@@ -21,12 +22,21 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
     public class ClientRoleHeaderAuthenticationMiddleware
     {
         private readonly RequestDelegate _nextMiddleware;
-        private readonly RuntimeConfigProvider _runtimeConfigurationProvider;
 
-        public ClientRoleHeaderAuthenticationMiddleware(RequestDelegate next, RuntimeConfigProvider runtimeConfigurationProvider)
+        private ILogger<ClientRoleHeaderAuthenticationMiddleware> _logger;
+
+        private bool _isLateConfigured;
+
+        // Identity provider used for identities added to the ClaimsPrincipal object for the current user by DAB.
+        private const string INTERNAL_DAB_IDENTITY_PROVIDER = "DAB-VERIFIED";
+
+        public ClientRoleHeaderAuthenticationMiddleware(RequestDelegate next,
+            ILogger<ClientRoleHeaderAuthenticationMiddleware> logger,
+            RuntimeConfigProvider runtimeConfigProvider)
         {
             _nextMiddleware = next;
-            _runtimeConfigurationProvider = runtimeConfigurationProvider;
+            _logger = logger;
+            _isLateConfigured = runtimeConfigProvider.IsLateConfigured;
         }
 
         /// <summary>
@@ -38,13 +48,9 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
         /// used to retrieve the `identity` from within the Principal in the HttpContext for use
         /// in downstream middleware.
         /// Based on the AuthenticateResult, the clientRoleHeader will be
-        /// validated or set depending on DevModAuthenticate flag in the runtime config:
-        /// AuthenticateResult: None
-        /// 1. DevModeAuthenticate -> Authenticated
-        /// 2. All other scenarios -> Anonymous
-        /// AuthenticateResult: Succeeded
-        /// 1. DevModeAuthenticate -> Authenticated
-        /// 2. All other scenarios -> honor client role header
+        /// validated or set.
+        /// AuthenticateResult: None -> Anonymous
+        /// AuthenticateResult: Succeeded -> Authenticated/Honor client role header
         /// </summary>
         /// <param name="httpContext">Request metadata</param>
         public async Task InvokeAsync(HttpContext httpContext)
@@ -59,7 +65,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
             // Write challenge response metadata (HTTP 401 Unauthorized response code
             // and www-authenticate headers) to the HTTP Context via JwtBearerHandler code
             // https://github.com/dotnet/aspnetcore/blob/3fe12b935c03138f76364dc877a7e069e254b5b2/src/Security/Authentication/JwtBearer/src/JwtBearerHandler.cs#L217
-            if (authNResult.Failure is not null && !_runtimeConfigurationProvider.IsAuthenticatedDevModeRequest())
+            if (authNResult.Failure is not null)
             {
                 await httpContext.ChallengeAsync();
                 return;
@@ -69,9 +75,8 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
 
             // A request can be authenticated in 2 cases:
             // 1. When the request has a valid jwt/easyauth token,
-            // 2. When the dev mode authenticate-devmode-requests config flag is true.
-            bool isAuthenticatedRequest = (httpContext.User.Identity?.IsAuthenticated ?? false) ||
-                _runtimeConfigurationProvider.IsAuthenticatedDevModeRequest();
+            // 2. When using simulator authentication in development mode.
+            bool isAuthenticatedRequest = httpContext.User.Identity?.IsAuthenticated ?? false;
 
             if (isAuthenticatedRequest)
             {
@@ -97,18 +102,29 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
                 }
             }
 
-            // When the user is not in the clientDefinedRole AND either
-            // 1. The client role header is resolved to a system role (anonymous, authenticated)
-            // -> Add the matcching system role name as a role claim to the ClaimsIdentity.
-            // 2. The dev mode authenticate-devmode-requests config flag is true (CRITICAL)
-            // -> Add the clientDefinedRole as a role claim to the ClaimsIdentity.
-            if (!httpContext.User.IsInRole(clientDefinedRole) &&
-                (IsSystemRole(clientDefinedRole) || _runtimeConfigurationProvider.IsAuthenticatedDevModeRequest()))
+            // Log the request's authenticated status (anonymous/authenticated) and user role,
+            // only in the non-hosted scenario.
+            if (!_isLateConfigured)
             {
-                Claim claim = new(ClaimTypes.Role, clientDefinedRole, ClaimValueTypes.String);
+                string requestAuthStatus = isAuthenticatedRequest ? AuthorizationType.Authenticated.ToString() :
+                    AuthorizationType.Anonymous.ToString();
+                _logger.LogDebug($"Request authentication state: {requestAuthStatus}.");
+                _logger.LogDebug($"The request will be executed in the context of {clientDefinedRole} role");
+            }
 
-                // To set the IsAuthenticated value as false, omit the authenticationType.
-                ClaimsIdentity identity = new();
+            // When the user is not in the clientDefinedRole and the client role header
+            // is resolved to a system role (anonymous, authenticated), add the matching system
+            // role name as a role claim to the ClaimsIdentity.
+            if (!httpContext.User.IsInRole(clientDefinedRole) && IsSystemRole(clientDefinedRole))
+            {
+                Claim claim = new(AuthenticationConfig.ROLE_CLAIM_TYPE, clientDefinedRole, ClaimValueTypes.String);
+                string authenticationType = isAuthenticatedRequest ? INTERNAL_DAB_IDENTITY_PROVIDER : string.Empty;
+
+                // Add identity with the same value of IsAuthenticated flag as the original identity.
+                ClaimsIdentity identity = new(
+                    authenticationType: authenticationType,
+                    nameType: AuthenticationConfig.NAME_CLAIM_TYPE,
+                    roleType: AuthenticationConfig.ROLE_CLAIM_TYPE);
                 identity.AddClaim(claim);
                 httpContext.User.AddIdentity(identity);
             }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
@@ -69,9 +70,39 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
             return entityPermissionsMap;
         }
 
-        public static Entity GenerateEmptyEntity()
+        /// <summary>
+        /// Creates an empty entity with no permissions or exposed rest/graphQL endpoints.
+        /// </summary>
+        /// <param name="sourceType">type of source object. Default is Table.</param>
+        public static Entity GenerateEmptyEntity(SourceType sourceType = SourceType.Table)
         {
-            return new Entity("foo", Rest: null, GraphQL: null, Array.Empty<PermissionSetting>(), Relationships: new(), Mappings: new());
+            return new Entity(Source: new DatabaseObjectSource(sourceType, Name: "foo", Parameters: null, KeyFields: null),
+                              Rest: null,
+                              GraphQL: null,
+                              Array.Empty<PermissionSetting>(),
+                              Relationships: new(),
+                              Mappings: new());
+        }
+
+        /// <summary>
+        /// Creates a stored procedure backed entity using the provided metadata.
+        /// </summary>
+        /// <param name="graphQLTypeName">Desired GraphQL type name.</param>
+        /// <param name="graphQLOperation">Query or Mutation</param>
+        /// <param name="permissionOperations">Collection of permission operations (CRUD+Execute)</param>
+        /// <returns>Stored procedure backed entity.</returns>
+        public static Entity GenerateStoredProcedureEntity(string graphQLTypeName, GraphQLOperation? graphQLOperation, string[] permissionOperations)
+        {
+            Entity entity = new(Source: new DatabaseObjectSource(SourceType.StoredProcedure, Name: "foo", Parameters: null, KeyFields: null),
+                              Rest: null,
+                              GraphQL: JsonSerializer.SerializeToElement(new GraphQLStoredProcedureEntityVerboseSettings(Type: graphQLTypeName, GraphQLOperation: graphQLOperation.ToString())),
+                              Permissions: new[] { new PermissionSetting(role: "anonymous", operations: permissionOperations) },
+                              Relationships: new(),
+                              Mappings: new());
+
+            // Ensures default GraphQL operation is "mutation" for stored procedures unless defined otherwise.
+            entity.TryProcessGraphQLNamingConfig();
+            return entity;
         }
 
         /// <summary>
@@ -79,9 +110,10 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         /// </summary>
         /// <param name="singularNameForEntity"> Singular name defined by user in the config.</param>
         /// <param name="pluralNameForEntity"> Plural name defined by user in the config.</param>
-        public static Entity GenerateEntityWithSingularPlural(string singularNameForEntity, string pluralNameForEntity)
+        /// <param name="sourceType">type of source object. Default is Table.</param>
+        public static Entity GenerateEntityWithSingularPlural(string singularNameForEntity, string pluralNameForEntity, SourceType sourceType = SourceType.Table)
         {
-            return new Entity(Source: "foo",
+            return new Entity(Source: new DatabaseObjectSource(sourceType, Name: "foo", Parameters: null, KeyFields: null),
                               Rest: null,
                               GraphQL: new GraphQLEntitySettings(new SingularPlural(singularNameForEntity, pluralNameForEntity)),
                               Permissions: Array.Empty<PermissionSetting>(),
@@ -93,10 +125,11 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         /// Creates an entity with a string GraphQL type.
         /// </summary>
         /// <param name="type"></param>
+        /// <param name="sourceType">type of source object. Default is Table.</param>
         /// <returns></returns>
-        public static Entity GenerateEntityWithStringType(string type)
+        public static Entity GenerateEntityWithStringType(string type, SourceType sourceType = SourceType.Table)
         {
-            return new Entity(Source: "foo",
+            return new Entity(Source: new DatabaseObjectSource(sourceType, Name: "foo", Parameters: null, KeyFields: null),
                               Rest: null,
                               GraphQL: new GraphQLEntitySettings(type),
                               Permissions: Array.Empty<PermissionSetting>(),

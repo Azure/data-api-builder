@@ -30,6 +30,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public DefaultAzureCredential AzureCredential { get; set; } = new();
 
         /// <summary>
+        /// The PostgreSql specific connection string builder.
+        /// </summary>
+        public override NpgsqlConnectionStringBuilder ConnectionStringBuilder
+            => (NpgsqlConnectionStringBuilder)base.ConnectionStringBuilder;
+
+        /// <summary>
         /// The saved cached access token obtained from DefaultAzureCredentials
         /// representing a managed identity.
         /// </summary>
@@ -40,12 +46,20 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public PostgreSqlQueryExecutor(
             RuntimeConfigProvider runtimeConfigProvider,
             DbExceptionParser dbExceptionParser,
-            ILogger<QueryExecutor<NpgsqlConnection>> logger)
-            : base(runtimeConfigProvider, dbExceptionParser, logger)
+            ILogger<IQueryExecutor> logger)
+            : base(dbExceptionParser,
+                  logger,
+                  new NpgsqlConnectionStringBuilder(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString),
+                  runtimeConfigProvider)
         {
             _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
             _attemptToSetAccessToken =
-                ShouldManagedIdentityAccessBeAttempted(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString);
+                ShouldManagedIdentityAccessBeAttempted();
+
+            if (runtimeConfigProvider.IsLateConfigured)
+            {
+                ConnectionStringBuilder.SslMode = SslMode.VerifyFull;
+            }
         }
 
         /// <summary>
@@ -84,10 +98,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Determines if managed identity access should be attempted or not.
         /// It should only be attempted if the password is not provided
         /// </summary>
-        private static bool ShouldManagedIdentityAccessBeAttempted(string connString)
+        private bool ShouldManagedIdentityAccessBeAttempted()
         {
-            NpgsqlConnectionStringBuilder connStringBuilder = new(connString);
-            return string.IsNullOrEmpty(connStringBuilder.Password);
+            return string.IsNullOrEmpty(ConnectionStringBuilder.Password);
         }
 
         /// <summary>
@@ -97,7 +110,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private bool IsDefaultAccessTokenValid()
         {
             return _defaultAccessToken is not null &&
-                ((AccessToken)_defaultAccessToken).ExpiresOn.CompareTo(System.DateTimeOffset.Now) > 0;
+                ((AccessToken)_defaultAccessToken).ExpiresOn.CompareTo(DateTimeOffset.Now) > 0;
         }
 
         /// <summary>

@@ -120,14 +120,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfigProvider runtimeConfigProvider =
                 TestHelper.GetMockRuntimeConfigProvider(runtimeConfigPath, path);
             MsSqlQueryBuilder queryBuilder = new();
-            Mock<DbExceptionParser> dbExceptionParser = new(runtimeConfigProvider, new HashSet<string>());
+            Mock<DbExceptionParser> dbExceptionParser = new(runtimeConfigProvider);
             Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
             Mock<ILogger<ISqlMetadataProvider>> sqlMetadataLogger = new();
-            Mock<ILogger<SqlQueryEngine>> queryEngineLogger = new();
+            Mock<ILogger<IQueryEngine>> queryEngineLogger = new();
             Mock<ILogger<SqlMutationEngine>> mutationEngingLogger = new();
             Mock<ILogger<AuthorizationResolver>> authLogger = new();
 
-            QueryExecutor<SqlConnection> queryExecutor = new(
+            MsSqlQueryExecutor queryExecutor = new(
                 runtimeConfigProvider,
                 dbExceptionParser.Object,
                 queryExecutorLogger.Object);
@@ -166,8 +166,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 sqlMetadataProvider.Object,
                 authorizationResolver,
                 gQLFilterParser,
-                httpContextAccessor.Object,
-                mutationEngingLogger.Object);
+                httpContextAccessor.Object);
 
             // Setup REST Service
             _restService = new RestService(

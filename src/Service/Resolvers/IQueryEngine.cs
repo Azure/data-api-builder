@@ -37,9 +37,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public Task<IActionResult> ExecuteAsync(FindRequestContext context);
 
-        // <summary>
-        // Given the StoredProcedureRequestContext, obtains the query text and executes it against the backend.
-        // </summary>
+        /// <summary>
+        /// Given the StoredProcedureRequestContext, obtains the query text and executes it against the backend.
+        /// </summary>
         public Task<IActionResult> ExecuteAsync(StoredProcedureRequestContext context);
 
         /// <summary>
@@ -50,7 +50,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// Resolves a jsonElement representing a list type based on the field's schema and metadata
         /// </summary>
-        public IEnumerable<JsonDocument> ResolveListType(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata);
+        public object? ResolveListType(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata);
 
     }
 }

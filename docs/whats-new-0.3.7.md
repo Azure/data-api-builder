@@ -9,12 +9,14 @@
 
 The full list of release notes for this version is available here: [version 0.3.7 release notes](https://github.com/Azure/data-api-builder/releases/tag/v0.3.7-alpha)
 
+Details on how to install the latest version are here: [Installing DAB CLI](./getting-started/getting-started.md#installing-dab-cli)
+
 ## Public JSON Schema
 
 JSON Schema has been published here:
 
 ```text
-https://dataapibuilder.blob.core.windows.net/schemas/v0.3.7-alpha/dab.draft.schema.json
+https://dataapibuilder.azureedge.net/schemas/v0.3.7-alpha/dab.draft.schema.json
 ```
 
 This will give you intellisense if you are using an IDE, like VS Code, that supports JSON Schemas. Take a look at `basic-empty-dab-config.json` in the `samples` folder, to have a starting point when manually creating the `dab-config.json` file.
@@ -37,7 +39,7 @@ Stored procedures are now supported for REST requests. If you have a stored proc
 
 ```sh
 
-dab add GetCowrittenBooksByAuthor --source dbo.stp_get_all_cowritten_books_by_author --source.type "stored-procedure" --permissions "anonymous:read"
+dab add GetCowrittenBooksByAuthor --source dbo.stp_get_all_cowritten_books_by_author --source.type "stored-procedure" --permissions "anonymous:read" --rest true
 ```
 
 The parameter can be passed in the URL query string when calling the REST endpoint:

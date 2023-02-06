@@ -13,6 +13,7 @@ namespace Azure.DataApiBuilder.Config
         Jwt? Jwt = null)
     {
         public const string CLIENT_PRINCIPAL_HEADER = "X-MS-CLIENT-PRINCIPAL";
+        public const string NAME_CLAIM_TYPE = "name";
         public const string ROLE_CLAIM_TYPE = "roles";
         public const string SIMULATOR_AUTHENTICATION = "Simulator";
 
@@ -42,7 +43,7 @@ namespace Azure.DataApiBuilder.Config
     /// </summary>
     /// <param name="Audience"></param>
     /// <param name="Issuer"></param>
-    public record Jwt(string Audience, string Issuer);
+    public record Jwt(string? Audience, string? Issuer);
 
     /// <summary>
     /// Various EasyAuth modes in which the runtime can run.

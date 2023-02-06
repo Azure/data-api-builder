@@ -53,6 +53,15 @@ namespace Azure.DataApiBuilder.Service.Tests
             RuntimeConfigProvider runtimeConfigProvider
                 = new(configPath,
                       configProviderLogger.Object);
+
+            // Only set IsLateConfigured for MsSQL for now to do certificate validation.
+            // For Pg/MySQL databases, set this after SSL connections are enabled for testing.
+            if (runtimeConfigProvider.TryGetRuntimeConfiguration(out RuntimeConfig runtimeConfig)
+                && runtimeConfig.DatabaseType is DatabaseType.mssql)
+            {
+                runtimeConfigProvider.IsLateConfigured = true;
+            }
+
             return runtimeConfigProvider;
         }
 
@@ -69,6 +78,14 @@ namespace Azure.DataApiBuilder.Service.Tests
             RuntimeConfigProvider runtimeConfigProvider
                 = new(config,
                       configProviderLogger.Object);
+
+            // Only set IsLateConfigured for MsSQL for now to do certificate validation.
+            // For Pg/MySQL databases, set this after SSL connections are enabled for testing.
+            if (config is not null && config.DatabaseType is DatabaseType.mssql)
+            {
+                runtimeConfigProvider.IsLateConfigured = true;
+            }
+
             return runtimeConfigProvider;
         }
 
@@ -93,6 +110,7 @@ namespace Azure.DataApiBuilder.Service.Tests
             string configJson = RuntimeConfigProvider.GetRuntimeConfigJsonString(configPath.ConfigFileName);
             RuntimeConfig.TryGetDeserializedRuntimeConfig(configJson, out RuntimeConfig runtimeConfig, configProviderLogger.Object);
             mockRuntimeConfigProvider.Setup(x => x.GetRuntimeConfiguration()).Returns(runtimeConfig);
+            mockRuntimeConfigProvider.Setup(x => x.IsLateConfigured).Returns(true);
             return mockRuntimeConfigProvider.Object;
         }
 

@@ -171,6 +171,30 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
+        /// <code>Do: </code>insert a new book and return all the books with same publisher
+        /// <code>Check: </code>the intended book is inserted and all the books with same publisher
+        /// are returned as response.
+        /// </summary>
+        [TestMethod]
+        public async Task TestStoredProcedureMutationNonEmptyResponse()
+        {
+            string dbQuery = @"
+                SELECT [table0].id, [table0].title
+                FROM [books] AS [table0]
+                JOIN (
+                    SELECT id
+                    FROM [publishers]
+                    WHERE name = 'Big Company') AS [table1]
+                ON [table0].publisher_id = [table1].id
+                ORDER BY [table0].id
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES
+            ";
+
+            await TestStoredProcedureMutationNonEmptyResponse(dbQuery);
+        }
+
+        /// <summary>
         /// <code>Do: </code>Book title updation and return the updated row
         /// <code>Check: </code>if the result returned from the mutation is correct
         /// </summary>
@@ -502,6 +526,72 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             ";
 
             await UpdateSimpleView(msSqlQuery);
+        }
+
+        [TestMethod]
+        public async Task InsertMutationWithVariablesAndMappings()
+        {
+            string msSqlQuery = @"
+                SELECT TOP 1 [__column1] AS [column1], [__column2] AS [column2]
+                FROM [GQLmappings]
+                WHERE [__column1] = 2
+                ORDER BY [__column1]
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            await InsertMutationWithVariablesAndMappings(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Demonstrates that using mapped column names for fields within the GraphQL mutatation results in successful engine processing
+        /// of the column2 value update for the record where column1 = $id.
+        /// </summary>
+        [TestMethod]
+        public async Task UpdateMutationWithVariablesAndMappings()
+        {
+            string msSqlQuery = @"
+                SELECT TOP 1 [__column1] AS [column1], [__column2] AS [column2]
+                FROM [GQLmappings]
+                WHERE [GQLmappings].[__column1] = 3
+                    AND [GQLmappings].[__column2] = 'Updated Value of Mapped Column'
+                ORDER BY [__column1]
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            await UpdateMutationWithVariablesAndMappings(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Demonstrates that using mapped column names for fields within the GraphQL mutatation results in successful engine processing
+        /// of removal of the record where column1 = $id and the returned object representing the deleting record utilizes the mapped column values.
+        /// </summary>
+        [TestMethod]
+        public async Task DeleteMutationWithVariablesAndMappings()
+        {
+            string msSqlQueryToVerifyDeletion = @"
+                SELECT COUNT(*) AS count
+                FROM [GQLmappings]
+                WHERE [__column1] = 4
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            string msSqlQueryForResult = @"
+                SELECT TOP 1 [__column1] AS [column1], [__column2] AS [column2]
+                FROM [GQLmappings]
+                WHERE [__column1] = 4
+                ORDER BY [__column1]
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            await DeleteMutationWithVariablesAndMappings(msSqlQueryForResult, msSqlQueryToVerifyDeletion);
         }
 
         /// <summary>

@@ -12,7 +12,8 @@
       + [GraphQL](#graphql)
       + [Host](#host)
     + [Entities](#entities)
-    + [GraphQL type](#graphql-type)
+    + [GraphQL Settings](#graphql-settings)
+    + [REST Settings](#rest-settings)
     + [Database object source](#database-object-source)
     + [Relationships](#relationships)
       + [One-To-Many Relationship](#one-to-many-relationship)
@@ -172,7 +173,9 @@ will instruct Data API builder to expose a GraphQL entity named `User` and a RES
 
 Within the entity section, there are feature specific sections:
 
-### GraphQL type
+### GraphQL Settings
+ 
+#### GraphQL Type
 
 The `graphql` property defines the name with which the entity is exposed as a GraphQL type, if that is different from the entity name:
 
@@ -194,6 +197,49 @@ or, if needed
 ```
 
 which instructs Data API builder runtime to expose the GraphQL type for the related entity and to name it using the provided type name. `plural` is optional and can be used to tell Data API builder the correct plural name for that type. If omitted Data API builder will try to pluralize the name automatically, following the english rules for pluralization (eg: https://engdic.org/singular-and-plural-noun-rules-definitions-examples)
+
+#### GraphQL Operation
+
+The `graphql` element will contain the `operation` property only for stored-procedures. The `operation` property defines the GraphQL operation that is configured for the stored procedure. It be one of `Query` or `Mutation`.
+
+For example:
+
+```json
+  {
+    "graphql": "true",
+    "operation": "query"
+    }
+  }
+```
+
+instructs the engine that the stored procedure is exposed for graphQL through Query operation.
+
+### REST Settings
+
+#### REST Path
+
+The `path` property defines the endpoint through which the entity is exposed for REST APIs, if that is different from the entity name:
+
+```json
+"rest":{
+  "path": "/stored-procedure-path"
+}
+```
+
+#### REST Methods
+
+The `methods` property is only valid for stored procedures. This property defines the REST HTTP actions that the stored procedure is configured for.
+
+For example:
+
+```json
+"rest":{
+  "path": "/stored-procedure-path"
+  "methods": [ "GET", "POST" ]
+}
+
+```
+instructs the engine that GET and POST actions are configured for this stored procedure.  
 
 ### Database object source
 
@@ -398,7 +444,8 @@ The `role` string contains the name of the role to which the defined permission 
 
 #### Actions
 
-The `actions` array is a mixed-type array that details what actions are allowed to related roles. In a simple case,  value is one of the following: `create`, `read`, `update`, `delete`
+The `actions` array is a mixed-type array that details what actions are allowed to related roles. When the entity is either a table or view, roles can be configured with the following actions: `create`, `read`, `update`, `delete`.
+Incase of stored procedures, the roles can only be configured with `execute` action.
 
 For example:
 
@@ -417,6 +464,7 @@ In case all actions are allowed, it is possible to use the wildcard character `*
   "actions": ["*"]
 }
 ```
+`*` action expands based on the type of the entity. For tables and views, it expands to `create, read, update, delete` actions. For stored-procedures, it translates to `execute` action.
 
 Another option is to specify an object with also details on what fields - defined in the `fields` object, are allowed and what are not:
 
@@ -476,6 +524,7 @@ Data API Builder will take the value of the claim named `UserId` and it will com
 
 *PLEASE NOTE* that at the moment support for policies is limited to:
 
++ Tables and Views. Stored Procedures cannot be configured with policies.
 + Binary operators [BinaryOperatorKind - Microsoft Learn](https://learn.microsoft.com/dotnet/api/microsoft.odata.uriparser.binaryoperatorkind?view=odata-core-7.0) such as `and`, `or`, `eq`, `gt`, `lt`, and more.
 + Unary operators [UnaryOperatorKind - Microsoft Learn](https://learn.microsoft.com/dotnet/api/microsoft.odata.uriparser.unaryoperatorkind?view=odata-core-7.0) such as the negate (`-`) and `not` operators.
 

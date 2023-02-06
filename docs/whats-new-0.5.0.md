@@ -103,3 +103,12 @@ query ($id: ID, $partitionKeyValue: String) {
 ## Enhanced logging support using loglevel
 
 ## Updated CLI
+
+- `--no-https-redirect` option is added to `start` command. Using this option, the automatic redirection of requests from `http` to `https` can be prevented.
+- In MsSql, session context can be enabled using `--set-session-context true` in the `init` command. A sample command is shown below
+  - `dab init --database-type mssql --connection-string "Connection String" --set-session-context true` 
+  
+- Authentication details such as the provider, audience and issuer can be configured using the options `--auth.provider`, `--auth.audience` and `--auth.issuer.` in the `init` command. A sample command is shown below.
+
+  - `dab init --database-type mssql --auth.provider AzureAD --auth.audience "aud" --auth.issuer "iss"`
+- User friendly error messaging when the entity name is not specified.

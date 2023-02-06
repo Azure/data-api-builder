@@ -127,7 +127,7 @@ If you now run the AZ CLI command again, you'll get an access token:
 }
 ```
 
-you can inspect the token using a online debugging tool like [jwt.io](http://jwt.io). The decoded token will contain something like:
+you can inspect the token using a online debugging tool like [jwt.ms](http://jwt.ms). The decoded token will contain something like:
 
 ```json
 {

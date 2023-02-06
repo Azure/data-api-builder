@@ -200,7 +200,7 @@ which instructs Data API builder runtime to expose the GraphQL type for the rela
 
 #### GraphQL Operation
 
-The `graphql` element will contain the `operation` property only for stored-procedures. The `operation` property defines the GraphQL operation that is configured for the stored procedure. It be one of `Query` or `Mutation`.
+The `graphql` element will contain the `operation` property only for stored-procedures. The `operation` property defines the GraphQL operation that is configured for the stored procedure. It can be one of `Query` or `Mutation`.
 
 For example:
 
@@ -217,7 +217,6 @@ instructs the engine that the stored procedure is exposed for graphQL through Qu
 ### REST Settings
 
 #### REST Path
-
 The `path` property defines the endpoint through which the entity is exposed for REST APIs, if that is different from the entity name:
 
 ```json
@@ -227,7 +226,6 @@ The `path` property defines the endpoint through which the entity is exposed for
 ```
 
 #### REST Methods
-
 The `methods` property is only valid for stored procedures. This property defines the REST HTTP actions that the stored procedure is configured for.
 
 For example:
@@ -530,7 +528,7 @@ Data API Builder will take the value of the claim named `UserId` and it will com
 
 ### Mappings
 
-In the `mappings` section are defined the mappings between database fields and the exposed GraphQL type and REST endpoint fields.
+In the `mappings` section, the mappings between database object field names and their corresponding exposed field names are defined for both GraphQL and REST endpoints.```
 
 The format is:
 

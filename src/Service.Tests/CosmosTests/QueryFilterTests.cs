@@ -11,7 +11,7 @@ using QueryBuilder = Azure.DataApiBuilder.Service.GraphQLBuilder.Queries.QueryBu
 namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 {
 
-    [TestClass, TestCategory(TestCategory.COSMOSDBNOSQL)]
+    [TestClass]
     public class QueryFilterTests : TestBase
     {
         private static readonly string _containerName = Guid.NewGuid().ToString();
@@ -32,7 +32,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// <summary>
         /// Tests eq of StringFilterInput
         /// </summary>
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestStringFiltersEq()
         {
             string gqlQuery = @"{
@@ -68,7 +68,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// <summary>
         /// Tests neq of StringFilterInput
         /// </summary>
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestStringFiltersNeq()
         {
 
@@ -90,7 +90,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// <summary>
         /// Tests startsWith of StringFilterInput
         /// </summary>
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestStringFiltersStartsWith()
         {
             string gqlQuery = @"{
@@ -111,7 +111,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// <summary>
         /// Tests endsWith of StringFilterInput
         /// </summary>
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestStringFiltersEndsWith()
         {
             string gqlQuery = @"{
@@ -132,7 +132,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// <summary>
         /// Tests contains of StringFilterInput
         /// </summary>
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestStringFiltersContains()
         {
             string gqlQuery = @"{
@@ -153,7 +153,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// <summary>
         /// Tests notContains of StringFilterInput
         /// </summary>
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestStringFiltersNotContains()
         {
             string gqlQuery = @"{
@@ -176,7 +176,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// Special chars not working so ignoring for now!
         /// </summary>
         [Ignore]
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestStringFiltersContainsWithSpecialChars()
         {
             string gqlQuery = @"{
@@ -196,7 +196,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// <summary>
         /// Tests eq of IntFilterInput
         /// </summary>
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestIntFiltersEq()
         {
             string gqlQuery = @"{
@@ -215,7 +215,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// <summary>
         /// Tests neq of IntFilterInput
         /// </summary>
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestIntFiltersNeq()
         {
             string gqlQuery = @"{
@@ -234,7 +234,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// <summary>
         /// Tests gt and lt of IntFilterInput
         /// </summary>
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestIntFiltersGtLt()
         {
             string gqlQuery = @"{
@@ -253,7 +253,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// <summary>
         /// Tests gte and lte of IntFilterInput
         /// </summary>
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestIntFiltersGteLte()
         {
             string gqlQuery = @"{
@@ -280,7 +280,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// one operation predicate: id == 2
         /// multiple operation predicate: id == 2 AND publisher_id < 3
         /// </remarks>
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestCreatingParenthesis1()
         {
             string gqlQuery = @"{
@@ -316,7 +316,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// one operation predicate: id == 2
         /// multiple operation predicate: id == 2 AND publisher_id < 3
         /// </remarks>
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestCreatingParenthesis2()
         {
             string gqlQuery = @"{
@@ -347,7 +347,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         ///   ((<AND-ed non and/or predicates>) AND (<AND-ed predicates in and filed>) OR <OR-ed predicates in or field>)
         /// </summart>
         /// 
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestComplicatedFilter()
         {
             string gqlQuery = @"{
@@ -387,7 +387,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// <summary>
         /// Test that an empty and evaluates to False
         /// </summary>
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestOnlyEmptyAnd()
         {
             string graphQLQueryName = "planets";
@@ -407,7 +407,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// <summary>
         /// Test that an empty or evaluates to False
         /// </summary>
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestOnlyEmptyOr()
         {
             string graphQLQueryName = "planets";
@@ -427,7 +427,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// <summary>
         /// Test filtering null integer fields
         /// </summary>
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestGetNullIntFields()
         {
             string gqlQuery = @"{
@@ -447,7 +447,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// <summary>
         /// Test filtering non null integer fields
         /// </summary>
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestGetNonNullIntFields()
         {
             string gqlQuery = @"{
@@ -467,7 +467,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// <summary>
         /// Test filtering null string fields
         /// </summary>
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestGetNullStringFields()
         {
             string gqlQuery = @"{
@@ -487,7 +487,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// <summary>
         /// Test filtering not null string fields
         /// </summary>
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestGetNonNullStringFields()
         {
             string gqlQuery = @"{
@@ -509,7 +509,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// </summary>
         ///
         [Ignore] //Todo: This test fails on linux/mac due to some string comparisoin issues. 
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestExplicitNullFieldsAreIgnored()
         {
             string gqlQuery = @"{
@@ -531,7 +531,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// <summary>
         /// Passes null to nullable fields and makes sure they are ignored
         /// </summary>
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestInputObjectWithOnlyNullFieldsEvaluatesToFalse()
         {
             string gqlQuery = @"{
@@ -551,7 +551,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// <summary>
         /// Test filters on nested object
         /// </summary>
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestFilterOnNestedFields()
         {
             string gqlQuery = @"{
@@ -581,7 +581,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// <summary>
         /// Test filters on nested object with and
         /// </summary>
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestFilterOnNestedFieldsWithAnd()
         {
             string gqlQuery = @"{
@@ -612,7 +612,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// <summary>
         /// Test filters on nested object
         /// </summary>
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestFilterOnInnerNestedFields()
         {
             string gqlQuery = @"{

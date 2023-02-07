@@ -8,7 +8,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 {
-    [TestClass, TestCategory(TestCategory.COSMOSDBNOSQL)]
+    [TestClass]
     public class MutationTests : TestBase
     {
         private static readonly string _containerName = Guid.NewGuid().ToString();
@@ -41,7 +41,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             OverrideEntityContainer("Planet", _containerName);
         }
 
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task CanCreateItemWithVariables()
         {
             // Run mutation Add planet;
@@ -59,7 +59,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             Assert.AreEqual("test_name", response.GetProperty("name").GetString());
         }
 
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task CanDeleteItemWithVariables()
         {
             // Pop an item in to delete
@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             Assert.IsNull(response.GetString());
         }
 
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task CanCreateItemWithoutVariables()
         {
             // Run mutation Add planet;
@@ -97,7 +97,7 @@ mutation {{
             Assert.AreEqual(id, response.GetProperty("id").GetString());
         }
 
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task CanDeleteItemWithoutVariables()
         {
             // Pop an item in to delete
@@ -126,7 +126,7 @@ mutation {{
             Assert.IsNull(response.GetString());
         }
 
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task MutationMissingInputReturnError()
         {
             // Run mutation Add planet without any input
@@ -142,7 +142,7 @@ mutation {{
             Assert.IsTrue(errorMessage.Contains("The argument `item` is required."), $"The actual error is {errorMessage}");
         }
 
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task MutationMissingRequiredIdReturnError()
         {
             // Run mutation Add planet without id
@@ -158,7 +158,7 @@ mutation {{
             Assert.IsTrue(response[0].GetProperty("message").ToString().Contains("The input content is invalid because the required properties - 'id; ' - are missing"));
         }
 
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task CanUpdateItemWithoutVariables()
         {
             // Run mutation Add planet;
@@ -189,7 +189,7 @@ mutation {{
             Assert.AreNotEqual(name, response.GetProperty("name").GetString());
         }
 
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task CanUpdateItemWithVariables()
         {
             // Run mutation Add planet;
@@ -223,7 +223,7 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdatePlanetInput!) {
             Assert.AreNotEqual(input.name, response.GetProperty("name").GetString());
         }
 
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task MutationMissingRequiredPartitionKeyValueReturnError()
         {
             // Run mutation Add planet without id

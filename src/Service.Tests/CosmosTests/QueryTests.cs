@@ -11,7 +11,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 {
-    [TestClass, TestCategory(TestCategory.COSMOSDBNOSQL)]
+    [TestClass]
     public class QueryTests : TestBase
     {
         private static readonly string _containerName = Guid.NewGuid().ToString();
@@ -60,7 +60,7 @@ query{
             OverrideEntityContainer("StarAlias", _containerName);
         }
 
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task GetByPrimaryKeyWithVariables()
         {
             // Run query
@@ -71,7 +71,7 @@ query{
             Assert.AreEqual(id, response.GetProperty("id").GetString());
         }
 
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task GetListOfString()
         {
             string id = _idList[0];
@@ -87,7 +87,7 @@ query ($id: ID, $partitionKeyValue: String) {
             CollectionAssert.AreEqual(new[] { "tag1", "tag2" }, tags);
         }
 
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task GetPaginatedWithVariables()
         {
             // Run paginated query
@@ -108,7 +108,7 @@ query ($id: ID, $partitionKeyValue: String) {
             Assert.AreEqual(TOTAL_ITEM_COUNT, totalElementsFromPaginatedQuery);
         }
 
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task GetByPrimaryKeyWithoutVariables()
         {
             // Run query
@@ -126,7 +126,7 @@ query {{
             Assert.AreEqual(id, response.GetProperty("id").GetString());
         }
 
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task GetPaginatedWithoutVariables()
         {
             // Run paginated query
@@ -158,7 +158,7 @@ query {{
             Assert.AreEqual(TOTAL_ITEM_COUNT, totalElementsFromPaginatedQuery);
         }
 
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task GetPaginatedWithSinglePartition()
         {
             // Run paginated query
@@ -196,7 +196,7 @@ query {{
         /// Query result with nested object
         /// </summary>
         /// <returns></returns>
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task GetByPrimaryKeyWithInnerObject()
         {
             // Run query
@@ -218,7 +218,7 @@ query {{
             Assert.AreEqual(id, response.GetProperty("id").GetString());
         }
 
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task GetWithOrderBy()
         {
             JsonElement response = await ExecuteGraphQLRequestAsync("planets", PlanetsWithOrderBy);
@@ -236,7 +236,7 @@ query {{
         /// "Star" is a GraphQL type, in the runtime config, the top level entity name is "StarAlias"
         /// A match is attempted using the runtime config entity singular type name when there is no match found with the GraphQL type name.
         /// </summary>
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task GetByPrimaryKeyWhenEntityNameDoesntMatchGraphQLType()
         {
             // Run query

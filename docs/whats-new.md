@@ -7,17 +7,18 @@
 Details on how to install the latest version are here: [Installing DAB CLI](./getting-started/getting-started.md#installing-dab-cli)
 
 ## Version 0.5.0
-- [Public Microsoft.DataApiBuilder nuget](./whats-new-0.5.0.md#public-microsoft.dataapibuilder-nuget)
+
+The full list of release notes for this version is available here: [version 0.5.0 release notes](https://github.com/Azure/data-api-builder/releases/tag/v0.5.0-beta)
+
+- [Public Microsoft.DataApiBuilder nuget](./whats-new-0.5.0.md#public-microsoftdataapibuilder-nuget)
 - [Public JSON Schema](./whats-new-0.5.0.md#public-json-schema)
 - [New `execute` action for stored procedures in Azure SQL](./whats-new-0.5.0.md#new-execute-action-for-stored-procedures-in-azure-sql)
 - [New `mappings` section for column renames of tables in Azure SQL](./whats-new-0.5.0.md#new-mappings-section)
-- [Set session context to add JWT claims as name/value pairs for Azure SQL connections](./whats-new-0.5.0.md#set-session-context-in-azure-sql)
+- [Set session context to add JWT claims as name/value pairs for Azure SQL connections](./whats-new-0.5.0.md#support-for-session-context-in-azure-sql)
 - [Support for filter on nested objects within a document in PostgreSQL](./whats-new-0.5.0.md#support-for-filter-on-nested-objects-within-a-document-in-postgresql)
 - [Support for list of scalars for CosmosDB NoSQL](./whats-new-0.5.0.md#support-scalar-list-in-cosmosdb-nosql)
 - [Enhanced logging support using `LogLevel`](./whats-new-0.5.0.md#enhanced-logging-support-using-loglevel)
 - [Updated DAB CLI to support new features](./whats-new-0.5.0.md#updated-cli)
-
-The full list of release notes for this version is available here: [version 0.5.0 release notes](https://github.com/Azure/data-api-builder/releases/tag/v0.5.0-beta)
 
 ## Version 0.4.11
 

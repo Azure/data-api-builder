@@ -45,7 +45,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     {
                         string parameterizedName = MakeParamWithValue(requestParamValue is null ? null :
                             GetParamAsProcedureParameterType(requestParamValue.ToString()!, paramKey));
-                        ProcedureParameters.Add(paramKey, $"@{parameterizedName}");
+                        ProcedureParameters.Add(paramKey, $"{parameterizedName}");
                     }
                     catch (ArgumentException ex)
                     {

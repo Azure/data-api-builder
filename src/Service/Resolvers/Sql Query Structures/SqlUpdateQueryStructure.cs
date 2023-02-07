@@ -155,7 +155,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     new PredicateOperand(
                         new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, backingColumn!)),
                     PredicateOperation.Equal,
-                    new PredicateOperand($"@{MakeParamWithValue(null)}")
+                    new PredicateOperand($"{MakeParamWithValue(null)}")
                 );
             }
             else
@@ -164,7 +164,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     new PredicateOperand(
                         new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, param.Key)),
                     PredicateOperation.Equal,
-                    new PredicateOperand($"@{MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString()!, param.Key))}"));
+                    new PredicateOperand($"{MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString()!, param.Key))}"));
             }
 
             return predicate;

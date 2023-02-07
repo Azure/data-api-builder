@@ -150,7 +150,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 foreach (KeyValuePair<string, object?> parameterEntry in parameters)
                 {
                     DbParameter parameter = cmd.CreateParameter();
-                    parameter.ParameterName = "@" + parameterEntry.Key;
+                    parameter.ParameterName = parameterEntry.Key;
                     parameter.Value = parameterEntry.Value ?? DBNull.Value;
                     cmd.Parameters.Add(parameter);
                 }

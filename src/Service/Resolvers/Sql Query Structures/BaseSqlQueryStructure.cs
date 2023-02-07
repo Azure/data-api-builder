@@ -82,7 +82,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     Predicate predicate = new(
                         new PredicateOperand(new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, leftoverColumn)),
                         PredicateOperation.Equal,
-                        new PredicateOperand($"@{MakeParamWithValue(value: null)}")
+                        new PredicateOperand($"{MakeParamWithValue(value: null)}")
                     );
 
                     updateOperations.Add(predicate);

@@ -174,7 +174,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             // Counter to generate different param name for each of the sessionParam.
             IncrementingInteger counter = new();
-            const string paramNamePrefix = "session_param";
+            const string paramNamePrefix = "@session_param";
             StringBuilder sessionMapQuery = new();
 
             foreach ((string claimType, Claim claim) in sessionParams)
@@ -182,7 +182,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 string paramName = $"{paramNamePrefix}{counter.Next()}";
                 parameters.Add(paramName, claim.Value);
                 // Append statement to set read only param value - can be set only once for a connection.
-                string statementToSetReadOnlyParam = "EXEC sp_set_session_context " + $"'{claimType}', @" + paramName + ", @read_only = 1;";
+                string statementToSetReadOnlyParam = "EXEC sp_set_session_context " + $"'{claimType}', " + paramName + ", @read_only = 1;";
                 sessionMapQuery = sessionMapQuery.Append(statementToSetReadOnlyParam);
             }
 

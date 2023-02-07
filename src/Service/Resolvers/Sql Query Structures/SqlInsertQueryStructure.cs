@@ -88,7 +88,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     paramName = MakeParamWithValue(null);
                 }
 
-                Values.Add($"@{paramName}");
+                Values.Add($"{paramName}");
             }
             catch (ArgumentException ex)
             {

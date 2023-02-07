@@ -106,7 +106,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="value">Value to be assigned to parameter, which can be null for nullable columns.</param>
         public string MakeParamWithValue(object? value)
         {
-            string paramName = $"param{Counter.Next()}";
+            string paramName = $"@param{Counter.Next()}";
             Parameters.Add(paramName, value);
             return paramName;
         }

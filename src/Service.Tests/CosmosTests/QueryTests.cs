@@ -71,7 +71,6 @@ query{
 
             // Validate results
             Assert.AreEqual(id, response.GetProperty("id").GetString());
-            TestFixtureTearDown();
         }
 
         [TestMethod]
@@ -95,8 +94,6 @@ query ($id: ID, $partitionKeyValue: String) {
         [TestMethod]
         public async Task GetPaginatedWithVariables()
         {
-            
-
             // Run paginated query
             const int pagesize = TOTAL_ITEM_COUNT / 2;
             int totalElementsFromPaginatedQuery = 0;
@@ -113,7 +110,6 @@ query ($id: ID, $partitionKeyValue: String) {
 
             // Validate results
             Assert.AreEqual(TOTAL_ITEM_COUNT, totalElementsFromPaginatedQuery);
-            TestFixtureTearDown();
         }
 
         [TestMethod]
@@ -134,7 +130,6 @@ query {{
 
             // Validate results
             Assert.AreEqual(id, response.GetProperty("id").GetString());
-            TestFixtureTearDown();
         }
 
         [TestMethod]
@@ -169,7 +164,7 @@ query {{
             } while (!string.IsNullOrEmpty(afterToken));
 
             Assert.AreEqual(TOTAL_ITEM_COUNT, totalElementsFromPaginatedQuery);
-            TestFixtureTearDown();
+            
         }
 
         [TestMethod]
@@ -206,7 +201,7 @@ query {{
             } while (!string.IsNullOrEmpty(afterToken));
 
             Assert.AreEqual(1, totalElementsFromPaginatedQuery);
-            TestFixtureTearDown();
+            
         }
 
         /// <summary>
@@ -234,7 +229,7 @@ query {{
 
             // Validate results
             Assert.AreEqual(id, response.GetProperty("id").GetString());
-            TestFixtureTearDown();
+            
         }
 
         [TestMethod]
@@ -250,7 +245,7 @@ query {{
                 Assert.AreEqual(id, response.GetProperty("items")[i++].GetProperty("id").GetString());
             }
 
-            TestFixtureTearDown();
+            
         }
 
         /// <summary>
@@ -275,7 +270,7 @@ query {{
 
             // Validate results
             Assert.AreEqual(id, response.GetProperty("id").GetString());
-            TestFixtureTearDown();
+            
         }
 
         private static void ConvertJsonElementToStringList(JsonElement ele, List<string> strList)
@@ -292,6 +287,7 @@ query {{
             }
         }
 
+        [ClassCleanup]
         public static void TestFixtureTearDown()
         {
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;

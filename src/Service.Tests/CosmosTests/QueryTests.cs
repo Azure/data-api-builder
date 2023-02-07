@@ -49,20 +49,27 @@ query{
         private static List<string> _idList;
         private const int TOTAL_ITEM_COUNT = 10;
 
-        [TestInitialize]
+        [ClassInitialize]
         public static void TestFixtureSetup(TestContext context)
         {
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
             cosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
+        }
+
+        private static void CreateAndInitializeContainer()
+        {
+            CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
             cosmosClient.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
             _idList = CreateItems(DATABASE_NAME, _containerName, TOTAL_ITEM_COUNT);
             OverrideEntityContainer("Planet", _containerName);
             OverrideEntityContainer("StarAlias", _containerName);
         }
 
-        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
+        [TestMethod]
         public async Task GetByPrimaryKeyWithVariables()
         {
+            CreateAndInitializeContainer();
+
             // Run query
             string id = _idList[0];
             JsonElement response = await ExecuteGraphQLRequestAsync("planet_by_pk", PlanetByPKQuery, new() { { "id", id }, { "partitionKeyValue", id } });
@@ -71,9 +78,11 @@ query{
             Assert.AreEqual(id, response.GetProperty("id").GetString());
         }
 
-        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
+        [TestMethod]
         public async Task GetListOfString()
         {
+            CreateAndInitializeContainer();
+
             string id = _idList[0];
             JsonElement response = await ExecuteGraphQLRequestAsync("planet_by_pk", @"
 query ($id: ID, $partitionKeyValue: String) {
@@ -87,9 +96,11 @@ query ($id: ID, $partitionKeyValue: String) {
             CollectionAssert.AreEqual(new[] { "tag1", "tag2" }, tags);
         }
 
-        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
+        [TestMethod]
         public async Task GetPaginatedWithVariables()
         {
+            CreateAndInitializeContainer();
+
             // Run paginated query
             const int pagesize = TOTAL_ITEM_COUNT / 2;
             int totalElementsFromPaginatedQuery = 0;
@@ -108,9 +119,11 @@ query ($id: ID, $partitionKeyValue: String) {
             Assert.AreEqual(TOTAL_ITEM_COUNT, totalElementsFromPaginatedQuery);
         }
 
-        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
+        [TestMethod]
         public async Task GetByPrimaryKeyWithoutVariables()
         {
+            CreateAndInitializeContainer();
+
             // Run query
             string id = _idList[0];
             string query = @$"
@@ -126,9 +139,11 @@ query {{
             Assert.AreEqual(id, response.GetProperty("id").GetString());
         }
 
-        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
+        [TestMethod]
         public async Task GetPaginatedWithoutVariables()
         {
+            CreateAndInitializeContainer();
+
             // Run paginated query
             const int pagesize = TOTAL_ITEM_COUNT / 2;
             int totalElementsFromPaginatedQuery = 0;
@@ -158,9 +173,11 @@ query {{
             Assert.AreEqual(TOTAL_ITEM_COUNT, totalElementsFromPaginatedQuery);
         }
 
-        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
+        [TestMethod]
         public async Task GetPaginatedWithSinglePartition()
         {
+            CreateAndInitializeContainer();
+
             // Run paginated query
             const int pagesize = TOTAL_ITEM_COUNT / 2;
             int totalElementsFromPaginatedQuery = 0;
@@ -196,9 +213,10 @@ query {{
         /// Query result with nested object
         /// </summary>
         /// <returns></returns>
-        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
+        [TestMethod]
         public async Task GetByPrimaryKeyWithInnerObject()
         {
+            CreateAndInitializeContainer();
             // Run query
             string id = _idList[0];
             string query = @$"
@@ -218,9 +236,10 @@ query {{
             Assert.AreEqual(id, response.GetProperty("id").GetString());
         }
 
-        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
+        [TestMethod]
         public async Task GetWithOrderBy()
         {
+            CreateAndInitializeContainer();
             JsonElement response = await ExecuteGraphQLRequestAsync("planets", PlanetsWithOrderBy);
 
             int i = 0;
@@ -236,9 +255,10 @@ query {{
         /// "Star" is a GraphQL type, in the runtime config, the top level entity name is "StarAlias"
         /// A match is attempted using the runtime config entity singular type name when there is no match found with the GraphQL type name.
         /// </summary>
-        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
+        [TestMethod]
         public async Task GetByPrimaryKeyWhenEntityNameDoesntMatchGraphQLType()
         {
+            CreateAndInitializeContainer();
             // Run query
             // _idList is the mock data that's generated for testing purpose, arbitrarilys pick the first id here to query.
             string id = _idList[0];

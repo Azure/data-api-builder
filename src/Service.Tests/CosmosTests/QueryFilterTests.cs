@@ -18,7 +18,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         private static int _pageSize = 10;
         private static readonly string _graphQLQueryName = "planets";
 
-        [ClassInitialize]
+        [TestInitialize]
         public static void TestFixtureSetup(TestContext context)
         {
             Init(context);
@@ -639,7 +639,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
         }
 
-        [ClassCleanup]
+        [TestCleanup]
         public static void TestFixtureTearDown()
         {
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;

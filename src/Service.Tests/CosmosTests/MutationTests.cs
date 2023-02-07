@@ -31,7 +31,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// Executes once for the test class.
         /// </summary>
         /// <param name="context"></param>
-        [ClassInitialize]
+        [TestInitialize]
         public static void TestFixtureSetup(TestContext context)
         {
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
@@ -242,7 +242,7 @@ mutation {{
         /// <summary>
         /// Runs once after all tests in this class are executed
         /// </summary>
-        [ClassCleanup]
+        [TestCleanup]
         public static void TestFixtureTearDown()
         {
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;

@@ -118,6 +118,8 @@ not                      | Logical negation      | not (year le 1960)
 **Grouping Operators**   |                       |
 ( )                      | Precedence grouping   | (year ge 1970 or title eq 'Foundation') and pages gt 400
 
+**NOTE: `$filter` is a case sensitive argument.**
+
 #### `$orderby`
 
 The value of the `orderby` parameter is a comma-separated list of expressions used to sort the items. 
@@ -131,6 +133,8 @@ http://localhost:5000/api/author?$orderby=first_name desc, last_name
 ```
 
 will return the list of authors sorted by `first_name` descending and then by `last_name` ascending.
+
+**NOTE: `$orderBy` is a case sensitive argument.**
 
 #### `$first` and `$after`
 

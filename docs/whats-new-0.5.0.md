@@ -1,10 +1,10 @@
 # What's New in Data API Builder 0.5.0
 
-- [Public Microsoft.DataApiBuilder nuget](#public-microsoft.dataapibuilder-nuget)
+- [Public Microsoft.DataApiBuilder nuget](#public-microsoftdataapibuilder-nuget)
 - [Public JSON Schema](#public-json-schema)
 - [New `execute` action for stored procedures in Azure SQL](#new-execute-action-for-stored-procedures-in-azure-sql)
 - [New `mappings` section for column renames of tables in Azure SQL](#new-mappings-section)
-- [Set session context to add JWT claims as name/value pairs for Azure SQL connections](#set-session-context-in-azure-sql)
+- [Set session context to add JWT claims as name/value pairs for Azure SQL connections](#support-for-session-context-in-azure-sql)
 - [Support for filter on nested objects within a document in PostgreSQL](#support-for-filter-on-nested-objects-within-a-document-in-postgresql)
 - [Support for list of scalars for CosmosDB NoSQL](#support-scalar-list-in-cosmosdb-nosql)
 - [Enhanced logging support using `LogLevel`](#enhanced-logging-support-using-loglevel)
@@ -19,7 +19,7 @@ Details on how to install the latest version are here: [Installing DAB CLI](./ru
 `Microsoft.DataApiBuilder` is now available as a public nuget package [here](https://www.nuget.org/packages/Microsoft.DataApiBuilder) for ease of installation using dotnet tool as follows:
 
 ```bash
-dotnet tool install --global  Microsoft.DataApiBuilder
+dotnet tool install --global Microsoft.DataApiBuilder
 ```
 
 ## Public JSON Schema
@@ -37,7 +37,8 @@ This will give you intellisense if you are using an IDE, like VS Code, that supp
 A new `execute` action is introduced as the only allowed action in the `permissions` section of the configuration file only when an entity is backed by a source type of `stored-procedure`. By default, only `POST` method is allowed for such entities and only the GraphQL `mutation` operation is configured with the prefix `execute` added to their name. This behavior can be overridden by explicitly specifying the allowed `methods` in the `rest` section of the configuration file. Similarly, for GraphQL, the `operation` in the `graphql` section, can be overridden to be `query` instead. For more details, see [here.](./views-and-stored-procedures.md/#stored-procedures)
 
 ## New `mappings` section
-In the `mappings` section, the mappings between database object field names and their corresponding exposed field names are defined for both GraphQL and REST endpoints.
+
+In the `mappings` section under each `entity`, the mappings between database object field names and their corresponding exposed field names are defined for both GraphQL and REST endpoints.
 
 The format is:
 
@@ -72,11 +73,12 @@ query {
 ```
 
 ## Support scalar list in CosmosDB NoSQL
+
 The ability to query `List` of Scalars is now added for Cosmos DB.
 
 Consider the below type definition
 
-```json
+```graphql
 type Planet @model(name:"Planet") {
     id : ID,
     name : String,
@@ -88,7 +90,7 @@ type Planet @model(name:"Planet") {
 
 It is now possible to run a query that fetches a List such as 
 
-```json
+```graphql
 query ($id: ID, $partitionKeyValue: String) {
     planet_by_pk (id: $id, _partitionKeyValue: $partitionKeyValue) {
         tags
@@ -97,14 +99,16 @@ query ($id: ID, $partitionKeyValue: String) {
 ```
 
 ## Enhanced logging support using loglevel
-- The default log levels for the engine in `Production` and `Development` are updated to `Error` and `Debug` respectively.
-- During engine start-up, for every entity, information such as exposed names, type, whether it is auto-generated, etc. about the primary key is logged.
+
+- The default log levels for the engine when `host.mode` is `Production` and `Development` are updated to `Error` and `Debug` respectively.
+- During engine start-up, for every column of an entity, information such as exposed field names, type, whether it is auto-generated, and the primary key is logged.
 - In the local execution scenario, all the queries that are generated and executed during engine start-up are logged at `Debug` level.
-- For every entity, relationship fields such as `source.fields`, `target.fields` and `cardinality` are logged. Incase of many-many relationships, `linking.object`, `linking.source.fields` and `linking.target.fields` are fetched from the config file and logged.
-- For every incoming request, the role and the authentication status of the request are logged. This is not applicable for hosted scenario.
-- In CLI, the Microsoft.DataAPIBuilder's version is logged along with the logs associated with the respective command's execution.
+- For every entity, relationship fields such as `source.fields`, `target.fields` and `cardinality` are logged. Incase of many-many relationships, `linking.object`, `linking.source.fields` and `linking.target.fields` inferred from the database (or from config file) are logged.
+- For every incoming request, the role and the authentication status of the request are logged.
+- In CLI, the `Microsoft.DataAPIBuilder` version is logged along with the logs associated with the respective command's execution.
 
 ## Updated CLI
+
 - `--no-https-redirect` option is added to `start` command. Using this option, the automatic redirection of requests from `http` to `https` can be prevented.
 - In MsSql, session context can be enabled using `--set-session-context true` in the `init` command. A sample command is shown below
   - `dab init --database-type mssql --connection-string "Connection String" --set-session-context true` 

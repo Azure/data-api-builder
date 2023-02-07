@@ -157,7 +157,6 @@ query {{
             } while (!string.IsNullOrEmpty(afterToken));
 
             Assert.AreEqual(TOTAL_ITEM_COUNT, totalElementsFromPaginatedQuery);
-
         }
 
         [TestMethod]
@@ -192,7 +191,6 @@ query {{
             } while (!string.IsNullOrEmpty(afterToken));
 
             Assert.AreEqual(1, totalElementsFromPaginatedQuery);
-
         }
 
         /// <summary>
@@ -219,7 +217,6 @@ query {{
 
             // Validate results
             Assert.AreEqual(id, response.GetProperty("id").GetString());
-
         }
 
         [TestMethod]
@@ -233,7 +230,6 @@ query {{
             {
                 Assert.AreEqual(id, response.GetProperty("items")[i++].GetProperty("id").GetString());
             }
-
         }
 
         /// <summary>

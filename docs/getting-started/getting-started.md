@@ -39,7 +39,7 @@ dotnet tool install -g --add-source ./ Microsoft.DataApiBuilder --version <versi
 or, if you have already installed a previous version, you can update DAB CLI to the latest version via the following:
 
 ```bash
-dotnet tool update -g --add-source ./ Microsoft.DataApiBuilder --version <version_number>
+dotnet tool update -g Microsoft.DataApiBuilder --version <version_number>
 ```
 
 > **ATTENTION**: if you are running on Linux or MacOS, you may need to add .NET global tools to your PATH to call `dab` directly. Once installed run:

@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: ODataASTVisitorUnitTests.cs
+// **************************************
+
 using System;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;

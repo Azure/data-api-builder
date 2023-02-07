@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: SqlTestBase.cs
+// **************************************
+
 using System.Collections.Generic;
 using System.IO;
 using System.Net;

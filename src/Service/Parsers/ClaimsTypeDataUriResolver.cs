@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: ClaimsTypeDataUriResolver.cs
+// **************************************
+
 using System;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;

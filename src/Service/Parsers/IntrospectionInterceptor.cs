@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: IntrospectionInterceptor.cs
+// **************************************
+
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Configurations;

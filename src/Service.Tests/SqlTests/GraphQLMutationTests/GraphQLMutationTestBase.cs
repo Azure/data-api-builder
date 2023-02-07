@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: GraphQLMutationTestBase.cs
+// **************************************
+
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;

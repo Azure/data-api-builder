@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: AppServiceAuthenticationInformation.cs
+// **************************************
+
 using System;
 
 namespace Azure.DataApiBuilder.Service.AuthenticationHelpers

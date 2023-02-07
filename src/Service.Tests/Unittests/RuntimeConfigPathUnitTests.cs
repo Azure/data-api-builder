@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: RuntimeConfigPathUnitTests.cs
+// **************************************
+
 using System;
 using System.Data;
 using System.IO;

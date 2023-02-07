@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: RestController.cs
+// **************************************
+
 using System;
 using System.Net;
 using System.Threading.Tasks;

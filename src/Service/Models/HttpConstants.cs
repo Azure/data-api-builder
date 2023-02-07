@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: HttpConstants.cs
+// **************************************
+
 namespace Azure.DataApiBuilder.Service.Models
 {
     /// <summary>

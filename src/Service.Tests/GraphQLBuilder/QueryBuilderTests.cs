@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: QueryBuilderTests.cs
+// **************************************
+
 using System.Collections.Generic;
 using System.Linq;
 using Azure.DataApiBuilder.Auth;

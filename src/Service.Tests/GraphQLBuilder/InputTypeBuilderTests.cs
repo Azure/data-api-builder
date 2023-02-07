@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: InputTypeBuilderTests.cs
+// **************************************
+
 using System.Collections.Generic;
 using System.Linq;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;

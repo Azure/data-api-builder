@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: QueryFilterTests.cs
+// **************************************
+
 using System;
 using System.Text.Json;
 using System.Threading.Tasks;

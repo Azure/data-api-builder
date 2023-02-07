@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: SupportedTypes.cs
+// **************************************
+
 namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes
 {
     /// <summary>

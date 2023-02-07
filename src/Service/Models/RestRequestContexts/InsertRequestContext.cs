@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: InsertRequestContext.cs
+// **************************************
+
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 

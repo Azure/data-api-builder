@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: GraphQLFilterParsers.cs
+// **************************************
+
 using System;
 using System.Collections.Generic;
 using System.Linq;

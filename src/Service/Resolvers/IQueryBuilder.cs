@@ -1,3 +1,9 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: IQueryBuilder.cs
+// **************************************
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {

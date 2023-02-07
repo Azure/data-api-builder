@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: SimulatorAuthenticationBuilderExtensions.cs
+// **************************************
+
 using Microsoft.AspNetCore.Authentication;
 
 namespace Azure.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimulator

@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: OrderByType.cs
+// **************************************
+
 using HotChocolate.Types;
 
 namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes

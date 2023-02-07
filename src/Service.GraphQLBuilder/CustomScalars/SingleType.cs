@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: SingleType.cs
+// **************************************
+
 using HotChocolate;
 using HotChocolate.Language;
 using HotChocolate.Types;

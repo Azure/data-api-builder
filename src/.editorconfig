@@ -469,3 +469,6 @@ dotnet_naming_symbols.constant_fields.required_modifiers = const
 dotnet_naming_style.upper_case_style.capitalization = all_upper
 dotnet_style_operator_placement_when_wrapping = beginning_of_line
 dotnet_diagnostic.CA1051.severity = suggestion
+
+# copyright header
+file_header_template = **************************************\nCopyright (c) Microsoft Corporation.\nLicensed under the MIT License.\n\n@file: {fileName}\n**************************************

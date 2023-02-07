@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: RuntimeConfigValidator.cs
+// **************************************
+
 using System;
 using System.Collections.Generic;
 using System.IO;

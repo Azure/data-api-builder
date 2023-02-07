@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: DataSource.cs
+// **************************************
+
 using System.Text.Json;
 using System.Text.Json.Serialization;
 

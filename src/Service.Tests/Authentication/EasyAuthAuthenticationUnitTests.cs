@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: EasyAuthAuthenticationUnitTests.cs
+// **************************************
+
 #nullable enable
 using System.Collections.Generic;
 using System.Linq;

@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: CosmosQueryBuilder.cs
+// **************************************
+
 using System;
 using System.Linq;
 using System.Text;

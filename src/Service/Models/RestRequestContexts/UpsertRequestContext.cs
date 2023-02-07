@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: UpsertRequestContext.cs
+// **************************************
+
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 

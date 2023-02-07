@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: CosmosQueryEngine.cs
+// **************************************
+
 # nullable disable
 using System;
 using System.Collections.Generic;

@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: PostgreSqlMetadataProvider.cs
+// **************************************
+
 using System;
 using System.Net;
 using Azure.DataApiBuilder.Service.Configurations;

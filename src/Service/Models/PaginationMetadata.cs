@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: PaginationMetadata.cs
+// **************************************
+
 using System.Collections.Generic;
 using Azure.DataApiBuilder.Service.Resolvers;
 

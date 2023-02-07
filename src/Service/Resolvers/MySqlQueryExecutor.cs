@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: MySqlQueryExecutor.cs
+// **************************************
+
 using System.Data.Common;
 using System.Threading.Tasks;
 using Azure.Core;

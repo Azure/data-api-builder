@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: SimulatorAuthenticationHandler.cs
+// **************************************
+
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;

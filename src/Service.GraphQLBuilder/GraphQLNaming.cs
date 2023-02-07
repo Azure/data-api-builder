@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: GraphQLNaming.cs
+// **************************************
+
 using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config;

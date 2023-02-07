@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: ISqlMetadataProvider.cs
+// **************************************
+
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;

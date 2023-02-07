@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: GraphQLUpdateMutationDatabasePolicyTestBase.cs
+// **************************************
+
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;

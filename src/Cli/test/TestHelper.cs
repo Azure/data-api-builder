@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: TestHelper.cs
+// **************************************
+
 namespace Cli.Tests
 {
     public static class TestHelper

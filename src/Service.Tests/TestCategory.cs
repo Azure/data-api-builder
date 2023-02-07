@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: TestCategory.cs
+// **************************************
+
 namespace Azure.DataApiBuilder.Service.Tests
 {
     public class TestCategory

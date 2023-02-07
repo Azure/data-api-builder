@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: Startup.cs
+// **************************************
+
 using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.IO.Abstractions;

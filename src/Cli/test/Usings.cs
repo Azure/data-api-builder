@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: Usings.cs
+// **************************************
+
 global using System.Diagnostics;
 global using System.Text.Json;
 global using Azure.DataApiBuilder.Config;

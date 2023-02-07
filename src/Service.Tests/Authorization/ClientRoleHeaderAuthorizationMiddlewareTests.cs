@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: ClientRoleHeaderAuthorizationMiddlewareTests.cs
+// **************************************
+
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;

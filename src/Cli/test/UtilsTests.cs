@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: UtilsTests.cs
+// **************************************
+
 namespace Cli.Tests
 {
     /// <summary>

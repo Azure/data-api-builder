@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: PrimaryKeyTestsForCompositeViews.cs
+// **************************************
+
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;

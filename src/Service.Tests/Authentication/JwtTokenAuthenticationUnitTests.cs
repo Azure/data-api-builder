@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: JwtTokenAuthenticationUnitTests.cs
+// **************************************
+
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;

@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: PostgreSqlDbExceptionParser.cs
+// **************************************
+
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Net;

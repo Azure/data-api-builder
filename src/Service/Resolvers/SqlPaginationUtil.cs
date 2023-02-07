@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: SqlPaginationUtil.cs
+// **************************************
+
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;

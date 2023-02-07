@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: EntitySourceNamesParser.cs
+// **************************************
+
 using System.Collections;
 using System.Net;
 using Azure.DataApiBuilder.Service.Exceptions;

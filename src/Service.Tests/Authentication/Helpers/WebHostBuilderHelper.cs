@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: WebHostBuilderHelper.cs
+// **************************************
+
 #nullable enable
 using System;
 using System.IO;

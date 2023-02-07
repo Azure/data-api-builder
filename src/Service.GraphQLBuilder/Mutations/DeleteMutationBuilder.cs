@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: DeleteMutationBuilder.cs
+// **************************************
+
 using Azure.DataApiBuilder.Config;
 using HotChocolate.Language;
 using HotChocolate.Types;

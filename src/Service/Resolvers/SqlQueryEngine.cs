@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: SqlQueryEngine.cs
+// **************************************
+
 #nullable disable
 using System;
 using System.Collections.Generic;

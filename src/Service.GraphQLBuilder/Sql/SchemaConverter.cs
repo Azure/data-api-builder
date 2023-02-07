@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: SchemaConverter.cs
+// **************************************
+
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;

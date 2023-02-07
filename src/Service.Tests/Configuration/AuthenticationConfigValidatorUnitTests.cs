@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: AuthenticationConfigValidatorUnitTests.cs
+// **************************************
+
 using System;
 using System.Collections.Generic;
 using System.IO.Abstractions.TestingHelpers;

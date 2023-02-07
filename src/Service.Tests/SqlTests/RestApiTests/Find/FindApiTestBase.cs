@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: FindApiTestBase.cs
+// **************************************
+
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;

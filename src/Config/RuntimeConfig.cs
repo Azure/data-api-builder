@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: RuntimeConfig.cs
+// **************************************
+
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Reflection;

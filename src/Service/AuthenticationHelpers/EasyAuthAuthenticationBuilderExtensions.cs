@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: EasyAuthAuthenticationBuilderExtensions.cs
+// **************************************
+
 using Azure.DataApiBuilder.Config;
 using Microsoft.AspNetCore.Authentication;
 

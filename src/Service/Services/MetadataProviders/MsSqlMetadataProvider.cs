@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: MsSqlMetadataProvider.cs
+// **************************************
+
 using System;
 using System.Net;
 using Azure.DataApiBuilder.Service.Configurations;

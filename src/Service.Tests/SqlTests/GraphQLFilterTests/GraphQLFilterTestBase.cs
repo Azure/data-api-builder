@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: GraphQLFilterTestBase.cs
+// **************************************
+
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;

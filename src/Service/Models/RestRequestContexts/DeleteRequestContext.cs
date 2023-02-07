@@ -1,3 +1,10 @@
+// **************************************
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+//
+// @file: DeleteRequestContext.cs
+// **************************************
+
 using Azure.DataApiBuilder.Config;
 
 namespace Azure.DataApiBuilder.Service.Models

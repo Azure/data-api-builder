@@ -23,7 +23,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
     public class TestBase
     {
         internal const string DATABASE_NAME = "graphqldb";
-        internal const string TEMP_DATABASE_NAME = "temp_graphql_db";
+        internal const string TEST_DATABASE_NAME = "test_graphql_db";
         private const string GRAPHQL_SCHEMA = @"
 type Character @model(name:""Character"") {
     id : ID,

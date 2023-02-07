@@ -19,7 +19,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         private static readonly string _graphQLQueryName = "planets";
 
         [ClassInitialize]
-        public static void TestFixtureSetupAsync(TestContext context)
+        public static void TestFixtureSetup(TestContext context)
         {
             Init(context);
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;

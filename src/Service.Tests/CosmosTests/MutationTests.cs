@@ -32,7 +32,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// </summary>
         /// <param name="context"></param>
         [ClassInitialize]
-        public static void TestFixtureSetupAsync(TestContext context)
+        public static void TestFixtureSetup(TestContext context)
         {
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
             cosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();

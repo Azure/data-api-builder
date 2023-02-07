@@ -53,9 +53,9 @@ query{
         public static void TestFixtureSetup(TestContext context)
         {
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
-            cosmosClient.CreateDatabaseIfNotExistsAsync(TEMP_DATABASE_NAME).Wait();
-            cosmosClient.GetDatabase(TEMP_DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
-            _idList = CreateItems(TEMP_DATABASE_NAME, _containerName, TOTAL_ITEM_COUNT);
+            cosmosClient.CreateDatabaseIfNotExistsAsync(TEST_DATABASE_NAME).Wait();
+            cosmosClient.GetDatabase(TEST_DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
+            _idList = CreateItems(TEST_DATABASE_NAME, _containerName, TOTAL_ITEM_COUNT);
             OverrideEntityContainer("Planet", _containerName);
             OverrideEntityContainer("StarAlias", _containerName);
         }
@@ -63,8 +63,6 @@ query{
         [TestMethod]
         public async Task GetByPrimaryKeyWithVariables()
         {
-            
-
             // Run query
             string id = _idList[0];
             JsonElement response = await ExecuteGraphQLRequestAsync("planet_by_pk", PlanetByPKQuery, new() { { "id", id }, { "partitionKeyValue", id } });
@@ -76,8 +74,6 @@ query{
         [TestMethod]
         public async Task GetListOfString()
         {
-            
-
             string id = _idList[0];
             JsonElement response = await ExecuteGraphQLRequestAsync("planet_by_pk", @"
 query ($id: ID, $partitionKeyValue: String) {
@@ -115,8 +111,6 @@ query ($id: ID, $partitionKeyValue: String) {
         [TestMethod]
         public async Task GetByPrimaryKeyWithoutVariables()
         {
-            
-
             // Run query
             string id = _idList[0];
             string query = @$"
@@ -135,8 +129,6 @@ query {{
         [TestMethod]
         public async Task GetPaginatedWithoutVariables()
         {
-            
-
             // Run paginated query
             const int pagesize = TOTAL_ITEM_COUNT / 2;
             int totalElementsFromPaginatedQuery = 0;
@@ -170,8 +162,6 @@ query {{
         [TestMethod]
         public async Task GetPaginatedWithSinglePartition()
         {
-            
-
             // Run paginated query
             const int pagesize = TOTAL_ITEM_COUNT / 2;
             int totalElementsFromPaginatedQuery = 0;
@@ -211,7 +201,6 @@ query {{
         [TestMethod]
         public async Task GetByPrimaryKeyWithInnerObject()
         {
-            
             // Run query
             string id = _idList[0];
             string query = @$"
@@ -235,7 +224,6 @@ query {{
         [TestMethod]
         public async Task GetWithOrderBy()
         {
-            
             JsonElement response = await ExecuteGraphQLRequestAsync("planets", PlanetsWithOrderBy);
 
             int i = 0;
@@ -245,7 +233,6 @@ query {{
                 Assert.AreEqual(id, response.GetProperty("items")[i++].GetProperty("id").GetString());
             }
 
-            
         }
 
         /// <summary>
@@ -256,7 +243,6 @@ query {{
         [TestMethod]
         public async Task GetByPrimaryKeyWhenEntityNameDoesntMatchGraphQLType()
         {
-            
             // Run query
             // _idList is the mock data that's generated for testing purpose, arbitrarilys pick the first id here to query.
             string id = _idList[0];
@@ -269,8 +255,7 @@ query {{
             JsonElement response = await ExecuteGraphQLRequestAsync("star_by_pk", query);
 
             // Validate results
-            Assert.AreEqual(id, response.GetProperty("id").GetString());
-            
+            Assert.AreEqual(id, response.GetProperty("id").GetString());   
         }
 
         private static void ConvertJsonElementToStringList(JsonElement ele, List<string> strList)
@@ -291,7 +276,7 @@ query {{
         public static void TestFixtureTearDown()
         {
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
-            cosmosClient.GetDatabase(TEMP_DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();
+            cosmosClient.GetDatabase(TEST_DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();
         }
     }
 }

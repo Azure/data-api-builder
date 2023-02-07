@@ -50,15 +50,11 @@ query{
         private const int TOTAL_ITEM_COUNT = 10;
 
         [ClassInitialize]
-        public static void TestFixtureSetup(TestContext context)
+        public static async Task TestFixtureSetupAsync(TestContext context)
         {
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
+            await DeleteDatabaseToFreeUpStorageAsync(cosmosClient);
             cosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
-        }
-
-        private static void CreateAndInitializeContainer()
-        {
-            CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
             cosmosClient.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
             _idList = CreateItems(DATABASE_NAME, _containerName, TOTAL_ITEM_COUNT);
             OverrideEntityContainer("Planet", _containerName);
@@ -68,7 +64,7 @@ query{
         [TestMethod]
         public async Task GetByPrimaryKeyWithVariables()
         {
-            CreateAndInitializeContainer();
+            
 
             // Run query
             string id = _idList[0];
@@ -82,7 +78,7 @@ query{
         [TestMethod]
         public async Task GetListOfString()
         {
-            CreateAndInitializeContainer();
+            
 
             string id = _idList[0];
             JsonElement response = await ExecuteGraphQLRequestAsync("planet_by_pk", @"
@@ -100,7 +96,7 @@ query ($id: ID, $partitionKeyValue: String) {
         [TestMethod]
         public async Task GetPaginatedWithVariables()
         {
-            CreateAndInitializeContainer();
+            
 
             // Run paginated query
             const int pagesize = TOTAL_ITEM_COUNT / 2;
@@ -124,7 +120,7 @@ query ($id: ID, $partitionKeyValue: String) {
         [TestMethod]
         public async Task GetByPrimaryKeyWithoutVariables()
         {
-            CreateAndInitializeContainer();
+            
 
             // Run query
             string id = _idList[0];
@@ -145,7 +141,7 @@ query {{
         [TestMethod]
         public async Task GetPaginatedWithoutVariables()
         {
-            CreateAndInitializeContainer();
+            
 
             // Run paginated query
             const int pagesize = TOTAL_ITEM_COUNT / 2;
@@ -180,7 +176,7 @@ query {{
         [TestMethod]
         public async Task GetPaginatedWithSinglePartition()
         {
-            CreateAndInitializeContainer();
+            
 
             // Run paginated query
             const int pagesize = TOTAL_ITEM_COUNT / 2;
@@ -221,7 +217,7 @@ query {{
         [TestMethod]
         public async Task GetByPrimaryKeyWithInnerObject()
         {
-            CreateAndInitializeContainer();
+            
             // Run query
             string id = _idList[0];
             string query = @$"
@@ -245,7 +241,7 @@ query {{
         [TestMethod]
         public async Task GetWithOrderBy()
         {
-            CreateAndInitializeContainer();
+            
             JsonElement response = await ExecuteGraphQLRequestAsync("planets", PlanetsWithOrderBy);
 
             int i = 0;
@@ -254,6 +250,7 @@ query {{
             {
                 Assert.AreEqual(id, response.GetProperty("items")[i++].GetProperty("id").GetString());
             }
+
             TestFixtureTearDown();
         }
 
@@ -265,7 +262,7 @@ query {{
         [TestMethod]
         public async Task GetByPrimaryKeyWhenEntityNameDoesntMatchGraphQLType()
         {
-            CreateAndInitializeContainer();
+            
             // Run query
             // _idList is the mock data that's generated for testing purpose, arbitrarilys pick the first id here to query.
             string id = _idList[0];

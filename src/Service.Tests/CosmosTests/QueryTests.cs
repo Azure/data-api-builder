@@ -49,7 +49,7 @@ query{
         private static List<string> _idList;
         private const int TOTAL_ITEM_COUNT = 10;
 
-        [ClassInitialize]
+        [TestInitialize]
         public static void TestFixtureSetup(TestContext context)
         {
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
@@ -268,7 +268,7 @@ query {{
             }
         }
 
-        [ClassCleanup]
+        [TestCleanup]
         public static void TestFixtureTearDown()
         {
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;

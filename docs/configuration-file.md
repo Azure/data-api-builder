@@ -12,17 +12,17 @@
       + [GraphQL](#graphql)
       + [Host](#host)
     + [Entities](#entities)
-    + [GraphQL Settings](#graphql-settings)
-    + [REST Settings](#rest-settings)
-    + [Database object source](#database-object-source)
-    + [Relationships](#relationships)
-      + [One-To-Many Relationship](#one-to-many-relationship)
-      + [Many-To-One Relationship](#many-to-one-relationship)
-      + [Many-To-Many Relationship](#many-to-many-relationship)
-    + [Permissions](#permissions)
-      + [Roles](#roles)
-      + [Actions](#actions)
-    + [Mappings](#mappings)
+      + [GraphQL Settings](#graphql-settings)
+      + [REST Settings](#rest-settings)
+      + [Database object source](#database-object-source)
+      + [Relationships](#relationships)
+        + [One-To-Many Relationship](#one-to-many-relationship)
+        + [Many-To-One Relationship](#many-to-one-relationship)
+        + [Many-To-Many Relationship](#many-to-many-relationship)
+      + [Permissions](#permissions)
+        + [Roles](#roles)
+        + [Actions](#actions)
+      + [Mappings](#mappings)
 
 ## Summary
 
@@ -173,9 +173,9 @@ will instruct Data API builder to expose a GraphQL entity named `User` and a RES
 
 Within the entity section, there are feature specific sections:
 
-### GraphQL Settings
+#### GraphQL Settings
  
-#### GraphQL Type
+##### GraphQL Type
 
 The `graphql` property defines the name with which the entity is exposed as a GraphQL type, if that is different from the entity name:
 
@@ -198,7 +198,7 @@ or, if needed
 
 which instructs Data API builder runtime to expose the GraphQL type for the related entity and to name it using the provided type name. `plural` is optional and can be used to tell Data API builder the correct plural name for that type. If omitted Data API builder will try to pluralize the name automatically, following the english rules for pluralization (eg: https://engdic.org/singular-and-plural-noun-rules-definitions-examples)
 
-#### GraphQL Operation
+##### GraphQL Operation
 
 The `graphql` element will contain the `operation` property only for stored-procedures. The `operation` property defines the GraphQL operation that is configured for the stored procedure. It can be one of `Query` or `Mutation`.
 
@@ -208,38 +208,37 @@ For example:
   {
     "graphql": "true",
     "operation": "query"
-    }
   }
 ```
 
 instructs the engine that the stored procedure is exposed for graphQL through Query operation.
 
-### REST Settings
+#### REST Settings
 
-#### REST Path
+##### REST Path
 The `path` property defines the endpoint through which the entity is exposed for REST APIs, if that is different from the entity name:
 
 ```json
 "rest":{
-  "path": "/stored-procedure-path"
+  "path": "/entity-path"
 }
 ```
 
-#### REST Methods
+##### REST Methods
 The `methods` property is only valid for stored procedures. This property defines the REST HTTP actions that the stored procedure is configured for.
 
 For example:
 
 ```json
 "rest":{
-  "path": "/stored-procedure-path"
+  "path": "/entity-path"
   "methods": [ "GET", "POST" ]
 }
 
 ```
 instructs the engine that GET and POST actions are configured for this stored procedure.  
 
-### Database object source
+#### Database object source
 
 The `source` property tells Data API builder what is the underlying database object to which the exposed entity is connected to.
 
@@ -277,7 +276,7 @@ where
 
 More details on how to use Views and Stored Procedure in the related documentation [Views and Stored Procedures](./views-and-stored-procedures.md)
 
-### Relationships
+#### Relationships
 
 The `relationships` section defines how an entity is related to other exposed entities, and optionally provides details on what underlying database objects can be used to support such relationships. Objects defined in the `relationship` section will be exposed as GraphQL field in the related entity. The format is the following:
 
@@ -295,7 +294,7 @@ The `relationships` section defines how an entity is related to other exposed en
 }
 ```
 
-#### One-To-Many Relationship
+##### One-To-Many Relationship
 
 Using the following configuration snippet as an example:
 
@@ -332,7 +331,7 @@ type Category
 
 These are optional if there is a Foreign Key constraint on the database, between the two tables, that can be used to infer that information automatically.
 
-#### Many-To-One Relationship
+##### Many-To-One Relationship
 
 Very similar, to the One-To-Many, but cardinality is set to `one`. Using the following configuration snippet as an example:
 
@@ -369,7 +368,7 @@ type Todo
 
 These are optional if there is a Foreign Key constraint on the database, between the two tables, that can be used to infer that information automatically.
 
-#### Many-To-Many Relationship
+##### Many-To-Many Relationship
 
 A many to many relationship is configured in the same way the other relationships type are configured, with the addition on of information about the association table or entity used to create the M:N relationship in the backend database.
 
@@ -415,7 +414,7 @@ type Todo
 }
 ```
 
-### Permissions
+#### Permissions
 
 The section `permissions` defines who (in terms of roles) can access the related entity and using which actions. Actions are the usual CRUD operations: `create`, `read`, `update`, `delete`.
 
@@ -430,7 +429,7 @@ The section `permissions` defines who (in terms of roles) can access the related
 }
 ```
 
-#### Roles
+##### Roles
 
 The `role` string contains the name of the role to which the defined permission will apply.
 
@@ -440,10 +439,10 @@ The `role` string contains the name of the role to which the defined permission 
 }
 ```
 
-#### Actions
+##### Actions
 
 The `actions` array is a mixed-type array that details what actions are allowed to related roles. When the entity is either a table or view, roles can be configured with the following actions: `create`, `read`, `update`, `delete`.
-Incase of stored procedures, the roles can only be configured with `execute` action.
+In case of stored procedures, the roles can only be configured with `execute` action.
 
 For example:
 
@@ -526,7 +525,7 @@ Data API Builder will take the value of the claim named `UserId` and it will com
 + Binary operators [BinaryOperatorKind - Microsoft Learn](https://learn.microsoft.com/dotnet/api/microsoft.odata.uriparser.binaryoperatorkind?view=odata-core-7.0) such as `and`, `or`, `eq`, `gt`, `lt`, and more.
 + Unary operators [UnaryOperatorKind - Microsoft Learn](https://learn.microsoft.com/dotnet/api/microsoft.odata.uriparser.unaryoperatorkind?view=odata-core-7.0) such as the negate (`-`) and `not` operators.
 
-### Mappings
+#### Mappings
 In the `mappings` section, the mappings between database object field names and their corresponding exposed field names are defined for both GraphQL and REST endpoints.```
 
 The format is:

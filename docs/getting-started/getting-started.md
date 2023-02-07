@@ -56,10 +56,10 @@ dab --version
 which should output
 
 ```bash
-dab 0.1.5
+dab 0.5.0
 ```
 
-Where `0.1.5` should match your version of DAB CLI.
+Where `0.5.0` should match your version of DAB CLI.
 
 >For detailed instructions on how to Install DAB CLI look here: [Running Data API Builder for Azure Databases using CLI](../running-using-dab-cli.md)
 

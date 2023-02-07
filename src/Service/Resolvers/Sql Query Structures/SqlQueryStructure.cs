@@ -481,7 +481,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                                                     columnName: columnName,
                                                     tableAlias: SourceAlias)),
                     PredicateOperation.Equal,
-                    new PredicateOperand($"@{MakeParamWithValue(parameter.Value)}")
+                    new PredicateOperand($"{MakeParamWithValue(parameter.Value)}")
                 ));
             }
         }

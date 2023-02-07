@@ -23,6 +23,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
     public class TestBase
     {
         internal const string DATABASE_NAME = "graphqldb";
+        internal const string TEMP_DATABASE_NAME = "temp_graphql_db";
         private const string GRAPHQL_SCHEMA = @"
 type Character @model(name:""Character"") {
     id : ID,
@@ -162,40 +163,6 @@ type Star @model(name:""StarAlias"") {
                     operations: new Config.Operation[] { Config.Operation.Create, Config.Operation.Read, Config.Operation.Update, Config.Operation.Delete },
                     roles: new string[] { "anonymous", "authenticated" }
                 );
-        }
-
-        /// <summary>
-        /// Checks if a database exists.
-        /// </summary>
-        /// <param name="databaseName">Name of the database to check.</param>
-        /// <returns>True, if the database exists, otherwise false.</returns>
-        public static async Task<bool> DatabaseExistsAsync(CosmosClient cosmosClient, string databaseName)
-        {
-            List<string> databaseNames = new();
-            using (FeedIterator<DatabaseProperties> iterator = cosmosClient.GetDatabaseQueryIterator<DatabaseProperties>())
-            {
-                while (iterator.HasMoreResults)
-                {
-                    foreach (DatabaseProperties databaseProperties in await iterator.ReadNextAsync())
-                    {
-                        databaseNames.Add(databaseProperties.Id);
-                    }
-                }
-            }
-
-            return databaseNames.Contains(databaseName);
-        }
-
-        public static async Task DeleteDatabaseToFreeUpStorageAsync(CosmosClient cosmosClient)
-        {
-            // Adding this method to delete existing database and all its collections
-            // to free up storage
-            bool databaseExists = await DatabaseExistsAsync(cosmosClient, DATABASE_NAME);
-            if (databaseExists)
-            {
-                Database database = await cosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME);
-                database.DeleteAsync().Wait();
-            }
         }
 
     }

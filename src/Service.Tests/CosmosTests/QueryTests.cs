@@ -50,13 +50,12 @@ query{
         private const int TOTAL_ITEM_COUNT = 10;
 
         [ClassInitialize]
-        public static async Task TestFixtureSetupAsync(TestContext context)
+        public static void TestFixtureSetup(TestContext context)
         {
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
-            await DeleteDatabaseToFreeUpStorageAsync(cosmosClient);
-            cosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
-            cosmosClient.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
-            _idList = CreateItems(DATABASE_NAME, _containerName, TOTAL_ITEM_COUNT);
+            cosmosClient.CreateDatabaseIfNotExistsAsync(TEMP_DATABASE_NAME).Wait();
+            cosmosClient.GetDatabase(TEMP_DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
+            _idList = CreateItems(TEMP_DATABASE_NAME, _containerName, TOTAL_ITEM_COUNT);
             OverrideEntityContainer("Planet", _containerName);
             OverrideEntityContainer("StarAlias", _containerName);
         }
@@ -296,7 +295,7 @@ query {{
         public static void TestFixtureTearDown()
         {
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
-            cosmosClient.GetDatabase(DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();
+            cosmosClient.GetDatabase(TEMP_DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();
         }
     }
 }

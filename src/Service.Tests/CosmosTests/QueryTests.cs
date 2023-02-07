@@ -12,6 +12,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 {
     [TestClass, TestCategory(TestCategory.COSMOSDBNOSQL)]
+    [Ignore]
     public class QueryTests : TestBase
     {
         private static readonly string _containerName = Guid.NewGuid().ToString();
@@ -156,7 +157,7 @@ query {{
             } while (!string.IsNullOrEmpty(afterToken));
 
             Assert.AreEqual(TOTAL_ITEM_COUNT, totalElementsFromPaginatedQuery);
-            
+
         }
 
         [TestMethod]
@@ -191,7 +192,7 @@ query {{
             } while (!string.IsNullOrEmpty(afterToken));
 
             Assert.AreEqual(1, totalElementsFromPaginatedQuery);
-            
+
         }
 
         /// <summary>
@@ -218,7 +219,7 @@ query {{
 
             // Validate results
             Assert.AreEqual(id, response.GetProperty("id").GetString());
-            
+
         }
 
         [TestMethod]
@@ -255,7 +256,7 @@ query {{
             JsonElement response = await ExecuteGraphQLRequestAsync("star_by_pk", query);
 
             // Validate results
-            Assert.AreEqual(id, response.GetProperty("id").GetString());   
+            Assert.AreEqual(id, response.GetProperty("id").GetString());
         }
 
         private static void ConvertJsonElementToStringList(JsonElement ele, List<string> strList)

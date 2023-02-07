@@ -644,6 +644,6 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         {
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
             cosmosClient.GetDatabase(DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();
-         }
+        }
     }
 }

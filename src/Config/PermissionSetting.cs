@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: PermissionSetting.cs
-// **************************************
 
 using System.Text.Json.Serialization;
 

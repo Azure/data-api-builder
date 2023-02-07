@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: AuthorizationMetadataHelpers.cs
-// **************************************
 
 using Azure.DataApiBuilder.Config;
 

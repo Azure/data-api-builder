@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: GraphQLPaginationTestBase.cs
-// **************************************
 
 using System.Text.Json;
 using System.Threading.Tasks;

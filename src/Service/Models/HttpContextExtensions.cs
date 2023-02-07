@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: HttpContextExtensions.cs
-// **************************************
 
 using System;
 using Microsoft.AspNetCore.Http;

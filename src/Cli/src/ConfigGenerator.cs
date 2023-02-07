@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: ConfigGenerator.cs
-// **************************************
 
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;

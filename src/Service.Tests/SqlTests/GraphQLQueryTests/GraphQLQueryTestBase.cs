@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: GraphQLQueryTestBase.cs
-// **************************************
 
 using System.Text.Json;
 using System.Threading.Tasks;

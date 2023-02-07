@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: AddEntityTests.cs
-// **************************************
 
 namespace Cli.Tests
 {

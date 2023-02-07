@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: AuthorizationResolverUnitTests.cs
-// **************************************
 
 #nullable enable
 using System.Collections.Generic;

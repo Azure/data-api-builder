@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: IConfigValidator.cs
-// **************************************
 
 namespace Azure.DataApiBuilder.Service.Configurations
 {

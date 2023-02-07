@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: SqlDeleteQueryStructure.cs
-// **************************************
 
 using System.Collections.Generic;
 using System.Net;

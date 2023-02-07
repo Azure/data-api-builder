@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: Utils.cs
-// **************************************
 
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;

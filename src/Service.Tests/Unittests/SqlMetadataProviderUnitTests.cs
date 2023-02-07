@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: SqlMetadataProviderUnitTests.cs
-// **************************************
 
 using System.Collections.Generic;
 using System.Net;

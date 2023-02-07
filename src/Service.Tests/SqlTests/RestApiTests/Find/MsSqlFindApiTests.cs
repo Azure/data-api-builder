@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: MsSqlFindApiTests.cs
-// **************************************
 
 using System.Collections.Generic;
 using System.Threading.Tasks;

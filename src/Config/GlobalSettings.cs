@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: GlobalSettings.cs
-// **************************************
 
 using System.Text.Json.Serialization;
 

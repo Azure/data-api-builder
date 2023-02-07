@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: MySqlDbExceptionParser.cs
-// **************************************
 
 using System.Collections.Generic;
 using System.Data.Common;

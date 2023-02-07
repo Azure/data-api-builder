@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: CosmosTestHelper.cs
-// **************************************
 
 using System;
 using Azure.DataApiBuilder.Config;

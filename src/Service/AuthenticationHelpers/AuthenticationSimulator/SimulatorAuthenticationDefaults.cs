@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: SimulatorAuthenticationDefaults.cs
-// **************************************
 
 namespace Azure.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimulator
 {

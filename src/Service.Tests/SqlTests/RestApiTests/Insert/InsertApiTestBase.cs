@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: InsertApiTestBase.cs
-// **************************************
 
 using System.Net;
 using System.Threading.Tasks;

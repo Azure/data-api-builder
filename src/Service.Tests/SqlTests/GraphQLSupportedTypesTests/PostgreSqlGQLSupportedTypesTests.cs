@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: PostgreSqlGQLSupportedTypesTests.cs
-// **************************************
 
 using System.Collections.Generic;
 using System.Linq;

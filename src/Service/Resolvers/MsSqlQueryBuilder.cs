@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: MsSqlQueryBuilder.cs
-// **************************************
 
 using System.Collections.Generic;
 using System.Data.Common;

@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: GraphQLDeleteMutationDatabasePolicyTestBase.cs
-// **************************************
 
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;

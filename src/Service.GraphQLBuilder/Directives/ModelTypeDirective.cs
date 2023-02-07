@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: ModelTypeDirective.cs
-// **************************************
 
 using HotChocolate.Types;
 

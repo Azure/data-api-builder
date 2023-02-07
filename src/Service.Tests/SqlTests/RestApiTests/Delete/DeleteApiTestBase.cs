@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: DeleteApiTestBase.cs
-// **************************************
 
 using System.Net;
 using System.Threading.Tasks;

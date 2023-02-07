@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: SimulatorAuthenticationBuilderExtensions.cs
-// **************************************
 
 using Microsoft.AspNetCore.Authentication;
 

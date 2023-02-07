@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: PostgreSqlQueryExecutorUnitTests.cs
-// **************************************
 
 using System;
 using System.Text.Json;

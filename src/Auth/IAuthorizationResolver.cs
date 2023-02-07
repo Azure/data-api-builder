@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: IAuthorizationResolver.cs
-// **************************************
 
 using Azure.DataApiBuilder.Config;
 using Microsoft.AspNetCore.Http;

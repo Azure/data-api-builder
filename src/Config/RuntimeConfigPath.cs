@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: RuntimeConfigPath.cs
-// **************************************
 
 using System.Text;
 using System.Text.Json;

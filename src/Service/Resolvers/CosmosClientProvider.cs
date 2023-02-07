@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: CosmosClientProvider.cs
-// **************************************
 
 using System;
 using System.Data.Common;

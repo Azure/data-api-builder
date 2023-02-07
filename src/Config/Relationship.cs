@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: Relationship.cs
-// **************************************
 
 using System.Text.Json.Serialization;
 

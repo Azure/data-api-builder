@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: AuthTestCertHelper.cs
-// **************************************
 
 using System;
 using System.Security.Cryptography;

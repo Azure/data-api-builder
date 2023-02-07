@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: CosmosSqlMetadataProvider.cs
-// **************************************
 
 using System;
 using System.Collections.Generic;

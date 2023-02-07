@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: PathRewriteMiddleware.cs
-// **************************************
 
 using System;
 using System.Diagnostics.CodeAnalysis;

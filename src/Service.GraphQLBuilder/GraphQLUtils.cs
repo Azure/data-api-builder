@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: GraphQLUtils.cs
-// **************************************
 
 using System.Diagnostics.CodeAnalysis;
 using Azure.DataApiBuilder.Config;

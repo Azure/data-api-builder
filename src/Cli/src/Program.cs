@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: Program.cs
-// **************************************
 
 using CommandLine;
 using Microsoft.Extensions.Logging;

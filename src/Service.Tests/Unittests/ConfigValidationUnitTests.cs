@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: ConfigValidationUnitTests.cs
-// **************************************
 
 #nullable disable
 using System.Collections.Generic;

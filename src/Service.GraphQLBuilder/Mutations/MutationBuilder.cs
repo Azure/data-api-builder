@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: MutationBuilder.cs
-// **************************************
 
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;

@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: RequestContextUnitTests.cs
-// **************************************
 
 using System.Net;
 using System.Text.Json;

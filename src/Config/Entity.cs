@@ -1,9 +1,5 @@
-// **************************************
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-//
-// @file: Entity.cs
-// **************************************
 
 using System.ComponentModel;
 using System.Text.Json;

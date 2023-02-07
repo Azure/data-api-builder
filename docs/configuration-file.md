@@ -211,7 +211,7 @@ For example:
   }
 ```
 
-instructs the engine that the stored procedure is exposed for graphQL through Query operation.
+instructs the engine that the stored procedure is exposed for graphQL through `Query` operation.
 
 #### REST Settings
 

@@ -19,7 +19,7 @@ Details on how to install the latest version are here: [Installing DAB CLI](./ru
 `Microsoft.DataApiBuilder` is now available as a public nuget package [here](https://www.nuget.org/packages/Microsoft.DataApiBuilder) for ease of installation using dotnet tool as follows:
 
 ```bash
-dotnet tool install --global  Microsoft.DataApiBuilder
+dotnet tool install --global Microsoft.DataApiBuilder
 ```
 
 ## Public JSON Schema

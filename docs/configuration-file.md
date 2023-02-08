@@ -526,7 +526,7 @@ Data API Builder will take the value of the claim named `UserId` and it will com
 + Unary operators [UnaryOperatorKind - Microsoft Learn](https://learn.microsoft.com/dotnet/api/microsoft.odata.uriparser.unaryoperatorkind?view=odata-core-7.0) such as the negate (`-`) and `not` operators.
 
 #### Mappings
-In the `mappings` section, the mappings between database object field names and their corresponding exposed field names are defined for both GraphQL and REST endpoints.```
+The `mappings` section enables configuring aliases, or exposed names, for database object fields. The configured exposed names apply to both the GraphQL and REST endpoints. For entities with GraphQL enabled, the configured exposed name **must** meet GraphQL naming requirements. [GraphQL - October 2021 - Names ](https://spec.graphql.org/October2021/#sec-Names)
 
 The format is:
 
@@ -535,9 +535,9 @@ The format is:
 For example:
 
 ```json
-  "mappings":{
-    "title": "descriptions",
-    "completed": "done"
+  "mappings": {
+    "sku_title": "title",
+    "sku_status": "status"
   }
 ```
-means the `title` field in the related database object will be mapped to `description` field in the GraphQL type or in the REST request and response payload.
+means the `sku_title` field in the related database object will be mapped to the exposed name `title` and `sku_status` will be mapped to `status`. Both GraphQL and REST will require using `title` and `status` instead of `sku_title` and `sku_status` and will additionally use those mapped values in all response payloads.

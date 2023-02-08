@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using Azure.DataApiBuilder.Config;
 
 namespace Azure.DataApiBuilder.Service.Models

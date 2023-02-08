@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;

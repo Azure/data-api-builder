@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System.Net;
 
 namespace Azure.DataApiBuilder.Service.Exceptions

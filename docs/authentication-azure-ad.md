@@ -83,7 +83,19 @@ Where the`APP_ID` is the "Application (client) ID" and the `TENANT_ID` is the "D
 
 ## Configure AZ CLI to get an authentication token
 
-Run the following command to try to authenticate against the newly created scope:
+Make sure you are logged in to AZ CLI with the account that you want to use to authenticate against Data API Builder.
+
+```sh
+az login
+```
+
+and select the subscription where you have [configured the Data API Builder App Registration](#configure-server-app-registration).
+
+```sh
+az account set --subscription <subscription name or id>
+```
+
+then run the following command to try to authenticate against the newly created scope:
 
 ```sh
 az account get-access-token --scope api://<Application ID>/Endpoint.Access
@@ -115,7 +127,7 @@ If you now run the AZ CLI command again, you'll get an access token:
 }
 ```
 
-you can inspect the token using a online debugging tool like [jwt.io](http://jwt.io). The decoded token will contain something like:
+you can inspect the token using a online debugging tool like [jwt.ms](http://jwt.ms). The decoded token will contain something like:
 
 ```json
 {

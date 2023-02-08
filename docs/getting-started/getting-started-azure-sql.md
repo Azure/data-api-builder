@@ -177,7 +177,7 @@ Now that Data API builder engine is running, you can use your favorite REST clie
 
 ### REST Endpoint
 
-REST endpoint is made available at the path (make sure to keep in mind that the url path is treated as Case Sensitive and must match the entity and path names defined in the configuration file):
+REST endpoint is made available at the path (make sure to keep in mind that the url path is treated as case sensitive and must match the entity and path names defined in the configuration file):
 
 ```text
 /api/<entity>
@@ -204,7 +204,7 @@ GET /api/Book/id/1000
 
 The ability to filter by primary key is supported by all verbs with the exception of POST as that verb is used to create a new item and therefore searching an item by its primary key is not applicable.
 
-The GET verb also supports several query parameters that allow you to manipulate and refine the requested data:
+The GET verb also supports several query parameters (also case sensitive) that allow you to manipulate and refine the requested data:
 
 - `$orderby`: return items in the specified order
 - `$first`: the top `n` items to return

@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using HotChocolate.Language;

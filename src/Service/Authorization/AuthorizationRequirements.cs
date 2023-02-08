@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using Microsoft.AspNetCore.Authorization;
 
 namespace Azure.DataApiBuilder.Service.Authorization

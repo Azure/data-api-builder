@@ -125,9 +125,29 @@ As by default there are no pre-defined permission for the `anonymous` or `authen
   "source": "dbo.books",
   "permissions": [{
     "role": "administrator",
-    "actions": [ * ]
+    "actions": ["*"]
   }]
 }
 ```
 
 In the above configuration sample, only request carrying the `administrator` role in the authentication token and specifying the `administrator` value in the `X-MS-API-ROLE` HTTP header, will be able to operate on the `book` entity.
+
+### Item level security
+
+Database policy expressions enable results to be restricted even further. Database policies translate OData expressions to query predicates executed against the database. See the [configuration file](./configuration-file.md#policies) documentation for a detailed explanation of database policies.
+
+An example policy restricting the `Read` action on the `consumer` role to only return records where the *title* is "Sample Title."
+
+```json
+{
+    "role": "consumer",
+    "actions": [
+        {
+            "action": "Read",
+            "policy": {
+                "database": "@item.title eq 'Sample Title'"
+            }
+        }
+    ]
+}
+```

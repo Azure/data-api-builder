@@ -33,13 +33,13 @@ Data API Builder provides a CLI tool to simplify configuration and execution of 
 then, to install this tool globally, use:
 
 ```bash
-dotnet tool install -g --add-source ./ dab --version <version_number>
+dotnet tool install Microsoft.DataApiBuilder --global --version <version_number>
 ```
 
 or, if you have already installed a previous version, you can update DAB CLI to the latest version via the following:
 
 ```bash
-dotnet tool update -g --add-source ./ dab --version <version_number>
+dotnet tool update --global Microsoft.DataApiBuilder --version <version_number>
 ```
 
 > **ATTENTION**: if you are running on Linux or MacOS, you may need to add .NET global tools to your PATH to call `dab` directly. Once installed run:

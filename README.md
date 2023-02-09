@@ -64,7 +64,7 @@ If you want to propose a completely new feature, please create an RFC item. Good
 
 ## License
 
-DataApiBuilder for Azure Databases is licensed under the MIT license. See the [LICENSE](./LICENSE.txt) file for more details.
+**Data API builder for Azure Databases** is licensed under the MIT license. See the [LICENSE](./LICENSE.txt) file for more details.
 
 ## Trademarks
 

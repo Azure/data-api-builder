@@ -323,4 +323,24 @@ namespace Cli
         [Option("no-https-redirect", Required = false, HelpText = "Disables automatic https redirects.")]
         public bool IsHttpsRedirectionDisabled { get; }
     }
+
+    [Verb("export", isDefault: false, HelpText = "Export the GraphQL/OpenAPI files and save to disk", Hidden = false)]
+    public class ExportOptions : Options
+    {
+        public ExportOptions(bool graphql, string outputDirectory, string? config, string? graphqlFileName) : base(config)
+        {
+            GraphQL = graphql;
+            OutputDirectory = outputDirectory;
+            GraphQLFileName = graphqlFileName ?? "schema.graphql";
+        }
+
+        [Option("graphql", HelpText = "Export GraphQL schema")]
+        public bool GraphQL { get; }
+
+        [Option('o', "output", HelpText = "Directory to save to", Required = true)]
+        public string OutputDirectory { get; }
+
+        [Option('g', "graphql-file-name", HelpText = "The GraphQL file name (default schema.graphql)")]
+        public string GraphQLFileName { get; }
+    }
 }

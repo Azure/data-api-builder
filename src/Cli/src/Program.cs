@@ -1,7 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Diagnostics;
 using CommandLine;
+using HotChocolate.Utilities.Introspection;
 using Microsoft.Extensions.Logging;
 using static Cli.Utils;
 
@@ -42,7 +44,7 @@ namespace Cli
             bool isHelpOrVersionRequested = false;
 
             // Parsing user arguments and executing required methods.
-            ParserResult<object>? result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions>(args)
+            ParserResult<object>? result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions, ExportOptions>(args)
                 .WithParsed<InitOptions>(options =>
                 {
                     cliLogger.LogInformation($"{PRODUCT_NAME} {GetProductVersion()}");
@@ -106,6 +108,32 @@ namespace Cli
                     {
                         cliLogger.LogError("Failed to start the engine.");
                     }
+                })
+                .WithParsed<ExportOptions>(options =>
+                {
+                    StartOptions startOptions = new(false, LogLevel.None, true, options.Config!);
+
+                    CancellationTokenSource cancellationTokenSource = new();
+                    CancellationToken cancellationToken = cancellationTokenSource.Token;
+
+                    Task server = Task.Run(() =>
+                    {
+                        _ = ConfigGenerator.TryStartEngineWithOptions(startOptions);
+                    }, cancellationToken);
+
+                    if (options.GraphQL)
+                    {
+                        Task.Delay(1000).Wait();
+                        HttpClient client = new() { BaseAddress = new Uri("http://localhost:5000/graphql") };
+                        IntrospectionClient introspectionClient = new();
+                        Task<HotChocolate.Language.DocumentNode> response = introspectionClient.DownloadSchemaAsync(client);
+                        response.Wait();
+
+                        HotChocolate.Language.DocumentNode node = response.Result;
+                        File.WriteAllText(Path.Combine(options.OutputDirectory, options.GraphQLFileName), node.ToString());
+                    }
+
+                    cancellationTokenSource.Cancel();
                 })
                 .WithNotParsed(err =>
                 {

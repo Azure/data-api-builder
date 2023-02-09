@@ -324,7 +324,7 @@ namespace Cli
         public bool IsHttpsRedirectionDisabled { get; }
     }
 
-    [Verb("export", isDefault: false, HelpText = "Export the GraphQL/OpenAPI files and save to disk", Hidden = false)]
+    [Verb("export", isDefault: false, HelpText = "Export the GraphQL files and save to disk", Hidden = false)]
     public class ExportOptions : Options
     {
         public ExportOptions(bool graphql, string outputDirectory, string? config, string? graphqlFileName) : base(config)

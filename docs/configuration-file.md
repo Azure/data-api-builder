@@ -487,7 +487,7 @@ Role configuration supports granularly defining which database columns (fields) 
 
 That will indicate to Data API builder that the role *read-only* can `read` from all fields except from `field_xyz`.
 
-Both the simplified and granular `action` definitions can be used at the same time. For example, the following configuration limits the `read` action to specific fields, while implicitly allowing the create action to operate on all fields:
+Both the simplified and granular `action` definitions can be used at the same time. For example, the following configuration limits the `read` action to specific fields, while implicitly allowing the `create` action to operate on all fields:
 
 ```json
 {

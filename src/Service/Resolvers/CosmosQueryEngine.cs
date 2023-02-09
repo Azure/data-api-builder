@@ -73,7 +73,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             foreach (KeyValuePair<string, object> parameterEntry in structure.Parameters)
             {
-                querySpec = querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value);
+                querySpec = querySpec.WithParameter(parameterEntry.Key, parameterEntry.Value);
             }
 
             if (!string.IsNullOrEmpty(partitionKeyValue))

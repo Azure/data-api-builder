@@ -28,6 +28,7 @@
         - [Actions](#actions)
         - [Fields](#fields)
         - [Policies](#policies)
+        - [Limitations](#limitations)
       - [Mappings](#mappings)
 
 ## Summary
@@ -540,7 +541,11 @@ For example, a policy that utilizes both directive types, pulling the UserId fro
 
 Data API Builder will take the value of the `UserId` claim and the claim value to `OwnerId` field's value. The result payload will only include records that fulfill **both** the request metadata and the database policy expression.
 
+##### Limitations
+
 Database policies are supported for tables and views. Stored procedures cannot be configured with policies.
+
+Database policies are only supported for the `actions` **read**, **update**, and **delete**.
 
 Database policy OData expression syntax supports:
 

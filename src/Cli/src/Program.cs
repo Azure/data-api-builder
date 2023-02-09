@@ -130,7 +130,7 @@ namespace Cli
                         response.Wait();
 
                         HotChocolate.Language.DocumentNode node = response.Result;
-                        File.WriteAllText(Path.Combine(options.OutputDirectory, options.GraphQLFileName), node.ToString());
+                        File.WriteAllText(Path.Combine(options.OutputDirectory, options.GraphQLSchemaFile), node.ToString());
                     }
 
                     cancellationTokenSource.Cancel();

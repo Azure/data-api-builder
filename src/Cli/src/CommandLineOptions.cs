@@ -324,14 +324,14 @@ namespace Cli
         public bool IsHttpsRedirectionDisabled { get; }
     }
 
-    [Verb("export", isDefault: false, HelpText = "Export the GraphQL files and save to disk", Hidden = false)]
+    [Verb("export", isDefault: false, HelpText = "Export the GraphQL schema as a file and save to disk", Hidden = false)]
     public class ExportOptions : Options
     {
-        public ExportOptions(bool graphql, string outputDirectory, string? config, string? graphqlFileName) : base(config)
+        public ExportOptions(bool graphql, string outputDirectory, string? config, string? graphqlSchemaFile) : base(config)
         {
             GraphQL = graphql;
             OutputDirectory = outputDirectory;
-            GraphQLFileName = graphqlFileName ?? "schema.graphql";
+            GraphQLSchemaFile = graphqlSchemaFile ?? "schema.graphql";
         }
 
         [Option("graphql", HelpText = "Export GraphQL schema")]
@@ -340,7 +340,7 @@ namespace Cli
         [Option('o', "output", HelpText = "Directory to save to", Required = true)]
         public string OutputDirectory { get; }
 
-        [Option('g', "graphql-file-name", HelpText = "The GraphQL file name (default schema.graphql)")]
-        public string GraphQLFileName { get; }
+        [Option('g', "graphql-schema-file", HelpText = "The GraphQL schema file name (default schema.graphql)")]
+        public string GraphQLSchemaFile { get; }
     }
 }

@@ -218,7 +218,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 // find a configuration file name after attempting all the possibilities
                 // and checking for their existence in the current directory
                 // eventually setting it to an empty string.
-                Console.WriteLine($"The config file name is {configFileName}");
                 throw new ArgumentNullException("Configuration file name",
                     $"Could not determine a configuration file name that exists.");
             }

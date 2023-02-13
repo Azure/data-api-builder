@@ -85,7 +85,7 @@ The `parameters` defines which parameters should be exposed and to provide defau
 
 ### REST support for stored procedures
 
-The REST endpoint behavior for a stored procedure backed entity can be configured to be available for one or multiple HTTP verbs (GET, POST, PUT, PATCH, DELETE). The REST section of the entity would look like the following:
+The REST endpoint behavior for a stored procedure backed entity can be configured to support one or multiple HTTP verbs (GET, POST, PUT, PATCH, DELETE). The REST section of the entity would look like the following:
 
 ```json
 "rest": {
@@ -96,10 +96,25 @@ The REST endpoint behavior for a stored procedure backed entity can be configure
 Any REST requests for the entity will fail with **HTTP 405 Method Not Allowed** when an HTTP method not listed in the configuration is used. e.g. executing a PUT request will fail with error code 405.
 If the `methods` section is excluded from the entity's REST configuration, the default method **POST** will be inferred. To disable the REST endpoint for this entity, configure `"rest": false` and any REST requests on the stored procedure entity will fail with **HTTP 404 Not Found**.
 
-If the stored procedure accepts parameters, those can be passed in the URL query string when calling the REST endpoint. For example:
+If the stored procedure accepts parameters, the parameters can be passed in the URL query string when calling the REST endpoint with the GET HTTP verb. For example:
 
+URL
 ```text
-http://<dab-server>/api/GetCowrittenBooksByAuthor?author=isaac%20asimov
+GET http://<dab-server>/api/GetCowrittenBooksByAuthor?author=isaac%20asimov
+```
+
+Executing stored procedures using other HTTP verbs such as POST, PUT, PATCH, DELETE requires parameters to be passed as JSON in the request body. For example:
+
+URL
+```text
+POST http://<dab-server>/api/GetCowrittenBooksByAuthor
+```
+
+Body
+```json
+{
+  "author": "isaac asimov"
+}
 ```
 
 ### GraphQL support for stored procedures

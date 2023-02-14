@@ -12,7 +12,8 @@ namespace Azure.DataApiBuilder.Service.Models
     {
         public DbOperationResultRow(
             Dictionary<string, object?> row,
-            Dictionary<string, object> propertiesOfResult){
+            Dictionary<string, object> propertiesOfResult)
+        {
             this.Row = row;
             this.PropertiesOfResult = propertiesOfResult;
         }

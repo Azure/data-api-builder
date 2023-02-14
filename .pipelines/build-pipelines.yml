@@ -4,7 +4,15 @@
 # https://learn.microsoft.com/azure/devops/pipelines/languages/dotnet-core
 
 trigger:
-- main
+  batch: true
+  branches:
+    include:
+    - main
+    - gh-readonly-queue/main
+    - release/*
+  paths:
+    exclude:
+    - docs
 
 pool:
   vmImage: 'ubuntu-latest' # examples of other options: 'macOS-10.15', 'windows-2019'

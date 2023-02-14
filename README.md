@@ -1,5 +1,6 @@
 # Data API builder for Azure Databases
 
+[![NuGet Package](https://img.shields.io/nuget/v/microsoft.dataapibuilder.svg?color=success)](https://www.nuget.org/packages/Microsoft.DataApiBuilder)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 Latest version of Data API builder is  **0.5.0** [What's new?](./docs/whats-new.md#version-050)

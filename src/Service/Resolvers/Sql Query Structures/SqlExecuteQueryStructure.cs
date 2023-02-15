@@ -23,7 +23,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public Dictionary<string, object> ProcedureParameters { get; set; }
 
         /// <summary>
-        /// Constructs a  structure with all needed components to build an EXECUTE stored procedure call
+        /// Constructs a structure with all needed components to build an EXECUTE stored procedure call
         /// requestParams will be resolved from either the request querystring or body by this point
         /// Construct the ProcedureParameters dictionary through resolving requestParams and defaults from config/metadata
         /// Also performs type checking at this stage instead of in RequestValidator to prevent code duplication 
@@ -48,7 +48,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     {
                         string parameterizedName = MakeParamWithValue(requestParamValue is null ? null :
                             GetParamAsProcedureParameterType(requestParamValue.ToString()!, paramKey));
-                        ProcedureParameters.Add(paramKey, $"@{parameterizedName}");
+                        ProcedureParameters.Add(paramKey, $"{parameterizedName}");
                     }
                     catch (ArgumentException ex)
                     {
@@ -67,7 +67,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     if (paramDefinition.HasConfigDefault)
                     {
                         string parameterizedName = MakeParamWithValue(paramDefinition.ConfigDefaultValue);
-                        ProcedureParameters.Add(paramKey, $"@{parameterizedName}");
+                        ProcedureParameters.Add(paramKey, $"{parameterizedName}");
                     }
                     else
                     {

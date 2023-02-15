@@ -44,7 +44,7 @@ jobs:
       verboseOutput: false
 
   # Scan text elements including code, code comments, and content/web pages, for sensitive terms based on legal, cultural, or geopolitical reasons
-  - task: securedevelopmentteam.vss-secure-development-tools.build-task-policheck.PoliCheck@1
+  - task: PoliCheck@2
     displayName: 'PoliCheck'
     inputs:
       targetType: F

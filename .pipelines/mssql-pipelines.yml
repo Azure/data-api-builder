@@ -3,7 +3,15 @@
 # 2) WindowsTests -> Run LocalDB preinstalled on
 
 trigger:
-- main
+  batch: true
+  branches:
+    include:
+    - main
+    - gh-readonly-queue/main
+    - release/*
+  paths:
+    exclude:
+    - docs
 
 jobs:
 - job: linux

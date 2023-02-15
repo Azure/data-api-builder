@@ -410,9 +410,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// This cannot be Delete, Upsert or UpsertIncremental since those operations have dedicated functions.</param>
         /// <param name="parameters">The parameters of the mutation query.</param>
         /// <param name="context">In the case of GraphQL, the HotChocolate library's middleware context.</param>
-        /// <returns>A tuple of 2 dictionaries:
-        /// 1. A dictionary representing the row in <c>ColumnName: Value</c> format, null if no row is mutated.
-        /// 2. A dictionary of properties of the Db Data Reader like RecordsAffected, HasRows.</returns>
+        /// <returns>Single row read from DbDataReader.</returns>
         private async Task<DbOperationResultRow?>
             PerformMutationOperation(
                 string entityName,
@@ -602,9 +600,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         /// <param name="parameters">The parameters for the mutation query.</param>
         /// <param name="context">The REST request context.</param>
-        /// <returns>A tuple of 2 dictionaries:
-        /// 1. A dictionary representing the row in <c>ColumnName: Value</c> format, null if no row was found
-        /// 2. A dictionary of properties of the Db Data Reader like RecordsAffected, HasRows.</returns>
+        /// <returns>Single row read from DbDataReader.</returns>
         private async Task<DbOperationResultRow?>
             PerformUpsertOperation(
                 IDictionary<string, object?> parameters,

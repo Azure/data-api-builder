@@ -21,11 +21,11 @@ namespace Azure.DataApiBuilder.Service.Models
         /// <summary>
         /// A dictionary representing the row in <c>ColumnName: Value</c> format, empty if no row was found.
         /// </summary>
-        public Dictionary<string, object?> Row { get; set; }
+        public Dictionary<string, object?> Row { get; private set; }
 
         /// <summary>
         /// A dictionary of properties of the DbDataReader like RecordsAffected, HasRows.
         /// </summary>
-        public Dictionary<string, object> PropertiesOfResult { get; set; }
+        public Dictionary<string, object> PropertiesOfResult { get; private set; }
     }
 }

@@ -1361,10 +1361,10 @@ namespace Azure.DataApiBuilder.Service.Services
         private async Task<Dictionary<RelationShipPair, ForeignKeyDefinition>?>
             SummarizeFkMetadata(DbDataReader reader, List<string>? args = null)
         {
-            // Gets a tuple of 2 dictionaries:
+            // Gets a single row read from DbDataReader which contains 2 dictionaries:
             // 1. the first row extracted from the result
             // 2. Dictionary of the DbDataReader properties like RecordsAffected, HasRows.
-            // This function only requires the result row i.e. Item1 from the tuple.
+            // This function only requires the result row i.e.the first dictionary.
             DbOperationResultRow foreignKeyInfoWithProperties =
                 await QueryExecutor.ExtractRowFromDbDataReader(reader);
 

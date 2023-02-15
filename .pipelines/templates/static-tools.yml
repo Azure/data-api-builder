@@ -50,7 +50,7 @@ jobs:
       targetType: F
 
   # AntiMalware scan
-  - task: AntiMaware@4
+  - task: AntiMalware@4
     displayName: 'AntiMalware'
     inputs:
       EnableServices: true

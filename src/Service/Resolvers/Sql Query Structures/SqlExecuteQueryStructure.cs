@@ -23,7 +23,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public Dictionary<string, object> ProcedureParameters { get; set; }
 
         /// <summary>
-        /// Constructs a structure with all needed components to build an EXECUTE stored procedure call
+        /// Constructs a  structure with all needed components to build an EXECUTE stored procedure call
         /// requestParams will be resolved from either the request querystring or body by this point
         /// Construct the ProcedureParameters dictionary through resolving requestParams and defaults from config/metadata
         /// Also performs type checking at this stage instead of in RequestValidator to prevent code duplication 

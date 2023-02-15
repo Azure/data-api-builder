@@ -4,7 +4,15 @@
 # https://aka.ms/yaml
 
 trigger:
-- main
+  batch: true
+  branches:
+    include:
+    - main
+    - gh-readonly-queue/main
+    - release/*
+  paths:
+    exclude:
+    - docs
 
 jobs:
 - job: linux

@@ -3,7 +3,16 @@
 # Add steps that publish symbols, save build artifacts, and more:
 # https://learn.microsoft.com/azure/devops/pipelines/languages/dotnet-core
 trigger:
-- main
+  batch: true
+  branches:
+    include:
+    - main
+    - gh-readonly-queue/main
+    - release/*
+  paths:
+    exclude:
+    - docs
+
 strategy:
   matrix:
     linux:

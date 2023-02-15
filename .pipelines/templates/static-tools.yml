@@ -34,7 +34,7 @@ jobs:
       IsSoftware: true
 
   # Analyze source and build output text files for credentials
-  - task: securedevelopmentteam.vss-secure-development-tools.build-task-credscan.CredScan@2
+  - task: CredScan@3
     displayName: 'CredScan'
     inputs:
       toolMajorVersion: V2
@@ -50,7 +50,7 @@ jobs:
       targetType: F
 
   # AntiMalware scan
-  - task: securedevelopmentteam.vss-secure-development-tools.build-task-antimalware.AntiMalware@3
+  - task: AntiMalware@4
     displayName: 'AntiMalware'
     inputs:
       EnableServices: true

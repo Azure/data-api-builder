@@ -521,7 +521,7 @@ The `policy` section, defined per `action`, defines item-level security rules (d
 - `database` policy: an OData expression that is translated into a query predicate that will be evaluated by the database.
   - e.g. The policy expression `@item.OwnerId eq 2000` is translated to the query predicate `WHERE Table.OwnerId  = 2000`
 
-> A *predicate* is an expression that evaluates to TRUE, FALSE, or UNKNOWN. Predicates are used in the search condition of [WHERE](https://learn.microsoft.com/sql/t-sql/queries/where-transact-sql?view=sql-server-ver16) clauses and [HAVING](https://learn.microsoft.comsql/t-sql/queries/select-having-transact-sql?view=sql-server-ver16) clauses, the join conditions of [FROM](https://learn.microsoft.com/sql/t-sql/queries/from-transact-sql?view=sql-server-ver16) clauses, and other constructs where a Boolean value is required.
+> A *predicate* is an expression that evaluates to TRUE, FALSE, or UNKNOWN. Predicates are used in the search condition of [WHERE](https://learn.microsoft.com/sql/t-sql/queries/where-transact-sql) clauses and [HAVING](https://learn.microsoft.com/sql/t-sql/queries/select-having-transact-sql) clauses, the join conditions of [FROM](https://learn.microsoft.com/sql/t-sql/queries/from-transact-sql) clauses, and other constructs where a Boolean value is required.
 ([Microsoft Learn Docs](https://learn.microsoft.com/sql/t-sql/queries/predicates?view=sql-server-ver16))
 
 In order for results to be returned for a request, the request's query predicate resolved from a database policy must evaluate to `true` when executing against the database.

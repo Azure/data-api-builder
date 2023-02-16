@@ -235,5 +235,10 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         {
             return string.Empty;
         }
+
+        public bool IsDevelopmentMode()
+        {
+            return _runtimeConfig.HostGlobalSettings.Mode is HostModeType.Development;
+        }
     }
 }

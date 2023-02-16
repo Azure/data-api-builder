@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Net;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
@@ -84,7 +85,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 if (value != null)
                 {
                     paramName = MakeParamWithValue(
-                        GetParamAsColumnSystemType(value.ToString()!, columnName));
+                        GetParamAsSystemType(value.ToString()!, columnName, GetColumnSystemType(columnName)));
                 }
                 else
                 {

@@ -46,9 +46,18 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     // Parameterize, then add referencing parameter to ProcedureParameters dictionary
                     try
                     {
-                        string parameterizedName = MakeParamWithValue(requestParamValue is null ? null :
-                            GetParamAsProcedureParameterType(requestParamValue.ToString()!, paramKey));
-                        ProcedureParameters.Add(paramKey, $"@{parameterizedName}");
+                        string? parametrizedName = null;
+                        if(requestParamValue is not null)
+                        {
+                            Type systemType = GetUnderlyingStoredProcedureDefinition().Parameters[paramKey].SystemType!;
+                            parametrizedName = MakeParamWithValue(GetParamAsSystemType(requestParamValue.ToString()!, paramKey, systemType));
+                        }
+                        else
+                        {
+                            parametrizedName = MakeParamWithValue(null);
+                        }
+
+                        ProcedureParameters.Add(paramKey, $"@{parametrizedName}");
                     }
                     catch (ArgumentException ex)
                     {
@@ -78,31 +87,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                     }
                 }
-            }
-        }
-
-        /// <summary>
-        /// Gets the value of the parameter cast as the system type
-        /// of the stored procedure parameter this parameter is associated with
-        /// </summary>
-        private object GetParamAsProcedureParameterType(string param, string procParamName)
-        {
-            Type systemType = GetUnderlyingStoredProcedureDefinition().Parameters[procParamName].SystemType!;
-            try
-            {
-                return ParseParamAsSystemType(param, systemType);
-            }
-            catch (Exception e)
-            {
-                if (e is FormatException ||
-                    e is ArgumentNullException ||
-                    e is OverflowException)
-                {
-                    throw new ArgumentException($@"Parameter ""{param}"" cannot be resolved as stored procedure parameter ""{procParamName}"" " +
-                        $@"with type ""{systemType.Name}"".", innerException: e);
-                }
-
-                throw;
             }
         }
     }

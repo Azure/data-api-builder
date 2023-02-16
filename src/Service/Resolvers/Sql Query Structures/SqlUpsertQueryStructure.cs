@@ -115,7 +115,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     string paramIdentifier;
                     if (param.Value != null)
                     {
-                        paramIdentifier = MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString()!, backingColumn!));
+                        paramIdentifier = MakeParamWithValue(GetParamAsSystemType(param.Value.ToString()!, backingColumn!, GetColumnSystemType(backingColumn!)));
                     }
                     else
                     {

@@ -488,5 +488,59 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             return filterClause.Expression.Accept<string>(visitor);
         }
+
+        /// <summary>
+        /// Gets the value of the parameter cast as the system type
+        /// of the stored procedure parameter this parameter is associated with
+        /// </summary>
+        protected object GetParamAsSystemType(string param, string fieldName, Type systemType)
+        {
+            try
+            {
+                return ParseParamAsSystemType(param, systemType);
+            }
+            catch (Exception e)
+            {
+                if (e is FormatException ||
+                    e is ArgumentNullException ||
+                    e is OverflowException)
+                {
+                    if(MetadataProvider.IsDevelopmentMode())
+                    {
+                        if (MetadataProvider.EntityToDatabaseObject[EntityName].SourceType is SourceType.StoredProcedure)
+                        {
+                            throw new DataApiBuilderException(
+                                message: $@"Parameter ""{param}"" cannot be resolved as stored procedure parameter ""{fieldName}"" " +
+                        $@"with type ""{systemType.Name}"".",
+                                statusCode: HttpStatusCode.BadRequest,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                                innerException:e
+                                );
+                        }
+                        else
+                        {
+                            throw new DataApiBuilderException(
+                                message: $"Parameter \"{param}\" cannot be resolved as column \"{fieldName}\" " +
+                                    $"with type \"{systemType.Name}\".",
+                                statusCode: HttpStatusCode.BadRequest,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                                innerException: e);
+                        }
+                        
+                    }
+                    else
+                    {
+                        throw new DataApiBuilderException(
+                                message: $"",
+                                statusCode: HttpStatusCode.BadRequest,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                                innerException:e);
+                    }
+                }
+
+                throw;
+            }
+        }
+
     }
 }

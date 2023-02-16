@@ -506,7 +506,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 {
                     column.TableAlias = SourceAlias;
                     column.ParamName = column.Value is not null ?
-                        "@" + MakeParamWithValue(GetParamAsColumnSystemType(column.Value!.ToString()!, column.ColumnName)) :
+                        "@" + MakeParamWithValue(GetParamAsSystemType(column.Value!.ToString()!, column.ColumnName, GetColumnSystemType(column.ColumnName))) :
                         "@" + MakeParamWithValue(null);
                 }
             }
@@ -538,7 +538,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 if (value != null)
                 {
                     parameterName = MakeParamWithValue(
-                        GetParamAsColumnSystemType(value.ToString()!, backingColumn));
+                        GetParamAsSystemType(value.ToString()!, backingColumn, GetColumnSystemType(backingColumn)));
                     Predicates.Add(new Predicate(
                         new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, backingColumn, SourceAlias)),
                         op,

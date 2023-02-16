@@ -518,18 +518,21 @@ The `policy` section, defined per `action`, defines item-level security rules (d
   }
 ```
 
-+ `database` policy: an OData expression that is translated into a query predicate that will be evaluated by the database. 
-  + e.g. The policy expression `@item.OwnerId eq 2000` is translated to the query predicate `WHERE Table.OwnerId  = 2000`
+- `database` policy: an OData expression that is translated into a query predicate that will be evaluated by the database.
+  - e.g. The policy expression `@item.OwnerId eq 2000` is translated to the query predicate `WHERE Table.OwnerId  = 2000`
 
-> A *predicate* is an expression that evaluates to TRUE, FALSE, or UNKNOWN. Predicates are used in the search condition of [WHERE](https://learn.microsoft.com/en-us/sql/t-sql/queries/where-transact-sql?view=sql-server-ver16) clauses and [HAVING](https://learn.microsoft.com/en-us/sql/t-sql/queries/select-having-transact-sql?view=sql-server-ver16) clauses, the join conditions of [FROM](https://learn.microsoft.com/en-us/sql/t-sql/queries/from-transact-sql?view=sql-server-ver16) clauses, and other constructs where a Boolean value is required.
-([Microsoft Learn Docs](https://learn.microsoft.com/en-us/sql/t-sql/queries/predicates?view=sql-server-ver16))
+> A *predicate* is an expression that evaluates to TRUE, FALSE, or UNKNOWN. Predicates are used in the search condition of [WHERE](https://learn.microsoft.com/sql/t-sql/queries/where-transact-sql?view=sql-server-ver16) clauses and [HAVING](https://learn.microsoft.comsql/t-sql/queries/select-having-transact-sql?view=sql-server-ver16) clauses, the join conditions of [FROM](https://learn.microsoft.com/sql/t-sql/queries/from-transact-sql?view=sql-server-ver16) clauses, and other constructs where a Boolean value is required.
+([Microsoft Learn Docs](https://learn.microsoft.com/sql/t-sql/queries/predicates?view=sql-server-ver16))
 
 In order for results to be returned for a request, the request's query predicate resolved from a database policy must evaluate to `true` when executing against the database.
 
 Two types of directives can be used when authoring a database policy expression:
 
-+ `@claims`: access a claim within the valid access token provided in the request.
-+ `@item`: represents a field of the entity for which the database policy is defined.
+- `@claims`: access a claim within the validated access token provided in the request.
+- `@item`: represents a field of the entity for which the database policy is defined.
+
+> [!NOTE]
+> When Azure Static Web Apps authentication (EasyAuth) is configured, a limited number of claims types are available for use in database policies: `identityProvider`, `userId`, `userDetails`, and `userRoles`. See Azure Static Web App's [Client principal data](https://learn.microsoft.com/azure/static-web-apps/user-information?tabs=javascript#client-principal-data) documentation for more details.
 
 For example, a policy that utilizes both directive types, pulling the UserId from the access token and referencing the entity's OwnerId field would look like:
 
@@ -539,7 +542,7 @@ For example, a policy that utilizes both directive types, pulling the UserId fro
   }
 ```
 
-Data API Builder will take the value of the `UserId` claim and the claim value to `OwnerId` field's value. The result payload will only include records that fulfill **both** the request metadata and the database policy expression.
+Data API Builder will compare the value of the `UserId` claim to the value of the database field `OwnerId`. The result payload will only include records that fulfill **both** the request metadata and the database policy expression.
 
 ##### Limitations
 
@@ -549,8 +552,8 @@ Database policies are only supported for the `actions` **read**, **update**, and
 
 Database policy OData expression syntax supports:
 
-+ Binary operators [BinaryOperatorKind - Microsoft Learn](https://learn.microsoft.com/dotnet/api/microsoft.odata.uriparser.binaryoperatorkind?view=odata-core-7.0) such as `and`, `or`, `eq`, `gt`, `lt`, and more.
-+ Unary operators [UnaryOperatorKind - Microsoft Learn](https://learn.microsoft.com/dotnet/api/microsoft.odata.uriparser.unaryoperatorkind?view=odata-core-7.0) such as the negate (`-`) and `not` operators.
+- Binary operators [BinaryOperatorKind - Microsoft Learn](https://learn.microsoft.com/dotnet/api/microsoft.odata.uriparser.binaryoperatorkind?view=odata-core-7.0) such as `and`, `or`, `eq`, `gt`, `lt`, and more.
+- Unary operators [UnaryOperatorKind - Microsoft Learn](https://learn.microsoft.com/dotnet/api/microsoft.odata.uriparser.unaryoperatorkind?view=odata-core-7.0) such as the negate (`-`) and `not` operators.
 
 #### Mappings
 

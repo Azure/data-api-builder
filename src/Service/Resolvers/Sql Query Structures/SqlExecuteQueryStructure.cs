@@ -76,7 +76,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     if (paramDefinition.HasConfigDefault)
                     {
                         string parameterizedName = MakeParamWithValue(paramDefinition.ConfigDefaultValue);
-                        ProcedureParameters.Add(paramKey, $"@{parameterizedName}");
+                        ProcedureParameters.Add(paramKey, $"{parameterizedName}");
                     }
                     else
                     {

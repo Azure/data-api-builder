@@ -484,7 +484,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                                                     columnName: columnName,
                                                     tableAlias: SourceAlias)),
                     PredicateOperation.Equal,
-                    new PredicateOperand($"@{MakeParamWithValue(parameter.Value)}")
+                    new PredicateOperand($"{MakeParamWithValue(parameter.Value)}")
                 ));
             }
         }
@@ -542,7 +542,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     Predicates.Add(new Predicate(
                         new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, backingColumn, SourceAlias)),
                         op,
-                        new PredicateOperand($"@{parameterName}")));
+                        new PredicateOperand($"{parameterName}")));
                 }
                 else
                 {
@@ -842,7 +842,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             foreach (LabelledColumn column in Columns)
             {
-                ColumnLabelToParam.Add(column.Label, $"@{MakeParamWithValue(column.Label)}");
+                ColumnLabelToParam.Add(column.Label, $"{MakeParamWithValue(column.Label)}");
             }
         }
     }

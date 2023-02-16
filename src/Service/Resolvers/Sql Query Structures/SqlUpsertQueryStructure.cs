@@ -128,7 +128,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     Predicate predicate = new(
                         new PredicateOperand(new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, columnName: backingColumn!)),
                         PredicateOperation.Equal,
-                        new PredicateOperand($"@{paramIdentifier}")
+                        new PredicateOperand($"{paramIdentifier}")
                     );
 
                     // We are guaranteed by the RequestValidator, that a primary key column is in the URL, not body.
@@ -189,7 +189,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             InsertColumns.Add(columnName);
             string paramName;
             paramName = ColumnToParam[columnName];
-            Values.Add($"@{paramName}");
+            Values.Add($"{paramName}");
         }
 
         /// <summary>

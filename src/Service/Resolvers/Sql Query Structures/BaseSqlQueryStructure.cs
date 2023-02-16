@@ -505,7 +505,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     e is ArgumentNullException ||
                     e is OverflowException)
                 {
-                    if(MetadataProvider.IsDevelopmentMode())
+                    if (MetadataProvider.IsDevelopmentMode())
                     {
                         if (MetadataProvider.EntityToDatabaseObject[EntityName].SourceType is SourceType.StoredProcedure)
                         {
@@ -514,7 +514,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         $@"with type ""{systemType.Name}"".",
                                 statusCode: HttpStatusCode.BadRequest,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
-                                innerException:e
+                                innerException: e
                                 );
                         }
                         else
@@ -526,7 +526,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
                                 innerException: e);
                         }
-                        
+
                     }
                     else
                     {
@@ -534,7 +534,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                                 message: $"",
                                 statusCode: HttpStatusCode.BadRequest,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
-                                innerException:e);
+                                innerException: e);
                     }
                 }
 

@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Net;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;

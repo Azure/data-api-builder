@@ -313,10 +313,11 @@ namespace Cli
                                                                                       IEnumerable<string>? corsOrigin,
                                                                                       string authenticationProvider,
                                                                                       string? audience = null,
-                                                                                      string? issuer = null)
+                                                                                      string? issuer = null,
+                                                                                      string restPath = GlobalSettings.REST_DEFAULT_PATH)
         {
             Dictionary<GlobalSettingsType, object> defaultGlobalSettings = new();
-            defaultGlobalSettings.Add(GlobalSettingsType.Rest, new RestGlobalSettings());
+            defaultGlobalSettings.Add(GlobalSettingsType.Rest, new RestGlobalSettings(restPath));
             defaultGlobalSettings.Add(GlobalSettingsType.GraphQL, new GraphQLGlobalSettings());
             defaultGlobalSettings.Add(
                 GlobalSettingsType.Host,

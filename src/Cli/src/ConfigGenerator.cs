@@ -119,7 +119,8 @@ namespace Cli
                     options.CorsOrigin,
                     options.AuthenticationProvider,
                     options.Audience,
-                    options.Issuer),
+                    options.Issuer,
+                    options.RestPath),
                 Entities: new Dictionary<string, Entity>());
 
             runtimeConfigJson = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());

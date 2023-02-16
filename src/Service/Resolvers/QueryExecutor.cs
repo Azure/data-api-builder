@@ -213,8 +213,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ExtractRowFromDbDataReader(DbDataReader dbDataReader, List<string>? args = null)
         {
             DbOperationResultRow dbOperationResultRow = new(
-                row: new(),
-                propertiesOfResult: GetResultProperties(dbDataReader).Result ?? new());
+                columns: new(),
+                resultProperties: GetResultProperties(dbDataReader).Result ?? new());
 
             if (await ReadAsync(dbDataReader))
             {
@@ -236,11 +236,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             int colIndex = dbDataReader.GetOrdinal(columnName);
                             if (!dbDataReader.IsDBNull(colIndex))
                             {
-                                dbOperationResultRow.Row.Add(columnName, dbDataReader[columnName]);
+                                dbOperationResultRow.Columns.Add(columnName, dbDataReader[columnName]);
                             }
                             else
                             {
-                                dbOperationResultRow.Row.Add(columnName, value: null);
+                                dbOperationResultRow.Columns.Add(columnName, value: null);
                             }
                         }
                     }
@@ -261,10 +261,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             DbOperationResultRow dbOperationResultRow = await ExtractRowFromDbDataReader(dbDataReader);
             JsonArray resultArray = new();
 
-            while (dbOperationResultRow.Row.Count > 0)
+            while (dbOperationResultRow.Columns.Count > 0)
             {
                 JsonElement result =
-                    JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(dbOperationResultRow.Row));
+                    JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(dbOperationResultRow.Columns));
                 resultArray.Add(result);
                 dbOperationResultRow = await ExtractRowFromDbDataReader(dbDataReader);
             }
@@ -311,9 +311,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             /// In MsSQL upsert:
             /// result set #1: result of the UPDATE operation.
             /// result set #2: result of the INSERT operation.
-            if (dbOperationResultRow.Row.Count > 0)
+            if (dbOperationResultRow.Columns.Count > 0)
             {
-                dbOperationResultRow.PropertiesOfResult.Add(SqlMutationEngine.IS_FIRST_RESULT_SET, true);
+                dbOperationResultRow.ResultProperties.Add(SqlMutationEngine.IS_FIRST_RESULT_SET, true);
                 return dbOperationResultRow;
             }
             else if (await dbDataReader.NextResultAsync())
@@ -349,12 +349,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             DbDataReader dbDataReader,
             List<string>? columnNames = null)
         {
-            Dictionary<string, object> propertiesOfResult = new()
+            Dictionary<string, object> resultProperties = new()
             {
                 { nameof(dbDataReader.RecordsAffected), dbDataReader.RecordsAffected },
                 { nameof(dbDataReader.HasRows), dbDataReader.HasRows }
             };
-            return Task.FromResult((Dictionary<string, object>?)propertiesOfResult);
+            return Task.FromResult((Dictionary<string, object>?)resultProperties);
         }
 
         private async Task<string> GetJsonStringFromDbReader(DbDataReader dbDataReader)

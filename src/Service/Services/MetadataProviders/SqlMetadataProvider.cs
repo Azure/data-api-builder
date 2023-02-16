@@ -1364,14 +1364,14 @@ namespace Azure.DataApiBuilder.Service.Services
             // Gets a single row read from DbDataReader which contains 2 dictionaries:
             // 1. the first row extracted from the result
             // 2. Dictionary of the DbDataReader properties like RecordsAffected, HasRows.
-            // This function only requires the result row i.e.the first dictionary.
+            // This function only requires the DbOperationResultRow.Columns property.
             DbOperationResultRow foreignKeyInfoWithProperties =
                 await QueryExecutor.ExtractRowFromDbDataReader(reader);
 
             Dictionary<RelationShipPair, ForeignKeyDefinition> pairToFkDefinition = new();
-            while (foreignKeyInfoWithProperties.Row.Count > 0)
+            while (foreignKeyInfoWithProperties.Columns.Count > 0)
             {
-                Dictionary<string, object?> foreignKeyInfo = foreignKeyInfoWithProperties.Row;
+                Dictionary<string, object?> foreignKeyInfo = foreignKeyInfoWithProperties.Columns;
                 string referencingSchemaName =
                     (string)foreignKeyInfo[$"Referencing{nameof(DatabaseObject.SchemaName)}"]!;
                 string referencingTableName = (string)foreignKeyInfo[$"Referencing{nameof(SourceDefinition)}"]!;

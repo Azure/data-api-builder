@@ -124,7 +124,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         parameters,
                         context);
 
-                if (mutationResult is not null && mutationResult.Row.Count > 0
+                if (mutationResult is not null && mutationResult.Columns.Count > 0
                     && !context.Selection.Type.IsScalarType())
                 {
                     // Because the GraphQL mutation result set columns were exposed (mapped) column names,
@@ -133,7 +133,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     // represent database column names.
                     result = await _queryEngine.ExecuteAsync(
                                 context,
-                                GetBackingColumnsFromCollection(entityName, mutationResult.Row));
+                                GetBackingColumnsFromCollection(entityName, mutationResult.Columns));
                 }
             }
 
@@ -292,12 +292,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         parameters,
                         context);
 
-                if (upsertOperationResult is not null && upsertOperationResult.Row.Count > 0)
+                if (upsertOperationResult is not null && upsertOperationResult.Columns.Count > 0)
                 {
-                    Dictionary<string, object?> resultRow = upsertOperationResult.Row;
+                    Dictionary<string, object?> resultRow = upsertOperationResult.Columns;
 
                     bool isFirstResultSet = false;
-                    if (upsertOperationResult.PropertiesOfResult.TryGetValue(IS_FIRST_RESULT_SET, out object? isFirstResultSetValue))
+                    if (upsertOperationResult.ResultProperties.TryGetValue(IS_FIRST_RESULT_SET, out object? isFirstResultSetValue))
                     {
                         isFirstResultSet = Convert.ToBoolean(isFirstResultSetValue);
                     }
@@ -327,23 +327,23 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 if (context.OperationType is Config.Operation.Insert)
                 {
-                    if (mutationResult is null || mutationResult.Row.Count == 0)
+                    if (mutationResult is null || mutationResult.Columns.Count == 0)
                     {
                         // this case should not happen, we throw an exception
                         // which will be returned as an Unexpected Internal Server Error
                         throw new Exception();
                     }
 
-                    Dictionary<string, object?> resultRow = mutationResult.Row;
-                    string primaryKeyRoute = ConstructPrimaryKeyRoute(context, resultRow);
+                    Dictionary<string, object?> resultColumns = mutationResult.Columns;
+                    string primaryKeyRoute = ConstructPrimaryKeyRoute(context, resultColumns);
                     // location will be updated in rest controller where httpcontext is available
-                    return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(resultRow).Value);
+                    return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(resultColumns).Value);
                 }
 
                 if (context.OperationType is Config.Operation.Update || context.OperationType is Config.Operation.UpdateIncremental)
                 {
                     // Nothing to update means we throw Exception
-                    if (mutationResult is null || mutationResult.Row.Count == 0)
+                    if (mutationResult is null || mutationResult.Columns.Count == 0)
                     {
                         throw new DataApiBuilderException(message: "No Update could be performed, record not found",
                                                            statusCode: HttpStatusCode.PreconditionFailed,
@@ -351,7 +351,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     }
 
                     // Valid REST updates return OkObjectResult
-                    return OkMutationResponse(mutationResult.Row);
+                    return OkMutationResponse(mutationResult.Columns);
                 }
             }
 
@@ -520,7 +520,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         _httpContextAccessor.HttpContext!,
                         primaryKeyExposedColumnNames.Count > 0 ? primaryKeyExposedColumnNames : sourceDefinition.PrimaryKey);
 
-                if (dbOperationResultRow is not null && dbOperationResultRow.Row.Count == 0)
+                if (dbOperationResultRow is not null && dbOperationResultRow.Columns.Count == 0)
                 {
                     string searchedPK;
                     if (primaryKeyExposedColumnNames.Count > 0)

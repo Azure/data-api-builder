@@ -11,21 +11,21 @@ namespace Azure.DataApiBuilder.Service.Models
     public class DbOperationResultRow
     {
         public DbOperationResultRow(
-            Dictionary<string, object?> row,
-            Dictionary<string, object> propertiesOfResult)
+            Dictionary<string, object?> columns,
+            Dictionary<string, object> resultProperties)
         {
-            this.Row = row;
-            this.PropertiesOfResult = propertiesOfResult;
+            this.Columns = columns;
+            this.ResultProperties = resultProperties;
         }
 
         /// <summary>
-        /// A dictionary representing the row in <c>ColumnName: Value</c> format, empty if no row was found.
+        /// Represents a result set row in <c>ColumnName: Value</c> format, empty if no row was found.
         /// </summary>
-        public Dictionary<string, object?> Row { get; private set; }
+        public Dictionary<string, object?> Columns { get; private set; }
 
         /// <summary>
-        /// A dictionary of properties of the DbDataReader like RecordsAffected, HasRows.
+        /// Represents DbDataReader properties such as RecordsAffected and HasRows.
         /// </summary>
-        public Dictionary<string, object> PropertiesOfResult { get; private set; }
+        public Dictionary<string, object> ResultProperties { get; private set; }
     }
 }

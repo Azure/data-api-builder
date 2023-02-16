@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Microsoft.Extensions.Logging;
@@ -1360,17 +1361,17 @@ namespace Azure.DataApiBuilder.Service.Services
         private async Task<Dictionary<RelationShipPair, ForeignKeyDefinition>?>
             SummarizeFkMetadata(DbDataReader reader, List<string>? args = null)
         {
-            // Gets a tuple of 2 dictionaries:
-            // 1. the first row extracted from the result
-            // 2. Dictionary of the DbDataReader properties like RecordsAffected, HasRows.
-            // This function only requires the result row i.e. Item1 from the tuple.
-            Tuple<Dictionary<string, object?>?, Dictionary<string, object>>? foreignKeyInfoWithProperties =
+            // Gets a single row read from DbDataReader which contains 2 dictionaries:
+            // 1. The columns of the first row extracted from the result
+            // 2. DbDataReader properties like RecordsAffected, HasRows.
+            // This function only requires the DbOperationResultRow.Columns property.
+            DbOperationResultRow foreignKeyInfoWithProperties =
                 await QueryExecutor.ExtractRowFromDbDataReader(reader);
 
             Dictionary<RelationShipPair, ForeignKeyDefinition> pairToFkDefinition = new();
-            while (foreignKeyInfoWithProperties is not null && foreignKeyInfoWithProperties.Item1 is not null)
+            while (foreignKeyInfoWithProperties.Columns.Count > 0)
             {
-                Dictionary<string, object?> foreignKeyInfo = foreignKeyInfoWithProperties.Item1;
+                Dictionary<string, object?> foreignKeyInfo = foreignKeyInfoWithProperties.Columns;
                 string referencingSchemaName =
                     (string)foreignKeyInfo[$"Referencing{nameof(DatabaseObject.SchemaName)}"]!;
                 string referencingTableName = (string)foreignKeyInfo[$"Referencing{nameof(SourceDefinition)}"]!;

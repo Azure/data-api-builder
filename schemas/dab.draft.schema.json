@@ -321,8 +321,8 @@
                     "operation": {
                       "type": "string",
                       "enum": [
-                        "mutation",
-                        "query"
+                        "Mutation",
+                        "Query"
                       ]
                     }
                   },

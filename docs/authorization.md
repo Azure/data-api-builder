@@ -134,16 +134,24 @@ In the above configuration sample, only request carrying the `administrator` rol
 
 ### Item level security
 
-Database policy expressions enable results to be restricted even further. Database policies translate OData expressions to query predicates executed against the database. See the [configuration file](./configuration-file.md#policies) documentation for a detailed explanation of database policies.
+Database policy expressions enable results to be restricted even further. Database policies translate OData expressions to query predicates executed against the database. Database policy expressions are supported for the read, update, and delete actions. See the [configuration file](./configuration-file.md#policies) documentation for a detailed explanation of database policies.
 
-An example policy restricting the `Read` action on the `consumer` role to only return records where the *title* is "Sample Title."
+|Action   | Database Policy Support | Details  |
+|---|:-:|---|
+|create   |:x:| [Issue #1216](https://github.com/Azure/data-api-builder/issues/1216)   |
+|read   |:heavy_check_mark:   |   |
+|update   |:heavy_check_mark:   |   |
+|delete   |:heavy_check_mark:   |   |
+|execute   |:x:   |Database policies are not applicable towards stored procedure execution.   |
+
+An example policy restricting the `read` action on the `consumer` role to only return records where the *title* is "Sample Title."
 
 ```json
 {
     "role": "consumer",
     "actions": [
         {
-            "action": "Read",
+            "action": "read",
             "policy": {
                 "database": "@item.title eq 'Sample Title'"
             }

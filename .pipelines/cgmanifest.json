@@ -9,7 +9,7 @@
                     "version": "0.40.0"
                 }
             },
-            "DevelopmentDependency": true
+            "DevelopmentDependency": false
         }
     ],
     "version": 1

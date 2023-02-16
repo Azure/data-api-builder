@@ -6,7 +6,7 @@
 
 ### SESSION_CONTEXT
 
-For MsSql, Data API Builder (DAB) uses SESSION_CONTEXT to send user specified metadata to the underlying database. Such metadata is available to DAB by virtue of the claims present in the access token.
+For MsSql, Data API builder (DAB) uses SESSION_CONTEXT to send user specified metadata to the underlying database. Such metadata is available to DAB by virtue of the claims present in the access token.
 The data sent to the database can then be used to configure an additional level of security (e.g. by configuring Security policies) to further prevent access
 to data in operations like SELECT, UPDATE, DELETE. The SESSION_CONTEXT data is available to the database for the duration of the database connection until that connection is closed. The same data can be used inside a stored procedure as well.  
 

@@ -1,28 +1,35 @@
 # Configuration File
 
-+ [Configuration File](#configuration-file)
-  + [Summary](#summary)
-  + [Environments Support](#environments-support)
-  + [Accessing Environment Variables](#accessing-environment-variables)
-  + [File Structure](#file-structure)
-    + [Schema](#schema)
-    + [Data Source](#data-source)
-    + [Runtime global settings](#runtime-global-settings)
-      + [REST](#rest)
-      + [GraphQL](#graphql)
-      + [Host](#host)
-    + [Entities](#entities)
-      + [GraphQL Settings](#graphql-settings)
-      + [REST Settings](#rest-settings)
-      + [Database object source](#database-object-source)
-      + [Relationships](#relationships)
-        + [One-To-Many Relationship](#one-to-many-relationship)
-        + [Many-To-One Relationship](#many-to-one-relationship)
-        + [Many-To-Many Relationship](#many-to-many-relationship)
-      + [Permissions](#permissions)
-        + [Roles](#roles)
-        + [Actions](#actions)
-      + [Mappings](#mappings)
+- [Configuration File](#configuration-file)
+  - [Summary](#summary)
+  - [Environments Support](#environments-support)
+  - [Accessing Environment Variables](#accessing-environment-variables)
+  - [File Structure](#file-structure)
+    - [Schema](#schema)
+    - [Data Source](#data-source)
+    - [Runtime global settings](#runtime-global-settings)
+      - [REST](#rest)
+      - [GraphQL](#graphql)
+      - [Host](#host)
+    - [Entities](#entities)
+      - [GraphQL Settings](#graphql-settings)
+        - [GraphQL Type](#graphql-type)
+        - [GraphQL Operation](#graphql-operation)
+      - [REST Settings](#rest-settings)
+        - [REST Path](#rest-path)
+        - [REST Methods](#rest-methods)
+      - [Database object source](#database-object-source)
+      - [Relationships](#relationships)
+        - [One-To-Many Relationship](#one-to-many-relationship)
+        - [Many-To-One Relationship](#many-to-one-relationship)
+        - [Many-To-Many Relationship](#many-to-many-relationship)
+      - [Permissions](#permissions)
+        - [Roles](#roles)
+        - [Actions](#actions)
+        - [Fields](#fields)
+        - [Policies](#policies)
+        - [Limitations](#limitations)
+      - [Mappings](#mappings)
 
 ## Summary
 
@@ -423,7 +430,7 @@ The section `permissions` defines who (in terms of roles) can access the related
   "permissions": [
     {
       "role": "...",
-      "actions": [...],
+      "actions": ["create", "read", "update", "delete"],
       }
   ]
 }
@@ -441,43 +448,47 @@ The `role` string contains the name of the role to which the defined permission 
 
 ##### Actions
 
-The `actions` array is a mixed-type array that details what actions are allowed to related roles. When the entity is either a table or view, roles can be configured with the following actions: `create`, `read`, `update`, `delete`.
-In case of stored procedures, the roles can only be configured with `execute` action.
+The `actions` array details what actions are allowed on the associated role. When the entity is either a table or view, roles can be configured with a combination of the actions: `create`, `read`, `update`, `delete`.
 
-For example:
+The following example tells Data API builder that the contributor role permits the `read` and `create` actions on the entity:
 
 ```json
 {
+  "role": "contributor",
   "actions": ["read", "create"]
 }
 ```
 
-tells Data API builder that the related role can perform `read` and `create` actions on the related entity.
-
-In case all actions are allowed, it is possible to use the wildcard character `*` to indicate that. For example:
+In case all actions are allowed, the wildcard character `*` can be used as a shortcut to represent all actions supported for the type of entity:
 
 ```json
 {
+  "role": "editor",
   "actions": ["*"]
 }
 ```
-`*` action expands based on the type of the entity. For tables and views, it expands to `create, read, update, delete` actions. For stored-procedures, it translates to `execute` action.
 
-Another option is to specify an object with also details on what fields - defined in the `fields` object, are allowed and what are not:
+For stored procedures, roles can only be configured with `execute` action and the wildcard `*` action will expand to `execute`.
+For tables and views, the wildcard `*` action expands to the actions `create, read, update, delete`.
+
+##### Fields
+
+Role configuration supports granularly defining which database columns (fields) are permitted to be accessed in the section `fields`:
 
 ```json
 {
+  "role": "read-only",
   "action": "read",
-  "fields: {
+  "fields": {
     "include": ["*"],
     "exclude": ["field_xyz"]
   }
 }
 ```
 
-That will indicate to Data API builder that the related role can `read` from all fields except from `field_xyz`.
+That will indicate to Data API builder that the role *read-only* can `read` from all fields except from `field_xyz`.
 
-Both the simple and the more complex definition can be used at the same time, for example, to limit the `read` action to specific fields, while allowing create to operate on all fields:
+Both the simplified and granular `action` definitions can be used at the same time. For example, the following configuration limits the `read` action to specific fields, while implicitly allowing the `create` action to operate on all fields:
 
 ```json
 {
@@ -491,25 +502,39 @@ Both the simple and the more complex definition can be used at the same time, fo
       }
     },
     "create"
-    ]
-  }
+  ]
 }
 ```
 
-In the `fields` objects, the `*` can be used as the wildcard character to indicate all fields. Exclusions have precedence over inclusions.
+In the `fields` section above, the wildcard `*` in the `include` section indicates all fields. The fields noted in the `exclude` section have precedence over fields noted in the `include` section. The definition translates to *include all fields except for the field 'last_updated'*.
 
-The `policy` section contains detail about item-level security rules.
+##### Policies
 
-+ `database` policy: define a rule - a predicate - that will be injected in the query sent to the database
+The `policy` section, defined per `action`, defines item-level security rules (database policies) which limit the results returned from a request. The sub-section `database` denotes the database policy expression that will be evaluated during request execution.
 
-In order for an request or item to be returned, the policies must be evaluated to `true`.
+```json
+  "policy": {
+    "database": "<Expression>"
+  }
+```
 
-Two types of directives can be used when configuring a database policy:
+- `database` policy: an OData expression that is translated into a query predicate that will be evaluated by the database.
+  - e.g. The policy expression `@item.OwnerId eq 2000` is translated to the query predicate `WHERE Table.OwnerId  = 2000`
 
-+ `@claims`: access a claim stored in the authentication token
-+ `@item`: access an entity's field in the underlying database.
+> A *predicate* is an expression that evaluates to TRUE, FALSE, or UNKNOWN. Predicates are used in the search condition of [WHERE](https://learn.microsoft.com/sql/t-sql/queries/where-transact-sql) clauses and [HAVING](https://learn.microsoft.com/sql/t-sql/queries/select-having-transact-sql) clauses, the join conditions of [FROM](https://learn.microsoft.com/sql/t-sql/queries/from-transact-sql) clauses, and other constructs where a Boolean value is required.
+([Microsoft Learn Docs](https://learn.microsoft.com/sql/t-sql/queries/predicates?view=sql-server-ver16))
 
-For example a policy could be the following:
+In order for results to be returned for a request, the request's query predicate resolved from a database policy must evaluate to `true` when executing against the database.
+
+Two types of directives can be used when authoring a database policy expression:
+
+- `@claims`: access a claim within the validated access token provided in the request.
+- `@item`: represents a field of the entity for which the database policy is defined.
+
+> [!NOTE]
+> When Azure Static Web Apps authentication (EasyAuth) is configured, a limited number of claims types are available for use in database policies: `identityProvider`, `userId`, `userDetails`, and `userRoles`. See Azure Static Web App's [Client principal data](https://learn.microsoft.com/azure/static-web-apps/user-information?tabs=javascript#client-principal-data) documentation for more details.
+
+For example, a policy that utilizes both directive types, pulling the UserId from the access token and referencing the entity's OwnerId field would look like:
 
 ```json
   "policy": {
@@ -517,20 +542,24 @@ For example a policy could be the following:
   }
 ```
 
-Data API Builder will take the value of the claim named `UserId` and it will compare it with the value of the field `OwnerId` existing in the entity where the policy has been defined. Only those elements for which the expression will result to be true, will be allowed to be accessed.
+Data API Builder will compare the value of the `UserId` claim to the value of the database field `OwnerId`. The result payload will only include records that fulfill **both** the request metadata and the database policy expression.
 
-*PLEASE NOTE* that at the moment support for policies is limited to:
+##### Limitations
 
-+ Tables and Views. Stored Procedures cannot be configured with policies.
-+ Binary operators [BinaryOperatorKind - Microsoft Learn](https://learn.microsoft.com/dotnet/api/microsoft.odata.uriparser.binaryoperatorkind?view=odata-core-7.0) such as `and`, `or`, `eq`, `gt`, `lt`, and more.
-+ Unary operators [UnaryOperatorKind - Microsoft Learn](https://learn.microsoft.com/dotnet/api/microsoft.odata.uriparser.unaryoperatorkind?view=odata-core-7.0) such as the negate (`-`) and `not` operators.
+Database policies are supported for tables and views. Stored procedures cannot be configured with policies.
+
+Database policies are only supported for the `actions` **read**, **update**, and **delete**.
+
+Database policy OData expression syntax supports:
+
+- Binary operators [BinaryOperatorKind - Microsoft Learn](https://learn.microsoft.com/dotnet/api/microsoft.odata.uriparser.binaryoperatorkind?view=odata-core-7.0) such as `and`, `or`, `eq`, `gt`, `lt`, and more.
+- Unary operators [UnaryOperatorKind - Microsoft Learn](https://learn.microsoft.com/dotnet/api/microsoft.odata.uriparser.unaryoperatorkind?view=odata-core-7.0) such as the negate (`-`) and `not` operators.
 
 #### Mappings
+
 The `mappings` section enables configuring aliases, or exposed names, for database object fields. The configured exposed names apply to both the GraphQL and REST endpoints. For entities with GraphQL enabled, the configured exposed name **must** meet GraphQL naming requirements. [GraphQL - October 2021 - Names ](https://spec.graphql.org/October2021/#sec-Names)
 
-The format is:
-
-`<database_field>: <entity_field>`
+The format is: `<database_field>: <entity_field>`
 
 For example:
 
@@ -540,4 +569,5 @@ For example:
     "sku_status": "status"
   }
 ```
+
 means the `sku_title` field in the related database object will be mapped to the exposed name `title` and `sku_status` will be mapped to `status`. Both GraphQL and REST will require using `title` and `status` instead of `sku_title` and `sku_status` and will additionally use those mapped values in all response payloads.

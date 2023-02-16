@@ -69,6 +69,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public IAuthorizationResolver AuthorizationResolver { get; }
 
+        public const string PARAM_NAME_PREFIX = "@";
+
         public BaseQueryStructure(
             ISqlMetadataProvider metadataProvider,
             IAuthorizationResolver authorizationResolver,
@@ -109,7 +111,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="value">Value to be assigned to parameter, which can be null for nullable columns.</param>
         public string MakeParamWithValue(object? value)
         {
-            string paramName = $"param{Counter.Next()}";
+            string paramName = $"{PARAM_NAME_PREFIX}param{Counter.Next()}";
             Parameters.Add(paramName, value);
             return paramName;
         }

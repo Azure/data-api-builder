@@ -55,7 +55,7 @@ More specifically, the above configuration is telling Data API Builder that it m
 
 ### Roles selection
 
-For a request to be evaluated in the context of a user role, the request must include the `X-MS-API-ROLE` HTTP Header and set the value to a role present in the received authentication token. If the received authentication token has the following contents:
+For a request to be evaluated in the context of a user role, the request must include the `X-MS-API-ROLE` HTTP Header and set the value to a role present in the received access token. If the received access token has the following contents:
 
 ```json
 {
@@ -72,7 +72,7 @@ For a request to be evaluated in the context of a user role, the request must in
 
 and the request must be evaluated in the context of the `author` role, then the `X-MS-API-ROLE` must be set to `author`.
 
-A request can only be evaluated in the context of a single role. So, if the authentication token allows for more than one role, for example:
+A request can only be evaluated in the context of a single role. So, if the access token allows for more than one role, for example:
 
 ```json
 "userRoles": ["author", "editor"]
@@ -125,9 +125,9 @@ As by default there are no pre-defined permission for the `anonymous` or `authen
   "source": "dbo.books",
   "permissions": [{
     "role": "administrator",
-    "actions": [ * ]
+    "actions": [ "*" ]
   }]
 }
 ```
 
-In the above configuration sample, only request carrying the `administrator` role in the authentication token and specifying the `administrator` value in the `X-MS-API-ROLE` HTTP header, will be able to operate on the `book` entity.
+In the above configuration sample, only request carrying the `administrator` role in the access token and specifying the `administrator` value in the `X-MS-API-ROLE` HTTP header, will be able to operate on the `book` entity.

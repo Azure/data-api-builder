@@ -283,11 +283,11 @@
                       "items": {
                         "type": "string",
                         "enum": [
-                          "GET",
-                          "POST",
-                          "PUT",
-                          "PATCH",
-                          "DELETE"
+                          "get",
+                          "post",
+                          "put",
+                          "patch",
+                          "delete"
                         ]
                       }
                     }

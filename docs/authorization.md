@@ -142,7 +142,7 @@ Database policy expressions enable results to be restricted even further. Databa
 |read   |:heavy_check_mark:   |   |
 |update   |:heavy_check_mark:   |   |
 |delete   |:heavy_check_mark:   |   |
-|execute   |:x:   |Database policies are not applicable towards stored procedure execution.   |
+|execute   |:x:   |Database policies are not applicable to stored procedure execution.   |
 
 An example policy restricting the `read` action on the `consumer` role to only return records where the *title* is "Sample Title."
 

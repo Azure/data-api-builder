@@ -345,7 +345,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <inheritdoc />
         /// <Note>This function is a DbDataReader handler of type
         /// Func<DbDataReader, List<string>?, Task<TResult?>></Note>
-        public Task<Dictionary<string, object>?> GetResultProperties(
+        public Task<Dictionary<string, object>> GetResultProperties(
             DbDataReader dbDataReader,
             List<string>? columnNames = null)
         {
@@ -354,7 +354,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 { nameof(dbDataReader.RecordsAffected), dbDataReader.RecordsAffected },
                 { nameof(dbDataReader.HasRows), dbDataReader.HasRows }
             };
-            return Task.FromResult((Dictionary<string, object>?)resultProperties);
+            return Task.FromResult(resultProperties);
         }
 
         private async Task<string> GetJsonStringFromDbReader(DbDataReader dbDataReader)

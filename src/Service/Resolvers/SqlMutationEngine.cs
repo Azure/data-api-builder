@@ -334,10 +334,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         throw new Exception();
                     }
 
-                    Dictionary<string, object?> resultColumns = mutationResult.Columns;
-                    string primaryKeyRoute = ConstructPrimaryKeyRoute(context, resultColumns);
+                    string primaryKeyRoute = ConstructPrimaryKeyRoute(context, mutationResult.Columns);
                     // location will be updated in rest controller where httpcontext is available
-                    return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(resultColumns).Value);
+                    return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(mutationResult.Columns).Value);
                 }
 
                 if (context.OperationType is Config.Operation.Update || context.OperationType is Config.Operation.UpdateIncremental)

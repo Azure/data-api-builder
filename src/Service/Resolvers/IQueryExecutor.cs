@@ -88,7 +88,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="dbDataReader">A DbDataReader.</param>
         /// <param name="args">List of string arguments if any.</param>
         /// <returns>A dictionary of properties of the DbDataReader like RecordsAffected, HasRows.</returns>
-        public Task<Dictionary<string, object>?> GetResultProperties(
+        public Task<Dictionary<string, object>> GetResultProperties(
                 DbDataReader dbDataReader,
                 List<string>? args = null);
 

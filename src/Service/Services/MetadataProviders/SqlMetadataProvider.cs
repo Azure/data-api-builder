@@ -1362,8 +1362,8 @@ namespace Azure.DataApiBuilder.Service.Services
             SummarizeFkMetadata(DbDataReader reader, List<string>? args = null)
         {
             // Gets a single row read from DbDataReader which contains 2 dictionaries:
-            // 1. the first row extracted from the result
-            // 2. Dictionary of the DbDataReader properties like RecordsAffected, HasRows.
+            // 1. The columns of the first row extracted from the result
+            // 2. DbDataReader properties like RecordsAffected, HasRows.
             // This function only requires the DbOperationResultRow.Columns property.
             DbOperationResultRow foreignKeyInfoWithProperties =
                 await QueryExecutor.ExtractRowFromDbDataReader(reader);

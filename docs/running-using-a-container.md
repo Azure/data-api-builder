@@ -6,10 +6,10 @@ Login into the `hawaiiacr` Azure Container Registry:
 az acr login --name hawaiiacr
 ```
 
-Once you are logged in to Azure Container Registry, you can run Data API Builder from Docker:
+Once you are logged in to Azure Container Registry, you can run Data API builder from Docker:
 
 ```sh
-docker run -it -v <configuration-file>://App/<configuration-file> -p 5000:5000 hawaiiacr.azurecr.io/dab:<tag> --ConfigFileName <configuration-file>
+docker run -it -v <configuration-file>://App/<configuration-file> -p 5000:5000 hawaiiacr.azurecr.io/data-api-builder:<tag> --ConfigFileName <configuration-file>
 ```
 
 The proceeding command makes the following assumptions:
@@ -19,7 +19,7 @@ The proceeding command makes the following assumptions:
 - You want to use the latest release 0.5.*.
 
 ```bash
-docker run -it -v "c:\data-api-builder\samples://App/samples" -p 5000:5000 hawaiiacr.azurecr.io/dab:0.5.* --ConfigFileName ./samples/my-sample-dab-config.json
+docker run -it -v "c:\data-api-builder\samples://App/samples" -p 5000:5000 hawaiiacr.azurecr.io/data-api-builder:0.5.* --ConfigFileName ./samples/my-sample-dab-config.json
 ```
 
 You may also use one of the provided Docker compose files, available in the `docker` folder:

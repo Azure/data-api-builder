@@ -8,6 +8,9 @@ See issue [#452](https://github.com/Azure/data-api-builder/issues/452)
 
 See issue [#479](https://github.com/Azure/data-api-builder/issues/479)
 
+## Database authorization policies are not supported for the `create` action
+
+See issue [#1216](https://github.com/Azure/data-api-builder/issues/1216)
 ## Knowns issues with MySQL 
 Here are some known issues specifically with MySQL database. 
 - Update fails on tables with Computed columns. [Issue #1001](https://github.com/Azure/data-api-builder/issues/1001)

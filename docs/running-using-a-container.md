@@ -9,7 +9,7 @@ az acr login --name hawaiiacr
 once you are logged in you can run Data API Builder from Docker:
 
 ```sh
-docker run -it -v <configuration-file>://App/<configuration-file> -p 5000:5000 hawaiiacr.azurecr.io/dab:<tag> --ConfigFileName <configuration-file>
+docker run -it -v <host-folder>://App/<,container-folder> -p 5000:5000 hawaiiacr.azurecr.io/dab:<tag> --ConfigFileName <configuration-file>
 ```
 
 For example, if:

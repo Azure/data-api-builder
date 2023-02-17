@@ -258,7 +258,7 @@ query {{
         }
 
         [TestMethod]
-        public async Task QueryWithFragmentIsValid()
+        public async Task QueryWithInlineFragmentOverlappingFields()
         {
             string query = @"
 query {
@@ -271,6 +271,69 @@ query {
         }
     }
 }
+            ";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync("planets", query);
+
+            Assert.AreEqual(TOTAL_ITEM_COUNT, response.GetProperty("items").GetArrayLength());
+        }
+
+        [TestMethod]
+        public async Task QueryWithInlineFragmentNonOverlappingFields()
+        {
+            string query = @"
+query {
+    planets {
+        __typename
+        items {
+            name
+            ... on Planet { id }
+        }
+    }
+}
+            ";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync("planets", query);
+
+            Assert.AreEqual(TOTAL_ITEM_COUNT, response.GetProperty("items").GetArrayLength());
+        }
+
+        [TestMethod]
+        public async Task QueryWithFragmentOverlappingFields()
+        {
+            string query = @"
+query {
+    planets {
+        __typename
+        items {
+            id
+            name
+            ... on Planet { id }
+        }
+    }
+}
+            ";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync("planets", query);
+
+            Assert.AreEqual(TOTAL_ITEM_COUNT, response.GetProperty("items").GetArrayLength());
+        }
+
+        [TestMethod]
+        public async Task QueryWithFragmentNonOverlappingFields()
+        {
+            string query = @"
+query {
+    planets(first: 10) {
+        __typename
+        items {
+            name
+            ... p
+        }
+    }
+}
+
+fragment p on Planet { id }
             ";
 
             JsonElement response = await ExecuteGraphQLRequestAsync("planets", query);

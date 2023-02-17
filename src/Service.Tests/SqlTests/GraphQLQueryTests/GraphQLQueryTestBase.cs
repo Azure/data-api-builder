@@ -1211,7 +1211,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         [TestMethod]
-        public async Task QueryWithFragmentIsValid()
+        public async Task QueryWithInlineFragmentOverlappingFields()
         {
             string query = @"
 query {
@@ -1224,6 +1224,71 @@ query {
         }
     }
 }
+            ";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync(query, "books", false);
+
+            Assert.AreEqual(10, response.GetProperty("items").GetArrayLength());
+        }
+
+        [TestMethod]
+        public async Task QueryWithInlineFragmentNonOverlappingFields()
+        {
+            string query = @"
+query {
+    books(first: 10) {
+        __typename
+        items {
+            title
+            ... on book { id }
+        }
+    }
+}
+            ";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync(query, "books", false);
+
+            Assert.AreEqual(10, response.GetProperty("items").GetArrayLength());
+        }
+
+        [TestMethod]
+        public async Task QueryWithFragmentOverlappingFields()
+        {
+            string query = @"
+query {
+    books(first: 10) {
+        __typename
+        items {
+            id
+            title
+            ... b
+        }
+    }
+}
+
+fragment b on book { id }
+            ";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync(query, "books", false);
+
+            Assert.AreEqual(10, response.GetProperty("items").GetArrayLength());
+        }
+
+        [TestMethod]
+        public async Task QueryWithFragmentNonOverlappingFields()
+        {
+            string query = @"
+query {
+    books(first: 10) {
+        __typename
+        items {
+            title
+            ... b
+        }
+    }
+}
+
+fragment b on book { id }
             ";
 
             JsonElement response = await ExecuteGraphQLRequestAsync(query, "books", false);

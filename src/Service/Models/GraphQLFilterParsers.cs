@@ -460,7 +460,7 @@ namespace Azure.DataApiBuilder.Service.Models
                 predicates.Push(new PredicateOperand(new Predicate(
                     new PredicateOperand(column),
                     op,
-                    new PredicateOperand(processLiteral ? $"@{processLiterals(value)}" : value.ToString()))
+                    new PredicateOperand(processLiteral ? $"{processLiterals(value)}" : value.ToString()))
                 ));
             }
 

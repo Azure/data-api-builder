@@ -1,25 +1,19 @@
 # Running Data API Builder for Azure Databases using a container
 
-Login into the `hawaiiacr` Azure Container Registry:
-
-```bash
-az acr login --name hawaiiacr
-```
-
-Once you are logged in to Azure Container Registry, you can run Data API builder from Docker:
+With Docker, you can run Data API builder using a container from `mcr.microsoft.com/data-api-builder`:
 
 ```sh
-docker run -it -v <configuration-file>://App/<configuration-file> -p 5000:5000 hawaiiacr.azurecr.io/data-api-builder:<tag> --ConfigFileName <configuration-file>
+docker run -it -v <configuration-file>://App/<configuration-file> -p 5000:5000 pull mcr.microsoft.com/data-api-builder:<tag> --ConfigFileName <configuration-file>
 ```
 
 The proceeding command makes the following assumptions:
 
 - You are working in the `c:\data-api-builder` folder
 - The configuration file you want to use in the `samples` folder and is named `my-sample-dab-config.json`
-- You want to use the latest release 0.5.*.
+- You want to use the latest release which can be identified from the [Releases](https://github.com/Azure/data-api-builder/releases) page.
 
 ```bash
-docker run -it -v "c:\data-api-builder\samples://App/samples" -p 5000:5000 hawaiiacr.azurecr.io/data-api-builder:0.5.* --ConfigFileName ./samples/my-sample-dab-config.json
+docker run -it -v "c:\data-api-builder\samples://App/samples" -p 5000:5000 pull mcr.microsoft.com/data-api-builder:0.5.* --ConfigFileName ./samples/my-sample-dab-config.json
 ```
 
 You may also use one of the provided Docker compose files, available in the `docker` folder:

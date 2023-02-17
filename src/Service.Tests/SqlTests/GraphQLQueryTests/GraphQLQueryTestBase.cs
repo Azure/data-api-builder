@@ -1210,6 +1210,27 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
 
+        [TestMethod]
+        public async Task QueryWithFragmentIsValid()
+        {
+            string query = @"
+query {
+    books(first: 10) {
+        __typename
+        items {
+            id
+            title
+            ... on book { id }
+        }
+    }
+}
+            ";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync(query, "books", false);
+
+            Assert.AreEqual(10, response.GetProperty("items").GetArrayLength());
+        }
+
         #endregion
 
         #region Negative Tests

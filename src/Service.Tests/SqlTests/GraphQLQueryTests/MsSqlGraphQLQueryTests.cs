@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -345,27 +344,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         {
             string msSqlQuery = $"SELECT TOP 5 id, name FROM books_publishers_view_composite ORDER BY id FOR JSON PATH, INCLUDE_NULL_VALUES";
             await base.TestQueryOnCompositeView(msSqlQuery);
-        }
-
-        [TestMethod]
-        public async Task QueryWithFragmentIsValid()
-        {
-            string query = @"
-query {
-    books(first: 10) {
-        __typename
-        items {
-            id
-            title
-            ... on book { id }
-        }
-    }
-}
-            ";
-
-            JsonElement response = await ExecuteGraphQLRequestAsync(query, "books", false);
-
-            Assert.AreEqual(10, response.GetProperty("items").GetArrayLength());
         }
 
         #endregion

@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using Azure.DataApiBuilder.Config;
 using CommandLine;
 using Microsoft.Extensions.Logging;
@@ -99,7 +102,9 @@ namespace Cli
             IEnumerable<string>? sourceParameters,
             IEnumerable<string>? sourceKeyFields,
             string? restRoute,
+            IEnumerable<string>? restMethodsForStoredProcedure,
             string? graphQLType,
+            string? graphQLOperationForStoredProcedure,
             IEnumerable<string>? fieldsToInclude,
             IEnumerable<string>? fieldsToExclude,
             string? policyRequest,
@@ -112,7 +117,9 @@ namespace Cli
             SourceParameters = sourceParameters;
             SourceKeyFields = sourceKeyFields;
             RestRoute = restRoute;
+            RestMethodsForStoredProcedure = restMethodsForStoredProcedure;
             GraphQLType = graphQLType;
+            GraphQLOperationForStoredProcedure = graphQLOperationForStoredProcedure;
             FieldsToInclude = fieldsToInclude;
             FieldsToExclude = fieldsToExclude;
             PolicyRequest = policyRequest;
@@ -135,8 +142,14 @@ namespace Cli
         [Option("rest", Required = false, HelpText = "Route for rest api.")]
         public string? RestRoute { get; }
 
+        [Option("rest.methods", Required = false, Separator = ',', HelpText = "HTTP actions to be supported for stored procedure. Specify the actions as a comma separated list. Valid HTTP actions are : [GET, POST, PUT, PATCH, DELETE]")]
+        public IEnumerable<string>? RestMethodsForStoredProcedure { get; }
+
         [Option("graphql", Required = false, HelpText = "Type of graphQL.")]
         public string? GraphQLType { get; }
+
+        [Option("graphql.operation", Required = false, HelpText = $"GraphQL operation to be supported for stored procedure. Valid operations are : [Query, Mutation] ")]
+        public string? GraphQLOperationForStoredProcedure { get; }
 
         [Option("fields.include", Required = false, Separator = ',', HelpText = "Fields that are allowed access to permission.")]
         public IEnumerable<string>? FieldsToInclude { get; }
@@ -165,7 +178,9 @@ namespace Cli
             IEnumerable<string>? sourceParameters,
             IEnumerable<string>? sourceKeyFields,
             string? restRoute,
+            IEnumerable<string>? restMethodsForStoredProcedure,
             string? graphQLType,
+            string? graphQLOperationForStoredProcedure,
             IEnumerable<string>? fieldsToInclude,
             IEnumerable<string>? fieldsToExclude,
             string? policyRequest,
@@ -176,7 +191,9 @@ namespace Cli
                   sourceParameters,
                   sourceKeyFields,
                   restRoute,
+                  restMethodsForStoredProcedure,
                   graphQLType,
+                  graphQLOperationForStoredProcedure,
                   fieldsToInclude,
                   fieldsToExclude,
                   policyRequest,
@@ -216,7 +233,9 @@ namespace Cli
             IEnumerable<string>? sourceParameters,
             IEnumerable<string>? sourceKeyFields,
             string? restRoute,
+            IEnumerable<string>? restMethodsForStoredProcedure,
             string? graphQLType,
+            string? graphQLOperationForStoredProcedure,
             IEnumerable<string>? fieldsToInclude,
             IEnumerable<string>? fieldsToExclude,
             string? policyRequest,
@@ -227,7 +246,9 @@ namespace Cli
                   sourceParameters,
                   sourceKeyFields,
                   restRoute,
+                  restMethodsForStoredProcedure,
                   graphQLType,
+                  graphQLOperationForStoredProcedure,
                   fieldsToInclude,
                   fieldsToExclude,
                   policyRequest,
@@ -283,11 +304,12 @@ namespace Cli
     [Verb("start", isDefault: false, HelpText = "Start Data Api Builder Engine", Hidden = false)]
     public class StartOptions : Options
     {
-        public StartOptions(bool verbose, LogLevel? logLevel, string config)
+        public StartOptions(bool verbose, LogLevel? logLevel, bool isHttpsRedirectionDisabled, string config)
             : base(config)
         {
             // When verbose is true we set LogLevel to information.
             LogLevel = verbose is true ? Microsoft.Extensions.Logging.LogLevel.Information : logLevel;
+            IsHttpsRedirectionDisabled = isHttpsRedirectionDisabled;
         }
 
         // SetName defines mutually exclusive sets, ie: can not have
@@ -297,5 +319,8 @@ namespace Cli
         [Option("LogLevel", SetName = "LogLevel", Required = false, HelpText = "Specify logging level as provided value, " +
             "see: https://learn.microsoft.com/en-us/dotnet/api/microsoft.extensions.logging.loglevel?view=dotnet-plat-ext-7.0")]
         public LogLevel? LogLevel { get; }
+
+        [Option("no-https-redirect", Required = false, HelpText = "Disables automatic https redirects.")]
+        public bool IsHttpsRedirectionDisabled { get; }
     }
 }

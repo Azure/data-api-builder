@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System;
 using System.Net;
 using Azure.DataApiBuilder.Service.Configurations;
@@ -26,7 +29,7 @@ namespace Azure.DataApiBuilder.Service.Services
         {
         }
 
-        protected override string GetDefaultSchemaName()
+        public override string GetDefaultSchemaName()
         {
             return "dbo";
         }

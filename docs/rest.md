@@ -20,6 +20,8 @@ Depending on the permission defined on the entity in the configuration file, the
 - [PATCH](#patch): Update an item
 - [DELETE](#delete): Delete an item
 
+> **Attention!**: the URL path (entities and query parameters) is case sensitive
+
 ## Result set format
 
 The returned result is a JSON object with this format:
@@ -69,7 +71,7 @@ http://localhost:5000/api/book/id/1001
 
 ### Query parameters
 
-REST endpoints support the following query parameters to control the returned items:
+REST endpoints support the following query parameters (case sensitive) to control the returned items:
 
 - [`$select`](#select): returns only the selected columns
 - [`$filter`](#filter): filters the returned items
@@ -118,6 +120,8 @@ not                      | Logical negation      | not (year le 1960)
 **Grouping Operators**   |                       |
 ( )                      | Precedence grouping   | (year ge 1970 or title eq 'Foundation') and pages gt 400
 
+**NOTE: `$filter` is a case sensitive argument.**
+
 #### `$orderby`
 
 The value of the `orderby` parameter is a comma-separated list of expressions used to sort the items. 
@@ -131,6 +135,8 @@ http://localhost:5000/api/author?$orderby=first_name desc, last_name
 ```
 
 will return the list of authors sorted by `first_name` descending and then by `last_name` ascending.
+
+**NOTE: `$orderBy` is a case sensitive argument.**
 
 #### `$first` and `$after`
 

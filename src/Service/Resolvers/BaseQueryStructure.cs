@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System.Collections.Generic;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
@@ -25,7 +28,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// The metadata provider of the respective database.
         /// </summary>
-        protected ISqlMetadataProvider MetadataProvider { get; }
+        public ISqlMetadataProvider MetadataProvider { get; }
 
         /// <summary>
         /// The DatabaseObject associated with the entity, represents the
@@ -65,6 +68,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// authorization policies to requests.
         /// </summary>
         public IAuthorizationResolver AuthorizationResolver { get; }
+
+        public const string PARAM_NAME_PREFIX = "@";
 
         public BaseQueryStructure(
             ISqlMetadataProvider metadataProvider,
@@ -106,7 +111,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="value">Value to be assigned to parameter, which can be null for nullable columns.</param>
         public string MakeParamWithValue(object? value)
         {
-            string paramName = $"param{Counter.Next()}";
+            string paramName = $"{PARAM_NAME_PREFIX}param{Counter.Next()}";
             Parameters.Add(paramName, value);
             return paramName;
         }

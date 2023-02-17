@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 # nullable disable
 using System;
 using System.Collections.Generic;
@@ -70,7 +73,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             foreach (KeyValuePair<string, object> parameterEntry in structure.Parameters)
             {
-                querySpec = querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value);
+                querySpec = querySpec.WithParameter(parameterEntry.Key, parameterEntry.Value);
             }
 
             if (!string.IsNullOrEmpty(partitionKeyValue))
@@ -153,7 +156,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             foreach (KeyValuePair<string, object> parameterEntry in structure.Parameters)
             {
-                querySpec = querySpec.WithParameter("@" + parameterEntry.Key, parameterEntry.Value);
+                querySpec = querySpec.WithParameter(parameterEntry.Key, parameterEntry.Value);
             }
 
             FeedIterator<JObject> resultSetIterator = container.GetItemQueryIterator<JObject>(querySpec);
@@ -193,10 +196,34 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public IEnumerable<JsonDocument> ResolveListType(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
+        public object ResolveListType(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
         {
-            //TODO: Try to avoid additional deserialization/serialization here.
-            return JsonSerializer.Deserialize<List<JsonDocument>>(element.ToString());
+            IType listType = fieldSchema.Type;
+            // Is the List type nullable? [...]! vs [...]
+            if (listType.IsNonNullType())
+            {
+                listType = listType.InnerType().InnerType();
+            }
+            else
+            {
+                listType = listType.InnerType();
+            }
+
+            // Is the type of the list values nullable?
+            if (listType.IsNonNullType())
+            {
+                listType = listType.InnerType();
+            }
+
+            // Object types, such as the pagination field `items` will need to be
+            // walked as a JsonDocument not a JsonElement, so we'll return
+            // the JsonDocument here instead
+            if (listType.IsObjectType())
+            {
+                return JsonSerializer.Deserialize<List<JsonDocument>>(element);
+            }
+
+            return JsonSerializer.Deserialize(element, fieldSchema.RuntimeType);
         }
 
         /// <summary>

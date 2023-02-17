@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -216,7 +219,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             },
             {
                 "FindTestWithPrimaryKeyContainingForeignKey",
-                $"SELECT [id], [content] FROM reviews " +
+                $"SELECT [id], [content], [book_id] FROM reviews " +
                 $"WHERE id = 567 AND book_id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
@@ -260,7 +263,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             },
             {
                 "FindTestWithIntTypeNullValuesOrderByAsc",
-                $"SELECT id, int_types FROM type_table " +
+                $"SELECT id AS typeid, int_types FROM type_table " +
                 $"ORDER BY int_types asc, id asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
@@ -377,7 +380,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             },
             {
                 "FindTestWithSingleMappedFieldsToBeReturned",
-                $"SELECT [species] AS [Scientific Name] FROM { _integrationMappingTable } " +
+                $"SELECT [species] AS [Scientific Name], [treeId] FROM { _integrationMappingTable } " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {

@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System;
 using System.Collections.Generic;
 using System.IO.Abstractions;
@@ -40,6 +43,7 @@ type Planet @model(name:""Planet"") {
     age : Int,
     dimension : String,
     stars: [Star]
+    tags: [String!]
 }
 
 type Star @model(name:""StarAlias"") {

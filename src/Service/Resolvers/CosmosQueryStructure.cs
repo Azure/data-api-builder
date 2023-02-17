@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -145,7 +148,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     Predicates.Add(new Predicate(
                         new PredicateOperand(new Column(tableSchema: string.Empty, _containerAlias, parameter.Key)),
                         PredicateOperation.Equal,
-                        new PredicateOperand($"@{MakeParamWithValue(parameter.Value)}")
+                        new PredicateOperand($"{MakeParamWithValue(parameter.Value)}")
                     ));
                 }
             }

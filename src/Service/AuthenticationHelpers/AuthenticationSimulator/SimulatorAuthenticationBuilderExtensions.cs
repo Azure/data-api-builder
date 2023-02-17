@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using Microsoft.AspNetCore.Authentication;
 
 namespace Azure.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimulator

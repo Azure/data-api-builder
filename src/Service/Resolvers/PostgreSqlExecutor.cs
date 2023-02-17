@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System;
 using System.Data.Common;
 using System.Threading.Tasks;
@@ -46,7 +49,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public PostgreSqlQueryExecutor(
             RuntimeConfigProvider runtimeConfigProvider,
             DbExceptionParser dbExceptionParser,
-            ILogger<QueryExecutor<NpgsqlConnection>> logger)
+            ILogger<IQueryExecutor> logger)
             : base(dbExceptionParser,
                   logger,
                   new NpgsqlConnectionStringBuilder(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString),
@@ -55,6 +58,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
             _attemptToSetAccessToken =
                 ShouldManagedIdentityAccessBeAttempted();
+
+            if (runtimeConfigProvider.IsLateConfigured)
+            {
+                ConnectionStringBuilder.SslMode = SslMode.VerifyFull;
+            }
         }
 
         /// <summary>

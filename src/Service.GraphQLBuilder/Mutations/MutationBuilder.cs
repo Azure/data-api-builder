@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using HotChocolate.Language;
@@ -43,24 +46,30 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     // unlike table/views where we create one for each CUD operation.
                     if (entities[dbEntityName].ObjectType is SourceType.StoredProcedure)
                     {
-                        // If the role has actions other than READ, a schema for mutation will be generated.
-                        Operation storedProcedureOperation = GetOperationTypeForStoredProcedure(dbEntityName, entityPermissionsMap);
-                        if (storedProcedureOperation is not Operation.Read)
+                        // check graphql sp config
+                        string entityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
+                        Entity entity = entities[entityName];
+                        bool isSPDefinedAsMutation = entity.FetchConfiguredGraphQLOperation() is GraphQLOperation.Mutation;
+
+                        if (isSPDefinedAsMutation)
                         {
-                            AddMutationsForStoredProcedure(dbEntityName, storedProcedureOperation, entityPermissionsMap, name, entities, mutationFields);
+                            AddMutationsForStoredProcedure(dbEntityName, entityPermissionsMap, name, entities, mutationFields);
                         }
-
-                        continue;
                     }
-
-                    AddMutations(dbEntityName, operation: Operation.Create, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
-                    AddMutations(dbEntityName, operation: Operation.Update, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
-                    AddMutations(dbEntityName, operation: Operation.Delete, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
+                    else
+                    {
+                        AddMutations(dbEntityName, operation: Operation.Create, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
+                        AddMutations(dbEntityName, operation: Operation.Update, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
+                        AddMutations(dbEntityName, operation: Operation.Delete, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
+                    }
                 }
             }
 
             List<IDefinitionNode> definitionNodes = new();
-            // Only add mutation type if we have fields authorized for mutation operations
+
+            // Only add mutation type if we have fields authorized for mutation operations.
+            // Per GraphQL Specification (Oct 2021) https://spec.graphql.org/October2021/#sec-Root-Operation-Types
+            // "The mutation root operation type is optional; if it is not provided, the service does not support mutations."
             if (mutationFields.Count() > 0)
             {
                 definitionNodes.Add(new ObjectTypeDefinitionNode(null, new NameNode("Mutation"), null, new List<DirectiveNode>(), new List<NamedTypeNode>(), mutationFields));
@@ -68,21 +77,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             }
 
             return new(definitionNodes);
-        }
-
-        /// <summary>
-        /// Tries to fetch the Operation Type for Stored Procedure.
-        /// Stored Procedure currently supports exactly 1 CRUD operation at a time.
-        /// This check is done during initialization as part of config validation.
-        /// </summary>
-        private static Operation GetOperationTypeForStoredProcedure(
-            string dbEntityName,
-            Dictionary<string, EntityMetadata>? entityPermissionsMap)
-        {
-            List<Operation> operations = entityPermissionsMap![dbEntityName].OperationToRolesMap.Keys.ToList();
-
-            // Stored Procedure will have only CRUD action.
-            return operations.First();
         }
 
         /// <summary>
@@ -133,29 +127,35 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         }
 
         /// <summary>
-        /// Helper method to add the new StoredProcedure in the mutation fields
-        /// of GraphQL Schema
+        /// Uses the provided input arguments to add a stored procedure to the GraphQL schema as a mutation field when
+        /// at least one role with permission to execute is defined in the stored procedure's entity definition within the runtime config.
         /// </summary>
         private static void AddMutationsForStoredProcedure(
             string dbEntityName,
-            Operation operation,
             Dictionary<string, EntityMetadata>? entityPermissionsMap,
             NameNode name,
             IDictionary<string, Entity> entities,
             List<FieldDefinitionNode> mutationFields
             )
         {
-            IEnumerable<string> rolesAllowedForMutation = IAuthorizationResolver.GetRolesForOperation(dbEntityName, operation: operation, entityPermissionsMap);
+            IEnumerable<string> rolesAllowedForMutation = IAuthorizationResolver.GetRolesForOperation(dbEntityName, operation: Operation.Execute, entityPermissionsMap);
             if (rolesAllowedForMutation.Count() > 0)
             {
                 mutationFields.Add(GraphQLStoredProcedureBuilder.GenerateStoredProcedureSchema(name, entities[dbEntityName], rolesAllowedForMutation));
             }
         }
 
+        /// <summary>
+        /// Evaluates the provided mutation name to determine the operation type.
+        /// e.g. createEntity is resolved to Operation.Create
+        /// </summary>
+        /// <param name="inputTypeName">Mutation name</param>
+        /// <returns>Operation</returns>
         public static Operation DetermineMutationOperationTypeBasedOnInputType(string inputTypeName)
         {
             return inputTypeName switch
             {
+                string s when s.StartsWith(Operation.Execute.ToString(), StringComparison.OrdinalIgnoreCase) => Operation.Execute,
                 string s when s.StartsWith(Operation.Create.ToString(), StringComparison.OrdinalIgnoreCase) => Operation.Create,
                 string s when s.StartsWith(Operation.Update.ToString(), StringComparison.OrdinalIgnoreCase) => Operation.UpdateGraphQL,
                 _ => Operation.Delete

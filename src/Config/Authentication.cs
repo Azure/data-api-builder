@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 namespace Azure.DataApiBuilder.Config
 {
     /// <summary>
@@ -43,7 +46,7 @@ namespace Azure.DataApiBuilder.Config
     /// </summary>
     /// <param name="Audience"></param>
     /// <param name="Issuer"></param>
-    public record Jwt(string Audience, string Issuer);
+    public record Jwt(string? Audience, string? Issuer);
 
     /// <summary>
     /// Various EasyAuth modes in which the runtime can run.

@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -394,7 +397,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
-                        SELECT id, content
+                        SELECT id, book_id, content
                         FROM reviews" + @"
                         WHERE id = 567 AND book_id = 1
                         ORDER BY id asc
@@ -481,7 +484,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                   SELECT json_agg(to_jsonb(subq)) AS data
                   FROM (
-                      SELECT id, int_types
+                      SELECT id as typeid, int_types
                       FROM " + _integrationTypeTable + @"
                       ORDER BY int_types asc, id asc
                   ) AS subq"
@@ -696,7 +699,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                     SELECT json_agg(to_jsonb(subq)) AS data
                     FROM (
-                        SELECT  ""species"" AS ""Scientific Name""
+                        SELECT  ""treeId"" AS ""treeId"", ""species"" AS ""Scientific Name""
                         FROM " + _integrationMappingTable + @"
                     ) AS subq
                 "

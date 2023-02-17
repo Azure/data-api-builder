@@ -1,7 +1,12 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Config
@@ -118,13 +123,49 @@ namespace Azure.DataApiBuilder.Config
         /// </summary>
         public static string GetPublishedDraftSchemaLink()
         {
-            string assemblyDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            string schemaPath = Path.Combine(assemblyDirectory, "dab.draft.schema.json");
+            string? assemblyDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
+            if (assemblyDirectory is null)
+            {
+                throw new DataApiBuilderException(
+                    message: "Could not get the link for DAB draft schema.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            string? schemaPath = Path.Combine(assemblyDirectory, "dab.draft.schema.json");
             string schemaFileContent = File.ReadAllText(schemaPath);
-            Dictionary<string, object> jsonDictionary = JsonSerializer.Deserialize<Dictionary<string, object>>(schemaFileContent)!;
-            Dictionary<string, string> properties = JsonSerializer.Deserialize<Dictionary<string, string>>(jsonDictionary["additionalProperties"].ToString())!;
-            return properties["version"];
+            Dictionary<string, object>? jsonDictionary = JsonSerializer.Deserialize<Dictionary<string, object>>(schemaFileContent);
+
+            if (jsonDictionary is null)
+            {
+                throw new DataApiBuilderException(
+                    message: "The schema file is misconfigured. Please check the file formatting.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            object? additionalProperties;
+            if (!jsonDictionary.TryGetValue("additionalProperties", out additionalProperties))
+            {
+                throw new DataApiBuilderException(
+                    message: "The schema file doesn't have the required field : additionalProperties",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            // properties cannot be null since the property additionalProperties exist in the schema file.
+            Dictionary<string, string> properties = JsonSerializer.Deserialize<Dictionary<string, string>>(additionalProperties.ToString()!)!;
+
+            string? versionNum;
+            if (!properties.TryGetValue("version", out versionNum))
+            {
+                throw new DataApiBuilderException(message: "Missing required property 'version' in additionalProperties section.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            return versionNum;
         }
 
         /// <summary>

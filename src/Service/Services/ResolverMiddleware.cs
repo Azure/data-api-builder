@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -165,7 +168,7 @@ namespace Azure.DataApiBuilder.Service.Services
         protected static bool TryGetPropertyFromParent(IMiddlewareContext context, out JsonElement jsonElement)
         {
             JsonDocument result = context.Parent<JsonDocument>();
-            if (result == null)
+            if (result is null)
             {
                 jsonElement = default;
                 return false;

@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 namespace Cli.Tests
 {
     /// <summary>
@@ -44,7 +47,10 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null)
+                ;
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -117,7 +123,10 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -191,7 +200,10 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -262,7 +274,10 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                         ""entities"": {
@@ -361,7 +376,10 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -430,7 +448,10 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                         ""entities"": {
@@ -542,7 +563,10 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                         ""entities"": {
@@ -663,7 +687,10 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             Relationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
 
@@ -705,7 +732,10 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             Relationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
 
@@ -747,7 +777,10 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             Relationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
 
@@ -797,7 +830,9 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { },
-                config: _testRuntimeConfig
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
             );
 
             string? actualConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY);
@@ -824,7 +859,6 @@ namespace Cli.Tests
         /// </summary>
         [DataTestMethod]
         [DataRow("s001.book", null, new string[] { "anonymous", "*" }, null, null, "UpdateSourceName", DisplayName = "Updating sourceName with no change in parameters or keyfields.")]
-        [DataRow(null, "stored-procedure", null, new string[] { "param1:123", "param2:hello", "param3:true" }, null, "ConvertToStoredProcedure", DisplayName = "SourceParameters with stored procedure.")]
         [DataRow(null, "view", null, null, new string[] { "col1", "col2" }, "ConvertToView", DisplayName = "Source KeyFields with View")]
         [DataRow(null, "table", null, null, new string[] { "id", "name" }, "ConvertToTable", DisplayName = "Source KeyFields with Table")]
         [DataRow(null, null, null, null, new string[] { "id", "name" }, "ConvertToDefaultType", DisplayName = "Source KeyFields with SourceType not provided")]
@@ -858,7 +892,9 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { },
-                config: _testRuntimeConfig
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
             );
 
             string? actualConfig = AddPropertiesToJson(INITIAL_CONFIG, BASIC_ENTITY_WITH_ANONYMOUS_ROLE);
@@ -868,10 +904,6 @@ namespace Cli.Tests
                 case "UpdateSourceName":
                     actualConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY);
                     expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, BASIC_ENTITY_WITH_ANONYMOUS_ROLE);
-                    break;
-                case "ConvertToStoredProcedure":
-                    actualConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_ONLY_READ_PERMISSION);
-                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
                     break;
                 case "ConvertToView":
                     expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_SOURCE_AS_VIEW);
@@ -886,21 +918,27 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Simple test to verify success on updating a source's value type from string to object.
+        /// Validate behavior of updating a source's value type from string to object.
         /// </summary>
+        /// <param name="source">Name of database object.</param>
+        /// <param name="parameters">Stored Procedure Parameters</param>
+        /// <param name="keyFields">Primary key fields</param>
+        /// <param name="permissionConfig">Permissions role:action</param>
+        /// <param name="task">Denotes which test/assertion is made on updated entity.</param>
         [DataTestMethod]
-        [DataRow("newSourceName", null, null, "UpdateSourceName", DisplayName = "Update Source Name of the source object.")]
-        [DataRow(null, new string[] { "param1:dab", "param2:false" }, null, "UpdateParameters", DisplayName = "update Parameters of stored procedure.")]
-        [DataRow(null, null, new string[] { "col1", "col2" }, "UpdateKeyFields", DisplayName = "update KeyFields for table/view.")]
+        [DataRow("newSourceName", null, null, new string[] { "anonymous", "execute" }, "UpdateSourceName", DisplayName = "Update Source Name of the source object.")]
+        [DataRow(null, new string[] { "param1:dab", "param2:false" }, null, new string[] { "anonymous", "execute" }, "UpdateParameters", DisplayName = "Update Parameters of stored procedure.")]
+        [DataRow(null, null, new string[] { "col1", "col2" }, new string[] { "anonymous", "read" }, "UpdateKeyFields", DisplayName = "Update KeyFields for table/view.")]
         public void TestUpdateDatabaseSourceObject(
             string? source,
             IEnumerable<string>? parameters,
             IEnumerable<string>? keyFields,
+            IEnumerable<string>? permissionConfig,
             string task)
         {
             UpdateOptions options = new(
                 source: source,
-                permissions: new string[] { "anonymous", "read" },
+                permissions: permissionConfig,
                 entity: "MyEntity",
                 sourceType: null,
                 sourceParameters: parameters,
@@ -919,7 +957,9 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { },
-                config: _testRuntimeConfig
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
             );
 
             string? initialConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
@@ -984,10 +1024,10 @@ namespace Cli.Tests
         /// </summary>
         [DataTestMethod]
         [DataRow(SINGLE_ENTITY_WITH_ONLY_READ_PERMISSION, "stored-procedure", new string[] { "param1:123", "param2:hello", "param3:true" },
-            null, SINGLE_ENTITY_WITH_STORED_PROCEDURE, null, false, true,
+            null, SINGLE_ENTITY_WITH_STORED_PROCEDURE, new string[] { "anonymous", "execute" }, false, true,
             DisplayName = "PASS:Convert table to stored-procedure with valid parameters.")]
         [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "stored-procedure", null, new string[] { "col1", "col2" },
-            SINGLE_ENTITY_WITH_STORED_PROCEDURE, new string[] { "anonymous", "read" }, false, false,
+            SINGLE_ENTITY_WITH_STORED_PROCEDURE, new string[] { "anonymous", "execute" }, false, false,
             DisplayName = "FAIL:Convert table to stored-procedure with invalid KeyFields.")]
         [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "stored-procedure", null, null, SINGLE_ENTITY_WITH_STORED_PROCEDURE, null,
             true, false, DisplayName = "FAIL:Convert table with wildcard CRUD operation to stored-procedure.")]
@@ -1039,7 +1079,9 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { },
-                config: _testRuntimeConfig
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
             );
 
             string runtimeConfig = AddPropertiesToJson(INITIAL_CONFIG, initialSourceObjectEntity);
@@ -1133,7 +1175,9 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { },
-                config: _testRuntimeConfig
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
             );
 
             string? actualConfig = AddPropertiesToJson(INITIAL_CONFIG, ENTITY_CONFIG_WITH_POLCIY_AND_ACTION_FIELDS);
@@ -1171,17 +1215,16 @@ namespace Cli.Tests
         /// <summary>
         /// Test to verify updating permissions for stored-procedure.
         /// Checks: 
-        /// 1. Updating with WILDCARD/multiple CRUD action should fail.
-        /// 2. Adding a new role should have the same single CRUD operation as the existing one.
+        /// 1. Updating a stored-procedure with WILDCARD/CRUD action should fail.
+        /// 2. Adding a new role/Updating an existing role with execute action should succeeed.
         /// </summary>
         [DataTestMethod]
-        [DataRow("anonymous", "*", false, DisplayName = "FAIL: Stored-Procedure incorrectly updated with wildcard CRUD operation for an existing role.")]
-        [DataRow("anonymous", "create", true, DisplayName = "PASS: Stored-Procedure with 1 CRUD operation for an existing role.")]
-        [DataRow("anonymous", "create,read", false, DisplayName = "FAIL: Stored-Procedure with more than 1 CRUD operation for an existing role.")]
-        [DataRow("authenticated", "*", false, DisplayName = "FAIL: Stored-Procedure with wildcard CRUD operation for a new role.")]
-        [DataRow("authenticated", "create", true, DisplayName = "PASS: Stored-Procedure with 1 CRUD operation for a new role.")]
-        [DataRow("authenticated", "read", true, DisplayName = "PASS: Stored-Procedure with same single CRUD operation for a new role as that of existing one.")]
-        [DataRow("authenticated", "create,read", false, DisplayName = "FAIL: Stored-Procedure with more than 1 CRUD operation for a new role.")]
+        [DataRow("anonymous", "*", false, DisplayName = "FAIL: Stored-Procedure updated with wildcard operation")]
+        [DataRow("anonymous", "execute", true, DisplayName = "PASS: Stored-Procedure updated with execute operation")]
+        [DataRow("anonymous", "create,read", false, DisplayName = "FAIL: Stored-Procedure updated with CRUD action.")]
+        [DataRow("authenticated", "*", false, DisplayName = "FAIL: Stored-Procedure updated with wildcard operation for an existing role.")]
+        [DataRow("authenticated", "execute", true, DisplayName = "PASS: Stored-Procedure updated with execute operation for an existing role.")]
+        [DataRow("authenticated", "create,read", false, DisplayName = "FAIL: Stored-Procedure updated with CRUD action for an existing role.")]
         public void TestUpdatePermissionsForStoredProcedure(
             string role,
             string operations,
@@ -1209,7 +1252,10 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
 
@@ -1243,7 +1289,10 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { "id:Identity", "name:Company Name" },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -1282,7 +1331,8 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Test to Update stored procedure action
+        /// Test to Update stored procedure action. Stored procedures support only execute action. 
+        /// An attempt to update to another action should be unsuccessful.
         /// </summary>
         [TestMethod]
         public void TestUpdateActionOfStoredProcedureRole()
@@ -1308,7 +1358,10 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: null,
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -1321,13 +1374,13 @@ namespace Cli.Tests
                                     {
                                     ""role"": ""anonymous"",
                                     ""actions"": [
-                                            ""read""
+                                            ""execute""
                                         ]
                                     },
                                     {
                                     ""role"": ""authenticated"",
                                     ""actions"": [
-                                            ""read""
+                                            ""execute""
                                         ]
                                     }
                                 ]
@@ -1335,33 +1388,7 @@ namespace Cli.Tests
                         }
                     }";
 
-            string expectedConfig = GetInitialConfigString() + "," + @"
-                    ""entities"": {
-                            ""MyEntity"": {
-                                ""source"": {
-                                    ""object"": ""MySp"",
-                                    ""type"": ""stored-procedure""
-                                },
-                                ""permissions"": [
-                                    {
-                                    ""role"": ""anonymous"",
-                                    ""actions"": [
-                                            ""read""
-                                        ]
-                                    },
-                                    {
-                                    ""role"": ""authenticated"",
-                                    ""actions"": [
-                                            ""create""
-                                        ]
-                                    }
-                                ]
-                            }
-                        }
-                    }";
-
-            Assert.IsTrue(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
-            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfig), JObject.Parse(runtimeConfig)));
+            Assert.IsFalse(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
         }
 
         /// <summary>
@@ -1391,7 +1418,10 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { "Macaroni:Mac & Cheese", "region:United State's Region", "russian:русский", "chinese:中文" },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -1458,7 +1488,10 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { "name:Company Name", "addr:Company Address", "number:Contact Details" },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = GetConfigWithMappings();
 
@@ -1483,6 +1516,191 @@ namespace Cli.Tests
 
             Assert.IsTrue(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
             Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfig), JObject.Parse(runtimeConfig)));
+        }
+
+        /// <summary>
+        /// Test to validate various updates to various combinations of
+        /// REST path, REST methods, GraphQL Type and GraphQL Operation are working as intended.
+        /// </summary>
+        /// <param name="restMethods">List of REST Methods that are configured for the entity</param>
+        /// <param name="graphQLOperation">GraphQL Operation configured for the entity</param>
+        /// <param name="restRoute">REST Path configured for the entity</param>
+        /// <param name="graphQLType">GraphQL Type configured for the entity</param>
+        /// <param name="testType">Scenario that is tested. It is also used to construct the expected JSON.</param>
+        [DataTestMethod]
+        [DataRow(null, null, "true", null, "RestEnabled", DisplayName = "Entity Update - REST enabled without any methods explicitly configured")]
+        [DataRow(null, null, "book", null, "CustomRestPath", DisplayName = "Entity Update - Custom REST path defined without any methods explictly configured")]
+        [DataRow(new string[] { "Get", "Post", "Patch" }, null, null, null, "RestMethods", DisplayName = "Entity Update - REST methods defined without REST Path explicitly configured")]
+        [DataRow(new string[] { "Get", "Post", "Patch" }, null, "true", null, "RestEnabledWithMethods", DisplayName = "Entity Update - REST enabled along with some methods")]
+        [DataRow(new string[] { "Get", "Post", "Patch" }, null, "book", null, "CustomRestPathWithMethods", DisplayName = "Entity Update - Custom REST path defined along with some methods")]
+        [DataRow(null, null, null, "true", "GQLEnabled", DisplayName = "Entity Update - GraphQL enabled without any operation explicitly configured")]
+        [DataRow(null, null, null, "book", "GQLCustomType", DisplayName = "Entity Update - Custom GraphQL Type defined without any operation explicitly configured")]
+        [DataRow(null, null, null, "book:books", "GQLSingularPluralCustomType", DisplayName = "Entity Update - SingularPlural GraphQL Type enabled without any operation explicitly configured")]
+        [DataRow(null, "Query", null, "true", "GQLEnabledWithCustomOperation", DisplayName = "Entity Update - GraphQL enabled with Query operation")]
+        [DataRow(null, "Query", null, "book", "GQLCustomTypeAndOperation", DisplayName = "Entity Update - Custom GraphQL Type defined along with Query operation")]
+        [DataRow(null, "Query", null, "book:books", "GQLSingularPluralTypeAndOperation", DisplayName = "Entity Update - SingularPlural GraphQL Type defined along with Query operation")]
+        [DataRow(null, null, "true", "true", "RestAndGQLEnabled", DisplayName = "Entity Update - Both REST and GraphQL enabled without any methods and operations configured explicitly")]
+        [DataRow(null, null, "false", "false", "RestAndGQLDisabled", DisplayName = "Entity Update - Both REST and GraphQL disabled without any methods and operations configured explicitly")]
+        [DataRow(new string[] { "Get" }, "Query", "true", "true", "CustomRestMethodAndGqlOperation", DisplayName = "Entity Update - Both REST and GraphQL enabled with custom REST methods and GraphQL operations")]
+        [DataRow(new string[] { "Post", "Patch", "Put" }, "Query", "book", "book:books", "CustomRestAndGraphQLAll", DisplayName = "Entity Update - Configuration with REST Path, Methods and GraphQL Type, Operation")]
+        public void TestUpdateRestAndGraphQLSettingsForStoredProcedures(
+            IEnumerable<string>? restMethods,
+            string? graphQLOperation,
+            string? restRoute,
+            string? graphQLType,
+            string testType)
+        {
+            UpdateOptions options = new(
+                source: null,
+                permissions: null,
+                entity: "MyEntity",
+                sourceType: null,
+                sourceParameters: null,
+                sourceKeyFields: null,
+                restRoute: restRoute,
+                graphQLType: graphQLType,
+                fieldsToInclude: new string[] { },
+                fieldsToExclude: new string[] { },
+                policyRequest: null,
+                policyDatabase: null,
+                relationship: null,
+                cardinality: null,
+                targetEntity: null,
+                linkingObject: null,
+                linkingSourceFields: new string[] { },
+                linkingTargetFields: new string[] { },
+                relationshipFields: new string[] { },
+                map: null,
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: restMethods,
+                graphQLOperationForStoredProcedure: graphQLOperation
+                );
+
+            string runtimeConfig = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_METHODS_GRAPHQL_OPERATION);
+
+            string expectedConfiguration = "";
+            switch (testType)
+            {
+                case "RestEnabled":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_ENABLED);
+                    break;
+                }
+                case "CustomRestPath":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_PATH);
+                    break;
+                }
+                case "RestMethods":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_METHODS);
+                    break;
+                }
+                case "RestEnabledWithMethods":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_REST_ENABLED_WITH_CUSTOM_REST_METHODS);
+                    break;
+                }
+                case "CustomRestPathWithMethods":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_PATH_WITH_CUSTOM_REST_METHODS);
+                    break;
+                }
+                case "GQLEnabled":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_GRAPHQL_ENABLED);
+                    break;
+                }
+                case "GQLCustomType":
+                case "GQLSingularPluralCustomType":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_GRAPHQL_CUSTOM_TYPE);
+                    break;
+                }
+                case "GQLEnabledWithCustomOperation":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_GRAPHQL_ENABLED_WITH_CUSTOM_OPERATION);
+                    break;
+                }
+                case "GQLCustomTypeAndOperation":
+                case "GQLSingularPluralTypeAndOperation":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_GRAPHQL_ENABLED_WITH_CUSTOM_TYPE_OPERATION);
+                    break;
+                }
+                case "RestAndGQLEnabled":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_REST_GRAPHQL_ENABLED);
+                    break;
+                }
+                case "RestAndGQLDisabled":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_REST_GRAPHQL_DISABLED);
+                    break;
+                }
+                case "CustomRestMethodAndGqlOperation":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_METHOD_GRAPHQL_OPERATION);
+                    break;
+                }
+                case "CustomRestAndGraphQLAll":
+                {
+                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_GRAPHQL_ALL);
+                    break;
+                }
+            }
+
+            Assert.IsTrue(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
+            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfiguration), JObject.Parse(runtimeConfig)));
+        }
+
+        /// <summary>
+        /// Validates that updating an entity with conflicting options such as disabling an entity
+        /// for GraphQL but specifying GraphQL Operations results in a failure. Likewise for REST Path and
+        /// Methods.
+        /// </summary>
+        /// <param name="restMethods"></param>
+        /// <param name="graphQLOperation"></param>
+        /// <param name="restRoute"></param>
+        /// <param name="graphQLType"></param>
+        [DataTestMethod]
+        [DataRow(null, "Mutation", "true", "false", DisplayName = "Conflicting configurations during update - GraphQL operation specified but entity is disabled for GraphQL")]
+        [DataRow(new string[] { "Get" }, null, "false", "true", DisplayName = "Conflicting configurations during update - REST methods specified but entity is disabled for REST")]
+        public void TestUpdatetoredProcedureWithConflictingRestGraphQLOptions(
+            IEnumerable<string>? restMethods,
+                string? graphQLOperation,
+                string? restRoute,
+                string? graphQLType
+                )
+        {
+            UpdateOptions options = new(
+                source: null,
+                permissions: null,
+                entity: "MyEntity",
+                sourceType: null,
+                sourceParameters: null,
+                sourceKeyFields: null,
+                restRoute: restRoute,
+                graphQLType: graphQLType,
+                fieldsToInclude: new string[] { },
+                fieldsToExclude: new string[] { },
+                policyRequest: null,
+                policyDatabase: null,
+                relationship: null,
+                cardinality: null,
+                targetEntity: null,
+                linkingObject: null,
+                linkingSourceFields: new string[] { },
+                linkingTargetFields: new string[] { },
+                relationshipFields: new string[] { },
+                map: null,
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: restMethods,
+                graphQLOperationForStoredProcedure: graphQLOperation
+                );
+
+            string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_METHODS_GRAPHQL_OPERATION);
+            Assert.IsFalse(ConfigGenerator.TryUpdateExistingEntity(options, ref initialConfiguration));
         }
 
         #endregion
@@ -1518,7 +1736,10 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -1580,7 +1801,10 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
 
@@ -1630,7 +1854,10 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: null,
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             Relationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
 
@@ -1667,7 +1894,10 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: mappings.Split(','),
-                config: _testRuntimeConfig);
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+                );
 
             string runtimeConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
@@ -1719,7 +1949,9 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: null,
-                config: _testRuntimeConfig
+                config: _testRuntimeConfig,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
             );
 
             string runtimeConfig = GetConfigWithMappings();

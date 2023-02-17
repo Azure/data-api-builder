@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -79,7 +82,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         MakeCursorFromJsonElement(
                             lastElemInRoot,
                             paginationMetadata.Structure!.PrimaryKey(),
-                            paginationMetadata.Structure!.OrderByColumns));
+                            paginationMetadata.Structure!.OrderByColumns,
+                            paginationMetadata.Structure!.EntityName,
+                            paginationMetadata.Structure!.DatabaseObject.SchemaName,
+                            paginationMetadata.Structure!.DatabaseObject.Name,
+                            paginationMetadata.Structure!.MetadataProvider));
                 }
             }
 
@@ -140,13 +147,23 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 foreach (OrderByColumn column in orderByColumns)
                 {
                     string? exposedColumnName = GetExposedColumnName(entityName, column.ColumnName, sqlMetadataProvider);
-                    object? value = ResolveJsonElementToScalarVariable(element.GetProperty(exposedColumnName));
-                    cursorJson.Add(new PaginationColumn(tableSchema: schemaName,
+                    if (TryResolveJsonElementToScalarVariable(element.GetProperty(exposedColumnName), out object? value))
+                    {
+                        cursorJson.Add(new PaginationColumn(tableSchema: schemaName,
                                                         tableName: tableName,
                                                         exposedColumnName,
                                                         value,
                                                         tableAlias: null,
                                                         direction: column.Direction));
+                    }
+                    else
+                    {
+                        throw new DataApiBuilderException(
+                            message: "Incompatible data to create pagination cursor.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorProcessingData);
+                    }
+
                     remainingKeys.Remove(column.ColumnName);
                 }
             }
@@ -166,11 +183,22 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 if (remainingKeys.Contains(column))
                 {
                     string? exposedColumnName = GetExposedColumnName(entityName, column, sqlMetadataProvider);
-                    cursorJson.Add(new PaginationColumn(tableSchema: schemaName,
+                    if (TryResolveJsonElementToScalarVariable(element.GetProperty(column), out object? value))
+                    {
+                        cursorJson.Add(new PaginationColumn(tableSchema: schemaName,
                                                         tableName: tableName,
                                                         exposedColumnName,
-                                                        ResolveJsonElementToScalarVariable(element.GetProperty(column)),
+                                                        value,
                                                         direction: OrderBy.ASC));
+                    }
+                    else
+                    {
+                        throw new DataApiBuilderException(
+                           message: "Incompatible data to create pagination cursor.",
+                           statusCode: HttpStatusCode.BadRequest,
+                           subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorProcessingData);
+                    }
+
                     remainingKeys.Remove(column);
                 }
             }
@@ -371,18 +399,62 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
-        /// Resolves a JsonElement representing a variable to the appropriate type
+        /// Tries to resolve a JsonElement representing a variable to the appropriate type
         /// </summary>
-        /// <exception cref="ArgumentException" />
-        public static object? ResolveJsonElementToScalarVariable(JsonElement element) => element.ValueKind switch
+        /// <param name="element">The Json element to convert from.</param>
+        /// <param name="scalarVariable">The scalar into which the element is resolved based on its ValueKind.</param>
+        /// <returns>True when resolution is successful, false otherwise.</returns>
+        public static bool TryResolveJsonElementToScalarVariable(
+            JsonElement element,
+            out object? scalarVariable)
         {
-            JsonValueKind.String => element.GetString()!,
-            JsonValueKind.Number => element.GetInt64(),
-            JsonValueKind.Null => null,
-            JsonValueKind.True => true,
-            JsonValueKind.False => false,
-            _ => throw new ArgumentException("Unexpected JsonElement value"),
-        };
+            bool resolved = true;
+            scalarVariable = null;
+            switch (element.ValueKind)
+            {
+                case JsonValueKind.String:
+                {
+                    scalarVariable = element.GetString();
+                    break;
+                }
+
+                case JsonValueKind.Number:
+                {
+                    if (element.TryGetDouble(out double value))
+                    {
+                        scalarVariable = value;
+                    }
+
+                    break;
+                }
+
+                case JsonValueKind.Null:
+                {
+                    scalarVariable = null;
+                    break;
+                }
+
+                case JsonValueKind.True:
+                {
+                    scalarVariable = true;
+                    break;
+                }
+
+                case JsonValueKind.False:
+                {
+                    scalarVariable = false;
+                    break;
+                }
+
+                default:
+                {
+                    resolved = false;
+                    break;
+                }
+            }
+
+            return resolved;
+        }
 
         /// <summary>
         /// Encodes string to base64

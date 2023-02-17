@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -69,6 +72,22 @@ query{
 
             // Validate results
             Assert.AreEqual(id, response.GetProperty("id").GetString());
+        }
+
+        [TestMethod]
+        public async Task GetListOfString()
+        {
+            string id = _idList[0];
+            JsonElement response = await ExecuteGraphQLRequestAsync("planet_by_pk", @"
+query ($id: ID, $partitionKeyValue: String) {
+    planet_by_pk (id: $id, _partitionKeyValue: $partitionKeyValue) {
+        tags
+    }
+}", new() { { "id", id }, { "partitionKeyValue", id } });
+
+            string[] tags = response.GetProperty("tags").Deserialize<string[]>();
+            Assert.AreEqual(2, tags.Length);
+            CollectionAssert.AreEqual(new[] { "tag1", "tag2" }, tags);
         }
 
         [TestMethod]

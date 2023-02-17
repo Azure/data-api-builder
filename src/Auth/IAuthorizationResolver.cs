@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using Azure.DataApiBuilder.Config;
 using Microsoft.AspNetCore.Http;
 
@@ -82,6 +85,16 @@ namespace Azure.DataApiBuilder.Auth
         /// <param name="operation">Specific operation to get collection of roles</param>
         /// <returns>Collection of role names allowed to perform operation on Entity's field.</returns>
         public IEnumerable<string> GetRolesForField(string entityName, string field, Operation operation);
+
+        /// <summary>
+        /// Returns whether the httpVerb (GET, POST, PUT, PATCH, DELETE) is allowed to be performed
+        /// on the stored procedure (represented by entityName) for the role: roleName.
+        /// </summary>
+        /// <param name="entityName"></param>
+        /// <param name="roleName"></param>
+        /// <param name="httpVerb"></param>
+        /// <returns>True if the execution of the stored procedure is permitted. Otherwise, false.</returns>
+        public bool IsStoredProcedureExecutionPermitted(string entityName, string roleName, RestMethod httpVerb);
 
         /// <summary>
         /// Returns a list of roles which define permissions for the provided operation.

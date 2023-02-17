@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 namespace Cli.Tests
 {
     public static class TestHelper
@@ -46,6 +49,7 @@ namespace Cli.Tests
 
             // The new process should not be exited after triggering the start command.
             Assert.IsFalse(process.HasExited);
+
             return process;
         }
 
@@ -236,12 +240,489 @@ namespace Cli.Tests
                   {
                     ""role"": ""anonymous"",
                     ""actions"": [
-                      ""read""
+                      ""execute""
                     ]
                   }
-                ]
+                ],
+                ""rest"": {
+                    ""methods"": [
+                      ""post""
+                    ]
+                  },
+                  ""graphql"": {
+                    ""operation"": ""Mutation""
+                      }
+                    }
+                  }
+          }";
+
+        public const string SP_DEFAULT_REST_METHODS_GRAPHQL_OPERATION = @"{
+              ""entities"": {
+              ""MyEntity"": {
+                ""source"": {
+                  ""type"": ""stored-procedure"",
+                  ""object"": ""s001.book""
+                },
+                ""permissions"": [
+                  {
+                    ""role"": ""anonymous"",
+                    ""actions"": [
+                      ""execute""
+                    ]
+                  }
+                ],
+                ""rest"": {
+                  ""methods"": [	
+                      ""post""
+                    ]	
+                },	
+                ""graphql"": {	
+                    ""operation"": ""Mutation""	
+                      }
+                    }
+                  }
+          }";
+
+        public const string SP_GRAPHQL_ENABLED = @"{
+              ""entities"": {
+              ""MyEntity"": {
+                ""source"": {
+                  ""type"": ""stored-procedure"",
+                  ""object"": ""s001.book""
+                },
+                ""permissions"": [
+                  {
+                    ""role"": ""anonymous"",
+                    ""actions"": [
+                      ""execute""
+                    ]
+                  }
+                ],
+                ""rest"": {
+                  ""methods"": [	
+                      ""post""
+                    ]	
+                },	
+                ""graphql"": {
+                    ""type"": true,
+                    ""operation"": ""Mutation""	
+                      }
+                    }
+                  }
+          }";
+
+        public const string SP_GRAPHQL_CUSTOM_TYPE = @"{
+              ""entities"": {
+              ""MyEntity"": {
+                ""source"": {
+                  ""type"": ""stored-procedure"",
+                  ""object"": ""s001.book""
+                },
+                ""permissions"": [
+                  {
+                    ""role"": ""anonymous"",
+                    ""actions"": [
+                      ""execute""
+                    ]
+                  }
+                ],
+                ""rest"": {
+                  ""methods"": [	
+                      ""post""
+                    ]	
+                },	
+                ""graphql"": {
+                    ""type"": {
+                        ""singular"": ""book"",
+                        ""plural"": ""books""
+                    },
+                        ""operation"": ""Mutation""	
+                      }
+                    }
+                  }
+          }";
+
+        public const string SP_GRAPHQL_ENABLED_WITH_CUSTOM_OPERATION = @"{
+              ""entities"": {
+              ""MyEntity"": {
+                ""source"": {
+                  ""type"": ""stored-procedure"",
+                  ""object"": ""s001.book""
+                },
+                ""permissions"": [
+                  {
+                    ""role"": ""anonymous"",
+                    ""actions"": [
+                      ""execute""
+                    ]
+                  }
+                ],
+                ""rest"": {
+                  ""methods"": [	
+                      ""post""
+                    ]	
+                },	
+                ""graphql"": {
+                    ""type"": true,
+                     ""operation"": ""Query""	
+                      }
+                    }
+                  }
+          }";
+
+        public const string SP_GRAPHQL_ENABLED_WITH_CUSTOM_TYPE_OPERATION = @"{
+              ""entities"": {
+              ""MyEntity"": {
+                ""source"": {
+                  ""type"": ""stored-procedure"",
+                  ""object"": ""s001.book""
+                },
+                ""permissions"": [
+                  {
+                    ""role"": ""anonymous"",
+                    ""actions"": [
+                      ""execute""
+                    ]
+                  }
+                ],
+                ""rest"": {
+                  ""methods"": [	
+                      ""post""
+                    ]	
+                },	
+                ""graphql"": {
+                    ""type"": {
+                      ""singular"": ""book"",
+                        ""plural"": ""books""
+                    },
+                     ""operation"": ""Query""	
+                      }
+                    }
+                  }
+          }";
+
+        public const string SP_REST_GRAPHQL_ENABLED = @"{
+              ""entities"": {
+              ""MyEntity"": {
+                ""source"": {
+                  ""type"": ""stored-procedure"",
+                  ""object"": ""s001.book""
+                },
+                ""permissions"": [
+                  {
+                    ""role"": ""anonymous"",
+                    ""actions"": [
+                      ""execute""
+                    ]
+                  }
+                ],
+                ""rest"": {
+                  ""path"":true,
+                  ""methods"": [	
+                      ""post""
+                    ]	
+                },	
+                ""graphql"": {
+                    ""type"": true,
+                     ""operation"": ""Mutation""	
+                      }
+                    }
+                  }
+          }";
+
+        public const string SP_REST_GRAPHQL_DISABLED = @"{
+              ""entities"": {
+              ""MyEntity"": {
+                ""source"": {
+                  ""type"": ""stored-procedure"",
+                  ""object"": ""s001.book""
+                },
+                ""permissions"": [
+                  {
+                    ""role"": ""anonymous"",
+                    ""actions"": [
+                      ""execute""
+                    ]
+                  }
+                ],
+                ""rest"": false,	
+                ""graphql"": false
+                }
               }
-            }
+          }";
+
+        public const string SP_CUSTOM_REST_METHOD_GRAPHQL_OPERATION = @"{
+              ""entities"": {
+              ""MyEntity"": {
+                ""source"": {
+                  ""type"": ""stored-procedure"",
+                  ""object"": ""s001.book""
+                },
+                ""permissions"": [
+                  {
+                    ""role"": ""anonymous"",
+                    ""actions"": [
+                      ""execute""
+                    ]
+                  }
+                ],
+                ""rest"": {
+                  ""path"":true,
+                  ""methods"": [	
+                      ""get""
+                    ]	
+                },	
+                ""graphql"": {
+                    ""type"": true,
+                     ""operation"": ""Query""	
+                      }
+                    }
+                  }
+          }";
+
+        public const string SP_CUSTOM_REST_GRAPHQL_ALL = @"{
+              ""entities"": {
+              ""MyEntity"": {
+                ""source"": {
+                  ""type"": ""stored-procedure"",
+                  ""object"": ""s001.book""
+                },
+                ""permissions"": [
+                  {
+                    ""role"": ""anonymous"",
+                    ""actions"": [
+                      ""execute""
+                    ]
+                  }
+                ],
+                ""rest"": {
+                  ""path"":""/book"",
+                  ""methods"": [	
+                      ""post"",
+                      ""patch"",
+                      ""put""
+                    ]	
+                },	
+                ""graphql"": {
+                    ""type"": {
+                      ""singular"":""book"",
+                      ""plural"":""books""
+                    },
+                     ""operation"": ""Query""	
+                      }
+                    }
+                  }
+          }";
+
+        public const string SP_DEFAULT_REST_ENABLED = @"{
+              ""entities"": {
+              ""MyEntity"": {
+                ""source"": {
+                  ""type"": ""stored-procedure"",
+                  ""object"": ""s001.book""
+                },
+                ""permissions"": [
+                  {
+                    ""role"": ""anonymous"",
+                    ""actions"": [
+                      ""execute""
+                    ]
+                  }
+                ],
+                ""rest"": {
+                  ""path"": true,
+                  ""methods"": [	
+                      ""post""
+                    ]	
+                },	
+                ""graphql"": {	
+                    ""operation"": ""Mutation""	
+                      }
+                    }
+                  }
+          }";
+
+        public const string SP_CUSTOM_REST_PATH = @"{
+              ""entities"": {
+              ""MyEntity"": {
+                ""source"": {
+                  ""type"": ""stored-procedure"",
+                  ""object"": ""s001.book""
+                },
+                ""permissions"": [
+                  {
+                    ""role"": ""anonymous"",
+                    ""actions"": [
+                      ""execute""
+                    ]
+                  }
+                ],
+                ""rest"": {
+                  ""path"": ""/book"",
+                  ""methods"": [	
+                      ""post""
+                    ]	
+                },	
+                ""graphql"": {	
+                    ""operation"": ""Mutation""	
+                      }
+                    }
+                  }
+          }";
+
+        public const string SP_CUSTOM_REST_METHODS = @"{
+              ""entities"": {
+              ""MyEntity"": {
+                ""source"": {
+                  ""type"": ""stored-procedure"",
+                  ""object"": ""s001.book""
+                },
+                ""permissions"": [
+                  {
+                    ""role"": ""anonymous"",
+                    ""actions"": [
+                      ""execute""
+                    ]
+                  }
+                ],
+                ""rest"": {
+                  ""methods"": [	
+                      ""get"",
+                      ""post"",
+                      ""patch""
+                    ]	
+                },	
+                ""graphql"": {	
+                    ""operation"": ""Mutation""	
+                      }
+                    }
+                  }
+          }";
+
+        public const string SP_REST_ENABLED_WITH_CUSTOM_REST_METHODS = @"{
+              ""entities"": {
+              ""MyEntity"": {
+                ""source"": {
+                  ""type"": ""stored-procedure"",
+                  ""object"": ""s001.book""
+                },
+                ""permissions"": [
+                  {
+                    ""role"": ""anonymous"",
+                    ""actions"": [
+                      ""execute""
+                    ]
+                  }
+                ],
+                ""rest"": {
+                  ""path"": true,
+                  ""methods"": [	
+                      ""get"",
+                      ""post"",
+                      ""patch""
+                    ]	
+                },	
+                ""graphql"": {	
+                    ""operation"": ""Mutation""	
+                      }
+                    }
+                  }
+          }";
+
+        public const string SP_CUSTOM_REST_PATH_WITH_CUSTOM_REST_METHODS = @"{
+              ""entities"": {
+              ""MyEntity"": {
+                ""source"": {
+                  ""type"": ""stored-procedure"",
+                  ""object"": ""s001.book""
+                },
+                ""permissions"": [
+                  {
+                    ""role"": ""anonymous"",
+                    ""actions"": [
+                      ""execute""
+                    ]
+                  }
+                ],
+                ""rest"": {
+                  ""path"": ""/book"",
+                  ""methods"": [	
+                      ""get"",
+                      ""post"",
+                      ""patch""
+                    ]	
+                },	
+                ""graphql"": {	
+                    ""operation"": ""Mutation""	
+                      }
+                    }
+                  }
+          }";
+
+        public const string STORED_PROCEDURE_WITH_BOTH_REST_METHODS_GRAPHQL_OPERATION = @"
+          {
+              ""entities"": {
+              ""MyEntity"": {
+                ""source"": {
+                  ""type"": ""stored-procedure"",
+                  ""object"": ""s001.book"",
+                  ""parameters"": {
+                      ""param1"": 123,
+                      ""param2"": ""hello"",
+                      ""param3"": true
+                  }
+                },
+                ""permissions"": [
+                  {
+                    ""role"": ""anonymous"",
+                    ""actions"": [
+                      ""execute""
+                    ]
+                  }
+                ],
+                ""rest"": {	
+                    ""methods"": [	
+                      ""post"",
+                      ""put"",
+                      ""patch""	
+                    ]	
+                  },	
+                  ""graphql"": {	
+                    ""operation"": ""Query""	
+                      }
+                    }
+                  }
+          }";
+
+        public const string STORED_PROCEDURE_WITH_REST_GRAPHQL_CONFIG = @"
+          {
+              ""entities"": {
+              ""MyEntity"": {
+                ""source"": {
+                  ""type"": ""stored-procedure"",
+                  ""object"": ""s001.book"",
+                  ""parameters"": {
+                      ""param1"": 123,
+                      ""param2"": ""hello"",
+                      ""param3"": true
+                  }
+                },
+                ""permissions"": [
+                  {
+                    ""role"": ""anonymous"",
+                    ""actions"": [
+                      ""execute""
+                    ]
+                  }
+                ],
+                ""rest"": {	
+                    ""methods"": [	
+                      ""get""
+                    ]	
+                  },	
+                  ""graphql"": false
+                    }
+                  }
           }";
 
         public const string SINGLE_ENTITY_WITH_SOURCE_AS_TABLE = @"

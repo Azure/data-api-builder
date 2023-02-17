@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -50,7 +53,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// Resolves a jsonElement representing a list type based on the field's schema and metadata
         /// </summary>
-        public IEnumerable<JsonDocument> ResolveListType(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata);
+        public object? ResolveListType(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata);
 
     }
 }

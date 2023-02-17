@@ -33,13 +33,13 @@ Data API Builder provides a CLI tool to simplify configuration and execution of 
 then, to install this tool globally, use:
 
 ```bash
-dotnet tool install -g --add-source ./ dab --version <version_number>
+dotnet tool install --global Microsoft.DataApiBuilder --version <version_number>
 ```
 
 or, if you have already installed a previous version, you can update DAB CLI to the latest version via the following:
 
 ```bash
-dotnet tool update -g --add-source ./ dab --version <version_number>
+dotnet tool update --global Microsoft.DataApiBuilder --version <version_number>
 ```
 
 > **ATTENTION**: if you are running on Linux or MacOS, you may need to add .NET global tools to your PATH to call `dab` directly. Once installed run:
@@ -56,10 +56,10 @@ dab --version
 which should output
 
 ```bash
-dab 0.1.5
+dab 0.5.0
 ```
 
-Where `0.1.5` should match your version of DAB CLI.
+Where `0.5.0` should match your version of DAB CLI.
 
 >For detailed instructions on how to Install DAB CLI look here: [Running Data API Builder for Azure Databases using CLI](../running-using-dab-cli.md)
 

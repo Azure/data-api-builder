@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using Azure.DataApiBuilder.Config;
 
 namespace Azure.DataApiBuilder.Auth
@@ -34,6 +37,17 @@ namespace Azure.DataApiBuilder.Auth
         /// i.e. Read operation is permitted in {Role1, Role2, ..., RoleN}
         /// </summary>
         public Dictionary<Operation, List<string>> OperationToRolesMap { get; set; } = new();
+
+        /// <summary>
+        /// Set of Http verbs enabled for Stored Procedure entities that have their REST endpoint enabled.
+        /// </summary>
+        public HashSet<RestMethod> StoredProcedureHttpVerbs { get; set; } = new();
+
+        /// <summary>
+        /// Defines the type of database object the entity represents.
+        /// Examples include Table, View, StoredProcedure
+        /// </summary>
+        public SourceType ObjectType { get; set; } = SourceType.Table;
     }
 
     /// <summary>

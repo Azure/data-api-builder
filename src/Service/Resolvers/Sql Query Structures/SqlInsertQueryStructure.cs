@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -88,7 +91,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     paramName = MakeParamWithValue(null);
                 }
 
-                Values.Add($"@{paramName}");
+                Values.Add($"{paramName}");
             }
             catch (ArgumentException ex)
             {

@@ -92,7 +92,7 @@ update Fungus --config "dab-config.PostgreSql.json" --permissions "authenticated
 update Fungus --config "dab-config.PostgreSql.json" --permissions "policy_tester_01:read" --fields.include "*" --policy-database "@item.region ne 'northeast'"
 update books_view_with_mapping --config "dab-config.PostgreSql.json" --source.key-fields "id" --map "id:book_id"
 update BookWebsitePlacement --config "dab-config.PostgreSql.json" --relationship books --target.entity Book --cardinality one
-update SupportedType --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,delete,update" 
+update SupportedType --config "dab-config.PostgreSql.json" --map "id:typeid" --permissions "authenticated:create,read,delete,update" 
 update Author --config "dab-config.PostgreSql.json" --relationship books --target.entity Book --cardinality many --linking.object book_author_link
 update Notebook --config "dab-config.PostgreSql.json" --permissions "anonymous:create,update,delete"
 update Journal --config "dab-config.PostgreSql.json" --permissions "policy_tester_noupdate:update" --fields.include "*" --policy-database "@item.id ne 1"

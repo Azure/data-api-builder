@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System.Data.Common;
 using System.Threading.Tasks;
 using Azure.Core;
@@ -44,7 +47,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public MySqlQueryExecutor(
             RuntimeConfigProvider runtimeConfigProvider,
             DbExceptionParser dbExceptionParser,
-            ILogger<QueryExecutor<MySqlConnection>> logger)
+            ILogger<IQueryExecutor> logger)
             : base(dbExceptionParser,
                   logger,
                   new MySqlConnectionStringBuilder(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString),
@@ -53,6 +56,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
             _attemptToSetAccessToken =
                 ShouldManagedIdentityAccessBeAttempted();
+
+            if (runtimeConfigProvider.IsLateConfigured)
+            {
+                ConnectionStringBuilder.SslMode = MySqlSslMode.VerifyFull;
+            }
         }
 
         /// <summary>

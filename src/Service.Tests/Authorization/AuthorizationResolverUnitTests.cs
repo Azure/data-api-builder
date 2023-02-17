@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 #nullable enable
 using System.Collections.Generic;
 using System.Linq;
@@ -913,7 +916,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            List<Config.Operation> operations = AuthorizationResolver.GetAllOperations(operation).ToList();
+            List<Config.Operation> operations = AuthorizationResolver.GetAllOperationsForObjectType(operation, SourceType.Table).ToList();
 
             foreach (Config.Operation testOperation in operations)
             {

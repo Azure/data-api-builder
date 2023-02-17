@@ -95,7 +95,7 @@ update stocks_view_selected --config "dab-config.MySql.json" --permissions "auth
 update books_publishers_view_composite --config "dab-config.MySql.json" --permissions "authenticated:create,read,update,delete"
 update books_view_with_mapping --config "dab-config.MySql.json" --map "id:book_id" --source.key-fields "id" 
 update BookWebsitePlacement --config "dab-config.MySql.json" --relationship books --target.entity Book --cardinality one
-update SupportedType --config "dab-config.MySql.json" --permissions "authenticated:create,read,delete,update" 
+update SupportedType --config "dab-config.MySql.json" --map "id:typeid" --permissions "authenticated:create,read,delete,update" 
 update Author --config "dab-config.MySql.json" --relationship books --target.entity Book --cardinality many --linking.object book_author_link
 update Notebook --config "dab-config.MySql.json" --permissions "anonymous:create,update,delete"
 update Journal --config "dab-config.MySql.json" --permissions "policy_tester_noupdate:update" --fields.include "*" --policy-database "@item.id ne 1"

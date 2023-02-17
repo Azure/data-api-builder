@@ -1,9 +1,13 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -207,6 +211,38 @@ namespace Azure.DataApiBuilder.Service.Authorization
                     {
                         context.Succeed(requirement);
                     }
+                }
+            }
+            else if (requirement is StoredProcedurePermissionsRequirement)
+            {
+                if (context.Resource is not null)
+                {
+                    string? entityName = context.Resource as string;
+
+                    if (entityName is null)
+                    {
+                        throw new DataApiBuilderException(
+                            message: "restContext Resource Null, Something went wrong",
+                            statusCode: HttpStatusCode.Unauthorized,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError
+                        );
+                    }
+
+                    string roleName = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
+                    Enum.TryParse<RestMethod>(httpContext.Request.Method, ignoreCase: true, out RestMethod httpVerb);
+                    bool isAuthorized = _authorizationResolver.IsStoredProcedureExecutionPermitted(entityName, roleName, httpVerb);
+                    if (!isAuthorized)
+                    {
+                        context.Fail();
+                    }
+                    else
+                    {
+                        context.Succeed(requirement);
+                    }
+                }
+                else
+                {
+                    context.Fail();
                 }
             }
 

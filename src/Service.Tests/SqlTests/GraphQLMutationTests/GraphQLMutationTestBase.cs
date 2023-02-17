@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -116,10 +119,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         public async Task TestStoredProcedureMutationForInsertion(string dbQuery)
         {
-            string graphQLMutationName = "insertBook";
+            string graphQLMutationName = "executeInsertBook";
             string graphQLMutation = @"
                 mutation {
-                    insertBook(title: ""Random Book"", publisher_id: 1234 ) {
+                    executeInsertBook(title: ""Random Book"", publisher_id: 1234 ) {
                         result
                     }
                 }
@@ -146,10 +149,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         public async Task TestStoredProcedureMutationForDeletion(string dbQueryToVerifyDeletion)
         {
-            string graphQLMutationName = "deleteLastInsertedBook";
+            string graphQLMutationName = "executeDeleteLastInsertedBook";
             string graphQLMutation = @"
                 mutation {
-                    deleteLastInsertedBook {
+                    executeDeleteLastInsertedBook {
                         result
                     }
                 }
@@ -177,10 +180,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         public async Task TestStoredProcedureMutationNonEmptyResponse(string dbQuery)
         {
-            string graphQLMutationName = "insertAndDisplayAllBooksUnderGivenPublisher";
+            string graphQLMutationName = "executeInsertAndDisplayAllBooksUnderGivenPublisher";
             string graphQLMutation = @"
                 mutation{
-                    insertAndDisplayAllBooksUnderGivenPublisher(title: ""Orange Tomato"" publisher_name: ""Big Company""){
+                    executeInsertAndDisplayAllBooksUnderGivenPublisher(title: ""Orange Tomato"" publisher_name: ""Big Company""){
                         id
                         title
                     }
@@ -201,10 +204,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         public async Task TestStoredProcedureMutationForUpdate(string dbQuery)
         {
-            string graphQLMutationName = "updateBookTitle";
+            string graphQLMutationName = "executeUpdateBookTitle";
             string graphQLMutation = @"
                 mutation {
-                    updateBookTitle(id: 14, title: ""Before Midnight"") {
+                    executeUpdateBookTitle(id: 14, title: ""Before Midnight"") {
                         id
                         title
                         publisher_id

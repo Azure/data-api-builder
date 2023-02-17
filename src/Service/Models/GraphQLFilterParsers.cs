@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -457,7 +460,7 @@ namespace Azure.DataApiBuilder.Service.Models
                 predicates.Push(new PredicateOperand(new Predicate(
                     new PredicateOperand(column),
                     op,
-                    new PredicateOperand(processLiteral ? $"@{processLiterals(value)}" : value.ToString()))
+                    new PredicateOperand(processLiteral ? $"{processLiterals(value)}" : value.ToString()))
                 ));
             }
 

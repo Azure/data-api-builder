@@ -4,7 +4,15 @@
 # https://learn.microsoft.com/azure/devops/pipelines/languages/dotnet-core
 
 trigger:
-- main
+  batch: true
+  branches:
+    include:
+    - main
+    - gh-readonly-queue/main
+    - release/*
+  paths:
+    exclude:
+    - docs
 
 pool:
   vmImage: 'ubuntu-latest' # examples of other options: 'macOS-10.15', 'windows-2019'
@@ -14,7 +22,7 @@ variables:
   buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
   major: 0
-  minor: 5
+  minor: 6
   # Maintain a separate patch value between CI and PR runs.
   # The counter is reset when the minor version is updated.
   patch: $[counter(format('{0}_{1}', variables['build.reason'], variables['minor']), 0)]
@@ -175,6 +183,15 @@ steps:
     publishVstsFeed: CosmosDB/DataApiBuilder
     versioningScheme: 'off'
     allowPackageConflicts: false
+
+- task: NuGetCommand@2
+  displayName: 'Publish Nuget to Nuget.org'
+  condition: eq(variables.isReleaseBuild, 'true')
+  inputs:
+    command: push
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
+    nuGetFeedType: external
+    publishFeedCredentials: Microsoft.DataApiBuilder
 
 - task: PublishCodeCoverageResults@1
   displayName: 'Publish code coverage'

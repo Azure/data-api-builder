@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -98,7 +101,7 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <inheritdoc />
-        protected override string GetDefaultSchemaName()
+        public override string GetDefaultSchemaName()
         {
             return string.Empty;
         }

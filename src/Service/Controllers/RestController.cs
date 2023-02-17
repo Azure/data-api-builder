@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System;
 using System.Net;
 using System.Threading.Tasks;
@@ -184,14 +187,9 @@ namespace Azure.DataApiBuilder.Service.Controllers
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
 
-                (string entityName, string primaryKeyRoute) =
-                    _restService.GetEntityNameAndPrimaryKeyRouteFromRoute(route);
+                (string entityName, string primaryKeyRoute) = _restService.GetEntityNameAndPrimaryKeyRouteFromRoute(route);
 
-                IActionResult? result
-                    = await _restService.ExecuteAsync(
-                            entityName,
-                            operationType,
-                            primaryKeyRoute);
+                IActionResult? result = await _restService.ExecuteAsync(entityName, operationType, primaryKeyRoute);
 
                 if (result is null)
                 {
@@ -211,8 +209,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
                     // created result to the url constructed from the HttpRequest. We
                     // then update the Location of the created result to this value.
                     CreatedResult createdResult = (result as CreatedResult)!;
-                    string location =
-                        UriHelper.GetEncodedUrl(HttpContext.Request) + "/" + createdResult.Location;
+                    string location = UriHelper.GetEncodedUrl(HttpContext.Request) + "/" + createdResult.Location;
                     createdResult.Location = location;
                     result = createdResult;
                 }

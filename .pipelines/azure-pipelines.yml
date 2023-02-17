@@ -1,6 +1,14 @@
 
 trigger:
-- main
+  batch: true
+  branches:
+    include:
+    - main
+    - gh-readonly-queue/main
+    - release/*
+  paths:
+    exclude:
+    - docs
 
 variables:
 #  DebugArguments: ' --filter "TestCategory!=ABC" --verbosity normal '

@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
@@ -121,6 +124,15 @@ namespace Azure.DataApiBuilder.Service.Authorization
             return false;
         }
 
+        public bool IsStoredProcedureExecutionPermitted(string entityName, string roleName, RestMethod httpVerb)
+        {
+            bool executionPermitted = EntityPermissionsMap.TryGetValue(entityName, out EntityMetadata? entityMetadata)
+                && entityMetadata is not null
+                && entityMetadata.RoleToOperationMap.TryGetValue(roleName, out _);
+
+            return executionPermitted;
+        }
+
         /// <inheritdoc />
         public bool AreColumnsAllowedForOperation(string entityName, string roleName, Config.Operation operation, IEnumerable<string> columns)
         {
@@ -211,12 +223,24 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// during runtime.
         /// </summary>
         /// <param name="runtimeConfig"></param>
-        /// <returns></returns>
         public void SetEntityPermissionMap(RuntimeConfig? runtimeConfig)
         {
             foreach ((string entityName, Entity entity) in runtimeConfig!.Entities)
             {
-                EntityMetadata entityToRoleMap = new();
+                EntityMetadata entityToRoleMap = new()
+                {
+                    ObjectType = entity.ObjectType
+                };
+
+                bool isStoredProcedureEntity = entity.ObjectType is SourceType.StoredProcedure;
+                if (isStoredProcedureEntity)
+                {
+                    RestMethod[]? methods = entity.GetRestMethodsConfiguredForStoredProcedure();
+                    if (methods is not null)
+                    {
+                        entityToRoleMap.StoredProcedureHttpVerbs = new(methods);
+                    }
+                }
 
                 // Store the allowedColumns for anonymous role.
                 // In case the authenticated role is not defined on the entity,
@@ -305,7 +329,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                         // so that it doesn't need to be evaluated per request.
                         PopulateAllowedExposedColumns(operationToColumn.AllowedExposedColumns, entityName, allowedColumns);
 
-                        IEnumerable<Config.Operation> operations = GetAllOperations(operation);
+                        IEnumerable<Config.Operation> operations = GetAllOperationsForObjectType(operation, entity.ObjectType);
                         foreach (Config.Operation crudOperation in operations)
                         {
                             // Try to add the opElement to the map if not present.
@@ -317,7 +341,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
 
                             foreach (string allowedColumn in allowedColumns)
                             {
-                                entityToRoleMap.FieldToRolesMap.TryAdd(key: allowedColumn, CreateOperationToRoleMap());
+                                entityToRoleMap.FieldToRolesMap.TryAdd(key: allowedColumn, CreateOperationToRoleMap(entity.ObjectType));
                                 entityToRoleMap.FieldToRolesMap[allowedColumn][crudOperation].Add(role);
                             }
 
@@ -387,13 +411,20 @@ namespace Azure.DataApiBuilder.Service.Authorization
         }
 
         /// <summary>
-        /// Helper method to create a list consisting of the given operation types.
+        /// Returns a list of all possible operations depending on the provided SourceType.
+        /// Stored procedures only support Operation.Execute.
         /// In case the operation is Operation.All (wildcard), it gets resolved to a set of CRUD operations.
         /// </summary>
         /// <param name="operation">operation type.</param>
+        /// <param name="sourceType">Type of database object: Table, View, or Stored Procedure.</param>
         /// <returns>IEnumerable of all available operations.</returns>
-        public static IEnumerable<Config.Operation> GetAllOperations(Config.Operation operation)
+        public static IEnumerable<Config.Operation> GetAllOperationsForObjectType(Config.Operation operation, SourceType sourceType)
         {
+            if (sourceType is SourceType.StoredProcedure)
+            {
+                return new List<Config.Operation> { Config.Operation.Execute };
+            }
+
             return operation is Config.Operation.All ? PermissionOperation.ValidPermissionOperations : new List<Config.Operation> { operation };
         }
 
@@ -650,11 +681,19 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// Creates new key value map of
         /// Key: operationType
         /// Value: Collection of role names.
-        /// There are only four possible operations
+        /// There are only five possible operations
         /// </summary>
-        /// <returns></returns>
-        private static Dictionary<Config.Operation, List<string>> CreateOperationToRoleMap()
+        /// <returns>Dictionary: Key - Operation | Value - List of roles.</returns>
+        private static Dictionary<Config.Operation, List<string>> CreateOperationToRoleMap(SourceType sourceType)
         {
+            if (sourceType is SourceType.StoredProcedure)
+            {
+                return new Dictionary<Config.Operation, List<string>>()
+                {
+                    { Config.Operation.Execute, new List<string>()}
+                };
+            }
+
             return new Dictionary<Config.Operation, List<string>>()
             {
                 { Config.Operation.Create, new List<string>()},

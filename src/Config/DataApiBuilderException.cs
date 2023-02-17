@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System.Net;
 
 namespace Azure.DataApiBuilder.Service.Exceptions
@@ -70,7 +73,11 @@ namespace Azure.DataApiBuilder.Service.Exceptions
             /// <summary>
             /// One of the claim belonging to the user has unsupported claim value type.
             /// </summary>
-            UnsupportedClaimValueType
+            UnsupportedClaimValueType,
+            /// <summary>
+            /// Error encountered while doing data type conversions.
+            /// </summary>
+            ErrorProcessingData
         }
 
         public HttpStatusCode StatusCode { get; }

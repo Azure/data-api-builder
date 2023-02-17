@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
@@ -252,8 +255,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         [TestMethod]
         public async Task InsertOneInViewBadRequestTest()
         {
-            _ = $"View or function '{_defaultSchemaName}.{_composite_subset_bookPub}' is not updatable " +
+            string expectedErrorMessage = $"View or function '{_defaultSchemaName}.{_composite_subset_bookPub}' is not updatable " +
                                           $"because the modification affects multiple base tables.";
+            await base.InsertOneInViewBadRequestTest(expectedErrorMessage, isExpectedErrorMsgSubstr: false);
         }
 
         /// <summary>
@@ -281,7 +285,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: null,
                 entityNameOrPath: _integrationProcedureInsertOneAndDisplay_EntityName,
                 sqlQuery: GetQuery(queryName),
-                operationType: Config.Operation.Insert,
+                operationType: Config.Operation.Execute,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: _integrationProcedureInsertOneAndDisplay_EntityName,

@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -220,6 +223,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                                                                                   runtimeConfigProvider));
             }
 
+            AddColumnsForEndCursor();
             _limit = context.First is not null ? context.First + 1 : DEFAULT_LIST_LIMIT + 1;
             ParametrizeColumns();
         }
@@ -420,13 +424,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 if (PaginationMetadata.RequestedEndCursor)
                 {
-                    // add the primary keys in the selected columns if they are missing
-                    IEnumerable<string> extraNeededColumns = PrimaryKey().Except(Columns.Select(c => c.Label));
-
-                    foreach (string column in extraNeededColumns)
-                    {
-                        AddColumn(column);
-                    }
+                    AddColumnsForEndCursor();
                 }
 
                 // if the user does a paginated query only requesting hasNextPage
@@ -486,7 +484,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                                                     columnName: columnName,
                                                     tableAlias: SourceAlias)),
                     PredicateOperation.Equal,
-                    new PredicateOperand($"@{MakeParamWithValue(parameter.Value)}")
+                    new PredicateOperand($"{MakeParamWithValue(parameter.Value)}")
                 ));
             }
         }
@@ -508,8 +506,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 {
                     column.TableAlias = SourceAlias;
                     column.ParamName = column.Value is not null ?
-                        "@" + MakeParamWithValue(GetParamAsColumnSystemType(column.Value!.ToString()!, column.ColumnName)) :
-                        "@" + MakeParamWithValue(null);
+                        MakeParamWithValue(GetParamAsColumnSystemType(column.Value!.ToString()!, column.ColumnName)) :
+                        MakeParamWithValue(null);
                 }
             }
             catch (ArgumentException ex)
@@ -544,7 +542,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     Predicates.Add(new Predicate(
                         new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, backingColumn, SourceAlias)),
                         op,
-                        new PredicateOperand($"@{parameterName}")));
+                        new PredicateOperand($"{parameterName}")));
                 }
                 else
                 {
@@ -705,13 +703,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         /// <summary>
         /// Create a list of orderBy columns from the orderBy argument
-        /// passed to the gql query
+        /// passed to the gql query. The orderBy argument could contain mapped field names
+        /// so we find their backing column names before creating the orderBy list.
+        /// All the remaining primary key columns are also added to ensure there are no tie breaks.
         /// </summary>
         private List<OrderByColumn> ProcessGqlOrderByArg(List<ObjectFieldNode> orderByFields, IInputField orderByArgumentSchema)
         {
             if (_ctx is null)
             {
-                throw new ArgumentNullException("IMiddlewareContext should be intiliazed before " +
+                throw new ArgumentNullException("IMiddlewareContext should be initialized before " +
                                                 "trying to parse the orderBy argument.");
             }
 
@@ -721,7 +721,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // of tie breaking and pagination
             List<OrderByColumn> orderByColumnsList = new();
 
-            List<string> remainingPkCols = new(PrimaryKey());
+            HashSet<string> remainingPkCols = new(PrimaryKey());
 
             InputObjectType orderByArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(orderByArgumentSchema);
             foreach (ObjectFieldNode field in orderByFields)
@@ -738,15 +738,22 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 string fieldName = field.Name.ToString();
 
+                if (!MetadataProvider.TryGetBackingColumn(EntityName, fieldName, out string? backingColumnName))
+                {
+                    throw new DataApiBuilderException(message: "Mapped fieldname could not be found.",
+                        statusCode: HttpStatusCode.InternalServerError,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                }
+
                 // remove pk column from list if it was specified as a
                 // field in orderBy
-                remainingPkCols.Remove(fieldName);
+                remainingPkCols.Remove(backingColumnName);
 
                 if (fieldValue.ToString() == $"{OrderBy.DESC}")
                 {
                     orderByColumnsList.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
                                                              tableName: DatabaseObject.Name,
-                                                             columnName: fieldName,
+                                                             columnName: backingColumnName,
                                                              tableAlias: SourceAlias,
                                                              direction: OrderBy.DESC));
                 }
@@ -754,7 +761,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 {
                     orderByColumnsList.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
                                                              tableName: DatabaseObject.Name,
-                                                             columnName: fieldName,
+                                                             columnName: backingColumnName,
                                                              tableAlias: SourceAlias));
                 }
             }
@@ -791,6 +798,36 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
+        /// End Cursor consists of primary keys and order by columns.
+        /// It is formed using the column values from the last row returned as a JsonElement.
+        /// Hence, in addition to the requested fields, we need to add any extraneous primary keys
+        /// and order by columns to the list of columns in the select clause.
+        /// When adding to the columns of the select clause, we make sure to use exposed column names as the label.
+        /// </summary>
+        private void AddColumnsForEndCursor()
+        {
+            // add the primary keys in the selected columns if they are missing
+            IEnumerable<string> primaryKeyExtraColumns = PrimaryKey().Except(Columns.Select(c => c.ColumnName));
+
+            foreach (string column in primaryKeyExtraColumns)
+            {
+                MetadataProvider.TryGetExposedColumnName(EntityName, column, out string? exposedColumnName);
+                AddColumn(column, labelName: exposedColumnName!);
+            }
+
+            // Add any other left over orderBy columns to the select clause apart from those
+            // already selected and apart from the extra primary keys.
+            IEnumerable<string> orderByExtraColumns =
+                OrderByColumns.Select(orderBy => orderBy.ColumnName).Except(Columns.Select(c => c.ColumnName));
+
+            foreach (string column in orderByExtraColumns)
+            {
+                MetadataProvider.TryGetExposedColumnName(EntityName, column, out string? exposedColumnName);
+                AddColumn(column, labelName: exposedColumnName!);
+            }
+        }
+
+        /// <summary>
         /// Check if the column belongs to one of the subqueries
         /// </summary>
         public bool IsSubqueryColumn(Column column)
@@ -805,7 +842,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             foreach (LabelledColumn column in Columns)
             {
-                ColumnLabelToParam.Add(column.Label, $"@{MakeParamWithValue(column.Label)}");
+                ColumnLabelToParam.Add(column.Label, $"{MakeParamWithValue(column.Label)}");
             }
         }
     }

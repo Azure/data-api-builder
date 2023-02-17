@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
@@ -75,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
                 return "NULL";
             }
 
-            return $"@{_struct.MakeParamWithValue(GetParamWithSystemType(nodeIn.Value.ToString()!, nodeIn.TypeReference))}";
+            return $"{_struct.MakeParamWithValue(GetParamWithSystemType(nodeIn.Value.ToString()!, nodeIn.TypeReference))}";
         }
 
         /// <summary>

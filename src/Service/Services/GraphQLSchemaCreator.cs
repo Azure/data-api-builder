@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -146,10 +149,11 @@ namespace Azure.DataApiBuilder.Service.Services
                     IEnumerable<string> rolesAllowedForEntity = _authorizationResolver.GetRolesForEntity(entityName);
                     Dictionary<string, IEnumerable<string>> rolesAllowedForFields = new();
                     SourceDefinition sourceDefinition = _sqlMetadataProvider.GetSourceDefinition(entityName);
-
+                    bool isStoredProcedure = entity.ObjectType is SourceType.StoredProcedure;
                     foreach (string column in sourceDefinition.Columns.Keys)
                     {
-                        IEnumerable<string> roles = _authorizationResolver.GetRolesForField(entityName, field: column, operation: Config.Operation.Read);
+                        Config.Operation operation = isStoredProcedure ? Config.Operation.Execute : Config.Operation.Read;
+                        IEnumerable<string> roles = _authorizationResolver.GetRolesForField(entityName, field: column, operation: operation);
                         if (!rolesAllowedForFields.TryAdd(key: column, value: roles))
                         {
                             throw new DataApiBuilderException(

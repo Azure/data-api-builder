@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 #nullable disable
 using System;
 using System.Collections.Generic;
@@ -29,7 +32,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private readonly IQueryBuilder _queryBuilder;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationResolver _authorizationResolver;
-        private readonly ILogger<SqlQueryEngine> _logger;
+        private readonly ILogger<IQueryEngine> _logger;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private readonly GQLFilterParser _gQLFilterParser;
 
@@ -43,7 +46,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             IHttpContextAccessor httpContextAccessor,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
-            ILogger<SqlQueryEngine> logger,
+            ILogger<IQueryEngine> logger,
             RuntimeConfigProvider runtimeConfigProvider)
         {
             _queryExecutor = queryExecutor;
@@ -93,7 +96,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
         {
-            if (_sqlMetadataProvider.GraphQLStoredProcedureExposedNameToEntityNameMap.TryGetValue(context.Field.Name.Value, out string entityName))
+            if (_sqlMetadataProvider.GraphQLStoredProcedureExposedNameToEntityNameMap.TryGetValue(context.Selection.Field.Name.Value, out string entityName))
             {
                 SqlExecuteStructure sqlExecuteStructure = new(
                     entityName,
@@ -280,7 +283,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public IEnumerable<JsonDocument> ResolveListType(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
+        public object ResolveListType(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
         {
             PaginationMetadata parentMetadata = (PaginationMetadata)metadata;
             PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name.Value];

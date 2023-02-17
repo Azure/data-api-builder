@@ -1,6 +1,10 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
@@ -81,6 +85,27 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
                               Array.Empty<PermissionSetting>(),
                               Relationships: new(),
                               Mappings: new());
+        }
+
+        /// <summary>
+        /// Creates a stored procedure backed entity using the provided metadata.
+        /// </summary>
+        /// <param name="graphQLTypeName">Desired GraphQL type name.</param>
+        /// <param name="graphQLOperation">Query or Mutation</param>
+        /// <param name="permissionOperations">Collection of permission operations (CRUD+Execute)</param>
+        /// <returns>Stored procedure backed entity.</returns>
+        public static Entity GenerateStoredProcedureEntity(string graphQLTypeName, GraphQLOperation? graphQLOperation, string[] permissionOperations)
+        {
+            Entity entity = new(Source: new DatabaseObjectSource(SourceType.StoredProcedure, Name: "foo", Parameters: null, KeyFields: null),
+                              Rest: null,
+                              GraphQL: JsonSerializer.SerializeToElement(new GraphQLStoredProcedureEntityVerboseSettings(Type: graphQLTypeName, GraphQLOperation: graphQLOperation.ToString())),
+                              Permissions: new[] { new PermissionSetting(role: "anonymous", operations: permissionOperations) },
+                              Relationships: new(),
+                              Mappings: new());
+
+            // Ensures default GraphQL operation is "mutation" for stored procedures unless defined otherwise.
+            entity.TryProcessGraphQLNamingConfig();
+            return entity;
         }
 
         /// <summary>

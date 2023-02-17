@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -73,7 +76,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string field = $"{type.ToLowerInvariant()}_types";
             string graphQLQueryName = "supportedType_by_pk";
-            string gqlQuery = "{ supportedType_by_pk(id: " + id + ") { " + field + " } }";
+            string gqlQuery = "{ supportedType_by_pk(typeid: " + id + ") { " + field + " } }";
 
             string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id);
 
@@ -245,7 +248,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string field = $"{type.ToLowerInvariant()}_types";
             string graphQLQueryName = "updateSupportedType";
-            string gqlQuery = "mutation{ updateSupportedType (id: 1, item: {" + field + ": " + value + " }){ " + field + " } }";
+            string gqlQuery = "mutation{ updateSupportedType (typeid: 1, item: {" + field + ": " + value + " }){ " + field + " } }";
 
             string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id: 1);
 
@@ -287,7 +290,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string field = $"{type.ToLowerInvariant()}_types";
             string graphQLQueryName = "updateSupportedType";
-            string gqlQuery = "mutation($param: " + TypeNameToGraphQLType(type) + "){ updateSupportedType (id: 1, item: {" + field + ": $param }){ " + field + " } }";
+            string gqlQuery = "mutation($param: " + TypeNameToGraphQLType(type) + "){ updateSupportedType (typeid: 1, item: {" + field + ": $param }){ " + field + " } }";
 
             string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id: 1);
 

@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -9,6 +12,7 @@ using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Polly;
@@ -23,7 +27,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         where TConnection : DbConnection, new()
     {
         protected DbExceptionParser DbExceptionParser { get; }
-        protected ILogger<QueryExecutor<TConnection>> QueryExecutorLogger { get; }
+        protected ILogger<IQueryExecutor> QueryExecutorLogger { get; }
         private RuntimeConfigProvider ConfigProvider { get; }
 
         // The maximum number of attempts that can be made to execute the query successfully in addition to the first attempt.
@@ -35,7 +39,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public virtual DbConnectionStringBuilder ConnectionStringBuilder { get; set; }
 
         public QueryExecutor(DbExceptionParser dbExceptionParser,
-                             ILogger<QueryExecutor<TConnection>> logger,
+                             ILogger<IQueryExecutor> logger,
                              DbConnectionStringBuilder connectionStringBuilder,
                              RuntimeConfigProvider configProvider)
         {
@@ -59,7 +63,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public virtual async Task<TResult?> ExecuteQueryAsync<TResult>(
             string sqltext,
             IDictionary<string, object?> parameters,
-            Func<DbDataReader, List<string>?, Task<TResult?>>? dataReaderHandler,
+            Func<DbDataReader, List<string>?, Task<TResult>>? dataReaderHandler,
             HttpContext? httpContext = null,
             List<string>? args = null)
         {
@@ -76,6 +80,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 retryAttempt++;
                 try
                 {
+                    // When IsLateConfigured is true we are in a hosted scenario and do not reveal query information.
+                    if (!ConfigProvider.IsLateConfigured)
+                    {
+                        QueryExecutorLogger.LogDebug($"Executing query: \n{sqltext}");
+                    }
+
                     TResult? result =
                         await ExecuteQueryAgainstDbAsync(conn,
                             sqltext,
@@ -88,12 +98,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         // This implies that the request got successfully executed during one of retry attempts.
                         QueryExecutorLogger.LogInformation($"Request executed successfully in {retryAttempt} attempt of" +
                             $"{_maxRetryCount + 1} available attempts.");
-                    }
-
-                    // When IsLateConfigured is true we are in a hosted scenario and do not reveal query information.
-                    if (!ConfigProvider.IsLateConfigured)
-                    {
-                        QueryExecutorLogger.LogDebug($"Query Executed: \n{sqltext}");
                     }
 
                     return result;
@@ -131,7 +135,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             TConnection conn,
             string sqltext,
             IDictionary<string, object?> parameters,
-            Func<DbDataReader, List<string>?, Task<TResult?>>? dataReaderHandler,
+            Func<DbDataReader, List<string>?, Task<TResult>>? dataReaderHandler,
             HttpContext? httpContext,
             List<string>? args = null)
         {
@@ -150,7 +154,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 foreach (KeyValuePair<string, object?> parameterEntry in parameters)
                 {
                     DbParameter parameter = cmd.CreateParameter();
-                    parameter.ParameterName = "@" + parameterEntry.Key;
+                    parameter.ParameterName = parameterEntry.Key;
                     parameter.Value = parameterEntry.Value ?? DBNull.Value;
                     cmd.Parameters.Add(parameter);
                 }
@@ -205,12 +209,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public async Task<Tuple<Dictionary<string, object?>?, Dictionary<string, object>>?>
+        public async Task<DbOperationResultRow>
             ExtractRowFromDbDataReader(DbDataReader dbDataReader, List<string>? args = null)
         {
-            Dictionary<string, object?> row = new();
-
-            Dictionary<string, object> propertiesOfResult = GetResultProperties(dbDataReader).Result ?? new();
+            DbOperationResultRow dbOperationResultRow = new(
+                columns: new(),
+                resultProperties: GetResultProperties(dbDataReader).Result ?? new());
 
             if (await ReadAsync(dbDataReader))
             {
@@ -218,7 +222,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 {
                     DataTable? schemaTable = dbDataReader.GetSchemaTable();
 
-                    if (schemaTable != null)
+                    if (schemaTable is not null)
                     {
                         foreach (DataRow schemaRow in schemaTable.Rows)
                         {
@@ -232,43 +236,37 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             int colIndex = dbDataReader.GetOrdinal(columnName);
                             if (!dbDataReader.IsDBNull(colIndex))
                             {
-                                row.Add(columnName, dbDataReader[columnName]);
+                                dbOperationResultRow.Columns.Add(columnName, dbDataReader[columnName]);
                             }
                             else
                             {
-                                row.Add(columnName, value: null);
+                                dbOperationResultRow.Columns.Add(columnName, value: null);
                             }
                         }
                     }
                 }
             }
 
-            // no row was read
-            if (row.Count == 0)
-            {
-                return new Tuple<Dictionary<string, object?>?, Dictionary<string, object>>(null, propertiesOfResult);
-            }
-
-            return new Tuple<Dictionary<string, object?>?, Dictionary<string, object>>(row, propertiesOfResult);
+            return dbOperationResultRow;
         }
 
         /// <inheritdoc />
         /// <Note>This function is a DbDataReader handler of type Func<DbDataReader, List<string>?, Task<TResult?>>
         /// The parameter args is not used but is added to conform to the signature of the DbDataReader handler
         /// function argument of ExecuteQueryAsync.</Note>
-        public async Task<JsonArray?> GetJsonArrayAsync(
+        public async Task<JsonArray> GetJsonArrayAsync(
             DbDataReader dbDataReader,
             List<string>? args = null)
         {
-            Tuple<Dictionary<string, object?>?, Dictionary<string, object>>? resultRowAndProperties;
+            DbOperationResultRow dbOperationResultRow = await ExtractRowFromDbDataReader(dbDataReader);
             JsonArray resultArray = new();
 
-            while ((resultRowAndProperties = await ExtractRowFromDbDataReader(dbDataReader)) is not null &&
-                resultRowAndProperties.Item1 is not null)
+            while (dbOperationResultRow.Columns.Count > 0)
             {
                 JsonElement result =
-                    JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(resultRowAndProperties.Item1));
+                    JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(dbOperationResultRow.Columns));
                 resultArray.Add(result);
+                dbOperationResultRow = await ExtractRowFromDbDataReader(dbDataReader);
             }
 
             return resultArray;
@@ -303,21 +301,20 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <inheritdoc />
         /// <Note>This function is a DbDataReader handler of type
         /// Func<DbDataReader, List<string>?, Task<TResult?>></Note>
-        public async Task<Tuple<Dictionary<string, object?>?, Dictionary<string, object>>?> GetMultipleResultSetsIfAnyAsync(
+        public async Task<DbOperationResultRow> GetMultipleResultSetsIfAnyAsync(
             DbDataReader dbDataReader, List<string>? args = null)
         {
-            Tuple<Dictionary<string, object?>?, Dictionary<string, object>>? resultRecordWithProperties
+            DbOperationResultRow dbOperationResultRow
                 = await ExtractRowFromDbDataReader(dbDataReader);
 
             /// Processes a second result set from DbDataReader if it exists.
             /// In MsSQL upsert:
             /// result set #1: result of the UPDATE operation.
             /// result set #2: result of the INSERT operation.
-            if (resultRecordWithProperties is not null && resultRecordWithProperties.Item1 is not null)
+            if (dbOperationResultRow.Columns.Count > 0)
             {
-                resultRecordWithProperties.Item2.Add(SqlMutationEngine.IS_FIRST_RESULT_SET, true);
-                return new Tuple<Dictionary<string, object?>?, Dictionary<string, object>>
-                    (resultRecordWithProperties.Item1, resultRecordWithProperties.Item2);
+                dbOperationResultRow.ResultProperties.Add(SqlMutationEngine.IS_FIRST_RESULT_SET, true);
+                return dbOperationResultRow;
             }
             else if (await dbDataReader.NextResultAsync())
             {
@@ -342,20 +339,22 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 }
             }
 
-            return null;
+            return dbOperationResultRow;
         }
 
         /// <inheritdoc />
         /// <Note>This function is a DbDataReader handler of type
         /// Func<DbDataReader, List<string>?, Task<TResult?>></Note>
-        public Task<Dictionary<string, object>?> GetResultProperties(
+        public Task<Dictionary<string, object>> GetResultProperties(
             DbDataReader dbDataReader,
             List<string>? columnNames = null)
         {
-            Dictionary<string, object>? propertiesOfResult = new();
-            propertiesOfResult.Add(nameof(dbDataReader.RecordsAffected), dbDataReader.RecordsAffected);
-            propertiesOfResult.Add(nameof(dbDataReader.HasRows), dbDataReader.HasRows);
-            return Task.FromResult((Dictionary<string, object>?)propertiesOfResult);
+            Dictionary<string, object> resultProperties = new()
+            {
+                { nameof(dbDataReader.RecordsAffected), dbDataReader.RecordsAffected },
+                { nameof(dbDataReader.HasRows), dbDataReader.HasRows }
+            };
+            return Task.FromResult(resultProperties);
         }
 
         private async Task<string> GetJsonStringFromDbReader(DbDataReader dbDataReader)

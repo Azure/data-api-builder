@@ -1,14 +1,15 @@
 # Data API builder for Azure Databases
 
+[![NuGet Package](https://img.shields.io/nuget/v/microsoft.dataapibuilder.svg?color=success)](https://www.nuget.org/packages/Microsoft.DataApiBuilder)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-Latest version of Data API builder is  **0.4.11** [What's new?](./docs/whats-new.md#version-0411)
+Latest version of Data API builder is  **0.5.0** [What's new?](./docs/whats-new.md#version-050)
 
 ## About
 
 **Data API builder for Azure Databases provides modern REST and GraphQL endpoints to your Azure Databases.**
 
-With Data API builder, database objects can be exposed via REST or GraphQL endpoints so that your data can be accessed using modern techniques on any platform, any language, and any device. With an integrated and flexible policy engine, granular security is assured; integrated with Azure SQL, SQL Server, PostgreSQL, MySQL, MariaDB and Cosmos DB, gives developers an efficiency boost like never seen before.
+With Data API builder, database objects can be exposed via REST or GraphQL endpoints so that your data can be accessed using modern techniques on any platform, any language, and any device. With an integrated and flexible policy engine, granular security is assured; integrated with Azure SQL, SQL Server, PostgreSQL, MySQL and Cosmos DB, gives developers an efficiency boost like never seen before.
 
 ![Data API Builder Architecture Overview Diagram](./docs/media/data-api-builder-overview.png)
 
@@ -61,3 +62,11 @@ If you want to propose a completely new feature, please create an RFC item. Good
 - [Microsoft REST API Guidelines](https://github.com/microsoft/api-guidelines/blob/vNext/Guidelines.md)
 - [Microsoft Azure REST API Guidelines](https://github.com/microsoft/api-guidelines/blob/vNext/azure/Guidelines.md)
 - [GraphQL](https://graphql.org/)
+
+## License
+
+**Data API builder for Azure Databases** is licensed under the MIT license. See the [LICENSE](./LICENSE.txt) file for more details.
+
+## Trademarks
+
+This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft trademarks or logos is subject to and must follow Microsoft's Trademark & Brand Guidelines. Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship. Any use of third-party trademarks or logos are subject to those third-party's policies.

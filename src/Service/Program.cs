@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System;
 using System.Collections.Generic;
 using Azure.DataApiBuilder.Config;
@@ -47,20 +50,11 @@ namespace Azure.DataApiBuilder.Service
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    ILoggerFactory? loggerFactory = LoggerFactory
-                        .Create(builder =>
-                        {
-                            LogLevel logLevel = GetLogLevel(args);
-                            // Category defines the namespace we will log from,
-                            // including all sub-domains. ie: "Azure" includes
-                            // "Azure.DataApiBuilder.Service"
-                            builder.AddFilter(category: "Microsoft", logLevel);
-                            builder.AddFilter(category: "Azure", logLevel);
-                            builder.AddFilter(category: "Default", logLevel);
-                            builder.AddConsole();
-                        });
+                    Startup.MinimumLogLevel = GetLogLevelFromCommandLineArgs(args, out Startup.IsLogLevelOverriddenByCli);
+                    ILoggerFactory? loggerFactory = GetLoggerFactoryForLogLevel(Startup.MinimumLogLevel);
                     ILogger<Startup>? startupLogger = loggerFactory.CreateLogger<Startup>();
                     ILogger<RuntimeConfigProvider>? configProviderLogger = loggerFactory.CreateLogger<RuntimeConfigProvider>();
+                    DisableHttpsRedirectionIfNeeded(args);
                     webBuilder.UseStartup(builder =>
                     {
                         return new Startup(builder.Configuration, startupLogger, configProviderLogger);
@@ -77,8 +71,9 @@ namespace Azure.DataApiBuilder.Service
         /// to this change.
         /// </summary>
         /// <param name="args">array that may contain log level information.</param>
+        /// <param name="isLogLevelOverridenByCli">sets if log level is found in the args.</param>
         /// <returns>Appropriate log level.</returns>
-        private static LogLevel GetLogLevel(string[] args)
+        private static LogLevel GetLogLevelFromCommandLineArgs(string[] args, out bool isLogLevelOverridenByCli)
         {
             for (int i = 0; i < args.Length; i++)
             {
@@ -91,6 +86,7 @@ namespace Azure.DataApiBuilder.Service
 
                     if (Enum.TryParse(args[i + 1], out LogLevel logLevel))
                     {
+                        isLogLevelOverridenByCli = true;
                         return logLevel;
                     }
                     else
@@ -104,7 +100,48 @@ namespace Azure.DataApiBuilder.Service
                 }
             }
 
+            isLogLevelOverridenByCli = false;
             return LogLevel.Error;
+        }
+
+        /// <summary>
+        /// Creates a LoggerFactory and add filter with the given LogLevel.
+        /// </summary>
+        /// <param name="logLevel">minimum log level.</param>
+        public static ILoggerFactory GetLoggerFactoryForLogLevel(LogLevel logLevel)
+        {
+            return LoggerFactory
+                .Create(builder =>
+                {
+                    // Category defines the namespace we will log from,
+                    // including all sub-domains. ie: "Azure" includes
+                    // "Azure.DataApiBuilder.Service"
+                    builder.AddFilter(category: "Microsoft", logLevel);
+                    builder.AddFilter(category: "Azure", logLevel);
+                    builder.AddFilter(category: "Default", logLevel);
+                    builder.AddConsole();
+                });
+        }
+
+        /// <summary>
+        /// Iterate through args from cli and check for the flag `--no-https-redirect`.
+        /// If it is present, https redirection is disabled.
+        /// By Default it is enabled.
+        /// </summary>
+        /// <param name="args">array that may contain flag to disable https redirection.</param>
+        private static void DisableHttpsRedirectionIfNeeded(string[] args)
+        {
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (args[i].Equals(Startup.NO_HTTPS_REDIRECT_FLAG))
+                {
+                    Console.WriteLine("Redirecting to https is disabled.");
+                    RuntimeConfigProvider.IsHttpsRedirectionDisabled = true;
+                    return;
+                }
+            }
+
+            RuntimeConfigProvider.IsHttpsRedirectionDisabled = false;
         }
 
         // This is used for testing purposes only. The test web server takes in a
@@ -115,6 +152,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 IHostEnvironment env = hostingContext.HostingEnvironment;
                 AddConfigurationProviders(env, builder, args);
+                DisableHttpsRedirectionIfNeeded(args);
             }).UseStartup<Startup>();
 
         // This is used for testing purposes only. The test web server takes in a

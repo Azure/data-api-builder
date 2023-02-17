@@ -36,6 +36,10 @@ To start the Data API builder engine, use the `start` action if you have the con
 ```bash
 dab start
 ```
+For providing a custom configuration file, you can use the option `-c` or `--config` followed by the config file name.
+```
+dab start -c my-cutom-dab-config.json
+```
 
 You can also start the engine with a custom log level. This will alter the amount of logging that is provided during both startup and runtime of the service. To start the service with a custom log level use the `start` action with `--verbose` or `--LogLevel <0-6>`. `--verbose` will start the service with a log level of `informational` where as `--LogLevel <0-6>` represents one of the following log levels.
 ![image](https://user-images.githubusercontent.com/93220300/216731511-ea420ee8-3b52-4e1b-a052-87943b135be1.png)

@@ -129,14 +129,14 @@ steps:
   displayName: "Package DAB to multiple platforms"
   inputs:
     targetType: 'filePath'
-    filePath: $(System.DefaultWorkingDirectory)/publish.ps1
+    filePath: $(System.DefaultWorkingDirectory)/scripts/publish.ps1
     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) -Package
 
 - task: PowerShell@2
   displayName: "Smoke Test for DAB CLI"
   inputs:
     targetType: 'filePath'
-    filePath: $(System.DefaultWorkingDirectory)/dab-smoke-test-script.ps1
+    filePath: $(System.DefaultWorkingDirectory)/scripts/dab-smoke-test-script.ps1
     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(Agent.OS)  $(dabVersion)
 
 # Sign the binaries that were generated per platform
@@ -149,7 +149,7 @@ steps:
   displayName: "Zip the binaries after signing"
   inputs:
     targetType: 'filePath'
-    filePath: $(System.DefaultWorkingDirectory)/publish.ps1
+    filePath: $(System.DefaultWorkingDirectory)/scripts/publish.ps1
     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) -CreateZip
 
 # Generating SBOM manifest for Dab files
@@ -163,7 +163,7 @@ steps:
   displayName: "Generate Manifest File"
   inputs:
     targetType: 'filePath'
-    filePath: $(System.DefaultWorkingDirectory)/create_manifest_file.ps1
+    filePath: $(System.DefaultWorkingDirectory)/scripts/create_manifest_file.ps1
     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) $(isReleaseBuild)
 
 # This code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.

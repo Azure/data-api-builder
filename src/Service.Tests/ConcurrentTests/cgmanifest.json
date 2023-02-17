@@ -6,7 +6,8 @@
                 "type": "other",
                 "other": {
                     "name": "k6",
-                    "downloadUrl": "https://github.com/grafana/k6/releases/download/v0.42.0/k6-v0.42.0-windows-amd64.zip"
+                    "downloadUrl": "https://github.com/grafana/k6/releases/download/v0.42.0/k6-v0.42.0-windows-amd64.zip",
+                    "version": "0.42.0"
                 }
             },
             "DevelopmentDependency": true

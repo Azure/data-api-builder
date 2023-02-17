@@ -257,6 +257,27 @@ query {{
             Assert.AreEqual(id, response.GetProperty("id").GetString());
         }
 
+        [TestMethod]
+        public async Task QueryWithFragmentIsValid()
+        {
+            string query = @"
+query {
+    planets {
+        __typename
+        items {
+            id
+            name
+            ... on Planet { id }
+        }
+    }
+}
+            ";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync("planets", query);
+
+            Assert.AreEqual(TOTAL_ITEM_COUNT, response.GetProperty("items").GetArrayLength());
+        }
+
         private static void ConvertJsonElementToStringList(JsonElement ele, List<string> strList)
         {
             if (ele.ValueKind == JsonValueKind.Array)

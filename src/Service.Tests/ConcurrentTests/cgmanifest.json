@@ -3,8 +3,8 @@
     "registrations": [
         {
             "component": {
-                "type": "go",
-                "go": {
+                "type": "other",
+                "other": {
                     "name": "k6",
                     "version": "0.40.0"
                 }

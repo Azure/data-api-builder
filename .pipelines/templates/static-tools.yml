@@ -48,6 +48,7 @@ jobs:
     displayName: 'PoliCheck'
     inputs:
       targetType: F
+      optionsUEPATH: templates/UserExclusions.xml
 
   # AntiMalware scan
   - task: AntiMalware@4

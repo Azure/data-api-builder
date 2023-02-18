@@ -48,8 +48,6 @@ jobs:
     displayName: 'PoliCheck'
     inputs:
       targetType: F
-      targetArgument: '$(Build.SourcesDirectory)'
-      optionsUEPATH: '".pipelines\templates\UserExclusions.xml"'
 
   # AntiMalware scan
   - task: AntiMalware@4
@@ -77,6 +75,12 @@ jobs:
     inputs:
       alertWarningLevel: Medium
       failOnAlert: true
+
+  - task: notice@0
+    displayName: Generate NOTICE file
+    inputs:
+      outputfile: $$(Build.SourcesDirectory)/nuget/NOTICE
+      outputformat: text
 
 #  - task: securedevelopmentteam.vss-secure-development-tools.build-task-binskim.BinSkim@3
 #    displayName: 'BinSkim'

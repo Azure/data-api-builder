@@ -113,8 +113,14 @@ steps:
 - task: notice@0
   displayName: Generate NOTICE file
   inputs:
-    outputfile: '$(System.DefaultWorkingDirectory)/nuget/NOTICE'
     outputformat: text
+
+- task: CopyFiles@2
+  displayName: 'Copy generated NOTICE.txt'
+  inputs:
+    sourceFolder: '$(Build.ArtifactStagingDirectory)'
+    contents: 'NOTICE.txt'
+    targetFolder: '$(Build.SourcesDirectory)/nuget'
 
 - template: templates/code-signing.yml
   parameters:

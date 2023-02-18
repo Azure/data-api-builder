@@ -104,6 +104,18 @@ steps:
     contents: 'dab.draft.schema.json'
     targetFolder: '$(Build.ArtifactStagingDirectory)'
 
+  - task: ms.vss-governance-buildtask.governance-build-task-component-detection.ComponentGovernanceComponentDetection@0
+    displayName: 'Component Governance Detection' #https://docs.opensource.microsoft.com/tools/cg.html
+    inputs:
+      alertWarningLevel: Medium
+      failOnAlert: true
+
+  - task: notice@0
+    displayName: Generate NOTICE file
+    inputs:
+      outputfile: $$(Build.SourcesDirectory)/nuget/NOTICE
+      outputformat: text
+
 - template: templates/code-signing.yml
   parameters:
     # This is the path that will be used for packing nuget package.

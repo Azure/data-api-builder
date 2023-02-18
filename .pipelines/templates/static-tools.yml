@@ -49,7 +49,7 @@ jobs:
     inputs:
       targetType: F
       targetArgument: '$(Build.SourcesDirectory)'
-      optionsUEPATH: '.pipelines/templates/UserExclusions.xml'
+      optionsUEPATH: '.pipelines\templates\UserExclusions.xml'
 
   # AntiMalware scan
   - task: AntiMalware@4

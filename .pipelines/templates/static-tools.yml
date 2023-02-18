@@ -48,7 +48,8 @@ jobs:
     displayName: 'PoliCheck'
     inputs:
       targetType: F
-      optionsUEPATH: UserExclusions.xml
+      targetArgument: '$(Build.SourcesDirectory)'
+      optionsUEPATH: '.pipelines/templates/UserExclusions.xml'
 
   # AntiMalware scan
   - task: AntiMalware@4

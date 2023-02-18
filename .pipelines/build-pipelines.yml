@@ -113,7 +113,7 @@ steps:
 - task: notice@0
   displayName: Generate NOTICE file
   inputs:
-    outputfile: $(Build.SourcesDirectory)/nuget/NOTICE
+    outputfile: '$(System.DefaultWorkingDirectory)/nuget/NOTICE'
     outputformat: text
 
 - template: templates/code-signing.yml

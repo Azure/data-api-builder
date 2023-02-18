@@ -1,0 +1,4 @@
+<PoliCheckExclusions>
+  <!--The specified file names will be skipped during the scan regardless which folder they are in -->
+  <Exclusion Type="FileName">NOTICE.TXT</Exclusion>
+</PoliCheckExclusions>

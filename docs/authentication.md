@@ -1,17 +1,19 @@
 # Authentication
 
-Data API builder allows developers to define the authentication mechanisms they want to use to authenticate incoming requests.
+Data API builder allows developers to define the authentication mechanism (identity provider) they want Data API builder to use to authenticate who is making requests.
 
-Authentication is not performed by Data API builder, but is delegated to one of the supported authentication providers. The supported authentication options are:
+Authentication is delegated to a supported identity provider where access token can be issued. An acquired access token must be included with incoming requests to Data API builder. Data API builder then validates any presented access tokens, ensuring that Data API builder was the intended audience of the token.
 
-- EasyAuth
+The supported identity provider configuration options are:
+
+- StaticWebApps
 - JWT
 
-## EasyAuth
+## Azure Static Web Apps authentication (EasyAuth)
 
-When using this option, Data API builder will expect EasyAuth to have authenticated the request, and to have authentication data available in the `X-MS-CLIENT-PRINCIPAL` HTTP header, as described here for App Service: [Work with user identities in Azure App Service authentication](https://learn.microsoft.com/azure/app-service/configure-authentication-user-identities) and here for Static Web Apps: [Accessing User Information](https://learn.microsoft.com/azure/static-web-apps/user-information?tabs=csharp).
+When using the option `StaticWebApps`, Data API builder will expect Azure Static Web Apps authentication (EasyAuth) to have authenticated the request, and to have provided metadata about the authenticated user in the `X-MS-CLIENT-PRINCIPAL` HTTP header. The authenticated user metadata provided by Static Web Apps can be referenced in the following documentation: [Accessing User Information](https://learn.microsoft.com/azure/static-web-apps/user-information?tabs=csharp).
 
-To use this provider you need to specify the following configuration in the `runtime.host` section of the configuration file:
+To use the `StaticWebApps` provider you need to specify the following configuration in the `runtime.host` section of the configuration file:
 
 ```json
 "authentication": {
@@ -19,7 +21,7 @@ To use this provider you need to specify the following configuration in the `run
 }
 ```
 
-Using the EasyAuth provider is useful when you plan to run Data API builder in Azure, hosting it using App Service and running it in a container: [Run a custom container in Azure App Service](https://learn.microsoft.com/azure/app-service/quickstart-custom-container?tabs=dotnet&pivots=container-linux-vscode).
+Using the `StaticWebApps` provider is useful when you plan to run Data API builder in Azure, hosting it using App Service and running it in a container: [Run a custom container in Azure App Service](https://learn.microsoft.com/azure/app-service/quickstart-custom-container?tabs=dotnet&pivots=container-linux-vscode).
 
 ## JWT
 

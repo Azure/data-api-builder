@@ -4,7 +4,7 @@
 
 ### Background
 
-Data sent between a client and Data API Builder should occur over a secure connection to protect sensitive or valuable information. A secure connection is typically established using Transport Layer Security (TLS) protocols.
+Data sent between a client and Data API builder should occur over a secure connection to protect sensitive or valuable information. A secure connection is typically established using Transport Layer Security (TLS) protocols.
 
 Detailed in [OWASP's Transport Layer Protection](https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Protection_Cheat_Sheet.html) guidance, TLS provides numerous security benefits when implemented correctly:
 

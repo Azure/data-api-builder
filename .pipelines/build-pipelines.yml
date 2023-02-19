@@ -111,17 +111,23 @@ steps:
     failOnAlert: true
 
 - task: notice@0
+  # This will generate the NOTICE.txt for distribution
   displayName: Generate NOTICE file
   inputs:
     outputfile: $(System.DefaultWorkingDirectory)/nuget/NOTICE.txt
     outputformat: text
 
 - task: CopyFiles@2
-  displayName: 'Copy generated NOTICE.txt'
+  # Copying these files to the staging directory ensures they will be included
+  # in the published zips for all platforms.
+  displayName: 'Copy LICENSE, README, NOTICE to staging directory'
   inputs:
-    sourceFolder: '$(Build.ArtifactStagingDirectory)'
-    contents: 'NOTICE.txt'
-    targetFolder: '$(Build.SourcesDirectory)/nuget'
+    sourceFolder: $(System.DefaultWorkingDirectory)/nuget
+    contents: |
+      '../LICENSE.txt'
+      'README.txt'
+      'NOTICE.txt'
+    targetFolder: '$(Build.ArtifactStagingDirectory)'
 
 - template: templates/code-signing.yml
   parameters:

@@ -119,7 +119,7 @@ steps:
 - task: CopyFiles@2
   displayName: 'Copy generated NOTICE.txt'
   inputs:
-    sourceFolder: '$(Build.ArtifactStagingDirectory)/NOTICE'
+    sourceFolder: '$(Build.ArtifactStagingDirectory)'
     contents: 'NOTICE.txt'
     targetFolder: '$(Build.SourcesDirectory)/nuget'
 

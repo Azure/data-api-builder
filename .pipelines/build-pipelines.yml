@@ -124,9 +124,9 @@ steps:
   inputs:
     sourceFolder: $(Build.SourcesDirectory)
     contents: |
-      'LICENSE.txt'
-      'nuget/README.md'
-      'NOTICE.txt'
+      LICENSE.txt
+      nuget/README.md
+      NOTICE.txt
     targetFolder: '$(Build.ArtifactStagingDirectory)'
 
 - template: templates/code-signing.yml

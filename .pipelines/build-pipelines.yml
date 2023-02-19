@@ -122,11 +122,8 @@ steps:
   # in the published zips for all platforms.
   displayName: 'Copy LICENSE, README, NOTICE to staging directory'
   inputs:
-    sourceFolder: $(Build.SourcesDirectory)
-    contents: |
-      LICENSE.txt
-      nuget/README.md
-      NOTICE.txt
+    sourceFolder: '$(Build.SourcesDirectory)'
+    contents: NOTICE.txt
     targetFolder: '$(Build.ArtifactStagingDirectory)'
 
 - template: templates/code-signing.yml

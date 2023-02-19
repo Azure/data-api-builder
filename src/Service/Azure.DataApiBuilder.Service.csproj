@@ -91,4 +91,10 @@
         <ProjectReference Include="..\Service.GraphQLBuilder\Azure.DataApiBuilder.Service.GraphQLBuilder.csproj" />
     </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\..\nuget\README.md" CopyToOutputDirectory="Always" />
+    <None Include="..\..\LICENSE.txt" CopyToOutputDirectory="Always" />
+    <None Include="..\..\NOTICE.txt" Condition="Exists('..\..\..\NOTICE.txt')" CopyToOutputDirectory="Always" />
+  </ItemGroup>
+
 </Project>

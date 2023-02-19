@@ -114,7 +114,7 @@ steps:
   # This will generate the NOTICE.txt for distribution
   displayName: Generate NOTICE file
   inputs:
-    outputfile: $(System.DefaultWorkingDirectory)/nuget/NOTICE.txt
+    outputfile: $(System.DefaultWorkingDirectory)/NOTICE.txt
     outputformat: text
 
 - task: CopyFiles@2
@@ -122,10 +122,10 @@ steps:
   # in the published zips for all platforms.
   displayName: 'Copy LICENSE, README, NOTICE to staging directory'
   inputs:
-    sourceFolder: $(System.DefaultWorkingDirectory)/nuget
+    sourceFolder: $(System.DefaultWorkingDirectory)
     contents: |
-      '../LICENSE.txt'
-      'README.txt'
+      'LICENSE.txt'
+      'nuget/README.txt'
       'NOTICE.txt'
     targetFolder: '$(Build.ArtifactStagingDirectory)'
 

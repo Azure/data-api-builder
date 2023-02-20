@@ -58,10 +58,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\..\..\nuget\README.md" Pack="true" PackagePath="\" CopyToOutputDirectory="Always" />
+    <None Include="..\..\..\nuget\README.md" Pack="true" PackagePath="\" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\..\nuget\nuget_icon.png" Pack="true" PackagePath="\" />
-    <None Include="..\..\..\LICENSE.txt" Pack="true" PackagePath="\" CopyToOutputDirectory="Always" />
-    <None Include="..\..\..\NOTICE.txt" Pack="true" PackagePath="\" Condition="Exists('..\..\..\NOTICE.txt')" CopyToOutputDirectory="Always" />
+    <None Include="..\..\..\LICENSE.txt" Pack="true" PackagePath="\" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\..\NOTICE.txt" Pack="true" PackagePath="\" Condition="Exists('..\..\..\NOTICE.txt')" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

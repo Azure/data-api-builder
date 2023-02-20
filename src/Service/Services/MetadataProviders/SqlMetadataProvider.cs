@@ -90,7 +90,7 @@ namespace Azure.DataApiBuilder.Service.Services
             foreach (KeyValuePair<string, Entity> entity in _entities)
             {
                 entity.Value.TryPopulateSourceFields();
-                if (runtimeConfigProvider.GetRuntimeConfiguration().RestGlobalSettings.Enabled)
+                if (runtimeConfigProvider.GetRuntimeConfiguration().RestGlobalSettings!.Enabled)
                 {
                     _logger.LogInformation($"{entity.Key} path: {runtimeConfigProvider.RestPath}/{entity.Key}");
                 }

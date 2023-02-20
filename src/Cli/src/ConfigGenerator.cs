@@ -67,6 +67,7 @@ namespace Cli
             runtimeConfigJson = string.Empty;
 
             DatabaseType dbType = options.DatabaseType;
+            string? restPath = options.RestPath;
             object? dbOptions = null;
 
             switch (dbType)
@@ -81,6 +82,7 @@ namespace Cli
                         return false;
                     }
 
+                    restPath = null;
                     dbOptions = new CosmosDbNoSqlOptions(cosmosDatabase, cosmosContainer, graphQLSchemaPath, GraphQLSchema: null);
                     break;
 
@@ -120,7 +122,7 @@ namespace Cli
                     options.AuthenticationProvider,
                     options.Audience,
                     options.Issuer,
-                    options.RestPath),
+                    restPath),
                 Entities: new Dictionary<string, Entity>());
 
             runtimeConfigJson = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());

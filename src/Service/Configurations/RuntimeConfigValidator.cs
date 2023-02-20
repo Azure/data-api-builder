@@ -316,7 +316,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
         public static void ValidateGlobalEndpointRouteConfig(RuntimeConfig runtimeConfig)
         {
             // Do not check for conflicts if GraphQL or REST endpoints are disabled.
-            if (!runtimeConfig.GraphQLGlobalSettings.Enabled || !runtimeConfig.RestGlobalSettings.Enabled)
+            if (!runtimeConfig.GraphQLGlobalSettings.Enabled ||
+                runtimeConfig.RestGlobalSettings is null || !runtimeConfig.RestGlobalSettings.Enabled)
             {
                 return;
             }

@@ -297,7 +297,7 @@ namespace Azure.DataApiBuilder.Config
         }
 
         [JsonIgnore]
-        public RestGlobalSettings RestGlobalSettings { get; private set; } = new();
+        public RestGlobalSettings? RestGlobalSettings { get; private set; }
 
         [JsonIgnore]
         public GraphQLGlobalSettings GraphQLGlobalSettings { get; private set; } = new();

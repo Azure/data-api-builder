@@ -902,7 +902,7 @@ namespace Cli.Tests
             string authenticationProvider = "StaticWebApps",
             string? audience = null,
             string? issuer = null,
-            string restPath = GlobalSettings.REST_DEFAULT_PATH)
+            string? restPath = GlobalSettings.REST_DEFAULT_PATH)
         {
             Dictionary<string, object> runtimeSettingDict = new();
             Dictionary<GlobalSettingsType, object> defaultGlobalSetting = GetDefaultGlobalSettings(

@@ -183,7 +183,7 @@ namespace Cli.Tests
             // Adding runtime settings to the above basic config
             string expectedRuntimeConfig = AddPropertiesToJson(
                 _basicRuntimeConfig,
-                GetDefaultTestRuntimeSettingString());
+                GetDefaultTestRuntimeSettingString(restPath: null));
             RunTest(options, expectedRuntimeConfig);
         }
 

@@ -86,7 +86,7 @@ namespace Cli
         [Option("auth.provider", Default = "StaticWebApps", Required = false, HelpText = "Specify the Identity Provider.")]
         public string AuthenticationProvider { get; }
 
-        [Option("rest.path", Default = GlobalSettings.REST_DEFAULT_PATH, Required = false, HelpText = "Specify the default prefix for REST endpoint.")]
+        [Option("rest.path", Default = GlobalSettings.REST_DEFAULT_PATH, Required = false, HelpText = "Specify the REST endpoint's default prefix.")]
         public string RestPath { get; }
 
         [Option("auth.audience", Required = false, HelpText = "Identifies the recipients that the JWT is intended for.")]

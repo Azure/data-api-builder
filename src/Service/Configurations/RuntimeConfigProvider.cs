@@ -50,9 +50,13 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// </summary>
         protected virtual RuntimeConfig? RuntimeConfiguration { get; private set; }
 
+        /// <summary>
+        /// The rest path prefix for relation dbs like MsSql, PgSql, MySql.
+        /// </summary>
         public virtual string RestPath
         {
-            get { return RuntimeConfiguration is not null ? RuntimeConfiguration.RestGlobalSettings.Path : string.Empty; }
+            // For relation dbs, RestGlobalSettings is always non-null.
+            get { return RuntimeConfiguration is not null ? RuntimeConfiguration.RestGlobalSettings!.Path : string.Empty; }
         }
 
         /// <summary>

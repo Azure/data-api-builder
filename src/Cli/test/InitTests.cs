@@ -37,7 +37,7 @@ namespace Cli.Tests
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                restPath: "/rest-api",
+                restPath: "rest-api",
                 config: _testRuntimeConfig);
 
             _basicRuntimeConfig =

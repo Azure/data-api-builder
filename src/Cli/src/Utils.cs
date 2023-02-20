@@ -316,6 +316,12 @@ namespace Cli
                                                                                       string? issuer = null,
                                                                                       string restPath = GlobalSettings.REST_DEFAULT_PATH)
         {
+            // Prefix rest path with '/', if not already present.
+            if (!restPath.StartsWith('/'))
+            {
+                restPath = "/" + restPath;
+            }
+
             Dictionary<GlobalSettingsType, object> defaultGlobalSettings = new();
             defaultGlobalSettings.Add(GlobalSettingsType.Rest, new RestGlobalSettings(restPath));
             defaultGlobalSettings.Add(GlobalSettingsType.GraphQL, new GraphQLGlobalSettings());

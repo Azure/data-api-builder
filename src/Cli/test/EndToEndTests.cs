@@ -24,7 +24,7 @@ public class EndToEndTests
     [TestMethod]
     public void TestInitForCosmosDBNoSql()
     {
-        string[] args = { "init", "-c", _testRuntimeConfig, "--database-type", "cosmosdb_nosql", "--rest.path", "/rest-api",
+        string[] args = { "init", "-c", _testRuntimeConfig, "--database-type", "cosmosdb_nosql", "--rest.path", "rest-api",
                           "--connection-string", "localhost:5000", "--cosmosdb_nosql-database",
                           "graphqldb", "--cosmosdb_nosql-container", "planet", "--graphql-schema", "schema.gql", "--cors-origin", "localhost:3000,www.nolocalhost.com:80" };
         Program.Main(args);

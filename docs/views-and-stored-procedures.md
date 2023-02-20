@@ -99,6 +99,7 @@ If the `methods` section is excluded from the entity's REST configuration, the d
 If the stored procedure accepts parameters, the parameters can be passed in the URL query string when calling the REST endpoint with the GET HTTP verb. For example:
 
 URL
+
 ```text
 GET http://<dab-server>/api/GetCowrittenBooksByAuthor?author=isaac%20asimov
 ```
@@ -106,11 +107,13 @@ GET http://<dab-server>/api/GetCowrittenBooksByAuthor?author=isaac%20asimov
 Executing stored procedures using other HTTP verbs such as POST, PUT, PATCH, DELETE requires parameters to be passed as JSON in the request body. For example:
 
 URL
+
 ```text
 POST http://<dab-server>/api/GetCowrittenBooksByAuthor
 ```
 
 Body
+
 ```json
 {
   "author": "isaac asimov"
@@ -149,7 +152,7 @@ type GetCowrittenBooksByAuthor {
 
 In the schema, both query and mutation operations for stored procedures will have `execute` as a prefix. For the above stored procedure the exact query name field generated would be `executeGetCowrittenBooksByAuthor`
 
-```
+```graphql
 type Query {
   """
   Execute Stored-Procedure GetCowrittenBooksByAuthor and get results from the database
@@ -176,6 +179,7 @@ Runtime configuration:
   "operation": "mutation"
 }
 ```
+
 GraphQL Schema Components: type and mutation field:
 
 ```graphql

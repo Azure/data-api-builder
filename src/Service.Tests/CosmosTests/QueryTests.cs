@@ -420,6 +420,26 @@ fragment p on Planet { id }
             Assert.AreEqual(id, response.GetProperty("id").GetString());
         }
 
+        [TestMethod]
+        public async Task GraphQLQueryWithMultipleOfTheSameFieldReturnsFieldOnce()
+        {
+            string query = @"
+query {
+    planets {
+        items {
+            id
+            id
+        }
+    }
+}
+            ";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync("planets", query);
+
+            Assert.AreEqual(TOTAL_ITEM_COUNT, response.GetProperty("items").GetArrayLength());
+            Assert.AreEqual(_idList[0], response.GetProperty("items").EnumerateArray().First().GetProperty("id").GetString());
+        }
+
         private static void ConvertJsonElementToStringList(JsonElement ele, List<string> strList)
         {
             if (ele.ValueKind == JsonValueKind.Array)

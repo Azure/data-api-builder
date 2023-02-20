@@ -315,6 +315,16 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <param name="runtimeConfig"></param>
         public static void ValidateGlobalEndpointRouteConfig(RuntimeConfig runtimeConfig)
         {
+            // For relational databases, it is mandatory to specify the rest runtime settings in the config.
+            if (runtimeConfig.DatabaseType is not DatabaseType.cosmosdb_nosql &&
+                runtimeConfig.RestGlobalSettings is null)
+            {
+                throw new DataApiBuilderException(
+                    message: $"Please specify the REST runtime settings.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+            }
+
             // Do not check for conflicts if GraphQL or REST endpoints are disabled.
             if (!runtimeConfig.GraphQLGlobalSettings.Enabled ||
                 runtimeConfig.RestGlobalSettings is null || !runtimeConfig.RestGlobalSettings.Enabled)

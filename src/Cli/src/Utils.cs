@@ -323,6 +323,9 @@ namespace Cli
             }
 
             Dictionary<GlobalSettingsType, object> defaultGlobalSettings = new();
+
+            // If restPath is null, it implies we are dealing with cosmosdb_nosql,
+            // which only supports graphql.
             if (restPath is not null)
             {
                 defaultGlobalSettings.Add(GlobalSettingsType.Rest, new RestGlobalSettings(restPath));

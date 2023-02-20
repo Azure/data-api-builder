@@ -79,28 +79,17 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             InsertColumns.Add(columnName);
             string paramName;
 
-            try
+            if (value != null)
             {
-                if (value != null)
-                {
-                    paramName = MakeParamWithValue(
-                        GetParamAsSystemType(value.ToString()!, columnName, GetColumnSystemType(columnName)));
-                }
-                else
-                {
-                    paramName = MakeParamWithValue(null);
-                }
+                paramName = MakeParamWithValue(
+                    GetParamAsSystemType(value.ToString()!, columnName, GetColumnSystemType(columnName)));
+            }
+            else
+            {
+                paramName = MakeParamWithValue(null);
+            }
 
-                Values.Add($"{paramName}");
-            }
-            catch (ArgumentException ex)
-            {
-                throw new DataApiBuilderException(
-                    message: ex.Message,
-                    statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
-                    innerException: ex);
-            }
+            Values.Add($"{paramName}");
         }
 
         /// <summary>

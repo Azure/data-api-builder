@@ -104,11 +104,22 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else
             {
-                throw new DataApiBuilderException(
+                if(MetadataProvider.IsDevelopmentMode())
+                {
+                    throw new DataApiBuilderException(
                     message: $"{columnName} is not a valid column of {DatabaseObject.Name}",
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
                     );
+                }
+                else
+                {
+                    throw new DataApiBuilderException(
+                    message: $"{columnName} is not a valid field of {DatabaseObject.Name}",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
+                    );
+                }
             }
         }
 
@@ -493,7 +504,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Gets the value of the parameter cast as the system type
         /// of the stored procedure parameter this parameter is associated with
         /// </summary>
-        protected object GetParamAsSystemType(string param, string fieldName, Type systemType)
+        protected object GetParamAsSystemType(string param, string paramName, Type systemType)
         {
             try
             {
@@ -510,7 +521,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         if (MetadataProvider.EntityToDatabaseObject[EntityName].SourceType is SourceType.StoredProcedure)
                         {
                             throw new DataApiBuilderException(
-                                message: $@"Parameter ""{param}"" cannot be resolved as stored procedure parameter ""{fieldName}"" " +
+                                message: $@"Parameter ""{param}"" cannot be resolved as stored procedure parameter ""{paramName}"" " +
                         $@"with type ""{systemType.Name}"".",
                                 statusCode: HttpStatusCode.BadRequest,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
@@ -520,7 +531,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         else
                         {
                             throw new DataApiBuilderException(
-                                message: $"Parameter \"{param}\" cannot be resolved as column \"{fieldName}\" " +
+                                message: $"Parameter \"{param}\" cannot be resolved as column \"{paramName}\" " +
                                     $"with type \"{systemType.Name}\".",
                                 statusCode: HttpStatusCode.BadRequest,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
@@ -531,7 +542,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     else
                     {
                         throw new DataApiBuilderException(
-                                message: $"",
+                                message: $"Invalid value supplied for field: {paramName}",
                                 statusCode: HttpStatusCode.BadRequest,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
                                 innerException: e);

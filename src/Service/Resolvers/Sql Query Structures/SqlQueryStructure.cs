@@ -500,25 +500,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 return;
             }
 
-            try
+            foreach (PaginationColumn column in afterJsonValues)
             {
-                foreach (PaginationColumn column in afterJsonValues)
-                {
-                    column.TableAlias = SourceAlias;
-                    column.ParamName = column.Value is not null ?
-                        "@" + MakeParamWithValue(GetParamAsSystemType(column.Value!.ToString()!, column.ColumnName, GetColumnSystemType(column.ColumnName))) :
-                        "@" + MakeParamWithValue(null);
-                }
+                column.TableAlias = SourceAlias;
+                column.ParamName = column.Value is not null ?
+                    "@" + MakeParamWithValue(GetParamAsSystemType(column.Value!.ToString()!, column.ColumnName, GetColumnSystemType(column.ColumnName))) :
+                    "@" + MakeParamWithValue(null);
             }
-            catch (ArgumentException ex)
-            {
-                throw new DataApiBuilderException(
-                  message: ex.Message,
-                  statusCode: HttpStatusCode.BadRequest,
-                  subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
-                  innerException: ex);
-            }
-
+            
             PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(afterJsonValues.ToList());
         }
 

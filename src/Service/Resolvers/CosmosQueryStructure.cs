@@ -14,7 +14,6 @@ using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
-using Polly;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
@@ -69,7 +68,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 else if (selectionNode.Kind == SyntaxKind.InlineFragment)
                 {
                     InlineFragmentNode inlineFragment = (InlineFragmentNode)selectionNode;
-                    foreach(LabelledColumn column in GenerateQueryColumns(inlineFragment.SelectionSet, document, tableName))
+                    foreach (LabelledColumn column in GenerateQueryColumns(inlineFragment.SelectionSet, document, tableName))
                     {
                         yield return column;
                     }

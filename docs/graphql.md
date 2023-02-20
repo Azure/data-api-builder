@@ -1,12 +1,12 @@
 # GraphQL in Data API builder
 
-Entities configured to be available via GraphQL will be available at the path 
+Entities configured to be available via GraphQL will be available at the default path 
 
 ```text
 http://<dab-server>/graphql
 ```
 
-Data API Builder will automatically generate a GraphQL schema with query and mutation support for all configured entities. GraphQL schema can be explored using a modern GraphQL client like [Insomnia](http://insomnia.rest/) or [Postman](https://www.postman.com/), so that you'll have Intellisense and Autocomplete.
+Data API builder will automatically generate a GraphQL schema with query and mutation fields for all configured entities. The GraphQL schema can be explored using a modern GraphQL client like [Insomnia](http://insomnia.rest/) or [Postman](https://www.postman.com/), so that you'll have IntelliSense and autocomplete.
 
 If you followed the [Getting Started](./getting-started/getting-started.md) example, where there are the `books` and the `authors` entity configured for GraphQL access, you can see how easy is to use GraphQL.
 
@@ -20,7 +20,7 @@ The returned result is a JSON object with this format:
 }
 ```
 
-> **Attention!**: Only the first 100 items are returned by default.
+> [!Note] Only the first 100 items are returned by default.
 
 ## Supported GraphQL Root Types
 

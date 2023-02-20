@@ -14,6 +14,7 @@ using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
+using Polly;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
@@ -47,6 +48,43 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             Init(parameters);
         }
 
+        private static IEnumerable<LabelledColumn> GenerateQueryColumns(SelectionSetNode selectionSet, DocumentNode document, string tableName)
+        {
+            foreach (ISelectionNode selectionNode in selectionSet.Selections)
+            {
+                if (selectionNode.Kind == SyntaxKind.FragmentSpread)
+                {
+                    FragmentSpreadNode fragmentSpread = (FragmentSpreadNode)selectionNode;
+                    FragmentDefinitionNode fragmentDocumentNode = document.GetNodes()
+                        .Where(n => n.Kind == SyntaxKind.FragmentDefinition)
+                        .Cast<FragmentDefinitionNode>()
+                        .Where(n => n.Name.Value == fragmentSpread.Name.Value)
+                        .First();
+
+                    foreach (LabelledColumn column in GenerateQueryColumns(fragmentDocumentNode.SelectionSet, document, tableName))
+                    {
+                        yield return column;
+                    }
+                }
+                else if (selectionNode.Kind == SyntaxKind.InlineFragment)
+                {
+                    InlineFragmentNode inlineFragment = (InlineFragmentNode)selectionNode;
+                    foreach(LabelledColumn column in GenerateQueryColumns(inlineFragment.SelectionSet, document, tableName))
+                    {
+                        yield return column;
+                    }
+                }
+                else
+                {
+                    yield return new LabelledColumn(
+                        tableSchema: string.Empty,
+                        tableName: tableName,
+                        columnName: string.Empty,
+                        label: selectionNode.GetNodes().First().ToString());
+                }
+            }
+        }
+
         [MemberNotNull(nameof(Container))]
         [MemberNotNull(nameof(Database))]
         [MemberNotNull(nameof(OrderByColumns))]
@@ -64,10 +102,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 if (fieldNode is not null)
                 {
-                    Columns.AddRange(fieldNode.SelectionSet!.Selections.Select(x => new LabelledColumn(tableSchema: string.Empty,
-                                                                                                       tableName: SourceAlias,
-                                                                                                       columnName: string.Empty,
-                                                                                                       label: x.GetNodes().First().ToString())));
+                    Columns.AddRange(GenerateQueryColumns(fieldNode.SelectionSet!, _context.Document, SourceAlias));
                 }
 
                 ObjectType realType = GraphQLUtils.UnderlyingGraphQLEntityType(underlyingType.Fields[QueryBuilder.PAGINATION_FIELD_NAME].Type);
@@ -78,10 +113,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else
             {
-                Columns.AddRange(selection.SyntaxNode.SelectionSet!.Selections.Select(x => new LabelledColumn(tableSchema: string.Empty,
-                                                                                                              tableName: SourceAlias,
-                                                                                                              columnName: string.Empty,
-                                                                                                              label: x.GetNodes().First().ToString())));
+                Columns.AddRange(GenerateQueryColumns(selection.SyntaxNode.SelectionSet!, _context.Document, SourceAlias));
                 string entityName = MetadataProvider.GetEntityName(underlyingType.Name);
 
                 Database = MetadataProvider.GetSchemaName(entityName);

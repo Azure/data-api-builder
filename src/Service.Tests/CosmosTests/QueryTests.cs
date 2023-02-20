@@ -258,7 +258,7 @@ query {{
         }
 
         [TestMethod]
-        public async Task QueryWithInlineFragmentOverlappingFields()
+        public async Task CollectionQueryWithInlineFragmentOverlappingFields()
         {
             string query = @"
 query {
@@ -279,7 +279,7 @@ query {
         }
 
         [TestMethod]
-        public async Task QueryWithInlineFragmentNonOverlappingFields()
+        public async Task CollectionQueryWithInlineFragmentNonOverlappingFields()
         {
             string query = @"
 query {
@@ -299,7 +299,7 @@ query {
         }
 
         [TestMethod]
-        public async Task QueryWithFragmentOverlappingFields()
+        public async Task CollectionQueryWithFragmentOverlappingFields()
         {
             string query = @"
 query {
@@ -320,11 +320,11 @@ query {
         }
 
         [TestMethod]
-        public async Task QueryWithFragmentNonOverlappingFields()
+        public async Task CollectionQueryWithFragmentNonOverlappingFields()
         {
             string query = @"
 query {
-    planets(first: 10) {
+    planets {
         __typename
         items {
             name
@@ -339,6 +339,85 @@ fragment p on Planet { id }
             JsonElement response = await ExecuteGraphQLRequestAsync("planets", query);
 
             Assert.AreEqual(TOTAL_ITEM_COUNT, response.GetProperty("items").GetArrayLength());
+        }
+
+        [TestMethod]
+        public async Task QueryWithInlineFragmentOverlappingFields()
+        {
+            string query = @"
+query ($id: ID, $partitionKeyValue: String) {
+    planet_by_pk (id: $id, _partitionKeyValue: $partitionKeyValue) {
+        __typename
+        id
+        name
+        ... on Planet { id }
+    }
+}
+            ";
+
+            string id = _idList[0];
+            JsonElement response = await ExecuteGraphQLRequestAsync("planet_by_pk", query, new() { { "id", id }, { "partitionKeyValue", id } });
+
+            Assert.AreEqual(id, response.GetProperty("id").GetString());
+        }
+
+        [TestMethod]
+        public async Task QueryWithInlineFragmentNonOverlappingFields()
+        {
+            string query = @"
+query ($id: ID, $partitionKeyValue: String) {
+    planet_by_pk (id: $id, _partitionKeyValue: $partitionKeyValue) {
+        __typename
+        name
+        ... on Planet { id }
+    }
+}
+            ";
+
+            string id = _idList[0];
+            JsonElement response = await ExecuteGraphQLRequestAsync("planet_by_pk", query, new() { { "id", id }, { "partitionKeyValue", id } });
+
+            Assert.AreEqual(id, response.GetProperty("id").GetString());
+        }
+
+        [TestMethod]
+        public async Task QueryWithFragmentOverlappingFields()
+        {
+            string query = @"
+query ($id: ID, $partitionKeyValue: String) {
+    planet_by_pk (id: $id, _partitionKeyValue: $partitionKeyValue) {
+        __typename
+        id
+        name
+        ... on Planet { id }
+    }
+}
+            ";
+            string id = _idList[0];
+            JsonElement response = await ExecuteGraphQLRequestAsync("planet_by_pk", query, new() { { "id", id }, { "partitionKeyValue", id } });
+
+            Assert.AreEqual(id, response.GetProperty("id").GetString());
+        }
+
+        [TestMethod]
+        public async Task QueryWithFragmentNonOverlappingFields()
+        {
+            string query = @"
+query ($id: ID, $partitionKeyValue: String) {
+    planet_by_pk (id: $id, _partitionKeyValue: $partitionKeyValue) {
+        __typename
+        name
+        ... p
+    }
+}
+
+fragment p on Planet { id }
+            ";
+
+            string id = _idList[0];
+            JsonElement response = await ExecuteGraphQLRequestAsync("planet_by_pk", query, new() { { "id", id }, { "partitionKeyValue", id } });
+
+            Assert.AreEqual(id, response.GetProperty("id").GetString());
         }
 
         private static void ConvertJsonElementToStringList(JsonElement ele, List<string> strList)

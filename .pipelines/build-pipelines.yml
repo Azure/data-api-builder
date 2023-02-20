@@ -105,7 +105,7 @@ steps:
     targetFolder: '$(Build.ArtifactStagingDirectory)'
 
 - task: ms.vss-governance-buildtask.governance-build-task-component-detection.ComponentGovernanceComponentDetection@0
-  displayName: 'Component Governance Detection' #https://docs.opensource.microsoft.com/tools/cg.html
+  displayName: 'Component Governance Detection'
   inputs:
     alertWarningLevel: Medium
     failOnAlert: true

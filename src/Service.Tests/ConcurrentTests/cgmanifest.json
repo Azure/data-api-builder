@@ -3,11 +3,10 @@
     "registrations": [
         {
             "component": {
-                "type": "other",
-                "other": {
-                    "name": "k6",
-                    "downloadUrl": "https://github.com/grafana/k6/releases/download/v0.42.0/k6-v0.42.0-windows-amd64.zip",
-                    "version": "0.42.0"
+                "type": "git",
+                "git": {
+                    "repositoryUrl": "https://github.com/grafana/k6",
+                    "commitHash": "a45ab5a444da82148f25a9cb93932bed1c8566c9"
                 }
             },
             "DevelopmentDependency": true

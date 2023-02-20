@@ -30,6 +30,7 @@
         - [Policies](#policies)
         - [Limitations](#limitations)
       - [Mappings](#mappings)
+  - [Sample Config](#sample-config)
 
 ## Summary
 
@@ -571,3 +572,65 @@ For example:
 ```
 
 means the `sku_title` field in the related database object will be mapped to the exposed name `title` and `sku_status` will be mapped to `status`. Both GraphQL and REST will require using `title` and `status` instead of `sku_title` and `sku_status` and will additionally use those mapped values in all response payloads.
+
+#### Sample Config
+
+This is how the config file consumed by Data API builder looks like:
+
+```json
+{
+  "$schema": "dab.draft-01.schema.json",
+  "data-source": {
+    "database-type": "mssql",
+    "connection-string": "Server=localhost;Database=PlaygroundDB;User ID=PlaygroundUser;Password=ReplaceMe;TrustServerCertificate=true"
+  },
+  "mssql": {
+    "set-session-context": true
+  },
+  "runtime": {
+    "rest": {
+      "enabled": true,
+      "path": "/api"
+    },
+    "graphql": {
+      "allow-introspection": true,
+      "enabled": true,
+      "path": "/graphql"
+    },
+    "host": {
+      "mode": "development",
+      "cors": {
+        "origins": [],
+        "allow-credentials": false
+      },
+      "authentication": {
+        "provider": "StaticWebApps"
+      }
+    }
+  },
+  "entities": {
+    "Author": {
+      "source": "authors",
+      "rest": false,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "*" ]
+        }
+      ]
+    },
+    "Book": {
+      "source": "books",
+      "rest": false,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "*" ]
+        }
+      ]
+    }
+  }
+}
+```

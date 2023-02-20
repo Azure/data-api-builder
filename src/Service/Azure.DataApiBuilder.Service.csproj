@@ -95,7 +95,7 @@
   <ItemGroup>
     <None Include="..\..\nuget\README.md" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\LICENSE.txt" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\NOTICE.txt" Condition="Exists('..\..\..\NOTICE.txt')" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\NOTICE.txt" Condition="Exists('..\..\NOTICE.txt')" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

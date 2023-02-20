@@ -1,0 +1,9 @@
+{
+  "tool": "Credential Scanner",
+  "suppressions": [
+    {
+      "placeholder" : "REPLACEME",
+      "_justification": "Placeholder secret used for tests and samples."
+    }
+  ]
+}

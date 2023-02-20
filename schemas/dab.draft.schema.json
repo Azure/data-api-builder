@@ -1,6 +1,3 @@
-// Copyright (c) Microsoft Corporation.
-// Licensed under the MIT License.
-
 {
   "$schema": "https://json-schema.org/draft-07/schema",
   "$id": "#/additionalProperties/version",

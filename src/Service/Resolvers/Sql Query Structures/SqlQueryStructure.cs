@@ -605,6 +605,35 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             foreach (ISelectionNode node in selections)
             {
+                if (node.Kind == SyntaxKind.FragmentSpread)
+                {
+                    if (_ctx == null)
+                    {
+                        throw new DataApiBuilderException(
+                            message: "No GraphQL context exists",
+                            statusCode: HttpStatusCode.InternalServerError,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                    }
+
+                    FragmentSpreadNode fragmentSpread = (FragmentSpreadNode)node;
+                    DocumentNode document = _ctx.Document;
+                    FragmentDefinitionNode fragmentDocumentNode = document.GetNodes()
+                        .Where(n => n.Kind == SyntaxKind.FragmentDefinition)
+                        .Cast<FragmentDefinitionNode>()
+                        .Where(n => n.Name.Value == fragmentSpread.Name.Value)
+                        .First();
+
+                    AddGraphQLFields(fragmentDocumentNode.SelectionSet.Selections, runtimeConfigProvider);
+                    return;
+                }
+
+                if (node.Kind == SyntaxKind.InlineFragment)
+                {
+                    InlineFragmentNode inlineFragment = (InlineFragmentNode)node;
+                    AddGraphQLFields(inlineFragment.SelectionSet.Selections, runtimeConfigProvider);
+                    return;
+                }
+
                 FieldNode field = (FieldNode)node;
                 string fieldName = field.Name.Value;
 
@@ -614,7 +643,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 {
                     continue;
                 }
-                else if (field.SelectionSet is null)
+
+                if (field.SelectionSet is null)
                 {
                     if (MetadataProvider.TryGetBackingColumn(EntityName, fieldName, out string? name)
                         && !string.IsNullOrWhiteSpace(name))
@@ -794,7 +824,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         protected void AddColumn(string columnName, string labelName)
         {
-            Columns.Add(new LabelledColumn(DatabaseObject.SchemaName, DatabaseObject.Name, columnName, label: labelName, SourceAlias));
+            LabelledColumn column = new(DatabaseObject.SchemaName, DatabaseObject.Name, columnName, label: labelName, SourceAlias);
+            if (!Columns.Contains(column))
+            {
+                Columns.Add(column);
+            }
         }
 
         /// <summary>

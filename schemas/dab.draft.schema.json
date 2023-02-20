@@ -286,11 +286,11 @@
                       "items": {
                         "type": "string",
                         "enum": [
-                          "GET",
-                          "POST",
-                          "PUT",
-                          "PATCH",
-                          "DELETE"
+                          "get",
+                          "post",
+                          "put",
+                          "patch",
+                          "delete"
                         ]
                       }
                     }
@@ -410,7 +410,14 @@
               "source": {
                 "properties": {
                   "type": {
-                    "const": "stored-procedure"
+                    "oneOf": [
+                      {
+                        "const": "table"
+                      },
+                      {
+                        "const": "view"
+                      }
+                    ]
                   }
                 }
               }
@@ -438,19 +445,13 @@
                           "items": {
                             "oneOf": [
                               {
-                                "type": "string",
-                                "enum": [
-                                  "execute"
-                                ]
+                                "$ref": "#/$defs/action"
                               },
                               {
                                 "type": "object",
                                 "properties": {
                                   "action": {
-                                    "type": "string",
-                                    "enum": [
-                                      "execute"
-                                    ]
+                                    "$ref": "#/$defs/action"
                                   },
                                   "fields": {
                                     "type": "object",
@@ -517,13 +518,21 @@
                           "items": {
                             "oneOf": [
                               {
-                                "$ref": "#/$defs/action"
+                                "type": "string",
+                                "enum": [
+                                  "execute",
+                                  "*"
+                                ]
                               },
                               {
                                 "type": "object",
                                 "properties": {
                                   "action": {
-                                    "$ref": "#/$defs/action"
+                                    "type": "string",
+                                    "enum": [
+                                      "execute",
+                                      "*"
+                                    ]
                                   },
                                   "fields": {
                                     "type": "object",

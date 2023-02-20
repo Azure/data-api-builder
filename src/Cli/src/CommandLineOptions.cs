@@ -54,9 +54,16 @@ namespace Cli
             HostMode = hostMode;
             CorsOrigin = corsOrigin;
             AuthenticationProvider = authenticationProvider;
-            RestPath = restPath;
             Audience = audience;
             Issuer = issuer;
+
+            // Prefix rest path with '/', if not already present.
+            if (!restPath.StartsWith('/'))
+            {
+                restPath = "/" + restPath;
+            }
+
+            RestPath = restPath;
         }
 
         [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmosdb_nosql, cosmosdb_postgresql, mysql, postgresql")]

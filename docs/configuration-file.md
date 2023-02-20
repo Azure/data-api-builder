@@ -575,7 +575,7 @@ means the `sku_title` field in the related database object will be mapped to the
 
 #### Sample Config
 
-This is a sample config file to give an idea of how the config consumed by Data API builder might looks like:
+This is a sample config file to give an idea of how the json config consumed by Data API builder might look like:
 
 ```json
 {

@@ -36,6 +36,7 @@ To start the Data API builder engine, use the `start` action if you have the con
 ```bash
 dab start
 ```
+
 For providing a custom configuration file, you can use the option `-c` or `--config` followed by the config file name.
 ```
 dab start -c my-custom-dab-config.json

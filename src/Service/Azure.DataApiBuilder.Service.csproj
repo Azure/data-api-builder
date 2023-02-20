@@ -19,6 +19,7 @@
         <CopyToOutputDirectoryAction Condition="'$(Configuration)' == 'Debug'">Always</CopyToOutputDirectoryAction>
         <CopyToOutputDirectoryAction Condition="'$(Configuration)' == 'Release'">Always</CopyToOutputDirectoryAction>
         <CopyToOutputDirectoryAction Condition="'$(Configuration)'=='Docker'">Never</CopyToOutputDirectoryAction>
+        <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)'=='Release'">
@@ -90,5 +91,11 @@
         <ProjectReference Include="..\Config\Azure.DataApiBuilder.Config.csproj" />
         <ProjectReference Include="..\Service.GraphQLBuilder\Azure.DataApiBuilder.Service.GraphQLBuilder.csproj" />
     </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\nuget\README.md" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\LICENSE.txt" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\NOTICE.txt" Condition="Exists('..\..\NOTICE.txt')" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 
 </Project>

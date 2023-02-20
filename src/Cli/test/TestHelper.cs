@@ -250,7 +250,7 @@ namespace Cli.Tests
                     ]
                   },
                   ""graphql"": {
-                    ""operation"": ""Mutation""
+                    ""operation"": ""mutation""
                       }
                     }
                   }
@@ -277,7 +277,7 @@ namespace Cli.Tests
                     ]	
                 },	
                 ""graphql"": {	
-                    ""operation"": ""Mutation""	
+                    ""operation"": ""mutation""
                       }
                     }
                   }
@@ -305,7 +305,7 @@ namespace Cli.Tests
                 },	
                 ""graphql"": {
                     ""type"": true,
-                    ""operation"": ""Mutation""	
+                    ""operation"": ""mutation""
                       }
                     }
                   }
@@ -336,7 +336,7 @@ namespace Cli.Tests
                         ""singular"": ""book"",
                         ""plural"": ""books""
                     },
-                        ""operation"": ""Mutation""	
+                        ""operation"": ""mutation""
                       }
                     }
                   }
@@ -364,7 +364,7 @@ namespace Cli.Tests
                 },	
                 ""graphql"": {
                     ""type"": true,
-                     ""operation"": ""Query""	
+                     ""operation"": ""query""
                       }
                     }
                   }
@@ -395,7 +395,7 @@ namespace Cli.Tests
                       ""singular"": ""book"",
                         ""plural"": ""books""
                     },
-                     ""operation"": ""Query""	
+                     ""operation"": ""query""
                       }
                     }
                   }
@@ -424,7 +424,7 @@ namespace Cli.Tests
                 },	
                 ""graphql"": {
                     ""type"": true,
-                     ""operation"": ""Mutation""	
+                     ""operation"": ""mutation""
                       }
                     }
                   }
@@ -474,7 +474,7 @@ namespace Cli.Tests
                 },	
                 ""graphql"": {
                     ""type"": true,
-                     ""operation"": ""Query""	
+                     ""operation"": ""query""
                       }
                     }
                   }
@@ -508,7 +508,7 @@ namespace Cli.Tests
                       ""singular"":""book"",
                       ""plural"":""books""
                     },
-                     ""operation"": ""Query""	
+                     ""operation"": ""query""
                       }
                     }
                   }
@@ -536,7 +536,7 @@ namespace Cli.Tests
                     ]	
                 },	
                 ""graphql"": {	
-                    ""operation"": ""Mutation""	
+                    ""operation"": ""mutation""
                       }
                     }
                   }
@@ -564,7 +564,7 @@ namespace Cli.Tests
                     ]	
                 },	
                 ""graphql"": {	
-                    ""operation"": ""Mutation""	
+                    ""operation"": ""mutation""
                       }
                     }
                   }
@@ -593,7 +593,7 @@ namespace Cli.Tests
                     ]	
                 },	
                 ""graphql"": {	
-                    ""operation"": ""Mutation""	
+                    ""operation"": ""mutation""
                       }
                     }
                   }
@@ -623,7 +623,7 @@ namespace Cli.Tests
                     ]	
                 },	
                 ""graphql"": {	
-                    ""operation"": ""Mutation""	
+                    ""operation"": ""mutation""
                       }
                     }
                   }
@@ -653,7 +653,7 @@ namespace Cli.Tests
                     ]	
                 },	
                 ""graphql"": {	
-                    ""operation"": ""Mutation""	
+                    ""operation"": ""mutation""
                       }
                     }
                   }
@@ -688,7 +688,7 @@ namespace Cli.Tests
                     ]	
                   },	
                   ""graphql"": {	
-                    ""operation"": ""Query""	
+                    ""operation"": ""query""
                       }
                     }
                   }

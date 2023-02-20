@@ -247,8 +247,10 @@ namespace Azure.DataApiBuilder.Config
             {
                 if (graphQLConfigElement.TryGetProperty("operation", out JsonElement graphQLOperationElement))
                 {
-                    string? graphQLOperationString = JsonSerializer.Deserialize<string>(graphQLOperationElement, RuntimeConfig.SerializerOptions);
-                    if (graphQLOperationString is not null && Enum.TryParse(graphQLOperationString, out GraphQLOperation operation))
+                    string? graphQLOperationString =
+                        JsonSerializer.Deserialize<string>(graphQLOperationElement, RuntimeConfig.SerializerOptions);
+                    if (graphQLOperationString is not null &&
+                        Enum.TryParse(graphQLOperationString, ignoreCase: true, out GraphQLOperation operation))
                     {
                         return operation;
                     }

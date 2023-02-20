@@ -82,6 +82,14 @@ namespace Cli
                         return false;
                     }
 
+                    // If the option --rest.path is specified for cosmosdb_nosql, log a warning because
+                    // rest is not supported for cosmosdb_nosql yet.
+                    if (!restPath.Equals(GlobalSettings.REST_DEFAULT_PATH))
+                    {
+                        _logger.LogWarning("Configuration option --rest.path is not honored for cosmosdb_nosql since" +
+                            "it does not support REST yet.");
+                    }
+
                     restPath = null;
                     dbOptions = new CosmosDbNoSqlOptions(cosmosDatabase, cosmosContainer, graphQLSchemaPath, GraphQLSchema: null);
                     break;

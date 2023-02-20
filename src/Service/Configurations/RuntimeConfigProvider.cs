@@ -56,7 +56,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         public virtual string RestPath
         {
             // For relation dbs, RestGlobalSettings is always non-null.
-            get { return RuntimeConfiguration is not null ? RuntimeConfiguration.RestGlobalSettings!.Path : string.Empty; }
+            get { return RuntimeConfiguration is not null ? RuntimeConfiguration.RestGlobalSettings.Path : string.Empty; }
         }
 
         /// <summary>

@@ -1190,7 +1190,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             };
 
-            RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(globalSettings: settings, dataSource: new(DatabaseType.mssql));
+            RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(globalSettings: settings, dataSource: null);
             string expectedErrorMessage = "Conflicting GraphQL and REST path configuration.";
 
             try

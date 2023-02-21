@@ -1407,7 +1407,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     Assert.ThrowsException<DataApiBuilderException>(() =>
                     RuntimeConfigValidator.ValidateRestPathForRelationalDbs(configuration));
                 Assert.AreEqual(expectedErrorMessage, ex.Message);
-                Assert.AreEqual(HttpStatusCode.ServiceUnavailable,ex.StatusCode);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
             }
             else

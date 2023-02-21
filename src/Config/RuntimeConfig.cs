@@ -151,7 +151,7 @@ namespace Azure.DataApiBuilder.Config
 
             string? schemaPath = Path.Combine(assemblyDirectory, "dab.draft.schema.json");
             string schemaFileContent = File.ReadAllText(schemaPath);
-            Dictionary<string, object>? jsonDictionary = JsonSerializer.Deserialize<Dictionary<string, object>>(schemaFileContent);
+            Dictionary<string, object>? jsonDictionary = JsonSerializer.Deserialize<Dictionary<string, object>>(schemaFileContent, SerializerOptions);
 
             if (jsonDictionary is null)
             {

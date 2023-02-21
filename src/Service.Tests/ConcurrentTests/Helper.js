@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 import encoding from 'k6/encoding';
 import { check } from 'k6';
 

@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 #!/bin/bash
 # This script can be used for generating the config files
 databaseTypes=();

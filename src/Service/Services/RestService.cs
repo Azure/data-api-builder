@@ -386,8 +386,8 @@ namespace Azure.DataApiBuilder.Service.Services
         public (string, string) GetEntityNameAndPrimaryKeyRouteFromRoute(string route)
         {
             // route will ignore leading '/' so we trim here to allow for restPath
-            // that start with '/'
-            string restPath = _runtimeConfigProvider.RestPath.TrimStart('/');
+            // that start with '/'. We can be assured here that _runtimeConfigProvider.RestPath[0]='/'.
+            string restPath = _runtimeConfigProvider.RestPath.Substring(1);
             if (!route.StartsWith(restPath))
             {
                 throw new DataApiBuilderException(
@@ -398,7 +398,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
             // entity's path comes after the restPath, so get substring starting from
             // the end of restPath. If restPath is not empty we trim the '/' following the path.
-            string routeAfterPath = string.IsNullOrEmpty(restPath) ? route : route.Substring(restPath.Length).TrimStart('/');
+            string routeAfterPath = route.Substring(restPath.Length).TrimStart('/');
             // Split routeAfterPath on the first occurrence of '/', if we get back 2 elements
             // this means we have a non empty primary key route which we save. Otherwise, save
             // primary key route as empty string. Entity Path will always be the element at index 0.

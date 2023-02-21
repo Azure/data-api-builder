@@ -1,3 +1,6 @@
+-- Copyright (c) Microsoft Corporation.
+-- Licensed under the MIT License.
+
 drop table if exists dbo.books_authors;
 drop table if exists dbo.books;
 drop table if exists dbo.authors;

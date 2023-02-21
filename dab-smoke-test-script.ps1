@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 # This file validates the executables are passing the following basic checks:
 # 1. Correct version of DAB is generated
 # 2. HelpWindow gets displayed on the Console

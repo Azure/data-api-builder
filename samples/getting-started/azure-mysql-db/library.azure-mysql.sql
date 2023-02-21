@@ -1,3 +1,6 @@
+-- Copyright (c) Microsoft Corporation.
+-- Licensed under the MIT License.
+
 CREATE DATABASE  IF NOT EXISTS `booksdb` 
 USE `booksdb`;
 

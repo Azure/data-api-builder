@@ -4,7 +4,7 @@
 
 ### Azure support tickets
 
-While Data API Builder is in public preview, it is not eligible for Microsoft support. Please us the GitHub issues to file bugs and feature requests.
+While Data API Builder is in public preview, it is not eligible for Microsoft support. Please use GitHub Issues to file bugs and feature requests.
 
 ### GitHub issues
 

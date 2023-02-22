@@ -361,7 +361,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             if (string.IsNullOrEmpty(restPath))
             {
                 throw new DataApiBuilderException(
-                    message: $"REST path prefix cannot be empty.",
+                    message: $"REST path prefix cannot be null or empty.",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
             }

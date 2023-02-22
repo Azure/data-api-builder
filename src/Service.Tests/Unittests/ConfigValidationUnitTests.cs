@@ -1372,8 +1372,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DisplayName = "Rest path prefix containing reserved characters /+&,")]
         [DataRow("/@)", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
             DisplayName = "Rest path prefix containing reserved characters /@)")]
-        [DataRow("", "REST path prefix cannot be empty.", true,
+        [DataRow("", "REST path prefix cannot be null or empty.", true,
             DisplayName = "Empty Rest path prefix.")]
+        [DataRow(null, "REST path prefix cannot be null or empty.", true,
+            DisplayName = "Null Rest path prefix.")]
         [DataRow("?", "REST path should start with a '/'.", true,
             DisplayName = "Rest path prefix not starting with forward slash.")]
         [DataRow("/-rest-api", null, false,

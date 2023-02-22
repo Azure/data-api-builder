@@ -1050,13 +1050,13 @@
         {
           "role": "anonymous",
           "actions": [
-            "delete"
+            "execute"
           ]
         },
         {
           "role": "authenticated",
           "actions": [
-            "delete"
+            "execute"
           ]
         }
       ],
@@ -1114,13 +1114,13 @@
         {
           "role": "anonymous",
           "actions": [
-            "read"
+            "execute"
           ]
         },
         {
           "role": "authenticated",
           "actions": [
-            "read"
+            "execute"
           ]
         }
       ],

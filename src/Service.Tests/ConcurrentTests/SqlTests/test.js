@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 import { validateParallelReadOperations } from './ParallelReadsTestCase.js';
 import { validateParallelCRUDOperations } from './ParallelCrudOperationsTestCase.js';
 import { validateParallelDeleteOperationsOnSameItem } from './ParallelDeleteOnSameItem.js';

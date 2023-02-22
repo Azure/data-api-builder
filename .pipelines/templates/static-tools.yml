@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 # static analysis
 
 parameters:
@@ -69,12 +72,6 @@ jobs:
       projects: 'src/Azure.DataApiBuilder.sln'
       configuration: '${{ parameters.BuildConfiguration }}'
       publishTestResults: true
-
-  - task: ms.vss-governance-buildtask.governance-build-task-component-detection.ComponentGovernanceComponentDetection@0
-    displayName: 'Component Governance Detection' #https://docs.opensource.microsoft.com/tools/cg.html
-    inputs:
-      alertWarningLevel: Medium
-      failOnAlert: true
 
 #  - task: securedevelopmentteam.vss-secure-development-tools.build-task-binskim.BinSkim@3
 #    displayName: 'BinSkim'

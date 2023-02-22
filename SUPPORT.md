@@ -8,7 +8,7 @@ While Data API Builder is in public preview, it is not eligible for Microsoft su
 
 ### GitHub issues
 
-We use [GitHub Issues](https://github.com/azure/data-api-builder/issues) to track bugs, questions, and feature requests. GitHub issues require you to have a GitHub account and are free to create. There is a GitHub Issue template to help you provide the information we need to investigate your issue.
+We use [GitHub Issues](https://github.com/azure/data-api-builder/issues) to track bugs, questions, and feature requests. GitHub Issues require you to have a GitHub account and are free to create. There is a GitHub Issue template to help you provide the information we need to investigate your issue.
 
 We recommend that you search through the existing issues to see if there is a similar issue that you can comment on. If you find an existing issue, please add a comment to the existing issue instead of creating a new one.
 

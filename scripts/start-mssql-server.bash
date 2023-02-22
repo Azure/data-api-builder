@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 #!/bin/bash
 
 DOCKER_SQL_PASS=$1

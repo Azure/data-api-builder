@@ -1,3 +1,6 @@
+-- Copyright (c) Microsoft Corporation.
+-- Licensed under the MIT License.
+
 BEGIN TRANSACTION
 DROP SECURITY POLICY IF EXISTS revenuesSecPolicy;
 DROP FUNCTION IF EXISTS revenuesPredicate;

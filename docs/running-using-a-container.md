@@ -10,7 +10,7 @@ The proceeding command makes the following assumptions:
 
 - Let's say you are in the directory: `C:\data-api-builder` folder
 - The configuration file you want to use in the `samples` folder and is named `my-sample-dab-config.json`
-- You want to use the latest release which can be identified from the [Releases](https://github.com/Azure/data-api-builder/releases) page. For Example, If would like to use the image with the tag `0.5.*`
+- You want to use the latest release which can be identified from the [Releases](https://github.com/Azure/data-api-builder/releases) page. For Example, If you would like to use the image with the tag `0.5.*`, run the following command:
 
 ```bash
 docker run -it -v "c:\data-api-builder\samples:/App/samples" -p 5000:5000 pull mcr.microsoft.com/azure/data-api-builder:0.5.* --ConfigFileName ./samples/my-sample-dab-config.json

@@ -36,19 +36,19 @@ Set-Location $workingDirectory;
 #Generates the config files for the selected database types.
 foreach($databaseType in $databaseTypes){
     if($databaseType -eq "mssql"){
-        $commandFile = "MsSqlCommands.txt";
+        $commandFile = "mssql-commands.txt";
         $configFile = "dab-config.MsSql.json";
     }
     elseif($databaseType -eq "mysql"){
-        $commandFile = "MySqlCommands.txt";
+        $commandFile = "mysql-commands.txt";
         $configFile = "dab-config.MySql.json";
     }
     elseif($databaseType -eq "postgresql"){
-        $commandFile = "PostgreSqlCommands.txt";
+        $commandFile = "postgresql-commands.txt";
         $configFile = "dab-config.PostgreSql.json";
     }
     else{
-        $commandFile = "CosmosCommands.txt";
+        $commandFile = "cosmos_nosql-commands.txt";
         $configFile = "dab-config.CosmosDb_NoSql.json";
     }
 

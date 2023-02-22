@@ -39,16 +39,16 @@ cd $workingDirectory;
 for databaseType in ${databaseTypes[@]}
 do
     if [[ $databaseType == "mssql" ]]; then 
-        commandFile="MsSqlCommands.txt";
+        commandFile="mssql-commands.txt";
         configFile="dab-config.MsSql.json";
     elif [[ $databaseType == "mysql" ]]; then 
-        commandFile="MySqlCommands.txt";
+        commandFile="mysql-commands.txt";
         configFile="dab-config.MySql.json";
     elif [[ $databaseType == "postgresql" ]]; then
-        commandFile="PostgreSqlCommands.txt";
+        commandFile="postgresql-commands.txt";
         configFile="dab-config.PostgreSql.json";
     else 
-        commandFile="CosmosCommands.txt";
+        commandFile="cosmos_nosql-commands.txt";
         configFile="dab-config.CosmosDb_NoSql.json";
     fi
 

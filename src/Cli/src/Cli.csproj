@@ -71,8 +71,8 @@
   </ItemGroup>
 
   <Target Name="GenerateConfigFiles" AfterTargets="PostBuildEvent">
-      <Exec Command="powershell.exe -command ..\..\..\configGenerators\configGenerator.ps1 $(generateConfigFileForDbType) " Condition=" '$(OS)' == 'Windows_NT' And '$(generateConfigFileForDbType)' != '' " />
-      <Exec Command="bash ../../../configGenerators/configGenerator.sh $(generateConfigFileForDbType) " Condition=" '$(OS)' != 'Windows_NT' And '$(generateConfigFileForDbType)' != '' " />
+      <Exec Command="powershell.exe -command ..\..\..\config-generators\config-generator.ps1 $(generateConfigFileForDbType) " Condition=" '$(OS)' == 'Windows_NT' And '$(generateConfigFileForDbType)' != '' " />
+      <Exec Command="bash ../../../config-generators/config-generator.sh $(generateConfigFileForDbType) " Condition=" '$(OS)' != 'Windows_NT' And '$(generateConfigFileForDbType)' != '' " />
       <Copy SourceFiles="@(ConfigFiles)" DestinationFolder="..\..\out\tests\$(TargetFramework)" />
   </Target>
 

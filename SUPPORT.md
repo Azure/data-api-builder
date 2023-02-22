@@ -1,25 +1,27 @@
-# TODO: The maintainer of this repo has not yet edited this file
-
-**REPO OWNER**: Do you want Customer Service & Support (CSS) support for this product/project?
-
-- **No CSS support:** Fill out this template with information about how to file issues and get help.
-- **Yes CSS support:** Fill out an intake form at [aka.ms/spot](https://aka.ms/spot). CSS will work with/help you to determine next steps. More details also available at [aka.ms/onboardsupport](https://aka.ms/onboardsupport).
-- **Not sure?** Fill out a SPOT intake as though the answer were "Yes". CSS will help you decide.
-
-*Then remove this first heading from this SUPPORT.MD file before publishing your repo.*
-
 # Support
 
 ## How to file issues and get help
 
-This project uses GitHub Issues to track bugs and feature requests. Please search the existing
-issues before filing new issues to avoid duplicates.  For new issues, file your bug or
-feature request as a new Issue.
+### Azure support tickets
 
-For help and questions about using this project, please **REPO MAINTAINER: INSERT INSTRUCTIONS HERE
-FOR HOW TO ENGAGE REPO OWNERS OR COMMUNITY FOR HELP. COULD BE A STACK OVERFLOW TAG OR OTHER
-CHANNEL. WHERE WILL YOU HELP PEOPLE?**.
+While Data API Builder is in public preview, it is not eligible for Microsoft support. Please us the GitHub issues to file bugs and feature requests.
 
-## Microsoft Support Policy
+### GitHub issues
 
-Support for this **PROJECT or PRODUCT** is limited to the resources listed above.
+We use [GitHub Issues](https://github.com/azure/data-api-builder/issues) to track bugs, questions, and feature requests. GitHub issues require you to have a GitHub account and are free to create. There is a GitHub Issue template to help you provide the information we need to investigate your issue.
+
+We recommend that you search through the existing issues to see if there is a similar issue that you can comment on. If you find an existing issue, please add a comment to the existing issue instead of creating a new one.
+
+When an issue is raised, a member of the team will respond within five (5) business days. If you do not receive a response within five (5) business days, please feel free to ping the issue with a comment.
+
+## Resources
+
+- [Documentation](https://go.microsoft.com/fwlink/?linkid=2224253)
+- [GitHub repository](https://github.com/azure/data-api-builder)
+- [Community help](https://github.com/azure/data-api-builder/discussions)
+
+## Security issues
+
+Security issues and bugs should be reported privately, via email, to the Microsoft Security Response Center(secure@microsoft.com). You should receive a response within 24 hours.
+
+For more information, review [SECURITY.md](SECURITY.md).

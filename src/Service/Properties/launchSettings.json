@@ -12,7 +12,7 @@
     "IIS Express": {
       "commandName": "IISExpress",
       "launchBrowser": true,
-      "launchUrl": "graphql",
+      "launchUrl": "",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
@@ -20,7 +20,7 @@
     "Azure.DataApiBuilder.Service": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "graphql",
+      "launchUrl": "",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "MsSql"
       },
@@ -30,7 +30,7 @@
     "Development": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "graphql",
+      "launchUrl": "",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
@@ -40,7 +40,7 @@
     "PostgreSql": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "graphql",
+      "launchUrl": "",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "PostgreSql"
       },
@@ -50,7 +50,7 @@
     "MsSql": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "graphql",
+      "launchUrl": "",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "MsSql"
       },
@@ -60,7 +60,7 @@
     "MySql": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "graphql",
+      "launchUrl": "",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "MySql"
       },
@@ -70,7 +70,7 @@
     "CosmosDb_NoSql": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "graphql",
+      "launchUrl": "",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "CosmosDb_NoSql"
       },

@@ -422,16 +422,8 @@ namespace Azure.DataApiBuilder.Service
                     Tool = {
                         // Determines if accessing the endpoint from a browser
                         // will load the GraphQL Banana Cake Pop IDE.
-                        Enable = runtimeConfigProvider.IsDeveloperMode() || env.IsDevelopment()
+                        Enable = false
                     }
-                });
-
-                // In development mode, BCP is enabled at /graphql endpoint by default.
-                // Need to disable mapping BCP explicitly as well to avoid ability to query
-                // at an additional endpoint: /graphql/ui.
-                endpoints.MapBananaCakePop().WithOptions(new GraphQLToolOptions
-                {
-                    Enable = false
                 });
 
                 endpoints.MapHealthChecks("/");

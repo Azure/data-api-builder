@@ -24,7 +24,7 @@ public class EndToEndTests
     [TestMethod]
     public void TestInitForCosmosDBNoSql()
     {
-        string[] args = { "init", "-c", _testRuntimeConfig, "--database-type", "cosmosdb_nosql", "--rest.path", "rest-api",
+        string[] args = { "init", "-c", _testRuntimeConfig, "--database-type", "cosmosdb_nosql",
                           "--connection-string", "localhost:5000", "--cosmosdb_nosql-database",
                           "graphqldb", "--cosmosdb_nosql-container", "planet", "--graphql-schema", "schema.gql", "--cors-origin", "localhost:3000,www.nolocalhost.com:80" };
         Program.Main(args);
@@ -53,7 +53,7 @@ public class EndToEndTests
     [TestMethod]
     public void TestInitForCosmosDBPostgreSql()
     {
-        string[] args = { "init", "-c", _testRuntimeConfig, "--database-type", "cosmosdb_postgresql",
+        string[] args = { "init", "-c", _testRuntimeConfig, "--database-type", "cosmosdb_postgresql", "--rest.path", "/rest-api",
                           "--connection-string", "localhost:5000", "--cors-origin", "localhost:3000,www.nolocalhost.com:80" };
         Program.Main(args);
 
@@ -63,7 +63,7 @@ public class EndToEndTests
         Assert.AreEqual(DatabaseType.cosmosdb_postgresql, runtimeConfig.DatabaseType);
         Assert.IsNull(runtimeConfig.DataSource.CosmosDbPostgreSql);
         Assert.IsNotNull(runtimeConfig.RuntimeSettings);
-        Assert.AreEqual(GlobalSettings.REST_DEFAULT_PATH, runtimeConfig.RestGlobalSettings!.Path);
+        Assert.AreEqual("/rest-api", runtimeConfig.RestGlobalSettings!.Path);
         JsonElement jsonRestSettings = (JsonElement)runtimeConfig.RuntimeSettings[GlobalSettingsType.Rest];
 
         RestGlobalSettings? restGlobalSettings = JsonSerializer.Deserialize<RestGlobalSettings>(jsonRestSettings, RuntimeConfig.SerializerOptions);

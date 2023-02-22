@@ -1,3 +1,7 @@
+# Contributing
+
+_We are still working on our contribution guidelines. In the meantime, please feel free to open issues and provide feedback on how to streamline the process._
+
 ## Introduction
 
 This project welcomes contributions and suggestions. Most contributions require you to agree to a Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us the rights to use your contribution. For details, visit https://cla.opensource.microsoft.com.
@@ -6,14 +10,22 @@ When you submit a pull request, a CLA bot will automatically determine whether y
 
 This project has adopted the Microsoft Open Source Code of Conduct. For more information see the Code of Conduct FAQ or contact opencode@microsoft.com with any additional questions or comments.
 
+## Raising Issues
 
-## Codestyle
+We very much welcome issues to help us improve the project. Please include as much information as possible, including:
 
-We use `dotnet format` to enforce code conventions. It is run automatically
-in CI, so if you forget your PR cannot be merged. You can copy paste the
-following commands to install a git pre-commit hook. This will cause a commit to
-fail if you forgot to run `dotnet format`. If you have run on save enabled in
-your editor this is not necessary.
+- What you were trying to do
+- What happened
+- What you expected to happen
+- Any relevant logs
+- The hosting environment (e.g. Local, Azure Static Web Apps, Azure App Service, etc.)
+
+## Working with the code
+
+### Code style
+
+We use `dotnet format` to enforce code conventions. It is run automatically in CI, so if you forget your PR cannot be merged. You can copy paste the
+following commands to install a git pre-commit hook. This will cause a commit to fail if you forgot to run `dotnet format`. If you have run on save enabled in your editor this is not necessary.
 
 ```bash
 cat > .git/hooks/pre-commit << __EOF__
@@ -45,60 +57,23 @@ __EOF__
 chmod +x .git/hooks/pre-commit
 ```
 
-## dab
-1. To update the CLI tool trigger name from DAB to any other, goto csProj file and update the ToolCommandName :
-```
-<PackAsTool>true</PackAsTool>
-<ToolCommandName>dab</ToolCommandName>
-<PackageOutputPath>./nupkg</PackageOutputPath>
-```
-
-2. Goto your project directory and pack it up.
-```
-dotnet pack
-```
-
-3. Install the tool
-```
-dotnet tool install --global --add-source ./nupkg dab
-```
-
-4. After making new changes. Do the below steps
-
-	a) update the version in *csproj:
-	```
-    <PropertyGroup>
-	  <Version>2.0.0</Version>
-	</PropertyGroup>
-	```
-	b) pack the project :
-	```
-	dotnet pack
-	```
-	c) update the installed tool:
-	```
-	dotnet tool update -g --add-source ./nupkg dab --version 2.0.0
-	```
-
-## Share the changes
-1) Once you create the package (dotnet pack). It's ready to be shared.
-2) Share the latest package (.nupkg file).
-
-## Testing
+### Testing
 
 All tests are run in CI, so if they fail your PR will not be merged. Running
 tests locally can be useful to debug a failure.
 
-### Running Sql (MsSql, Postgres, MySql) tests
+#### Running Sql (MsSql, Postgres, MySql) tests
 
 The only thing that should different between CI and your own machine is how you
 connect to the database that's used for the tests. You should create a custom
 overrides file with your connection string:
+
 - `dab-config.MsSql.overrides.json` for SQL Server
 - `dab-config.PostgreSql.overrides.json` for Postgres
 - `dab-config.MySql.overrides.json` for MySql
 
 There's a template for these files called:
+
 - `dab-config.MsSql.overrides.example.json` for SQL Server
 - `dab-config.PostgreSql.overrides.example.json` for Postgres
 - `dab-config.PostgreSql.overrides.example.json` for MySql
@@ -118,7 +93,6 @@ TODO
 ### Running unit tests
 
 TODO
-
 
 ### Modifying tests
 

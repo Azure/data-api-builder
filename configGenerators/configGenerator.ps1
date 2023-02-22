@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 # This script can be used for generating the config files
 $PSDefaultParameterValues['*:Encoding'] = 'utf8';
 

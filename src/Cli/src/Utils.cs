@@ -109,12 +109,12 @@ namespace Cli
             // custom type definitions.
             else if (graphQLDetail is null && graphQLOperation is not null)
             {
-                return new GraphQLStoredProcedureEntityOperationSettings(GraphQLOperation: graphQLOperation.ToString());
+                return new GraphQLStoredProcedureEntityOperationSettings(GraphQLOperation: graphQLOperation.ToString()!.ToLower());
             }
 
             // Stored procedures that are defined with custom graphQL type definition and
             // custom a graphQL operation.
-            return new GraphQLStoredProcedureEntityVerboseSettings(Type: graphQLDetail, GraphQLOperation: graphQLOperation.ToString());
+            return new GraphQLStoredProcedureEntityVerboseSettings(Type: graphQLDetail, GraphQLOperation: graphQLOperation.ToString()!.ToLower());
 
         }
 
@@ -891,7 +891,7 @@ namespace Cli
         {
             if (!Enum.TryParse(operation, ignoreCase: true, out graphQLOperation))
             {
-                _logger.LogError($"Invalid GraphQL Operation. Supported operations are {GraphQLOperation.Query.ToString()} and {GraphQLOperation.Mutation.ToString()}.");
+                _logger.LogError($"Invalid GraphQL Operation. Supported operations are {GraphQLOperation.Query.ToString()!.ToLower()} and {GraphQLOperation.Mutation.ToString()!.ToLower()!}.");
                 return false;
             }
 

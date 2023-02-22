@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 import { generateEasyAuthHeader, validateResponseBodies, validateStatusCode, validateNoErrorsInResponse, graphQLEndPoint, statusCodes } from '../Helper.js';
 import { check } from 'k6';
 import http from 'k6/http';

@@ -276,7 +276,7 @@ steps:
       $(dabVersion)
 
 # Build a docker image and push it to ACR for publishing to MCR.
-# This step will pick the image with name `public/data-api-builder` and push to MCR.
+# This step will pick the image with name `public/azure/data-api-builder` and push to MCR.
 # This image will also be available in DockerHub.
 # Tag the image with dab version and latest.
 - task: Docker@2
@@ -284,7 +284,7 @@ steps:
   condition: eq(variables.isReleaseBuild, 'true')
   inputs:
     containerRegistry: 'CosmosDB GraphQL/Hawaii'
-    repository: 'public/data-api-builder'
+    repository: 'public/azure/data-api-builder'
     command: 'buildAndPush'
     Dockerfile: '**/Dockerfile'
     tags: |

@@ -179,7 +179,7 @@ steps:
   displayName: "Generate Manifest File"
   inputs:
     targetType: 'filePath'
-    filePath: $(System.DefaultWorkingDirectory)/scripts/create_manifest_file.ps1
+    filePath: $(System.DefaultWorkingDirectory)/scripts/create-manifest-file.ps1
     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) $(isReleaseBuild)
 
 # This code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.

@@ -1,16 +1,35 @@
 {
     "$schema": "https://json.schemastore.org/component-detection-manifest.json",
     "registrations": [
-        {
-            "component": {
-                "type": "git",
-                "git": {
-                    "repositoryUrl": "https://github.com/grafana/k6",
-                    "commitHash": "a45ab5a444da82148f25a9cb93932bed1c8566c9"
-                }
-            },
-            "DevelopmentDependency": true
-        }
+      {
+        "component": {
+          "type": "git",
+          "git": {
+            "repositoryUrl": "https://github.com/grafana/k6",
+            "commitHash": "a45ab5a444da82148f25a9cb93932bed1c8566c9"
+          }
+        },
+        "DevelopmentDependency": true
+      },
+      {
+        "component": {
+          "type": "npm",
+          "npm": {
+            "Name": "@chillicream/bananacakepop-express-middleware",
+            "Version": "5.0.0-insider.5"
+          }
+        },
+        "DevelopmentDependency": false,
+        "DependencyRoots": [
+          {
+            "Type": "git",
+            "git": {
+              "repositoryUrl": "https://github.com/ChilliCream/graphql-platform",
+              "commitHash": "aaa38546de102b1dee1bcbdd3c8dc626e77caed6"
+            }
+          }
+        ]
+      }
     ],
     "version": 1
 }

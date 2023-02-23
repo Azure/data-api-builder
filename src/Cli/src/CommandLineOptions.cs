@@ -40,6 +40,7 @@ namespace Cli
             IEnumerable<string>? corsOrigin,
             string authenticationProvider,
             string? audience = null,
+            string restPath = GlobalSettings.REST_DEFAULT_PATH,
             string? issuer = null,
             string? config = null)
             : base(config)
@@ -54,6 +55,7 @@ namespace Cli
             CorsOrigin = corsOrigin;
             AuthenticationProvider = authenticationProvider;
             Audience = audience;
+            RestPath = restPath;
             Issuer = issuer;
         }
 
@@ -83,6 +85,9 @@ namespace Cli
 
         [Option("auth.provider", Default = "StaticWebApps", Required = false, HelpText = "Specify the Identity Provider.")]
         public string AuthenticationProvider { get; }
+
+        [Option("rest.path", Default = GlobalSettings.REST_DEFAULT_PATH, Required = false, HelpText = "Specify the REST endpoint's default prefix.")]
+        public string RestPath { get; }
 
         [Option("auth.audience", Required = false, HelpText = "Identifies the recipients that the JWT is intended for.")]
         public string? Audience { get; }

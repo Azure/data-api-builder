@@ -636,7 +636,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 if (node.Kind != SyntaxKind.Field)
                 {
-                    throw new NotSupportedException($"The current node has a SyntaxKind of {node.Kind} which is unsupported.");
+                    throw new DataApiBuilderException(
+                        $"The current node has a SyntaxKind of {node.Kind} which is unsupported.",
+                        HttpStatusCode.InternalServerError,
+                        DataApiBuilderException.SubStatusCodes.NotSupported);
                 }
 
                 FieldNode field = (FieldNode)node;

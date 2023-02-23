@@ -116,9 +116,9 @@ public class GraphQLAuthorizationHandler : HotChocolate.AspNetCore.Authorization
     /// </summary>
     private static bool IsUserAuthenticated(IMiddlewareContext context)
     {
-        if (context.ContextData.TryGetValue(nameof(ClaimsPrincipal), out object? o)
-            && o is ClaimsPrincipal p
-            && p.Identities.Any(t => t.IsAuthenticated))
+        if (context.ContextData.TryGetValue(nameof(ClaimsPrincipal), out object? claimsPrincipalContextObject)
+            && claimsPrincipalContextObject is ClaimsPrincipal principal
+            && principal.Identities.Any(claimsIdentity => claimsIdentity.IsAuthenticated))
         {
             return true;
         }

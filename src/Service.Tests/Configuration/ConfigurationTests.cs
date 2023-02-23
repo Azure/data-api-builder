@@ -8,6 +8,8 @@ using System.IO.Abstractions.TestingHelpers;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Reflection.Metadata;
+using System.Security.Policy;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -807,36 +809,25 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// Test different graphql endpoints in different host modes
-        /// when accessed interactively via browser.
+        /// Test interactive behavior of various GraphQL endpoints in browser
+        /// when engine is launched with different host modes.
+        /// HC0013 -> Error code for bad GraphQL request
+        /// with message: "Either the parameter query or the parameter id has to be set."
         /// </summary>
         /// <param name="endpoint">The endpoint route</param>
         /// <param name="hostModeType">The mode in which the service is executing.</param>
         /// <param name="expectedStatusCode">Expected Status Code.</param>
         /// <param name="expectedContent">The expected phrase in the response body.</param>
-        [DataTestMethod]
+                [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow("/graphql/", HostModeType.Development, HttpStatusCode.OK, "Banana Cake Pop",
-            DisplayName = "GraphQL endpoint with no query in development mode.")]
-        [DataRow("/graphql", HostModeType.Production, HttpStatusCode.BadRequest,
-            "Either the parameter query or the parameter id has to be set",
-            DisplayName = "GraphQL endpoint with no query in production mode.")]
-        [DataRow("/graphql/ui", HostModeType.Development, HttpStatusCode.NotFound,
-            DisplayName = "Default BananaCakePop in development mode.")]
-        [DataRow("/graphql/ui", HostModeType.Production, HttpStatusCode.NotFound,
-            DisplayName = "Default BananaCakePop in production mode.")]
-        [DataRow("/graphql?query={book_by_pk(id: 1){title}}",
-            HostModeType.Development, HttpStatusCode.Moved,
-            DisplayName = "GraphQL endpoint with query in development mode.")]
-        [DataRow("/graphql?query={book_by_pk(id: 1){title}}",
-            HostModeType.Production, HttpStatusCode.OK, "data",
-            DisplayName = "GraphQL endpoint with query in production mode.")]
-        [DataRow(RestController.REDIRECTED_ROUTE, HostModeType.Development, HttpStatusCode.BadRequest,
-            "GraphQL request redirected to favicon.ico.",
-            DisplayName = "Redirected endpoint in development mode.")]
-        [DataRow(RestController.REDIRECTED_ROUTE, HostModeType.Production, HttpStatusCode.BadRequest,
-            "GraphQL request redirected to favicon.ico.",
-            DisplayName = "Redirected endpoint in production mode.")]
+        [DataRow("/graphql/", HostModeType.Development, HttpStatusCode.BadRequest, "HC0013", DisplayName = "GraphQL endpoint with no query in development mode is a bad GraphQL Request.")]
+        [DataRow("/graphql", HostModeType.Production, HttpStatusCode.BadRequest, "HC0013", DisplayName = "GraphQL endpoint with no query in production mode is a bad GraphQL Request.")]
+        [DataRow("/graphql/ui", HostModeType.Development, HttpStatusCode.BadRequest, DisplayName = "Development - No GraphQL IDE GUI shown, expected to show GraphQL request error.")]
+        [DataRow("/graphql/ui", HostModeType.Production, HttpStatusCode.BadRequest, DisplayName = "Production - No GraphQL IDE GUI shown, expected to show GraphQL request error.")]
+        [DataRow("/graphql?query={book_by_pk(id: 1){title}}", HostModeType.Development, HttpStatusCode.OK, DisplayName = "GraphQL endpoint with query in development mode.")]
+        [DataRow("/graphql?query={book_by_pk(id: 1){title}}", HostModeType.Production, HttpStatusCode.OK, "data", DisplayName = "GraphQL endpoint with query in production mode.")]
+        [DataRow(RestController.REDIRECTED_ROUTE, HostModeType.Development, HttpStatusCode.BadRequest, "GraphQL request redirected to favicon.ico.", DisplayName = "Redirected endpoint in development mode.")]
+        [DataRow(RestController.REDIRECTED_ROUTE, HostModeType.Production, HttpStatusCode.BadRequest,"GraphQL request redirected to favicon.ico.", DisplayName = "Redirected endpoint in production mode.")]
         public async Task TestInteractiveGraphQLEndpoints(
             string endpoint,
             HostModeType hostModeType,

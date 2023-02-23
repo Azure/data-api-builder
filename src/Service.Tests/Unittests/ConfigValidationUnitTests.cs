@@ -1190,7 +1190,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             };
 
-            RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(globalSettings: settings, dataSource: null);
+            RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(globalSettings: settings, dataSource: new(DatabaseType.mssql));
             string expectedErrorMessage = "Conflicting GraphQL and REST path configuration.";
 
             try
@@ -1326,6 +1326,96 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             entityMap.Add(targetEntity, sampleEntity2);
 
             return entityMap;
+        }
+
+        /// <summary>
+        /// Tests whether the REST path prefix is well formed or not.
+        /// </summary>
+        /// <param name="restPathPrefix">REST path prefix</param>
+        /// <param name="expectedErrorMessage">Expected error message in case an exception is thrown.</param>
+        /// <param name="expectError">Exception expected</param>
+        // @"[\.:\?#/\[\]@!$&'()\*\+,;=]+";
+        [DataTestMethod]
+        [DataRow("/.", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved character .")]
+        [DataRow("/:", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved character :")]
+        [DataRow("/?", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved character ?")]
+        [DataRow("/#", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved character #")]
+        [DataRow("//", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved character /")]
+        [DataRow("/[", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved character [")]
+        [DataRow("/)", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved character )")]
+        [DataRow("/@", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved character @")]
+        [DataRow("/!", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved character !")]
+        [DataRow("/$", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved character $")]
+        [DataRow("/&", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved character &")]
+        [DataRow("/'", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved character '")]
+        [DataRow("/+", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved character +")]
+        [DataRow("/;", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved character .")]
+        [DataRow("/=", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved character .")]
+        [DataRow("/?#*(=", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing multiple reserved characters /?#*(=")]
+        [DataRow("/+&,", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved characters /+&,")]
+        [DataRow("/@)", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved characters /@)")]
+        [DataRow("", "REST path prefix cannot be null or empty.", true,
+            DisplayName = "Empty Rest path prefix.")]
+        [DataRow(null, "REST path prefix cannot be null or empty.", true,
+            DisplayName = "Null Rest path prefix.")]
+        [DataRow("?", "REST path should start with a '/'.", true,
+            DisplayName = "Rest path prefix not starting with forward slash.")]
+        [DataRow("/-rest-api", null, false,
+            DisplayName = "Rest path prefix containing hyphen (-)")]
+        [DataRow("/rest api", null, false,
+            DisplayName = "Rest path prefix containing space in between")]
+        [DataRow("/ restapi", null, false,
+            DisplayName = "Rest path prefix containing space at the start")]
+        [DataRow("/ rest_api", null, false,
+            DisplayName = "Rest path prefix containing space at the start and underscore in between.")]
+        [DataRow("/", null, false,
+            DisplayName = "Rest path containing only a forward slash.")]
+        public void ValidateRestPathIsWellFormed(
+            string restPathPrefix,
+            string expectedErrorMessage,
+            bool expectError)
+        {
+            Dictionary<GlobalSettingsType, object> settings = new()
+            {
+                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings()) },
+                { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings(){ Path = restPathPrefix }) }
+
+            };
+
+            RuntimeConfig configuration =
+                ConfigurationTests.InitMinimalRuntimeConfig(globalSettings: settings, dataSource: new(DatabaseType.mssql));
+
+            if (expectError)
+            {
+                DataApiBuilderException ex =
+                    Assert.ThrowsException<DataApiBuilderException>(() =>
+                    RuntimeConfigValidator.ValidateRestPathForRelationalDbs(configuration));
+                Assert.AreEqual(expectedErrorMessage, ex.Message);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+            }
+            else
+            {
+                RuntimeConfigValidator.ValidateRestPathForRelationalDbs(configuration);
+            }
         }
     }
 }

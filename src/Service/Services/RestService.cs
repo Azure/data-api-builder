@@ -370,9 +370,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <summary>
         /// Tries to get the Entity name and primary key route
         /// from the provided string that starts with the REST
-        /// path. If the provided string does not start with
-        /// the given REST path, we throw an exception. We then
-        /// return the entity name via a lookup using the string
+        /// path. We then return the entity name via a lookup using the string
         /// up until the next '/' if one exists, and the primary
         /// key as the substring following the '/'. For example
         /// a request route shoud be of the form
@@ -388,13 +386,6 @@ namespace Azure.DataApiBuilder.Service.Services
             // route will ignore leading '/' so we trim here to allow for restPath
             // that start with '/'. We can be assured here that _runtimeConfigProvider.RestPath[0]='/'.
             string restPath = _runtimeConfigProvider.RestPath.Substring(1);
-            if (!route.StartsWith(restPath))
-            {
-                throw new DataApiBuilderException(
-                    message: $"Invalid Path for route: {route}.",
-                    statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-            }
 
             // entity's path comes after the restPath, so get substring starting from
             // the end of restPath. If restPath is not empty we trim the '/' following the path.
@@ -419,6 +410,23 @@ namespace Azure.DataApiBuilder.Service.Services
             }
 
             return (entityName, primaryKeyRoute);
+        }
+
+        /// <summary>
+        /// If REST request is disabled globally, Any requests through rest endpoints
+        /// or an invalid route would be inaccessible.
+        /// </summary>
+        public void DiscardRestRequestIfDisabled(string route)
+        {
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
+            string restPath = _runtimeConfigProvider.RestPath.Substring(1);
+            if (!runtimeConfig.RestGlobalSettings.Enabled || !route.StartsWith(restPath))
+            {
+                throw new DataApiBuilderException(
+                    message: $"Invalid Path for route: {route}.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
         }
 
         private HttpContext GetHttpContext()

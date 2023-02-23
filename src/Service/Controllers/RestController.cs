@@ -187,6 +187,9 @@ namespace Azure.DataApiBuilder.Service.Controllers
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
 
+                // To discard requests if REST is disabled globally.
+                _restService.DiscardRestRequestIfDisabled(route);
+
                 (string entityName, string primaryKeyRoute) = _restService.GetEntityNameAndPrimaryKeyRouteFromRoute(route);
 
                 IActionResult? result = await _restService.ExecuteAsync(entityName, operationType, primaryKeyRoute);

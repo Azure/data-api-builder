@@ -12,7 +12,7 @@ WIP
 
 WIP
 
-## GraphQL doens't provide introspection ability
+## GraphQL doesn't provide introspection ability
 
 WIP
 

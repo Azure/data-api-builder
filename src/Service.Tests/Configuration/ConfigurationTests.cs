@@ -892,7 +892,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             Dictionary<GlobalSettingsType, object> settings = new()
             {
-                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){ Path = graphQLConfiguredPath, AllowIntrospection = true }) }
+                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){ Path = graphQLConfiguredPath, AllowIntrospection = true }) },
+                { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings()) }
             };
 
             DataSource dataSource = new(DatabaseType.mssql)
@@ -1008,7 +1009,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             Dictionary<GlobalSettingsType, object> settings = new()
             {
-                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){ AllowIntrospection = enableIntrospection }) }
+                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){ AllowIntrospection = enableIntrospection }) },
+                { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings()) }
             };
 
             DataSource dataSource = new(DatabaseType.mssql)
@@ -1067,7 +1069,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             Dictionary<GlobalSettingsType, object> settings = new()
             {
-                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){ Enabled = globalGraphQLEnabled }) }
+                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){ Enabled = globalGraphQLEnabled }) },
+                { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings()) }
             };
 
             DataSource dataSource = new(DatabaseType.mssql)

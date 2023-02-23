@@ -395,7 +395,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
-            
+
             // entity's path comes after the restPath, so get substring starting from
             // the end of restPath. If restPath is not empty we trim the '/' following the path.
             string routeAfterPath = route.Substring(restPath.Length).TrimStart('/');

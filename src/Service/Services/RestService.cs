@@ -370,7 +370,9 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <summary>
         /// Tries to get the Entity name and primary key route
         /// from the provided string that starts with the REST
-        /// path. We then return the entity name via a lookup using the string
+        /// path. If the provided string does not start with
+        /// the given REST path, we throw an exception. We then
+        /// return the entity name via a lookup using the string
         /// up until the next '/' if one exists, and the primary
         /// key as the substring following the '/'. For example
         /// a request route shoud be of the form
@@ -386,7 +388,14 @@ namespace Azure.DataApiBuilder.Service.Services
             // route will ignore leading '/' so we trim here to allow for restPath
             // that start with '/'. We can be assured here that _runtimeConfigProvider.RestPath[0]='/'.
             string restPath = _runtimeConfigProvider.RestPath.Substring(1);
-
+            if (!route.StartsWith(restPath))
+            {
+                throw new DataApiBuilderException(
+                    message: $"Invalid Path for route: {route}.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+            
             // entity's path comes after the restPath, so get substring starting from
             // the end of restPath. If restPath is not empty we trim the '/' following the path.
             string routeAfterPath = route.Substring(restPath.Length).TrimStart('/');

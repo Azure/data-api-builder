@@ -116,7 +116,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             AuthenticationConfig authenticationConfig = new(Provider: authProvider);
             HostGlobalSettings hostGlobal = new(Authentication: authenticationConfig);
             JsonElement hostGlobalJson = JsonSerializer.SerializeToElement(hostGlobal);
+            RestGlobalSettings restGlobalSettings = new();
+            JsonElement restGlobalJson = JsonSerializer.SerializeToElement(restGlobalSettings);
             runtimeSettings.Add(GlobalSettingsType.Host, hostGlobalJson);
+            runtimeSettings.Add(GlobalSettingsType.Rest, restGlobalJson);
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",

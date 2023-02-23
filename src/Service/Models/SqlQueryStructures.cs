@@ -110,7 +110,8 @@ namespace Azure.DataApiBuilder.Service.Models
 
             return string.Equals(Label, other.Label, StringComparison.Ordinal) &&
                 string.Equals(TableName, other.TableName, StringComparison.Ordinal) &&
-                string.Equals(ColumnName, other.ColumnName, StringComparison.Ordinal);
+                string.Equals(ColumnName, other.ColumnName, StringComparison.Ordinal) &&
+                string.Equals(TableSchema, other.TableSchema, StringComparison.Ordinal);
         }
 
         /// <inheritdoc/>

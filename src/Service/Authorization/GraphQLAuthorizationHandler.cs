@@ -9,18 +9,13 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using HotChocolate.AspNetCore.Authorization;
 using HotChocolate.Resolvers;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Primitives;
 
 namespace Azure.DataApiBuilder.Service.Authorization;
 
 /// <summary>
 /// Custom authorization implementation of HotChocolate IAuthorizationHandler interface.
-/// https://github.com/ChilliCream/hotchocolate/blob/main/src/HotChocolate/AspNetCore/src/AspNetCore.Authorization/IAuthorizationHandler.cs
-/// Method implementation is duplicate of HotChocolate DefaultAuthorizationHandler:
-/// https://github.com/ChilliCream/hotchocolate/blob/main/src/HotChocolate/AspNetCore/src/AspNetCore.Authorization/DefaultAuthorizationHandler.cs
 /// The changes in this custom handler enable fetching the ClientRoleHeader value defined within requests (value of X-MS-API-ROLE) HTTP Header.
 /// Then, using that value to check the header value against the authenticated ClientPrincipal roles.
 /// </summary>
@@ -40,33 +35,26 @@ public class GraphQLAuthorizationHandler : HotChocolate.AspNetCore.Authorization
     /// Returns a value indicating if the current session is authorized to
     /// access the resolver data.
     /// </returns>
-    public async ValueTask<AuthorizeResult> AuthorizeAsync(
-        IMiddlewareContext context,
-        AuthorizeDirective directive)
+    public ValueTask<AuthorizeResult> AuthorizeAsync(IMiddlewareContext context, AuthorizeDirective directive)
     {
-        if (!TryGetAuthenticatedPrincipal(context, out ClaimsPrincipal? principal))
+        if (!IsUserAuthenticated(context))
         {
-            return AuthorizeResult.NotAuthenticated;
+            return new ValueTask<AuthorizeResult>(AuthorizeResult.NotAuthenticated);
         }
 
-        if (!TryGetApiRoleHeader(context, out string? clientRole))
+        if (TryGetApiRoleHeader(context, out string? clientRole) && IsInHeaderDesignatedRole(clientRole, directive.Roles))
         {
-            return AuthorizeResult.NotAllowed;
-        }
-
-        if (IsInHeaderDesignatedRole(clientRole!, directive.Roles))
-        {
-            if (NeedsPolicyValidation(directive))
+            // Schemas defining authorization policies are not supported.
+            // Requests will be short circuited and rejected (authorization forbidden).
+            if (!string.IsNullOrEmpty(directive.Policy))
             {
-                return await AuthorizeWithPolicyAsync(
-                        context, directive, principal!)
-                    .ConfigureAwait(false);
+                return new ValueTask<AuthorizeResult>(AuthorizeResult.NoDefaultPolicy);
             }
 
-            return AuthorizeResult.Allowed;
+            return new ValueTask<AuthorizeResult>(AuthorizeResult.Allowed);
         }
 
-        return AuthorizeResult.NotAllowed;
+        return new ValueTask<AuthorizeResult>(AuthorizeResult.NotAllowed);
     }
 
     /// <summary>
@@ -76,7 +64,7 @@ public class GraphQLAuthorizationHandler : HotChocolate.AspNetCore.Authorization
     /// </summary>
     /// <param name="context">HotChocolate Middleware Context</param>
     /// <param name="clientRole">Value of the client role header.</param>
-    /// <seealso cref="https://chillicream.com/docs/hotchocolate/server/interceptors/#ihttprequestinterceptor"/>
+    /// <seealso cref="https://chillicream.com/docs/hotchocolate/v12/server/interceptors#ihttprequestinterceptor"/>
     /// <returns>True, if clientRoleHeader is resolved and clientRole value
     /// False, if clientRoleHeader is not resolved, null clientRole value</returns>
     private static bool TryGetApiRoleHeader(IMiddlewareContext context, [NotNullWhen(true)] out string? clientRole)
@@ -99,25 +87,22 @@ public class GraphQLAuthorizationHandler : HotChocolate.AspNetCore.Authorization
     }
 
     /// <summary>
-    /// Checks the pre-validated clientRoleHeader value
-    /// against the roles listed in @authorize directive's roles.
+    /// Checks the pre-validated clientRoleHeader value against the roles listed in @authorize directive's roles.
     /// The runtime's GraphQLSchemaBuilder will not add an @authorize directive without any roles defined,
     /// however, since the Roles property of HotChocolate's AuthorizeDirective object is nullable,
     /// handle the possible null gracefully.
     /// </summary>
     /// <param name="clientRoleHeader">Role defined in request HTTP Header, X-MS-API-ROLE</param>
-    /// <param name="roles">Roles defined on the @authorize directive.</param>
-    /// <returns>True/False</returns>
-    private static bool IsInHeaderDesignatedRole(
-        string clientRoleHeader,
-        IReadOnlyList<string>? roles)
+    /// <param name="roles">Roles defined on the @authorize directive. Case insensitive.</param>
+    /// <returns>True when the authenticated user's explicitly defined role is present in the authorize directive role list. Otherwise, false.</returns>
+    private static bool IsInHeaderDesignatedRole(string clientRoleHeader, IReadOnlyList<string>? roles)
     {
         if (roles is null || roles.Count == 0)
         {
             return false;
         }
 
-        if (roles.Any(role => role.Equals(clientRoleHeader, StringComparison.InvariantCultureIgnoreCase)))
+        if (roles.Any(role => role.Equals(clientRoleHeader, StringComparison.OrdinalIgnoreCase)))
         {
             return true;
         }
@@ -126,98 +111,18 @@ public class GraphQLAuthorizationHandler : HotChocolate.AspNetCore.Authorization
     }
 
     /// <summary>
-    /// This method is used verbatim from HotChocolate DefaultAuthorizationHandler.
-    /// Retrieves the authenticated ClaimsPrincipal.
-    /// To be authenticted, at least one ClaimsIdentity in ClaimsPrincipal.Identities
-    /// must be authenticated.
+    /// Returns whether the ClaimsPrincipal in the HotChocolate IMiddlewareContext.ContextData is authenticated.
+    /// To be authenticated, at least one ClaimsIdentity in ClaimsPrincipal.Identities must be authenticated.
     /// </summary>
-    /// <seealso cref="https://github.com/ChilliCream/hotchocolate/blob/main/src/HotChocolate/AspNetCore/src/AspNetCore.Authorization/DefaultAuthorizationHandler.cs"/>
-    private static bool TryGetAuthenticatedPrincipal(
-        IMiddlewareContext context,
-        [NotNullWhen(true)] out ClaimsPrincipal? principal)
+    private static bool IsUserAuthenticated(IMiddlewareContext context)
     {
         if (context.ContextData.TryGetValue(nameof(ClaimsPrincipal), out object? o)
             && o is ClaimsPrincipal p
             && p.Identities.Any(t => t.IsAuthenticated))
         {
-            principal = p;
             return true;
         }
 
-        principal = null;
         return false;
-    }
-
-    /// <summary>
-    /// This method is used verbatim from HotChocolate DefaultAuthorizationHandler.
-    /// Checks whether a policy is present on the authorize directive
-    /// e.g. @authorize(policy: "SalesDepartment")
-    /// </summary>
-    /// <seealso cref="https://github.com/ChilliCream/hotchocolate/blob/main/src/HotChocolate/AspNetCore/src/AspNetCore.Authorization/DefaultAuthorizationHandler.cs"/>
-    private static bool NeedsPolicyValidation(AuthorizeDirective directive)
-        => directive.Roles == null
-           || directive.Roles.Count == 0
-           || !string.IsNullOrEmpty(directive.Policy);
-
-    /// <summary>
-    /// This method is used verbatim from HotChocolate DefaultAuthorizationHandler.
-    /// Authorizes the user based on a policy, if present on the authorize directive
-    /// e.g. @authorize(policy: "SalesDepartment")
-    /// </summary>
-    /// <seealso cref="https://github.com/ChilliCream/hotchocolate/blob/main/src/HotChocolate/AspNetCore/src/AspNetCore.Authorization/DefaultAuthorizationHandler.cs"/>
-    /// <returns></returns>
-    private static async Task<AuthorizeResult> AuthorizeWithPolicyAsync(
-        IMiddlewareContext context,
-        AuthorizeDirective directive,
-        ClaimsPrincipal principal)
-    {
-        IServiceProvider services = context.Service<IServiceProvider>();
-        IAuthorizationService? authorizeService =
-            services.GetService<IAuthorizationService>();
-        IAuthorizationPolicyProvider? policyProvider =
-            services.GetService<IAuthorizationPolicyProvider>();
-
-        if (authorizeService == null || policyProvider == null)
-        {
-            // authorization service is not configured so the user is
-            // authorized with the previous checks.
-            return string.IsNullOrWhiteSpace(directive.Policy)
-                ? AuthorizeResult.Allowed
-                : AuthorizeResult.NotAllowed;
-        }
-
-        AuthorizationPolicy? policy = null;
-
-        if ((directive.Roles is null || directive.Roles.Count == 0)
-            && string.IsNullOrWhiteSpace(directive.Policy))
-        {
-            policy = await policyProvider.GetDefaultPolicyAsync()
-                .ConfigureAwait(false);
-
-            if (policy == null)
-            {
-                return AuthorizeResult.NoDefaultPolicy;
-            }
-        }
-        else if (!string.IsNullOrWhiteSpace(directive.Policy))
-        {
-            policy = await policyProvider.GetPolicyAsync(directive.Policy)
-                .ConfigureAwait(false);
-
-            if (policy == null)
-            {
-                return AuthorizeResult.PolicyNotFound;
-            }
-        }
-
-        if (policy is not null)
-        {
-            AuthorizationResult result =
-                await authorizeService.AuthorizeAsync(principal, context, policy)
-                    .ConfigureAwait(false);
-            return result.Succeeded ? AuthorizeResult.Allowed : AuthorizeResult.NotAllowed;
-        }
-
-        return AuthorizeResult.NotAllowed;
     }
 }

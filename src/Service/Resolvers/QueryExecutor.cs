@@ -73,7 +73,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 ConnectionString = ConnectionStringBuilder.ConnectionString,
             };
 
-            await SetManagedIdentityAccessTokenIfAnyAsync(conn);
+            await SetManagedIdentityAccessTokenIfAnyAsync(conn, httpContext);
 
             return await _retryPolicy.ExecuteAsync(async () =>
             {
@@ -83,7 +83,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     // When IsLateConfigured is true we are in a hosted scenario and do not reveal query information.
                     if (!ConfigProvider.IsLateConfigured)
                     {
-                        QueryExecutorLogger.LogDebug($"Executing query: \n{sqltext}");
+                        QueryExecutorLogger.LogDebug($"Correlation ID: {HttpContextExtensions.GetLoggerCorrelationId(httpContext)}\n" +
+                            $"Executing query: \n{sqltext}");
                     }
 
                     TResult? result =
@@ -96,7 +97,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     if (retryAttempt > 1)
                     {
                         // This implies that the request got successfully executed during one of retry attempts.
-                        QueryExecutorLogger.LogInformation($"Request executed successfully in {retryAttempt} attempt of" +
+                        QueryExecutorLogger.LogInformation($"Correlation ID: {HttpContextExtensions.GetLoggerCorrelationId(httpContext)}\n" +
+                            $"Request executed successfully in {retryAttempt} attempt of" +
                             $"{_maxRetryCount + 1} available attempts.");
                     }
 
@@ -110,8 +112,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     }
                     else
                     {
-                        QueryExecutorLogger.LogError(e.Message);
-                        QueryExecutorLogger.LogError(e.StackTrace);
+                        QueryExecutorLogger.LogError($"Correlation ID: {HttpContextExtensions.GetLoggerCorrelationId(httpContext)}\n" +
+                            $"{e.Message}");
+                        QueryExecutorLogger.LogError($"Correlation ID: {HttpContextExtensions.GetLoggerCorrelationId(httpContext)}\n" +
+                            $"{e.StackTrace}");
 
                         // Throw custom DABException
                         throw DbExceptionParser.Parse(e);
@@ -174,8 +178,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             catch (DbException e)
             {
-                QueryExecutorLogger.LogError(e.Message);
-                QueryExecutorLogger.LogError(e.StackTrace);
+                QueryExecutorLogger.LogError($"Correlation ID: {HttpContextExtensions.GetLoggerCorrelationId(httpContext)}\n" +
+                    $"{e.Message}");
+                QueryExecutorLogger.LogError($"Correlation ID: {HttpContextExtensions.GetLoggerCorrelationId(httpContext)}\n" +
+                    $"{e.StackTrace}");
                 throw DbExceptionParser.Parse(e);
             }
         }
@@ -187,7 +193,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public virtual async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn)
+        public virtual async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, HttpContext? context)
         {
             // no-op in the base class.
             await Task.Yield();

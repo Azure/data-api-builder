@@ -39,7 +39,7 @@ namespace Azure.DataApiBuilder.Service.Services
             string tableName)
         {
             using MySqlConnection conn = new(ConnectionString);
-            await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
+            await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, context: null);
             await conn.OpenAsync();
 
             // Each row in the allColumns table corresponds to a single column.

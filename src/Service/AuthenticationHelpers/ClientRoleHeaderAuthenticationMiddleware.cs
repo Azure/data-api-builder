@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Service.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -111,8 +112,10 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
             {
                 string requestAuthStatus = isAuthenticatedRequest ? AuthorizationType.Authenticated.ToString() :
                     AuthorizationType.Anonymous.ToString();
-                _logger.LogDebug($"Request authentication state: {requestAuthStatus}.");
-                _logger.LogDebug($"The request will be executed in the context of {clientDefinedRole} role");
+                _logger.LogDebug($"Correlation ID: {HttpContextExtensions.GetLoggerCorrelationId(httpContext)}\n" +
+                    $"Request authentication state: {requestAuthStatus}.");
+                _logger.LogDebug($"Correlation ID: {HttpContextExtensions.GetLoggerCorrelationId(httpContext)}\n" +
+                    $"The request will be executed in the context of {clientDefinedRole} role");
             }
 
             // When the user is not in the clientDefinedRole and the client role header

@@ -8,6 +8,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
@@ -92,6 +93,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
                 // the authentication handler caller will return a 401 unauthorized
                 // response to the client.
                 logger.LogError($"Failure processing the StaticWebApps EasyAuth header.\n" +
+                    $"Correlation ID: {HttpContextExtensions.GetLoggerCorrelationId(context)}\n" +
                     $"{error.Message}\n" +
                     $"{error.StackTrace}");
             }

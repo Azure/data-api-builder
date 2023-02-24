@@ -6,7 +6,9 @@ using System.Data.Common;
 using System.Threading.Tasks;
 using Azure.Core;
 using Azure.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Service.Models;
 using Azure.Identity;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 
@@ -71,7 +73,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// connection needs to be replaced with the default access token.
         /// </summary>
         /// <param name="conn">The supplied connection to modify for managed identity access.</param>
-        public override async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn)
+        public override async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, HttpContext? context)
         {
             // Only attempt to get the access token if the connection string is in the appropriate format
             if (_attemptToSetAccessToken)
@@ -84,7 +86,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 string? accessToken = _accessTokenFromController ??
                     (IsDefaultAccessTokenValid() ?
                         ((AccessToken)_defaultAccessToken!).Token :
-                        await GetAccessTokenAsync());
+                        await GetAccessTokenAsync(context));
 
                 if (accessToken is not null)
                 {
@@ -123,7 +125,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         /// <returns>The string representation of the access token if found,
         /// null otherwise.</returns>
-        private async Task<string?> GetAccessTokenAsync()
+        private async Task<string?> GetAccessTokenAsync(HttpContext? context)
         {
             bool firstAttemptAtDefaultAccessToken = _defaultAccessToken is null;
 
@@ -138,7 +140,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // so a bunch of different exceptions could occur in that scenario
             catch (Exception ex)
             {
-                QueryExecutorLogger.LogWarning($"No password detected in the connection string. Attempt to retrieve " +
+                QueryExecutorLogger.LogWarning($"Correlation ID: {HttpContextExtensions.GetLoggerCorrelationId(context)}\n" +
+                    $"No password detected in the connection string. Attempt to retrieve " +
                     $"a managed identity access token using DefaultAzureCredential failed due to: \n{ex}\n" +
                     (firstAttemptAtDefaultAccessToken ?
                     $"If authentication with DefaultAzureCrendential is not intended, this warning can be safely ignored." :

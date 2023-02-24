@@ -34,5 +34,17 @@ namespace Azure.DataApiBuilder.Service.Models
 
             return null;
         }
+
+        /// <summary>
+        /// Return a string representing the correlation id for use in logging.
+        /// If no correlation id is present we instead return the string "unavailable".
+        /// </summary>
+        /// <param name="context">HttpContext that holds the correlation id if one exists.</param>
+        /// <returns>string representing correlation id.</returns>
+        public static string GetLoggerCorrelationId(HttpContext? context)
+        {
+            Guid? gid = context is not null ? HttpContextExtensions.GetCorrelationId(context) : null;
+            return gid is not null ? gid.ToString()! : "unavailable";
+        }
     }
 }

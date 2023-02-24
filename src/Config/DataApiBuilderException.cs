@@ -77,7 +77,11 @@ namespace Azure.DataApiBuilder.Service.Exceptions
             /// <summary>
             /// Error encountered while doing data type conversions.
             /// </summary>
-            ErrorProcessingData
+            ErrorProcessingData,
+            /// <summary>
+            /// Error encountered while trying to access data through disabled rest/graphQL path.
+            /// </summary>
+            PathDisabled
         }
 
         public HttpStatusCode StatusCode { get; }

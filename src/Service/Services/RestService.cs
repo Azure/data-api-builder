@@ -424,16 +424,20 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <summary>
         /// If REST request is disabled globally, Any requests through rest endpoints
         /// would be inaccessible.
+        /// When GraphQL is disabled, calls to /graphql is treated as rest api call which 
+        /// needs to be discarded when GraphQL is disabled.
         /// </summary>
-        public void DiscardRestRequestIfDisabled(string route)
+        public void DiscardRequestIfDisabled(string route)
         {
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
-            if (!runtimeConfig.RestGlobalSettings.Enabled)
+            string restPath = _runtimeConfigProvider.RestPath.Substring(1);
+            if (!runtimeConfig.RestGlobalSettings.Enabled 
+                || (!runtimeConfig.GraphQLGlobalSettings.Enabled && route.StartsWith("graphql")))
             {
                 throw new DataApiBuilderException(
-                    message: $"Invalid Path for route: {route}.",
-                    statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    message: $"Invalid Path for route: {route}",
+                    statusCode: HttpStatusCode.NotFound,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.PathDisabled);
             }
         }
 

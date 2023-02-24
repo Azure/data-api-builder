@@ -2034,7 +2034,7 @@ namespace Cli.Tests
         private static string GetInitialConfigString()
         {
             return @"{" +
-                        @"""$schema"": """ + DAb_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                        @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
                         @"""data-source"": {
                             ""database-type"": ""mssql"",
                             ""connection-string"": ""testconnectionstring""

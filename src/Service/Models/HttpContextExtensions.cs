@@ -44,7 +44,7 @@ namespace Azure.DataApiBuilder.Service.Models
         public static string GetLoggerCorrelationId(HttpContext? context)
         {
             Guid? gid = context is not null ? HttpContextExtensions.GetCorrelationId(context) : null;
-            return gid is not null ? gid.ToString()! : "unavailable";
+            return gid is not null ? $"Correlation ID: {gid.ToString()!}\n" : "";
         }
     }
 }

@@ -112,9 +112,9 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
             {
                 string requestAuthStatus = isAuthenticatedRequest ? AuthorizationType.Authenticated.ToString() :
                     AuthorizationType.Anonymous.ToString();
-                _logger.LogDebug($"Correlation ID: {HttpContextExtensions.GetLoggerCorrelationId(httpContext)}\n" +
+                _logger.LogDebug($"{HttpContextExtensions.GetLoggerCorrelationId(httpContext)}" +
                     $"Request authentication state: {requestAuthStatus}.");
-                _logger.LogDebug($"Correlation ID: {HttpContextExtensions.GetLoggerCorrelationId(httpContext)}\n" +
+                _logger.LogDebug($"{HttpContextExtensions.GetLoggerCorrelationId(httpContext)}" +
                     $"The request will be executed in the context of {clientDefinedRole} role");
             }
 

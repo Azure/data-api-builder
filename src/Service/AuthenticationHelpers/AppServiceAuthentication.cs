@@ -107,7 +107,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
                     // nor creating a DataApiBuilder exception because the authentication handler
                     // will create and send a 401 unauthorized response to the client.
                     logger.LogError($"Failure processing the AppService EasyAuth header.\n" +
-                        $"Correlation ID: {HttpContextExtensions.GetLoggerCorrelationId(context)}\n" +
+                        $"{HttpContextExtensions.GetLoggerCorrelationId(context)}" +
                         $"{error.Message}\n" +
                         $"{error.StackTrace}");
                 }

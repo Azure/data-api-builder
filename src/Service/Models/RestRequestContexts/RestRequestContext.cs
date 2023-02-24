@@ -159,7 +159,7 @@ namespace Azure.DataApiBuilder.Service.Models
                 // Exception not rethrown as returning false here is gracefully handled by caller,
                 // which will result in a 403 Unauthorized response to the client.
                 logger.LogError($"ERROR IN ODATA_AST_COLUMN_VISITOR TRAVERSAL\n" +
-                    $"Correlation ID: {HttpContextExtensions.GetLoggerCorrelationId(context)}\n" +
+                    $"{HttpContextExtensions.GetLoggerCorrelationId(context)}" +
                     $"{e.Message}\n" +
                     $"{e.StackTrace}");
 

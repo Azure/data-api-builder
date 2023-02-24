@@ -140,7 +140,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // so a bunch of different exceptions could occur in that scenario
             catch (Exception ex)
             {
-                QueryExecutorLogger.LogWarning($"Correlation ID: {HttpContextExtensions.GetLoggerCorrelationId(context)}\n" +
+                QueryExecutorLogger.LogWarning($"{HttpContextExtensions.GetLoggerCorrelationId(context)}" +
                     $"No password detected in the connection string. Attempt to retrieve " +
                     $"a managed identity access token using DefaultAzureCredential failed due to: \n{ex}\n" +
                     (firstAttemptAtDefaultAccessToken ?

@@ -150,7 +150,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             catch (CredentialUnavailableException ex)
             {
-                QueryExecutorLogger.LogWarning($"Correlation ID: {HttpContextExtensions.GetLoggerCorrelationId(context)}\n" +
+                QueryExecutorLogger.LogWarning($"{HttpContextExtensions.GetLoggerCorrelationId(context)}" +
                     $"Attempt to retrieve a managed identity access token using DefaultAzureCredential" +
                     $" failed due to: \n{ex}");
             }

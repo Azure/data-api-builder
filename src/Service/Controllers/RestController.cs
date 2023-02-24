@@ -219,8 +219,8 @@ namespace Azure.DataApiBuilder.Service.Controllers
             }
             catch (DataApiBuilderException ex)
             {
-                _logger.LogError($"Correlation ID: {HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}\n{ex.Message}");
-                _logger.LogError($"Correlation ID: {HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}\n{ex.StackTrace}");
+                _logger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}{ex.Message}");
+                _logger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}{ex.StackTrace}");
                 if (ex.SubStatusCode is DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed)
                 {
                     return new ForbidResult();
@@ -233,8 +233,8 @@ namespace Azure.DataApiBuilder.Service.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Correlation ID: {HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}\n{ex.Message}");
-                _logger.LogError($"Correlation ID: {HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}\n{ex.StackTrace}");
+                _logger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}{ex.Message}");
+                _logger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}{ex.StackTrace}");
                 Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                 return ErrorResponse(
                     DataApiBuilderException.SubStatusCodes.UnexpectedError.ToString(),

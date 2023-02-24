@@ -83,7 +83,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     // When IsLateConfigured is true we are in a hosted scenario and do not reveal query information.
                     if (!ConfigProvider.IsLateConfigured)
                     {
-                        QueryExecutorLogger.LogDebug($"Correlation ID: {HttpContextExtensions.GetLoggerCorrelationId(httpContext)}\n" +
+                        QueryExecutorLogger.LogDebug($"{HttpContextExtensions.GetLoggerCorrelationId(httpContext)}" +
                             $"Executing query: \n{sqltext}");
                     }
 
@@ -97,7 +97,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     if (retryAttempt > 1)
                     {
                         // This implies that the request got successfully executed during one of retry attempts.
-                        QueryExecutorLogger.LogInformation($"Correlation ID: {HttpContextExtensions.GetLoggerCorrelationId(httpContext)}\n" +
+                        QueryExecutorLogger.LogInformation($"{HttpContextExtensions.GetLoggerCorrelationId(httpContext)}" +
                             $"Request executed successfully in {retryAttempt} attempt of" +
                             $"{_maxRetryCount + 1} available attempts.");
                     }
@@ -112,9 +112,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     }
                     else
                     {
-                        QueryExecutorLogger.LogError($"Correlation ID: {HttpContextExtensions.GetLoggerCorrelationId(httpContext)}\n" +
+                        QueryExecutorLogger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(httpContext)}" +
                             $"{e.Message}");
-                        QueryExecutorLogger.LogError($"Correlation ID: {HttpContextExtensions.GetLoggerCorrelationId(httpContext)}\n" +
+                        QueryExecutorLogger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(httpContext)}" +
                             $"{e.StackTrace}");
 
                         // Throw custom DABException
@@ -178,9 +178,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             catch (DbException e)
             {
-                QueryExecutorLogger.LogError($"Correlation ID: {HttpContextExtensions.GetLoggerCorrelationId(httpContext)}\n" +
+                QueryExecutorLogger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(httpContext)}" +
                     $"{e.Message}");
-                QueryExecutorLogger.LogError($"Correlation ID: {HttpContextExtensions.GetLoggerCorrelationId(httpContext)}\n" +
+                QueryExecutorLogger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(httpContext)}" +
                     $"{e.StackTrace}");
                 throw DbExceptionParser.Parse(e);
             }

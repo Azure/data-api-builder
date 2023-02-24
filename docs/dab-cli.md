@@ -1,6 +1,6 @@
 # About `dab` CLI
 
-The Data API Builder CLI (**dab CLI** or `dab`) is a command line tool that streamlines the local development experience for applications using Data API Builder.
+The Data API builder CLI (**dab CLI** or `dab`) is a command line tool that streamlines the local development experience for applications using Data API builder.
 
 - Find the source code here: [Cli](../src/Cli)
 - Getting started: [Getting started](./getting-started/getting-started-dab-cli.md)
@@ -13,7 +13,7 @@ The Data API Builder CLI (**dab CLI** or `dab`) is a command line tool that stre
 - Add/update entity relationships
 - Configure roles and their permissions
 - Configure cross-origin requests (CORS)
-- Run the Data API Builder engine
+- Run the Data API builder engine
 
 ## Contributing to the CLI
 

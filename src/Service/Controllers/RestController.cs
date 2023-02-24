@@ -188,7 +188,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
                 }
 
                 // To discard api requests if is disabled globally.
-                 _restService.DiscardRequestIfDisabled(route);
+                _restService.DiscardRequestIfDisabled(route);
 
                 (string entityName, string primaryKeyRoute) = _restService.GetEntityNameAndPrimaryKeyRouteFromRoute(route);
 

@@ -430,8 +430,9 @@ namespace Azure.DataApiBuilder.Service.Services
         public void DiscardRequestIfDisabled(string route)
         {
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
-            string restPath = _runtimeConfigProvider.RestPath.Substring(1);
-            if (!runtimeConfig.RestGlobalSettings.Enabled 
+
+            _ = _runtimeConfigProvider.RestPath.Substring(1);
+            if (!runtimeConfig.RestGlobalSettings.Enabled
                 || (!runtimeConfig.GraphQLGlobalSettings.Enabled && route.StartsWith("graphql")))
             {
                 throw new DataApiBuilderException(

@@ -418,16 +418,16 @@ namespace Azure.DataApiBuilder.Service
                 endpoints.MapControllers();
 
                 if (runtimeConfig is not null && runtimeConfig.GraphQLGlobalSettings.Enabled)
+                {
+                    // Enable GraphQL endpoint when global settings for graphQL is enabled.
+                    endpoints.MapGraphQL(GlobalSettings.GRAPHQL_DEFAULT_PATH).WithOptions(new GraphQLServerOptions
                     {
-                        // Enable GraphQL endpoint when global settings for graphQL is enabled.
-                        endpoints.MapGraphQL(GlobalSettings.GRAPHQL_DEFAULT_PATH).WithOptions(new GraphQLServerOptions
-                        {
-                            Tool = {
+                        Tool = {
                                 // Determines if accessing the endpoint from a browser
                                 // will load the GraphQL Banana Cake Pop IDE.
                                 Enable = runtimeConfigProvider.IsDeveloperMode() || env.IsDevelopment()
                             }
-                        });
+                    });
                 }
 
                 // In development mode, BCP is enabled at /graphql endpoint by default.

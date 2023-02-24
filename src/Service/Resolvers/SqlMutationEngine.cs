@@ -117,14 +117,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else
             {
-                DbOperationResultRow? mutationResult =
+                DbResultSetRow? mutationResultRow =
                     await PerformMutationOperation(
                         entityName,
                         mutationOperation,
                         parameters,
                         context);
 
-                if (mutationResult is not null && mutationResult.Columns.Count > 0
+                if (mutationResultRow is not null && mutationResultRow.Columns.Count > 0
                     && !context.Selection.Type.IsScalarType())
                 {
                     // Because the GraphQL mutation result set columns were exposed (mapped) column names,
@@ -133,7 +133,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     // represent database column names.
                     result = await _queryEngine.ExecuteAsync(
                                 context,
-                                GetBackingColumnsFromCollection(entityName, mutationResult.Columns));
+                                GetBackingColumnsFromCollection(entityName, mutationResultRow.Columns));
                 }
             }
 
@@ -287,14 +287,18 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else if (context.OperationType is Config.Operation.Upsert || context.OperationType is Config.Operation.UpsertIncremental)
             {
-                DbOperationResultRow? upsertOperationResult =
+                DbResultSet? upsertOperationResult =
                     await PerformUpsertOperation(
                         parameters,
                         context);
 
-                if (upsertOperationResult is not null && upsertOperationResult.Columns.Count > 0)
+                DbResultSetRow? dbResultSetRow = upsertOperationResult is not null ?
+                    upsertOperationResult.Rows.FirstOrDefault()! : null;
+
+                if (upsertOperationResult is not null &&
+                    dbResultSetRow is not null && dbResultSetRow.Columns.Count > 0)
                 {
-                    Dictionary<string, object?> resultRow = upsertOperationResult.Columns;
+                    Dictionary<string, object?> resultRow = dbResultSetRow.Columns;
 
                     bool isFirstResultSet = false;
                     if (upsertOperationResult.ResultProperties.TryGetValue(IS_FIRST_RESULT_SET, out object? isFirstResultSetValue))
@@ -319,7 +323,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else
             {
-                DbOperationResultRow? mutationResult =
+                DbResultSetRow? mutationResultRow =
                     await PerformMutationOperation(
                         context.EntityName,
                         context.OperationType,
@@ -327,22 +331,22 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 if (context.OperationType is Config.Operation.Insert)
                 {
-                    if (mutationResult is null || mutationResult.Columns.Count == 0)
+                    if (mutationResultRow is null || mutationResultRow.Columns.Count == 0)
                     {
                         // this case should not happen, we throw an exception
                         // which will be returned as an Unexpected Internal Server Error
                         throw new Exception();
                     }
 
-                    string primaryKeyRoute = ConstructPrimaryKeyRoute(context, mutationResult.Columns);
+                    string primaryKeyRoute = ConstructPrimaryKeyRoute(context, mutationResultRow.Columns);
                     // location will be updated in rest controller where httpcontext is available
-                    return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(mutationResult.Columns).Value);
+                    return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(mutationResultRow.Columns).Value);
                 }
 
                 if (context.OperationType is Config.Operation.Update || context.OperationType is Config.Operation.UpdateIncremental)
                 {
                     // Nothing to update means we throw Exception
-                    if (mutationResult is null || mutationResult.Columns.Count == 0)
+                    if (mutationResultRow is null || mutationResultRow.Columns.Count == 0)
                     {
                         throw new DataApiBuilderException(message: "No Update could be performed, record not found",
                                                            statusCode: HttpStatusCode.PreconditionFailed,
@@ -350,7 +354,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     }
 
                     // Valid REST updates return OkObjectResult
-                    return OkMutationResponse(mutationResult.Columns);
+                    return OkMutationResponse(mutationResultRow.Columns);
                 }
             }
 
@@ -410,7 +414,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="parameters">The parameters of the mutation query.</param>
         /// <param name="context">In the case of GraphQL, the HotChocolate library's middleware context.</param>
         /// <returns>Single row read from DbDataReader.</returns>
-        private async Task<DbOperationResultRow?>
+        private async Task<DbResultSetRow?>
             PerformMutationOperation(
                 string entityName,
                 Config.Operation operationType,
@@ -487,7 +491,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     throw new NotSupportedException($"Unexpected mutation operation \" {operationType}\" requested.");
             }
 
-            DbOperationResultRow? dbOperationResultRow;
+            DbResultSet? dbResultSet;
+            DbResultSetRow? dbResultSetRow;
 
             if (context is not null && !context.Selection.Type.IsScalarType())
             {
@@ -511,15 +516,16 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 // which would fail to get the mutated entry from the db
                 // When no exposed column names were resolved, it is safe to provide
                 // backing column names (sourceDefinition.Primary) as a list of arguments.
-                dbOperationResultRow =
+                dbResultSet =
                     await _queryExecutor.ExecuteQueryAsync(
                         queryString,
                         queryParameters,
-                        _queryExecutor.ExtractRowFromDbDataReader,
+                        _queryExecutor.ExtractRowsFromResultSet,
                         _httpContextAccessor.HttpContext!,
                         primaryKeyExposedColumnNames.Count > 0 ? primaryKeyExposedColumnNames : sourceDefinition.PrimaryKey);
 
-                if (dbOperationResultRow is not null && dbOperationResultRow.Columns.Count == 0)
+                dbResultSetRow = dbResultSet is not null ? dbResultSet.Rows.FirstOrDefault() : null;
+                if (dbResultSetRow is not null && dbResultSetRow.Columns.Count == 0)
                 {
                     string searchedPK;
                     if (primaryKeyExposedColumnNames.Count > 0)
@@ -541,15 +547,16 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 // This is the scenario for all REST mutation operations covered by this function
                 // and the case when the Selection Type is a scalar for GraphQL.
-                dbOperationResultRow =
+                dbResultSet =
                     await _queryExecutor.ExecuteQueryAsync(
                         queryString,
                         queryParameters,
-                        _queryExecutor.ExtractRowFromDbDataReader,
+                        _queryExecutor.ExtractRowsFromResultSet,
                         _httpContextAccessor.HttpContext!);
+                dbResultSetRow = dbResultSet is not null ? dbResultSet.Rows.FirstOrDefault() : null;
             }
 
-            return dbOperationResultRow;
+            return dbResultSetRow;
         }
 
         /// <summary>
@@ -600,7 +607,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="parameters">The parameters for the mutation query.</param>
         /// <param name="context">The REST request context.</param>
         /// <returns>Single row read from DbDataReader.</returns>
-        private async Task<DbOperationResultRow?>
+        private async Task<DbResultSet?>
             PerformUpsertOperation(
                 IDictionary<string, object?> parameters,
                 RestRequestContext context)

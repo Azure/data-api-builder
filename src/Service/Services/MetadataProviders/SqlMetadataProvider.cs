@@ -1361,15 +1361,13 @@ namespace Azure.DataApiBuilder.Service.Services
         private async Task<Dictionary<RelationShipPair, ForeignKeyDefinition>?>
             SummarizeFkMetadata(DbDataReader reader, List<string>? args = null)
         {
-            // Gets a single row read from DbDataReader which contains 2 dictionaries:
-            // 1. The columns of the first row extracted from the result
-            // 2. DbDataReader properties like RecordsAffected, HasRows.
-            // This function only requires the DbOperationResultRow.Columns property.
-            DbOperationResultRow foreignKeyInfoWithProperties =
-                await QueryExecutor.ExtractRowFromDbDataReader(reader);
+            // Extract all the rows in the current Result Set of DbDataReader.
+            DbResultSet foreignKeysInfoWithProperties =
+                await QueryExecutor.ExtractRowsFromResultSet(reader);
 
             Dictionary<RelationShipPair, ForeignKeyDefinition> pairToFkDefinition = new();
-            while (foreignKeyInfoWithProperties.Columns.Count > 0)
+
+            foreach (DbResultSetRow foreignKeyInfoWithProperties in foreignKeysInfoWithProperties.Rows)
             {
                 Dictionary<string, object?> foreignKeyInfo = foreignKeyInfoWithProperties.Columns;
                 string referencingSchemaName =
@@ -1396,8 +1394,6 @@ namespace Azure.DataApiBuilder.Service.Services
                     (string)foreignKeyInfo[nameof(ForeignKeyDefinition.ReferencedColumns)]!);
                 foreignKeyDefinition.ReferencingColumns.Add(
                     (string)foreignKeyInfo[nameof(ForeignKeyDefinition.ReferencingColumns)]!);
-
-                foreignKeyInfoWithProperties = await QueryExecutor.ExtractRowFromDbDataReader(reader);
             }
 
             return pairToFkDefinition;

@@ -48,7 +48,7 @@ do
         commandFile="postgresql-commands.txt";
         configFile="dab-config.PostgreSql.json";
     else 
-        commandFile="cosmos_nosql-commands.txt";
+        commandFile="cosmosdb_nosql-commands.txt";
         configFile="dab-config.CosmosDb_NoSql.json";
     fi
 

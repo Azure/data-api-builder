@@ -158,7 +158,7 @@ mutation {{
     }}
 }}";
             JsonElement response = await ExecuteGraphQLRequestAsync("createPlanet", mutation, variables: new());
-            Assert.IsTrue(response[0].GetProperty("message").ToString().Contains("The input content is invalid because the required properties - 'id; ' - are missing"));
+            Assert.AreEqual("`id` is a required field and cannot be null.", response[0].GetProperty("message").ToString());
         }
 
         [TestMethod]

@@ -543,7 +543,7 @@ For example, a policy that utilizes both directive types, pulling the UserId fro
   }
 ```
 
-Data API Builder will compare the value of the `UserId` claim to the value of the database field `OwnerId`. The result payload will only include records that fulfill **both** the request metadata and the database policy expression.
+Data API builder will compare the value of the `UserId` claim to the value of the database field `OwnerId`. The result payload will only include records that fulfill **both** the request metadata and the database policy expression.
 
 ##### Limitations
 

@@ -955,6 +955,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <param name="expectedStatusCodeForREST">Expected success/error code for Rest Request</param>
         /// <param name="expectedStatusCodeForGraphQL">Expected Http success/error code for GraphQL Request</param>
         [DataTestMethod]
+        [TestCategory(TestCategory.MSSQL)]
         [DataRow(false, false, HttpStatusCode.NotFound, HttpStatusCode.NotFound)]
         [DataRow(true, true, HttpStatusCode.OK, HttpStatusCode.OK)]
         [DataRow(true, false, HttpStatusCode.OK, HttpStatusCode.NotFound)]

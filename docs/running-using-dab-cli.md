@@ -1,4 +1,4 @@
-# Running Data API Builder for Azure Databases using CLI
+# Running Data API builder for Azure Databases using CLI
 
 The easiest option that doesn't require cloning the repo is to use the `dab` [CLI tool](./dab-cli.md) that you can find in the `Microsoft.DataApiBuilder` nuget package [here.](https://www.nuget.org/packages/Microsoft.DataApiBuilder)
 
@@ -73,7 +73,7 @@ This will log the information as follows:
 
 ## Get started using `dab` CLI
 
-To quickly get started using the CLI, make sure you have read the [Getting Started](./getting-started/getting-started.md) guide to become familiar with basic Data API builder concepts and then use the [Getting started with Data API Builder (`dab`) CLI](./getting-started/getting-started-dab-cli.md) to learn how to use the CLI tool.
+To quickly get started using the CLI, make sure you have read the [Getting Started](./getting-started/getting-started.md) guide to become familiar with basic Data API builder concepts and then use the [Getting started with Data API builder (`dab`) CLI](./getting-started/getting-started-dab-cli.md) to learn how to use the CLI tool.
 
 ## Uninstall `dab` CLI
 

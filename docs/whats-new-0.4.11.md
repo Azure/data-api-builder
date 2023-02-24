@@ -1,4 +1,4 @@
-# What's New in Data API Builder 0.4.11
+# What's New in Data API builder 0.4.11
 
 - [Public JSON Schema](#public-json-schema)
 - [Updated JSON schema for `data-source` section](#updated-json-schema-for-data-source-section)
@@ -63,7 +63,7 @@ query {
 
 ## Improved Stored Procedure support
 
-Full support for stored procedure in REST and GraphQL. Stored procedure with parameters now 100% supported. Check out the [Stored Procedures](./views-and-stored-procedures.md#stored-procedures) documentation to learn how to use use Data API Builder with stored procedures.
+Full support for stored procedure in REST and GraphQL. Stored procedure with parameters now 100% supported. Check out the [Stored Procedures](./views-and-stored-procedures.md#stored-procedures) documentation to learn how to use use Data API builder with stored procedures.
 
 ## `database-type` value renamed for Cosmos DB
 

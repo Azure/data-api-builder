@@ -4,7 +4,7 @@
 
 ### Azure support tickets
 
-While Data API builder is in public preview, it is not eligible for Microsoft support. Please use GitHub Issues to file bugs and feature requests.
+While Data API builder is in public preview, it is not eligible for Microsoft support. Please use [GitHub Issues](https://github.com/Azure/data-api-builder/issues) to file bugs and feature requests.
 
 ### GitHub issues
 
@@ -22,6 +22,6 @@ When an issue is raised, a member of the team will respond within five (5) busin
 
 ## Security issues
 
-Security issues and bugs should be reported privately, via email, to the Microsoft Security Response Center(secure@microsoft.com). You should receive a response within 24 hours.
+Security issues and bugs should be reported privately, via email, to the Microsoft Security Response Center (secure@microsoft.com). You should receive a response within 24 hours.
 
 For more information, review [SECURITY.md](SECURITY.md).

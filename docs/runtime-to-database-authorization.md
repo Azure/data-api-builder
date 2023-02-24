@@ -1,12 +1,10 @@
 # Runtime to Database Authorization
 
-- [MsSql](#mssql)
-
 ## MsSql
 
 ### SESSION_CONTEXT
 
-For MsSql, Data API builder (DAB) uses SESSION_CONTEXT to send user specified metadata to the underlying database. Such metadata is available to DAB by virtue of the claims present in the access token.
+For MsSql, Data API builder (DAb) uses SESSION_CONTEXT to send user specified metadata to the underlying database. Such metadata is available to DAb by virtue of the claims present in the access token.
 The data sent to the database can then be used to configure an additional level of security (e.g. by configuring Security policies) to further prevent access
 to data in operations like SELECT, UPDATE, DELETE. The SESSION_CONTEXT data is available to the database for the duration of the database connection until that connection is closed. The same data can be used inside a stored procedure as well.  
 
@@ -14,7 +12,7 @@ to data in operations like SELECT, UPDATE, DELETE. The SESSION_CONTEXT data is a
 
 Learn more about setting SESSION_CONTEXT data from the `sp_set_session_context` [Microsoft Learn article](https://learn.microsoft.com/sql/relational-databases/system-stored-procedures/sp-set-session-context-transact-sql).
 
-#### How to enable SESSION_CONTEXT in DAB
+#### How to enable SESSION_CONTEXT in DAb
 
 In the config file, the `data-source` section sub-key `options` holds database specific configuration properties. To enable SESSION_CONTEXT, the user needs to set the property `set-session-context` to `true` for MsSql. This can be done while generating the config file via CLI at the first time or can be done later as well by setting the property manually in the config file.
 

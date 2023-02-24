@@ -30,7 +30,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\src\Cli.csproj" />
+        <ProjectReference Include="..\Cli\Cli.csproj" />
     </ItemGroup>
 
 </Project>

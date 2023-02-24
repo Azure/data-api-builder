@@ -423,13 +423,12 @@ namespace Azure.DataApiBuilder.Service.Services
 
         /// <summary>
         /// If REST request is disabled globally, Any requests through rest endpoints
-        /// or an invalid route would be inaccessible.
+        /// would be inaccessible.
         /// </summary>
         public void DiscardRestRequestIfDisabled(string route)
         {
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetRuntimeConfiguration();
-            string restPath = _runtimeConfigProvider.RestPath.Substring(1);
-            if (!runtimeConfig.RestGlobalSettings.Enabled || !route.StartsWith(restPath))
+            if (!runtimeConfig.RestGlobalSettings.Enabled)
             {
                 throw new DataApiBuilderException(
                     message: $"Invalid Path for route: {route}.",

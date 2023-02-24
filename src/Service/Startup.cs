@@ -419,7 +419,7 @@ namespace Azure.DataApiBuilder.Service
 
                 if (runtimeConfig is not null && runtimeConfig.GraphQLGlobalSettings.Enabled)
                 {
-                    // Disabling GraphQL endpoint when Global runtime setting has graphQL disabled.
+                    // Enable GraphQL endpoint when global settings for graphQL is enabled.
                     endpoints.MapGraphQL(GlobalSettings.GRAPHQL_DEFAULT_PATH).WithOptions(new GraphQLServerOptions
                     {
                         Tool = {

@@ -1012,7 +1012,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/Book");
                 HttpResponseMessage restResponse = await client.SendAsync(restRequest);
                 Assert.AreEqual(expectedStatusCodeForREST, restResponse.StatusCode);
-                
+
             }
 
             // Hosted Scenario

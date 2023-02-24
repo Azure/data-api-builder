@@ -37,7 +37,7 @@ type Character @model(name:""Character"") {
 }
 
 type Planet @model(name:""Planet"") {
-    id : ID,
+    id : ID!,
     name : String,
     character: Character,
     age : Int,

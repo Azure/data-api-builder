@@ -1,6 +1,6 @@
 # Authentication with Azure AD
 
-For authentication with Azure AD to work properly, Azure AD needs to be configured so that it can authenticate a request sent to Data API Builder (the "Server App").
+For authentication with Azure AD to work properly, Azure AD needs to be configured so that it can authenticate a request sent to Data API builder (the "Server App").
 
 The first step is to configure Azure AD to perform authentication for Data API builder
 

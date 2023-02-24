@@ -30,7 +30,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     "23503",
 
                     // check_violation,The CHECK constraint ensures that all values in a column satisfy certain conditions.
-                    // Check violation occurs when a check constraint fails. e.g. name like '.dab' when name = 'DAB' fails the check.
+                    // Check violation occurs when a check constraint fails. e.g. name like '.dab' when name = 'DAb' fails the check.
                     "23514",
 
                     // exclusion_violation, The EXCLUDE constraint ensures that if any two rows are compared on the specified column(s)

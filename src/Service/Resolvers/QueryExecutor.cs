@@ -113,7 +113,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         QueryExecutorLogger.LogError(e.Message);
                         QueryExecutorLogger.LogError(e.StackTrace);
 
-                        // Throw custom DABException
+                        // Throw custom DAbException
                         throw DbExceptionParser.Parse(e);
                     }
                 }
@@ -143,7 +143,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             DbCommand cmd = conn.CreateCommand();
             cmd.CommandType = CommandType.Text;
 
-            // Add query to send user data from DAB to the underlying database to enable additional security the user might have configured
+            // Add query to send user data from DAb to the underlying database to enable additional security the user might have configured
             // at the database level.
             string sessionParamsQuery = GetSessionParamsQuery(httpContext, parameters);
             //"EXEC sp_set_session_context 'roles', 'Anonymous', @read_only =1 ;";

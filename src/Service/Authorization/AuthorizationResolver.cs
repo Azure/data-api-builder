@@ -480,7 +480,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
             {
 
                 // Only add a role claim which represents the role context evaluated for the request,
-                // as this can be via the virtue of an identity added by DAB.
+                // as this can be via the virtue of an identity added by DAb.
                 if (!claimsInRequestContext.ContainsKey(AuthenticationConfig.ROLE_CLAIM_TYPE) &&
                     identity.HasClaim(type: AuthenticationConfig.ROLE_CLAIM_TYPE, value: clientRoleHeader))
                 {

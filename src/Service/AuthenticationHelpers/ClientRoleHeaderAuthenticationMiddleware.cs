@@ -30,8 +30,8 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
 
         private bool _isLateConfigured;
 
-        // Identity provider used for identities added to the ClaimsPrincipal object for the current user by DAB.
-        private const string INTERNAL_DAB_IDENTITY_PROVIDER = "DAB-VERIFIED";
+        // Identity provider used for identities added to the ClaimsPrincipal object for the current user by DAb.
+        private const string INTERNAL_DAb_IDENTITY_PROVIDER = "DAb-VERIFIED";
 
         public ClientRoleHeaderAuthenticationMiddleware(RequestDelegate next,
             ILogger<ClientRoleHeaderAuthenticationMiddleware> logger,
@@ -121,7 +121,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
             if (!httpContext.User.IsInRole(clientDefinedRole) && IsSystemRole(clientDefinedRole))
             {
                 Claim claim = new(AuthenticationConfig.ROLE_CLAIM_TYPE, clientDefinedRole, ClaimValueTypes.String);
-                string authenticationType = isAuthenticatedRequest ? INTERNAL_DAB_IDENTITY_PROVIDER : string.Empty;
+                string authenticationType = isAuthenticatedRequest ? INTERNAL_DAb_IDENTITY_PROVIDER : string.Empty;
 
                 // Add identity with the same value of IsAuthenticated flag as the original identity.
                 ClaimsIdentity identity = new(

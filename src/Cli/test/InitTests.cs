@@ -42,7 +42,7 @@ namespace Cli.Tests
 
             _basicRuntimeConfig =
             @"{" +
-                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                @"""$schema"": """ + DAb_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
                 @"""data-source"": {
                     ""database-type"": ""mssql"",
                     ""connection-string"": ""testconnectionstring"",
@@ -86,7 +86,7 @@ namespace Cli.Tests
 
             _basicRuntimeConfig =
             @"{" +
-                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                @"""$schema"": """ + DAb_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
                 @"""data-source"": {
                     ""database-type"": ""cosmosdb_postgresql"",
                     ""connection-string"": ""testconnectionstring""
@@ -126,7 +126,7 @@ namespace Cli.Tests
 
             _basicRuntimeConfig =
             @"{" +
-                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                @"""$schema"": """ + DAb_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
                 @"""data-source"": {
                     ""database-type"": ""mssql"",
                     ""connection-string"": """",
@@ -167,7 +167,7 @@ namespace Cli.Tests
 
             _basicRuntimeConfig =
             @"{" +
-                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                @"""$schema"": """ + DAb_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
                 @"""data-source"": {
                     ""database-type"": ""cosmosdb_nosql"",
                     ""connection-string"": ""testconnectionstring"",
@@ -289,7 +289,7 @@ namespace Cli.Tests
 
             _basicRuntimeConfig =
             @"{" +
-                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                @"""$schema"": """ + DAb_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
                 @"""data-source"": {
                     ""database-type"": ""mssql"",
                     ""connection-string"": ""testconnectionstring"",

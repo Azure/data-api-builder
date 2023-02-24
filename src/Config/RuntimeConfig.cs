@@ -144,7 +144,7 @@ namespace Azure.DataApiBuilder.Config
             if (assemblyDirectory is null)
             {
                 throw new DataApiBuilderException(
-                    message: "Could not get the link for DAB draft schema.",
+                    message: "Could not get the link for DAb draft schema.",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }

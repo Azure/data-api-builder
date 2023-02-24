@@ -981,7 +981,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// </summary>
         /// <param name="claimValueType">Claim.ValueType which is a string, by definition.</param>
         /// <param name="claimValue">Claim.Value which is a string, by definition.</param>
-        /// <param name="supportedValueType">Whether Claim.ValueType is supported by DAB engine</param>
+        /// <param name="supportedValueType">Whether Claim.ValueType is supported by DAb engine</param>
         /// <seealso cref="https://github.com/AzureAD/azure-activedirectory-identitymodel-extensions-for-dotnet/blob/9ddad8fc51ed2732622323612acad83f6629d5ba/src/Microsoft.IdentityModel.JsonWebTokens/Json/JsonClaimSet.cs#L76-L124"/>
         /// <seealso cref="https://github.com/AzureAD/azure-activedirectory-identitymodel-extensions-for-dotnet/blob/59d1307a260829c0f8609a183a962aceaeffba89/src/Microsoft.IdentityModel.Tokens/TokenUtilities.cs#L82-L112"/>
         #pragma warning disable format
@@ -1042,7 +1042,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                     $"The claim value for claim: testClaim belonging to the user has an unsupported data type.",
                     actual: ex.Message,
                     message: "Test expected to fail- a claim value for claim belonging to the user had datatype " +
-                    "which is not currently supported by DAB.");
+                    "which is not currently supported by DAb.");
             }
         }
 
@@ -1209,7 +1209,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// <summary>
         /// Test to validate the AuthorizationResolver.GetAllUserClaims() successfully adds role claim to the claimsInRequestContext dictionary.
         /// Only the role claim corresponding to the X-MS-API-ROLE header is added to the claimsInRequestContext.
-        /// The role claim will be sourced by DAB when the user is not already a member of a system role(authenticated/anonymous),
+        /// The role claim will be sourced by DAb when the user is not already a member of a system role(authenticated/anonymous),
         /// or the role claim will be sourced from a user's access token issued by an identity provider.
         /// </summary>
         [TestMethod]

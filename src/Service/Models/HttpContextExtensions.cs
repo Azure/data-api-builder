@@ -36,8 +36,8 @@ namespace Azure.DataApiBuilder.Service.Models
         }
 
         /// <summary>
-        /// Return a string representing the correlation id for use in logging.
-        /// If no correlation id is present we instead return the string "unavailable".
+        /// Return a string representing the labeled correlation id for use in logging.
+        /// If no correlation id is present we instead return the empty string.
         /// </summary>
         /// <param name="context">HttpContext that holds the correlation id if one exists.</param>
         /// <returns>string representing correlation id.</returns>

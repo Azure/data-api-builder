@@ -16,7 +16,7 @@ $RIDs = "win-x64", "linux-x64", "osx-x64"
 if ($Package)
 {
     foreach ($RID in $RIDs) {
-        $cmd = "dotnet publish --configuration $BuildConfiguration --output $BuildOutputDir/publish/$BuildConfiguration/$RID/dab --runtime $RID --self-contained true -p:Version=$DabVersion $BuildRoot/src/Cli/src/Cli.csproj"
+        $cmd = "dotnet publish --configuration $BuildConfiguration --output $BuildOutputDir/publish/$BuildConfiguration/$RID/dab --runtime $RID --self-contained true -p:Version=$DabVersion $BuildRoot/src/Cli/Cli.csproj"
         Write-Host $cmd
         Invoke-Expression $cmd
     }

@@ -68,7 +68,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
 
             using MySqlConnection conn = new(connectionString);
-            await mySqlQueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
+            await mySqlQueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, context: null);
             MySqlConnectionStringBuilder my = new(conn.ConnectionString);
 
             if (expectManagedIdentityAccessToken)

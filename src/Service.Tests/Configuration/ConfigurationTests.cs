@@ -947,6 +947,97 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
+        /// Tests that the when Rest or GraphQL is disabled Globally,
+        /// any requests made will get a 404 response.
+        /// </summary>
+        /// <param name="isRestEnabled">The custom configured GraphQL path in configuration</param>
+        /// <param name="isGraphQLEnabled">The path used in the web request executed in the test.</param>
+        /// <param name="expectedStatusCodeForREST">Expected success/error code for Rest Request</param>
+        /// <param name="expectedStatusCodeForGraphQL">Expected Http success/error code for GraphQL Request</param>
+        [DataTestMethod]
+        [DataRow(false, false, HttpStatusCode.NotFound, HttpStatusCode.NotFound)]
+        [DataRow(true, true, HttpStatusCode.OK, HttpStatusCode.OK)]
+        [DataRow(true, false, HttpStatusCode.OK, HttpStatusCode.NotFound)]
+        [DataRow(false, true, HttpStatusCode.NotFound, HttpStatusCode.OK)]
+        public async Task TestGlobalFlagToEnableRestAndGraphQLForHostedAndNonHostedEnvironment(
+            bool isRestEnabled,
+            bool isGraphQLEnabled,
+            HttpStatusCode expectedStatusCodeForREST,
+            HttpStatusCode expectedStatusCodeForGraphQL)
+        {
+            Dictionary<GlobalSettingsType, object> settings = new()
+            {
+                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){ Enabled = isGraphQLEnabled }) },
+                { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings(){ Enabled = isRestEnabled }) }
+            };
+
+            DataSource dataSource = new(DatabaseType.mssql)
+            {
+                ConnectionString = GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)
+            };
+
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(globalSettings: settings, dataSource: dataSource);
+            const string CUSTOM_CONFIG = "custom-config.json";
+            File.WriteAllText(
+                CUSTOM_CONFIG,
+                JsonSerializer.Serialize(configuration, RuntimeConfig.SerializerOptions));
+
+            string[] args = new[]
+            {
+                    $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            // Non-Hosted Scenario
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                string query = @"{
+                    book_by_pk(id: 1) {
+                       id,
+                       title,
+                       publisher_id
+                    }
+                }";
+
+                object payload = new { query };
+
+                HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
+                {
+                    Content = JsonContent.Create(payload)
+                };
+
+                HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
+                Assert.AreEqual(expectedStatusCodeForGraphQL, graphQLResponse.StatusCode);
+
+                HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/Book");
+                HttpResponseMessage restResponse = await client.SendAsync(restRequest);
+                Assert.AreEqual(expectedStatusCodeForREST, restResponse.StatusCode);
+                
+            }
+
+            // Hosted Scenario
+            // Instantiate new server with no runtime config for post-startup configuration hydration tests.
+            using (TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>())))
+            using (HttpClient client = server.CreateClient())
+            {
+                ConfigurationPostParameters config = GetPostStartupConfigParams(MSSQL_ENVIRONMENT, configuration);
+
+                HttpResponseMessage postResult =
+                await client.PostAsync("/configuration", JsonContent.Create(config));
+                Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
+
+                HttpStatusCode restResponseCode = await GetRestResponsePostConfigHydration(client);
+
+                Assert.AreEqual(expected: expectedStatusCodeForREST, actual: restResponseCode);
+
+                HttpStatusCode graphqlResponseCode = await GetGraphQLResponsePostConfigHydration(client);
+
+                Assert.AreEqual(expected: expectedStatusCodeForGraphQL, actual: graphqlResponseCode);
+
+            }
+        }
+
+        /// <summary>
         /// Tests that Startup.cs properly handles EasyAuth authentication configuration.
         /// AppService as Identity Provider while in Production mode will result in startup error.
         /// An Azure AppService environment has environment variables on the host which indicate
@@ -1238,6 +1329,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 await httpClient.PostAsync("/configuration", JsonContent.Create(config));
             Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
 
+            return await GetRestResponsePostConfigHydration(httpClient);
+        }
+
+        /// <summary>
+        /// Executing REST requests against the engine until a non-503 error is received.
+        /// </summary>
+        /// <param name="httpClient">Client used for request execution.</param>
+        /// <returns>ServiceUnavailable if service is not successfully hydrated with config,
+        /// else the response code from the REST request</returns>
+        private static async Task<HttpStatusCode> GetRestResponsePostConfigHydration(HttpClient httpClient)
+        {
             // Retry request RETRY_COUNT times in 1 second increments to allow required services
             // time to instantiate and hydrate permissions.
             int retryCount = RETRY_COUNT;
@@ -1250,6 +1352,51 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 responseCode = postConfigHydrationResult.StatusCode;
 
                 if (postConfigHydrationResult.StatusCode == HttpStatusCode.ServiceUnavailable)
+                {
+                    retryCount--;
+                    Thread.Sleep(TimeSpan.FromSeconds(RETRY_WAIT_SECONDS));
+                    continue;
+                }
+
+                break;
+            }
+
+            return responseCode;
+        }
+
+        /// <summary>
+        /// Executing GraphQL POST requests against the engine until a non-503 error is received.
+        /// </summary>
+        /// <param name="httpClient">Client used for request execution.</param>
+        /// <returns>ServiceUnavailable if service is not successfully hydrated with config,
+        /// else the response code from the GRAPHQL request</returns>
+        private static async Task<HttpStatusCode> GetGraphQLResponsePostConfigHydration(HttpClient httpClient)
+        {
+            // Retry request RETRY_COUNT times in 1 second increments to allow required services
+            // time to instantiate and hydrate permissions.
+            int retryCount = RETRY_COUNT;
+            HttpStatusCode responseCode = HttpStatusCode.ServiceUnavailable;
+            while (retryCount > 0)
+            {
+                string query = @"{
+                    book_by_pk(id: 1) {
+                       id,
+                       title,
+                       publisher_id
+                    }
+                }";
+
+                object payload = new { query };
+
+                HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
+                {
+                    Content = JsonContent.Create(payload)
+                };
+
+                HttpResponseMessage graphQLResponse = await httpClient.SendAsync(graphQLRequest);
+                responseCode = graphQLResponse.StatusCode;
+
+                if (responseCode == HttpStatusCode.ServiceUnavailable)
                 {
                     retryCount--;
                     Thread.Sleep(TimeSpan.FromSeconds(RETRY_WAIT_SECONDS));

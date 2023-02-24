@@ -61,6 +61,13 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <param name="httpContext">Request metadata.</param>
         public async Task InvokeAsync(HttpContext httpContext)
         {
+            // If Rest request is made with Rest disabled Globally or graphQL request is made
+            // with graphQL disabled globally, then the request will be discarded.
+            if (CheckIfRequestIsDisabledGlobally(httpContext))
+            {
+                return;
+            }
+
             // Only attempt to rewrite the URL when the developer configured GraphQL path differs
             // from the internally set default path of /graphql
             if (httpContext.Request.Path.HasValue &&
@@ -100,6 +107,32 @@ namespace Azure.DataApiBuilder.Service.Services
             }
 
             graphQLRoute = null;
+            return false;
+        }
+
+        /// <summary>
+        /// Sets Http Response code to 404 NOT Found if a REST call is made with REST disabled globally
+        /// or if graphql request is made with GraphQL disabled globally.
+        /// </summary>
+        /// <param name="httpContext">Request metadata.</param>
+        /// <returns>True if the given REST/GraphQL request is disabled globally,else false </returns>
+        private bool CheckIfRequestIsDisabledGlobally(HttpContext httpContext)
+        {
+            if (_runtimeConfigurationProvider.TryGetRuntimeConfiguration(out RuntimeConfig? config))
+            {
+                string restPath = config.RestGlobalSettings.Path;
+                string graphQLPath = config.GraphQLGlobalSettings.Path;
+
+                if ((httpContext.Request.Path.StartsWithSegments(restPath, comparisonType: StringComparison.OrdinalIgnoreCase)
+                    && !config.RestGlobalSettings.Enabled)
+                    || (httpContext.Request.Path.StartsWithSegments(graphQLPath, comparisonType: StringComparison.OrdinalIgnoreCase)
+                    && !config.GraphQLGlobalSettings.Enabled))
+                {
+                    httpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return true;
+                }
+            }
+
             return false;
         }
     }

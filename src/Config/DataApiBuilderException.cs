@@ -77,7 +77,11 @@ namespace Azure.DataApiBuilder.Service.Exceptions
             /// <summary>
             /// Error encountered while doing data type conversions.
             /// </summary>
-            ErrorProcessingData
+            ErrorProcessingData,
+            /// <summary>
+            /// Invalid Path is used to make API calls.
+            /// </summary>
+            InvalidPath
         }
 
         public HttpStatusCode StatusCode { get; }

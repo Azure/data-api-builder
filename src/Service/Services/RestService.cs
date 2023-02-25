@@ -392,8 +392,8 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 throw new DataApiBuilderException(
                     message: $"Invalid Path for route: {route}.",
-                    statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    statusCode: HttpStatusCode.NotFound,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.InvalidPath);
             }
 
             // entity's path comes after the restPath, so get substring starting from

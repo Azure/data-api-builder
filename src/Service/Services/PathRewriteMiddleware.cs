@@ -4,6 +4,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
@@ -113,6 +114,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <summary>
         /// Sets Http Response code to 404 NOT Found if a REST call is made with REST disabled globally
         /// or if graphql request is made with GraphQL disabled globally.
+        /// 404 is also thrown when the request path is invalid.
         /// </summary>
         /// <param name="httpContext">Request metadata.</param>
         /// <returns>True if the given REST/GraphQL request is disabled globally,else false </returns>
@@ -122,11 +124,11 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 string restPath = config.RestGlobalSettings.Path;
                 string graphQLPath = config.GraphQLGlobalSettings.Path;
+                bool isRestRequest = httpContext.Request.Path.StartsWithSegments(restPath, comparisonType: StringComparison.OrdinalIgnoreCase);
+                bool isGraphQLRequest = httpContext.Request.Path.StartsWithSegments(graphQLPath, comparisonType: StringComparison.OrdinalIgnoreCase);
 
-                if ((httpContext.Request.Path.StartsWithSegments(restPath, comparisonType: StringComparison.OrdinalIgnoreCase)
-                    && !config.RestGlobalSettings.Enabled)
-                    || (httpContext.Request.Path.StartsWithSegments(graphQLPath, comparisonType: StringComparison.OrdinalIgnoreCase)
-                    && !config.GraphQLGlobalSettings.Enabled))
+                if ((isRestRequest && !config.RestGlobalSettings.Enabled)
+                    || (isGraphQLRequest && !config.GraphQLGlobalSettings.Enabled))
                 {
                     httpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                     return true;

@@ -950,8 +950,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// Tests that the when Rest or GraphQL is disabled Globally,
         /// any requests made will get a 404 response.
         /// </summary>
-        /// <param name="isRestEnabled">The custom configured GraphQL path in configuration</param>
-        /// <param name="isGraphQLEnabled">The path used in the web request executed in the test.</param>
+        /// <param name="isRestEnabled">The custom configured REST enabled property in configuration.</param>
+        /// <param name="isGraphQLEnabled">The custom configured GraphQL enabled property in configuration.</param>
         /// <param name="expectedStatusCodeForREST">Expected success/error code for Rest Request</param>
         /// <param name="expectedStatusCodeForGraphQL">Expected Http success/error code for GraphQL Request</param>
         [DataTestMethod]

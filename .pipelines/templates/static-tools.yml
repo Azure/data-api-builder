@@ -73,10 +73,13 @@ jobs:
       configuration: '${{ parameters.BuildConfiguration }}'
       publishTestResults: true
 
-  - task: securedevelopmentteam.vss-secure-development-tools.build-task-binskim.BinSkim@3
+  - task: securedevelopmentteam.vss-secure-development-tools.build-task-binskim.BinSkim@4
     displayName: 'BinSkim'
     inputs:
       InputType: Basic
+      AnalyzeTargetBinskim:
+        $(Build.SourcesDirectory)\**.dll
+        $(Build.SourcesDirectory)\**.exe
 
   # Publish Analysis Results (position after all tools ran)
   - task: securedevelopmentteam.vss-secure-development-tools.build-task-publishsecurityanalysislogs.PublishSecurityAnalysisLogs@2

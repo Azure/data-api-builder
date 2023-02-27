@@ -118,9 +118,11 @@ This section contains options that will affect the runtime behavior and/or all e
 "runtime": {
   "rest": {
     "path": "/api",
+    "enabled": true
   },
   "graphql": {
     "path": "/graphql",
+    "enabled": true
   },
   "host": {
     "mode": "production" | "development",
@@ -143,9 +145,13 @@ This section contains options that will affect the runtime behavior and/or all e
 
 `path`: defines the URL path where all exposed REST endpoints will be made available. For example if set to `/api`, the REST endpoint will be exposed `/api/<entity>`. No sub-paths allowed. Optional. Default is `/api`.
 
+`enabled`: Boolean flag that defines whether we want to enable to disable the REST endpoints globally. If disabled globally, no entities would be accessible via REST requests irrespective of the individual entity settings.
+
 #### GraphQL
 
 `path`: defines the URL path where the GraphQL endpoint will be made available. For example if set to `/graphql`, the GraphQL endpoint will be exposed `/graphql`. No sub-paths allowed. Optional. Default is `graphql`. Currently, a customized path value for GraphQL endpoint is not supported.
+
+`enabled`: Boolean flag that defines whether we want to enable to disable the GraphQL endpoints globally. If disabled globally, no entities would be accessible via GraphQL requests irrespective of the individual entity settings.
 
 #### Host
 

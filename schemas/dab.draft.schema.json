@@ -129,6 +129,10 @@
             "path": {
               "default": "/api",
               "type": "string"
+            },
+            "enabled": {
+              "type": "boolean",
+              "description": "Allow enabling/disabling REST requests for all entities."
             }
           }
         },
@@ -143,6 +147,10 @@
             "path": {
               "default": "/graphql",
               "type": "string"
+            },
+            "enabled": {
+              "type": "boolean",
+              "description": "Allow enabling/disabling GraphQL requests for all entities."
             }
           }
         },

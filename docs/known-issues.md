@@ -18,7 +18,7 @@ Here are some known issues specifically with MySQL database.
 - Support for CREATE/UPDATE actions on view is missing. [Issue #894](https://github.com/Azure/data-api-builder/issues/894)
 - Nested Filtering in GraphQL are not yet supported. [Issue #1019](https://github.com/Azure/data-api-builder/issues/1019)
 - Entities backed by Stored Procedures are not yet supported. [Issue #1024](https://github.com/Azure/data-api-builder/issues/1024)
-- Support for database policies for PUT/PATCH operations in REST is missing. [Issue #1267](https://github.com/Azure/data-api-builder/issues/1267)
+- Database policies for PUT/PATCH operations in REST are not yet supported. [Issue #1267](https://github.com/Azure/data-api-builder/issues/1267)
 
 ## Knowns issues with PostgreSQL
 Here are some known issues specifically with PostgreSQL database.

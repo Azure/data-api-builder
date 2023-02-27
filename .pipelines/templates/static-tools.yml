@@ -64,10 +64,10 @@ jobs:
     inputs:
       InputType: Basic
       TargetPattern: binskimPattern
-      AnalyzeTargetBinskim: $(Build.SourcesDirectory)\src\out\tests\debug\net6.0\Cli.Tests.dll
+      AnalyzeTargetBinskim: $(Build.SourcesDirectory)\**\**.dll
 
   # Publish Analysis Results (position after all tools ran)
-  - task: securedevelopmentteam.vss-secure-development-tools.build-task-publishsecurityanalysislogs.PublishSecurityAnalysisLogs@2
+  - task: securedevelopmentteam.vss-secure-development-tools.build-task-publishsecurityanalysislogs.PublishSecurityAnalysisLogs@3
     displayName: 'Publish Security Analysis Logs'
 
   # The Post-Analysis build task will analyze the log files produced by the tools, and introduce a build break

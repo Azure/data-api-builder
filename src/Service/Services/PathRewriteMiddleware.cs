@@ -34,13 +34,6 @@ namespace Azure.DataApiBuilder.Service.Services
         private const string DEFAULT_GRAPHQL_PATH = "/graphql";
 
         /// <summary>
-        /// Every GraphQL request gets redirected to this route
-        /// when Banana Cake Pop UI is disabled.
-        /// e.g. https://servername:port/favicon.ico
-        /// </summary>
-        public const string REDIRECTED_ROUTE = "/favicon.ico";
-
-        /// <summary>
         /// Setup dependencies and requirements for custom middleware.
         /// </summary>
         /// <param name="next">Reference to next middleware in the request pipeline.</param>

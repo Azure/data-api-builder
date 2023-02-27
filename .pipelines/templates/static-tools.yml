@@ -63,7 +63,7 @@ jobs:
     displayName: 'BinSkim'
     inputs:
       InputType: Basic
-      AnalyzeTargetGlob: $(Build.SourcesDirectory)\**.dll;$(Build.SourcesDirectory)\**.exe
+      AnalyzeTargetGlob: $(Build.SourcesDirectory)\**.dll;$(Build.SourcesDirectory)\**.exe;-:f|$(Build.SourcesDirectory)\**\Microsoft.Azure.Cosmos.ServiceInterop.dll
       AnalyzeIgnorePdbLoadError: true
 
   # Publish Analysis Results (position after all tools ran)
@@ -71,7 +71,7 @@ jobs:
     displayName: 'Publish Security Analysis Logs'
 
   # The Post-Analysis build task will analyze the log files produced by the tools, and introduce a build break
-  - task: securedevelopmentteam.vss-secure-development-tools.build-task-postanalysis.PostAnalysis@1
+  - task: securedevelopmentteam.vss-secure-development-tools.build-task-postanalysis.PostAnalysis@2
     displayName: 'Post Analysis'
     inputs:
       AllTools: true

@@ -57,7 +57,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                     FROM (
                         SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
                         FROM " + _Composite_NonAutoGenPK_TableName + @"
-                        WHERE categoryid = 5 AND pieceid = 2 AND ""categoryName"" = 'FairyTales'
+                        WHERE categoryid = 5 AND pieceid = 2 AND ""categoryName"" = 'Tales'
                             AND ""piecesAvailable"" = 0 AND ""piecesRequired"" = 0
                     ) AS subq
                 "

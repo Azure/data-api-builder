@@ -770,10 +770,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         public async Task TestNestedFilterOneMany(string existsPredicate)
         {
             string graphQLQueryName = "series";
-            // Gets the series that have comics with categoryName containing Fairy
+            // Gets the series that have comics with categoryName containing Tales
             string gqlQuery = @"{
                 series (" + QueryBuilder.FILTER_FIELD_NAME +
-                    @": { comics: { categoryName: { contains: ""Fairy"" }}} )
+                    @": { comics: { categoryName: { contains: ""Tales"" }}} )
                     {
                       items {
                         id

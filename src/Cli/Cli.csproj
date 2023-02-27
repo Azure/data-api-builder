@@ -10,6 +10,7 @@
     <ToolCommandName>dab</ToolCommandName>
     <PackageOutputPath>./nupkg</PackageOutputPath>
     <BaseOutputPath>..\..\out\cli</BaseOutputPath>
+    <OutputPath>$(BaseOutputPath)\cli</OutputPath>
     <RuntimeIdentifiers>win-x64;linux-x64;osx-x64</RuntimeIdentifiers>
     <PackageId>Microsoft.DataApiBuilder</PackageId>
     <Title>Microsoft.DataApiBuilder</Title>

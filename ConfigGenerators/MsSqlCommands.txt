@@ -1,128 +1,128 @@
-dab init --config "dab-config.MsSql.json" --database-type mssql --set-session-context true --connection-string "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=sa;Password=REPLACEME;MultipleActiveResultSets=False;Connection Timeout=5;" --host-mode Development --cors-origin "http://localhost:5000"
-dab add Publisher --config "dab-config.MsSql.json" --source publishers --permissions "anonymous:read"
-dab add Stock --config "dab-config.MsSql.json" --source stocks --permissions "anonymous:create,read,update"
-dab add Book --config "dab-config.MsSql.json" --source books --permissions "anonymous:create,read,update,delete" --graphql "book:books"
-dab add BookWebsitePlacement --config "dab-config.MsSql.json" --source book_website_placements --permissions "anonymous:read"
-dab add Author --config "dab-config.MsSql.json" --source authors --permissions "anonymous:read"
-dab add Revenue --config "dab-config.MsSql.json" --source revenues --permissions "anonymous:*"
-dab add Review --config "dab-config.MsSql.json" --source reviews --permissions "anonymous:create,read,update" --rest true --graphql "review:reviews"
-dab add Comic --config "dab-config.MsSql.json" --source comics --permissions "anonymous:create,read,update"
-dab add Broker --config "dab-config.MsSql.json" --source brokers --permissions "anonymous:read"
-dab add WebsiteUser --config "dab-config.MsSql.json" --source website_users --permissions "anonymous:create,read,delete,update"
-dab add SupportedType --config "dab-config.MsSql.json" --source type_table --permissions "anonymous:create,read,delete,update"
-dab add stocks_price --config "dab-config.MsSql.json" --source stocks_price --permissions "anonymous:read"
-dab add Tree --config "dab-config.MsSql.json" --source trees --permissions "anonymous:create,read,update,delete"
-dab add Shrub --config "dab-config.MsSql.json" --source trees --permissions "anonymous:create,read,update,delete" --rest plants
-dab add Fungus --config "dab-config.MsSql.json" --source fungi --permissions "anonymous:create,read,update,delete" --graphql "fungus:fungi"
-dab add books_view_all --config "dab-config.MsSql.json" --source books_view_all --source.type "view" --permissions "anonymous:*" --rest true --graphql true
-dab add books_view_with_mapping --config "dab-config.MsSql.json" --source books_view_with_mapping --source.type "view" --permissions "anonymous:*" --rest true --graphql true
-dab add stocks_view_selected --config "dab-config.MsSql.json" --source stocks_view_selected --source.type "view" --permissions "anonymous:*" --rest true --graphql true
-dab add books_publishers_view_composite --config "dab-config.MsSql.json" --source books_publishers_view_composite --source.type "view" --permissions "anonymous:*" --rest true --graphql true
-dab add books_publishers_view_composite_insertable --config "dab-config.MsSql.json" --source books_publishers_view_composite_insertable --source.type "view" --permissions "anonymous:*" --rest true --graphql true
-dab add Empty --config "dab-config.MsSql.json" --source "empty_table" --permissions "authenticated:create,read,update,delete" --rest true
-dab add Notebook --config "dab-config.MsSql.json" --source "notebooks" --permissions "anonymous:read" --rest true --graphql true --fields.include "*" --policy-database "@item ne 1"
-dab add Journal --config "dab-config.MsSql.json" --source "journals" --rest true --graphql true --permissions "policy_tester_noupdate:create,delete"
-dab add ArtOfWar --config "dab-config.MsSql.json" --source "aow" --rest true --graphql false --permissions "anonymous:*"
-dab add series --config "dab-config.MsSql.json" --source "series" --permissions "anonymous:*"
-dab add Sales --config "dab-config.MsSql.json" --source "sales" --permissions "anonymous:*" --rest true --graphql true
-dab add GetBooks --config "dab-config.MsSql.json" --source "get_books" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql true
-dab add GetBook --config "dab-config.MsSql.json" --source "get_book_by_id" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql false
-dab add GetPublisher --config "dab-config.MsSql.json" --source "get_publisher_by_id" --source.type "stored-procedure" --source.params "id:1" --permissions "anonymous:execute" --rest true --graphql true
-dab add InsertBook --config "dab-config.MsSql.json" --source "insert_book" --source.type "stored-procedure" --source.params "title:randomX,publisher_id:1234" --permissions "anonymous:execute" --rest true --graphql true
-dab add CountBooks --config "dab-config.MsSql.json" --source "count_books" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql true
-dab add DeleteLastInsertedBook --config "dab-config.MsSql.json" --source "delete_last_inserted_book" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql true
-dab add UpdateBookTitle --config "dab-config.MsSql.json" --source "update_book_title" --source.type "stored-procedure" --source.params "id:1,title:Testing Tonight" --permissions "anonymous:execute" --rest true --graphql true
-dab add GetAuthorsHistoryByFirstName --config "dab-config.MsSql.json" --source "get_authors_history_by_first_name" --source.type "stored-procedure" --source.params "firstName:Aaron" --permissions "anonymous:execute" --rest true --graphql SearchAuthorByFirstName
-dab add InsertAndDisplayAllBooksUnderGivenPublisher --config "dab-config.MsSql.json" --source "insert_and_display_all_books_for_given_publisher" --source.type "stored-procedure" --source.params "title:MyTitle,publisher_name:MyPublisher" --permissions "anonymous:execute" --rest true --graphql true
-dab add GQLmappings --config "dab-config.MsSql.json" --source "GQLmappings" --permissions "anonymous:*" --rest true --graphql true
-dab update GQLmappings --config "dab-config.MsSql.json" --map "__column1:column1,__column2:column2" --permissions "authenticated:*"
-dab update Publisher --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship books --target.entity Book --cardinality many
-dab update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_01:create,delete"
-dab update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_01:update" --fields.include "*"
-dab update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_01:read" --fields.include "*" --policy-database "@item.id eq 1940"
-dab update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_02:create,delete"
-dab update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_02:update" --fields.include "*"
-dab update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_02:read" --fields.include "*" --policy-database "@item.id ne 1940"
-dab update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_03:create,delete"
-dab update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_03:update" --fields.include "*"
-dab update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_03:read" --fields.include "*" --policy-database "@item.id ne 1940"
-dab update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_04:create,delete"
-dab update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_04:update" --fields.include "*"
-dab update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_04:read" --fields.include "*" --policy-database "@item.id eq 1940"
-dab update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_06:create,delete"
-dab update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_06:update" --fields.include "*"
-dab update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_06:read" --fields.include "*" --policy-database "@item.id eq 1940"
-dab update Stock --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --rest commodities --graphql true --relationship stocks_price --target.entity stocks_price --cardinality one
-dab update Book --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete"
-dab update Book --config "dab-config.MsSql.json" --relationship publishers --target.entity Publisher --cardinality one
-dab update Book --config "dab-config.MsSql.json" --relationship websiteplacement --target.entity BookWebsitePlacement --cardinality one
-dab update Book --config "dab-config.MsSql.json" --relationship reviews --target.entity Review --cardinality many
-dab update Book --config "dab-config.MsSql.json" --relationship authors --target.entity Author --cardinality many --linking.object book_author_link --linking.source.fields "book_id" --linking.target.fields "author_id"
-dab update Book --config "dab-config.MsSql.json" --map "id:id,title:title"
-dab update Book --config "dab-config.MsSql.json" --permissions "policy_tester_01:create,delete"
-dab update Book --config "dab-config.MsSql.json" --permissions "policy_tester_01:update" --fields.include "*"
-dab update Book --config "dab-config.MsSql.json" --permissions "policy_tester_01:read" --fields.include "*" --policy-database "@item.title eq 'Policy-Test-01'"
-dab update Book --config "dab-config.MsSql.json" --permissions "policy_tester_02:create,delete"
-dab update Book --config "dab-config.MsSql.json" --permissions "policy_tester_02:update" --fields.include "*"
-dab update Book --config "dab-config.MsSql.json" --permissions "policy_tester_02:read" --fields.include "*" --policy-database "@item.title ne 'Policy-Test-01'"
-dab update Book --config "dab-config.MsSql.json" --permissions "policy_tester_03:create,delete"
-dab update Book --config "dab-config.MsSql.json" --permissions "policy_tester_03:update" --fields.include "*"
-dab update Book --config "dab-config.MsSql.json" --permissions "policy_tester_03:read" --fields.include "*" --policy-database "@item.title eq 'Policy-Test-01'"
-dab update Book --config "dab-config.MsSql.json" --permissions "policy_tester_04:create,delete"
-dab update Book --config "dab-config.MsSql.json" --permissions "policy_tester_04:update" --fields.include "*"
-dab update Book --config "dab-config.MsSql.json" --permissions "policy_tester_04:read" --fields.include "*" --policy-database "@item.title ne 'Policy-Test-01'"
-dab update Book --config "dab-config.MsSql.json" --permissions "policy_tester_05:create,delete"
-dab update Book --config "dab-config.MsSql.json" --permissions "policy_tester_05:update" --fields.include "*"
-dab update Book --config "dab-config.MsSql.json" --permissions "policy_tester_05:read" --fields.include "*" --policy-database "@item.id ne 9"
-dab update Book --config "dab-config.MsSql.json" --permissions "policy_tester_06:update" --fields.include "*"
-dab update Book --config "dab-config.MsSql.json" --permissions "policy_tester_06:create,delete"
-dab update Book --config "dab-config.MsSql.json" --permissions "policy_tester_06:read" --fields.include "*" --policy-database "@item.id ne 10"
-dab update Book --config "dab-config.MsSql.json" --permissions "policy_tester_07:create"
-dab update Book --config "dab-config.MsSql.json" --permissions "policy_tester_07:update" --fields.include "*" --policy-database "@item.id ne 9"
-dab update Book --config "dab-config.MsSql.json" --permissions "policy_tester_07:read" --fields.include "*"
-dab update Book --config "dab-config.MsSql.json" --permissions "policy_tester_07:delete" --fields.include "*" --policy-database "@item.id ne 9"
-dab update Book --config "dab-config.MsSql.json" --permissions "policy_tester_08:create"
-dab update Book --config "dab-config.MsSql.json" --permissions "policy_tester_08:update" --fields.include "*" --policy-database "@item.id eq 9"
-dab update Book --config "dab-config.MsSql.json" --permissions "policy_tester_08:delete" --fields.include "*" --policy-database "@item.id eq 9"
-dab update Book --config "dab-config.MsSql.json" --permissions "policy_tester_08:read" --fields.include "*"
-dab update Review --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete"
-dab update Review --config "dab-config.MsSql.json" --relationship books --target.entity Book --cardinality one
-dab update BookWebsitePlacement --config "dab-config.MsSql.json" --permissions "authenticated:create,update" --rest true --graphql true
-dab update BookWebsitePlacement --config "dab-config.MsSql.json" --permissions "authenticated:delete" --fields.include "*" --policy-database "@claims.userId eq @item.id"
-dab update Author --config "dab-config.MsSql.json"  --permissions "authenticated:create,read,update,delete" --rest true --graphql true
-dab update WebsiteUser --config "dab-config.MsSql.json" --permissions "authenticated:create,read,delete,update" --rest false --graphql "websiteUser:websiteUsers"
-dab update stocks_price --config "dab-config.MsSql.json" --permissions "authenticated:create,read,delete,update" --rest false
-dab update Comic --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship myseries --target.entity series --cardinality one
-dab update series --config "dab-config.MsSql.json" --relationship comics --target.entity Comic --cardinality many
-dab update Broker --config "dab-config.MsSql.json" --permissions "authenticated:create,update,read,delete" --graphql false
-dab update Tree --config "dab-config.MsSql.json" --rest true --graphql false --permissions "authenticated:create,read,update,delete" --map "species:Scientific Name,region:United State's Region"
-dab update Shrub --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --map "species:fancyName"
-dab update Fungus --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --map "spores:hazards" --rest true
-dab update Fungus --config "dab-config.MsSql.json" --permissions "policy_tester_01:read" --fields.include "*" --policy-database "@item.region ne 'northeast'"
-dab update books_view_all --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true
-dab update stocks_view_selected --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete"
-dab update books_publishers_view_composite --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete"
-dab update books_view_with_mapping --config "dab-config.MsSql.json" --map "id:book_id" --source.key-fields "id" 
-dab update BookWebsitePlacement --config "dab-config.MsSql.json" --relationship books --target.entity Book --cardinality one
-dab update SupportedType --config "dab-config.MsSql.json" --map "id:typeid" --permissions "authenticated:create,read,delete,update" 
-dab update Author --config "dab-config.MsSql.json" --relationship books --target.entity Book --cardinality many --linking.object book_author_link
-dab update Notebook --config "dab-config.MsSql.json" --permissions "anonymous:create,update,delete"
-dab update Empty --config "dab-config.MsSql.json" --permissions "anonymous:read"
-dab update Journal --config "dab-config.MsSql.json" --permissions "policy_tester_noupdate:update" --fields.include "*" --policy-database "@item.id ne 1"
-dab update Journal --config "dab-config.MsSql.json" --permissions "policy_tester_noupdate:read" --fields.include "*"
-dab update Journal --config "dab-config.MsSql.json" --permissions "policy_tester_update_noread:create"
-dab update Journal --config "dab-config.MsSql.json" --permissions "policy_tester_update_noread:update" --fields.include "*" --policy-database "@item.id eq 1"
-dab update Journal --config "dab-config.MsSql.json" --permissions "policy_tester_update_noread:read" --fields.exclude "*"
-dab update Journal --config "dab-config.MsSql.json" --permissions "policy_tester_update_noread:delete" --fields.include "*" --policy-database "@item.id eq 1"
-dab update Journal --config "dab-config.MsSql.json" --permissions "authorizationHandlerTester:read"
-dab update ArtOfWar --config "dab-config.MsSql.json" --permissions "authenticated:*" --map "DetailAssessmentAndPlanning:始計,WagingWar:作戰,StrategicAttack:謀攻,NoteNum:┬─┬ノ( º _ ºノ)"
-dab update GetBook --config "dab-config.MsSql.json" --permissions "authenticated:execute" --rest.methods "Get"
-dab update GetPublisher --config "dab-config.MsSql.json" --permissions "authenticated:execute"
-dab update GetBooks --config "dab-config.MsSql.json" --permissions "authenticated:execute" --graphql.operation "Query" --rest.methods "Get"
-dab update InsertBook --config "dab-config.MsSql.json" --permissions "authenticated:execute"
-dab update CountBooks --config "dab-config.MsSql.json" --permissions "authenticated:execute"
-dab update DeleteLastInsertedBook --config "dab-config.MsSql.json" --permissions "authenticated:execute"
-dab update UpdateBookTitle --config "dab-config.MsSql.json" --permissions "authenticated:execute"
-dab update Sales --config "dab-config.MsSql.json" --permissions "authenticated:*"
-dab update GetAuthorsHistoryByFirstName --config "dab-config.MsSql.json" --permissions "authenticated:execute"
-dab update InsertAndDisplayAllBooksUnderGivenPublisher --config "dab-config.MsSql.json" --permissions "authenticated:execute"
+init --config "dab-config.MsSql.json" --database-type mssql --set-session-context true --connection-string "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=sa;Password=REPLACEME;MultipleActiveResultSets=False;Connection Timeout=5;" --host-mode Development --cors-origin "http://localhost:5000"
+add Publisher --config "dab-config.MsSql.json" --source publishers --permissions "anonymous:read"
+add Stock --config "dab-config.MsSql.json" --source stocks --permissions "anonymous:create,read,update"
+add Book --config "dab-config.MsSql.json" --source books --permissions "anonymous:create,read,update,delete" --graphql "book:books"
+add BookWebsitePlacement --config "dab-config.MsSql.json" --source book_website_placements --permissions "anonymous:read"
+add Author --config "dab-config.MsSql.json" --source authors --permissions "anonymous:read"
+add Revenue --config "dab-config.MsSql.json" --source revenues --permissions "anonymous:*"
+add Review --config "dab-config.MsSql.json" --source reviews --permissions "anonymous:create,read,update" --rest true --graphql "review:reviews"
+add Comic --config "dab-config.MsSql.json" --source comics --permissions "anonymous:create,read,update"
+add Broker --config "dab-config.MsSql.json" --source brokers --permissions "anonymous:read"
+add WebsiteUser --config "dab-config.MsSql.json" --source website_users --permissions "anonymous:create,read,delete,update"
+add SupportedType --config "dab-config.MsSql.json" --source type_table --permissions "anonymous:create,read,delete,update"
+add stocks_price --config "dab-config.MsSql.json" --source stocks_price --permissions "anonymous:read"
+add Tree --config "dab-config.MsSql.json" --source trees --permissions "anonymous:create,read,update,delete"
+add Shrub --config "dab-config.MsSql.json" --source trees --permissions "anonymous:create,read,update,delete" --rest plants
+add Fungus --config "dab-config.MsSql.json" --source fungi --permissions "anonymous:create,read,update,delete" --graphql "fungus:fungi"
+add books_view_all --config "dab-config.MsSql.json" --source books_view_all --source.type "view" --permissions "anonymous:*" --rest true --graphql true
+add books_view_with_mapping --config "dab-config.MsSql.json" --source books_view_with_mapping --source.type "view" --permissions "anonymous:*" --rest true --graphql true
+add stocks_view_selected --config "dab-config.MsSql.json" --source stocks_view_selected --source.type "view" --permissions "anonymous:*" --rest true --graphql true
+add books_publishers_view_composite --config "dab-config.MsSql.json" --source books_publishers_view_composite --source.type "view" --permissions "anonymous:*" --rest true --graphql true
+add books_publishers_view_composite_insertable --config "dab-config.MsSql.json" --source books_publishers_view_composite_insertable --source.type "view" --permissions "anonymous:*" --rest true --graphql true
+add Empty --config "dab-config.MsSql.json" --source "empty_table" --permissions "authenticated:create,read,update,delete" --rest true
+add Notebook --config "dab-config.MsSql.json" --source "notebooks" --permissions "anonymous:read" --rest true --graphql true --fields.include "*" --policy-database "@item ne 1"
+add Journal --config "dab-config.MsSql.json" --source "journals" --rest true --graphql true --permissions "policy_tester_noupdate:create,delete"
+add ArtOfWar --config "dab-config.MsSql.json" --source "aow" --rest true --graphql false --permissions "anonymous:*"
+add series --config "dab-config.MsSql.json" --source "series" --permissions "anonymous:*"
+add Sales --config "dab-config.MsSql.json" --source "sales" --permissions "anonymous:*" --rest true --graphql true
+add GetBooks --config "dab-config.MsSql.json" --source "get_books" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql true
+add GetBook --config "dab-config.MsSql.json" --source "get_book_by_id" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql false
+add GetPublisher --config "dab-config.MsSql.json" --source "get_publisher_by_id" --source.type "stored-procedure" --source.params "id:1" --permissions "anonymous:execute" --rest true --graphql true
+add InsertBook --config "dab-config.MsSql.json" --source "insert_book" --source.type "stored-procedure" --source.params "title:randomX,publisher_id:1234" --permissions "anonymous:execute" --rest true --graphql true
+add CountBooks --config "dab-config.MsSql.json" --source "count_books" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql true
+add DeleteLastInsertedBook --config "dab-config.MsSql.json" --source "delete_last_inserted_book" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql true
+add UpdateBookTitle --config "dab-config.MsSql.json" --source "update_book_title" --source.type "stored-procedure" --source.params "id:1,title:Testing Tonight" --permissions "anonymous:execute" --rest true --graphql true
+add GetAuthorsHistoryByFirstName --config "dab-config.MsSql.json" --source "get_authors_history_by_first_name" --source.type "stored-procedure" --source.params "firstName:Aaron" --permissions "anonymous:execute" --rest true --graphql SearchAuthorByFirstName
+add InsertAndDisplayAllBooksUnderGivenPublisher --config "dab-config.MsSql.json" --source "insert_and_display_all_books_for_given_publisher" --source.type "stored-procedure" --source.params "title:MyTitle,publisher_name:MyPublisher" --permissions "anonymous:execute" --rest true --graphql true
+add GQLmappings --config "dab-config.MsSql.json" --source "GQLmappings" --permissions "anonymous:*" --rest true --graphql true
+update GQLmappings --config "dab-config.MsSql.json" --map "__column1:column1,__column2:column2" --permissions "authenticated:*"
+update Publisher --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship books --target.entity Book --cardinality many
+update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_01:create,delete"
+update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_01:update" --fields.include "*"
+update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_01:read" --fields.include "*" --policy-database "@item.id eq 1940"
+update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_02:create,delete"
+update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_02:update" --fields.include "*"
+update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_02:read" --fields.include "*" --policy-database "@item.id ne 1940"
+update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_03:create,delete"
+update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_03:update" --fields.include "*"
+update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_03:read" --fields.include "*" --policy-database "@item.id ne 1940"
+update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_04:create,delete"
+update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_04:update" --fields.include "*"
+update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_04:read" --fields.include "*" --policy-database "@item.id eq 1940"
+update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_06:create,delete"
+update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_06:update" --fields.include "*"
+update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_06:read" --fields.include "*" --policy-database "@item.id eq 1940"
+update Stock --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --rest commodities --graphql true --relationship stocks_price --target.entity stocks_price --cardinality one
+update Book --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete"
+update Book --config "dab-config.MsSql.json" --relationship publishers --target.entity Publisher --cardinality one
+update Book --config "dab-config.MsSql.json" --relationship websiteplacement --target.entity BookWebsitePlacement --cardinality one
+update Book --config "dab-config.MsSql.json" --relationship reviews --target.entity Review --cardinality many
+update Book --config "dab-config.MsSql.json" --relationship authors --target.entity Author --cardinality many --linking.object book_author_link --linking.source.fields "book_id" --linking.target.fields "author_id"
+update Book --config "dab-config.MsSql.json" --map "id:id,title:title"
+update Book --config "dab-config.MsSql.json" --permissions "policy_tester_01:create,delete"
+update Book --config "dab-config.MsSql.json" --permissions "policy_tester_01:update" --fields.include "*"
+update Book --config "dab-config.MsSql.json" --permissions "policy_tester_01:read" --fields.include "*" --policy-database "@item.title eq 'Policy-Test-01'"
+update Book --config "dab-config.MsSql.json" --permissions "policy_tester_02:create,delete"
+update Book --config "dab-config.MsSql.json" --permissions "policy_tester_02:update" --fields.include "*"
+update Book --config "dab-config.MsSql.json" --permissions "policy_tester_02:read" --fields.include "*" --policy-database "@item.title ne 'Policy-Test-01'"
+update Book --config "dab-config.MsSql.json" --permissions "policy_tester_03:create,delete"
+update Book --config "dab-config.MsSql.json" --permissions "policy_tester_03:update" --fields.include "*"
+update Book --config "dab-config.MsSql.json" --permissions "policy_tester_03:read" --fields.include "*" --policy-database "@item.title eq 'Policy-Test-01'"
+update Book --config "dab-config.MsSql.json" --permissions "policy_tester_04:create,delete"
+update Book --config "dab-config.MsSql.json" --permissions "policy_tester_04:update" --fields.include "*"
+update Book --config "dab-config.MsSql.json" --permissions "policy_tester_04:read" --fields.include "*" --policy-database "@item.title ne 'Policy-Test-01'"
+update Book --config "dab-config.MsSql.json" --permissions "policy_tester_05:create,delete"
+update Book --config "dab-config.MsSql.json" --permissions "policy_tester_05:update" --fields.include "*"
+update Book --config "dab-config.MsSql.json" --permissions "policy_tester_05:read" --fields.include "*" --policy-database "@item.id ne 9"
+update Book --config "dab-config.MsSql.json" --permissions "policy_tester_06:update" --fields.include "*"
+update Book --config "dab-config.MsSql.json" --permissions "policy_tester_06:create,delete"
+update Book --config "dab-config.MsSql.json" --permissions "policy_tester_06:read" --fields.include "*" --policy-database "@item.id ne 10"
+update Book --config "dab-config.MsSql.json" --permissions "policy_tester_07:create"
+update Book --config "dab-config.MsSql.json" --permissions "policy_tester_07:update" --fields.include "*" --policy-database "@item.id ne 9"
+update Book --config "dab-config.MsSql.json" --permissions "policy_tester_07:read" --fields.include "*"
+update Book --config "dab-config.MsSql.json" --permissions "policy_tester_07:delete" --fields.include "*" --policy-database "@item.id ne 9"
+update Book --config "dab-config.MsSql.json" --permissions "policy_tester_08:create"
+update Book --config "dab-config.MsSql.json" --permissions "policy_tester_08:update" --fields.include "*" --policy-database "@item.id eq 9"
+update Book --config "dab-config.MsSql.json" --permissions "policy_tester_08:delete" --fields.include "*" --policy-database "@item.id eq 9"
+update Book --config "dab-config.MsSql.json" --permissions "policy_tester_08:read" --fields.include "*"
+update Review --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete"
+update Review --config "dab-config.MsSql.json" --relationship books --target.entity Book --cardinality one
+update BookWebsitePlacement --config "dab-config.MsSql.json" --permissions "authenticated:create,update" --rest true --graphql true
+update BookWebsitePlacement --config "dab-config.MsSql.json" --permissions "authenticated:delete" --fields.include "*" --policy-database "@claims.userId eq @item.id"
+update Author --config "dab-config.MsSql.json"  --permissions "authenticated:create,read,update,delete" --rest true --graphql true
+update WebsiteUser --config "dab-config.MsSql.json" --permissions "authenticated:create,read,delete,update" --rest false --graphql "websiteUser:websiteUsers"
+update stocks_price --config "dab-config.MsSql.json" --permissions "authenticated:create,read,delete,update" --rest false
+update Comic --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship myseries --target.entity series --cardinality one
+update series --config "dab-config.MsSql.json" --relationship comics --target.entity Comic --cardinality many
+update Broker --config "dab-config.MsSql.json" --permissions "authenticated:create,update,read,delete" --graphql false
+update Tree --config "dab-config.MsSql.json" --rest true --graphql false --permissions "authenticated:create,read,update,delete" --map "species:Scientific Name,region:United State's Region"
+update Shrub --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --map "species:fancyName"
+update Fungus --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --map "spores:hazards" --rest true
+update Fungus --config "dab-config.MsSql.json" --permissions "policy_tester_01:read" --fields.include "*" --policy-database "@item.region ne 'northeast'"
+update books_view_all --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true
+update stocks_view_selected --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete"
+update books_publishers_view_composite --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete"
+update books_view_with_mapping --config "dab-config.MsSql.json" --map "id:book_id" --source.key-fields "id" 
+update BookWebsitePlacement --config "dab-config.MsSql.json" --relationship books --target.entity Book --cardinality one
+update SupportedType --config "dab-config.MsSql.json" --map "id:typeid" --permissions "authenticated:create,read,delete,update" 
+update Author --config "dab-config.MsSql.json" --relationship books --target.entity Book --cardinality many --linking.object book_author_link
+update Notebook --config "dab-config.MsSql.json" --permissions "anonymous:create,update,delete"
+update Empty --config "dab-config.MsSql.json" --permissions "anonymous:read"
+update Journal --config "dab-config.MsSql.json" --permissions "policy_tester_noupdate:update" --fields.include "*" --policy-database "@item.id ne 1"
+update Journal --config "dab-config.MsSql.json" --permissions "policy_tester_noupdate:read" --fields.include "*"
+update Journal --config "dab-config.MsSql.json" --permissions "policy_tester_update_noread:create"
+update Journal --config "dab-config.MsSql.json" --permissions "policy_tester_update_noread:update" --fields.include "*" --policy-database "@item.id eq 1"
+update Journal --config "dab-config.MsSql.json" --permissions "policy_tester_update_noread:read" --fields.exclude "*"
+update Journal --config "dab-config.MsSql.json" --permissions "policy_tester_update_noread:delete" --fields.include "*" --policy-database "@item.id eq 1"
+update Journal --config "dab-config.MsSql.json" --permissions "authorizationHandlerTester:read"
+update ArtOfWar --config "dab-config.MsSql.json" --permissions "authenticated:*" --map "DetailAssessmentAndPlanning:始計,WagingWar:作戰,StrategicAttack:謀攻,NoteNum:┬─┬ノ( º _ ºノ)"
+update GetBook --config "dab-config.MsSql.json" --permissions "authenticated:execute" --rest.methods "Get"
+update GetPublisher --config "dab-config.MsSql.json" --permissions "authenticated:execute"
+update GetBooks --config "dab-config.MsSql.json" --permissions "authenticated:execute" --graphql.operation "Query" --rest.methods "Get"
+update InsertBook --config "dab-config.MsSql.json" --permissions "authenticated:execute"
+update CountBooks --config "dab-config.MsSql.json" --permissions "authenticated:execute"
+update DeleteLastInsertedBook --config "dab-config.MsSql.json" --permissions "authenticated:execute"
+update UpdateBookTitle --config "dab-config.MsSql.json" --permissions "authenticated:execute"
+update Sales --config "dab-config.MsSql.json" --permissions "authenticated:*"
+update GetAuthorsHistoryByFirstName --config "dab-config.MsSql.json" --permissions "authenticated:execute"
+update InsertAndDisplayAllBooksUnderGivenPublisher --config "dab-config.MsSql.json" --permissions "authenticated:execute"

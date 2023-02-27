@@ -125,9 +125,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             int maxAttempts = maxRetries + 1; // 1 represents the original attempt to execute the query in addition to retries.
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestCategory.MSSQL);
             Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
             Mock<MsSqlQueryExecutor> queryExecutor
-                = new(runtimeConfigProvider, dbExceptionParser, queryExecutorLogger.Object);
+                = new(runtimeConfigProvider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
 
             queryExecutor.Setup(x => x.ConnectionStringBuilder).Returns(
                 new SqlConnectionStringBuilder(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString));

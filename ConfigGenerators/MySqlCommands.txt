@@ -1,4 +1,4 @@
-﻿init --config "dab-config.MySql.json" --database-type mysql --connection-string "server=localhost;database=datagatewaytest;Allow User Variables=true;uid=root;pwd=REPLACEME" --host-mode Development --cors-origin "http://localhost:5000"
+init --config "dab-config.MySql.json" --database-type mysql --connection-string "server=localhost;database=datagatewaytest;Allow User Variables=true;uid=root;pwd=REPLACEME" --host-mode Development --cors-origin "http://localhost:5000"
 add Publisher --config "dab-config.MySql.json" --source publishers --permissions "anonymous:read"
 add Stock --config "dab-config.MySql.json" --source stocks --permissions "anonymous:create,read,update"
 add Book --config "dab-config.MySql.json" --source books --permissions "anonymous:create,read,update,delete" --graphql "book:books"

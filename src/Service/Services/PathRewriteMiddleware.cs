@@ -4,8 +4,6 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
-using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
@@ -72,7 +70,7 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             // If Rest request is made with Rest disabled Globally or graphQL request is made
             // with graphQL disabled globally, then the request will be discarded.
-            if (!CheckIfValidRequest(httpContext))
+            if (IsEndPointDisabledGlobally(httpContext))
             {
                 return;
             }
@@ -126,26 +124,9 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         /// <param name="httpContext">Request metadata.</param>
         /// <returns>True if the given REST/GraphQL request is disabled globally,else false </returns>
-        private bool CheckIfValidRequest(HttpContext httpContext)
+        private bool IsEndPointDisabledGlobally(HttpContext httpContext)
         {
             PathString requestPath = httpContext.Request.Path;
-            bool isHealthCheckRequest = requestPath == "/" && httpContext.Request.Method == HttpMethod.Get.Method;
-            bool isSettingConfig = requestPath.StartsWithSegments("/configuration")
-                    && httpContext.Request.Method == HttpMethod.Post.Method;
-
-            if (isHealthCheckRequest || isSettingConfig)
-            {
-                return true;
-            }
-
-            if (requestPath.Equals(REDIRECTED_ROUTE))
-            {
-                httpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                byte[] error_message = Encoding.UTF8.GetBytes($"GraphQL request redirected to {REDIRECTED_ROUTE}.");
-                httpContext.Response.Body.WriteAsync(error_message);
-                return false;
-            }
-
             if (_runtimeConfigurationProvider.TryGetRuntimeConfiguration(out RuntimeConfig? config))
             {
                 string restPath = config.RestGlobalSettings.Path;
@@ -153,16 +134,15 @@ namespace Azure.DataApiBuilder.Service.Services
                 bool isRestRequest = requestPath.StartsWithSegments(restPath, comparisonType: StringComparison.OrdinalIgnoreCase);
                 bool isGraphQLRequest = requestPath.StartsWithSegments(graphQLPath, comparisonType: StringComparison.OrdinalIgnoreCase);
 
-                if ((!isRestRequest && !isGraphQLRequest)
-                    || (isRestRequest && !config.RestGlobalSettings.Enabled)
+                if ((isRestRequest && !config.RestGlobalSettings.Enabled)
                     || (isGraphQLRequest && !config.GraphQLGlobalSettings.Enabled))
                 {
                     httpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return false;
+                    return true;
                 }
             }
 
-            return true;
+            return false;
         }
     }
 

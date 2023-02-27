@@ -831,10 +831,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [DataRow("/graphql?query={book_by_pk(id: 1){title}}",
             HostModeType.Production, HttpStatusCode.OK, "data",
             DisplayName = "GraphQL endpoint with query in production mode.")]
-        [DataRow(PathRewriteMiddleware.REDIRECTED_ROUTE, HostModeType.Development, HttpStatusCode.BadRequest,
+        [DataRow(RestController.REDIRECTED_ROUTE, HostModeType.Development, HttpStatusCode.BadRequest,
             "GraphQL request redirected to favicon.ico.",
             DisplayName = "Redirected endpoint in development mode.")]
-        [DataRow(PathRewriteMiddleware.REDIRECTED_ROUTE, HostModeType.Production, HttpStatusCode.BadRequest,
+        [DataRow(RestController.REDIRECTED_ROUTE, HostModeType.Production, HttpStatusCode.BadRequest,
             "GraphQL request redirected to favicon.ico.",
             DisplayName = "Redirected endpoint in production mode.")]
         public async Task TestInteractiveGraphQLEndpoints(
@@ -888,7 +888,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <param name="expectedStatusCode">Expected Http success/error code</param>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow("/graphql", "/gql", HttpStatusCode.NotFound, DisplayName = "Request to non-configured graphQL endpoint is handled by REST controller.")]
+        [DataRow("/graphql", "/gql", HttpStatusCode.BadRequest, DisplayName = "Request to non-configured graphQL endpoint is handled by REST controller.")]
         [DataRow("/graphql", "/graphql", HttpStatusCode.OK, DisplayName = "Request to configured default GraphQL endpoint succeeds, path not rewritten.")]
         [DataRow("/gql", "/gql/additionalURLsegment", HttpStatusCode.OK, DisplayName = "GraphQL request path (with extra segments) rewritten to match internally set GraphQL endpoint /graphql.")]
         [DataRow("/gql", "/gql", HttpStatusCode.OK, DisplayName = "GraphQL request path rewritten to match internally set GraphQL endpoint /graphql.")]
@@ -952,14 +952,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// </summary>
         /// <param name="isRestEnabled">The custom configured REST enabled property in configuration.</param>
         /// <param name="isGraphQLEnabled">The custom configured GraphQL enabled property in configuration.</param>
-        /// <param name="expectedStatusCodeForREST">Expected success/error code for Rest Request</param>
-        /// <param name="expectedStatusCodeForGraphQL">Expected Http success/error code for GraphQL Request</param>
+        /// <param name="expectedStatusCodeForREST">Expected HTTP status code code for the Rest request</param>
+        /// <param name="expectedStatusCodeForGraphQL">Expected HTTP status code code for the GraphQL request</param>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow(false, false, HttpStatusCode.NotFound, HttpStatusCode.NotFound)]
-        [DataRow(true, true, HttpStatusCode.OK, HttpStatusCode.OK)]
-        [DataRow(true, false, HttpStatusCode.OK, HttpStatusCode.NotFound)]
-        [DataRow(false, true, HttpStatusCode.NotFound, HttpStatusCode.OK)]
+        [DataRow(false, false, HttpStatusCode.NotFound, HttpStatusCode.NotFound, DisplayName = "Both Rest and GraphQL endpoints disabled globally")]
+        [DataRow(true, true, HttpStatusCode.OK, HttpStatusCode.OK, DisplayName = "Both Rest and GraphQL endpoints enabled globally")]
+        [DataRow(true, false, HttpStatusCode.OK, HttpStatusCode.NotFound, DisplayName = "Rest enabled and GraphQL endpoints disabled globally")]
+        [DataRow(false, true, HttpStatusCode.NotFound, HttpStatusCode.OK, DisplayName = "Rest disabled and GraphQL endpoints enabled globally")]
         public async Task TestGlobalFlagToEnableRestAndGraphQLForHostedAndNonHostedEnvironment(
             bool isRestEnabled,
             bool isGraphQLEnabled,

@@ -340,7 +340,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             // is specified as null in the request body.
             requestBody = @"
             {
-               ""categoryName"":""FairyTales"",
+               ""categoryName"":""Tales"",
                ""piecesAvailable"":null,
                ""piecesRequired"":""4""
             }";

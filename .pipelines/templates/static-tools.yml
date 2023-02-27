@@ -27,29 +27,29 @@ jobs:
       version: 6.0.x
 
   # Analyze source and build output text files for credentials
-  # - task: CredScan@3
-  #  displayName: 'CredScan'
-  #  inputs:
-  #    toolMajorVersion: V2
-  #    scanFolder: $(Build.SourcesDirectory)
-  #    suppressionsFile: templates/CredScanSuppressions.json
-  #    debugMode: false
-  #   verboseOutput: false
+  - task: CredScan@3
+    displayName: 'CredScan'
+    inputs:
+      toolMajorVersion: V2
+      scanFolder: $(Build.SourcesDirectory)
+      suppressionsFile: templates/CredScanSuppressions.json
+      debugMode: false
+      verboseOutput: false
 
   # Scan text elements including code, code comments, and content/web pages, for sensitive terms based on legal, cultural, or geopolitical reasons
-  # - task: PoliCheck@2
-  #  displayName: 'PoliCheck'
-  #  inputs:
-  #    targetType: F
+  - task: PoliCheck@2
+    displayName: 'PoliCheck'
+    inputs:
+      targetType: F
 
   # AntiMalware scan
-  # - task: AntiMalware@4
-  #  displayName: 'AntiMalware'
-  #  inputs:
-  #    EnableServices: true
-  #    SignatureFreshness: OneDay
-  #    # Signature refreshes on Hosted Agents can sometimes have a delay of a day or two.
-  #    TreatStaleSignatureAs: Warning
+  - task: AntiMalware@4
+    displayName: 'AntiMalware'
+    inputs:
+      EnableServices: true
+      SignatureFreshness: OneDay
+      # Signature refreshes on Hosted Agents can sometimes have a delay of a day or two.
+      TreatStaleSignatureAs: Warning
 
   - task: DotNetCoreCLI@2
     displayName: Build Azure.DataApiBuilder.sln

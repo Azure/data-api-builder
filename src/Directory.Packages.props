@@ -7,7 +7,7 @@
     <PackageVersion Include="coverlet.msbuild" Version="3.2.0" />
     <PackageVersion Include="coverlet.collector" Version="3.2.0" />
     <PackageVersion Include="HotChocolate" Version="12.18.0" />
-    <PackageVersion Include="HotChocolate.AspNetCore" Version="12.15.1" />
+    <PackageVersion Include="HotChocolate.AspNetCore" Version="12.18.0" />
     <PackageVersion Include="HotChocolate.AspNetCore.Authorization" Version="12.18.0" />
     <PackageVersion Include="Humanizer" Version="2.14.1" />
     <PackageVersion Include="Humanizer.Core" Version="2.14.1" />

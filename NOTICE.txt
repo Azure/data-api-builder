@@ -42,6 +42,920 @@ limitations under the License.
 
 ---------------------------------------------------------
 
+HotChocolate 12.18.0 - MIT
+
+
+(c) Microsoft 2022
+Copyright (c) 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc. GraphQL ChilliCream
+
+MIT License
+
+Copyright (c) 2021 ChilliCream Inc. (Michael & Rafael Staib)
+
+DISCLAIMER: 
+----------------------------------------------------------------------------------
+Covered by the MIT is only the C# source code that is located in the main branch. 
+Minified JavaScript files are excluded from the MIT file since they represent 
+external components from other projects that are just used by our project. 
+
+Further, other branches from our contributors or temporary feature branches 
+are not covered by this license and may contain proprietary code.
+----------------------------------------------------------------------------------
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+---------------------------------------------------------
+
+---------------------------------------------------------
+
+HotChocolate.Abstractions 12.18.0 - MIT
+
+
+(c) Microsoft 2022
+Copyright 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc. GraphQL ChilliCream
+
+MIT License
+
+Copyright (c) 2021 ChilliCream Inc. (Michael & Rafael Staib)
+
+DISCLAIMER: 
+----------------------------------------------------------------------------------
+Covered by the MIT is only the C# source code that is located in the main branch. 
+Minified JavaScript files are excluded from the MIT file since they represent 
+external components from other projects that are just used by our project. 
+
+Further, other branches from our contributors or temporary feature branches 
+are not covered by this license and may contain proprietary code.
+----------------------------------------------------------------------------------
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+---------------------------------------------------------
+
+---------------------------------------------------------
+
+HotChocolate.AspNetCore 12.18.0 - MIT
+
+
+(c) Microsoft 2022
+(c) 2012 by C dric Mesnil
+Copyright (c) 2018 Jed Watson
+Copyright (c) ChilliCream, Inc.
+Copyright 2021 ChilliCream Inc.
+(c) Cure53 and other contributors
+Copyright (c) 2021 ChilliCream Inc.
+Copyright (c) Microsoft Corporation
+Copyright (c) Facebook, Inc. and its affiliates
+Copyright (c) 2021 ChilliCream Inc. GraphQL ChilliCream
+Copyright (c) 2022 kenny wong <wowohoo@qq.com> http://jaywcjlove.github.io/hotkeys
+
+MIT License
+
+Copyright (c) 2021 ChilliCream Inc. (Michael & Rafael Staib)
+
+DISCLAIMER: 
+----------------------------------------------------------------------------------
+Covered by the MIT is only the C# source code that is located in the main branch. 
+Minified JavaScript files are excluded from the MIT file since they represent 
+external components from other projects that are just used by our project. 
+
+Further, other branches from our contributors or temporary feature branches 
+are not covered by this license and may contain proprietary code.
+----------------------------------------------------------------------------------
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+---------------------------------------------------------
+
+---------------------------------------------------------
+
+HotChocolate.AspNetCore.Authorization 12.18.0 - MIT
+
+
+(c) Microsoft 2022
+Copyright 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc.
+Copyright 2021 ChilliCream Inc. TThis
+Copyright (c) 2021 ChilliCream Inc. GraphQL ChilliCream
+
+MIT License
+
+Copyright (c) 2021 ChilliCream Inc. (Michael & Rafael Staib)
+
+DISCLAIMER: 
+----------------------------------------------------------------------------------
+Covered by the MIT is only the C# source code that is located in the main branch. 
+Minified JavaScript files are excluded from the MIT file since they represent 
+external components from other projects that are just used by our project. 
+
+Further, other branches from our contributors or temporary feature branches 
+are not covered by this license and may contain proprietary code.
+----------------------------------------------------------------------------------
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+---------------------------------------------------------
+
+---------------------------------------------------------
+
+HotChocolate.Execution 12.18.0 - MIT
+
+
+(c) Microsoft 2022
+Copyright 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc. GraphQL ChilliCream
+
+MIT License
+
+Copyright (c) 2021 ChilliCream Inc. (Michael & Rafael Staib)
+
+DISCLAIMER: 
+----------------------------------------------------------------------------------
+Covered by the MIT is only the C# source code that is located in the main branch. 
+Minified JavaScript files are excluded from the MIT file since they represent 
+external components from other projects that are just used by our project. 
+
+Further, other branches from our contributors or temporary feature branches 
+are not covered by this license and may contain proprietary code.
+----------------------------------------------------------------------------------
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+---------------------------------------------------------
+
+---------------------------------------------------------
+
+HotChocolate.Fetching 12.18.0 - MIT
+
+
+(c) Microsoft 2022
+Copyright 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc. GraphQL ChilliCream
+
+MIT License
+
+Copyright (c) 2021 ChilliCream Inc. (Michael & Rafael Staib)
+
+DISCLAIMER: 
+----------------------------------------------------------------------------------
+Covered by the MIT is only the C# source code that is located in the main branch. 
+Minified JavaScript files are excluded from the MIT file since they represent 
+external components from other projects that are just used by our project. 
+
+Further, other branches from our contributors or temporary feature branches 
+are not covered by this license and may contain proprietary code.
+----------------------------------------------------------------------------------
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+---------------------------------------------------------
+
+---------------------------------------------------------
+
+HotChocolate.Language 12.18.0 - MIT
+
+
+(c) Microsoft 2022
+Copyright 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc. GraphQL ChilliCream
+
+MIT License
+
+Copyright (c) 2021 ChilliCream Inc. (Michael & Rafael Staib)
+
+DISCLAIMER: 
+----------------------------------------------------------------------------------
+Covered by the MIT is only the C# source code that is located in the main branch. 
+Minified JavaScript files are excluded from the MIT file since they represent 
+external components from other projects that are just used by our project. 
+
+Further, other branches from our contributors or temporary feature branches 
+are not covered by this license and may contain proprietary code.
+----------------------------------------------------------------------------------
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+---------------------------------------------------------
+
+---------------------------------------------------------
+
+HotChocolate.Language.SyntaxTree 12.18.0 - MIT
+
+
+(c) Microsoft 2022
+Copyright 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc.
+Copyright 2021 ChilliCream Inc. YThis
+Copyright (c) 2021 ChilliCream Inc. GraphQL ChilliCream
+
+MIT License
+
+Copyright (c) 2021 ChilliCream Inc. (Michael & Rafael Staib)
+
+DISCLAIMER: 
+----------------------------------------------------------------------------------
+Covered by the MIT is only the C# source code that is located in the main branch. 
+Minified JavaScript files are excluded from the MIT file since they represent 
+external components from other projects that are just used by our project. 
+
+Further, other branches from our contributors or temporary feature branches 
+are not covered by this license and may contain proprietary code.
+----------------------------------------------------------------------------------
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+---------------------------------------------------------
+
+---------------------------------------------------------
+
+HotChocolate.Language.Utf8 12.18.0 - MIT
+
+
+(c) Microsoft 2022
+Copyright 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc. GraphQL ChilliCream
+
+MIT License
+
+Copyright (c) 2021 ChilliCream Inc. (Michael & Rafael Staib)
+
+DISCLAIMER: 
+----------------------------------------------------------------------------------
+Covered by the MIT is only the C# source code that is located in the main branch. 
+Minified JavaScript files are excluded from the MIT file since they represent 
+external components from other projects that are just used by our project. 
+
+Further, other branches from our contributors or temporary feature branches 
+are not covered by this license and may contain proprietary code.
+----------------------------------------------------------------------------------
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+---------------------------------------------------------
+
+---------------------------------------------------------
+
+HotChocolate.Language.Visitors 12.18.0 - MIT
+
+
+(c) Microsoft 2022
+Copyright 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc. GraphQL ChilliCream
+
+MIT License
+
+Copyright (c) 2021 ChilliCream Inc. (Michael & Rafael Staib)
+
+DISCLAIMER: 
+----------------------------------------------------------------------------------
+Covered by the MIT is only the C# source code that is located in the main branch. 
+Minified JavaScript files are excluded from the MIT file since they represent 
+external components from other projects that are just used by our project. 
+
+Further, other branches from our contributors or temporary feature branches 
+are not covered by this license and may contain proprietary code.
+----------------------------------------------------------------------------------
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+---------------------------------------------------------
+
+---------------------------------------------------------
+
+HotChocolate.Subscriptions 12.18.0 - MIT
+
+
+(c) Microsoft 2022
+Copyright 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc. GraphQL ChilliCream
+Copyright 2021 ChilliCream Inc. :Contains Hot Chocolate GraphQL
+
+MIT License
+
+Copyright (c) 2021 ChilliCream Inc. (Michael & Rafael Staib)
+
+DISCLAIMER: 
+----------------------------------------------------------------------------------
+Covered by the MIT is only the C# source code that is located in the main branch. 
+Minified JavaScript files are excluded from the MIT file since they represent 
+external components from other projects that are just used by our project. 
+
+Further, other branches from our contributors or temporary feature branches 
+are not covered by this license and may contain proprietary code.
+----------------------------------------------------------------------------------
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+---------------------------------------------------------
+
+---------------------------------------------------------
+
+HotChocolate.Subscriptions.InMemory 12.18.0 - MIT
+
+
+(c) Microsoft 2022
+Copyright 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc.
+Copyright 2021 ChilliCream Inc. WContains
+Copyright (c) 2021 ChilliCream Inc. GraphQL ChilliCream
+
+MIT License
+
+Copyright (c) 2021 ChilliCream Inc. (Michael & Rafael Staib)
+
+DISCLAIMER: 
+----------------------------------------------------------------------------------
+Covered by the MIT is only the C# source code that is located in the main branch. 
+Minified JavaScript files are excluded from the MIT file since they represent 
+external components from other projects that are just used by our project. 
+
+Further, other branches from our contributors or temporary feature branches 
+are not covered by this license and may contain proprietary code.
+----------------------------------------------------------------------------------
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+---------------------------------------------------------
+
+---------------------------------------------------------
+
+HotChocolate.Types 12.18.0 - MIT
+
+
+(c) Microsoft 2022
+Copyright 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc. GraphQL ChilliCream
+Copyright 2021 ChilliCream Inc. Contains the Hot Chocolate GraphQL
+
+MIT License
+
+Copyright (c) 2021 ChilliCream Inc. (Michael & Rafael Staib)
+
+DISCLAIMER: 
+----------------------------------------------------------------------------------
+Covered by the MIT is only the C# source code that is located in the main branch. 
+Minified JavaScript files are excluded from the MIT file since they represent 
+external components from other projects that are just used by our project. 
+
+Further, other branches from our contributors or temporary feature branches 
+are not covered by this license and may contain proprietary code.
+----------------------------------------------------------------------------------
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+---------------------------------------------------------
+
+---------------------------------------------------------
+
+HotChocolate.Types.CursorPagination 12.18.0 - MIT
+
+
+(c) Microsoft 2022
+Copyright 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc. GraphQL ChilliCream
+
+MIT License
+
+Copyright (c) 2021 ChilliCream Inc. (Michael & Rafael Staib)
+
+DISCLAIMER: 
+----------------------------------------------------------------------------------
+Covered by the MIT is only the C# source code that is located in the main branch. 
+Minified JavaScript files are excluded from the MIT file since they represent 
+external components from other projects that are just used by our project. 
+
+Further, other branches from our contributors or temporary feature branches 
+are not covered by this license and may contain proprietary code.
+----------------------------------------------------------------------------------
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+---------------------------------------------------------
+
+---------------------------------------------------------
+
+HotChocolate.Types.Mutations 12.18.0 - MIT
+
+
+(c) Microsoft 2022
+Copyright 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc. GraphQL ChilliCream
+
+MIT License
+
+Copyright (c) 2021 ChilliCream Inc. (Michael & Rafael Staib)
+
+DISCLAIMER: 
+----------------------------------------------------------------------------------
+Covered by the MIT is only the C# source code that is located in the main branch. 
+Minified JavaScript files are excluded from the MIT file since they represent 
+external components from other projects that are just used by our project. 
+
+Further, other branches from our contributors or temporary feature branches 
+are not covered by this license and may contain proprietary code.
+----------------------------------------------------------------------------------
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+---------------------------------------------------------
+
+---------------------------------------------------------
+
+HotChocolate.Types.OffsetPagination 12.18.0 - MIT
+
+
+(c) Microsoft 2022
+Copyright 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc. GraphQL ChilliCream
+
+MIT License
+
+Copyright (c) 2021 ChilliCream Inc. (Michael & Rafael Staib)
+
+DISCLAIMER: 
+----------------------------------------------------------------------------------
+Covered by the MIT is only the C# source code that is located in the main branch. 
+Minified JavaScript files are excluded from the MIT file since they represent 
+external components from other projects that are just used by our project. 
+
+Further, other branches from our contributors or temporary feature branches 
+are not covered by this license and may contain proprietary code.
+----------------------------------------------------------------------------------
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+---------------------------------------------------------
+
+---------------------------------------------------------
+
+HotChocolate.Types.Scalars.Upload 12.18.0 - MIT
+
+
+(c) Microsoft 2022
+Copyright 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc. GraphQL ChilliCream
+Copyright 2021 ChilliCream Inc. Contains the GraphQL Upload Scalar
+
+MIT License
+
+Copyright (c) 2021 ChilliCream Inc. (Michael & Rafael Staib)
+
+DISCLAIMER: 
+----------------------------------------------------------------------------------
+Covered by the MIT is only the C# source code that is located in the main branch. 
+Minified JavaScript files are excluded from the MIT file since they represent 
+external components from other projects that are just used by our project. 
+
+Further, other branches from our contributors or temporary feature branches 
+are not covered by this license and may contain proprietary code.
+----------------------------------------------------------------------------------
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+---------------------------------------------------------
+
+---------------------------------------------------------
+
+HotChocolate.Utilities 12.18.0 - MIT
+
+
+(c) Microsoft 2022
+Copyright 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc.
+Copyright 2021 ChilliCream Inc. Contains
+Copyright (c) 2021 ChilliCream Inc. GraphQL ChilliCream
+
+MIT License
+
+Copyright (c) 2021 ChilliCream Inc. (Michael & Rafael Staib)
+
+DISCLAIMER: 
+----------------------------------------------------------------------------------
+Covered by the MIT is only the C# source code that is located in the main branch. 
+Minified JavaScript files are excluded from the MIT file since they represent 
+external components from other projects that are just used by our project. 
+
+Further, other branches from our contributors or temporary feature branches 
+are not covered by this license and may contain proprietary code.
+----------------------------------------------------------------------------------
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+---------------------------------------------------------
+
+---------------------------------------------------------
+
+HotChocolate.Utilities.Introspection 12.18.0 - MIT
+
+
+(c) Microsoft 2022
+Copyright 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc.
+Copyright 2021 ChilliCream Inc. HContains
+Copyright (c) 2021 ChilliCream Inc. GraphQL ChilliCream
+
+MIT License
+
+Copyright (c) 2021 ChilliCream Inc. (Michael & Rafael Staib)
+
+DISCLAIMER: 
+----------------------------------------------------------------------------------
+Covered by the MIT is only the C# source code that is located in the main branch. 
+Minified JavaScript files are excluded from the MIT file since they represent 
+external components from other projects that are just used by our project. 
+
+Further, other branches from our contributors or temporary feature branches 
+are not covered by this license and may contain proprietary code.
+----------------------------------------------------------------------------------
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+---------------------------------------------------------
+
+---------------------------------------------------------
+
+HotChocolate.Validation 12.18.0 - MIT
+
+
+(c) Microsoft 2022
+Copyright 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc.
+Copyright (c) 2021 ChilliCream Inc. GraphQL ChilliCream
+
+MIT License
+
+Copyright (c) 2021 ChilliCream Inc. (Michael & Rafael Staib)
+
+DISCLAIMER: 
+----------------------------------------------------------------------------------
+Covered by the MIT is only the C# source code that is located in the main branch. 
+Minified JavaScript files are excluded from the MIT file since they represent 
+external components from other projects that are just used by our project. 
+
+Further, other branches from our contributors or temporary feature branches 
+are not covered by this license and may contain proprietary code.
+----------------------------------------------------------------------------------
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+---------------------------------------------------------
+
+---------------------------------------------------------
+
 Microsoft.AspNetCore.Http.Abstractions 2.2.0 - Apache-2.0
 
 
@@ -925,7 +1839,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 ---------------------------------------------------------
 
-HotChocolate.AspNetCore 12.15.1 - MIT
+HotChocolate.AspNetCore 12.18.0 - MIT
 
 
 (c) Microsoft 2022
@@ -977,7 +1891,7 @@ SOFTWARE.
 
 ---------------------------------------------------------
 
-HotChocolate.Types.Scalars.Upload 12.15.1 - MIT
+HotChocolate.Types.Scalars.Upload 12.18.0 - MIT
 
 
 (c) Microsoft 2022

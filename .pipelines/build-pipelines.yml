@@ -195,6 +195,7 @@ steps:
   displayName: "Upload build artifacts"
   inputs:
     targetPath: '$(Build.ArtifactStagingDirectory)' 
+    publishLocation: 'pipeline'
 
 - task: NuGetCommand@2
   displayName: 'Publish Nuget to Internal Feed'

@@ -31,8 +31,6 @@ namespace Azure.DataApiBuilder.Service.Controllers
         /// </summary>
         public const string SERVER_ERROR = "While processing your request the server ran into an unexpected error.";
 
-        
-
         private readonly ILogger<RestController> _logger;
 
         /// <summary>

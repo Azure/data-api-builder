@@ -888,7 +888,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <param name="expectedStatusCode">Expected Http success/error code</param>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow("/graphql", "/gql", HttpStatusCode.BadRequest, DisplayName = "Request to non-configured graphQL endpoint is handled by REST controller.")]
+        [DataRow("/graphql", "/gql", HttpStatusCode.NotFound, DisplayName = "Request to non-configured graphQL endpoint is handled by REST controller.")]
         [DataRow("/graphql", "/graphql", HttpStatusCode.OK, DisplayName = "Request to configured default GraphQL endpoint succeeds, path not rewritten.")]
         [DataRow("/gql", "/gql/additionalURLsegment", HttpStatusCode.OK, DisplayName = "GraphQL request path (with extra segments) rewritten to match internally set GraphQL endpoint /graphql.")]
         [DataRow("/gql", "/gql", HttpStatusCode.OK, DisplayName = "GraphQL request path rewritten to match internally set GraphQL endpoint /graphql.")]

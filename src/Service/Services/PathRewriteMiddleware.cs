@@ -5,10 +5,10 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
-using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 
@@ -140,10 +140,10 @@ namespace Azure.DataApiBuilder.Service.Services
 
             if (requestPath.Equals(REDIRECTED_ROUTE))
             {
-                throw new DataApiBuilderException(
-                    message: $"GraphQL request redirected to {REDIRECTED_ROUTE}.",
-                    statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                httpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                byte[] error_message = Encoding.UTF8.GetBytes($"GraphQL request redirected to {REDIRECTED_ROUTE}.");
+                httpContext.Response.Body.WriteAsync(error_message);
+                return false;
             }
 
             if (_runtimeConfigurationProvider.TryGetRuntimeConfiguration(out RuntimeConfig? config))
@@ -153,7 +153,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 bool isRestRequest = requestPath.StartsWithSegments(restPath, comparisonType: StringComparison.OrdinalIgnoreCase);
                 bool isGraphQLRequest = requestPath.StartsWithSegments(graphQLPath, comparisonType: StringComparison.OrdinalIgnoreCase);
 
-                if ( (!isRestRequest && !isGraphQLRequest)
+                if ((!isRestRequest && !isGraphQLRequest)
                     || (isRestRequest && !config.RestGlobalSettings.Enabled)
                     || (isGraphQLRequest && !config.GraphQLGlobalSettings.Enabled))
                 {

@@ -198,24 +198,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 }
             }
 
-            /*if (context.DbPolicyClause is not null)
-            {
-                // Similar to how we have added FilterPredicates above,
-                // we will add DbPolicyPredicates here.
-                try
-                {
-                    ProcessOdataClause(context.DbPolicyClause);
-                }
-                catch (Exception ex)
-                {
-                    throw new DataApiBuilderException(
-                        message: "Policy query parameter is not well formed.",
-                        statusCode: HttpStatusCode.Forbidden,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed,
-                        innerException: ex);
-                }
-            }*/
-
             if (!string.IsNullOrWhiteSpace(context.After))
             {
                 AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromJsonString(context.After,

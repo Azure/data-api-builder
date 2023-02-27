@@ -9,7 +9,6 @@ using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Web;
-using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
@@ -33,7 +32,6 @@ namespace Azure.DataApiBuilder.Service.Services
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationService _authorizationService;
         private readonly ISqlMetadataProvider _sqlMetadataProvider;
-        private readonly IAuthorizationResolver _authorizationResolver;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
 
         public RestService(
@@ -42,7 +40,6 @@ namespace Azure.DataApiBuilder.Service.Services
             ISqlMetadataProvider sqlMetadataProvider,
             IHttpContextAccessor httpContextAccessor,
             IAuthorizationService authorizationService,
-            IAuthorizationResolver authorizationResolver,
             RuntimeConfigProvider runtimeConfigProvider
             )
         {
@@ -51,7 +48,6 @@ namespace Azure.DataApiBuilder.Service.Services
             _httpContextAccessor = httpContextAccessor;
             _authorizationService = authorizationService;
             _sqlMetadataProvider = sqlMetadataProvider;
-            _authorizationResolver = authorizationResolver;
             _runtimeConfigProvider = runtimeConfigProvider;
         }
 

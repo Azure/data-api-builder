@@ -580,12 +580,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 parameters,
                 _httpContextAccessor.HttpContext!,
                 Config.Operation.Delete);
-            /*AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
-                Config.Operation.Delete,
-                deleteStructure,
-                _httpContextAccessor.HttpContext!,
-                _authorizationResolver,
-                _sqlMetadataProvider);*/
             queryString = _queryBuilder.Build(deleteStructure);
             queryParameters = deleteStructure.Parameters;
 

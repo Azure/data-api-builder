@@ -14,5 +14,5 @@ Invoke-WebRequest $chiliCreamLicenseMetadataURL `
 | Out-File $chiliCreamLicenseSavePath
 
 # Concatenate existing NOTICE.txt file with Chilicream license.
-$noticeFilePath = $BuildSourcesDir
+$noticeFilePath = "$BuildSourcesDir/NOTICE.txt"
 Add-Content $noticeFilePath -Value (Get-Content $chiliCreamLicenseSavePath)

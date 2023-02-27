@@ -4,9 +4,11 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 
@@ -32,6 +34,13 @@ namespace Azure.DataApiBuilder.Service.Services
         // Default configured GraphQL endpoint path used when
         // not defined or customized in runtime configuration.
         private const string DEFAULT_GRAPHQL_PATH = "/graphql";
+
+        /// <summary>
+        /// Every GraphQL request gets redirected to this route
+        /// when Banana Cake Pop UI is disabled.
+        /// e.g. https://servername:port/favicon.ico
+        /// </summary>
+        public const string REDIRECTED_ROUTE = "/favicon.ico";
 
         /// <summary>
         /// Setup dependencies and requirements for custom middleware.
@@ -63,7 +72,7 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             // If Rest request is made with Rest disabled Globally or graphQL request is made
             // with graphQL disabled globally, then the request will be discarded.
-            if (CheckIfRequestIsDisabledGlobally(httpContext))
+            if (!CheckIfValidRequest(httpContext))
             {
                 return;
             }
@@ -117,24 +126,43 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         /// <param name="httpContext">Request metadata.</param>
         /// <returns>True if the given REST/GraphQL request is disabled globally,else false </returns>
-        private bool CheckIfRequestIsDisabledGlobally(HttpContext httpContext)
+        private bool CheckIfValidRequest(HttpContext httpContext)
         {
+            PathString requestPath = httpContext.Request.Path;
+            bool isHealthCheckRequest = requestPath == "/" && httpContext.Request.Method == HttpMethod.Get.Method;
+            bool isSettingConfig = requestPath.StartsWithSegments("/configuration")
+                    && httpContext.Request.Method == HttpMethod.Post.Method;
+
+            if (isHealthCheckRequest || isSettingConfig)
+            {
+                return true;
+            }
+
+            if (requestPath.Equals(REDIRECTED_ROUTE))
+            {
+                throw new DataApiBuilderException(
+                    message: $"GraphQL request redirected to {REDIRECTED_ROUTE}.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
             if (_runtimeConfigurationProvider.TryGetRuntimeConfiguration(out RuntimeConfig? config))
             {
                 string restPath = config.RestGlobalSettings.Path;
                 string graphQLPath = config.GraphQLGlobalSettings.Path;
-                bool isRestRequest = httpContext.Request.Path.StartsWithSegments(restPath, comparisonType: StringComparison.OrdinalIgnoreCase);
-                bool isGraphQLRequest = httpContext.Request.Path.StartsWithSegments(graphQLPath, comparisonType: StringComparison.OrdinalIgnoreCase);
+                bool isRestRequest = requestPath.StartsWithSegments(restPath, comparisonType: StringComparison.OrdinalIgnoreCase);
+                bool isGraphQLRequest = requestPath.StartsWithSegments(graphQLPath, comparisonType: StringComparison.OrdinalIgnoreCase);
 
-                if ((isRestRequest && !config.RestGlobalSettings.Enabled)
+                if ( (!isRestRequest && !isGraphQLRequest)
+                    || (isRestRequest && !config.RestGlobalSettings.Enabled)
                     || (isGraphQLRequest && !config.GraphQLGlobalSettings.Enabled))
                 {
                     httpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return true;
+                    return false;
                 }
             }
 
-            return false;
+            return true;
         }
     }
 

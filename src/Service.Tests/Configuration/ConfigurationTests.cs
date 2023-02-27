@@ -831,10 +831,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [DataRow("/graphql?query={book_by_pk(id: 1){title}}",
             HostModeType.Production, HttpStatusCode.OK, "data",
             DisplayName = "GraphQL endpoint with query in production mode.")]
-        [DataRow(RestController.REDIRECTED_ROUTE, HostModeType.Development, HttpStatusCode.BadRequest,
+        [DataRow(PathRewriteMiddleware.REDIRECTED_ROUTE, HostModeType.Development, HttpStatusCode.BadRequest,
             "GraphQL request redirected to favicon.ico.",
             DisplayName = "Redirected endpoint in development mode.")]
-        [DataRow(RestController.REDIRECTED_ROUTE, HostModeType.Production, HttpStatusCode.BadRequest,
+        [DataRow(PathRewriteMiddleware.REDIRECTED_ROUTE, HostModeType.Production, HttpStatusCode.BadRequest,
             "GraphQL request redirected to favicon.ico.",
             DisplayName = "Redirected endpoint in production mode.")]
         public async Task TestInteractiveGraphQLEndpoints(

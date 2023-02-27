@@ -1,4 +1,4 @@
-# What's New in Data API Builder
+# What's New in Data API builder
 
 - [Version 0.5.0](#version-050)
 - [Version 0.4.11](#version-0411)

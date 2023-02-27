@@ -22,11 +22,11 @@ GraphQL queries can traverse related objects and their fields, so that with just
 
 to retrieve books and their authors.
 
-To allow this ability to work, Data API Builder needs to know how the two objects are related to each other. The `relationships` section in the configuration file provide the necessary metadata for making this ability working correctly and efficiently.
+To allow this ability to work, Data API builder needs to know how the two objects are related to each other. The `relationships` section in the configuration file provide the necessary metadata for making this ability working correctly and efficiently.
 
 ## Configuring a Relationship
 
-No matter what database you are using with Data API Builder, you have to explicitly tell Data API Builder that an object is related to another one even if, using Foreign Key metadata when available, it could infer it automatically. This is done to allow you to have full control on what is exposed via GraphQL and what not.
+No matter what database you are using with Data API builder, you have to explicitly tell Data API builder that an object is related to another one even if, using Foreign Key metadata when available, it could infer it automatically. This is done to allow you to have full control on what is exposed via GraphQL and what not.
 
 There are three types of relationships that can be established between two entities:
 
@@ -53,7 +53,7 @@ A one-to-many relationship allows an object to access a list of related objects.
 }
 ```
 
-If there are Foreign Key supporting the relationship between the two underlying database objects, you only need to tell Data API Builder, that you want to expose such relationship. With DAB CLI:
+If there are Foreign Key supporting the relationship between the two underlying database objects, you only need to tell Data API builder, that you want to expose such relationship. With DAB CLI:
 
 ```bash
 dab update series --relationship books --target.entity book --cardinality many 
@@ -77,11 +77,11 @@ which will update the `series` entity - used in the example - to look like the f
 
 A new key has been added under the `relationships` element: `books`. The element defines the name that will be used for the GraphQL field to navigate from the `series` object to the object defined in the `target.entity`, `book` in this case. This means that there must be an entity called `book` in configuration file.
 
-`cardinality` property tells Data API Builder that there can be many books in each series, so the created GraphQL field will return a list of items.
+`cardinality` property tells Data API builder that there can be many books in each series, so the created GraphQL field will return a list of items.
 
-That's all you need. At startup Data API Builder will automatically detect the database fields that needs to be used to sustain the defined relationship.
+That's all you need. At startup Data API builder will automatically detect the database fields that needs to be used to sustain the defined relationship.
 
-If you don't have a Foreign Key constraint sustaining the database relationship, Data API Builder cannot figure out automatically what fields will be used to relate the two entities, so you have to provide it manually. You can do it with DAB CLI:
+If you don't have a Foreign Key constraint sustaining the database relationship, Data API builder cannot figure out automatically what fields will be used to relate the two entities, so you have to provide it manually. You can do it with DAB CLI:
 
 ```bash
 dab update series --relationship books --target.entity book --cardinality many  --relationship.fields "id:series_id"

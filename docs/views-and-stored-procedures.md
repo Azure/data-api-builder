@@ -7,7 +7,7 @@
 
 ### Configuration
 
-Views can be used similar to how a table can be used in Data API Builder. View usage must be defined by specifying the source type for the entity as `view`. Along with that `key-fields` must be provided, so that Data API Builder knows how it can identify and return a single item, if needed.
+Views can be used similar to how a table can be used in Data API builder. View usage must be defined by specifying the source type for the entity as `view`. Along with that `key-fields` must be provided, so that Data API builder knows how it can identify and return a single item, if needed.
 
 If you have a view, for example [`dbo.vw_books_details`](../samples/getting-started/azure-sql-db/library.azure-sql.sql#L112) it can be exposed using the following `dab` command:
 
@@ -43,7 +43,7 @@ A view, from a GraphQL perspective, behaves like a table. All GraphQL operations
 
 ## Stored procedures
 
-Stored procedures can be used as objects related to entities exposed by Data API Builder. Stored Procedure usage must be defined specifying that the source type for the entity is `stored-procedure`.
+Stored procedures can be used as objects related to entities exposed by Data API builder. Stored Procedure usage must be defined specifying that the source type for the entity is `stored-procedure`.
 
 If you have a stored procedure, for example [`dbo.stp_get_all_cowritten_books_by_author`](../samples/getting-started/azure-sql-db/library.azure-sql.sql#L138) it can be exposed using the following `dab` command:
 
@@ -79,7 +79,7 @@ The `parameters` defines which parameters should be exposed and to provide defau
 
 **Limitations**:
 
-1. Only the first result set returned by the stored procedure will be used by Data API Builder.
+1. Only the first result set returned by the stored procedure will be used by Data API builder.
 2. For both REST and GraphQL endpoints: when a stored procedure parameter is specified both in the configuration file and in the URL query string, the parameter in the URL query string will take precedence.
 3. Entities backed by a stored procedure do not have all the capabilities automatically provided for entities backed by tables, collections or views. Stored procedure backed entities do not support pagination, ordering, or filtering. Nor do such entities support returning items specified by primary key values.
 

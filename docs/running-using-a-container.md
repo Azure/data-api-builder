@@ -1,4 +1,4 @@
-# Running Data API Builder for Azure Databases using a container
+# Running Data API builder for Azure Databases using a container
 
 With Docker, you can run Data API builder using a container from `mcr.microsoft.com/azure-databases/data-api-builder`:
 

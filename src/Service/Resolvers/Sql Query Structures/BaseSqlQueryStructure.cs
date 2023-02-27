@@ -59,6 +59,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             : base(metadataProvider, authorizationResolver, gQLFilterParser, predicates, entityName, counter)
         {
             Joins = new();
+
+            // For GraphQL read operation, we are deliberately not passing httpContext to this point
+            // and hence it will take its default value i.e. null here.
+            // For GraphQL read operation, the database policy predicates are added in SqlQueryStructure class.
             if (httpContext is not null)
             {
                 AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(

@@ -55,6 +55,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public PaginationMetadata PaginationMetadata { get; set; }
 
         /// <summary>
+        /// If this query is built because of a GraphQL query (as opposed to
+        /// REST), then this is set to the resolver context of that query.
+        /// </summary>
+        public IMiddlewareContext? _ctx;
+
+        /// <summary>
         /// Map query columns' labels to the parameter representing that
         /// column label as a string literal.
         /// Only used for MySql
@@ -70,12 +76,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// The maximum number of results this query should return.
         /// </summary>
         private uint? _limit = DEFAULT_LIST_LIMIT;
-
-        /// <summary>
-        /// If this query is built because of a GraphQL query (as opposed to
-        /// REST), then this is set to the resolver context of that query.
-        /// </summary>
-        IMiddlewareContext? _ctx;
 
         /// <summary>
         /// The underlying type of the type returned by this query see, the
@@ -133,13 +133,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ISqlMetadataProvider sqlMetadataProvider,
             IAuthorizationResolver authorizationResolver,
             RuntimeConfigProvider runtimeConfigProvider,
-            GQLFilterParser gQLFilterParser)
+            GQLFilterParser gQLFilterParser,
+            HttpContext httpContext)
             : this(sqlMetadataProvider,
                 authorizationResolver,
                 gQLFilterParser,
                 predicates: null,
                 entityName: context.EntityName,
-                counter: new IncrementingInteger())
+                counter: new IncrementingInteger(),
+                httpContext: httpContext)
         {
             IsListQuery = context.IsMany;
             SourceAlias = $"{DatabaseObject.SchemaName}_{DatabaseObject.Name}";
@@ -196,7 +198,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 }
             }
 
-            if (context.DbPolicyClause is not null)
+            /*if (context.DbPolicyClause is not null)
             {
                 // Similar to how we have added FilterPredicates above,
                 // we will add DbPolicyPredicates here.
@@ -212,7 +214,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed,
                         innerException: ex);
                 }
-            }
+            }*/
 
             if (!string.IsNullOrWhiteSpace(context.After))
             {
@@ -287,7 +289,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                   gQLFilterParser,
                   predicates: null,
                   entityName: entityName,
-                  counter)
+                  counter: counter
+                  )
         {
             _ctx = ctx;
             IOutputType outputType = schemaField.Type;
@@ -347,7 +350,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             // Get HttpContext from IMiddlewareContext and fail if resolved value is null.
-            if (!_ctx.ContextData.TryGetValue(nameof(HttpContext), out object? httpContextValue))
+            if (!ctx.ContextData.TryGetValue(nameof(HttpContext), out object? httpContextValue))
             {
                 throw new DataApiBuilderException(
                     message: "No HttpContext found in GraphQL Middleware Context.",
@@ -453,8 +456,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             GQLFilterParser gQLFilterParser,
             List<Predicate>? predicates = null,
             string entityName = "",
-            IncrementingInteger? counter = null)
-            : base(metadataProvider, authorizationResolver, gQLFilterParser, predicates, entityName, counter)
+            IncrementingInteger? counter = null,
+            HttpContext? httpContext = null)
+            : base(metadataProvider,
+                  authorizationResolver,
+                  gQLFilterParser, predicates,
+                  entityName,
+                  counter,
+                  httpContext)
         {
             JoinQueries = new();
             PaginationMetadata = new(this);

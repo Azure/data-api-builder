@@ -10,6 +10,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
+using Microsoft.AspNetCore.Http;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
@@ -64,8 +65,16 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
             IDictionary<string, object?> mutationParams,
-            bool incrementalUpdate)
-        : base(sqlMetadataProvider, authorizationResolver, gQLFilterParser, entityName: entityName)
+            bool incrementalUpdate,
+            HttpContext httpContext,
+            Config.Operation operationType)
+        : base(
+              metadataProvider: sqlMetadataProvider,
+              authorizationResolver: authorizationResolver,
+              gQLFilterParser: gQLFilterParser,
+              entityName: entityName,
+              operationType: operationType,
+              httpContext: httpContext)
         {
             UpdateOperations = new();
             InsertColumns = new();

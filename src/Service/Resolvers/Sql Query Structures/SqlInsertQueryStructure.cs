@@ -11,6 +11,8 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Resolvers;
+using Microsoft.AspNetCore.Http;
+
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
     /// <summary>
@@ -39,13 +41,17 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ISqlMetadataProvider sqlMetadataProvider,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
-            IDictionary<string, object?> mutationParams
+            IDictionary<string, object?> mutationParams,
+            HttpContext httpContext,
+            Config.Operation operationType
         ) : this(
             entityName,
             sqlMetadataProvider,
             authorizationResolver,
             gQLFilterParser,
-            GQLMutArgumentToDictParams(context, CreateMutationBuilder.INPUT_ARGUMENT_NAME, mutationParams))
+            GQLMutArgumentToDictParams(context, CreateMutationBuilder.INPUT_ARGUMENT_NAME, mutationParams),
+            httpContext,
+            operationType)
         { }
 
         public SqlInsertStructure(
@@ -53,9 +59,17 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ISqlMetadataProvider sqlMetadataProvider,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
-            IDictionary<string, object?> mutationParams
+            IDictionary<string, object?> mutationParams,
+            HttpContext httpContext,
+            Config.Operation operationType
             )
-        : base(sqlMetadataProvider, authorizationResolver, gQLFilterParser, entityName: entityName)
+        : base(
+              metadataProvider: sqlMetadataProvider,
+              authorizationResolver: authorizationResolver,
+              gQLFilterParser: gQLFilterParser,
+              entityName: entityName,
+              httpContext: httpContext,
+              operationType: operationType)
         {
             InsertColumns = new();
             Values = new();

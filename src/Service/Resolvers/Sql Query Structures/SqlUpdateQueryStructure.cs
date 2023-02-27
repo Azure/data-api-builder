@@ -11,6 +11,7 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Resolvers;
+using Microsoft.AspNetCore.Http;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
@@ -35,8 +36,16 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
             IDictionary<string, object?> mutationParams,
+            HttpContext httpContext,
+            Config.Operation operationType,
             bool isIncrementalUpdate)
-        : base(sqlMetadataProvider, authorizationResolver, gQLFilterParser, entityName: entityName)
+        : base(
+              metadataProvider: sqlMetadataProvider,
+              authorizationResolver: authorizationResolver,
+              gQLFilterParser: gQLFilterParser,
+              entityName: entityName,
+              httpContext: httpContext,
+              operationType: operationType)
         {
             UpdateOperations = new();
             OutputColumns = GenerateOutputColumns();
@@ -87,8 +96,16 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ISqlMetadataProvider sqlMetadataProvider,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
-            IDictionary<string, object?> mutationParams)
-            : base(sqlMetadataProvider, authorizationResolver, gQLFilterParser, entityName: entityName)
+            IDictionary<string, object?> mutationParams,
+            HttpContext httpContext,
+            Config.Operation operationType)
+            : base(
+                  metadataProvider: sqlMetadataProvider,
+                  authorizationResolver: authorizationResolver,
+                  gQLFilterParser: gQLFilterParser,
+                  entityName: entityName,
+                  httpContext: httpContext,
+                  operationType: operationType)
         {
             UpdateOperations = new();
             SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();

@@ -180,24 +180,6 @@ namespace Azure.DataApiBuilder.Service.Services
                 }
             }
 
-            string role = GetHttpContext().Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
-            Config.Operation operation = HttpVerbToOperations(GetHttpContext().Request.Method);
-            string dbPolicy = _authorizationResolver.ProcessDBPolicy(entityName, role, operation, GetHttpContext());
-            if (!string.IsNullOrEmpty(dbPolicy))
-            {
-                // Since dbPolicy is nothing but filters to be added by virtue of database policy, we prefix it with
-                // ?$filter= so that it conforms with the format followed by other filter predicates.
-                // This helps the ODataVisitor helpers to parse the policy text properly.
-                dbPolicy = "?$filter=" + dbPolicy;
-
-                // Parse and save the values that are needed to later generate queries in the given RestRequestContext.
-                // DbPolicyClause is an Abstract Syntax Tree representing the parsed policy text.
-                context.DbPolicyClause = _sqlMetadataProvider.GetODataParser().GetFilterClause(
-                    filterQueryString: dbPolicy,
-                    resourcePath: $"{context.EntityName}.{context.DatabaseObject.FullName}",
-                    customResolver: new ClaimsTypeDataUriResolver());
-            }
-
             // At this point for DELETE, the primary key should be populated in the Request Context.
             RequestValidator.ValidateRequestContext(context, _sqlMetadataProvider);
 

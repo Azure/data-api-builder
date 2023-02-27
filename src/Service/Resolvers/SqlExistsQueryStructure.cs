@@ -34,7 +34,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             List<Predicate> predicates,
             string entityName,
             IncrementingInteger? counter = null)
-            : base(metadataProvider, authorizationResolver, gQLFilterParser, predicates, entityName, counter)
+            : base(
+                  metadataProvider,
+                  authorizationResolver,
+                  gQLFilterParser,
+                  predicates,
+                  entityName,
+                  counter)
         {
             SourceAlias = CreateTableAlias();
             // Get HttpContext from IMiddlewareContext and fail if resolved value is null.

@@ -128,7 +128,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
 
             requestBody = @"
             {
-                ""categoryName"": ""FairyTales"",
+                ""categoryName"": ""Tales"",
                 ""piecesAvailable"":""5"",
                 ""piecesRequired"":""4""
             }";

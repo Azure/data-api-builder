@@ -24,7 +24,7 @@ The returned result is a JSON object with this format:
 
 ## Supported GraphQL Root Types
 
-Data API Builder support the following GraphQL root types:
+Data API builder support the following GraphQL root types:
 
 [Queries](#queries)
 [Mutations](#mutations)
@@ -37,7 +37,7 @@ Each entity has support for the following actions:
 - [Query by Primary key](#query-by-primary-key)
 - [Generic Query](#generic-query)
 
-Data API Builder, unless otherwise specified, will use the *singular* name of an entity whenever a single item is expected to be returned, and will use the *plural* name of an entity whenever a list of items is expected to be returned. For example the `book` entity will have:
+Data API builder, unless otherwise specified, will use the *singular* name of an entity whenever a single item is expected to be returned, and will use the *plural* name of an entity whenever a list of items is expected to be returned. For example the `book` entity will have:
 
 - `book_by_pk()`: to return zero or one entity
 - `books()`: to return a list of zero or more entities

@@ -88,7 +88,9 @@ namespace Azure.DataApiBuilder.Config
         /// Pick up the global runtime settings from the dictionary if present
         /// otherwise initialize with default.
         /// </summary>
-        public void DetermineGlobalSettings()
+        /// <param name="logger">ILogger instance to log warning.</param>
+        /// <exception cref="NotSupportedException"></exception>
+        public void DetermineGlobalSettings(ILogger? logger = null)
         {
             if (RuntimeSettings is not null)
             {
@@ -98,6 +100,20 @@ namespace Azure.DataApiBuilder.Config
                     switch (settingsType)
                     {
                         case GlobalSettingsType.Rest:
+                            if (DatabaseType is DatabaseType.cosmosdb_nosql)
+                            {
+                                string warningMsg = "REST runtime settings will not be honored for " +
+                                        $"{DatabaseType} as it does not support REST yet.";
+                                if (logger is null)
+                                {
+                                    Console.WriteLine(warningMsg);
+                                }
+                                else
+                                {
+                                    logger.LogWarning(warningMsg);
+                                }
+                            }
+
                             RestGlobalSettings
                                 = ((JsonElement)settingsJson).Deserialize<RestGlobalSettings>(SerializerOptions)!;
                             break;
@@ -270,7 +286,7 @@ namespace Azure.DataApiBuilder.Config
             try
             {
                 deserializedRuntimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(configJson, SerializerOptions);
-                deserializedRuntimeConfig!.DetermineGlobalSettings();
+                deserializedRuntimeConfig!.DetermineGlobalSettings(logger);
                 deserializedRuntimeConfig!.DetermineGraphQLEntityNames();
                 deserializedRuntimeConfig.DataSource.PopulateDbSpecificOptions();
                 return true;

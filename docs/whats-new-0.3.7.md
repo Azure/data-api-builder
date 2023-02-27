@@ -1,4 +1,4 @@
-# What's New in Data API Builder 0.3.7
+# What's New in Data API builder 0.3.7
 
 - [Public JSON Schema](#public-json-schema)
 - [View Support](#view-support)
@@ -56,7 +56,7 @@ Azure AD authentication is now fully working. Read how to use it here: [Authenti
 
 ## New "Simulator" Authentication Provider for local authentication
 
-To simplify testing of authenticated requests when developing locally, a new `simulator` authentication provider has been created; `simulator` is a configurable authentication provider which instructs the Data API Builder engine to treat all requests as authenticated. More details here: [Local Authentication](./local-authentication.md)
+To simplify testing of authenticated requests when developing locally, a new `simulator` authentication provider has been created; `simulator` is a configurable authentication provider which instructs the Data API builder engine to treat all requests as authenticated. More details here: [Local Authentication](./local-authentication.md)
 
 ## Support for filter on nested objects within a document in Cosmos DB
 

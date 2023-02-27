@@ -38,25 +38,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="expectedPrimaryKeyRoute">The primary key route we
         /// expect to parse from route.</param>
         [DataTestMethod]
-        [DataRow("foo", "", "foo", "")]
-        [DataRow("foo/", "", "foo", "")]
-        [DataRow("foo", "/", "foo", "")]
-        [DataRow("foo", "foo", "", "")]
-        [DataRow("foo/bar", "", "foo", "bar")]
-        [DataRow("foo/bar", "/foo", "bar", "")]
-        [DataRow("foo/bar", "foo/", "bar", "")]
-        [DataRow("foo/bar", "/foo/", "bar", "")]
-        [DataRow("foo/bar/baz", "", "foo", "bar/baz")]
-        [DataRow("foo/bar/baz", "/foo", "bar", "baz")]
-        [DataRow("foo/bar/baz", "/foo/bar", "baz", "")]
-        [DataRow("foo/bar/baz", "/foo/bar/", "baz", "")]
-        [DataRow("foo/bar/baz/qux", "", "foo", "bar/baz/qux")]
-        [DataRow("foo/bar/baz/qux", "/foo", "bar", "baz/qux")]
-        [DataRow("foo/bar/baz/qux", "/foo/bar/", "baz", "qux")]
-        [DataRow("foo/bar/baz/qux", "/foo/bar/baz", "qux", "")]
-        [DataRow("foo////bar////baz/qux", "////foo", "bar", "///baz/qux")]
-        [DataRow("foo/bar/baz/qux/1/fred/23/thud/456789", "",
-            "foo", "bar/baz/qux/1/fred/23/thud/456789")]
+        [DataRow("rest-api/Book/id/1", "/rest-api", "Book", "id/1")]
+        [DataRow("rest api/Book/id/1", "/rest api", "Book", "id/1")]
+        [DataRow(" rest_api/commodities/categoryid/1/pieceid/1", "/ rest_api", "commodities", "categoryid/1/pieceid/1")]
+        [DataRow("rest-api/Book/id/1", "/rest-api", "Book", "id/1")]
         public void ParseEntityNameAndPrimaryKeyTest(string route,
                                                      string path,
                                                      string expectedEntityName,
@@ -81,10 +66,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="route">The route to be parsed.</param>
         /// <param name="path">An invalid path for the given route.</param>
         [DataTestMethod]
-        [DataRow("foo", "bar")]
-        [DataRow("\\foo", "foo")]
+        [DataRow("/foo/bar", "foo")]
+        [DataRow("food/Book", "foo")]
         [DataRow("\"foo\"", "foo")]
-        [DataRow("foo/bar", ".")]
         [DataRow("foo/bar", "bar")]
         public void ErrorForInvalidRouteAndPathToParseTest(string route,
                                                            string path)

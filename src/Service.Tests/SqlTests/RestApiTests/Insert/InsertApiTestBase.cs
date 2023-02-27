@@ -44,7 +44,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             {
                 ""categoryid"": ""5"",
                 ""pieceid"": ""2"",
-                ""categoryName"":""FairyTales""
+                ""categoryName"":""Tales""
             }";
 
             expectedLocationHeader = $"categoryid/5/pieceid/2";

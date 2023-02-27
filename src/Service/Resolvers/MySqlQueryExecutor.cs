@@ -49,11 +49,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public MySqlQueryExecutor(
             RuntimeConfigProvider runtimeConfigProvider,
             DbExceptionParser dbExceptionParser,
-            ILogger<IQueryExecutor> logger)
+            ILogger<IQueryExecutor> logger,
+            IHttpContextAccessor httpContextAccessor)
             : base(dbExceptionParser,
                   logger,
                   new MySqlConnectionStringBuilder(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString),
-                  runtimeConfigProvider)
+                  runtimeConfigProvider,
+                  httpContextAccessor)
         {
             _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
             _attemptToSetAccessToken =
@@ -72,19 +74,18 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// provided in the runtime configuration.
         /// </summary>
         /// <param name="conn">The supplied connection to modify for managed identity access.</param>
-        public override async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, HttpContext? context)
+        public override async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn)
         {
             // Only attempt to get the access token if the connection string is in the appropriate format
             if (_attemptToSetAccessToken)
             {
-
                 // If the configuration controller provided a managed identity access token use that,
                 // else use the default saved access token if still valid.
                 // Get a new token only if the saved token is null or expired.
                 string? accessToken = _accessTokenFromController ??
                     (IsDefaultAccessTokenValid() ?
                         ((AccessToken)_defaultAccessToken!).Token :
-                        await GetAccessTokenAsync(context));
+                        await GetAccessTokenAsync());
 
                 if (accessToken is not null)
                 {
@@ -129,7 +130,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         /// <returns>The string representation of the access token if found,
         /// null otherwise.</returns>
-        private async Task<string?> GetAccessTokenAsync(HttpContext? context)
+        private async Task<string?> GetAccessTokenAsync()
         {
             try
             {
@@ -139,7 +140,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             catch (CredentialUnavailableException ex)
             {
-                QueryExecutorLogger.LogWarning($"{HttpContextExtensions.GetLoggerCorrelationId(context)}" +
+                QueryExecutorLogger.LogWarning($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContextAccessor.HttpContext)}" +
                     $"Attempt to retrieve a managed identity access token using DefaultAzureCredential" +
                     $" failed due to: \n{ex}");
             }

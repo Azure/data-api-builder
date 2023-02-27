@@ -8,6 +8,7 @@ using Azure.Core;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.Identity;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -41,7 +42,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString = connectionString;
             Mock<DbExceptionParser> dbExceptionParser = new(runtimeConfigProvider);
             Mock<ILogger<PostgreSqlQueryExecutor>> queryExecutorLogger = new();
-            PostgreSqlQueryExecutor postgreSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser.Object, queryExecutorLogger.Object);
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
+            PostgreSqlQueryExecutor postgreSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
 
             const string DEFAULT_TOKEN = "Default access token";
             const string CONFIG_TOKEN = "Configuration controller access token";
@@ -64,12 +66,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                         schema: null,
                         connectionString: connectionString,
                         accessToken: CONFIG_TOKEN);
-                    postgreSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser.Object, queryExecutorLogger.Object);
+                    postgreSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
                 }
             }
 
             using NpgsqlConnection conn = new(connectionString);
-            await postgreSqlQueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, context: null);
+            await postgreSqlQueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
             NpgsqlConnectionStringBuilder connStringBuilder = new(conn.ConnectionString);
 
             if (expectManagedIdentityAccessToken)

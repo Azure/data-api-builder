@@ -29,6 +29,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         protected DbExceptionParser DbExceptionParser { get; }
         protected ILogger<IQueryExecutor> QueryExecutorLogger { get; }
         private RuntimeConfigProvider ConfigProvider { get; }
+        protected IHttpContextAccessor HttpContextAccessor { get; }
 
         // The maximum number of attempts that can be made to execute the query successfully in addition to the first attempt.
         // So to say in case of transient exceptions, the query will be executed (_maxRetryCount + 1) times at max.
@@ -41,12 +42,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public QueryExecutor(DbExceptionParser dbExceptionParser,
                              ILogger<IQueryExecutor> logger,
                              DbConnectionStringBuilder connectionStringBuilder,
-                             RuntimeConfigProvider configProvider)
+                             RuntimeConfigProvider configProvider,
+                             IHttpContextAccessor httpContextAccessor)
         {
             DbExceptionParser = dbExceptionParser;
             QueryExecutorLogger = logger;
             ConnectionStringBuilder = connectionStringBuilder;
             ConfigProvider = configProvider;
+            HttpContextAccessor = httpContextAccessor;
             _retryPolicy = Polly.Policy
             .Handle<DbException>(DbExceptionParser.IsTransientException)
             .WaitAndRetryAsync(
@@ -73,7 +76,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 ConnectionString = ConnectionStringBuilder.ConnectionString,
             };
 
-            await SetManagedIdentityAccessTokenIfAnyAsync(conn, httpContext);
+            await SetManagedIdentityAccessTokenIfAnyAsync(conn);
 
             return await _retryPolicy.ExecuteAsync(async () =>
             {
@@ -193,7 +196,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public virtual async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, HttpContext? context)
+        public virtual async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn)
         {
             // no-op in the base class.
             await Task.Yield();

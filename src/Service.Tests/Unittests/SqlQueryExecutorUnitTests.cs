@@ -66,7 +66,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString = connectionString;
             Mock<DbExceptionParser> dbExceptionParser = new(runtimeConfigProvider);
             Mock<ILogger<MsSqlQueryExecutor>> queryExecutorLogger = new();
-            MsSqlQueryExecutor msSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser.Object, queryExecutorLogger.Object);
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
+            MsSqlQueryExecutor msSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
 
             const string DEFAULT_TOKEN = "Default access token";
             const string CONFIG_TOKEN = "Configuration controller access token";
@@ -89,12 +90,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                         schema: null,
                         connectionString: connectionString,
                         accessToken: CONFIG_TOKEN);
-                    msSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser.Object, queryExecutorLogger.Object);
+                    msSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
                 }
             }
 
             using SqlConnection conn = new(connectionString);
-            await msSqlQueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, context: null);
+            await msSqlQueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
 
             if (expectManagedIdentityAccessToken)
             {

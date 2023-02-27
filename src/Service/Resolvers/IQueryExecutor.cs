@@ -102,7 +102,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// Modified the properties of the supplied connection to support managed identity access.
         /// </summary>
-        public Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, HttpContext? context);
+        public Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn);
 
         /// <summary>
         /// Method to generate the query to send user data to the underlying database which might be used

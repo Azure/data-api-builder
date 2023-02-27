@@ -94,11 +94,11 @@ namespace Azure.DataApiBuilder.Config
     {
         public Field(HashSet<string>? include, HashSet<string>? exclude)
         {
-            Include = include is null ? new() : new(include);
+            Include = include;
             Exclude = exclude is null ? new() : new(exclude);
         }
         [property: JsonPropertyName("include")]
-        public HashSet<string> Include { get; set; }
+        public HashSet<string>? Include { get; set; }
         [property: JsonPropertyName("exclude")]
         public HashSet<string> Exclude { get; set; }
     }

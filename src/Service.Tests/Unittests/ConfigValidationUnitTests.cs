@@ -1417,5 +1417,78 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 RuntimeConfigValidator.ValidateRestPathForRelationalDbs(configuration);
             }
         }
+
+        [DataTestMethod]
+        [DataRow(@"""@item.id ne 140""", "[]", @"[""some_field""]", true,
+            DisplayName = "Empty array for included fields and db policy referencing some field.")]
+        [DataRow(@"""""", "[]", @"[""some_field""]", false,
+            DisplayName = "Empty array for included fields and empty db policy.")]
+        [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", @"[""id"", ""name""]", @"[""some_field""]", false,
+            DisplayName = "All fields referenced by db policy present in included.")]
+        [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", @"[ ""id"" ]", @"[""name""]", true,
+            DisplayName = "One field referenced by db policy present in excluded.")]
+        public void TestFieldInclusionExclusion(
+            string databasePolicy,
+            string includedFields,
+            string excludedFields,
+            bool exceptionExpected)
+        {
+            string runtimeConfigString = @"{" +
+                @"""$schema"": ""test_schema""," +
+                @"""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""testconnectionstring"",
+                    ""options"":{
+                        ""set-session-context"": false
+                    }
+                },
+                ""runtime"": {
+                    ""host"": {
+                    ""mode"": ""development"",
+                    ""authentication"": {
+                        ""provider"": ""StaticWebApps""
+                    }
+                  }
+                },
+                ""entities"": {
+                    ""Publisher"":{
+                        ""source"": ""publishers"",
+                        ""permissions"": [
+                           {
+                            ""role"": ""anonymous"",
+                            ""actions"": [
+                               {
+                                ""action"": ""Read"",
+                                ""policy"": {
+                                    ""database"":" + databasePolicy +
+                                  @"},
+                                ""fields"": {
+                                    ""include"" : " + includedFields + "," +
+                                    @"""exclude"": " + excludedFields + 
+                                  @"}
+                               }
+                            ]
+                           }
+                         ]
+                        }
+                    }
+                }";
+
+            RuntimeConfig runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(runtimeConfigString, RuntimeConfig.SerializerOptions);
+            runtimeConfig!.DetermineGlobalSettings();
+            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+            if (exceptionExpected)
+            {
+                DataApiBuilderException ex =
+                    Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
+                Assert.AreEqual("Not all the columns required by policy are accessible.", ex.Message);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+            }
+            else
+            {
+                configValidator.ValidatePermissionsInConfig(runtimeConfig);
+            }
+        }
     }
 }

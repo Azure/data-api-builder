@@ -2,7 +2,7 @@
     {
         "id": "1000",
         "title": "Foundation",
-        "authors": [
+        "Authors": [
             {
                 "id": "1",
                 "first_name": "Isaac",
@@ -20,7 +20,7 @@
     {
         "id": "1001",
         "title": "Foundation and Empire",
-        "authors": [
+        "Authors": [
             {
                 "id": "1",
                 "first_name": "Isaac",
@@ -32,7 +32,7 @@
     {
         "id": "1002",
         "title": "Second Foundation",
-        "authors": [
+        "Authors": [
             {
                 "id": "1",
                 "first_name": "Isaac",
@@ -44,7 +44,7 @@
     {
         "id": "1008",
         "title": "Nightwings",
-        "authors": [
+        "Authors": [
             {
                 "id": "1",
                 "first_name": "Isaac",

@@ -4,29 +4,36 @@ Make sure you have read the [Getting Started](getting-started.md) document.
 
 This tutorial assumes that you have already a [Cosmos DB NoSQL API database account](https://learn.microsoft.com/azure/cosmos-db/sql/create-cosmosdb-resources-portal#create-an-azure-cosmos-db-account) that can be used as a playground.
 
-## Create the database containers
+## Create the database container
 
-Create the necessary database container needed to represent Books. There are different ways to model this sample and you can learn more about data modeling from [here](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/modeling-data). We will use the embedding data model in this sample.
+Create the necessary database container needed to represent Books. There are different ways to model this sample and you can learn more about data modeling from [here](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/modeling-data). We will use the [embedded data model](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/modeling-data#embedding-data) in this sample.
 
 - `books`: Collection containing books and it's authors with 'id' as the partition key
 
-Read more about [choosing partition key](https://docs.microsoft.com/en-us/azure/cosmos-db/partitioning-overview#choose-partitionkey) and [data modelling](https://docs.microsoft.com/en-us/azure/cosmos-db/sql/modeling-data)
+Read more about [choosing partition key](https://docs.microsoft.com/en-us/azure/cosmos-db/partitioning-overview#choose-partitionkey) and [data modeling](https://docs.microsoft.com/en-us/azure/cosmos-db/sql/modeling-data)
 
-Once the containers are created, we can import the sample data which are placed in the 'azure-cosmos-db' folder to the book collection by using the Add New Item option (Make sure you add one by one item) in the Azure Data Explorer.
+Once the container is created, we can import the sample data which are placed in the 'azure-cosmos-db' folder to the book collection by using the add new item option (Make sure you add one by one item) in the Azure Data Explorer.
+
+![Cosmos DB Add New Document](../media/cosmos-insert-new.png)
 
 ## Add Book schema file
 
-We need to expose the books collection so that it can be used via GraphQL. Cosmos DB, being schema agnostic, requires us to provide the schema definition for the collections. These schema definitions need to be added in the `schema.gql` file.
+We need to expose the books collection so that it can be used via GraphQL. Cosmos DB, being schema agnostic, requires us to provide the schema definition for the collection. The schema definition needs to be added in the `schema.gql` file.
 
-Start by adding the `Author` and `Book` schema:
+Start by adding the `Book` schema:
 
 ```graphql
-type Author @model {
+type Book @model {
+  id: ID
+  title: String
+  Authors: [Author]
+}
+
+type Author {
   id: ID
   first_name: String
   middle_name: String
   last_name: String
-  Books: [Book]
 }
 ```
 
@@ -110,7 +117,7 @@ We want to expose the books collection so that they can be used via GraphQL. For
 You can do this either by using the CLI with the add command :
 
 ```bash
-  dab add Book --source books --permissions "anonymous:*"
+dab add Book --source books --permissions "anonymous:*"
 ```
 
 or by adding the `Book` entity manually to the configuration file under entities section:
@@ -131,7 +138,7 @@ or by adding the `Book` entity manually to the configuration file under entities
 
 within the `entities` object you can create any entity with any name (as long as it is valid for GraphQL). The name `Book`, in this case, will be used to build the GraphQL type. Within the entity you have the `source` element that specifies which container contains the entity data. In our case it is `books`.
 
-> **NOTE**: Entities names are case sensitive and they will be exposed via GraphQL as you have typed them.
+> **NOTE**: Entity names are case sensitive and they will be exposed via GraphQL as you have typed them.
 
 After that, you need to specify the permission for the exposed entity, so that you can be sure only those users making a request with the right claims will be able to access the entity and its data. In this getting started tutorial we're just allowing anyone, without the need to be authenticated, to perform all the CRUD operations to the `Book` entity.
 
@@ -224,7 +231,7 @@ Using GraphQL you can now execute queries like:
     items {
       id
       title
-      authors {
+      Authors {
         first_name
         last_name
       }

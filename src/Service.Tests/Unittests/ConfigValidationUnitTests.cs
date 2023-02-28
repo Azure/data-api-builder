@@ -1418,15 +1418,25 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
         }
 
+        /// <summary>
+        /// Method to validate that the validations for include/exclude fields for an entity
+        /// work as expected.
+        /// </summary>
+        /// <param name="databasePolicy">Database policy for a particular role/action combination for an entity.</param>
+        /// <param name="includedFields">Fields that are accessible to user for the role/action combination.</param>
+        /// <param name="excludedFields">Fields that are inaccessible to user for the role/action combination.</param>
+        /// <param name="exceptionExpected">Whether an exception is expected (true when validation fails).</param>
         [DataTestMethod]
-        [DataRow(@"""@item.id ne 140""", "[]", @"[""some_field""]", true,
+        [DataRow(@"""@item.id ne 140""", "[]", @"[""name""]", true,
             DisplayName = "Empty array for included fields and db policy referencing some field.")]
-        [DataRow(@"""""", "[]", @"[""some_field""]", false,
+        [DataRow(@"""""", "[]", @"[""name""]", false,
             DisplayName = "Empty array for included fields and empty db policy.")]
-        [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", @"[""id"", ""name""]", @"[""some_field""]", false,
+        [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", @"[""id"", ""name""]", @"[""title""]", false,
             DisplayName = "All fields referenced by db policy present in included.")]
         [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", @"[ ""id"" ]", @"[""name""]", true,
             DisplayName = "One field referenced by db policy present in excluded.")]
+        [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", @"[]", @"[]", true,
+            DisplayName = "Empty arrays for included/excluded fields and non-empty database policy.")]
         public void TestFieldInclusionExclusion(
             string databasePolicy,
             string includedFields,
@@ -1477,6 +1487,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfig runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(runtimeConfigString, RuntimeConfig.SerializerOptions);
             runtimeConfig!.DetermineGlobalSettings();
             RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+
+            // Perform validation on the permissions in the config and assert the expected results.
             if (exceptionExpected)
             {
                 DataApiBuilderException ex =

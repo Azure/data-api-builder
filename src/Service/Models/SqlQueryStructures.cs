@@ -90,6 +90,51 @@ namespace Azure.DataApiBuilder.Service.Models
         {
             Label = label;
         }
+
+        /// <summary>
+        /// Performs an equality test against two <c>LabelledColumn</c> instances to see if they are referring to the same column.
+        /// </summary>
+        /// <param name="other">The column to compare.</param>
+        /// <returns>True if the columns are the same, otherwise false.</returns>
+        public bool Equals(LabelledColumn? other)
+        {
+            if (other is null)
+            {
+                return false;
+            }
+
+            if (ReferenceEquals(this, other))
+            {
+                return true;
+            }
+
+            return string.Equals(Label, other.Label, StringComparison.Ordinal) &&
+                string.Equals(TableName, other.TableName, StringComparison.Ordinal) &&
+                string.Equals(ColumnName, other.ColumnName, StringComparison.Ordinal) &&
+                string.Equals(TableSchema, other.TableSchema, StringComparison.Ordinal);
+        }
+
+        /// <inheritdoc/>
+        public override bool Equals(object? obj)
+        {
+            if (obj is null)
+            {
+                return false;
+            }
+
+            if (ReferenceEquals(obj, this))
+            {
+                return true;
+            }
+
+            return Equals(obj as LabelledColumn);
+        }
+
+        /// <inheritdoc/>
+        public override int GetHashCode()
+        {
+            return base.GetHashCode() ^ Label.GetHashCode(StringComparison.Ordinal);
+        }
     }
 
     /// <summary>

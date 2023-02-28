@@ -9,7 +9,7 @@
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>dab</ToolCommandName>
     <PackageOutputPath>./nupkg</PackageOutputPath>
-    <BaseOutputPath>..\..\out\cli</BaseOutputPath>
+    <OutputPath>$(BaseOutputPath)\cli</OutputPath>
     <RuntimeIdentifiers>win-x64;linux-x64;osx-x64</RuntimeIdentifiers>
     <PackageId>Microsoft.DataApiBuilder</PackageId>
     <Title>Microsoft.DataApiBuilder</Title>
@@ -46,11 +46,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Service\Azure.DataApiBuilder.Service.csproj" />
+    <ProjectReference Include="..\Service\Azure.DataApiBuilder.Service.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-      <ConfigFiles Include="..\..\Service\dab-config*.json" />
+      <ConfigFiles Include="..\Service\dab-config*.json" />
   </ItemGroup>
 
   <ItemGroup>
@@ -58,22 +58,22 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\..\..\nuget\README.md" Pack="true" PackagePath="\" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\..\nuget\nuget_icon.png" Pack="true" PackagePath="\" />
-    <None Include="..\..\..\LICENSE.txt" Pack="true" PackagePath="\" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\..\NOTICE.txt" Pack="true" PackagePath="\" Condition="Exists('..\..\..\NOTICE.txt')" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\nuget\README.md" Pack="true" PackagePath="\" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\nuget\nuget_icon.png" Pack="true" PackagePath="\" />
+    <None Include="..\..\LICENSE.txt" Pack="true" PackagePath="\" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\NOTICE.txt" Pack="true" PackagePath="\" Condition="Exists('..\..\..\NOTICE.txt')" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="..\..\..\schemas\dab.draft.schema.json">
+    <Content Include="..\..\schemas\dab.draft.schema.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
 
   <Target Name="GenerateConfigFiles" AfterTargets="PostBuildEvent">
-      <Exec Command="powershell.exe -command ..\..\..\ConfigGenerators\configGenerator.ps1 $(generateConfigFileForDbType) " Condition=" '$(OS)' == 'Windows_NT' And '$(generateConfigFileForDbType)' != '' " />
-      <Exec Command="bash ../../../ConfigGenerators/configGenerator.sh $(generateConfigFileForDbType) " Condition=" '$(OS)' != 'Windows_NT' And '$(generateConfigFileForDbType)' != '' " />
-      <Copy SourceFiles="@(ConfigFiles)" DestinationFolder="..\..\out\tests\$(TargetFramework)" />
+      <Exec Command="powershell.exe -command ..\..\config-generators\config-generator.ps1 $(generateConfigFileForDbType) " Condition=" '$(OS)' == 'Windows_NT' And '$(generateConfigFileForDbType)' != '' " />
+      <Exec Command="bash ../../config-generators/config-generator.sh $(generateConfigFileForDbType) " Condition=" '$(OS)' != 'Windows_NT' And '$(generateConfigFileForDbType)' != '' " />
+      <Copy SourceFiles="@(ConfigFiles)" DestinationFolder="..\out\tests\$(TargetFramework)" />
   </Target>
 
 </Project>

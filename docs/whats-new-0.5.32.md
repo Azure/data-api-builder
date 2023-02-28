@@ -19,14 +19,14 @@ Running the below command,
 dab init --database-type mssql --connection-string "Connection-String" --rest.path "rest-api" 
 ```
 configures the REST endpoints with a prefix of `rest-api`. The complete path for the REST endpoints will be 
-`http://<dab-server>/rest-api/<entity-name>`
+`https://<dab-server>/rest-api/<entity-name>`
 
 When `--rest.path` option is not used, the REST endpoints will be configured with the default prefix `api`. The complete path in this case will be
-`http://<dab-server>/api/<entity-name>`
+`https://<dab-server>/api/<entity-name>`
 
-## Data API builder container image in MCR
+## Data API builder container image in MAR
 
-The official docker images for Data API builder for Azure Databases are now available in [Microsoft Container Registry](https://mcr.microsoft.com/en-us/product/azure-databases/data-api-builder/tags).
+The official docker images for Data API builder for Azure Databases are now available in [Microsoft Artifact Registry](https://mcr.microsoft.com/product/azure-databases/data-api-builder/tags).
 
 [This](https://mcr.microsoft.com/en-us/product/azure-databases/data-api-builder/about) page contains the instructions for using the published images.
 

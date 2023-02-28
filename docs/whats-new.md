@@ -11,7 +11,7 @@ Details on how to install the latest version are here: [Installing DAB CLI](./ge
 
 The full list of release notes for this version is available here: [version 0.5.32 release notes](https://github.com/Azure/data-api-builder/releases/tag/v0.5.32-beta)
 - [Ability to customize rest path via CLI](./whats-new-0.5.32.md#customize-rest-path-cli)
-- [Data API builder container image in MCR ](./whats-new-0.5.32.md#container-image-in-mcr)
+- [Data API builder container image in MCR](./whats-new-0.5.32.md#container-image-in-mcr)
 - [Support for GraphQL fragments](./whats-new-0.5.32.md#grapql-fragments-support)
 - [Generate NOTICE.txt in the pipeline for distribution and include LICENSE, README, NOTICE in zip, nuget, docker image](./whats-new-0.5.32.md#notice-license-readme-in-binaries-and-container-image)
 - [Turn on BinSkim and fix Policheck alerts](./whats-new-0.5.32.md#turn-on-binskim-fix-policheck)

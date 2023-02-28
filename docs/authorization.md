@@ -130,7 +130,9 @@ As by default there are no pre-defined permission for the `anonymous` or `authen
 }
 ```
 
-In the above configuration sample, only request carrying the `administrator` role in the access token and specifying the `administrator` value in the `X-MS-API-ROLE` HTTP header, will be able to operate on the `book` entity.
+In the above configuration sample, only requests which include the `administrator` role in the access token and specify the `administrator` value in the `X-MS-API-ROLE` HTTP header, will be able to operate on the `book` entity.
+
+Actions can also be specified with the wildcard shortcut: `*` (asterisk). The wildcard action is 
 
 ### Item level security
 

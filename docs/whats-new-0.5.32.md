@@ -52,6 +52,8 @@ fragment description on Character {
 }
 ```
 
+A GraphQL query that makes use of the above defined fragment can be constructed as shown
+
 ```graphql
 {
   Player1: Player{
@@ -62,7 +64,7 @@ fragment description on Character {
   }
 }
 ```
-In this case, the results of the queries will contain the following fields
+For the above query, the result will contain the following fields
 
 ```graphql
 {

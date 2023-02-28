@@ -1474,8 +1474,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                                   @"},
                                 ""fields"": {
                                     ""include"" : " + includedFields + "," +
-                                    @"""exclude"": " + excludedFields + 
-                                  @"}
+                                    @"""exclude"": " + excludedFields +
+                                    @"}
                                }
                             ]
                            }

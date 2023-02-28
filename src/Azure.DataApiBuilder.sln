@@ -17,9 +17,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataApiBuilder.Servic
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataApiBuilder.Auth", "Auth\Azure.DataApiBuilder.Auth.csproj", "{249FF898-AD6E-46F2-B441-F6926BCD5179}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cli", "Cli\src\Cli.csproj", "{55528027-AC5E-4B3A-901A-BAE649C44C07}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cli", "Cli\Cli.csproj", "{55528027-AC5E-4B3A-901A-BAE649C44C07}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cli.Tests", "Cli\test\Cli.Tests.csproj", "{2D9D5A56-2025-43BA-97D6-47385C2890FE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cli.Tests", "Cli.Tests\Cli.Tests.csproj", "{2D9D5A56-2025-43BA-97D6-47385C2890FE}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{FBA18E2E-32A2-437C-AA5D-F9EF358874DC}"
 	ProjectSection(SolutionItems) = preProject

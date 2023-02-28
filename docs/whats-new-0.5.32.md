@@ -1,7 +1,7 @@
 # What's New in Data API builder 0.5.32
 
 - [Ability to customize rest path via CLI](./whats-new-0.5.32.md#customize-rest-path-cli)
-- [Data API builder container image in MCR ](./whats-new-0.5.32.md#container-image-in-mcr)
+- [Data API builder container image in MAR ](./whats-new-0.5.32.md#container-image-in-mar)
 - [Support for GraphQL fragments](./whats-new-0.5.32.md#grapql-fragments-support)
 - [Generate NOTICE.txt in the pipeline for distribution and include LICENSE, README, NOTICE in zip, nuget, docker image](./whats-new-0.5.32.md#notice-license-readme-in-binaries-and-container-image)
 - [Turn on BinSkim and fix Policheck alerts](./whats-new-0.5.32.md#turn-on-binskim-fix-policheck)

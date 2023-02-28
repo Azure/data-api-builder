@@ -21,11 +21,11 @@ Running the below command,
 dab init --database-type mssql --connection-string "Connection-String" --rest.path "rest-api" 
 ```
 
-configures the REST endpoints with a prefix value of `rest-api`. So, the complete path would look like 
+configures the REST endpoints with a prefix of `rest-api`. The complete path for the REST endpoints will be 
 
 `http://<dab-server>/rest-api/<entity-name>`
 
-When this option is not used, the REST endpoints will have the default prefix value of `api`. So, the complete path in this case will be
+When `--rest.path` option is not used, the REST endpoints will be configured with the default prefix `api`. The complete path in this case will be
 
 `http://<dab-server>/api/<entity-name>`
 

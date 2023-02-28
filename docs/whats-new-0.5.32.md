@@ -8,7 +8,6 @@
 
 The full list of release notes for this version is available here: [version 0.5.32 release notes](https://github.com/Azure/data-api-builder/releases/tag/v0.5.32-beta)
 
-
 ## Ability to customize rest path via CLI
 
 A new option `--rest.path` is introduced in the `init` command to customize the path for REST APIs. 
@@ -16,17 +15,13 @@ A new option `--rest.path` is introduced in the `init` command to customize the 
 For Example:
 
 Running the below command,
-
 ```text
 dab init --database-type mssql --connection-string "Connection-String" --rest.path "rest-api" 
 ```
-
 configures the REST endpoints with a prefix of `rest-api`. The complete path for the REST endpoints will be 
-
 `http://<dab-server>/rest-api/<entity-name>`
 
 When `--rest.path` option is not used, the REST endpoints will be configured with the default prefix `api`. The complete path in this case will be
-
 `http://<dab-server>/api/<entity-name>`
 
 ## Data API builder container image in MCR
@@ -40,7 +35,6 @@ The official docker images for Data API builder for Azure Databases are now avai
 Fragments are reusable part of a graphQL query. In scenarios where the same fields have to be queried in different queries, the repeated fields can be consolidated into a single reusable component called fragment. 
 
 To read more about fragments, please visit [here](https://graphql.org/learn/queries/)
-
 
 A fragment called `description` on type `Character` is defined below
 
@@ -78,7 +72,6 @@ For the above query, the result will contain the following fields
   }   
 }
 ```
-
 
 ## Turn on BinSkim and fix Policheck alerts
 

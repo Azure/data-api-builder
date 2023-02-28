@@ -42,13 +42,13 @@ public class GraphQLAuthorizationHandler : HotChocolate.AspNetCore.Authorization
             return new ValueTask<AuthorizeResult>(AuthorizeResult.NotAuthenticated);
         }
 
+        // Schemas defining authorization policies are not supported, even when roles are defined appropriately.
+        // Requests will be short circuited and rejected (authorization forbidden).
         if (TryGetApiRoleHeader(context, out string? clientRole) && IsInHeaderDesignatedRole(clientRole, directive.Roles))
         {
-            // Schemas defining authorization policies are not supported.
-            // Requests will be short circuited and rejected (authorization forbidden).
             if (!string.IsNullOrEmpty(directive.Policy))
             {
-                return new ValueTask<AuthorizeResult>(AuthorizeResult.NoDefaultPolicy);
+                return new ValueTask<AuthorizeResult>(AuthorizeResult.NotAllowed);
             }
 
             return new ValueTask<AuthorizeResult>(AuthorizeResult.Allowed);

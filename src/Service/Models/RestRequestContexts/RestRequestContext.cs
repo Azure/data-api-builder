@@ -10,6 +10,7 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Parsers;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.OData.UriParser;
 
@@ -117,7 +118,7 @@ namespace Azure.DataApiBuilder.Service.Models
         /// <returns>
         /// Returns true on success, false on failure.
         /// </returns>
-        public void CalculateCumulativeColumns(ILogger logger)
+        public void CalculateCumulativeColumns(ILogger logger, HttpContext context)
         {
             try
             {
@@ -152,8 +153,9 @@ namespace Azure.DataApiBuilder.Service.Models
             {
                 // Exception not rethrown as returning false here is gracefully handled by caller,
                 // which will result in a 403 Unauthorized response to the client.
-                logger.LogError($"ERROR IN ODATA_AST_COLUMN_VISITOR TRAVERSAL" +
-                    $"{e.Message}" +
+                logger.LogError($"ERROR IN ODATA_AST_COLUMN_VISITOR TRAVERSAL\n" +
+                    $"{HttpContextExtensions.GetLoggerCorrelationId(context)}" +
+                    $"{e.Message}\n" +
                     $"{e.StackTrace}");
 
                 throw new DataApiBuilderException(

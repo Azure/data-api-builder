@@ -15,6 +15,7 @@ Invoke-WebRequest $chiliCreamLicenseMetadataURL `
 
 # Concatenate existing NOTICE.txt file with Chilicream license.
 $noticeFilePath = "$BuildSourcesDir/NOTICE.txt"
-Add-Content $noticeFilePath -Value "Banana Cake Pop"
-Add-Content $noticeFilePath -Value "Copyright 2023 ChilliCream, Inc."
+# Add newline before and after to meet formatting requirements
+Add-Content $noticeFilePath -Value "`r`nBanana Cake Pop`r`n"
+Add-Content $noticeFilePath -Value "Copyright 2023 ChilliCream, Inc.`r`n"
 Add-Content $noticeFilePath -Value (Get-Content $chiliCreamLicenseSavePath)

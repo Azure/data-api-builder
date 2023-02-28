@@ -124,7 +124,7 @@ steps:
   displayName: "Add ChilliCream License for Banana Cake Pop"
   inputs:
     targetType: 'filePath'
-    filePath: $(System.DefaultWorkingDirectory)/NoticeGeneration.ps1
+    filePath: $(System.DefaultWorkingDirectory)/scripts/notice-generation.ps1
     # Artifact Staging Directory used to temporarily store downloaded ChilliCream license.
     arguments: $(Build.ArtifactStagingDirectory) $(Build.SourcesDirectory)
 

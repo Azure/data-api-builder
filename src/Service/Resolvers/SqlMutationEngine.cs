@@ -619,6 +619,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     _gQLFilterParser,
                     parameters,
                     incrementalUpdate: false);
+                AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
+                    Config.Operation.Update,
+                    upsertStructure,
+                    _httpContextAccessor.HttpContext!,
+                    _authorizationResolver,
+                    _sqlMetadataProvider);
                 queryString = _queryBuilder.Build(upsertStructure);
                 queryParameters = upsertStructure.Parameters;
             }
@@ -631,6 +637,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     _gQLFilterParser,
                     parameters,
                     incrementalUpdate: true);
+                AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
+                    Config.Operation.Update,
+                    upsertIncrementalStructure,
+                    _httpContextAccessor.HttpContext!,
+                    _authorizationResolver,
+                    _sqlMetadataProvider);
                 queryString = _queryBuilder.Build(upsertIncrementalStructure);
                 queryParameters = upsertIncrementalStructure.Parameters;
             }

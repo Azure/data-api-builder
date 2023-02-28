@@ -5,7 +5,9 @@ using System.Data.Common;
 using System.Threading.Tasks;
 using Azure.Core;
 using Azure.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Service.Models;
 using Azure.Identity;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using MySqlConnector;
 
@@ -47,11 +49,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public MySqlQueryExecutor(
             RuntimeConfigProvider runtimeConfigProvider,
             DbExceptionParser dbExceptionParser,
-            ILogger<IQueryExecutor> logger)
+            ILogger<IQueryExecutor> logger,
+            IHttpContextAccessor httpContextAccessor)
             : base(dbExceptionParser,
                   logger,
                   new MySqlConnectionStringBuilder(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString),
-                  runtimeConfigProvider)
+                  runtimeConfigProvider,
+                  httpContextAccessor)
         {
             _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
             _attemptToSetAccessToken =
@@ -75,7 +79,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // Only attempt to get the access token if the connection string is in the appropriate format
             if (_attemptToSetAccessToken)
             {
-
                 // If the configuration controller provided a managed identity access token use that,
                 // else use the default saved access token if still valid.
                 // Get a new token only if the saved token is null or expired.
@@ -137,7 +140,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             catch (CredentialUnavailableException ex)
             {
-                QueryExecutorLogger.LogWarning($"Attempt to retrieve a managed identity access token using DefaultAzureCredential" +
+                QueryExecutorLogger.LogWarning($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContextAccessor.HttpContext)}" +
+                    $"Attempt to retrieve a managed identity access token using DefaultAzureCredential" +
                     $" failed due to: \n{ex}");
             }
 

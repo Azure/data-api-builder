@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;

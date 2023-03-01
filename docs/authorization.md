@@ -132,7 +132,12 @@ As by default there are no pre-defined permission for the `anonymous` or `authen
 
 In the above configuration sample, only requests which include the `administrator` role in the access token and specify the `administrator` value in the `X-MS-API-ROLE` HTTP header, will be able to operate on the `book` entity.
 
-Actions can also be specified with the wildcard shortcut: `*` (asterisk). The wildcard action is 
+Actions can also be specified with the wildcard shortcut: `*` (asterisk). The wildcard shortcut represents all actions supported for the entity type on which it is defined.
+
+- Tables and Views: `create`, `read`, `update`, `delete`
+- Stored Procedures: `execute`
+
+For more details, see the [configuration file](./configuration-file.md#actions) documentation.
 
 ### Item level security
 

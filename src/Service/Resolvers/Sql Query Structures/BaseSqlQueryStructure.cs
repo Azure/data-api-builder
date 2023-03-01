@@ -62,13 +62,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             // For GraphQL read operation, we are deliberately not passing httpContext to this point
             // and hence it will take its default value i.e. null here.
-            // For GraphQL read operation, the database policy predicates are added later in the Sql{*}QueryStructure class.
+            // For GraphQL read operation, the database policy predicates are added later in the Sql{*}QueryStructure classes.
             if (httpContext is not null)
             {
                 AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
                 operationType,
                 this,
-                httpContext!,
+                httpContext,
                 authorizationResolver,
                 metadataProvider
                 );

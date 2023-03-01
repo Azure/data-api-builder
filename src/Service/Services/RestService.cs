@@ -399,6 +399,10 @@ namespace Azure.DataApiBuilder.Service.Services
             return (entityName, primaryKeyRoute);
         }
 
+        /// <summary>
+        /// Gets the httpContext for the current request.
+        /// </summary>
+        /// <returns>Request's httpContext.</returns>
         private HttpContext GetHttpContext()
         {
             return _httpContextAccessor.HttpContext!;

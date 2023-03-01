@@ -196,7 +196,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     queryText,
                     executeQueryStructure.Parameters,
                     _queryExecutor.GetJsonArrayAsync,
-                    _httpContextAccessor.HttpContext!);
+                    GetHttpContext());
 
             // A note on returning stored procedure results:
             // We can't infer what the stored procedure actually did beyond the HasRows and RecordsAffected attributes
@@ -430,7 +430,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             _authorizationResolver,
                             _gQLFilterParser,
                             parameters,
-                            _httpContextAccessor.HttpContext!,
+                            GetHttpContext(),
                             Config.Operation.Create)
                         : new(
                             context,
@@ -439,7 +439,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             _authorizationResolver,
                             _gQLFilterParser,
                             parameters,
-                            _httpContextAccessor.HttpContext!,
+                            GetHttpContext(),
                             Config.Operation.Create);
                     queryString = _queryBuilder.Build(insertQueryStruct);
                     queryParameters = insertQueryStruct.Parameters;
@@ -451,7 +451,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         _authorizationResolver,
                         _gQLFilterParser,
                         parameters,
-                        _httpContextAccessor.HttpContext!,
+                        GetHttpContext(),
                         Config.Operation.Update,
                         isIncrementalUpdate: false);
                     queryString = _queryBuilder.Build(updateStructure);
@@ -464,7 +464,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         _authorizationResolver,
                         _gQLFilterParser,
                         parameters,
-                        _httpContextAccessor.HttpContext!,
+                        GetHttpContext(),
                         Config.Operation.UpdateIncremental,
                         isIncrementalUpdate: true);
                     queryString = _queryBuilder.Build(updateIncrementalStructure);
@@ -483,7 +483,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         _authorizationResolver,
                         _gQLFilterParser,
                         parameters,
-                        _httpContextAccessor.HttpContext!,
+                        GetHttpContext(),
                         Config.Operation.Update);
                     queryString = _queryBuilder.Build(updateGraphQLStructure);
                     queryParameters = updateGraphQLStructure.Parameters;
@@ -521,7 +521,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         queryString,
                         queryParameters,
                         _queryExecutor.ExtractRowFromDbDataReader,
-                        _httpContextAccessor.HttpContext!,
+                        GetHttpContext(),
                         primaryKeyExposedColumnNames.Count > 0 ? primaryKeyExposedColumnNames : sourceDefinition.PrimaryKey);
 
                 if (dbOperationResultRow is not null && dbOperationResultRow.Columns.Count == 0)
@@ -551,7 +551,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         queryString,
                         queryParameters,
                         _queryExecutor.ExtractRowFromDbDataReader,
-                        _httpContextAccessor.HttpContext!);
+                        GetHttpContext());
             }
 
             return dbOperationResultRow;
@@ -578,7 +578,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 _authorizationResolver,
                 _gQLFilterParser,
                 parameters,
-                _httpContextAccessor.HttpContext!,
+                GetHttpContext(),
                 Config.Operation.Delete);
             queryString = _queryBuilder.Build(deleteStructure);
             queryParameters = deleteStructure.Parameters;
@@ -588,7 +588,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     queryString,
                     queryParameters,
                     _queryExecutor.GetResultProperties,
-                    _httpContextAccessor.HttpContext!);
+                    GetHttpContext());
 
             return resultProperties;
         }
@@ -619,7 +619,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     _authorizationResolver,
                     _gQLFilterParser,
                     parameters,
-                    httpContext: _httpContextAccessor.HttpContext!,
+                    httpContext: GetHttpContext(),
                     operationType: Config.Operation.Upsert,
                     incrementalUpdate: false);
                 queryString = _queryBuilder.Build(upsertStructure);
@@ -633,7 +633,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     _authorizationResolver,
                     _gQLFilterParser,
                     parameters,
-                    httpContext: _httpContextAccessor.HttpContext!,
+                    httpContext: GetHttpContext(),
                     operationType: Config.Operation.UpsertIncremental,
                     incrementalUpdate: true);
                 queryString = _queryBuilder.Build(upsertIncrementalStructure);
@@ -648,7 +648,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                        queryString,
                        queryParameters,
                        _queryExecutor.GetMultipleResultSetsIfAnyAsync,
-                       _httpContextAccessor.HttpContext!,
+                       GetHttpContext(),
                        new List<string> { prettyPrintPk, entityName });
         }
 
@@ -792,6 +792,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
                 );
             }
+        }
+
+        /// <summary>
+        /// Gets the httpContext for the current request.
+        /// </summary>
+        /// <returns>Request's httpContext.</returns>
+        private HttpContext GetHttpContext()
+        {
+            return _httpContextAccessor.HttpContext!;
         }
     }
 }

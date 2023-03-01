@@ -15,6 +15,7 @@ using HotChocolate.Resolvers;
 using HotChocolate.Types;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
+using Polly;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
 
 namespace Azure.DataApiBuilder.Service.Services
@@ -76,8 +77,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 else
                 {
                     Tuple<JsonDocument, IMetadata> result = await _mutationEngine.ExecuteAsync(context, parameters);
-                    context.Result = result.Item1.RootElement.Clone();
-                    result.Item1.Dispose();
+                    SetContextResult(context, result.Item1);
                     SetNewMetadata(context, result.Item2);
                 }
             }
@@ -94,16 +94,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 else
                 {
                     Tuple<JsonDocument, IMetadata> result = await _queryEngine.ExecuteAsync(context, parameters);
-                    if (result.Item1 is not null)
-                    {
-                        context.Result = result.Item1.RootElement.Clone();
-                        result.Item1.Dispose();
-                    }
-                    else
-                    {
-                        context.Result = null;
-                    }
-                    
+                    SetContextResult(context, result.Item1);
                     SetNewMetadata(context, result.Item2);
                 }
             }
@@ -126,8 +117,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 {
                     IMetadata metadata = GetMetadata(context);
                     JsonDocument innerObject = _queryEngine.ResolveInnerObject(jsonElement, context.Selection.Field, ref metadata);
-                    context.Result = innerObject.RootElement.Clone();
-                    innerObject.Dispose();
+                    SetContextResult(context, innerObject);
                     SetNewMetadata(context, metadata);
                 }
             }
@@ -146,6 +136,19 @@ namespace Azure.DataApiBuilder.Service.Services
             }
 
             await _next(context);
+        }
+
+        private static void SetContextResult(IMiddlewareContext context, JsonDocument result)
+        {
+            if (result is not null)
+            {
+                context.Result = result.RootElement.Clone();
+                result.Dispose();
+            }
+            else
+            {
+                context.Result = null;
+            }
         }
 
         private static IEnumerable<JsonElement>? GetListOfClonedElements(IEnumerable<JsonDocument> docList)

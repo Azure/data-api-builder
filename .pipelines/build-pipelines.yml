@@ -193,11 +193,11 @@ steps:
 #     filePath: $(System.DefaultWorkingDirectory)/scripts/create-manifest-file.ps1
 #     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) $(isReleaseBuild)
 
-# # This code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
-# - task: PublishPipelineArtifact@1
-#   displayName: "Upload build artifacts"
-#   inputs:
-#     targetPath: '$(Build.ArtifactStagingDirectory)' 
+# This code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
+- task: PublishPipelineArtifact@1
+  displayName: "Upload build artifacts"
+  inputs:
+    targetPath: '$(Build.ArtifactStagingDirectory)' 
 
 # - task: NuGetCommand@2
 #   displayName: 'Publish Nuget to Internal Feed'

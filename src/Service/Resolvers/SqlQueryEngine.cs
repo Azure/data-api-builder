@@ -334,7 +334,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else
             {
-                _logger.LogInformation("Did not return enough rows.");
+                _logger.LogInformation($"{HttpContextExtensions.GetLoggerCorrelationId(_httpContextAccessor.HttpContext)}" +
+                    "Did not return enough rows.");
             }
 
             return jsonDocument;

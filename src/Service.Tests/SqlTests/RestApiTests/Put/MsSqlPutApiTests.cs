@@ -63,7 +63,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 "PutOne_Update_Nulled_Test",
                 $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
                 $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
-                $"WHERE [categoryid] = 2 AND [pieceid] = 1 AND [categoryName] = 'FairyTales' " +
+                $"WHERE [categoryid] = 2 AND [pieceid] = 1 AND [categoryName] = 'Tales' " +
                 $"AND [piecesAvailable] is NULL  AND [piecesRequired] = 4 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },

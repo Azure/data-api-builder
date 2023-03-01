@@ -533,7 +533,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     if (entity.ObjectType is SourceType.StoredProcedure)
                     {
                         if ((operationsList.Count > 1)
-                            || (operationsList.Count is 1 && operationsList[0] is not Config.Operation.Execute))
+                            || (operationsList.Count is 1 && !IsValidPermissionAction(operationsList[0], entity, entityName)))
                         {
                             throw new DataApiBuilderException(
                                 message: $"Invalid Operations for Entity: {entityName}. " +
@@ -649,7 +649,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
                         if (!_runtimeConfigProvider.IsLateConfigured)
                         {
-                            LoggingRelationshipHeader(linked: true);
                             string sourceDBOName = sqlMetadataProvider.EntityToDatabaseObject[entityName].FullName;
                             string targetDBOName = sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity].FullName;
                             string cardinality = relationship.Cardinality.ToString().ToLower();
@@ -688,7 +687,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
                     if (relationship.LinkingObject is null && !_runtimeConfigProvider.IsLateConfigured)
                     {
-                        LoggingRelationshipHeader();
                         RelationShipPair sourceTargetRelationshipPair = new(sourceDatabaseObject, targetDatabaseObject);
                         RelationShipPair targetSourceRelationshipPair = new(targetDatabaseObject, sourceDatabaseObject);
                         string sourceDBOName = sqlMetadataProvider.EntityToDatabaseObject[entityName].FullName;
@@ -710,19 +708,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     }
                 }
             }
-        }
-
-        /// <summary>
-        /// Helper function simply logs the header we display before logging relationship information.
-        /// </summary>
-        /// <param name="linked"></param>
-        private void LoggingRelationshipHeader(bool linked = false)
-        {
-            string linkedMessage = linked ? " by <linking.object>(linking.source.fields: <linking.source.fields>), (linking.target.fields: <linking.target.fields>)" :
-                string.Empty;
-            _logger.LogDebug($"Logging relationship information in the form:\n" +
-                             $"<entity>: <entity.source.object>(<source.fields>) is related to <cardinality> " +
-                             $"<target.entity: <target.entity.source.object(<target.fields>){linkedMessage}.");
         }
 
         /// <summary>
@@ -964,7 +949,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         {
             if (entity.ObjectType is SourceType.StoredProcedure)
             {
-                if (!PermissionOperation.ValidStoredProcedurePermissionOperations.Contains(action))
+                if (action is not Config.Operation.All && !PermissionOperation.ValidStoredProcedurePermissionOperations.Contains(action))
                 {
                     throw new DataApiBuilderException(
                         message: $"Invalid operation for Entity: {entityName}. " +

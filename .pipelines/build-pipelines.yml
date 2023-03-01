@@ -120,6 +120,14 @@ steps:
     outputfile: $(Build.SourcesDirectory)/NOTICE.txt
     outputformat: text
 
+- task: PowerShell@2
+  displayName: "Add ChilliCream License for Banana Cake Pop"
+  inputs:
+    targetType: 'filePath'
+    filePath: $(System.DefaultWorkingDirectory)/scripts/notice-generation.ps1
+    # Artifact Staging Directory used to temporarily store downloaded ChilliCream license.
+    arguments: $(Build.ArtifactStagingDirectory) $(Build.SourcesDirectory)
+
 - template: templates/code-signing.yml
   parameters:
     # This is the path that will be used for packing nuget package.
@@ -187,6 +195,7 @@ steps:
   displayName: "Upload build artifacts"
   inputs:
     targetPath: '$(Build.ArtifactStagingDirectory)' 
+    publishLocation: 'pipeline'
 
 - task: NuGetCommand@2
   displayName: 'Publish Nuget to Internal Feed'

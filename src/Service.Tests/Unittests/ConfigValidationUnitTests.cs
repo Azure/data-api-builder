@@ -1428,11 +1428,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="excludedFields">Fields that are inaccessible to user for the role/action combination.</param>
         /// <param name="exceptionExpected">Whether an exception is expected (true when validation fails).</param>
         [DataTestMethod]
-        [DataRow(@"""@item.id ne 140""", true, "[]", @"[""name""]", true,
+        [DataRow(@"""@item.id ne 140""", true, "[]", @"[ ""name"" ]", true,
             DisplayName = "Empty array for included fields and db policy referencing some field.")]
-        [DataRow(@"""""", true, "[]", @"[""name""]", false,
+        [DataRow(@"""""", true, "[]", @"[ ""name"" ]", false,
             DisplayName = "Empty array for included fields and empty db policy.")]
-        [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", true, @"[""id"", ""name""]", @"[""title""]", false,
+        [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", true, @"[ ""id"", ""name"" ]", @"[ ""title"" ]", false,
             DisplayName = "All fields referenced by db policy present in included.")]
         [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", true, @"[ ""id"" ]", @"[""name""]", true,
             DisplayName = "One field referenced by db policy present in excluded.")]
@@ -1441,12 +1441,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", true, null, null, false,
             DisplayName = "NULL included/excluded fields and non-empty database policy.")]
         [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", true, null,
-            @"[""id"", ""name""]", true,
+            @"[ ""id"", ""name"" ]", true,
             DisplayName = "NULL included fields and fields referenced in database policy are excluded.")]
         [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", true, null,
             @"[""title""]", false,
             DisplayName = "NULL included fields and fields referenced in database policy are not excluded.")]
-        [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", true, @"[""*""]",
+        [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", true, @"[ ""*"" ]",
             null, false, DisplayName = "NULL excluded fields and fields referenced in database policy are included via wildcard")]
         [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", false, null,
             null, false,
@@ -1538,7 +1538,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="exceptionExpected">Whether an exception is expected (true when validation fails).</param>
         /// <param name="misconfiguredColumnSet">Name of the misconfigured column set (included/excluded).</param>
         [DataTestMethod]
-        [DataRow(@"""@item.id ne 140""", @"[ ""*"", ""id"" ]", @"[""name""]", true, "included",
+        [DataRow(@"""@item.id ne 140""", @"[ ""*"", ""id"" ]", @"[ ""name"" ]", true, "included",
             DisplayName = "Included fields containing wildcard and another field.")]
         [DataRow(@"""@item.id ne 140""", @"[ ""*"", ""id"" ]", @"[ ""*"", ""name"" ]", true, "excluded",
             DisplayName = "Excluded fields containing wildcard and another field.")]

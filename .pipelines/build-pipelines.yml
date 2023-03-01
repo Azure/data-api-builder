@@ -181,7 +181,7 @@ steps:
     connection: 'DataApiBuilder' # string. Required. GitHub Connection. 
     userRepository: '$(Build.Repository.Name)' # string. Required. Repository. 
     defaultVersionType: 'latest' # 'latest' | 'specificVersion' | 'specificTag'. Required. Default version. Default: latest.
-    version: # string. Required when defaultVersionType != latest. Release. 
+    # version: # string. Required when defaultVersionType != latest. Release. 
     #itemPattern: '**' # string. Item Pattern. Default: **.
     downloadPath: '$(Build.ArtifactStagingDirectory)' # string. Required. Destination directory. Default: $(System.ArtifactsDirectory).
 

@@ -220,7 +220,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // the JsonDocument here instead
             if (listType.IsObjectType())
             {
-                return JsonSerializer.Deserialize<List<JsonDocument>>(element);
+                return JsonSerializer.Deserialize<List<JsonElement>>(element);
             }
 
             return JsonSerializer.Deserialize(element, fieldSchema.RuntimeType);

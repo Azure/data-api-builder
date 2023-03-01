@@ -1528,6 +1528,15 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
         }
 
+        /// <summary>
+        /// Method to validate that any field set (included/excluded) if misconfigured, thorws an exception during
+        /// config validation stage. If any field set contains a wildcard and any other field, we consider it as misconfigured.
+        /// </summary>
+        /// <param name="databasePolicy">Database policy for a particular role/action combination for an entity.</param>
+        /// <param name="includedFields">Fields that are accessible to user for the role/action combination.</param>
+        /// <param name="excludedFields">Fields that are inaccessible to user for the role/action combination.</param>
+        /// <param name="exceptionExpected">Whether an exception is expected (true when validation fails).</param>
+        /// <param name="misconfiguredColumnSet">Name of the misconfigured column set (included/excluded).</param>
         [DataTestMethod]
         [DataRow(@"""@item.id ne 140""", @"[ ""*"", ""id"" ]", @"[""name""]", true, "included",
             DisplayName = "Included fields containing wildcard and another field.")]
@@ -1537,7 +1546,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DisplayName = "Excluded fields containing wildcard and another field and included fields is null.")]
         [DataRow(@"""@item.id ne 140""", @"[ ""*"", ""name"" ]", null, true, "included",
             DisplayName = "Included fields containing wildcard and another field and excluded fields is null.")]
-        [DataRow(@"""@item.id ne 140""", @"[ ""*"" ]", @"[ ""name"" ]", false, "included",
+        [DataRow(@"""@item.id ne 140""", @"[ ""*"" ]", @"[ ""name"" ]", false, null,
             DisplayName = "Well configured include/exclude fields.")]
         public void ValidateMisconfiguredColumnSets(
             string databasePolicy,

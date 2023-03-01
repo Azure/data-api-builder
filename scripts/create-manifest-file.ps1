@@ -79,12 +79,28 @@ $latestBlock = @'
 }
 '@ 
 
-$latestBlock = $ExecutionContext.InvokeCommand.ExpandString($latestBlock) | ConvertFrom-Json 
+$latestBlock = $ExecutionContext.InvokeCommand.ExpandString($latestBlock) | ConvertFrom-Json
+
+# Get file content of the last released manifest file
+$manifestFilePath = "$BuildOutputDir/dab-manifest.json"
+$lastReleasedData = @()
+if (Test-Path $manifestFilePath) {
+    $lastReleasedData = Get-Content $manifestFilePath -raw | ConvertFrom-Json
+}
+
+# Updating the most recent latest as old
+foreach($data in $lastReleasedData) {
+    if($data.version -eq "latest") {
+        $data.version = "old"
+    }
+    break
+}
 
 # Adding new block to the top of the list of released versions.
-# TODO: To use the data from the current manifest file and update it.
+# Add the data from the last released manifest file.
 $versionArray = @()
 $versionArray += $latestBlock
+$versionArray += $lastReleasedData
 
 # Removing the oldest version if total count exceeds the max permissible count 
 if($versionArray.Length -gt $maxVersionCount){ 

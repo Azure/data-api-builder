@@ -15,7 +15,6 @@ using HotChocolate.Resolvers;
 using HotChocolate.Types;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
-using Polly;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
 
 namespace Azure.DataApiBuilder.Service.Services

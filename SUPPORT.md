@@ -12,7 +12,7 @@ We use [GitHub Issues](https://github.com/azure/data-api-builder/issues) to trac
 
 We recommend that you search through the existing issues to see if there is a similar issue that you can comment on. If you find an existing issue, please add a comment to the existing issue instead of creating a new one.
 
-When an issue is raised, a member of the team will respond within five (5) business days. If you do not receive a response within five (5) business days, please feel free to ping the issue with a comment.
+When an issue is raised, a member of the team will respond as soon as possible, so please be patient.
 
 ## Resources
 

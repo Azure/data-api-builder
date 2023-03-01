@@ -94,8 +94,16 @@ namespace Azure.DataApiBuilder.Service.Services
                 else
                 {
                     Tuple<JsonDocument, IMetadata> result = await _queryEngine.ExecuteAsync(context, parameters);
-                    context.Result = result.Item1.RootElement.Clone();
-                    result.Item1.Dispose();
+                    if (result.Item1 is not null)
+                    {
+                        context.Result = result.Item1.RootElement.Clone();
+                        result.Item1.Dispose();
+                    }
+                    else
+                    {
+                        context.Result = null;
+                    }
+                    
                     SetNewMetadata(context, result.Item2);
                 }
             }

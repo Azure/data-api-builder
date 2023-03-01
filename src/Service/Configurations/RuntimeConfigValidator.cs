@@ -534,7 +534,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     if (entity.ObjectType is SourceType.StoredProcedure)
                     {
                         if ((operationsList.Count > 1)
-                            || (operationsList.Count is 1 && operationsList[0] is not Config.Operation.Execute))
+                            || (operationsList.Count is 1 && !IsValidPermissionAction(operationsList[0], entity, entityName)))
                         {
                             throw new DataApiBuilderException(
                                 message: $"Invalid Operations for Entity: {entityName}. " +
@@ -950,7 +950,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         {
             if (entity.ObjectType is SourceType.StoredProcedure)
             {
-                if (!PermissionOperation.ValidStoredProcedurePermissionOperations.Contains(action))
+                if (action is not Config.Operation.All && !PermissionOperation.ValidStoredProcedurePermissionOperations.Contains(action))
                 {
                     throw new DataApiBuilderException(
                         message: $"Invalid operation for Entity: {entityName}. " +

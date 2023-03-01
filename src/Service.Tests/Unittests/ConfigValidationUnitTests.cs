@@ -1423,27 +1423,56 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// work as expected.
         /// </summary>
         /// <param name="databasePolicy">Database policy for a particular role/action combination for an entity.</param>
+        /// <param name="isFieldsPresent">Boolean variable representing whether fields section is present in config.</param>
         /// <param name="includedFields">Fields that are accessible to user for the role/action combination.</param>
         /// <param name="excludedFields">Fields that are inaccessible to user for the role/action combination.</param>
         /// <param name="exceptionExpected">Whether an exception is expected (true when validation fails).</param>
         [DataTestMethod]
-        [DataRow(@"""@item.id ne 140""", "[]", @"[""name""]", true,
+        [DataRow(@"""@item.id ne 140""", true, "[]", @"[""name""]", true,
             DisplayName = "Empty array for included fields and db policy referencing some field.")]
-        [DataRow(@"""""", "[]", @"[""name""]", false,
+        [DataRow(@"""""", true, "[]", @"[""name""]", false,
             DisplayName = "Empty array for included fields and empty db policy.")]
-        [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", @"[""id"", ""name""]", @"[""title""]", false,
+        [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", true, @"[""id"", ""name""]", @"[""title""]", false,
             DisplayName = "All fields referenced by db policy present in included.")]
-        [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", @"[ ""id"" ]", @"[""name""]", true,
+        [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", true, @"[ ""id"" ]", @"[""name""]", true,
             DisplayName = "One field referenced by db policy present in excluded.")]
-        [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", @"[]", @"[]", true,
+        [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", true, @"[]", @"[]", true,
             DisplayName = "Empty arrays for included/excluded fields and non-empty database policy.")]
+        [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", true, null, null, false,
+            DisplayName = "NULL included/excluded fields and non-empty database policy.")]
+        [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", true, null,
+            @"[""id"", ""name""]", true,
+            DisplayName = "NULL included fields and fields referenced in database policy are excluded.")]
+        [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", true, null,
+            @"[""title""]", false,
+            DisplayName = "NULL included fields and fields referenced in database policy are not excluded.")]
+        [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", true, @"[""*""]",
+            null, false, DisplayName = "NULL excluded fields and fields referenced in database policy are included via wildcard")]
+        [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", false, null,
+            null, false,
+            DisplayName = "fields section absent.")]
         public void TestFieldInclusionExclusion(
             string databasePolicy,
+            bool isFieldsPresent,
             string includedFields,
             string excludedFields,
             bool exceptionExpected)
         {
-            string runtimeConfigString = @"{" +
+
+            string fields = string.Empty;
+
+            if (isFieldsPresent)
+            {
+                string prefix = @",""fields"": {";
+                string includeFields = includedFields is null ? string.Empty : @"""include"" : " + includedFields;
+                string joinIncludeExclude = includedFields is not null && excludedFields is not null ? "," : string.Empty;
+                string excludeFields = excludedFields is null ? string.Empty : @"""exclude"" : " + excludedFields;
+                string postfix = "}";
+                fields = prefix + includeFields + joinIncludeExclude + excludeFields + postfix;
+            }
+
+            string runtimeConfigString = @"{
+                    " +
                 @"""$schema"": ""test_schema""," +
                 @"""data-source"": {
                     ""database-type"": ""mssql"",
@@ -1471,12 +1500,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                                 ""action"": ""Read"",
                                 ""policy"": {
                                     ""database"":" + databasePolicy +
-                                  @"},
-                                ""fields"": {
-                                    ""include"" : " + includedFields + "," +
-                                    @"""exclude"": " + excludedFields +
-                                    @"}
-                               }
+                                  @"}" + fields +
+                               @"}
                             ]
                            }
                          ]
@@ -1494,6 +1519,92 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 DataApiBuilderException ex =
                     Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
                 Assert.AreEqual("Not all the columns required by policy are accessible.", ex.Message);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+            }
+            else
+            {
+                configValidator.ValidatePermissionsInConfig(runtimeConfig);
+            }
+        }
+
+        [DataTestMethod]
+        [DataRow(@"""@item.id ne 140""", @"[ ""*"", ""id"" ]", @"[""name""]", true, "included",
+            DisplayName = "Included fields containing wildcard and another field.")]
+        [DataRow(@"""@item.id ne 140""", @"[ ""*"", ""id"" ]", @"[ ""*"", ""name"" ]", true, "excluded",
+            DisplayName = "Excluded fields containing wildcard and another field.")]
+        [DataRow(@"""@item.id ne 140""", null, @"[ ""*"", ""name"" ]", true, "excluded",
+            DisplayName = "Excluded fields containing wildcard and another field and included fields is null.")]
+        [DataRow(@"""@item.id ne 140""", @"[ ""*"", ""name"" ]", null, true, "included",
+            DisplayName = "Included fields containing wildcard and another field and excluded fields is null.")]
+        [DataRow(@"""@item.id ne 140""", @"[ ""*"" ]", @"[ ""name"" ]", false, "included",
+            DisplayName = "Well configured include/exclude fields.")]
+        public void ValidateMisconfiguredColumnSets(
+            string databasePolicy,
+            string includedFields,
+            string excludedFields,
+            bool exceptionExpected,
+            string misconfiguredColumnSet)
+        {
+
+            string fields = string.Empty;
+
+            string prefix = @",""fields"": {";
+            string includeFields = includedFields is null ? string.Empty : @"""include"" : " + includedFields;
+            string joinIncludeExclude = includedFields is not null && excludedFields is not null ? "," : string.Empty;
+            string excludeFields = excludedFields is null ? string.Empty : @"""exclude"" : " + excludedFields;
+            string postfix = "}";
+            fields = prefix + includeFields + joinIncludeExclude + excludeFields + postfix;
+
+            string runtimeConfigString = @"{
+                    " +
+                @"""$schema"": ""test_schema""," +
+                @"""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""testconnectionstring"",
+                    ""options"":{
+                        ""set-session-context"": false
+                    }
+                },
+                ""runtime"": {
+                    ""host"": {
+                    ""mode"": ""development"",
+                    ""authentication"": {
+                        ""provider"": ""StaticWebApps""
+                    }
+                  }
+                },
+                ""entities"": {
+                    ""Publisher"":{
+                        ""source"": ""publishers"",
+                        ""permissions"": [
+                           {
+                            ""role"": ""anonymous"",
+                            ""actions"": [
+                               {
+                                ""action"": ""Read"",
+                                ""policy"": {
+                                    ""database"":" + databasePolicy +
+                                  @"}" + fields +
+                               @"}
+                            ]
+                           }
+                         ]
+                        }
+                    }
+                }";
+
+            RuntimeConfig runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(runtimeConfigString, RuntimeConfig.SerializerOptions);
+            runtimeConfig!.DetermineGlobalSettings();
+            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+
+            // Perform validation on the permissions in the config and assert the expected results.
+            if (exceptionExpected)
+            {
+                DataApiBuilderException ex =
+                    Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
+                Assert.AreEqual($"No other field can be present with wildcard in the {misconfiguredColumnSet} " +
+                    $"set for: entity:Publisher, role:anonymous, action:Read", ex.Message);
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
             }

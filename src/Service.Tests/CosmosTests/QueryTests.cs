@@ -6,8 +6,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.Resolvers;
+using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -49,6 +51,14 @@ query{
     }
 }
 ";
+        public static readonly string MoonWithInvalidAuthorizationPolicy = @"
+query ($id: ID, $partitionKeyValue: String) {
+    moon_by_pk (id: $id, _partitionKeyValue: $partitionKeyValue){
+        id
+        name
+        details
+    }
+}";
         private static List<string> _idList;
         private const int TOTAL_ITEM_COUNT = 10;
 
@@ -61,6 +71,7 @@ query{
             _idList = CreateItems(DATABASE_NAME, _containerName, TOTAL_ITEM_COUNT);
             OverrideEntityContainer("Planet", _containerName);
             OverrideEntityContainer("StarAlias", _containerName);
+            OverrideEntityContainer("Moon", _containerName);
         }
 
         [TestMethod]
@@ -72,6 +83,31 @@ query{
 
             // Validate results
             Assert.AreEqual(id, response.GetProperty("id").GetString());
+        }
+
+        /// <summary>
+        /// Tests that the GraphQLAuthorizationHandler fails requests when selected fields
+        /// have a schema definition that attempts to define an authorization policy:
+        /// @authorize(policy: "PolicyName")
+        /// These requests should fail because defining policies on the authorize directive
+        /// is not supported.
+        /// </summary>
+        [TestMethod]
+        public async Task GetWithInvalidAuthorizationPolicyInSchema()
+        {
+            // Run query
+            string id = _idList[0];
+            string clientRoleHeader = AuthorizationType.Authenticated.ToString();
+            JsonElement response = await ExecuteGraphQLRequestAsync(
+                queryName: "moon_by_pk",
+                query: MoonWithInvalidAuthorizationPolicy,
+                variables: new() { { "id", id }, { "partitionKeyValue", id } },
+                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
+                clientRoleHeader: clientRoleHeader);
+
+            // Validate the result contains the GraphQL authorization error code.
+            string errorMessage = response.ToString();
+            Assert.IsTrue(errorMessage.Contains(AuthorizationHelpers.GRAPHQL_AUTHORIZATION_ERROR));
         }
 
         [TestMethod]

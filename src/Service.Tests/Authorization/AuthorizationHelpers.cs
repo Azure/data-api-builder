@@ -22,6 +22,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
     {
         public const string TEST_ENTITY = "SampleEntity";
         public const string TEST_ROLE = "Writer";
+        public const string GRAPHQL_AUTHORIZATION_ERROR = "AUTH_NOT_AUTHORIZED";
 
         /// <summary>
         /// Creates stub AuthorizationResolver object from provided runtimeConfig object.

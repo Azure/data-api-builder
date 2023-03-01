@@ -37,18 +37,25 @@ type Character @model(name:""Character"") {
 }
 
 type Planet @model(name:""Planet"") {
-    id : ID,
+    id : ID!,
     name : String,
     character: Character,
     age : Int,
     dimension : String,
-    stars: [Star]
+    stars: [Star],
+    moons: [Moon],
     tags: [String!]
 }
 
 type Star @model(name:""StarAlias"") {
     id : ID,
     name : String
+}
+
+type Moon @model(name:""Moon"") @authorize(policy: ""Crater"") {
+    id : ID,
+    name : String,
+    details : String
 }";
 
         private static string[] _planets = { "Earth", "Mars", "Jupiter", "Tatooine", "Endor", "Dagobah", "Hoth", "Bespin", "Spec%ial" };
@@ -66,7 +73,7 @@ type Star @model(name:""StarAlias"") {
 
             //create mock authorization resolver where mock entityPermissionsMap is created for Planet and Character.
             Mock<IAuthorizationResolver> authorizationResolverCosmos = new();
-            authorizationResolverCosmos.Setup(x => x.EntityPermissionsMap).Returns(GetEntityPermissionsMap(new string[] { "Character", "Planet", "StarAlias" }));
+            authorizationResolverCosmos.Setup(x => x.EntityPermissionsMap).Returns(GetEntityPermissionsMap(new string[] { "Character", "Planet", "StarAlias", "Moon" }));
 
             _application = new WebApplicationFactory<Startup>()
                 .WithWebHostBuilder(builder =>
@@ -130,10 +137,10 @@ type Star @model(name:""StarAlias"") {
         /// <param name="query"> The GraphQL query/mutation</param>
         /// <param name="variables">Variables to be included in the GraphQL request. If null, no variables property is included in the request, to pass an empty object provide an empty dictionary</param>
         /// <returns></returns>
-        internal static Task<JsonElement> ExecuteGraphQLRequestAsync(string queryName, string query, Dictionary<string, object> variables = null)
+        internal static Task<JsonElement> ExecuteGraphQLRequestAsync(string queryName, string query, Dictionary<string, object> variables = null, string authToken = null, string clientRoleHeader = null)
         {
             RuntimeConfigProvider configProvider = _application.Services.GetService<RuntimeConfigProvider>();
-            return GraphQLRequestExecutor.PostGraphQLRequestAsync(_client, configProvider, queryName, query, variables);
+            return GraphQLRequestExecutor.PostGraphQLRequestAsync(_client, configProvider, queryName, query, variables, authToken, clientRoleHeader);
         }
 
         internal static async Task<JsonDocument> ExecuteCosmosRequestAsync(string query, int pagesize, string continuationToken, string containerName)

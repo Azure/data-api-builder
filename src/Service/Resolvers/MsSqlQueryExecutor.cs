@@ -56,12 +56,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public MsSqlQueryExecutor(
             RuntimeConfigProvider runtimeConfigProvider,
             DbExceptionParser dbExceptionParser,
-            ILogger<IQueryExecutor> logger)
+            ILogger<IQueryExecutor> logger,
+            IHttpContextAccessor httpContextAccessor)
             : base(dbExceptionParser,
                   logger,
                   new SqlConnectionStringBuilder(
                       runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString),
-                  runtimeConfigProvider)
+                  runtimeConfigProvider,
+                  httpContextAccessor)
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
 
@@ -150,7 +152,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             catch (CredentialUnavailableException ex)
             {
-                QueryExecutorLogger.LogWarning($"Attempt to retrieve a managed identity access token using DefaultAzureCredential" +
+                QueryExecutorLogger.LogWarning($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContextAccessor.HttpContext)}" +
+                    $"Attempt to retrieve a managed identity access token using DefaultAzureCredential" +
                     $" failed due to: \n{ex}");
             }
 

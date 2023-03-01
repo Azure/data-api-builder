@@ -1,10 +1,20 @@
-# What's New in Data API Builder
+# What's New in Data API builder
 
+- [Version 0.5.32](#version-0532)
 - [Version 0.5.0](#version-050)
 - [Version 0.4.11](#version-0411)
 - [Version 0.3.7](#version-037)
 
 Details on how to install the latest version are here: [Installing DAB CLI](./getting-started/getting-started.md#installing-dab-cli)
+
+## Version 0.5.32
+
+The full list of release notes for this version is available here: [version 0.5.32 release notes](https://github.com/Azure/data-api-builder/releases/tag/v0.5.32-beta)
+- [Ability to customize rest path via CLI](./whats-new-0.5.32.md#customize-rest-path-cli)
+- [Data API builder container image in MAR](./whats-new-0.5.32.md#container-image-in-mar)
+- [Support for GraphQL fragments](./whats-new-0.5.32.md#grapql-fragments-support)
+- [Generate NOTICE.txt in the pipeline for distribution and include LICENSE, README, NOTICE in zip, nuget, docker image](./whats-new-0.5.32.md#notice-license-readme-in-binaries-and-container-image)
+- [Turn on BinSkim and fix Policheck alerts](./whats-new-0.5.32.md#turn-on-binskim-fix-policheck)
 
 ## Version 0.5.0
 

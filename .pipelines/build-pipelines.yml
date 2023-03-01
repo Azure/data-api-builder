@@ -120,6 +120,14 @@ steps:
     outputfile: $(Build.SourcesDirectory)/NOTICE.txt
     outputformat: text
 
+- task: PowerShell@2
+  displayName: "Add ChilliCream License for Banana Cake Pop"
+  inputs:
+    targetType: 'filePath'
+    filePath: $(System.DefaultWorkingDirectory)/scripts/notice-generation.ps1
+    # Artifact Staging Directory used to temporarily store downloaded ChilliCream license.
+    arguments: $(Build.ArtifactStagingDirectory) $(Build.SourcesDirectory)
+
 - template: templates/code-signing.yml
   parameters:
     # This is the path that will be used for packing nuget package.
@@ -145,14 +153,14 @@ steps:
   displayName: "Package DAB to multiple platforms"
   inputs:
     targetType: 'filePath'
-    filePath: $(System.DefaultWorkingDirectory)/publish.ps1
+    filePath: $(System.DefaultWorkingDirectory)/scripts/publish.ps1
     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) -Package
 
 - task: PowerShell@2
   displayName: "Smoke Test for DAB CLI"
   inputs:
     targetType: 'filePath'
-    filePath: $(System.DefaultWorkingDirectory)/dab-smoke-test-script.ps1
+    filePath: $(System.DefaultWorkingDirectory)/scripts/dab-smoke-test-script.ps1
     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(Agent.OS)  $(dabVersion)
 
 # Sign the binaries that were generated per platform
@@ -165,7 +173,7 @@ steps:
   displayName: "Zip the binaries after signing"
   inputs:
     targetType: 'filePath'
-    filePath: $(System.DefaultWorkingDirectory)/publish.ps1
+    filePath: $(System.DefaultWorkingDirectory)/scripts/publish.ps1
     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) -CreateZip
 
 # Generating SBOM manifest for Dab files
@@ -179,7 +187,7 @@ steps:
   displayName: "Generate Manifest File"
   inputs:
     targetType: 'filePath'
-    filePath: $(System.DefaultWorkingDirectory)/create_manifest_file.ps1
+    filePath: $(System.DefaultWorkingDirectory)/scripts/create-manifest-file.ps1
     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) $(isReleaseBuild)
 
 # This code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
@@ -187,6 +195,7 @@ steps:
   displayName: "Upload build artifacts"
   inputs:
     targetPath: '$(Build.ArtifactStagingDirectory)' 
+    publishLocation: 'pipeline'
 
 - task: NuGetCommand@2
   displayName: 'Publish Nuget to Internal Feed'
@@ -276,7 +285,7 @@ steps:
       $(dabVersion)
 
 # Build a docker image and push it to ACR for publishing to MCR.
-# This step will pick the image with name `public/azure/data-api-builder` and push to MCR.
+# This step will pick the image with name `public/azure-databases/data-api-builder` and push to MCR.
 # This image will also be available in DockerHub.
 # Tag the image with dab version and latest.
 - task: Docker@2
@@ -284,7 +293,7 @@ steps:
   condition: eq(variables.isReleaseBuild, 'true')
   inputs:
     containerRegistry: 'CosmosDB GraphQL/Hawaii'
-    repository: 'public/azure/data-api-builder'
+    repository: 'public/azure-databases/data-api-builder'
     command: 'buildAndPush'
     Dockerfile: '**/Dockerfile'
     tags: |

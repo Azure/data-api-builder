@@ -5,6 +5,7 @@ using System;
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
@@ -218,8 +219,8 @@ namespace Azure.DataApiBuilder.Service.Controllers
             }
             catch (DataApiBuilderException ex)
             {
-                _logger.LogError(ex.Message);
-                _logger.LogError(ex.StackTrace);
+                _logger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}{ex.Message}");
+                _logger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}{ex.StackTrace}");
                 if (ex.SubStatusCode is DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed)
                 {
                     return new ForbidResult();
@@ -232,8 +233,8 @@ namespace Azure.DataApiBuilder.Service.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex.Message);
-                _logger.LogError(ex.StackTrace);
+                _logger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}{ex.Message}");
+                _logger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}{ex.StackTrace}");
                 Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                 return ErrorResponse(
                     DataApiBuilderException.SubStatusCodes.UnexpectedError.ToString(),

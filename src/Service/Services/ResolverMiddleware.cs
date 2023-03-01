@@ -195,7 +195,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
         protected static bool IsInnerObject(IMiddlewareContext context)
         {
-            return context.Selection.Field.Type.IsObjectType() && context.Parent<JsonDocument>() != default;
+            return context.Selection.Field.Type.IsObjectType() && context.Parent<JsonElement?>() is not null;
         }
 
         /// <summary>

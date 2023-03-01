@@ -114,7 +114,7 @@ namespace Cli.Tests
         /// <param name="sourceType">Table, StoredProcedure, View</param>
         /// <param name="isSuccess">True/False</param>
         [DataTestMethod]
-        [DataRow(new string[] { "*" }, SourceType.StoredProcedure, false, DisplayName = "FAIL: Stored-Procedure with wildcard CRUD operation.")]
+        [DataRow(new string[] { "*" }, SourceType.StoredProcedure, true, DisplayName = "PASS: Stored-Procedure with wildcard CRUD operation.")]
         [DataRow(new string[] { "execute" }, SourceType.StoredProcedure, true, DisplayName = "PASS: Stored-Procedure with execute operation only.")]
         [DataRow(new string[] { "create", "read" }, SourceType.StoredProcedure, false, DisplayName = "FAIL: Stored-Procedure with more than 1 CRUD operation.")]
         [DataRow(new string[] { "*" }, SourceType.Table, true, DisplayName = "PASS: Table with wildcard CRUD operation.")]

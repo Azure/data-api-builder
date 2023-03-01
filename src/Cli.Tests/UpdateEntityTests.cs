@@ -1030,7 +1030,7 @@ namespace Cli.Tests
             SINGLE_ENTITY_WITH_STORED_PROCEDURE, new string[] { "anonymous", "execute" }, false, false,
             DisplayName = "FAIL:Convert table to stored-procedure with invalid KeyFields.")]
         [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "stored-procedure", null, null, SINGLE_ENTITY_WITH_STORED_PROCEDURE, null,
-            true, false, DisplayName = "FAIL:Convert table with wildcard CRUD operation to stored-procedure.")]
+            true, true, DisplayName = "PASS:Convert table with wildcard CRUD operation to stored-procedure.")]
         [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "table", null, new string[] { "id", "name" },
             SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, new string[] { "anonymous", "*" }, false, true,
             DisplayName = "PASS:Convert stored-procedure to table with valid KeyFields.")]
@@ -1219,10 +1219,10 @@ namespace Cli.Tests
         /// 2. Adding a new role/Updating an existing role with execute action should succeeed.
         /// </summary>
         [DataTestMethod]
-        [DataRow("anonymous", "*", false, DisplayName = "FAIL: Stored-Procedure updated with wildcard operation")]
+        [DataRow("anonymous", "*", true, DisplayName = "PASS: Stored-Procedure updated with wildcard operation")]
         [DataRow("anonymous", "execute", true, DisplayName = "PASS: Stored-Procedure updated with execute operation")]
         [DataRow("anonymous", "create,read", false, DisplayName = "FAIL: Stored-Procedure updated with CRUD action.")]
-        [DataRow("authenticated", "*", false, DisplayName = "FAIL: Stored-Procedure updated with wildcard operation for an existing role.")]
+        [DataRow("authenticated", "*", true, DisplayName = "PASS: Stored-Procedure updated with wildcard operation for an existing role.")]
         [DataRow("authenticated", "execute", true, DisplayName = "PASS: Stored-Procedure updated with execute operation for an existing role.")]
         [DataRow("authenticated", "create,read", false, DisplayName = "FAIL: Stored-Procedure updated with CRUD action for an existing role.")]
         public void TestUpdatePermissionsForStoredProcedure(

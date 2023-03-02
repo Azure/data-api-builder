@@ -137,6 +137,12 @@ namespace Azure.DataApiBuilder.Service.Services
             await _next(context);
         }
 
+        /// <summary>
+        /// Set the context's result and dispose properly. If result is not null
+        /// clone root and disponse, otherwise set to null.
+        /// </summary>
+        /// <param name="context">Context to store result.</param>
+        /// <param name="result">Result to store in context.</param>
         private static void SetContextResult(IMiddlewareContext context, JsonDocument result)
         {
             if (result is not null)
@@ -150,6 +156,12 @@ namespace Azure.DataApiBuilder.Service.Services
             }
         }
 
+        /// <summary>
+        /// Create and return a list of cloned root elements from a collection of JsonDocuments.
+        /// Dispose of each JsonDocument after its root element is cloned.
+        /// </summary>
+        /// <param name="docList">List of JsonDocuments to clone and dispose.</param>
+        /// <returns>List of cloned root elements.</returns>
         private static IEnumerable<JsonElement>? GetListOfClonedElements(IEnumerable<JsonDocument> docList)
         {
             List<JsonElement> result = new();

@@ -89,9 +89,11 @@ if (Test-Path $manifestFilePath) {
 }
 
 # marking previous versions as old
+# there will always be only 1 "latest" version
 foreach($data in $lastReleasedData) {
     if($data.version -eq "latest") {
         $data.version = "old"
+        break
     }
 }
 

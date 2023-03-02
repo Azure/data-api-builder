@@ -113,6 +113,35 @@
           "plural": "Stars"
         }
       }
+    },
+    "Moon": {
+      "source": {
+        "type": "table",
+        "object": "graphqldb.moon",
+        "key-fields": []
+      },
+      "rest": false,
+      "graphql": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        }
+      ]
     }
   }
 }

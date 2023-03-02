@@ -69,51 +69,50 @@ To add a new Entity to the config. It will fail if the config doesn't exist.
 
 #### options:
 <pre>
--s, --source               Name of the source table or container.
+-s, --source              :Name of the source table or container.
 
---permissions              Permissions required to access the source table or container.
+--permissions             :Permissions required to access the source table or container.
 
---relationship             Specify relationship between two entities.
+--relationship            :Specify relationship between two entities.
 
---cardinality              Specify cardinality between two entities.
+--cardinality             :Specify cardinality between two entities.
 
---target.entity            Another exposed entity to which the source entity relates to.
+--target.entity           :Another exposed entity to which the source entity relates to.
 
---linking.object           Database object that is used to support an M:N relationship.
+--linking.object          :Database object that is used to support an M:N relationship.
 
---linking.source.fields    Database fields in the linking object to connect to the related item in the source entity.
+--linking.source.fields   :Database fields in the linking object to connect to the related item in the source entity.
 
---linking.target.fields    Database fields in the linking object to connect to the related item in the target entity.
+--linking.target.fields   :Database fields in the linking object to connect to the related item in the target entity.
 
---relationship.fields      Specify fields to be used for mapping the entities.
+--relationship.fields     :Specify fields to be used for mapping the entities.
 
--m, --map                  Specify mappings between database fields and GraphQL and REST fields. format: --map
+-m, --map                 :Specify mappings between database fields and GraphQL and REST fields. format: --map
                            "backendName1:exposedName1,backendName2:exposedName2,...".
+--source.type             :Type of the database object.Must be one of: [table, view, stored-procedure]
 
---source.type              Type of the database object.Must be one of: [table, view, stored-procedure]
+--source.params           :Dictionary of parameters and their values for Source object."param1:val1,param2:value2,.."
 
---source.params            Dictionary of parameters and their values for Source object."param1:val1,param2:value2,.."
+--source.key-fields       :The field(s) to be used as primary keys.
 
---source.key-fields        The field(s) to be used as primary keys.
+--rest                    :Route for rest api.
 
---rest                     Route for rest api.
-
---rest.methods             HTTP actions to be supported for stored procedure. Specify the actions as a comma separated list. Valid HTTP actions are :
+--rest.methods            :HTTP actions to be supported for stored procedure. Specify the actions as a comma separated list. Valid HTTP actions are :
                            [GET, POST, PUT, PATCH, DELETE]
 
---graphql                  Type of graphQL.
+--graphql                 :Type of graphQL.
 
---graphql.operation        GraphQL operation to be supported for stored procedure. Valid operations are : [Query, Mutation]
+--graphql.operation       :GraphQL operation to be supported for stored procedure. Valid operations are : [Query, Mutation]
 
---fields.include           Fields that are allowed access to permission.
+--fields.include          :Fields that are allowed access to permission.
 
---fields.exclude           Fields that are excluded from the action lists.
+--fields.exclude          :Fields that are excluded from the action lists.
 
---policy-request           Specify the rule to be checked before sending any request to the database.
+--policy-request          :Specify the rule to be checked before sending any request to the database.
 
---policy-database          Specify an OData style filter rule that will be injected in the query sent to the database.
+--policy-database         :Specify an OData style filter rule that will be injected in the query sent to the database.
 
--c, --config               Path to config file. Defaults to 'dab-config.json'.
+-c, --config              :Path to config file. Defaults to 'dab-config.json'.
 </pre>
 
 
@@ -126,51 +125,51 @@ To update properties of any Entity present in the config.
 
 #### options:
 <pre>
--s, --source               Name of the source table or container.
+-s, --source              :Name of the source table or container.
 
---permissions              Permissions required to access the source table or container.
+--permissions             :Permissions required to access the source table or container.
 
---relationship             Specify relationship between two entities.
+--relationship            :Specify relationship between two entities.
 
---cardinality              Specify cardinality between two entities.
+--cardinality             :Specify cardinality between two entities.
 
---target.entity            Another exposed entity to which the source entity relates to.
+--target.entity           :Another exposed entity to which the source entity relates to.
 
---linking.object           Database object that is used to support an M:N relationship.
+--linking.object          :Database object that is used to support an M:N relationship.
 
---linking.source.fields    Database fields in the linking object to connect to the related item in the source entity.
+--linking.source.fields   :Database fields in the linking object to connect to the related item in the source entity.
 
---linking.target.fields    Database fields in the linking object to connect to the related item in the target entity.
+--linking.target.fields   :Database fields in the linking object to connect to the related item in the target entity.
 
---relationship.fields      Specify fields to be used for mapping the entities.
+--relationship.fields     :Specify fields to be used for mapping the entities.
 
--m, --map                  Specify mappings between database fields and GraphQL and REST fields. format: --map
+-m, --map                 :Specify mappings between database fields and GraphQL and REST fields. format: --map
                            "backendName1:exposedName1,backendName2:exposedName2,...".
 
---source.type              Type of the database object.Must be one of: [table, view, stored-procedure]
+--source.type             :Type of the database object.Must be one of: [table, view, stored-procedure]
 
---source.params            Dictionary of parameters and their values for Source object."param1:val1,param2:value2,.."
+--source.params           :Dictionary of parameters and their values for Source object."param1:val1,param2:value2,.."
 
---source.key-fields        The field(s) to be used as primary keys.
+--source.key-fields       :The field(s) to be used as primary keys.
 
---rest                     Route for rest api.
+--rest                    :Route for rest api.
 
---rest.methods             HTTP actions to be supported for stored procedure. Specify the actions as a comma separated list. Valid HTTP actions are :
+--rest.methods            :HTTP actions to be supported for stored procedure. Specify the actions as a comma separated list. Valid HTTP actions are :
                            [GET, POST, PUT, PATCH, DELETE]
 
---graphql                  Type of graphQL.
+--graphql                 :Type of graphQL.
 
---graphql.operation        GraphQL operation to be supported for stored procedure. Valid operations are : [Query, Mutation]
+--graphql.operation       :GraphQL operation to be supported for stored procedure. Valid operations are : [Query, Mutation]
 
---fields.include           Fields that are allowed access to permission.
+--fields.include          :Fields that are allowed access to permission.
 
---fields.exclude           Fields that are excluded from the action lists.
+--fields.exclude          :Fields that are excluded from the action lists.
 
---policy-request           Specify the rule to be checked before sending any request to the database.
+--policy-request          :Specify the rule to be checked before sending any request to the database.
 
---policy-database          Specify an OData style filter rule that will be injected in the query sent to the database.
+--policy-database         :Specify an OData style filter rule that will be injected in the query sent to the database.
 
--c, --config               Path to config file. Defaults to 'dab-config.json'.
+-c, --config              :Path to config file. Defaults to 'dab-config.json'.
 </pre>
 
 
@@ -183,13 +182,13 @@ To start the runtime engine for serving rest/graphQL requests.
 
 #### options:
 <pre>
---verbose              Specify logging level as informational.
+--verbose             :Specify logging level as informational.
 
---LogLevel             Specify logging level as provided value. example: debug, error, information, etc.
+--LogLevel            :Specify logging level as provided value. example: debug, error, information, etc.
 
---no-https-redirect    Disables automatic https redirects.
+--no-https-redirect   :Disables automatic https redirects.
 
--c, --config           Path to config file. Defaults to 'dab-config.json'.
+-c, --config          :Path to config file. Defaults to 'dab-config.json'.
 </pre>
 
 **NOTE:** 

@@ -89,6 +89,7 @@ To add a new Entity to the config. It will fail if the config doesn't exist.
 
 -m, --map                 :Specify mappings between database fields and GraphQL and REST fields. format: --map
                            "backendName1:exposedName1,backendName2:exposedName2,...".
+                           
 --source.type             :Type of the database object.Must be one of: [table, view, stored-procedure]
 
 --source.params           :Dictionary of parameters and their values for Source object."param1:val1,param2:value2,.."

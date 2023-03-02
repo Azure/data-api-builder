@@ -115,7 +115,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 if (TryGetPropertyFromParent(context, out jsonElement))
                 {
                     IMetadata metadata = GetMetadata(context);
-                    JsonDocument innerObject = _queryEngine.ResolveInnerObject(jsonElement, context.Selection.Field, ref metadata);
+                    using JsonDocument innerObject = _queryEngine.ResolveInnerObject(jsonElement, context.Selection.Field, ref metadata);
                     SetContextResult(context, innerObject);
                     SetNewMetadata(context, metadata);
                 }
@@ -205,7 +205,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
         protected static bool TryGetPropertyFromParent(IMiddlewareContext context, out JsonElement jsonElement)
         {
-            JsonDocument result = JsonDocument.Parse(JsonSerializer.Serialize(context.Parent<JsonElement>()));
+            using JsonDocument result = JsonDocument.Parse(JsonSerializer.Serialize(context.Parent<JsonElement>()));
             if (result is null)
             {
                 jsonElement = default;

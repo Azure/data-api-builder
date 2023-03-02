@@ -30,7 +30,7 @@
         - [Policies](#policies)
         - [Limitations](#limitations)
       - [Mappings](#mappings)
-  - [Sample Config](#sample-config)
+      - [Sample Config](#sample-config)
 
 ## Summary
 
@@ -475,7 +475,7 @@ In case all actions are allowed, the wildcard character `*` can be used as a sho
 }
 ```
 
-For stored procedures, roles can only be configured with `execute` action and the wildcard `*` action will expand to `execute`.
+For stored procedures, roles can only be configured with the `execute` action or the wildcard `*`. The wildcard `*` will expand to the `execute` action for stored precedures.
 For tables and views, the wildcard `*` action expands to the actions `create, read, update, delete`.
 
 ##### Fields

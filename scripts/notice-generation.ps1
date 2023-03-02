@@ -16,7 +16,7 @@ Invoke-WebRequest $chiliCreamLicenseMetadataURL `
 # Concatenate existing NOTICE.txt file with Chilicream license.
 $noticeFilePath = "$BuildSourcesDir/NOTICE.txt"
 
-# Replace erroneous copyright, using [System.IO.File] for better performance that Get-Content and Set-Content
+# Replace erroneous copyright, using [System.IO.File] for better performance than Get-Content and Set-Content
 $content = [System.IO.File]::ReadAllText($noticeFilePath).Replace("(c) Microsoft 2023`n","")
 $chiliCreamLicenseText = [System.IO.File]::ReadAllText($chiliCreamLicenseSavePath)
 $bananaCakePopCopyright = "`r`nBanana Cake Pop`r`n`r`nCopyright 2023 ChilliCream, Inc.`r`n`r`n"

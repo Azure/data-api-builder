@@ -293,7 +293,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         context);
 
                 DbResultSetRow? dbResultSetRow = upsertOperationResult is not null ?
-                    upsertOperationResult.Rows.FirstOrDefault()! : null;
+                    (upsertOperationResult.Rows.FirstOrDefault() ?? new()) : null;
 
                 if (upsertOperationResult is not null &&
                     dbResultSetRow is not null && dbResultSetRow.Columns.Count > 0)
@@ -524,7 +524,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         _httpContextAccessor.HttpContext!,
                         primaryKeyExposedColumnNames.Count > 0 ? primaryKeyExposedColumnNames : sourceDefinition.PrimaryKey);
 
-                dbResultSetRow = dbResultSet is not null ? dbResultSet.Rows.FirstOrDefault() : null;
+                dbResultSetRow = dbResultSet is not null ?
+                    (dbResultSet.Rows.FirstOrDefault() ?? new DbResultSetRow()) : null;
                 if (dbResultSetRow is not null && dbResultSetRow.Columns.Count == 0)
                 {
                     string searchedPK;
@@ -553,7 +554,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         queryParameters,
                         _queryExecutor.ExtractRowsFromResultSet,
                         _httpContextAccessor.HttpContext!);
-                dbResultSetRow = dbResultSet is not null ? dbResultSet.Rows.FirstOrDefault() : null;
+                dbResultSetRow = dbResultSet is not null ? (dbResultSet.Rows.FirstOrDefault() ?? new()) : null;
             }
 
             return dbResultSetRow;

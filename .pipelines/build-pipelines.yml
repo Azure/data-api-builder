@@ -30,7 +30,7 @@ variables:
   # The counter is reset when the minor version is updated.
   patch: $[counter(format('{0}_{1}', variables['build.reason'], variables['minor']), 0)]
   isReleaseBuild: $(isNugetRelease)
-  additionalProperties.version: 'https://dataapibuilder.azureedge.net/schemas/v$(major).$(minor).$(patch)-beta/dab.draft.schema.json'
+  additionalProperties.version: 'https://dataapibuilder.azureedge.net/schemas/v$(major).$(minor).$(patch)/dab.draft.schema.json'
 
 steps:
 - task: NuGetAuthenticate@1
@@ -182,6 +182,15 @@ steps:
   inputs:
       BuildDropPath: '$(Build.ArtifactStagingDirectory)'
 
+# Downloads the manifest file from the latest GitHub Release.
+- task: DownloadGitHubRelease@0
+  inputs:
+    connection: 'DataApiBuilder'
+    userRepository: '$(Build.Repository.Name)'
+    defaultVersionType: 'latest'
+    itemPattern: 'dab-manifest.json'
+    downloadPath: '$(Build.ArtifactStagingDirectory)'
+
 # Generating Manifest File for generated Zip package
 - task: PowerShell@2
   displayName: "Generate Manifest File"
@@ -234,7 +243,7 @@ steps:
     action: 'create'
     target: '$(Build.SourceVersion)'
     tagSource: 'userSpecifiedTag'
-    tag: 'v$(dabVersion)-beta'
+    tag: 'v$(dabVersion)'
     title: 'New Release: Data API Builder for Azure Databases'
     assets: |
       $(Build.ArtifactStagingDirectory)/**/*.nupkg

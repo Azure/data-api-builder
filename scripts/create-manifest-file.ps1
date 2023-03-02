@@ -12,7 +12,7 @@ $versionId = $DabVersion
 $versionTag = "untagged" #untagged. non-release build will have no tag
 $releaseType = "development"
 $releaseDate = (Get-Date).ToUniversalTime().ToString('u')
-$maxVersionCount = 3
+$maxVersionCount = 100
 
 if ($isReleaseBuild -eq 'true')
 {
@@ -88,12 +88,11 @@ if (Test-Path $manifestFilePath) {
     $lastReleasedData = Get-Content $manifestFilePath -raw | ConvertFrom-Json
 }
 
-# Updating the most recent latest as old
+# marking previous versions as old
 foreach($data in $lastReleasedData) {
     if($data.version -eq "latest") {
         $data.version = "old"
     }
-    break
 }
 
 # Adding new block to the top of the list of released versions.

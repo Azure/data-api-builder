@@ -184,7 +184,6 @@ steps:
 
 # Downloads the manifest file from the latest GitHub Release.
 - task: DownloadGitHubRelease@0
-  continueOnError: true
   inputs:
     connection: 'DataApiBuilder'
     userRepository: '$(Build.Repository.Name)'

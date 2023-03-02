@@ -206,6 +206,13 @@ steps:
     targetPath: '$(Build.ArtifactStagingDirectory)' 
     publishLocation: 'pipeline'
 
+# Add code sign validation task after all binaries are code signed and copied to artifact staging directory
+- task: securedevelopmentteam.vss-secure-development-tools.build-task-codesignvalidation.CodeSign@1
+  displayName: 'Run Codesign Validation'
+  # condition: eq(variables.isReleaseBuild, 'true')
+  inputs:
+    Path: '$(Build.ArtifactStagingDirectory);$(Build.SourcesDirectory)/src/out/cli/$(buildConfiguration)/net6.0/publish'
+
 - task: NuGetCommand@2
   displayName: 'Publish Nuget to Internal Feed'
   condition: eq(variables.isReleaseBuild, 'true')

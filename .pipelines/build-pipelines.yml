@@ -30,7 +30,7 @@ variables:
   # The counter is reset when the minor version is updated.
   patch: $[counter(format('{0}_{1}', variables['build.reason'], variables['minor']), 0)]
   isReleaseBuild: $(isNugetRelease)
-  additionalProperties.version: 'https://dataapibuilder.azureedge.net/schemas/v$(major).$(minor).$(patch)-beta/dab.draft.schema.json'
+  additionalProperties.version: 'https://dataapibuilder.azureedge.net/schemas/v$(major).$(minor).$(patch)/dab.draft.schema.json'
 
 steps:
 - task: NuGetAuthenticate@1
@@ -120,6 +120,14 @@ steps:
     outputfile: $(Build.SourcesDirectory)/NOTICE.txt
     outputformat: text
 
+- task: PowerShell@2
+  displayName: "Add ChilliCream License for Banana Cake Pop"
+  inputs:
+    targetType: 'filePath'
+    filePath: $(System.DefaultWorkingDirectory)/scripts/notice-generation.ps1
+    # Artifact Staging Directory used to temporarily store downloaded ChilliCream license.
+    arguments: $(Build.ArtifactStagingDirectory) $(Build.SourcesDirectory)
+
 - template: templates/code-signing.yml
   parameters:
     # This is the path that will be used for packing nuget package.
@@ -145,14 +153,14 @@ steps:
   displayName: "Package DAB to multiple platforms"
   inputs:
     targetType: 'filePath'
-    filePath: $(System.DefaultWorkingDirectory)/publish.ps1
+    filePath: $(System.DefaultWorkingDirectory)/scripts/publish.ps1
     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) -Package
 
 - task: PowerShell@2
   displayName: "Smoke Test for DAB CLI"
   inputs:
     targetType: 'filePath'
-    filePath: $(System.DefaultWorkingDirectory)/dab-smoke-test-script.ps1
+    filePath: $(System.DefaultWorkingDirectory)/scripts/dab-smoke-test-script.ps1
     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(Agent.OS)  $(dabVersion)
 
 # Sign the binaries that were generated per platform
@@ -165,7 +173,7 @@ steps:
   displayName: "Zip the binaries after signing"
   inputs:
     targetType: 'filePath'
-    filePath: $(System.DefaultWorkingDirectory)/publish.ps1
+    filePath: $(System.DefaultWorkingDirectory)/scripts/publish.ps1
     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) -CreateZip
 
 # Generating SBOM manifest for Dab files
@@ -174,12 +182,21 @@ steps:
   inputs:
       BuildDropPath: '$(Build.ArtifactStagingDirectory)'
 
+# Downloads the manifest file from the latest GitHub Release.
+- task: DownloadGitHubRelease@0
+  inputs:
+    connection: 'DataApiBuilder'
+    userRepository: '$(Build.Repository.Name)'
+    defaultVersionType: 'latest'
+    itemPattern: 'dab-manifest.json'
+    downloadPath: '$(Build.ArtifactStagingDirectory)'
+
 # Generating Manifest File for generated Zip package
 - task: PowerShell@2
   displayName: "Generate Manifest File"
   inputs:
     targetType: 'filePath'
-    filePath: $(System.DefaultWorkingDirectory)/create_manifest_file.ps1
+    filePath: $(System.DefaultWorkingDirectory)/scripts/create-manifest-file.ps1
     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) $(isReleaseBuild)
 
 # This code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
@@ -187,6 +204,7 @@ steps:
   displayName: "Upload build artifacts"
   inputs:
     targetPath: '$(Build.ArtifactStagingDirectory)' 
+    publishLocation: 'pipeline'
 
 - task: NuGetCommand@2
   displayName: 'Publish Nuget to Internal Feed'
@@ -225,7 +243,7 @@ steps:
     action: 'create'
     target: '$(Build.SourceVersion)'
     tagSource: 'userSpecifiedTag'
-    tag: 'v$(dabVersion)-beta'
+    tag: 'v$(dabVersion)'
     title: 'New Release: Data API Builder for Azure Databases'
     assets: |
       $(Build.ArtifactStagingDirectory)/**/*.nupkg

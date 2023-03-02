@@ -30,6 +30,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         protected DbExceptionParser DbExceptionParser { get; }
         protected ILogger<IQueryExecutor> QueryExecutorLogger { get; }
         private RuntimeConfigProvider ConfigProvider { get; }
+        protected IHttpContextAccessor HttpContextAccessor { get; }
 
         // The maximum number of attempts that can be made to execute the query successfully in addition to the first attempt.
         // So to say in case of transient exceptions, the query will be executed (_maxRetryCount + 1) times at max.
@@ -42,12 +43,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public QueryExecutor(DbExceptionParser dbExceptionParser,
                              ILogger<IQueryExecutor> logger,
                              DbConnectionStringBuilder connectionStringBuilder,
-                             RuntimeConfigProvider configProvider)
+                             RuntimeConfigProvider configProvider,
+                             IHttpContextAccessor httpContextAccessor)
         {
             DbExceptionParser = dbExceptionParser;
             QueryExecutorLogger = logger;
             ConnectionStringBuilder = connectionStringBuilder;
             ConfigProvider = configProvider;
+            HttpContextAccessor = httpContextAccessor;
             _retryPolicy = Polly.Policy
             .Handle<DbException>(DbExceptionParser.IsTransientException)
             .WaitAndRetryAsync(
@@ -84,7 +87,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     // When IsLateConfigured is true we are in a hosted scenario and do not reveal query information.
                     if (!ConfigProvider.IsLateConfigured)
                     {
-                        QueryExecutorLogger.LogDebug($"Executing query: \n{sqltext}");
+                        QueryExecutorLogger.LogDebug($"{HttpContextExtensions.GetLoggerCorrelationId(httpContext)}" +
+                            $"Executing query: \n{sqltext}");
                     }
 
                     TResult? result =
@@ -97,7 +101,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     if (retryAttempt > 1)
                     {
                         // This implies that the request got successfully executed during one of retry attempts.
-                        QueryExecutorLogger.LogInformation($"Request executed successfully in {retryAttempt} attempt of" +
+                        QueryExecutorLogger.LogInformation($"{HttpContextExtensions.GetLoggerCorrelationId(httpContext)}" +
+                            $"Request executed successfully in {retryAttempt} attempt of" +
                             $"{_maxRetryCount + 1} available attempts.");
                     }
 
@@ -111,8 +116,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     }
                     else
                     {
-                        QueryExecutorLogger.LogError(e.Message);
-                        QueryExecutorLogger.LogError(e.StackTrace);
+                        QueryExecutorLogger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(httpContext)}" +
+                            $"{e.Message}");
+                        QueryExecutorLogger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(httpContext)}" +
+                            $"{e.StackTrace}");
 
                         // Throw custom DABException
                         throw DbExceptionParser.Parse(e);
@@ -175,8 +182,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             catch (DbException e)
             {
-                QueryExecutorLogger.LogError(e.Message);
-                QueryExecutorLogger.LogError(e.StackTrace);
+                QueryExecutorLogger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(httpContext)}" +
+                    $"{e.Message}");
+                QueryExecutorLogger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(httpContext)}" +
+                    $"{e.StackTrace}");
                 throw DbExceptionParser.Parse(e);
             }
         }

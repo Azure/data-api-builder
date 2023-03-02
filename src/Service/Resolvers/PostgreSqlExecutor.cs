@@ -6,7 +6,9 @@ using System.Data.Common;
 using System.Threading.Tasks;
 using Azure.Core;
 using Azure.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Service.Models;
 using Azure.Identity;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 
@@ -49,11 +51,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public PostgreSqlQueryExecutor(
             RuntimeConfigProvider runtimeConfigProvider,
             DbExceptionParser dbExceptionParser,
-            ILogger<IQueryExecutor> logger)
+            ILogger<IQueryExecutor> logger,
+            IHttpContextAccessor httpContextAccessor)
             : base(dbExceptionParser,
                   logger,
                   new NpgsqlConnectionStringBuilder(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString),
-                  runtimeConfigProvider)
+                  runtimeConfigProvider,
+                  httpContextAccessor)
         {
             _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
             _attemptToSetAccessToken =
@@ -138,7 +142,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // so a bunch of different exceptions could occur in that scenario
             catch (Exception ex)
             {
-                QueryExecutorLogger.LogWarning($"No password detected in the connection string. Attempt to retrieve " +
+                QueryExecutorLogger.LogWarning($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContextAccessor.HttpContext)}" +
+                    $"No password detected in the connection string. Attempt to retrieve " +
                     $"a managed identity access token using DefaultAzureCredential failed due to: \n{ex}\n" +
                     (firstAttemptAtDefaultAccessToken ?
                     $"If authentication with DefaultAzureCrendential is not intended, this warning can be safely ignored." :

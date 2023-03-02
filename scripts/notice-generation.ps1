@@ -16,7 +16,7 @@ Invoke-WebRequest $chiliCreamLicenseMetadataURL `
 # Download and save the Microsoft.Data.SqlClient.SNI.runtime license
 $sqlClientSNILicenseSavePath = "$BuildArtifactStagingDir/sqlclient_sni_runtime.txt"
 $sqlClientSNILicenseMetadataURL = "https://www.nuget.org/packages/Microsoft.Data.SqlClient.SNI.runtime/5.0.1/License"
-$pageContent = Invoke-WebRequest $sqlClientSNILicenseMetadataURL `
+$pageContent = Invoke-WebRequest $sqlClientSNILicenseMetadataURL
 
 # Regular expression with three capture groups.
 # Capture Group 1: HTML tag which indicates start of license text

@@ -13,14 +13,31 @@ Invoke-WebRequest $chiliCreamLicenseMetadataURL `
 | Select-Object -ExpandProperty Content `
 | Out-File $chiliCreamLicenseSavePath
 
-# Concatenate existing NOTICE.txt file with Chilicream license.
+# Download and save the Microsoft.Data.SqlClient.SNI.runtime license
+$sqlClientSNILicenseSavePath = "$BuildArtifactStagingDir/sqlclient_sni_runtime.txt"
+$sqlClientSNILicenseMetadataURL = "https://www.nuget.org/packages/Microsoft.Data.SqlClient.SNI.runtime/5.0.1/License"
+$pageContent = Invoke-WebRequest $sqlClientSNILicenseMetadataURL `
+
+# Regular expression with three capture groups.
+# Capture Group 1: HTML tag which indicates start of license text
+# Named Capture Group licenseText: License text. Match across many lines with regex modifier (?s)
+# Capture Group 3: HTML tag which indicates end of license text.
+$licenseRegex = '(<pre class="license-file-contents custom-license-container">)(?<licenseText>(?s).*)(<\/pre>)'
+$pageContent -match $licenseRegex
+$Matches.licenseText
+
+# Path of notice file generated in CI/CD pipeline.
 $noticeFilePath = "$BuildSourcesDir/NOTICE.txt"
 
 # Replace erroneous copyright, using [System.IO.File] for better performance than Get-Content and Set-Content
 $content = [System.IO.File]::ReadAllText($noticeFilePath).Replace("(c) Microsoft 2023`r`n", "")
-$chiliCreamLicenseText = [System.IO.File]::ReadAllText($chiliCreamLicenseSavePath)
+
+# Prepare license content for writing to file.
+$sqlClientSNICopyright = "`r`nMICROSOFT.DATA.SQLCLIENT.SNI`r`n`r`n(c) Microsoft Corporation`r`n`r`n"
+$sqlClientSNILicenseText = [System.IO.File]::ReadAllText($sqlClientSNILicenseSavePath)
 $bananaCakePopCopyright = "`r`nBanana Cake Pop`r`n`r`nCopyright 2023 ChilliCream, Inc.`r`n`r`n"
+$chiliCreamLicenseText = [System.IO.File]::ReadAllText($chiliCreamLicenseSavePath)
 
 # Combine all notice file components and write to file.
-$finalOutputContent = $content + $bananaCakePopCopyright + $chiliCreamLicenseText
+$finalOutputContent = $content + $sqlClientSNICopyright + $sqlClientSNILicenseText +  $bananaCakePopCopyright + $chiliCreamLicenseText
 [System.IO.File]::WriteAllText($noticeFilePath, $finalOutputContent)

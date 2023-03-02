@@ -24,7 +24,7 @@ $pageContent = Invoke-WebRequest $sqlClientSNILicenseMetadataURL `
 # Capture Group 3: HTML tag which indicates end of license text.
 $licenseRegex = '(<pre class="license-file-contents custom-license-container">)(?<licenseText>(?s).*)(<\/pre>)'
 $pageContent -match $licenseRegex
-$Matches.licenseText
+$sqlClientSNILicense = $Matches.licenseText
 
 # Path of notice file generated in CI/CD pipeline.
 $noticeFilePath = "$BuildSourcesDir/NOTICE.txt"
@@ -34,10 +34,9 @@ $content = [System.IO.File]::ReadAllText($noticeFilePath).Replace("(c) Microsoft
 
 # Prepare license content for writing to file.
 $sqlClientSNICopyright = "`r`nMICROSOFT.DATA.SQLCLIENT.SNI`r`n`r`n(c) Microsoft Corporation`r`n`r`n"
-$sqlClientSNILicenseText = [System.IO.File]::ReadAllText($sqlClientSNILicenseSavePath)
 $bananaCakePopCopyright = "`r`nBanana Cake Pop`r`n`r`nCopyright 2023 ChilliCream, Inc.`r`n`r`n"
 $chiliCreamLicenseText = [System.IO.File]::ReadAllText($chiliCreamLicenseSavePath)
 
 # Combine all notice file components and write to file.
-$finalOutputContent = $content + $sqlClientSNICopyright + $sqlClientSNILicenseText +  $bananaCakePopCopyright + $chiliCreamLicenseText
+$finalOutputContent = $content + $sqlClientSNICopyright + $sqlClientSNILicense +  $bananaCakePopCopyright + $chiliCreamLicenseText
 [System.IO.File]::WriteAllText($noticeFilePath, $finalOutputContent)

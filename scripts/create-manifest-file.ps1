@@ -12,7 +12,7 @@ $versionId = $DabVersion
 $versionTag = "untagged" #untagged. non-release build will have no tag
 $releaseType = "development"
 $releaseDate = (Get-Date).ToUniversalTime().ToString('u')
-$maxVersionCount = 3
+$maxVersionCount = 100
 
 if ($isReleaseBuild -eq 'true')
 {
@@ -79,12 +79,29 @@ $latestBlock = @'
 }
 '@ 
 
-$latestBlock = $ExecutionContext.InvokeCommand.ExpandString($latestBlock) | ConvertFrom-Json 
+$latestBlock = $ExecutionContext.InvokeCommand.ExpandString($latestBlock) | ConvertFrom-Json
+
+# Get file content of the last released manifest file
+$manifestFilePath = "$BuildOutputDir/dab-manifest.json"
+$lastReleasedData = @()
+if (Test-Path $manifestFilePath) {
+    $lastReleasedData = Get-Content $manifestFilePath -raw | ConvertFrom-Json
+}
+
+# marking previous versions as old
+# there will always be only 1 "latest" version
+foreach($data in $lastReleasedData) {
+    if($data.version -eq "latest") {
+        $data.version = "old"
+        break
+    }
+}
 
 # Adding new block to the top of the list of released versions.
-# TODO: To use the data from the current manifest file and update it.
+# Add the data from the last released manifest file.
 $versionArray = @()
 $versionArray += $latestBlock
+$versionArray += $lastReleasedData
 
 # Removing the oldest version if total count exceeds the max permissible count 
 if($versionArray.Length -gt $maxVersionCount){ 

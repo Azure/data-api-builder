@@ -34,7 +34,7 @@ $content = [System.IO.File]::ReadAllText($noticeFilePath).Replace("(c) Microsoft
 
 # Prepare license content for writing to file.
 $sqlClientSNICopyright = "`r`nMICROSOFT.DATA.SQLCLIENT.SNI`r`n`r`n(c) Microsoft Corporation`r`n`r`n"
-$bananaCakePopCopyright = "`r`nBanana Cake Pop`r`n`r`nCopyright 2023 ChilliCream, Inc.`r`n`r`n"
+$bananaCakePopCopyright = "`r`n`r`nBanana Cake Pop`r`n`r`nCopyright 2023 ChilliCream, Inc.`r`n`r`n"
 $chiliCreamLicenseText = [System.IO.File]::ReadAllText($chiliCreamLicenseSavePath)
 
 # Combine all notice file components and write to file.

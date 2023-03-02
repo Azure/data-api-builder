@@ -30,7 +30,7 @@ variables:
   # The counter is reset when the minor version is updated.
   patch: $[counter(format('{0}_{1}', variables['build.reason'], variables['minor']), 0)]
   isReleaseBuild: $(isNugetRelease)
-  additionalProperties.version: 'https://dataapibuilder.azureedge.net/schemas/v$(major).$(minor).$(patch)-beta/dab.draft.schema.json'
+  additionalProperties.version: 'https://dataapibuilder.azureedge.net/schemas/v$(major).$(minor).$(patch)/dab.draft.schema.json'
 
 steps:
 - task: NuGetAuthenticate@1
@@ -120,6 +120,14 @@ steps:
     outputfile: $(Build.SourcesDirectory)/NOTICE.txt
     outputformat: text
 
+- task: PowerShell@2
+  displayName: "Add ChilliCream License for Banana Cake Pop"
+  inputs:
+    targetType: 'filePath'
+    filePath: $(System.DefaultWorkingDirectory)/scripts/notice-generation.ps1
+    # Artifact Staging Directory used to temporarily store downloaded ChilliCream license.
+    arguments: $(Build.ArtifactStagingDirectory) $(Build.SourcesDirectory)
+
 - template: templates/code-signing.yml
   parameters:
     # This is the path that will be used for packing nuget package.
@@ -187,6 +195,7 @@ steps:
   displayName: "Upload build artifacts"
   inputs:
     targetPath: '$(Build.ArtifactStagingDirectory)' 
+    publishLocation: 'pipeline'
 
 - task: NuGetCommand@2
   displayName: 'Publish Nuget to Internal Feed'
@@ -225,7 +234,7 @@ steps:
     action: 'create'
     target: '$(Build.SourceVersion)'
     tagSource: 'userSpecifiedTag'
-    tag: 'v$(dabVersion)-beta'
+    tag: 'v$(dabVersion)'
     title: 'New Release: Data API Builder for Azure Databases'
     assets: |
       $(Build.ArtifactStagingDirectory)/**/*.nupkg

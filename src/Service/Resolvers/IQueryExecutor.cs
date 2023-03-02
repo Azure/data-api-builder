@@ -63,7 +63,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         /// <param name="dbDataReader">A DbDataReader</param>
         /// <param name="args">List of columns to extract. Extracts all if unspecified.</param>
-        /// <returns>All rows in the current Result Set..</returns>
+        /// <returns>Current Result Set in the DbDataReader.</returns>
         public Task<DbResultSet> ExtractResultSetFromDbDataReader(
                 DbDataReader dbDataReader,
                 List<string>? args = null);

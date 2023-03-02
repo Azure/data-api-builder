@@ -58,13 +58,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             List<string>? args = null);
 
         /// <summary>
-        /// Extracts all the rows in the current Result Set of DbDataReader and format it
+        /// Extracts the current Result Set of DbDataReader and format it
         /// so it can be used as a parameter to query execution.
         /// </summary>
         /// <param name="dbDataReader">A DbDataReader</param>
         /// <param name="args">List of columns to extract. Extracts all if unspecified.</param>
         /// <returns>All rows in the current Result Set..</returns>
-        public Task<DbResultSet> ExtractRowsFromResultSet(
+        public Task<DbResultSet> ExtractResultSetFromDbDataReader(
                 DbDataReader dbDataReader,
                 List<string>? args = null);
 

@@ -220,7 +220,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         /// <inheritdoc />
         public async Task<DbResultSet>
-            ExtractRowsFromResultSet(DbDataReader dbDataReader, List<string>? args = null)
+            ExtractResultSetFromDbDataReader(DbDataReader dbDataReader, List<string>? args = null)
         {
             DbResultSet dbResultSet =
                 new(resultProperties: GetResultProperties(dbDataReader).Result ?? new());
@@ -270,7 +270,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             DbDataReader dbDataReader,
             List<string>? args = null)
         {
-            DbResultSet dbResultSet = await ExtractRowsFromResultSet(dbDataReader);
+            DbResultSet dbResultSet = await ExtractResultSetFromDbDataReader(dbDataReader);
             JsonArray resultArray = new();
 
             foreach (DbResultSetRow dbResultSetRow in dbResultSet.Rows)
@@ -319,7 +319,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             DbDataReader dbDataReader, List<string>? args = null)
         {
             DbResultSet dbResultSet
-                = await ExtractRowsFromResultSet(dbDataReader);
+                = await ExtractResultSetFromDbDataReader(dbDataReader);
 
             /// Processes a second result set from DbDataReader if it exists.
             /// In MsSQL upsert:
@@ -333,7 +333,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             else if (await dbDataReader.NextResultAsync())
             {
                 // Since no first result set exists, we return the second result set.
-                return await ExtractRowsFromResultSet(dbDataReader);
+                return await ExtractResultSetFromDbDataReader(dbDataReader);
             }
             else
             {

@@ -1363,7 +1363,7 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             // Extract all the rows in the current Result Set of DbDataReader.
             DbResultSet foreignKeysInfoWithProperties =
-                await QueryExecutor.ExtractRowsFromResultSet(reader);
+                await QueryExecutor.ExtractResultSetFromDbDataReader(reader);
 
             Dictionary<RelationShipPair, ForeignKeyDefinition> pairToFkDefinition = new();
 

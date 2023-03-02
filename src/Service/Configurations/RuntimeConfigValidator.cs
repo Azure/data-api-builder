@@ -488,13 +488,14 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             {
                                 // Check if the IncludeSet/ExcludeSet contain wildcard. If they contain wildcard, we make sure that they
                                 // don't contain any other field. If they do, we throw an appropriate exception.
-                                if (configOperation.Fields.Include.Contains(AuthorizationResolver.WILDCARD) && configOperation.Fields.Include.Count > 1 ||
+                                if (configOperation.Fields.Include is not null && configOperation.Fields.Include.Contains(AuthorizationResolver.WILDCARD)
+                                    && configOperation.Fields.Include.Count > 1 ||
                                     configOperation.Fields.Exclude.Contains(AuthorizationResolver.WILDCARD) && configOperation.Fields.Exclude.Count > 1)
                                 {
                                     // See if included or excluded columns contain wildcard and another field.
                                     // If thats the case with both of them, we specify 'included' in error.
-                                    string misconfiguredColumnSet = configOperation.Fields.Include.Contains(AuthorizationResolver.WILDCARD)
-                                        && configOperation.Fields.Include.Count > 1 ? "included" : "excluded";
+                                    string misconfiguredColumnSet = configOperation.Fields.Exclude.Contains(AuthorizationResolver.WILDCARD)
+                                        && configOperation.Fields.Exclude.Count > 1 ? "excluded" : "included";
                                     string actionName = actionOp is Config.Operation.All ? "*" : actionOp.ToString();
 
                                     throw new DataApiBuilderException(
@@ -865,7 +866,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <param name="policy">Database policy</param>
         /// <param name="include">Array of fields which are accessible to the user.</param>
         /// <param name="exclude">Array of fields which are not accessible to the user.</param>
-        private static void AreFieldsAccessible(string policy, HashSet<string> includedFields, HashSet<string> excludedFields)
+        private static void AreFieldsAccessible(string policy, HashSet<string>? includedFields, HashSet<string> excludedFields)
         {
             // Pattern of field references in the policy
             string fieldCharsRgx = @"@item\.[a-zA-Z0-9_]*";
@@ -892,11 +893,11 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <param name="excluded">Set of fields which are not accessible to the user.</param>
         /// <returns>Boolean value indicating whether the field is accessible or not.</returns>
         /// <exception cref="DataApiBuilderException">Throws exception if the field is not accessible.</exception>
-        private static bool IsFieldAccessible(Match columnNameMatch, HashSet<string> includedFields, HashSet<string> excludedFields)
+        private static bool IsFieldAccessible(Match columnNameMatch, HashSet<string>? includedFields, HashSet<string> excludedFields)
         {
             string columnName = columnNameMatch.Value.Substring(AuthorizationResolver.FIELD_PREFIX.Length);
             if (excludedFields.Contains(columnName!) || excludedFields.Contains(AuthorizationResolver.WILDCARD) ||
-                !(includedFields.Contains(AuthorizationResolver.WILDCARD) || includedFields.Contains(columnName)))
+                (includedFields is not null && !includedFields.Contains(AuthorizationResolver.WILDCARD) && !includedFields.Contains(columnName)))
             {
                 // If column is present in excluded OR excluded='*'
                 // If column is absent from included and included!=*

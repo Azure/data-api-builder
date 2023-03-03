@@ -213,7 +213,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
         protected static bool TryGetPropertyFromParent(IMiddlewareContext context, out JsonElement jsonElement)
         {
-            using JsonDocument result = JsonDocument.Parse(JsonSerializer.Serialize(context.Parent<JsonElement>()));
+            JsonDocument result = JsonDocument.Parse(JsonSerializer.Serialize(context.Parent<JsonElement>()));
             if (result is null)
             {
                 jsonElement = default;

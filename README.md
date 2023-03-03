@@ -3,7 +3,7 @@
 [![NuGet Package](https://img.shields.io/nuget/v/microsoft.dataapibuilder.svg?color=success)](https://www.nuget.org/packages/Microsoft.DataApiBuilder)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-Latest version of Data API builder is  **0.5.0** [What's new?](./docs/whats-new.md#version-050)
+Latest version of Data API builder is  **0.5.34** [What's new?](./docs/whats-new.md#version-0533)
 
 ## About
 
@@ -11,7 +11,7 @@ Latest version of Data API builder is  **0.5.0** [What's new?](./docs/whats-new.
 
 With Data API builder, database objects can be exposed via REST or GraphQL endpoints so that your data can be accessed using modern techniques on any platform, any language, and any device. With an integrated and flexible policy engine, granular security is assured; integrated with Azure SQL, SQL Server, PostgreSQL, MySQL and Cosmos DB, gives developers an efficiency boost like never seen before.
 
-![Data API Builder Architecture Overview Diagram](./docs/media/data-api-builder-overview.png)
+![Data API builder Architecture Overview Diagram](./docs/media/data-api-builder-overview.png)
 
 ## Features
 

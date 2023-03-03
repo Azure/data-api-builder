@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 # This file validates the executables are passing the following basic checks:
 # 1. Correct version of DAB is generated
 # 2. HelpWindow gets displayed on the Console
@@ -62,7 +65,7 @@ describe SmokeTest {
             $dabVersion = $dabVersion.Substring(0, $dabVersion.IndexOf("-"));
         }
 
-        $expectedSchemaPath = "https://dataapibuilder.azureedge.net/schemas/v$dabVersion-beta/dab.draft.schema.json";
+        $expectedSchemaPath = "https://dataapibuilder.azureedge.net/schemas/v$dabVersion/dab.draft.schema.json";
         $parsedSchema = Get-Content -Raw -Path $configFileName | ConvertFrom-Json
         $genratedSchemaPath = $parsedSchema.'$schema'
         $genratedSchemaPath.Equals($expectedSchemaPath) | Should -Be True

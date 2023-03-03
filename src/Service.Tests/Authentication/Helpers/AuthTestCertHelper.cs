@@ -21,7 +21,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// <returns></returns>
         public static X509Certificate2 CreateSelfSignedCert(string hostName)
         {
-            CertificateRequest request = new($"CN={hostName}", RSA.Create(), HashAlgorithmName.SHA256, RSASignaturePadding.Pss);
+            CertificateRequest request = new($"CN={hostName}", RSA.Create(keySizeInBits: 2048), HashAlgorithmName.SHA256, RSASignaturePadding.Pss);
             return request.CreateSelfSigned(notBefore: DateTime.UtcNow, notAfter: DateTime.UtcNow.AddMinutes(5));
         }
     }

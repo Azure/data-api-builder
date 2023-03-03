@@ -48,14 +48,14 @@ the roles will be used to match any defined role in the configuration file. For 
 }
 ```
 
-More specifically, the above configuration is telling Data API Builder that it must allow the requestor to
+More specifically, the above configuration is telling Data API builder that it must allow the requestor to
 
 - read data from the underlying database object to any non-authenticated request
 - perform any CRUD operation on the underlying database object if the user making the request is in the `author` role, which is the case of the sample token mentioned before.
 
 ### Roles selection
 
-For a request to be evaluated in the context of a user role, the request must include the `X-MS-API-ROLE` HTTP Header and set the value to a role present in the received authentication token. If the received authentication token has the following contents:
+For a request to be evaluated in the context of a user role, the request must include the `X-MS-API-ROLE` HTTP Header and set the value to a role present in the received access token. If the received access token has the following contents:
 
 ```json
 {
@@ -72,7 +72,7 @@ For a request to be evaluated in the context of a user role, the request must in
 
 and the request must be evaluated in the context of the `author` role, then the `X-MS-API-ROLE` must be set to `author`.
 
-A request can only be evaluated in the context of a single role. So, if the authentication token allows for more than one role, for example:
+A request can only be evaluated in the context of a single role. So, if the access token allows for more than one role, for example:
 
 ```json
 "userRoles": ["author", "editor"]
@@ -86,7 +86,7 @@ If `X-MS-API-ROLE` is not specified for an authenticated request, the request is
 
 Permissions and their components,  `roles`, `actions`, `fields` and `policies`, are explained in the [configuration file](./configuration-file.md#permissions) documentation.
 
-There can be multiple roles defined in an entity's permissions configuration. However, a request is only evaluated in the context of a single role. The role evaluated for a request is either a system role automatically assigned by the Data API Builder engine or a role manually specified in the `X-MS-API-ROLE` HTTP header.
+There can be multiple roles defined in an entity's permissions configuration. However, a request is only evaluated in the context of a single role. The role evaluated for a request is either a system role automatically assigned by the Data API builder engine or a role manually specified in the `X-MS-API-ROLE` HTTP header.
 
 ### Secure by default
 
@@ -125,12 +125,19 @@ As by default there are no pre-defined permission for the `anonymous` or `authen
   "source": "dbo.books",
   "permissions": [{
     "role": "administrator",
-    "actions": ["*"]
+    "actions": [ "*" ]
   }]
 }
 ```
 
-In the above configuration sample, only request carrying the `administrator` role in the authentication token and specifying the `administrator` value in the `X-MS-API-ROLE` HTTP header, will be able to operate on the `book` entity.
+In the above configuration sample, only requests which include the `administrator` role in the access token and specify the `administrator` value in the `X-MS-API-ROLE` HTTP header, will be able to operate on the `book` entity.
+
+Actions can also be specified with the wildcard shortcut: `*` (asterisk). The wildcard shortcut represents all actions supported for the entity type on which it is defined.
+
+- Tables and Views: `create`, `read`, `update`, `delete`
+- Stored Procedures: `execute`
+
+For more details, see the [configuration file](./configuration-file.md#actions) documentation.
 
 ### Item level security
 

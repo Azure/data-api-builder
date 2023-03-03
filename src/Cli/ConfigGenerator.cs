@@ -67,6 +67,7 @@ namespace Cli
             runtimeConfigJson = string.Empty;
 
             DatabaseType dbType = options.DatabaseType;
+            string? restPath = options.RestPath;
             object? dbOptions = null;
 
             switch (dbType)
@@ -81,6 +82,15 @@ namespace Cli
                         return false;
                     }
 
+                    // If the option --rest.path is specified for cosmosdb_nosql, log a warning because
+                    // rest is not supported for cosmosdb_nosql yet.
+                    if (!GlobalSettings.REST_DEFAULT_PATH.Equals(restPath))
+                    {
+                        _logger.LogWarning("Configuration option --rest.path is not honored for cosmosdb_nosql since " +
+                            "it does not support REST yet.");
+                    }
+
+                    restPath = null;
                     dbOptions = new CosmosDbNoSqlOptions(cosmosDatabase, cosmosContainer, graphQLSchemaPath, GraphQLSchema: null);
                     break;
 
@@ -119,7 +129,8 @@ namespace Cli
                     options.CorsOrigin,
                     options.AuthenticationProvider,
                     options.Audience,
-                    options.Issuer),
+                    options.Issuer,
+                    restPath),
                 Entities: new Dictionary<string, Entity>());
 
             runtimeConfigJson = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());

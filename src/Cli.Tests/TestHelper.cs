@@ -7,7 +7,7 @@ namespace Cli.Tests
     {
         // Config file name for tests
         public static string _testRuntimeConfig = "dab-config-test.json";
-        public const string DAB_DRAFT_SCHEMA_TEST_PATH = "https://dataapibuilder.azureedge.net/schemas/vmajor.minor.patch-beta/dab.draft.schema.json";
+        public const string DAB_DRAFT_SCHEMA_TEST_PATH = "https://dataapibuilder.azureedge.net/schemas/vmajor.minor.patch/dab.draft.schema.json";
 
         /// <summary>
         /// Adds the entity properties to the configuration and returns the updated configuration json as a string.
@@ -250,7 +250,7 @@ namespace Cli.Tests
                     ]
                   },
                   ""graphql"": {
-                    ""operation"": ""Mutation""
+                    ""operation"": ""mutation""
                       }
                     }
                   }
@@ -277,7 +277,7 @@ namespace Cli.Tests
                     ]	
                 },	
                 ""graphql"": {	
-                    ""operation"": ""Mutation""	
+                    ""operation"": ""mutation""
                       }
                     }
                   }
@@ -305,7 +305,7 @@ namespace Cli.Tests
                 },	
                 ""graphql"": {
                     ""type"": true,
-                    ""operation"": ""Mutation""	
+                    ""operation"": ""mutation""
                       }
                     }
                   }
@@ -336,7 +336,7 @@ namespace Cli.Tests
                         ""singular"": ""book"",
                         ""plural"": ""books""
                     },
-                        ""operation"": ""Mutation""	
+                        ""operation"": ""mutation""
                       }
                     }
                   }
@@ -364,7 +364,7 @@ namespace Cli.Tests
                 },	
                 ""graphql"": {
                     ""type"": true,
-                     ""operation"": ""Query""	
+                     ""operation"": ""query""
                       }
                     }
                   }
@@ -395,7 +395,7 @@ namespace Cli.Tests
                       ""singular"": ""book"",
                         ""plural"": ""books""
                     },
-                     ""operation"": ""Query""	
+                     ""operation"": ""query""
                       }
                     }
                   }
@@ -424,7 +424,7 @@ namespace Cli.Tests
                 },	
                 ""graphql"": {
                     ""type"": true,
-                     ""operation"": ""Mutation""	
+                     ""operation"": ""mutation""
                       }
                     }
                   }
@@ -474,7 +474,7 @@ namespace Cli.Tests
                 },	
                 ""graphql"": {
                     ""type"": true,
-                     ""operation"": ""Query""	
+                     ""operation"": ""query""
                       }
                     }
                   }
@@ -508,7 +508,7 @@ namespace Cli.Tests
                       ""singular"":""book"",
                       ""plural"":""books""
                     },
-                     ""operation"": ""Query""	
+                     ""operation"": ""query""
                       }
                     }
                   }
@@ -536,7 +536,7 @@ namespace Cli.Tests
                     ]	
                 },	
                 ""graphql"": {	
-                    ""operation"": ""Mutation""	
+                    ""operation"": ""mutation""
                       }
                     }
                   }
@@ -564,7 +564,7 @@ namespace Cli.Tests
                     ]	
                 },	
                 ""graphql"": {	
-                    ""operation"": ""Mutation""	
+                    ""operation"": ""mutation""
                       }
                     }
                   }
@@ -593,7 +593,7 @@ namespace Cli.Tests
                     ]	
                 },	
                 ""graphql"": {	
-                    ""operation"": ""Mutation""	
+                    ""operation"": ""mutation""
                       }
                     }
                   }
@@ -623,7 +623,7 @@ namespace Cli.Tests
                     ]	
                 },	
                 ""graphql"": {	
-                    ""operation"": ""Mutation""	
+                    ""operation"": ""mutation""
                       }
                     }
                   }
@@ -653,7 +653,7 @@ namespace Cli.Tests
                     ]	
                 },	
                 ""graphql"": {	
-                    ""operation"": ""Mutation""	
+                    ""operation"": ""mutation""
                       }
                     }
                   }
@@ -688,7 +688,7 @@ namespace Cli.Tests
                     ]	
                   },	
                   ""graphql"": {	
-                    ""operation"": ""Query""	
+                    ""operation"": ""query""
                       }
                     }
                   }
@@ -901,7 +901,8 @@ namespace Cli.Tests
             IEnumerable<string>? corsOrigins = null,
             string authenticationProvider = "StaticWebApps",
             string? audience = null,
-            string? issuer = null)
+            string? issuer = null,
+            string? restPath = GlobalSettings.REST_DEFAULT_PATH)
         {
             Dictionary<string, object> runtimeSettingDict = new();
             Dictionary<GlobalSettingsType, object> defaultGlobalSetting = GetDefaultGlobalSettings(
@@ -909,7 +910,8 @@ namespace Cli.Tests
                 corsOrigin: corsOrigins,
                 authenticationProvider: authenticationProvider,
                 audience: audience,
-                issuer: issuer);
+                issuer: issuer,
+                restPath: restPath);
 
             runtimeSettingDict.Add("runtime", defaultGlobalSetting);
 

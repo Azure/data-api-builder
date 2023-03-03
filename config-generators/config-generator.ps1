@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 # This script can be used for generating the config files
 $PSDefaultParameterValues['*:Encoding'] = 'utf8';
 
@@ -33,19 +36,19 @@ Set-Location $workingDirectory;
 #Generates the config files for the selected database types.
 foreach($databaseType in $databaseTypes){
     if($databaseType -eq "mssql"){
-        $commandFile = "MsSqlCommands.txt";
+        $commandFile = "mssql-commands.txt";
         $configFile = "dab-config.MsSql.json";
     }
     elseif($databaseType -eq "mysql"){
-        $commandFile = "MySqlCommands.txt";
+        $commandFile = "mysql-commands.txt";
         $configFile = "dab-config.MySql.json";
     }
     elseif($databaseType -eq "postgresql"){
-        $commandFile = "PostgreSqlCommands.txt";
+        $commandFile = "postgresql-commands.txt";
         $configFile = "dab-config.PostgreSql.json";
     }
     else{
-        $commandFile = "CosmosCommands.txt";
+        $commandFile = "cosmosdb_nosql-commands.txt";
         $configFile = "dab-config.CosmosDb_NoSql.json";
     }
 

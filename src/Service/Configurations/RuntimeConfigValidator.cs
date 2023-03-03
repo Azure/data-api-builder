@@ -37,6 +37,13 @@ namespace Azure.DataApiBuilder.Service.Configurations
         // The claimType is invalid if there is a match found.
         private static readonly Regex _invalidClaimCharsRgx = new(_invalidClaimChars, RegexOptions.Compiled);
 
+        // Any reserved character is not allowed to be present in
+        // the rest path. Refer here: https://www.rfc-editor.org/rfc/rfc3986#page-12.
+        private static readonly string _invalidRestPathChars = @"[\.:\?#/\[\]@!$&'()\*\+,;=]+";
+
+        //  Regex to validate rest path prefix.
+        private static readonly Regex _invalidRestPathCharsRgx = new(_invalidRestPathChars, RegexOptions.Compiled);
+
         // Regex used to extract all claimTypes in policy. It finds all the substrings which are
         // of the form @claims.*** delimited by space character,end of the line or end of the string.
         private static readonly string _claimChars = @"@claims\.[^\s\)]*";
@@ -47,6 +54,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
         // Error messages.
         public const string INVALID_CLAIMS_IN_POLICY_ERR_MSG = "One or more claim types supplied in the database policy are not supported.";
+        public const string BADLY_FORMED_REST_PATH_ERR_MSG = "REST path contains one or more reserved characters.";
 
         public RuntimeConfigValidator(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -315,6 +323,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <param name="runtimeConfig"></param>
         public static void ValidateGlobalEndpointRouteConfig(RuntimeConfig runtimeConfig)
         {
+            ValidateRestPathForRelationalDbs(runtimeConfig);
             // Do not check for conflicts if GraphQL or REST endpoints are disabled.
             if (!runtimeConfig.GraphQLGlobalSettings.Enabled || !runtimeConfig.RestGlobalSettings.Enabled)
             {
@@ -328,6 +337,51 @@ namespace Azure.DataApiBuilder.Service.Configurations
             {
                 throw new DataApiBuilderException(
                     message: $"Conflicting GraphQL and REST path configuration.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+            }
+        }
+
+        /// <summary>
+        /// Method to validate that the rest path prefix is well formed and does not contain
+        /// any disallowed characters.
+        /// </summary>
+        /// <param name="runtimeConfig"></param>
+        /// <exception cref="DataApiBuilderException"></exception>
+        public static void ValidateRestPathForRelationalDbs(RuntimeConfig runtimeConfig)
+        {
+            // cosmosdb_nosql does not support rest. No need to do any validations.
+            if (runtimeConfig.DatabaseType is DatabaseType.cosmosdb_nosql)
+            {
+                return;
+            }
+
+            string restPath = runtimeConfig.RestGlobalSettings.Path;
+
+            if (string.IsNullOrEmpty(restPath))
+            {
+                throw new DataApiBuilderException(
+                    message: $"REST path prefix cannot be null or empty.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+            }
+
+            // A valid rest path prefix should start with a forward slash '/'.
+            if (!restPath.StartsWith("/"))
+            {
+                throw new DataApiBuilderException(
+                    message: $"REST path should start with a '/'.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+            }
+
+            restPath = restPath.Substring(1);
+
+            // Rest path prefix should not contain any reserved characters.
+            if (_invalidRestPathCharsRgx.IsMatch(restPath))
+            {
+                throw new DataApiBuilderException(
+                    message: BADLY_FORMED_REST_PATH_ERR_MSG,
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
             }
@@ -434,13 +488,14 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             {
                                 // Check if the IncludeSet/ExcludeSet contain wildcard. If they contain wildcard, we make sure that they
                                 // don't contain any other field. If they do, we throw an appropriate exception.
-                                if (configOperation.Fields.Include.Contains(AuthorizationResolver.WILDCARD) && configOperation.Fields.Include.Count > 1 ||
+                                if (configOperation.Fields.Include is not null && configOperation.Fields.Include.Contains(AuthorizationResolver.WILDCARD)
+                                    && configOperation.Fields.Include.Count > 1 ||
                                     configOperation.Fields.Exclude.Contains(AuthorizationResolver.WILDCARD) && configOperation.Fields.Exclude.Count > 1)
                                 {
                                     // See if included or excluded columns contain wildcard and another field.
                                     // If thats the case with both of them, we specify 'included' in error.
-                                    string misconfiguredColumnSet = configOperation.Fields.Include.Contains(AuthorizationResolver.WILDCARD)
-                                        && configOperation.Fields.Include.Count > 1 ? "included" : "excluded";
+                                    string misconfiguredColumnSet = configOperation.Fields.Exclude.Contains(AuthorizationResolver.WILDCARD)
+                                        && configOperation.Fields.Exclude.Count > 1 ? "excluded" : "included";
                                     string actionName = actionOp is Config.Operation.All ? "*" : actionOp.ToString();
 
                                     throw new DataApiBuilderException(
@@ -479,7 +534,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     if (entity.ObjectType is SourceType.StoredProcedure)
                     {
                         if ((operationsList.Count > 1)
-                            || (operationsList.Count is 1 && operationsList[0] is not Config.Operation.Execute))
+                            || (operationsList.Count is 1 && !IsValidPermissionAction(operationsList[0], entity, entityName)))
                         {
                             throw new DataApiBuilderException(
                                 message: $"Invalid Operations for Entity: {entityName}. " +
@@ -595,7 +650,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
                         if (!_runtimeConfigProvider.IsLateConfigured)
                         {
-                            LoggingRelationshipHeader(linked: true);
                             string sourceDBOName = sqlMetadataProvider.EntityToDatabaseObject[entityName].FullName;
                             string targetDBOName = sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity].FullName;
                             string cardinality = relationship.Cardinality.ToString().ToLower();
@@ -634,7 +688,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
                     if (relationship.LinkingObject is null && !_runtimeConfigProvider.IsLateConfigured)
                     {
-                        LoggingRelationshipHeader();
                         RelationShipPair sourceTargetRelationshipPair = new(sourceDatabaseObject, targetDatabaseObject);
                         RelationShipPair targetSourceRelationshipPair = new(targetDatabaseObject, sourceDatabaseObject);
                         string sourceDBOName = sqlMetadataProvider.EntityToDatabaseObject[entityName].FullName;
@@ -656,19 +709,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     }
                 }
             }
-        }
-
-        /// <summary>
-        /// Helper function simply logs the header we display before logging relationship information.
-        /// </summary>
-        /// <param name="linked"></param>
-        private void LoggingRelationshipHeader(bool linked = false)
-        {
-            string linkedMessage = linked ? " by <linking.object>(linking.source.fields: <linking.source.fields>), (linking.target.fields: <linking.target.fields>)" :
-                string.Empty;
-            _logger.LogDebug($"Logging relationship information in the form:\n" +
-                             $"<entity>: <entity.source.object>(<source.fields>) is related to <cardinality> " +
-                             $"<target.entity: <target.entity.source.object(<target.fields>){linkedMessage}.");
         }
 
         /// <summary>
@@ -826,7 +866,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <param name="policy">Database policy</param>
         /// <param name="include">Array of fields which are accessible to the user.</param>
         /// <param name="exclude">Array of fields which are not accessible to the user.</param>
-        private static void AreFieldsAccessible(string policy, HashSet<string> includedFields, HashSet<string> excludedFields)
+        private static void AreFieldsAccessible(string policy, HashSet<string>? includedFields, HashSet<string> excludedFields)
         {
             // Pattern of field references in the policy
             string fieldCharsRgx = @"@item\.[a-zA-Z0-9_]*";
@@ -853,11 +893,11 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <param name="excluded">Set of fields which are not accessible to the user.</param>
         /// <returns>Boolean value indicating whether the field is accessible or not.</returns>
         /// <exception cref="DataApiBuilderException">Throws exception if the field is not accessible.</exception>
-        private static bool IsFieldAccessible(Match columnNameMatch, HashSet<string> includedFields, HashSet<string> excludedFields)
+        private static bool IsFieldAccessible(Match columnNameMatch, HashSet<string>? includedFields, HashSet<string> excludedFields)
         {
             string columnName = columnNameMatch.Value.Substring(AuthorizationResolver.FIELD_PREFIX.Length);
             if (excludedFields.Contains(columnName!) || excludedFields.Contains(AuthorizationResolver.WILDCARD) ||
-                !(includedFields.Contains(AuthorizationResolver.WILDCARD) || includedFields.Contains(columnName)))
+                (includedFields is not null && !includedFields.Contains(AuthorizationResolver.WILDCARD) && !includedFields.Contains(columnName)))
             {
                 // If column is present in excluded OR excluded='*'
                 // If column is absent from included and included!=*
@@ -910,7 +950,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         {
             if (entity.ObjectType is SourceType.StoredProcedure)
             {
-                if (!PermissionOperation.ValidStoredProcedurePermissionOperations.Contains(action))
+                if (action is not Config.Operation.All && !PermissionOperation.ValidStoredProcedurePermissionOperations.Contains(action))
                 {
                     throw new DataApiBuilderException(
                         message: $"Invalid operation for Entity: {entityName}. " +

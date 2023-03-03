@@ -109,12 +109,12 @@ namespace Cli
             // custom type definitions.
             else if (graphQLDetail is null && graphQLOperation is not null)
             {
-                return new GraphQLStoredProcedureEntityOperationSettings(GraphQLOperation: graphQLOperation.ToString());
+                return new GraphQLStoredProcedureEntityOperationSettings(GraphQLOperation: graphQLOperation.ToString()!.ToLower());
             }
 
             // Stored procedures that are defined with custom graphQL type definition and
             // custom a graphQL operation.
-            return new GraphQLStoredProcedureEntityVerboseSettings(Type: graphQLDetail, GraphQLOperation: graphQLOperation.ToString());
+            return new GraphQLStoredProcedureEntityVerboseSettings(Type: graphQLDetail, GraphQLOperation: graphQLOperation.ToString()!.ToLower());
 
         }
 
@@ -313,10 +313,24 @@ namespace Cli
                                                                                       IEnumerable<string>? corsOrigin,
                                                                                       string authenticationProvider,
                                                                                       string? audience = null,
-                                                                                      string? issuer = null)
+                                                                                      string? issuer = null,
+                                                                                      string? restPath = GlobalSettings.REST_DEFAULT_PATH)
         {
+            // Prefix rest path with '/', if not already present.
+            if (restPath is not null && !restPath.StartsWith('/'))
+            {
+                restPath = "/" + restPath;
+            }
+
             Dictionary<GlobalSettingsType, object> defaultGlobalSettings = new();
-            defaultGlobalSettings.Add(GlobalSettingsType.Rest, new RestGlobalSettings());
+
+            // If restPath is null, it implies we are dealing with cosmosdb_nosql,
+            // which only supports graphql.
+            if (restPath is not null)
+            {
+                defaultGlobalSettings.Add(GlobalSettingsType.Rest, new RestGlobalSettings(restPath));
+            }
+
             defaultGlobalSettings.Add(GlobalSettingsType.GraphQL, new GraphQLGlobalSettings());
             defaultGlobalSettings.Add(
                 GlobalSettingsType.Host,
@@ -728,7 +742,7 @@ namespace Cli
         {
             if (operations.Length > 1
                 || !TryGetOperationName(operations.First(), out Operation operationName)
-                || operationName is not Operation.Execute)
+                || (operationName is not Operation.Execute && operationName is not Operation.All))
             {
                 _logger.LogError("Stored Procedure supports only execute operation.");
                 return false;
@@ -891,7 +905,7 @@ namespace Cli
         {
             if (!Enum.TryParse(operation, ignoreCase: true, out graphQLOperation))
             {
-                _logger.LogError($"Invalid GraphQL Operation. Supported operations are {GraphQLOperation.Query.ToString()} and {GraphQLOperation.Mutation.ToString()}.");
+                _logger.LogError($"Invalid GraphQL Operation. Supported operations are {GraphQLOperation.Query.ToString()!.ToLower()} and {GraphQLOperation.Mutation.ToString()!.ToLower()!}.");
                 return false;
             }
 

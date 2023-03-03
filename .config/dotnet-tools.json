@@ -7,12 +7,6 @@
       "commands": [
         "dotnet-format"
       ]
-    },
-    "microsoft.dataapibuilder": {
-      "version": "0.5.32",
-      "commands": [
-        "dab"
-      ]
     }
   }
 }

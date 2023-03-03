@@ -116,7 +116,15 @@ namespace Azure.DataApiBuilder.Service.Services
                 {
                     IMetadata metadata = GetMetadata(context);
                     using JsonDocument innerObject = _queryEngine.ResolveInnerObject(jsonElement, context.Selection.Field, ref metadata);
-                    SetContextResult(context, innerObject);
+                    if (innerObject is not null)
+                    {
+                        context.Result = innerObject.RootElement.Clone();
+                    }
+                    else
+                    {
+                        context.Result = null;
+                    }
+
                     SetNewMetadata(context, metadata);
                 }
             }

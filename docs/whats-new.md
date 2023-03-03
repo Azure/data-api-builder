@@ -1,6 +1,6 @@
 # What's New in Data API builder
 
-- [Version 0.5.34](#version-0533)
+- [Version 0.5.34](#version-0534)
 - [Version 0.5.32](#version-0532)
 - [Version 0.5.0](#version-050)
 - [Version 0.4.11](#version-0411)

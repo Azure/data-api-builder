@@ -109,7 +109,7 @@ With the configuration file in place, then it's time to start defining which ent
 
 ## Add Book entity
 
-We want to expose the books collection so that they can be used via GraphQL. For doing that, all we need is to add the related information to the entities section of the configuration file.
+We want to expose the books collection so that it can be accessed via GraphQL. For doing that, all we need is to add the related information to the entities section of the configuration file.
 
 > **NOTE**: REST operations are not supported for Cosmos DB via the
 > Data API Builder, You can use the existing [REST API](https://learn.microsoft.com/rest/api/cosmos-db/)
@@ -136,13 +136,13 @@ or by adding the `Book` entity manually to the configuration file under entities
     }
 ```
 
-within the `entities` object you can create any entity with any name (as long as it is valid for GraphQL). The name `Book`, in this case, will be used to build the GraphQL type. Within the entity you have the `source` element that specifies which container contains the entity data. In our case it is `books`.
+Within the `entities` object you can create any entity with any name (as long as it is valid for GraphQL). The name `Book`, in this case, will be used to build the GraphQL type. Within the entity you have the `source` element that specifies which container contains the entity data. In our case it is `books`.
 
 > **NOTE**: Entity names are case sensitive and they will be exposed via GraphQL as you have typed them.
 
-After that, you need to specify the permission for the exposed entity, so that you can be sure only those users making a request with the right claims will be able to access the entity and its data. In this getting started tutorial we're just allowing anyone, without the need to be authenticated, to perform all the CRUD operations to the `Book` entity.
+After that, you need to specify the permissions for the exposed entity, so that you can be sure only those users making a request with the right claims will be able to access the entity and its data. In this getting started tutorial we're just allowing anyone, without the need to be authenticated, to perform all the CRUD operations to the `Book` entity.
 
-Once you have added the `Book` entity, the `entities` object of configuration file will look like the following:
+Once you have added the `Book` entity, the `entities` object of the configuration file will look like the following:
 
 ```json
  "entities": {
@@ -248,6 +248,6 @@ Congratulations, you have just created a fully working backend to support your m
 
 If you want to practice what you have learned, here's a little exercise you can do on your own
 
-- add the collection `series` which will store series names (for example: [Foundation Series](https://en.wikipedia.org/wiki/Foundation_series)) and respective ids.
-- update the `books` collection by adding a field named `series_id` and update with matching series_id.
+- Add the collection `series` which will store series names (for example: [Foundation Series](https://en.wikipedia.org/wiki/Foundation_series)) and respective ids.
+- Update the `books` collection by adding a field named `series_id` and update with matching series_id.
 - Update the configuration file with a new entity named `Series`, supported by the `series` source collection you just created.

@@ -1,10 +1,10 @@
-# What's New in Data API builder 0.5.33
+# What's New in Data API builder 0.5.34
 
 - [Honor REST and GraphQL enabled flag at runtime level](#honor-rest-and-graphql-enabled-flag-at-runtime-level)
 - [Add Correlation ID to request logs](#add-correlation-id-to-request-logs)
 - [Wildcard Operation Support for Stored Procedures in Engine and CLI](#wildcard-operation-support-for-stored-procedures-in-engine-and-cli)
 
-The full list of release notes for this version is available here: [version 0.5.33 release notes](https://github.com/Azure/data-api-builder/releases/tag/v0.5.33)
+The full list of release notes for this version is available here: [version 0.5.34 release notes](https://github.com/Azure/data-api-builder/releases/tag/v0.5.34)
 
 ## Honor REST and GraphQL enabled flag at runtime level
 

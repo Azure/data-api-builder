@@ -1,6 +1,6 @@
 # What's New in Data API builder
 
-- [Version 0.5.33](#version-0533)
+- [Version 0.5.34](#version-0533)
 - [Version 0.5.32](#version-0532)
 - [Version 0.5.0](#version-050)
 - [Version 0.4.11](#version-0411)
@@ -8,9 +8,9 @@
 
 Details on how to install the latest version are here: [Installing DAB CLI](./getting-started/getting-started.md#installing-dab-cli)
 
-## Version 0.5.33
+## Version 0.5.34
 
-The full list of release notes for this version is available here: [version 0.5.33 release notes](https://github.com/Azure/data-api-builder/releases/tag/v0.5.33)
+The full list of release notes for this version is available here: [version 0.5.34 release notes](https://github.com/Azure/data-api-builder/releases/tag/v0.5.34)
 
 - [Honor REST and GraphQL enabled flag at runtime level](#honor-rest-and-graphql-enabled-flag-at-runtime-level)
 - [Add Correlation ID to request logs](#add-correlation-id-to-request-logs)

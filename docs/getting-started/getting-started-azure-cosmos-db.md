@@ -12,7 +12,7 @@ Create the database container needed to represent Books. There are different way
 
 Read more about [choosing partition key](https://docs.microsoft.com/en-us/azure/cosmos-db/partitioning-overview#choose-partitionkey) and [data modeling](https://docs.microsoft.com/en-us/azure/cosmos-db/sql/modeling-data)
 
-Once the container is created, we can import the sample data which are placed in the 'azure-cosmos-db' folder to the book collection by using the add new item option (Make sure you add one by one item) in the Azure Data Explorer.
+Once the container is created, we can import the sample data in `books.json` which is placed in the ['azure-cosmos-db'](../samples/getting-started/azure-cosmos-db) folder to the book collection by using the add new item option (Make sure you add one by one item) in the Azure Data Explorer.
 
 ![Cosmos DB Add New Document](../media/cosmos-insert-new.png)
 

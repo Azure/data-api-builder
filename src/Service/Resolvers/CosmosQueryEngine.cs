@@ -215,12 +215,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 listType = listType.InnerType();
             }
 
-            // Object types, such as the pagination field `items` will need to be
-            // walked as a JsonDocument not a JsonElement, so we'll return
-            // the JsonDocument here instead
             if (listType.IsObjectType())
             {
-                return JsonSerializer.Deserialize<List<JsonDocument>>(element);
+                return JsonSerializer.Deserialize<List<JsonElement>>(element);
             }
 
             return JsonSerializer.Deserialize(element, fieldSchema.RuntimeType);

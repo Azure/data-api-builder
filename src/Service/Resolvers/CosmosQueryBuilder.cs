@@ -63,10 +63,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         private string WrappedColumns(CosmosQueryStructure structure)
         {
-            return string.Join(", ",
-                structure.Columns.Select(
-                    c => _containerAlias + "." + c.Label
-            ));
+            return string.Join(
+                ", ",
+                structure.Columns
+                    .Select(c => _containerAlias + "." + c.Label)
+                    .Distinct()
+                );
         }
 
         /// <summary>

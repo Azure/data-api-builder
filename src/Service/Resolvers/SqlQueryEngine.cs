@@ -290,7 +290,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             metadata = currentMetadata;
 
             //TODO: Try to avoid additional deserialization/serialization here.
-            return JsonSerializer.Deserialize<List<JsonDocument>>(element.ToString());
+            return JsonSerializer.Deserialize<List<JsonElement>>(element.ToString());
         }
 
         // <summary>
@@ -334,7 +334,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else
             {
-                _logger.LogInformation("Did not return enough rows.");
+                _logger.LogInformation($"{HttpContextExtensions.GetLoggerCorrelationId(_httpContextAccessor.HttpContext)}" +
+                    "Did not return enough rows.");
             }
 
             return jsonDocument;

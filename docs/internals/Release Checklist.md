@@ -40,7 +40,7 @@ After a successful build, complete the following steps:
   - Check that the **Target** branch hash matches that of the latest release branch commit hash.
   ![GitHub Release Target Branch Hash](GitHub-Release-TargetBranch.png)
   - Provide a description to the release. This list is arbitrary and a good source of content can be sourced from PRs included in this release. **Make sure to reference the PR for each item.**
-  - Publish the release.
+  - Publish the release (Make sure the pre-release is unchecked).
 
 ## Guidelines for versioning
 

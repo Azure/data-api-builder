@@ -742,7 +742,7 @@ namespace Cli
         {
             if (operations.Length > 1
                 || !TryGetOperationName(operations.First(), out Operation operationName)
-                || operationName is not Operation.Execute)
+                || (operationName is not Operation.Execute && operationName is not Operation.All))
             {
                 _logger.LogError("Stored Procedure supports only execute operation.");
                 return false;

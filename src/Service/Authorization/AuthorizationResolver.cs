@@ -284,34 +284,29 @@ namespace Azure.DataApiBuilder.Service.Authorization
                                 }
                                 else
                                 {
-                                    if (operationObj.Fields.Include is not null)
+                                    // When a wildcard (*) is defined for Included columns, all of the table's
+                                    // columns must be resolved and placed in the operationToColumn Key/Value store.
+                                    // This is especially relevant for find requests, where actual column names must be
+                                    // resolved when no columns were included in a request.
+                                    if (operationObj.Fields.Include is null ||
+                                        (operationObj.Fields.Include.Count == 1 && operationObj.Fields.Include.Contains(WILDCARD)))
                                     {
-                                        // When a wildcard (*) is defined for Included columns, all of the table's
-                                        // columns must be resolved and placed in the operationToColumn Key/Value store.
-                                        // This is especially relevant for find requests, where actual column names must be
-                                        // resolved when no columns were included in a request.
-                                        if (operationObj.Fields.Include.Count == 1 && operationObj.Fields.Include.Contains(WILDCARD))
-                                        {
-                                            operationToColumn.Included.UnionWith(ResolveEntityDefinitionColumns(entityName));
-                                        }
-                                        else
-                                        {
-                                            operationToColumn.Included = operationObj.Fields.Include;
-                                        }
+                                        operationToColumn.Included.UnionWith(ResolveEntityDefinitionColumns(entityName));
+                                    }
+                                    else
+                                    {
+                                        operationToColumn.Included = operationObj.Fields.Include;
                                     }
 
-                                    if (operationObj.Fields.Exclude is not null)
+                                    // When a wildcard (*) is defined for Excluded columns, all of the table's
+                                    // columns must be resolved and placed in the operationToColumn Key/Value store.
+                                    if (operationObj.Fields.Exclude.Count == 1 && operationObj.Fields.Exclude.Contains(WILDCARD))
                                     {
-                                        // When a wildcard (*) is defined for Excluded columns, all of the table's
-                                        // columns must be resolved and placed in the operationToColumn Key/Value store.
-                                        if (operationObj.Fields.Exclude.Count == 1 && operationObj.Fields.Exclude.Contains(WILDCARD))
-                                        {
-                                            operationToColumn.Excluded.UnionWith(ResolveEntityDefinitionColumns(entityName));
-                                        }
-                                        else
-                                        {
-                                            operationToColumn.Excluded = operationObj.Fields.Exclude;
-                                        }
+                                        operationToColumn.Excluded.UnionWith(ResolveEntityDefinitionColumns(entityName));
+                                    }
+                                    else
+                                    {
+                                        operationToColumn.Excluded = operationObj.Fields.Exclude;
                                     }
                                 }
 

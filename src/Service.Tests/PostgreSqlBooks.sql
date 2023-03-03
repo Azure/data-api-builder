@@ -268,7 +268,7 @@ INSERT INTO reviews(id, book_id, content) VALUES (567, 1, 'Indeed a great book')
 INSERT INTO foo.magazines(id, title, issue_number) VALUES (1, 'Vogue', 1234), (11, 'Sports Illustrated', NULL), (3, 'Fitness', NULL);
 INSERT INTO series(id, name) VALUES (3001, 'Foundation'), (3002, 'Hyperion Cantos');
 INSERT INTO comics(id, title, "categoryName", series_id)
-VALUES (1, 'Star Trek', 'SciFi', NULL), (2, 'Cinderella', 'FairyTales', 3001),(3,'Únknown','', 3002), (4, 'Alexander the Great', 'Historical', NULL);INSERT INTO stocks(categoryid, pieceid, "categoryName") VALUES (1, 1, 'SciFi'), (2, 1, 'FairyTales'),(0,1,''),(100, 99, 'Historical');
+VALUES (1, 'Star Trek', 'SciFi', NULL), (2, 'Cinderella', 'Tales', 3001),(3,'Únknown','', 3002), (4, 'Alexander the Great', 'Historical', NULL);INSERT INTO stocks(categoryid, pieceid, "categoryName") VALUES (1, 1, 'SciFi'), (2, 1, 'Tales'),(0,1,''),(100, 99, 'Historical');
 INSERT INTO brokers("ID Number", "First Name", "Last Name") VALUES (1, 'Michael', 'Burry'), (2, 'Jordan', 'Belfort');
 INSERT INTO stocks_price(categoryid, pieceid, price, is_wholesale_price) VALUES (2, 1, 100.57, True), (1, 1, 42.75, False);
 INSERT INTO type_table(id, short_types, int_types, long_types, string_types, single_types, float_types, decimal_types, boolean_types, datetime_types, bytearray_types) VALUES

@@ -121,7 +121,7 @@ steps:
     outputformat: text
 
 - task: PowerShell@2
-  displayName: "Add ChilliCream License for Banana Cake Pop"
+  displayName: "Add Additional Licenses to NOTICE file"
   inputs:
     targetType: 'filePath'
     filePath: $(System.DefaultWorkingDirectory)/scripts/notice-generation.ps1

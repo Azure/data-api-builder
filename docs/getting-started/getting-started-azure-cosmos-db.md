@@ -6,7 +6,7 @@ This tutorial assumes that you have already a [Cosmos DB NoSQL API database acco
 
 ## Create the database container
 
-Create the necessary database container needed to represent Books. There are different ways to model this sample and you can learn more about data modeling from [here](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/modeling-data). We will use the [embedded data model](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/modeling-data#embedding-data) in this sample.
+Create the database container needed to represent Books. There are different ways to model this sample and you can learn more about data modeling from [here](https://learn.microsoft.com/azure/cosmos-db/nosql/modeling-data). We will use the [embedded data model](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/modeling-data#embedding-data) in this sample.
 
 - `books`: Collection containing books and its authors with 'id' as the partition key
 

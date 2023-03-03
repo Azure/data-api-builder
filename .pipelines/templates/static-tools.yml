@@ -66,6 +66,11 @@ jobs:
       AnalyzeTargetGlob: $(Build.SourcesDirectory)\**.dll;$(Build.SourcesDirectory)\**.exe;-:f|$(Build.SourcesDirectory)\**\Microsoft.Azure.Cosmos.ServiceInterop.dll
       AnalyzeIgnorePdbLoadError: true
 
+  - task: Semmle@1
+    displayName: 'Run CodeQL (Semmle) (csharp)'
+    inputs:
+      sourceCodeDirectory: '$(Build.SourcesDirectory)'
+
   # Publish Analysis Results (position after all tools ran)
   - task: securedevelopmentteam.vss-secure-development-tools.build-task-publishsecurityanalysislogs.PublishSecurityAnalysisLogs@3
     displayName: 'Publish Security Analysis Logs'

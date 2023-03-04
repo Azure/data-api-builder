@@ -69,9 +69,9 @@ To add a new Entity to the config. It will fail if the config doesn't exist.
 | **--source.params** | false   | -   | Dictionary of parameters and their values for Source object."param1:val1,param2:value2,.." for Stored-Procedures.   |
 | **--source.key-fields** | false   | -   | The field(s) to be used as primary keys.   |
 | **--rest** | false   | -   | Route for rest api.   |
-| **--rest.methods** | false   | POST   | HTTP actions to be supported for stored procedure. Specify the actions as a comma separated list. Valid HTTP actions are :[GET, POST, PUT, PATCH, DELETE]   |
+| **--rest.methods** | false   | post   | HTTP actions to be supported for stored procedure. Specify the actions as a comma separated list. Valid HTTP actions are :[get, post, put, patch, delete]   |
 | **--graphql** | false   | -   | Type of graphQL.  |
-| **--graphql.operation** | false   | mutation   | GraphQL operation to be supported for stored procedure. Valid operations are : [Query, Mutation]  |
+| **--graphql.operation** | false   | mutation   | GraphQL operation to be supported for stored procedure. Valid operations are : [query, mutation]  |
 | **--fields.include** | false   | -   | Fields that are allowed access to permission.  |
 | **--fields.exclude** | false   | -   | Fields that are excluded from the action lists.   |
 | **--policy-database** | false   | -   | Specify an OData style filter rule that will be injected in the query sent to the database.  |

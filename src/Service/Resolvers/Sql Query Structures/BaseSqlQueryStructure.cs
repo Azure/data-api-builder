@@ -542,7 +542,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     else
                     {
                         throw new DataApiBuilderException(
-                                message: $"Invalid value supplied for field: {paramName}",
+                                message: $"Invalid value provided for field: {paramName}",
                                 statusCode: HttpStatusCode.BadRequest,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
                                 innerException: e);

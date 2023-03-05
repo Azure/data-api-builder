@@ -268,7 +268,7 @@ steps:
 # Build a docker image and push it to the container registry.
 - task: Docker@2
   displayName: "Build and push docker image to Azure Container Registry"
-  condition: eq(variables.isReleaseBuild, 'false')
+  condition: and(succeeded(), eq(variables.isReleaseBuild, 'false'))
   inputs:
     containerRegistry: 'CosmosDB GraphQL/Hawaii'
     repository: 'dab/$(Build.SourceBranch)'

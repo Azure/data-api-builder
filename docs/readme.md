@@ -2,7 +2,7 @@
 
 Data API builder for Azure Databases provide modern REST and GraphQL endpoints to your Azure Databases.
 
-With Data API builder, database objects can be exposed via REST or GraphQL endpoints so that your data can be accessed using modern techniques by any platform, any language, any device. With an integrated and flexible policy engine, granular security is assured; integrated with Azure SQL, SQL Server, PostgreSQL, MySQL, MariaDB and Cosmos DB, gives developers an efficiency boost like it was never seen before.
+With data API builder, database objects can be exposed via REST or GraphQL endpoints so that your data can be accessed using modern techniques on any platform, any language, and any device. With an integrated and flexible policy engine, native support for common behavior like pagination, filtering, projection and sorting, the creation of CRUD backend services can be done in minutes instead of hours or days, giving developers an efficiency boost like never seen before. 
 
 ## Table of content
 
@@ -15,8 +15,8 @@ With Data API builder, database objects can be exposed via REST or GraphQL endpo
   - [Running from source code](./running-from-source-code.md)  
   - [Local authentication](./local-authentication.md)
 - [Running in Azure](./running-in-azure.md)
-  - [Static Web Apps Integration](./static-web-apps-integration.md) (WIP)
-  - [Container Self-Hosting](./azure-container-self-hosting.md) (WIP)
+  - [Static Web Apps Integration](./static-web-apps-integration.md) WIP
+  - [Container Self-Hosting](./azure-container-self-hosting.md)  WIP
 - [Configuration file](./configuration-file.md)
   - [Database Connections](./database-connections.md)
   - [Runtime to Database Authorization](./runtime-to-database-authorization.md)

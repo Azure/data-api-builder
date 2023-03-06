@@ -19,7 +19,7 @@ Make sure you have .NET 6.0 SDK installed on your machine: https://dotnet.micros
 
 You can list the SDKs installed on your machine by using the following command:
 
-```bash
+```shell
 dotnet --list-sdks
 ```
 
@@ -27,19 +27,14 @@ dotnet --list-sdks
 
 Data API Builder provides a CLI tool to simplify configuration and execution of the engine. You can install the DAB CLI using [.NET tools](https://docs.microsoft.com/en-us/dotnet/core/tools/global-tools):
 
-- Download the latest version of the package: [dab.<version_number>.nupkg](https://github.com/Azure/data-api-builder/releases/)
-- Navigate to the folder where the package file is downloaded.
-
-then, to install this tool globally, use:
-
-```bash
-dotnet tool install --global Microsoft.DataApiBuilder --version <version_number>
+```shell
+dotnet tool install --global Microsoft.DataApiBuilder 
 ```
 
 or, if you have already installed a previous version, you can update DAB CLI to the latest version via the following:
 
-```bash
-dotnet tool update --global Microsoft.DataApiBuilder --version <version_number>
+```shell
+dotnet tool update --global Microsoft.DataApiBuilder 
 ```
 
 > **ATTENTION**: if you are running on Linux or MacOS, you may need to add .NET global tools to your PATH to call `dab` directly. Once installed run:
@@ -53,24 +48,26 @@ Installing the package will make the `dab` command available on your development
 dab --version
 ```
 
-which should output
+which should output something like:
 
 ```bash
 dab 0.5.0
 ```
 
-Where `0.5.0` should match your version of DAB CLI.
+Where `0.5.0` is the version of DAB CLI that you have installed on your machine.
 
 >For detailed instructions on how to Install DAB CLI look here: [Running Data API Builder for Azure Databases using CLI](../running-using-dab-cli.md)
 
 ## Azure Database
 
-As the Data API builder for Azure Databases generates REST and GraphQL endpoints for database objects, you need to have a database ready for the tutorial. You can choose either a relational or non-relational database. This getting started guide documents the process to set up Data API builder for Azure SQL or Azure Cosmos DB.
+As the Data API builder for Azure Databases generates REST and GraphQL endpoints for database objects, you need to have a database ready for the tutorial. You can choose either a relational or non-relational database. 
 
 It's time for you to choose which database you want to use, so you can continue the getting started guide from there:
 
-- [Getting Started with Data API builder for Azure SQL](./getting-started-azure-sql.md)
+- [Getting Started with Data API builder for Azure SQL (or SQL Server)](./getting-started-azure-sql.md)
 - [Getting Started with Data API builder for with Azure Cosmos DB](./getting-started-azure-cosmos-db.md)
+- [Getting Started with Data API builder for with Azure Database PostgreSQL](./getting-started-azure-postgresql.md.md)
+- [Getting Started with Data API builder for with Azure MySQL Database](./getting-started-azure-mysql-db.md.md)
 
 ## Further reading
 

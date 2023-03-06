@@ -290,7 +290,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             metadata = currentMetadata;
 
             //TODO: Try to avoid additional deserialization/serialization here.
-            return JsonSerializer.Deserialize<List<JsonDocument>>(element.ToString());
+            return JsonSerializer.Deserialize<List<JsonElement>>(element.ToString());
         }
 
         // <summary>

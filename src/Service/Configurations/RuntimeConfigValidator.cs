@@ -405,9 +405,11 @@ namespace Azure.DataApiBuilder.Service.Configurations
             if (_invalidPathCharsRgx.IsMatch(apiPath))
             {
                 string errorMessage = INVALID_GRAPHQL_PATH_WITH_RESERVED_CHAR_ERR_MSG;
-                if ("REST".Equals(apiType)){
+                if ("REST".Equals(apiType))
+                {
                     errorMessage = INVALID_REST_PATH_WITH_RESERVED_CHAR_ERR_MSG;
                 }
+
                 throw new DataApiBuilderException(
                     message: errorMessage,
                     statusCode: HttpStatusCode.ServiceUnavailable,

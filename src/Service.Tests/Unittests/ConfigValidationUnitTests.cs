@@ -1433,7 +1433,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             string graphQLPathPrefix = GlobalSettings.GRAPHQL_DEFAULT_PATH;
             string restPathPrefix = GlobalSettings.REST_DEFAULT_PATH;
 
-            if ("REST".Equals(apiType)) 
+            if ("REST".Equals(apiType))
             {
                 restPathPrefix = apiPathPrefix;
             }
@@ -1483,7 +1483,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                         expectedErrorMessage = "GraphQL " + expectedErrorMessage;
                     }
                 }
-                
+
                 Assert.AreEqual(expectedErrorMessage, ex.Message);
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);

@@ -99,7 +99,7 @@ public class EndToEndTests
         Assert.IsFalse(runtimeConfig.RestGlobalSettings.Enabled);
         Assert.AreEqual("/graphql-api", runtimeConfig.GraphQLGlobalSettings.Path);
         Assert.IsFalse(runtimeConfig.GraphQLGlobalSettings.Enabled);
-        }
+    }
 
     /// <summary>
     /// Test to verify adding a new Entity.

@@ -110,10 +110,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             // https://stackoverflow.com/questions/42668720/check-if-postgres-query-inserted-or-updated-via-upsert
             // relying on xmax to detect insert vs update breaks for views
-
+            string predicates = JoinPredicateStrings(Build(structure.Predicates), structure.DbPolicyPredicates);
             string updateQuery = $"UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
                 $"SET {Build(structure.UpdateOperations, ", ")} " +
-                $"WHERE {Build(structure.Predicates)} " +
+                $"WHERE {predicates} " +
                 $"RETURNING {Build(structure.OutputColumns)}, '{UPDATE_UPSERT}' AS {UPSERT_IDENTIFIER_COLUMN_NAME}";
 
             if (structure.IsFallbackToUpdate)

@@ -1,6 +1,6 @@
-# Database connections in Data API Builder
+# Database connections in Data API builder
 
-In order to work properly, Data API Builder needs to connect to a target database. To do that a connection string must be supplied in the [configuration file](./configuration-file.md)
+In order to work properly, Data API builder needs to connect to a target database. To do that a connection string must be supplied in the [configuration file](./configuration-file.md)
 
 ## Connection Resiliency
 
@@ -10,6 +10,6 @@ Connection to databases are automatically retried, in case a transient error is 
 
 ### Azure SQL & SQL Server
 
-Data API Builder uses the SqlClient library to connect to Azure SQL or SQL Server. A list of all the supported connection string options is available here: [SqlConnection.ConnectionString Property](https://learn.microsoft.com/dotnet/api/system.data.sqlclient.sqlconnection.connectionstring).
+Data API builder uses the SqlClient library to connect to Azure SQL or SQL Server. A list of all the supported connection string options is available here: [SqlConnection.ConnectionString Property](https://learn.microsoft.com/dotnet/api/system.data.sqlclient.sqlconnection.connectionstring).
 
 Usage of Managed Service Identities (MSI) is also supported. Don't specify your username and password in the connection string, and the DefaultAzureCredential will be used as documented here: [Azure Identity client library for .NET - DefaultAzureCredential](https://learn.microsoft.com/dotnet/api/overview/azure/Identity-readme#defaultazurecredential)

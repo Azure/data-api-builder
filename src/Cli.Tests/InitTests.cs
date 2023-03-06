@@ -37,6 +37,7 @@ namespace Cli.Tests
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                restPath: "rest-api",
                 config: _testRuntimeConfig);
 
             _basicRuntimeConfig =
@@ -57,7 +58,8 @@ namespace Cli.Tests
                 _basicRuntimeConfig,
                 GetDefaultTestRuntimeSettingString(
                     HostModeType.Development,
-                    new List<string>() { "http://localhost:3000", "http://nolocalhost:80" })
+                    new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
+                    restPath: options.RestPath)
             );
 
             RunTest(options, expectedRuntimeConfig);
@@ -79,6 +81,7 @@ namespace Cli.Tests
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                restPath: "/rest-endpoint",
                 config: _testRuntimeConfig);
 
             _basicRuntimeConfig =
@@ -96,7 +99,8 @@ namespace Cli.Tests
                 _basicRuntimeConfig,
                 GetDefaultTestRuntimeSettingString(
                     HostModeType.Development,
-                    new List<string>() { "http://localhost:3000", "http://nolocalhost:80" })
+                    new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
+                    restPath: options.RestPath)
             );
             RunTest(options, expectedRuntimeConfig);
         }
@@ -179,7 +183,7 @@ namespace Cli.Tests
             // Adding runtime settings to the above basic config
             string expectedRuntimeConfig = AddPropertiesToJson(
                 _basicRuntimeConfig,
-                GetDefaultTestRuntimeSettingString());
+                GetDefaultTestRuntimeSettingString(restPath: null));
             RunTest(options, expectedRuntimeConfig);
         }
 

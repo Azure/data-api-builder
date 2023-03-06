@@ -95,7 +95,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     FROM (
                         SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
                         FROM " + _Composite_NonAutoGenPK_TableName + @"
-                        WHERE categoryid = 2 AND pieceid = 1 AND categoryName ='FairyTales' AND piecesAvailable is NULL
+                        WHERE categoryid = 2 AND pieceid = 1 AND categoryName ='Tales' AND piecesAvailable is NULL
                         AND piecesRequired = 4
                     ) AS subq
                 "

@@ -22,6 +22,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
     {
         public const string TEST_ENTITY = "SampleEntity";
         public const string TEST_ROLE = "Writer";
+        public const string GRAPHQL_AUTHORIZATION_ERROR = "AUTH_NOT_AUTHORIZED";
 
         /// <summary>
         /// Creates stub AuthorizationResolver object from provided runtimeConfig object.
@@ -116,7 +117,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             AuthenticationConfig authenticationConfig = new(Provider: authProvider);
             HostGlobalSettings hostGlobal = new(Authentication: authenticationConfig);
             JsonElement hostGlobalJson = JsonSerializer.SerializeToElement(hostGlobal);
+            RestGlobalSettings restGlobalSettings = new();
+            JsonElement restGlobalJson = JsonSerializer.SerializeToElement(restGlobalSettings);
             runtimeSettings.Add(GlobalSettingsType.Host, hostGlobalJson);
+            runtimeSettings.Add(GlobalSettingsType.Rest, restGlobalJson);
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",

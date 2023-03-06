@@ -4,7 +4,7 @@
   "title": "Data API Builder",
   "description": "Schema for Data API Builder engine",
   "additionalProperties": {
-    "version": "https://dataapibuilder.azureedge.net/schemas/vmajor.minor.patch-beta/dab.draft.schema.json"
+    "version": "https://dataapibuilder.azureedge.net/schemas/vmajor.minor.patch/dab.draft.schema.json"
   },
   "type": "object",
   "properties": {
@@ -129,6 +129,10 @@
             "path": {
               "default": "/api",
               "type": "string"
+            },
+            "enabled": {
+              "type": "boolean",
+              "description": "Allow enabling/disabling REST requests for all entities."
             }
           }
         },
@@ -143,6 +147,10 @@
             "path": {
               "default": "/graphql",
               "type": "string"
+            },
+            "enabled": {
+              "type": "boolean",
+              "description": "Allow enabling/disabling GraphQL requests for all entities."
             }
           }
         },

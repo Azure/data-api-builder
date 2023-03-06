@@ -15,6 +15,7 @@ using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers;
 using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using static Azure.DataApiBuilder.Service.Configurations.RuntimeConfigValidator;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
@@ -1331,73 +1332,119 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Tests whether the REST path prefix is well formed or not.
+        /// Tests whether the API path prefix is well formed or not.
         /// </summary>
-        /// <param name="restPathPrefix">REST path prefix</param>
+        /// <param name="apiPathPrefix">API path prefix</param>
         /// <param name="expectedErrorMessage">Expected error message in case an exception is thrown.</param>
+        /// <param name="IsPathContainingReservedCharacters">Boolean indicating if path prefix contains reserved characters.</param>
         /// <param name="expectError">Exception expected</param>
         // @"[\.:\?#/\[\]@!$&'()\*\+,;=]+";
         [DataTestMethod]
-        [DataRow("/.", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
-            DisplayName = "Rest path prefix containing reserved character .")]
-        [DataRow("/:", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
-            DisplayName = "Rest path prefix containing reserved character :")]
-        [DataRow("/?", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
-            DisplayName = "Rest path prefix containing reserved character ?")]
-        [DataRow("/#", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
-            DisplayName = "Rest path prefix containing reserved character #")]
-        [DataRow("//", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
-            DisplayName = "Rest path prefix containing reserved character /")]
-        [DataRow("/[", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
-            DisplayName = "Rest path prefix containing reserved character [")]
-        [DataRow("/)", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
-            DisplayName = "Rest path prefix containing reserved character )")]
-        [DataRow("/@", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
-            DisplayName = "Rest path prefix containing reserved character @")]
-        [DataRow("/!", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
-            DisplayName = "Rest path prefix containing reserved character !")]
-        [DataRow("/$", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
-            DisplayName = "Rest path prefix containing reserved character $")]
-        [DataRow("/&", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
-            DisplayName = "Rest path prefix containing reserved character &")]
-        [DataRow("/'", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
-            DisplayName = "Rest path prefix containing reserved character '")]
-        [DataRow("/+", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
-            DisplayName = "Rest path prefix containing reserved character +")]
-        [DataRow("/;", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
-            DisplayName = "Rest path prefix containing reserved character .")]
-        [DataRow("/=", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
-            DisplayName = "Rest path prefix containing reserved character .")]
-        [DataRow("/?#*(=", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
-            DisplayName = "Rest path prefix containing multiple reserved characters /?#*(=")]
-        [DataRow("/+&,", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
-            DisplayName = "Rest path prefix containing reserved characters /+&,")]
-        [DataRow("/@)", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
-            DisplayName = "Rest path prefix containing reserved characters /@)")]
-        [DataRow("", "REST path prefix cannot be null or empty.", true,
-            DisplayName = "Empty Rest path prefix.")]
-        [DataRow(null, "REST path prefix cannot be null or empty.", true,
-            DisplayName = "Null Rest path prefix.")]
-        [DataRow("?", "REST path should start with a '/'.", true,
-            DisplayName = "Rest path prefix not starting with forward slash.")]
-        [DataRow("/-rest-api", null, false,
-            DisplayName = "Rest path prefix containing hyphen (-)")]
-        [DataRow("/rest api", null, false,
-            DisplayName = "Rest path prefix containing space in between")]
-        [DataRow("/ restapi", null, false,
-            DisplayName = "Rest path prefix containing space at the start")]
-        [DataRow("/ rest_api", null, false,
-            DisplayName = "Rest path prefix containing space at the start and underscore in between.")]
-        [DataRow("/", null, false,
-            DisplayName = "Rest path containing only a forward slash.")]
-        public void ValidateRestPathIsWellFormed(
-            string restPathPrefix,
+        [DataRow("/.", "", true, true,
+            DisplayName = "API path prefix containing reserved character .")]
+        [DataRow("/:", "", true, true,
+            DisplayName = "API path prefix containing reserved character :")]
+        [DataRow("/?", "", true, true,
+            DisplayName = "API path prefix containing reserved character ?")]
+        [DataRow("/#", "", true, true,
+            DisplayName = "API path prefix containing reserved character #")]
+        [DataRow("//", "", true, true,
+            DisplayName = "API path prefix containing reserved character /")]
+        [DataRow("/[", "", true, true,
+            DisplayName = "API path prefix containing reserved character [")]
+        [DataRow("/)", "", true, true,
+            DisplayName = "API path prefix containing reserved character )")]
+        [DataRow("/@", "", true, true,
+            DisplayName = "API path prefix containing reserved character @")]
+        [DataRow("/!", "", true, true,
+            DisplayName = "API path prefix containing reserved character !")]
+        [DataRow("/$", "", true, true,
+            DisplayName = "API path prefix containing reserved character $")]
+        [DataRow("/&", "", true, true,
+            DisplayName = "API path prefix containing reserved character &")]
+        [DataRow("/'", "", true, true,
+            DisplayName = "API path prefix containing reserved character '")]
+        [DataRow("/+", "", true, true,
+            DisplayName = "API path prefix containing reserved character +")]
+        [DataRow("/;", "", true, true,
+            DisplayName = "API path prefix containing reserved character .")]
+        [DataRow("/=", "", true, true,
+            DisplayName = "API path prefix containing reserved character .")]
+        [DataRow("/?#*(=", "", true, true,
+            DisplayName = "API path prefix containing multiple reserved characters /?#*(=")]
+        [DataRow("/+&,", "", true, true,
+            DisplayName = "API path prefix containing reserved characters /+&,")]
+        [DataRow("/@)", "", true, true,
+            DisplayName = "API path prefix containing reserved characters /@)")]
+        [DataRow("", "path prefix cannot be null or empty.", false, true,
+            DisplayName = "Empty API path prefix.")]
+        [DataRow(null, "path prefix cannot be null or empty.", false, true,
+            DisplayName = "Null API path prefix.")]
+        [DataRow("?", "path should start with a '/'.", false, true,
+            DisplayName = "API path prefix not starting with forward slash.")]
+        [DataRow("/-api", null, false, false,
+            DisplayName = "API path prefix containing hyphen (-)")]
+        [DataRow("/api path", null, false, false,
+            DisplayName = "API path prefix containing space in between")]
+        [DataRow("/ apipath", null, false, false,
+            DisplayName = "API path prefix containing space at the start")]
+        [DataRow("/ api_path", null, false, false,
+            DisplayName = "API path prefix containing space at the start and underscore in between.")]
+        [DataRow("/", null, false, false,
+            DisplayName = "API path containing only a forward slash.")]
+        public void ValidateApiPathIsWellFormed(
+            string apiPathPrefix,
             string expectedErrorMessage,
+            bool IsPathContainingReservedCharacters,
             bool expectError)
         {
+            ValidateRestAndGraphQLPathIsWellFormed(
+                apiPathPrefix,
+                expectedErrorMessage,
+                IsPathContainingReservedCharacters,
+                expectError,
+                apiType: "REST"
+            );
+            ValidateRestAndGraphQLPathIsWellFormed(
+                apiPathPrefix,
+                expectedErrorMessage,
+                IsPathContainingReservedCharacters,
+                expectError,
+                apiType: "GraphQL"
+            );
+        }
+
+        /// <summary>
+        /// Validate Rest and GraphQL prefix path and throw exception with appropriate error messages
+        /// on failure.
+        /// </summary>
+        /// <param name="apiPathPrefix">API path prefix</param>
+        /// <param name="expectedErrorMessage">Expected error message in case an exception is thrown.</param>
+        /// <param name="IsPathContainingReservedCharacters">Boolean indicating if path prefix contains reserved characters.</param>
+        /// <param name="expectError">Exception expected</param>
+        /// <param name="apiType">Either REST or GraphQL</param>
+        private static void ValidateRestAndGraphQLPathIsWellFormed(
+            string apiPathPrefix,
+            string expectedErrorMessage,
+            bool IsPathContainingReservedCharacters,
+            bool expectError,
+            string apiType)
+        {
+            string graphQLPathPrefix = GlobalSettings.GRAPHQL_DEFAULT_PATH;
+            string restPathPrefix = GlobalSettings.REST_DEFAULT_PATH;
+
+            if ("REST".Equals(apiType)) 
+            {
+                restPathPrefix = apiPathPrefix;
+            }
+            else
+            {
+                graphQLPathPrefix = apiPathPrefix;
+            }
+
             Dictionary<GlobalSettingsType, object> settings = new()
             {
-                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings()) },
+                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(Path: graphQLPathPrefix)) },
                 { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings(){ Path = restPathPrefix }) }
 
             };
@@ -1407,9 +1454,36 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             if (expectError)
             {
-                DataApiBuilderException ex =
-                    Assert.ThrowsException<DataApiBuilderException>(() =>
+                DataApiBuilderException ex;
+                if ("REST".Equals(apiType))
+                {
+                    ex = Assert.ThrowsException<DataApiBuilderException>(() =>
                     RuntimeConfigValidator.ValidateRestPathForRelationalDbs(configuration));
+
+                    if (IsPathContainingReservedCharacters)
+                    {
+                        expectedErrorMessage = INVALID_REST_PATH_WITH_RESERVED_CHAR_ERR_MSG;
+                    }
+                    else
+                    {
+                        expectedErrorMessage = "REST " + expectedErrorMessage;
+                    }
+                }
+                else
+                {
+                    ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+                    RuntimeConfigValidator.ValidateGraphQLPathForRelationalDbs(configuration));
+
+                    if (IsPathContainingReservedCharacters)
+                    {
+                        expectedErrorMessage = INVALID_GRAPHQL_PATH_WITH_RESERVED_CHAR_ERR_MSG;
+                    }
+                    else
+                    {
+                        expectedErrorMessage = "GraphQL " + expectedErrorMessage;
+                    }
+                }
+                
                 Assert.AreEqual(expectedErrorMessage, ex.Message);
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);

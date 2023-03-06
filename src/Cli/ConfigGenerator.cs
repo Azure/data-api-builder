@@ -130,7 +130,10 @@ namespace Cli
                     options.AuthenticationProvider,
                     options.Audience,
                     options.Issuer,
-                    restPath),
+                    restPath,
+                    !options.RestDisabled,
+                    options.GraphQLPath,
+                    !options.GraphQLDisabled),
                 Entities: new Dictionary<string, Entity>());
 
             runtimeConfigJson = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());

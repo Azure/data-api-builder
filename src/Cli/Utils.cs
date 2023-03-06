@@ -314,12 +314,21 @@ namespace Cli
                                                                                       string authenticationProvider,
                                                                                       string? audience = null,
                                                                                       string? issuer = null,
-                                                                                      string? restPath = GlobalSettings.REST_DEFAULT_PATH)
+                                                                                      string? restPath = GlobalSettings.REST_DEFAULT_PATH,
+                                                                                      bool restEnabled = true,
+                                                                                      string graphqlPath = GlobalSettings.GRAPHQL_DEFAULT_PATH,
+                                                                                      bool graphqlEnabled = true)
         {
             // Prefix rest path with '/', if not already present.
             if (restPath is not null && !restPath.StartsWith('/'))
             {
                 restPath = "/" + restPath;
+            }
+
+            // Prefix graphql path with '/', if not already present.
+            if (!graphqlPath.StartsWith('/'))
+            {
+                graphqlPath = "/" + graphqlPath;
             }
 
             Dictionary<GlobalSettingsType, object> defaultGlobalSettings = new();
@@ -328,10 +337,10 @@ namespace Cli
             // which only supports graphql.
             if (restPath is not null)
             {
-                defaultGlobalSettings.Add(GlobalSettingsType.Rest, new RestGlobalSettings(restPath));
+                defaultGlobalSettings.Add(GlobalSettingsType.Rest, new RestGlobalSettings(Enabled: restEnabled, Path: restPath));
             }
 
-            defaultGlobalSettings.Add(GlobalSettingsType.GraphQL, new GraphQLGlobalSettings());
+            defaultGlobalSettings.Add(GlobalSettingsType.GraphQL, new GraphQLGlobalSettings(Enabled: graphqlEnabled, Path: graphqlPath));
             defaultGlobalSettings.Add(
                 GlobalSettingsType.Host,
                 GetDefaultHostGlobalSettings(

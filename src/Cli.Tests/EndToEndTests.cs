@@ -54,7 +54,7 @@ public class EndToEndTests
     public void TestInitForCosmosDBPostgreSql()
     {
         string[] args = { "init", "-c", _testRuntimeConfig, "--database-type", "cosmosdb_postgresql", "--rest.path", "/rest-api",
-                          "--connection-string", "localhost:5000", "--cors-origin", "localhost:3000,www.nolocalhost.com:80" };
+                          "--graphql-path", "/graphql-api","--connection-string", "localhost:5000", "--cors-origin", "localhost:3000,www.nolocalhost.com:80" };
         Program.Main(args);
 
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
@@ -63,7 +63,10 @@ public class EndToEndTests
         Assert.AreEqual(DatabaseType.cosmosdb_postgresql, runtimeConfig.DatabaseType);
         Assert.IsNull(runtimeConfig.DataSource.CosmosDbPostgreSql);
         Assert.IsNotNull(runtimeConfig.RuntimeSettings);
-        Assert.AreEqual("/rest-api", runtimeConfig.RestGlobalSettings!.Path);
+        Assert.AreEqual("/rest-api", runtimeConfig.RestGlobalSettings.Path);
+        Assert.IsTrue(runtimeConfig.RestGlobalSettings.Enabled);
+        Assert.AreEqual("/graphql-api", runtimeConfig.GraphQLGlobalSettings.Path);
+        Assert.IsTrue(runtimeConfig.GraphQLGlobalSettings.Enabled);
         JsonElement jsonRestSettings = (JsonElement)runtimeConfig.RuntimeSettings[GlobalSettingsType.Rest];
 
         RestGlobalSettings? restGlobalSettings = JsonSerializer.Deserialize<RestGlobalSettings>(jsonRestSettings, RuntimeConfig.SerializerOptions);
@@ -75,6 +78,28 @@ public class EndToEndTests
         Assert.IsNotNull(hostGlobalSettings);
         CollectionAssert.AreEqual(new string[] { "localhost:3000", "www.nolocalhost.com:80" }, hostGlobalSettings.Cors!.Origins);
     }
+
+    /// <summary>
+    /// Initializing config for REST and GraphQL global settings,
+    /// such as custom path and enabling/disabling endpoints.
+    /// </summary>
+    [TestMethod]
+    public void TestInitializingRestAndGraphQLGlobalSettings()
+    {
+        string[] args = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql", "--rest.path", "/rest-api",
+                          "--rest.disable", "--graphql-path", "/graphql-api", "--graphql.disable" };
+        Program.Main(args);
+
+        RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
+
+        Assert.IsNotNull(runtimeConfig);
+        Assert.AreEqual(DatabaseType.mssql, runtimeConfig.DatabaseType);
+        Assert.IsNotNull(runtimeConfig.RuntimeSettings);
+        Assert.AreEqual("/rest-api", runtimeConfig.RestGlobalSettings.Path);
+        Assert.IsFalse(runtimeConfig.RestGlobalSettings.Enabled);
+        Assert.AreEqual("/graphql-api", runtimeConfig.GraphQLGlobalSettings.Path);
+        Assert.IsFalse(runtimeConfig.GraphQLGlobalSettings.Enabled);
+        }
 
     /// <summary>
     /// Test to verify adding a new Entity.

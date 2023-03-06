@@ -40,8 +40,11 @@ namespace Cli
             IEnumerable<string>? corsOrigin,
             string authenticationProvider,
             string? audience = null,
-            string restPath = GlobalSettings.REST_DEFAULT_PATH,
             string? issuer = null,
+            string restPath = GlobalSettings.REST_DEFAULT_PATH,
+            bool restDisabled = false,
+            string graphQLPath = GlobalSettings.GRAPHQL_DEFAULT_PATH,
+            bool graphqlDisabled = false,
             string? config = null)
             : base(config)
         {
@@ -55,8 +58,11 @@ namespace Cli
             CorsOrigin = corsOrigin;
             AuthenticationProvider = authenticationProvider;
             Audience = audience;
-            RestPath = restPath;
             Issuer = issuer;
+            RestPath = restPath;
+            RestDisabled = restDisabled;
+            GraphQLPath = graphQLPath;
+            GraphQLDisabled = graphqlDisabled;
         }
 
         [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmosdb_nosql, cosmosdb_postgresql, mysql, postgresql")]
@@ -86,14 +92,24 @@ namespace Cli
         [Option("auth.provider", Default = "StaticWebApps", Required = false, HelpText = "Specify the Identity Provider.")]
         public string AuthenticationProvider { get; }
 
-        [Option("rest.path", Default = GlobalSettings.REST_DEFAULT_PATH, Required = false, HelpText = "Specify the REST endpoint's default prefix.")]
-        public string RestPath { get; }
-
         [Option("auth.audience", Required = false, HelpText = "Identifies the recipients that the JWT is intended for.")]
         public string? Audience { get; }
 
         [Option("auth.issuer", Required = false, HelpText = "Specify the party that issued the jwt token.")]
         public string? Issuer { get; }
+
+        [Option("rest.path", Default = GlobalSettings.REST_DEFAULT_PATH, Required = false, HelpText = "Specify the REST endpoint's default prefix.")]
+        public string RestPath { get; }
+
+        [Option("rest.disable", Default = false, Required = false, HelpText = "To disable REST requests for all entities.")]
+        public bool RestDisabled { get; }
+
+        [Option("graphql.path", Default = GlobalSettings.GRAPHQL_DEFAULT_PATH, Required = false, HelpText = "Specify the GraphQL endpoint's default prefix.")]
+        public string GraphQLPath { get; }
+
+        [Option("graphql.disable", Default = false, Required = false, HelpText = "To disable GraphQL requests for all entities.")]
+        public bool GraphQLDisabled { get; }
+
     }
 
     /// <summary>

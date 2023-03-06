@@ -54,7 +54,7 @@ public class EndToEndTests
     public void TestInitForCosmosDBPostgreSql()
     {
         string[] args = { "init", "-c", _testRuntimeConfig, "--database-type", "cosmosdb_postgresql", "--rest.path", "/rest-api",
-                          "--graphql-path", "/graphql-api","--connection-string", "localhost:5000", "--cors-origin", "localhost:3000,www.nolocalhost.com:80" };
+                          "--graphql.path", "/graphql-api","--connection-string", "localhost:5000", "--cors-origin", "localhost:3000,www.nolocalhost.com:80" };
         Program.Main(args);
 
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
@@ -87,7 +87,7 @@ public class EndToEndTests
     public void TestInitializingRestAndGraphQLGlobalSettings()
     {
         string[] args = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql", "--rest.path", "/rest-api",
-                          "--rest.disable", "--graphql-path", "/graphql-api", "--graphql.disable" };
+                          "--rest.disable", "--graphql.path", "/graphql-api", "--graphql.disable" };
         Program.Main(args);
 
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);

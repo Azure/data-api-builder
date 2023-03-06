@@ -101,13 +101,13 @@ namespace Cli
         [Option("rest.path", Default = GlobalSettings.REST_DEFAULT_PATH, Required = false, HelpText = "Specify the REST endpoint's default prefix.")]
         public string RestPath { get; }
 
-        [Option("rest.disable", Default = false, Required = false, HelpText = "To disable REST requests for all entities.")]
+        [Option("rest.disabled", Default = false, Required = false, HelpText = "To disable REST requests for all entities.")]
         public bool RestDisabled { get; }
 
         [Option("graphql.path", Default = GlobalSettings.GRAPHQL_DEFAULT_PATH, Required = false, HelpText = "Specify the GraphQL endpoint's default prefix.")]
         public string GraphQLPath { get; }
 
-        [Option("graphql.disable", Default = false, Required = false, HelpText = "To disable GraphQL requests for all entities.")]
+        [Option("graphql.disabled", Default = false, Required = false, HelpText = "To disable GraphQL requests for all entities.")]
         public bool GraphQLDisabled { get; }
 
     }

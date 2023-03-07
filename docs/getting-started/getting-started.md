@@ -51,10 +51,10 @@ dab --version
 which should output something like:
 
 ```bash
-dab 0.5.0
+dab 0.5.34
 ```
 
-Where `0.5.0` is the version of DAB CLI that you have installed on your machine.
+Where `0.5.34` is the version of DAB CLI that you have installed on your machine.
 
 >For detailed instructions on how to Install DAB CLI look here: [Running Data API Builder for Azure Databases using CLI](../running-using-dab-cli.md)
 
@@ -65,9 +65,9 @@ As the Data API builder for Azure Databases generates REST and GraphQL endpoints
 It's time for you to choose which database you want to use, so you can continue the getting started guide from there:
 
 - [Getting Started with Data API builder for Azure SQL (or SQL Server)](./getting-started-azure-sql.md)
-- [Getting Started with Data API builder for with Azure Cosmos DB](./getting-started-azure-cosmos-db.md)
-- [Getting Started with Data API builder for with Azure Database PostgreSQL](./getting-started-azure-postgresql.md.md)
-- [Getting Started with Data API builder for with Azure MySQL Database](./getting-started-azure-mysql-db.md.md)
+- [Getting Started with Data API builder for Azure Cosmos DB](./getting-started-azure-cosmos-db.md)
+- [Getting Started with Data API builder for Azure Database PostgreSQL](./getting-started-azure-postgresql.md.md)
+- [Getting Started with Data API builder for Azure MySQL Database](./getting-started-azure-mysql-db.md.md)
 
 ## Further reading
 

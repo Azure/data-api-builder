@@ -67,7 +67,7 @@ It's time for you to choose which database you want to use, so you can continue 
 - [Getting Started with Data API builder for Azure SQL (or SQL Server)](./getting-started-azure-sql.md)
 - [Getting Started with Data API builder for Azure Cosmos DB](./getting-started-azure-cosmos-db.md)
 - [Getting Started with Data API builder for Azure Database PostgreSQL](./getting-started-azure-postgresql.md.md)
-- [Getting Started with Data API builder for with Azure MySQL Database](./getting-started-azure-mysql-db.md.md)
+- [Getting Started with Data API builder for Azure MySQL Database](./getting-started-azure-mysql-db.md.md)
 
 ## Further reading
 

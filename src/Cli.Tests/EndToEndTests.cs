@@ -209,7 +209,7 @@ public class EndToEndTests
     public void TestConfigGeneratedAfterAddingEntityWithoutIEnumerables()
     {
         string[] initArgs = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql", "--connection-string", "localhost:5000",
-            "--set-session-context", "true" };
+            "--set-session-context", "false" };
         Program.Main(initArgs);
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
         Assert.IsNotNull(runtimeConfig);

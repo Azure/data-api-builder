@@ -853,7 +853,7 @@ namespace Cli.Tests
           ""database-type"": ""mssql"",
           ""connection-string"": ""localhost:5000"",
           ""options"":{
-            ""set-session-context"": true
+            ""set-session-context"": false
           }
         },
         ""runtime"": {

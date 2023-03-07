@@ -1,21 +1,16 @@
-# Troubleshooting
 
-## Request are not authorized
+# Troubleshoot Data API builder (preview)
 
-WIP
+This article provides solutions to common problems that might arise when you're using Data API builder (preview).
 
-## Request returns an HTTP 400 error
+## Troubleshooting topics
 
-WIP
+For help on installation, see [Troubleshoot Data API builder installation](./troubleshooting-installation.md).
 
-## Request returns an HTTP 500 error
+For help on using Data API builder, see [Troubleshoot Data API builder usage](./troubleshooting-usage.md).
 
-WIP
+## Get help and give feedback
 
-## GraphQL doesn't provide introspection ability
+If you're unable to find what you're looking for in this article, or you want to provide feedback, you can post questions to [Data API builder Discussions](https://github.com/Azure/data-api-builder/discussions).
 
-WIP
-
-
-
-
+You can also report bugs by opening GitHub Issues in the [Data API builder GitHub repository](https://github.com/Azure/data-api-builder).

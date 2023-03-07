@@ -54,7 +54,7 @@ which should output something like:
 dab 0.5.34
 ```
 
-Where `0.5.0` is the version of DAB CLI that you have installed on your machine.
+Where `0.5.34` is the version of DAB CLI that you have installed on your machine.
 
 >For detailed instructions on how to Install DAB CLI look here: [Running Data API Builder for Azure Databases using CLI](../running-using-dab-cli.md)
 

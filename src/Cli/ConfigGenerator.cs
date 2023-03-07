@@ -95,7 +95,13 @@ namespace Cli
                     break;
 
                 case DatabaseType.mssql:
-                    dbOptions = new MsSqlOptions(SetSessionContext: options.SetSessionContext);
+                    if (!bool.TryParse(options.SetSessionContext, out bool sessionContext))
+                    {
+                        _logger.LogError("--set-session-context property can either be set to true/false.");
+                        return false;
+                    }
+
+                    dbOptions = new MsSqlOptions(SetSessionContext: sessionContext);
                     break;
                 case DatabaseType.mysql:
                 case DatabaseType.postgresql:

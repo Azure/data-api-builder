@@ -35,7 +35,7 @@ namespace Cli
             string? cosmosNoSqlDatabase,
             string? cosmosNoSqlContainer,
             string? graphQLSchemaPath,
-            bool setSessionContext,
+            string setSessionContext,
             HostModeType hostMode,
             IEnumerable<string>? corsOrigin,
             string authenticationProvider,
@@ -74,8 +74,8 @@ namespace Cli
         [Option("graphql-schema", Required = false, HelpText = "GraphQL schema Path.")]
         public string? GraphQLSchemaPath { get; }
 
-        [Option("set-session-context", Default = false, Required = false, HelpText = "Enable sending data to MsSql using session context.")]
-        public bool SetSessionContext { get; }
+        [Option("set-session-context", Default = "false", Required = false, HelpText = "Enable sending data to MsSql using session context.")]
+        public string SetSessionContext { get; }
 
         [Option("host-mode", Default = HostModeType.Production, Required = false, HelpText = "Specify the Host mode - Development or Production")]
         public HostModeType HostMode { get; }

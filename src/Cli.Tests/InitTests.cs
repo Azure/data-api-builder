@@ -188,6 +188,43 @@ namespace Cli.Tests
         }
 
         /// <summary>
+        /// Verify that if graphQLSchema file is not present, we will get error.
+        /// </summary>
+        [DataRow(false, false, DisplayName = "FAIL: GraphQL Schema file not found.")]
+        [DataRow(true, true, DisplayName = "PASS: GraphQL Schema file found.")]
+        [DataTestMethod]
+        public void VerifyGraphQLSchemaFileAvailabilityForCosmosDB(
+            bool schemaFileAvailable,
+            bool expectSuccess
+        )
+        {
+            string graphQLSchemaFile = "testSchemaFile.gql";
+            if (schemaFileAvailable)
+            {
+                File.Create(graphQLSchemaFile);
+            }
+
+            InitOptions options = new(
+                databaseType: DatabaseType.cosmosdb_nosql,
+                connectionString: "testconnectionstring",
+                cosmosNoSqlDatabase: "somedb",
+                cosmosNoSqlContainer: "somecontainer",
+                graphQLSchemaPath: graphQLSchemaFile,
+                setSessionContext: false,
+                hostMode: HostModeType.Production,
+                corsOrigin: null,
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                config: _testRuntimeConfig);
+
+            Assert.AreEqual(expectSuccess, ConfigGenerator.TryCreateRuntimeConfig(options, out _));
+
+            if (File.Exists(graphQLSchemaFile))
+            {
+                File.Delete(graphQLSchemaFile);
+            }
+        }
+
+        /// <summary>
         /// Verify that if either database or graphQLSchema is null or empty, we will get error.
         /// </summary>
         [DataRow(null, "testcontainer", "", false, DisplayName = "Both database and schema are either null or empty.")]

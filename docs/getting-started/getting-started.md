@@ -65,7 +65,7 @@ As the Data API builder for Azure Databases generates REST and GraphQL endpoints
 It's time for you to choose which database you want to use, so you can continue the getting started guide from there:
 
 - [Getting Started with Data API builder for Azure SQL (or SQL Server)](./getting-started-azure-sql.md)
-- [Getting Started with Data API builder for with Azure Cosmos DB](./getting-started-azure-cosmos-db.md)
+- [Getting Started with Data API builder for Azure Cosmos DB](./getting-started-azure-cosmos-db.md)
 - [Getting Started with Data API builder for with Azure Database PostgreSQL](./getting-started-azure-postgresql.md.md)
 - [Getting Started with Data API builder for with Azure MySQL Database](./getting-started-azure-mysql-db.md.md)
 

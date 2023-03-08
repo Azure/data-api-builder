@@ -127,7 +127,7 @@ In either configuration modes, detailed errors are sent to the console output to
 
 ## GraphQL doesn't provide introspection ability
 
-Make sure the GraphQL clients are using support GraphQL introspections. Well known as Insomnia and Postman all supports introspection. Make sure the configuration file has the option `allow-introspection` set to `true` in the `runtime.graphql` configuration section. For example:
+Make sure the GraphQL clients you are using support GraphQL introspections. Well known clients like Insomnia and Postman all support introspection. Make sure the configuration file has the option `allow-introspection` set to `true` in the `runtime.graphql` configuration section. For example:
 
 ```json
 "runtime": {

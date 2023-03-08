@@ -37,7 +37,7 @@ To initialize the runtime config for Microsoft Data API builder runtime engine. 
 | **--cosmosdb_nosql-container** | false   | -   | Container name for Cosmos DB for NoSql.   |
 | **--graphql-schema** | true when databaseType=cosmosdb_nosql   | -   | GraphQL schema Path   |
 | **--set-session-context** | false   | false   | Enable sending data to MsSql using session context.   |
-| **--host-mode** | false   | Production   | Specify the Host mode - Development or Production   |
+| **--host-mode** | false   | Production   | Specify the Host mode - development or production   |
 | **--cors-origin** | false   | ""   | Specify the list of allowed origins.   |
 | **--auth.provider** | false   | StaticWebApps   | Specify the Identity Provider.   |
 | **--rest.path** | false   | /api   | Specify the REST endpoint's default prefix.   |
@@ -57,20 +57,12 @@ To add a new Entity to the config. It will fail if the config doesn't exist.
 | :---   | :--- | :--- | :--- |
 | **-s, --source** | true   | -   | Name of the source table or container.   |
 | **--permissions** | true   | -   | Permissions required to access the source table or container. Format "[role]:[actions]"   |
-| **--relationship** | false   | -   | Specify relationship between two entities. Provide the name of the relationship.   |
-| **--cardinality** | true when relationship is provided   | -   | Specify cardinality between two entities. Could be one or many.   |
-| **--target.entity** | true when relationship is provided   | -   | Another exposed entity to which the source entity relates to.  |
-| **--linking.object** | false   | -   | Database object that is used to support an M:N relationship.   |
-| **--linking.source.fields** | false   | -   | Database fields in the linking object to connect to the related item in the source entity.   |
-| **--linking.target.fields** | false   | -   | Database fields in the linking object to connect to the related item in the target entity.   |
-| **--relationship.fields** | false   | -   | Specify fields to be used for mapping the entities.   |
-| **-m, --map** | false   | -   | Specify mappings between database fields and GraphQL and REST fields. format: --map "backendName1:exposedName1,backendName2:exposedName2,...".   |
 | **--source.type** | false   | table   | Type of the database object.Must be one of: [table, view, stored-procedure]   |
 | **--source.params** | false   | -   | Dictionary of parameters and their values for Source object."param1:val1,param2:value2,.." for Stored-Procedures.   |
-| **--source.key-fields** | false   | -   | The field(s) to be used as primary keys.   |
-| **--rest** | false   | -   | Route for rest api.   |
+| **--source.key-fields** | false   | -   | The field(s) to be used as primary keys for Tables and views only. Comma separated values. Example `--source.key-fields "id,name,type"`  |
+| **--rest** | false   | case sensitive entity name.  | Route for rest api.   |
 | **--rest.methods** | false   | post   | HTTP actions to be supported for stored procedure. Specify the actions as a comma separated list. Valid HTTP actions are :[get, post, put, patch, delete]   |
-| **--graphql** | false   | -   | Type of graphQL.  |
+| **--graphql** | false   | case sensitive entity name  | Type of graphQL.  |
 | **--graphql.operation** | false   | mutation   | GraphQL operation to be supported for stored procedure. Valid operations are : [query, mutation]  |
 | **--fields.include** | false   | -   | Fields that are allowed access to permission.  |
 | **--fields.exclude** | false   | -   | Fields that are excluded from the action lists.   |
@@ -85,10 +77,10 @@ To update properties of any Entity present in the config.
 
 **Example:** `dab update Publisher --permissions "authenticated:*"`
 
+**NOTE:** `dab update` supports all the options that is supported by `dab add`. Additionally, it also supports the below given options.
+
 | Options | Required    | Default Value    | Description |
 | :---   | :--- | :--- | :--- |
-| **-s, --source** | true   | -   | Name of the source table or container.   |
-| **--permissions** | true   | -   | Permissions required to access the source table or container. Format "[role]:[actions]"   |
 | **--relationship** | false   | -   | Specify relationship between two entities. Provide the name of the relationship.   |
 | **--cardinality** | true when relationship is provided   | -   | Specify cardinality between two entities. Could be one or many.   |
 | **--target.entity** | true when relationship is provided   | -   | Another exposed entity to which the source entity relates to.  |
@@ -97,18 +89,6 @@ To update properties of any Entity present in the config.
 | **--linking.target.fields** | false   | -   | Database fields in the linking object to connect to the related item in the target entity.   |
 | **--relationship.fields** | false   | -   | Specify fields to be used for mapping the entities.   |
 | **-m, --map** | false   | -   | Specify mappings between database fields and GraphQL and REST fields. format: --map "backendName1:exposedName1,backendName2:exposedName2,...".   |
-| **--source.type** | false   | table   | Type of the database object.Must be one of: [table, view, stored-procedure]   |
-| **--source.params** | false   | -   | Dictionary of parameters and their values for Source object."param1:val1,param2:value2,.." for Stored-Procedures.   |
-| **--source.key-fields** | false   | -   | The field(s) to be used as primary keys.   |
-| **--rest** | false   | -   | Route for rest api.   |
-| **--rest.methods** | false   | post   | HTTP actions to be supported for stored procedure. Specify the actions as a comma separated list. Valid HTTP actions are :[get, post, put, patch, delete]   |
-| **--graphql** | false   | -   | Type of graphQL.  |
-| **--graphql.operation** | false   | mutation   | GraphQL operation to be supported for stored procedure. Valid operations are : [query, mutation]  |
-| **--fields.include** | false   | -   | Fields that are allowed access to permission.  |
-| **--fields.exclude** | false   | -   | Fields that are excluded from the action lists.   |
-| **--policy-database** | false   | -   | Specify an OData style filter rule that will be injected in the query sent to the database.  |
-| **-c, --config** | false   | dab-config.json   | Path to config file.   |
-
 
 ### **`start`**
 To start the runtime engine for serving rest/graphQL requests.
@@ -120,7 +100,7 @@ To start the runtime engine for serving rest/graphQL requests.
 | Options | Required    | Default Value    | Description |
 | :---   | :--- | :--- | :--- |
 | **--verbose** | false   | -   | Specify logging level as informational.   |
-| **--LogLevel** | false   | Debug when hostMode=Development, else Error when HostMode=Production   | Specify logging level as provided value. example: debug, error, information, etc.   |
+| **--LogLevel** | false   | Debug when hostMode=development, else Error when HostMode=Production   | Specify logging level as provided value. example: debug, error, information, etc.   |
 | **--no-https-redirect** | false   | false   | Disables automatic https redirects.   |
 | **-c, --config** | false   | dab-config.json   | Path to config file.   |
 

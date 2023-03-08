@@ -1,26 +1,22 @@
-# Runtime to Database Authorization
+# SESSION_CONTEXT and Row Level Security
 
-- [MsSql](#mssql)
+## SESSION_CONTEXT
 
-## MsSql
+For Azure SQL and SQL Server, Data API builder can take advantage of `SESSION_CONTEXT` to send user specified metadata to the underlying database. Such metadata is available to Data API builder by virtue of the claims present in the access token. The data sent to the database can then be used to configure an additional level of security (e.g. by configuring Security policies) to further prevent access to data in operations like SELECT, UPDATE, DELETE. The `SESSION_CONTEXT` data is available to the database for the duration of the database connection until that connection is closed. The same data can be used inside a stored procedure as well.  
 
-### SESSION_CONTEXT
+## How to read and write to `SESSION_CONTEXT`
 
-For MsSql, Data API builder uses SESSION_CONTEXT to send user specified metadata to the underlying database. Such metadata is available to Data API builder by virtue of the claims present in the access token.
-The data sent to the database can then be used to configure an additional level of security (e.g. by configuring Security policies) to further prevent access
-to data in operations like SELECT, UPDATE, DELETE. The SESSION_CONTEXT data is available to the database for the duration of the database connection until that connection is closed. The same data can be used inside a stored procedure as well.  
+Learn more about setting `SESSION_CONTEXT` data from the `sp_set_session_context` [Microsoft Learn article](https://learn.microsoft.com/sql/relational-databases/system-stored-procedures/sp-set-session-context-transact-sql).
 
-#### How to read and write to SESSION_CONTEXT
+## How to enable `SESSION_CONTEXT` in Data API builder
 
-Learn more about setting SESSION_CONTEXT data from the `sp_set_session_context` [Microsoft Learn article](https://learn.microsoft.com/sql/relational-databases/system-stored-procedures/sp-set-session-context-transact-sql).
+In the config file, the `data-source` section sub-key `options` holds database specific configuration properties. To enable `SESSION_CONTEXT`, the user needs to set the property `set-session-context` to `true`. This can be done while generating the config file via CLI at the first time or can be done later as well by setting the property manually in the config file.
 
-#### How to enable SESSION_CONTEXT in Data API builder
+## CLI command to set the `SESSION_CONTEXT`
 
-In the config file, the `data-source` section sub-key `options` holds database specific configuration properties. To enable SESSION_CONTEXT, the user needs to set the property `set-session-context` to `true` for MsSql. This can be done while generating the config file via CLI at the first time or can be done later as well by setting the property manually in the config file.
+Use the command `dab init` to generate the config file. The `--set-session-context` flag can be used to set the `SESSION_CONTEXT` property to `true`. The command looks like:
 
-##### CLI command to set the SESSION_CONTEXT
-
-```bash
+```shell
 dab init -c config.json --database-type mssql --connection-string some-connection-string --set-session-context true
 ```
 
@@ -36,9 +32,9 @@ This will generate the data-source section in config file as follows:
   }
  ```
 
-#### How and what data is sent via SESSION_CONTEXT (Example)
+## How and what data is sent via SESSION_CONTEXT 
 
-All the claims present in the EasyAuth/JWT token are sent via the SESSION_CONTEXT to the underlying database. A sample decoded EasyAuth token looks like:
+All the claims present in the EasyAuth/JWT token are sent via the `SESSION_CONTEXT` to the underlying database. A sample decoded EasyAuth token looks like:
 
 ```json
 {
@@ -94,7 +90,7 @@ All the claims present in the EasyAuth/JWT token are sent via the SESSION_CONTEX
 }
 ```
 
-All the claims present in the the token are translated into key-value pairs passed via SESSION_CONTEXT query formulated like below:
+All the claims present in the the token are translated into key-value pairs passed via `SESSION_CONTEXT` query formulated like below:
 
 ```sql
 EXEC sp_set_session_context 'aud', '<AudienceID>', @read_only = 1;
@@ -110,20 +106,19 @@ EXEC sp_set_session_context 'uti', '_sSP3AwBY0SucuqqJyjEAA', @read_only = 1;
 EXEC sp_set_session_context 'ver', '2.0', @read_only = 1;
 ```
 
-#### Example: How to use SESSION_CONTEXT to configure additional level of security (Row Level Security)
+## Example: How to use `SESSION_CONTEXT` to leverage Row Level Security (RLS)
 
-For more details about Row Level Security (RLS), please refer this [Microsoft Learn article](https://learn.microsoft.com/sql/relational-databases/security/row-level-security), but, basically RLS enables us to use group membership or execution context to control access to rows in a database table.  
+For more details about Row Level Security (RLS), please refer this [Microsoft Learn article](https://learn.microsoft.com/sql/relational-databases/security/row-level-security). 
 
 In this demonstration, we will first be creating a database table `revenues`. We will then configure a [Security Policy](https://learn.microsoft.com/sql/t-sql/statements/create-security-policy-transact-sql) which would add a FILTER PREDICATE
-to this `revenues` table. The [FILTER PREDICATE](https://learn.microsoft.com/sql/relational-databases/security/row-level-security#Description) is nothing but a table-valued function which will filter the rows accessible to operations SELECT, UPDATE, DELETE
-based on the criteria that is configured for the function.  
+to this `revenues` table. The [FILTER PREDICATE](https://learn.microsoft.com/sql/relational-databases/security/row-level-security#Description) is nothing but a table-valued function which will filter the rows accessible to operations SELECT, UPDATE, DELETE based on the criteria that is configured for the function.  
 At the end of the demonstration, we will see that only those rows are returned to the user which match the criteria of the filter predicate imposed by the security policy.  
 
-##### Laying down the ground work for SESSION_CONTEXT- SQL Queries
+### Laying down the ground work for `SESSION_CONTEXT` - SQL Queries
 
 We can execute the below SQL queries in the same order via SSMS or any other SQL client to lay the groundwork for SESSION_CONTEXT.
 
-###### Creating revenues table
+#### Creating revenues table
 
 ```sql
 CREATE TABLE revenues(
@@ -142,9 +137,9 @@ INSERT INTO revenues(id, category, revenue, username) VALUES
 (4, 'Series', 40000, 'Davide');  
 ```
 
-###### Creating function to be used as FILTER PREDICATE
+#### Creating function to be used as FILTER PREDICATE
 
-Create a function to be used as a filter predicate by the security policy to restrict access to rows in the table for SELECT, UPDATE, DELETE operations. We use the variable @username to store the value of the column revenues.username and then filter the rows accessible to the user using the filter predicate with condition: @username = SESSION_CONTEXT(N'name').
+Create a function to be used as a filter predicate by the security policy to restrict access to rows in the table for SELECT, UPDATE, DELETE operations. We use the variable @username to store the value of the column revenues.username and then filter the rows accessible to the user using the filter predicate with condition:` @username = SESSION_CONTEXT(N'name')`.
   
 ```sql
 CREATE FUNCTION dbo.revenuesPredicate(@username varchar(max))  
@@ -154,7 +149,7 @@ AS RETURN SELECT 1 AS fn_securitypredicate_result
 WHERE @username = CAST(SESSION_CONTEXT(N'name') AS varchar(max));  
 ```
 
-###### Creating SECURITY POLICY to add to the revenues table
+#### Creating SECURITY POLICY to add to the revenues table
 
 Adding a security policy which would restrict access to the rows in revenues table for SELECT, UPDATE, DELETE operations using the filter predicate dbo.revenuesPredicate.
 
@@ -164,7 +159,7 @@ ADD FILTER PREDICATE dbo.revenuesPredicate(username)
 ON dbo.revenues;  
 ```
 
-##### SESSION_CONTEXT in action
+#### SESSION_CONTEXT in action
 
 Now that we have laid the groundwork for SESSION_CONTEXT, it's time to see it in action.  
 
@@ -173,7 +168,7 @@ EXEC sp_set_session_context 'name', 'Sean'; -- setting the value of 'name' key i
 SELECT * FROM dbo.revenues;  
 ```
 
-###### Result
+#### Result
 
 Rows corresponding to `username` = 'Sean' are returned as only these rows match the criteria of the filter predicate imposed by the security policy.
 

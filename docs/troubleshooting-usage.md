@@ -165,7 +165,7 @@ You must generate a token valid for the defined audience. Using AZ CLI, for exam
 az account get-access-token --resource "b455fa3c-15fa-4864-8bcd-88fd83d686f3"
 ```
 
-Check out the Azure AD Authentication documentation file to get more details on Azure AD authentication with Data API builder
+Check out the Azure AD Authentication documentation(./authentication-azure-ad.md) file to get more details on Azure AD authentication with Data API builder
 
 ### HTTP 403 “Forbidden” Errors
 
@@ -173,7 +173,7 @@ If you're sending an authenticated request, either using Static Web Apps integra
 
 If the request is sent without a `X-MS-API-ROLE` header, the request, once authenticated, is executed in the context of the system role `authenticated`. If such a role hasn't been defined in the configuration file, for the entity you're trying to access to, an HTTP 403 error is returned.
 
-If instead the request is proving a `X-MS-API-ROLE` header, then make sure the role is spelled correctly and is equal to one of the roles defined for the entity you're trying to access to.
+If instead the request is providing a `X-MS-API-ROLE` header, then make sure the role is spelled correctly and is equal to one of the roles defined for the entity you're trying to access to.
 
 For example, if you've a configuration file as shown in the following example:
 
@@ -192,6 +192,6 @@ For example, if you've a configuration file as shown in the following example:
 }
 ```
 
-The X-MS-API-ROLE must be set to `role1` to be able to access the Todo entity using the `role1` role.
+The `X-MS-API-ROLE` must be set to `role1` to be able to access the Todo entity using the `role1` role.
 
 **ATTENTION**: Roles name matching is case-sensitive

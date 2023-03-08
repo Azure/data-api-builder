@@ -6,13 +6,13 @@ Please note that familiarity with Git commands and tooling is assumed throughout
 
 Clone the repository locally:
 
-```bash
+```shell
 git clone https://github.com/Azure/data-api-builder.git
 ```
 
-Check out the branch associated with the latest [release](https://github.com/Azure/data-api-builder/releases):
+Check out the branch associated with the latest [release](https://github.com/Azure/data-api-builder/releases). For example:
 
-```bash
+```shell
 cd .\data-api-builder\
 git checkout release/Jan2023
 ```

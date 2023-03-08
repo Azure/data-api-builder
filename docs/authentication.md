@@ -43,7 +43,7 @@ The supported providers are the following:
 
 ## Roles Selection
 
-Once a request has been authenticated via any of the available options, the roles defined in the token will be used to help determine how permission rules will be evaluated to [authorize](./authorization.md) the request. Any authenticated request will be automatically assigned to the `authenticated` system role, unless a user role is requested to be used, as described in the [Authorization](./authorization.md.md) document.
+Once a request has been authenticated via any of the available options, the roles defined in the token will be used to help determine how permission rules will be evaluated to [authorize](./authorization.md) the request. Any authenticated request will be automatically assigned to the `authenticated` system role, unless a user role is requested to be used, as described in the [Authorization](./authorization.md) document.
 
 ## Anonymous Requests
 

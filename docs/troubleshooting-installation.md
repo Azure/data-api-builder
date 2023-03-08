@@ -14,7 +14,7 @@ Installing .NET 6 on Ubuntu 22 can be tricky as the .NET package are available b
 
 Data API builder is distributed as a NuGet package and can be installed using the `dotnet tool` command. If you're having issues using `dotnet tool`, take a look at [Troubleshoot .NET tool usage issues](https://learn.microsoft.com/dotnet/core/tools/troubleshoot-usage-issues)
 
-## Data API Builder CLI
+## Data API builder CLI
 
 ### `dab` command can't be found
 

@@ -92,7 +92,7 @@ Then the URL route to use the `Todo` entity is:
 
 ## HTTP 400 “Bad Request” Error
 
-A request set the GraphQL endpoint return HTTP 400 "Bad Request" error every time the GraphQL request isn't done properly. It could be that a non-existing entity field is specified, or that the entity name is misspelled. Data API builder returns a descriptive error in the response payload with details about the error itself.
+A request sent to the GraphQL endpoint returns HTTP 400 "Bad Request" error every time the GraphQL request isn't done properly. It could be that a non-existing entity field is specified, or that the entity name is misspelled. Data API builder returns a descriptive error in the response payload with details about the error itself.
 
 If the return GraphQL error is *"Either the parameter query or the parameter ID has to be set."*, make sure the GraphQL request is sent using the HTTP POST method.
 

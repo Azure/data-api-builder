@@ -41,6 +41,12 @@ To get started quickly with Data API builder for Azure Databases, you can use th
 
 Documentation is available in the [`docs`](./docs) folder.
 
+## Samples
+
+Several samples are available already. In the `./samples` folder, you'll find the code needed to follow the [Getting Started](./docs/getting-started/getting-started.md) tutorial.
+
+More samples, including end-to-end samples using the most common frontend framework, are available in the [https://github.com/Azure-Samples/data-api-builder] repository.
+
 ## Known Issues
 
 List of known issues and possible workarounds, where applicable and possible, is available here: [Known Issues](./docs/known-issues.md).

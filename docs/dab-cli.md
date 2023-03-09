@@ -43,7 +43,7 @@ Initializes the runtime configuration for the Data API Builder runtime engine. I
 | **--cosmosdb_nosql-container** | false   | -   | Container name for Cosmos DB for NoSql.   |
 | **--graphql-schema** | true when databaseType=cosmosdb_nosql   | -   | GraphQL schema Path   |
 | **--set-session-context** | false   | false   | Enable sending data to MsSql using session context.   |
-| **--host-mode** | false   | Production   | Specify the Host mode - development or production   |
+| **--host-mode** | false   | production   | Specify the Host mode - development or production   |
 | **--cors-origin** | false   | ""   | Specify the list of allowed origins.   |
 | **--auth.provider** | false   | StaticWebApps   | Specify the Identity Provider.   |
 | **--rest.path** | false   | /api   | Specify the REST endpoint's default prefix.   |
@@ -66,9 +66,9 @@ Add new database entity to the configuration file. Make sure you already have a 
 | **--source.type** | false   | table   | Type of the database object.Must be one of: [table, view, stored-procedure]   |
 | **--source.params** | false   | -   | Dictionary of parameters and their values for Source object."param1:val1,param2:value2,.." for Stored-Procedures.   |
 | **--source.key-fields** | false   | -   | The field(s) to be used as primary keys for Tables and views only. Comma separated values. Example `--source.key-fields "id,name,type"`  |
-| **--rest** | false   | case sensitive entity name.  | Route for rest api.   |
+| **--rest** | false   | case sensitive entity name.  | Route for rest api. Example:<br/> `--rest`: false -> disales rest calls for this entity.<br/> `--rest`: true -> entity name becomes the rest path.<br/> `--rest`: "customPathName" -> provided customPathName becomes the rest path.|
 | **--rest.methods** | false   | post   | HTTP actions to be supported for stored procedure. Specify the actions as a comma separated list. Valid HTTP actions are :[get, post, put, patch, delete]   |
-| **--graphql** | false   | case sensitive entity name  | Type of graphQL.  |
+| **--graphql** | false   | case sensitive entity name  | Type of graphQL. Example:<br/> `--graphql`: false -> disales graphql calls for this entity.<br/> `--graphql`: true -> singular form of entity name becomes the query name.<br/> `--graphql`: "customQueryName" -> singular form of provided customQueryName becomes the rest path. |
 | **--graphql.operation** | false   | mutation   | GraphQL operation to be supported for stored procedure. Valid operations are : [query, mutation]  |
 | **--fields.include** | false   | -   | Fields that are allowed access to permission.  |
 | **--fields.exclude** | false   | -   | Fields that are excluded from the action lists.   |
@@ -91,9 +91,9 @@ Update the properties of any database entity in the configuration file.
 | **--cardinality** | true when relationship is provided   | -   | Specify cardinality between two entities. Could be one or many.   |
 | **--target.entity** | true when relationship is provided   | -   | Another exposed entity to which the source entity relates to.  |
 | **--linking.object** | false   | -   | Database object that is used to support an M:N relationship.   |
-| **--linking.source.fields** | false   | -   | Database fields in the linking object to connect to the related item in the source entity.   |
-| **--linking.target.fields** | false   | -   | Database fields in the linking object to connect to the related item in the target entity.   |
-| **--relationship.fields** | false   | -   | Specify fields to be used for mapping the entities.   |
+| **--linking.source.fields** | false   | -   | Database fields in the linking object to connect to the related item in the source entity. Comma separated fields.   |
+| **--linking.target.fields** | false   | -   | Database fields in the linking object to connect to the related item in the target entity. Comma separated fields.  |
+| **--relationship.fields** | false   | -   | Specify fields to be used for mapping the entities. Example: `--relationship.fields "id:book_id"`. Here `id` represents column from sourceEntity, while `book_id` from targetEntity.Foreign keys are required between the underlying sources if not specified.  |
 | **-m, --map** | false   | -   | Specify mappings between database fields and GraphQL and REST fields. format: --map "backendName1:exposedName1,backendName2:exposedName2,...".   |
 
 ### **`start`**

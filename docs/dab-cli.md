@@ -29,7 +29,7 @@ dab init --help
 ## CLI command line verbs and options
 
 ### **`init`**
-To initialize the runtime config for Microsoft Data API builder runtime engine. It will create a new json file with properties provided as options.
+Initializes the runtime configuration for the Data API Builder runtime engine. It will create a new JSON file with the properties provided as options. 
 
 **Syntax:** `dab init [options]`
 
@@ -53,7 +53,7 @@ To initialize the runtime config for Microsoft Data API builder runtime engine. 
  
 
 ### **`add`**
-To add a new Entity to the config. It will fail if the config doesn't exist.
+Add new database entity to the configuration file. Make sure you already have a configuration file before executing this command, otherwise it will return an error.
 
 **Syntax**: `dab add [entity-name] [options]`
 
@@ -77,13 +77,13 @@ To add a new Entity to the config. It will fail if the config doesn't exist.
 
 
 ### **`update`**
-To update properties of any Entity present in the config.
+Update the properties of any database entity in the configuration file.
 
 **Syntax**: `dab update [entity-name] [options]`
 
 **Example:** `dab update Publisher --permissions "authenticated:*"`
 
-**NOTE:** `dab update` supports all the options that is supported by `dab add`. Additionally, it also supports the below given options.
+**NOTE:** `dab update` supports all the options that are supported by `dab add`. Additionally, it also supports the below listed options.
 
 | Options | Required    | Default Value    | Description |
 | :---   | :--- | :--- | :--- |
@@ -97,7 +97,7 @@ To update properties of any Entity present in the config.
 | **-m, --map** | false   | -   | Specify mappings between database fields and GraphQL and REST fields. format: --map "backendName1:exposedName1,backendName2:exposedName2,...".   |
 
 ### **`start`**
-To start the runtime engine for serving rest/graphQL requests.
+Start the runtime engine with the provided configuration file for serving rest and graphQL requests.
 
 **Syntax**: `dab start [options]`
 
@@ -112,7 +112,7 @@ To start the runtime engine for serving rest/graphQL requests.
 
 **NOTE:** 
 1. One cannot have both verbose and LogLevel.
-2.  To Know more about different Logging levels, see: https://learn.microsoft.com/en-us/dotnet/api/microsoft.extensions.logging.loglevel?view=dotnet-plat-ext-6.0
+2. To Know more about different Logging levels, see: https://learn.microsoft.com/en-us/dotnet/api/microsoft.extensions.logging.loglevel?view=dotnet-plat-ext-6.0
 
 ## Getting started
 The [Getting Started](./getting-started/getting-started.md) document provides a quick overview of the `dab` CLI.

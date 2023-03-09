@@ -536,7 +536,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public static string FormatQueryString(NameValueCollection queryParameters)
         {
             string queryString = "";
-            foreach(string key in queryParameters)
+            foreach (string key in queryParameters)
             {
                 if (string.IsNullOrWhiteSpace(key))
                 {

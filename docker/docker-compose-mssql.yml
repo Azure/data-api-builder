@@ -4,7 +4,7 @@
 version: "3.9"
 services:
   hawaii:
-    image: "hawaiiacr.azurecr.io/dab/refs/heads/main:latest"
+    image: "mcr.microsoft.com/azure-databases/data-api-builder:latest"
     ports:
       - "5000:5000"
     volumes:

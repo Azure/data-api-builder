@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -441,7 +442,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$first=1",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstSingleKeyPagination)),
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(after)}",
+                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(after)}",
                 paginated: true
             );
         }
@@ -461,7 +462,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$first=1",
                 entityNameOrPath: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstMultiKeyPagination)),
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
+                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(SqlPaginationUtil.Base64Encode(after))}",
                 paginated: true
             );
         }
@@ -476,7 +477,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             string after = SqlPaginationUtil.Base64Encode($"[{{\"Value\":7,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"id\"}}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: $"?$after={HttpUtility.UrlEncode(after)}",
+                queryString: $"?$after={Uri.EscapeDataString(after)}",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithAfterSingleKeyPagination))
             );
@@ -494,7 +495,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
 
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: $"?$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
+                queryString: $"?$after={Uri.EscapeDataString(SqlPaginationUtil.Base64Encode(after))}",
                 entityNameOrPath: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithAfterMultiKeyPagination))
             );
@@ -514,7 +515,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: $"?$first=1",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithPaginationVerifSinglePrimaryKeyInAfter)),
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(after)}",
+                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(after)}",
                 paginated: true
             );
         }
@@ -534,7 +535,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: $"?$first=1",
                 entityNameOrPath: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithPaginationVerifMultiplePrimaryKeysInAfter)),
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
+                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(SqlPaginationUtil.Base64Encode(after))}",
                 paginated: true
             );
         }
@@ -616,7 +617,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$first=1&$orderby='Last Name'",
                 entityNameOrPath: _integrationEntityHasColumnWithSpace,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstAndSpacedColumnOrderBy)),
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
+                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(SqlPaginationUtil.Base64Encode(after))}",
                 paginated: true
 
             );
@@ -652,7 +653,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$first=1&$orderby=title",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstSingleKeyPaginationAndOrderBy)),
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
+                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(SqlPaginationUtil.Base64Encode(after))}",
                 paginated: true
             );
         }
@@ -671,7 +672,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$first=1&$orderby=id",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstSingleKeyIncludedInOrderByAndPagination)),
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(after)}",
+                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(after)}",
                 paginated: true
             );
         }
@@ -690,7 +691,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$first=2&$orderby=id",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstTwoOrderByAndPagination)),
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(after)}",
+                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(after)}",
                 paginated: true
             );
         }
@@ -706,7 +707,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             string after = $"[{{\"Value\":\"2001-01-01\",\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"authors\",\"ColumnName\":\"birthdate\"}}," +
                             $"{{\"Value\":\"Aniruddh\",\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"authors\",\"ColumnName\":\"name\"}}," +
                             $"{{\"Value\":125,\"Direction\":1,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"authors\",\"ColumnName\":\"id\"}}]";
-            after = $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}";
+            after = $"&$after={Uri.EscapeDataString(SqlPaginationUtil.Base64Encode(after))}";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: $"?$first=2&$orderby=birthdate, name, id desc",
@@ -729,7 +730,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             string after = "[{\"Value\":\"2001-01-01\",\"Direction\":0,\"ColumnName\":\"birthdate\"}," +
                             "{\"Value\":\"Aniruddh\",\"Direction\":0,\"ColumnName\":\"name\"}," +
                             "{\"Value\":125,\"Direction\":0,\"ColumnName\":\"id\"}]";
-            after = $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}";
+            after = $"&$after={Uri.EscapeDataString(SqlPaginationUtil.Base64Encode(after))}";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: $"?$first=2&$orderby=birthdate, name, id{after}",
@@ -755,7 +756,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$first=1&$orderby=id desc, book_id",
                 entityNameOrPath: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstMultiKeyIncludeAllInOrderByAndPagination)),
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
+                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(SqlPaginationUtil.Base64Encode(after))}",
                 paginated: true
             );
         }
@@ -776,7 +777,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$first=1&$orderby=book_id",
                 entityNameOrPath: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstMultiKeyIncludeOneInOrderByAndPagination)),
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
+                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(SqlPaginationUtil.Base64Encode(after))}",
                 paginated: true
             );
         }
@@ -799,7 +800,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$first=1&$orderby=publisher_id desc, title desc",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstAndMultiColumnOrderBy)),
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
+                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(SqlPaginationUtil.Base64Encode(after))}",
                 paginated: true
             );
         }
@@ -820,7 +821,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$first=1&$orderby=publisher_id desc",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstAndTiedColumnOrderBy)),
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
+                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(SqlPaginationUtil.Base64Encode(after))}",
                 paginated: true
             );
         }
@@ -864,7 +865,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$first=1&$orderby=content desc",
                 entityNameOrPath: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstMultiKeyPaginationAndOrderBy)),
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
+                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(SqlPaginationUtil.Base64Encode(after))}",
                 paginated: true
             );
         }
@@ -970,12 +971,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         {
             string after = $"[{{\"Value\":\"Pseudotsuga menziesii\",\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"trees\",\"ColumnName\":\"fancyName\"}}," +
                             $"{{\"Value\":2,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"trees\",\"ColumnName\":\"treeId\"}}]";
+            string queryStringBase = "?$first=1&$orderby=fancyName";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$first=1&$orderby=fancyName",
+                queryString: queryStringBase,
                 entityNameOrPath: _integrationMappingDifferentEntityPath,
                 sqlQuery: GetQuery(nameof(FindTestWithDifferentMappingFirstSingleKeyPaginationAndOrderBy)),
-                expectedAfterQueryString: $"&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
+                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(SqlPaginationUtil.Base64Encode(after))}",
                 paginated: true
             );
         }
@@ -994,7 +996,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                             $"{{\"Value\":2,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"trees\",\"ColumnName\":\"treeId\"}}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: $"?$orderby=fancyName,treeId&$after={HttpUtility.UrlEncode(SqlPaginationUtil.Base64Encode(after))}",
+                queryString: $"?$orderby=fancyName,treeId&$after={Uri.EscapeDataString(SqlPaginationUtil.Base64Encode(after))}",
                 entityNameOrPath: _integrationMappingDifferentEntity,
                 sqlQuery: GetQuery(nameof(FindTestWithDifferentMappingAfterSingleKeyPaginationAndOrderBy))
             );

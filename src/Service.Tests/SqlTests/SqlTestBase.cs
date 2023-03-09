@@ -457,8 +457,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 {
                     string baseUrl = HttpClient.BaseAddress.ToString() + restPath + "/" + entityNameOrPath;
                     if (!string.IsNullOrEmpty(queryString))
-                    {                 
-                        //baseUrl = baseUrl + "?" + HttpUtility.ParseQueryString(queryString).ToString();
+                    {
                         // Parse query string with AspNetCore components for consistent URI encoding.
                         baseUrl = QueryHelpers.AddQueryString(uri: baseUrl, queryString: QueryHelpers.ParseQuery(queryString));
                     }

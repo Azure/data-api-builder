@@ -208,7 +208,7 @@ steps:
 
 - task: NuGetCommand@2
   displayName: 'Publish Nuget to Internal Feed'
-  condition: eq(variables.isReleaseBuild, 'true')
+  condition: and(succeeded(), eq(variables.isReleaseBuild, 'true'))
   inputs:
     command: 'push'
     feedsToUse: 'select'
@@ -220,7 +220,7 @@ steps:
 
 - task: NuGetCommand@2
   displayName: 'Publish Nuget to Nuget.org'
-  condition: eq(variables.isReleaseBuild, 'true')
+  condition: and(succeeded(), eq(variables.isReleaseBuild, 'true'))
   inputs:
     command: push
     packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
@@ -236,7 +236,7 @@ steps:
 # Create a draft release with Assets
 - task: GitHubRelease@1
   displayName: "Draft Github Release"
-  condition: eq(variables.isReleaseBuild, 'true')
+  condition: and(succeeded(), eq(variables.isReleaseBuild, 'true'))
   inputs:
     gitHubConnection: 'DataApiBuilder'
     repositoryName: '$(Build.Repository.Name)'
@@ -268,7 +268,7 @@ steps:
 # Build a docker image and push it to the container registry.
 - task: Docker@2
   displayName: "Build and push docker image to Azure Container Registry"
-  condition: eq(variables.isReleaseBuild, 'false')
+  condition: and(succeeded(), eq(variables.isReleaseBuild, 'false'))
   inputs:
     containerRegistry: 'CosmosDB GraphQL/Hawaii'
     repository: 'dab/$(Build.SourceBranch)'
@@ -282,7 +282,7 @@ steps:
 # Tag the image with the value of the releaseName variable and nuget release version.
 - task: Docker@2
   displayName: "Build and push docker image to Azure Container Registry tagged with releaseName and nuget release version"
-  condition: eq(variables.isReleaseBuild, 'true')
+  condition: and(succeeded(), eq(variables.isReleaseBuild, 'true'))
   inputs:
     containerRegistry: 'CosmosDB GraphQL/Hawaii'
     repository: 'dab'
@@ -299,7 +299,7 @@ steps:
 # Tag the image with dab version and latest.
 - task: Docker@2
   displayName: "Build and push docker image to ACR for publishing to MCR"
-  condition: eq(variables.isReleaseBuild, 'true')
+  condition: and(succeeded(), eq(variables.isReleaseBuild, 'true'))
   inputs:
     containerRegistry: 'CosmosDB GraphQL/Hawaii'
     repository: 'public/azure-databases/data-api-builder'
@@ -308,4 +308,3 @@ steps:
     tags: |
       $(dabVersion)
       latest
-

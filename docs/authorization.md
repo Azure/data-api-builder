@@ -15,7 +15,7 @@ There are two system roles:
 
 ### User Roles
 
-An authenticated request comes with a set of role claims that describe the requestor's role membership. When using EasyAuth authentication, the received token can be something like the following:
+An authenticated request comes with a set of role claims that describe the requestor's role membership. When using EasyAuth authentication (the default when using `StaticWebApps` as authentication mode), the received token can be something like the following:
 
 ```json
 {
@@ -33,7 +33,7 @@ An authenticated request comes with a set of role claims that describe the reque
 the roles will be used to match any defined role in the configuration file. For example, a request coming in with the aforementioned sample token will be matched with the `author` permissions if the sample `book` entity is configured like the following:
 
 ```json
-"book": {
+"Book": {
     "source": "books",
     "permissions": [
         {
@@ -80,11 +80,11 @@ A request can only be evaluated in the context of a single role. So, if the acce
 
 the desired role must be specified in the `X-MS-API-ROLE` HTTP Header.
 
-If `X-MS-API-ROLE` is not specified for an authenticated request, the request is assumed to be evaluated in the context of the `authenticated` system role.
+> ATTENTION! If `X-MS-API-ROLE` is not specified for an authenticated request, the request is assumed to be evaluated in the context of the `authenticated` system role.
 
 ## Permissions
 
-Permissions and their components,  `roles`, `actions`, `fields` and `policies`, are explained in the [configuration file](./configuration-file.md#permissions) documentation.
+Permissions and their components, `roles`, `actions`, `fields` and `policies`, are explained in the [configuration file](./configuration-file.md#permissions) documentation.
 
 There can be multiple roles defined in an entity's permissions configuration. However, a request is only evaluated in the context of a single role. The role evaluated for a request is either a system role automatically assigned by the Data API builder engine or a role manually specified in the `X-MS-API-ROLE` HTTP header.
 
@@ -141,7 +141,7 @@ For more details, see the [configuration file](./configuration-file.md#actions) 
 
 ### Item level security
 
-Database policy expressions enable results to be restricted even further. Database policies translate OData expressions to query predicates executed against the database. Database policy expressions are supported for the read, update, and delete actions. See the [configuration file](./configuration-file.md#policies) documentation for a detailed explanation of database policies.
+Database policy expressions enable results to be restricted even further. Database policies translate expressions to query predicates executed against the database. Database policy expressions are supported for the read, update, and delete actions. See the [configuration file](./configuration-file.md#policies) documentation for a detailed explanation of database policies.
 
 |Action   | Database Policy Support | Details  |
 |---|:-:|---|

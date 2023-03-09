@@ -6,7 +6,6 @@ using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
-using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
@@ -27,7 +26,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         /// <exception cref="DataApiBuilderException">if middleware context doesn't have an httpcontext</exception>
         public SqlExistsQueryStructure(
-            IMiddlewareContext ctx,
+            HttpContext httpContext,
             ISqlMetadataProvider metadataProvider,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
@@ -40,27 +39,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                   gQLFilterParser,
                   predicates,
                   entityName,
-                  counter)
+                  counter,
+                  httpContext,
+                  Config.Operation.Read)
         {
             SourceAlias = CreateTableAlias();
-            // Get HttpContext from IMiddlewareContext and fail if resolved value is null.
-            if (!ctx.ContextData.TryGetValue(nameof(HttpContext), out object? httpContextValue))
-            {
-                throw new DataApiBuilderException(
-                    message: "No HttpContext found in GraphQL Middleware Context.",
-                    statusCode: System.Net.HttpStatusCode.Forbidden,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
-            }
-
-            HttpContext httpContext = (HttpContext)httpContextValue!;
-
-            // This adds any required DBPolicyPredicates to this Exists query structure.
-            AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
-                Config.Operation.Read,
-                queryStructure: this,
-                httpContext,
-                authorizationResolver,
-                metadataProvider);
         }
     }
 }

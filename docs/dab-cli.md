@@ -68,7 +68,7 @@ Add new database entity to the configuration file. Make sure you already have a 
 | **--source.key-fields** | false   | -   | The field(s) to be used as primary keys for Tables and views only. Comma separated values. Example `--source.key-fields "id,name,type"`  |
 | **--rest** | false   | case sensitive entity name.  | Route for rest api. Example:<br/> `--rest`: false -> disales rest calls for this entity.<br/> `--rest`: true -> entity name becomes the rest path.<br/> `--rest`: "customPathName" -> provided customPathName becomes the rest path.|
 | **--rest.methods** | false   | post   | HTTP actions to be supported for stored procedure. Specify the actions as a comma separated list. Valid HTTP actions are :[get, post, put, patch, delete]   |
-| **--graphql** | false   | case sensitive entity name  | Type of graphQL. Example:<br/> `--graphql`: false -> disales graphql calls for this entity.<br/> `--graphql`: true -> singular form of entity name becomes the query name.<br/> `--graphql`: "customQueryName" -> singular form of provided customQueryName becomes the rest path. |
+| **--graphql** | false   | case sensitive entity name  | Type of graphQL. Example:<br/> `--graphql`: false -> disales graphql calls for this entity.<br/> `--graphql`: true -> singular form of entity name becomes the query/mutation name.<br/> `--graphql`: "customQueryName" -> singular form of provided customQueryName becomes the query/mutation name. |
 | **--graphql.operation** | false   | mutation   | GraphQL operation to be supported for stored procedure. Valid operations are : [query, mutation]  |
 | **--fields.include** | false   | -   | Fields that are allowed access to permission.  |
 | **--fields.exclude** | false   | -   | Fields that are excluded from the action lists.   |

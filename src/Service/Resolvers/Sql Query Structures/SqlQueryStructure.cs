@@ -58,7 +58,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// If this query is built because of a GraphQL query (as opposed to
         /// REST), then this is set to the resolver context of that query.
         /// </summary>
-        public IMiddlewareContext? _ctx;
+        IMiddlewareContext? _ctx;
 
         /// <summary>
         /// Map query columns' labels to the parameter representing that

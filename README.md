@@ -9,24 +9,29 @@ Latest version of Data API builder is  **0.5.34** [What's new?](./docs/whats-new
 
 **Data API builder for Azure Databases provides modern REST and GraphQL endpoints to your Azure Databases.**
 
-With Data API builder, database objects can be exposed via REST or GraphQL endpoints so that your data can be accessed using modern techniques on any platform, any language, and any device. With an integrated and flexible policy engine, granular security is assured; integrated with Azure SQL, SQL Server, PostgreSQL, MySQL and Cosmos DB, gives developers an efficiency boost like never seen before.
+With data API builder, database objects can be exposed via REST or GraphQL endpoints so that your data can be accessed using modern techniques on any platform, any language, and any device. With an integrated and flexible policy engine, native support for common behavior like pagination, filtering, projection and sorting, the creation of CRUD backend services can be done in minutes instead of hours or days, giving developers an efficiency boost like never seen before.
 
-![Data API builder Architecture Overview Diagram](./docs/media/data-api-builder-overview.png)
+Data API builder is Open Source and works on any platform. It can be executed on-premises, in a container or as a Managed Service in Azure, via the new [Database Connection](https://learn.microsoft.com/azure/static-web-apps/database-overview) feature available in Azure Static Web Apps.
+
+![Data API builder Architecture Overview Diagram](./docs/media/dab-architecture-overview.png)
 
 ## Features
 
 - Allow collections, tables, views and stored procedures to be accessed via REST and GraphQL
-- Support authentication via JWT and EasyAuth
+- Support authentication via OAuth2/JWT
+- Support for EasyAuth when running in Azure
 - Role-based authorization using received claims
 - Item-level security via policy expressions
 - REST
   - CRUD operations via POST, GET, PUT, PATCH, DELETE
-  - filtering, sorting and pagination
+  - Filtering, sorting and pagination
 - GraphQL
-  - queries and mutations
-  - filtering, sorting and pagination
-  - relationship navigation
+  - Queries and mutations
+  - Filtering, sorting and pagination
+  - Relationship navigation
 - Easy development via dedicated CLI
+- Full integration with Static Web Apps via Database Connection feature when running in Azure
+- Open Source
 
 ## Getting Started
 
@@ -36,9 +41,11 @@ To get started quickly with Data API builder for Azure Databases, you can use th
 
 Documentation is available in the [`docs`](./docs) folder.
 
-## Limitations
+## Samples
 
-- JWT only supports Azure AD
+Several samples are available already. In the `./samples` folder, you'll find the code needed to follow the [Getting Started](./docs/getting-started/getting-started.md) tutorial.
+
+More samples, including end-to-end samples using the most common frontend framework, are available in the [https://github.com/Azure-Samples/data-api-builder] repository.
 
 ## Known Issues
 

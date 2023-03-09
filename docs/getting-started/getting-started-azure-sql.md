@@ -1,30 +1,34 @@
-# Getting started with Data API builder for Azure SQL Database
+# Getting started with Data API builder for Azure SQL Database or SQL Server
 
 Make sure you have read the [Getting Started](getting-started.md) document.
 
 As mentioned before, this tutorial assumes that you already have a SQL Server or an Azure SQL database that can be used as playground.
 
+## Create a sample database
+
+If you don't have a SQL Server or Azure SQL database, you can create one in Azure. You can use the Azure Portal or the Azure CLI. More details here: [Quickstart: Create a single database - Azure SQL Database](https://docs.microsoft.com/en-us/azure/azure-sql/database/single-database-create-quickstart?view=azuresql&tabs=azure-portal)
+
 ## Get the database connection string
 
 There are several ways to get an Azure SQL database connection string. More details here: [Azure SQL Database and Azure SQL Managed Instance connect and query articles](https://learn.microsoft.com/azure/azure-sql/database/connect-query-content-reference-guide?view=azuresql)
 
-If you are connecting to Azure SQL DB, Azure SQL MI, or SQL Server, the connection string look like:
+If you are connecting to Azure SQL DB or Azure SQL MI, the connection string look like:
 
 ```text
-Server=<server-address>;Database=<database-name>;User ID=<user-d>;Password=<password>;
+Server=<server-address>;Database=<database-name>;User ID=<user-id>;Password=<password>;
 ```
 
-To connect to a local SQL Server, for example:
+To connect to a local SQL Server, remember to set the `TrustServerCertificate` property to `true`:
 
 ```text
-Server=localhost;Database=Library;User ID=dab_user;Password=<password>;TrustServerCertificate=true
+Server=localhost;Database=<database-name>;User ID=<user-id>;Password=<password>;TrustServerCertificate=true;
 ```
 
 More details on Azure SQL and SQL Server connection strings can be found here: https://learn.microsoft.com/sql/connect/ado-net/connection-string-syntax
 
 ## Create the database objects
 
-Create the database tables needed to represent Authors, Books and the many-to-many relationship between Authors and Books. You can find the `library.azure-sql.sql` script in the `azure-sql-db` folder in the GitHub repo. You can use it to create three tables, along with sample data:
+Create the database tables needed to represent Authors, Books and the many-to-many relationship between Authors and Books. You can find the `library.azure-sql.sql` script in the [/samples/getting-started/azure-sql-db](../samples/getting-started/azure-sql-db) folder in this GitHub repo. You can use it to create three tables, along with sample data:
 
 - `dbo.authors`: Table containing authors
 - `dbo.books`: Table containing books
@@ -38,9 +42,11 @@ The Data API builder for Azure Databases engine needs a [configuration file](../
 
 For this getting started guide you will use DAB CLI to initialize your configuration file. Run the following command:
 
-```bash
-dab init --database-type "mssql" --connection-string "Server=localhost;Database=PlaygroundDB;User ID=PlaygroundUser;Password=<Password>;TrustServerCertificate=true" --host-mode "Development"
+```shell
+dab init --database-type "mssql" --connection-string "Server=localhost;Database=<database-name>;User ID=<user>;Password=<password>;TrustServerCertificate=true" --host-mode "Development"
 ```
+
+Make sure to replace the placehoders (`<database-name>`, `<user>` and `<password>`) with the correct values for your database.
 
 The command will generate a config file called `dab-config.json` looking like this:
 
@@ -49,7 +55,7 @@ The command will generate a config file called `dab-config.json` looking like th
   "$schema": "dab.draft-01.schema.json",
   "data-source": {
     "database-type": "mssql",
-    "connection-string": "Server=localhost;Database=PlaygroundDB;User ID=PlaygroundUser;Password=ReplaceMe;TrustServerCertificate=true"
+    "connection-string": "Server=localhost;Database=<database-name>;User ID=<user>;Password=<password>;TrustServerCertificate=true"
   },
   "mssql": {
     "set-session-context": true
@@ -173,7 +179,7 @@ you'll be good to go, Data API Builder is up and running, ready to serve your re
 
 ## Query the endpoints
 
-Now that Data API builder engine is running, you can use your favorite REST client (Postman or Insomnia, for example) to query the REST or the GraphQL endpoints.
+Now that Data API builder engine is running, you can use your favorite REST client ([Postman](https://www.postman.com/downloads/) or [Insomnia](https://insomnia.rest/download), for example) to query the REST or the GraphQL endpoints.
 
 ### REST Endpoint
 
@@ -264,11 +270,11 @@ The element under `relationship` is used to add a field - `books` in the sample 
 
 - `cardinality`: set to `many` as an author can be associated with more than one book
 - `target.entity`: Which entity, defined in the same configuration file, will be used in this relationship. For this sample is `book` as we are creating the relationship on the `Author` entity.
-- `linking.object`: the database table used to support the many-to-many relationship. That table is the `dbo.books_authors`.
+- `linking.object`: the database table used to support the many-to-many relationship. That table is the `dbo.books_authors`. If you are creating a simple One-to-Many or Many-to-One relationship, this field is not needed.
 
 Data API Builder will automatically figure out what are the columns that are used to support the relationship between all the involved parts by analyzing the foreign key constraints that exist between the involved tables. For this reason the configuration is done! (If you don't have foreign keys you can always manually specify the columns you want to use to navigate from one table to another. More on this in the [relationships documentation](../relationships.md))
 
-The `author` entity should now look like the following:
+The `Author` entity should now look like the following:
 
 ```json
 "Author": {

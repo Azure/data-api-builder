@@ -7,6 +7,9 @@ namespace Cli.Tests
     {
         // Config file name for tests
         public static string _testRuntimeConfig = "dab-config-test.json";
+
+        // CosmosDB_NoSql empty test graphql file name
+        public static string _cosmosdb_nosql_graphql_schema_file = "test-schema.gql";
         public const string DAB_DRAFT_SCHEMA_TEST_PATH = "https://dataapibuilder.azureedge.net/schemas/vmajor.minor.patch/dab.draft.schema.json";
 
         /// <summary>
@@ -928,6 +931,17 @@ namespace Cli.Tests
             Mock<ILogger<Utils>> utilsLogger = new();
             ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger.Object);
             Utils.SetCliUtilsLogger(utilsLogger.Object);
+        }
+
+        /// <summary>
+        /// Helper method to setup test files required for CosmosDB_NoSQL
+        /// </summary>
+        public static void SetUpTestFilesForCosmosDB_NoSQL()
+        {
+          if (!File.Exists(_cosmosdb_nosql_graphql_schema_file))
+          {
+            File.Create(_cosmosdb_nosql_graphql_schema_file);
+          }
         }
     }
 }

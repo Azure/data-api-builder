@@ -24,6 +24,7 @@ public class EndToEndTests
     [TestMethod]
     public void TestInitForCosmosDBNoSql()
     {
+        SetUpTestFilesForCosmosDB_NoSQL();
         string[] args = { "init", "-c", _testRuntimeConfig, "--database-type", "cosmosdb_nosql",
                           "--connection-string", "localhost:5000", "--cosmosdb_nosql-database",
                           "graphqldb", "--cosmosdb_nosql-container", "planet", "--graphql-schema", "schema.gql", "--cors-origin", "localhost:3000,www.nolocalhost.com:80" };
@@ -670,6 +671,11 @@ public class EndToEndTests
         if (File.Exists(_testRuntimeConfig))
         {
             File.Delete(_testRuntimeConfig);
+        }
+
+        if (File.Exists(_cosmosdb_nosql_graphql_schema_file))
+        {
+            File.Delete(_cosmosdb_nosql_graphql_schema_file);
         }
     }
 

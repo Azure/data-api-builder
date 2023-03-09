@@ -71,6 +71,7 @@ namespace Cli.Tests
         [TestMethod]
         public void CosmosDbPostgreSqlDatabase()
         {
+            SetUpTestFilesForCosmosDB_NoSQL();
             InitOptions options = new(
                 databaseType: DatabaseType.cosmosdb_postgresql,
                 connectionString: "testconnectionstring",
@@ -153,6 +154,7 @@ namespace Cli.Tests
         [TestMethod]
         public void CosmosDbNoSqlDatabase()
         {
+            SetUpTestFilesForCosmosDB_NoSQL();
             InitOptions options = new(
                 databaseType: DatabaseType.cosmosdb_nosql,
                 connectionString: "testconnectionstring",
@@ -198,10 +200,9 @@ namespace Cli.Tests
             bool expectSuccess
         )
         {
-            string graphQLSchemaFile = "testSchemaFile.gql";
             if (schemaFileAvailable)
             {
-                File.Create(graphQLSchemaFile);
+                SetUpTestFilesForCosmosDB_NoSQL();
             }
 
             InitOptions options = new(
@@ -209,7 +210,7 @@ namespace Cli.Tests
                 connectionString: "testconnectionstring",
                 cosmosNoSqlDatabase: "somedb",
                 cosmosNoSqlContainer: "somecontainer",
-                graphQLSchemaPath: graphQLSchemaFile,
+                graphQLSchemaPath: _cosmosdb_nosql_graphql_schema_file,
                 setSessionContext: false,
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
@@ -217,11 +218,6 @@ namespace Cli.Tests
                 config: _testRuntimeConfig);
 
             Assert.AreEqual(expectSuccess, ConfigGenerator.TryCreateRuntimeConfig(options, out _));
-
-            if (File.Exists(graphQLSchemaFile))
-            {
-                File.Delete(graphQLSchemaFile);
-            }
         }
 
         /// <summary>
@@ -239,6 +235,7 @@ namespace Cli.Tests
             string? graphQLSchema,
             bool expectedResult)
         {
+            SetUpTestFilesForCosmosDB_NoSQL();
             InitOptions options = new(
                 databaseType: DatabaseType.cosmosdb_nosql,
                 connectionString: "testconnectionstring",
@@ -418,6 +415,16 @@ namespace Cli.Tests
             if (File.Exists(_testRuntimeConfig))
             {
                 File.Delete(_testRuntimeConfig);
+            }
+
+            if (File.Exists(_testRuntimeConfig))
+            {
+                File.Delete(_testRuntimeConfig);
+            }
+
+            if (File.Exists(_cosmosdb_nosql_graphql_schema_file))
+            {
+                File.Delete(_cosmosdb_nosql_graphql_schema_file);
             }
         }
     }

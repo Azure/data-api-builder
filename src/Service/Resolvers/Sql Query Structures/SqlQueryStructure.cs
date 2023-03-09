@@ -55,12 +55,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public PaginationMetadata PaginationMetadata { get; set; }
 
         /// <summary>
-        /// If this query is built because of a GraphQL query (as opposed to
-        /// REST), then this is set to the resolver context of that query.
-        /// </summary>
-        IMiddlewareContext? _ctx;
-
-        /// <summary>
         /// Map query columns' labels to the parameter representing that
         /// column label as a string literal.
         /// Only used for MySql
@@ -76,6 +70,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// The maximum number of results this query should return.
         /// </summary>
         private uint? _limit = DEFAULT_LIST_LIMIT;
+
+        /// <summary>
+        /// If this query is built because of a GraphQL query (as opposed to
+        /// REST), then this is set to the resolver context of that query.
+        /// </summary>
+        IMiddlewareContext? _ctx;
 
         /// <summary>
         /// The underlying type of the type returned by this query see, the
@@ -332,7 +332,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             // Get HttpContext from IMiddlewareContext and fail if resolved value is null.
-            if (!ctx.ContextData.TryGetValue(nameof(HttpContext), out object? httpContextValue))
+            if (!_ctx.ContextData.TryGetValue(nameof(HttpContext), out object? httpContextValue))
             {
                 throw new DataApiBuilderException(
                     message: "No HttpContext found in GraphQL Middleware Context.",

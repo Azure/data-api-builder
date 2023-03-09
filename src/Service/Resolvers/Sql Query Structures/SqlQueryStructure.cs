@@ -435,7 +435,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                   gQLFilterParser, predicates,
                   entityName,
                   counter,
-                  httpContext)
+                  httpContext,
+                  Config.Operation.Read)
         {
             JoinQueries = new();
             PaginationMetadata = new(this);

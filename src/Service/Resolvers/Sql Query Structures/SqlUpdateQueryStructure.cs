@@ -37,7 +37,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             GQLFilterParser gQLFilterParser,
             IDictionary<string, object?> mutationParams,
             HttpContext httpContext,
-            Config.Operation operationType,
             bool isIncrementalUpdate)
         : base(
               metadataProvider: sqlMetadataProvider,
@@ -45,7 +44,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
               gQLFilterParser: gQLFilterParser,
               entityName: entityName,
               httpContext: httpContext,
-              operationType: operationType)
+              operationType: Config.Operation.Update)
         {
             UpdateOperations = new();
             OutputColumns = GenerateOutputColumns();
@@ -97,15 +96,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
             IDictionary<string, object?> mutationParams,
-            HttpContext httpContext,
-            Config.Operation operationType)
+            HttpContext httpContext)
             : base(
                   metadataProvider: sqlMetadataProvider,
                   authorizationResolver: authorizationResolver,
                   gQLFilterParser: gQLFilterParser,
                   entityName: entityName,
                   httpContext: httpContext,
-                  operationType: operationType)
+                  operationType: Config.Operation.Update)
         {
             UpdateOperations = new();
             SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();

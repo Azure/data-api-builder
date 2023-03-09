@@ -430,8 +430,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             _authorizationResolver,
                             _gQLFilterParser,
                             parameters,
-                            GetHttpContext(),
-                            Config.Operation.Create)
+                            GetHttpContext())
                         : new(
                             context,
                             entityName,
@@ -439,8 +438,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             _authorizationResolver,
                             _gQLFilterParser,
                             parameters,
-                            GetHttpContext(),
-                            Config.Operation.Create);
+                            GetHttpContext());
                     queryString = _queryBuilder.Build(insertQueryStruct);
                     queryParameters = insertQueryStruct.Parameters;
                     break;
@@ -452,7 +450,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         _gQLFilterParser,
                         parameters,
                         GetHttpContext(),
-                        Config.Operation.Update,
                         isIncrementalUpdate: false);
                     queryString = _queryBuilder.Build(updateStructure);
                     queryParameters = updateStructure.Parameters;
@@ -465,7 +462,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         _gQLFilterParser,
                         parameters,
                         GetHttpContext(),
-                        Config.Operation.UpdateIncremental,
                         isIncrementalUpdate: true);
                     queryString = _queryBuilder.Build(updateIncrementalStructure);
                     queryParameters = updateIncrementalStructure.Parameters;
@@ -483,8 +479,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         _authorizationResolver,
                         _gQLFilterParser,
                         parameters,
-                        GetHttpContext(),
-                        Config.Operation.Update);
+                        GetHttpContext());
                     queryString = _queryBuilder.Build(updateGraphQLStructure);
                     queryParameters = updateGraphQLStructure.Parameters;
                     break;
@@ -578,8 +573,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 _authorizationResolver,
                 _gQLFilterParser,
                 parameters,
-                GetHttpContext(),
-                Config.Operation.Delete);
+                GetHttpContext());
             queryString = _queryBuilder.Build(deleteStructure);
             queryParameters = deleteStructure.Parameters;
 
@@ -620,7 +614,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     _gQLFilterParser,
                     parameters,
                     httpContext: GetHttpContext(),
-                    operationType: Config.Operation.Upsert,
                     incrementalUpdate: false);
                 queryString = _queryBuilder.Build(upsertStructure);
                 queryParameters = upsertStructure.Parameters;
@@ -634,7 +627,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     _gQLFilterParser,
                     parameters,
                     httpContext: GetHttpContext(),
-                    operationType: Config.Operation.UpsertIncremental,
                     incrementalUpdate: true);
                 queryString = _queryBuilder.Build(upsertIncrementalStructure);
                 queryParameters = upsertIncrementalStructure.Parameters;

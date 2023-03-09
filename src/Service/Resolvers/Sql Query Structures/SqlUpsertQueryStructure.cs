@@ -66,14 +66,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             GQLFilterParser gQLFilterParser,
             IDictionary<string, object?> mutationParams,
             bool incrementalUpdate,
-            HttpContext httpContext,
-            Config.Operation operationType)
+            HttpContext httpContext)
         : base(
               metadataProvider: sqlMetadataProvider,
               authorizationResolver: authorizationResolver,
               gQLFilterParser: gQLFilterParser,
               entityName: entityName,
-              operationType: operationType,
+              operationType: Config.Operation.Update,
               httpContext: httpContext)
         {
             UpdateOperations = new();

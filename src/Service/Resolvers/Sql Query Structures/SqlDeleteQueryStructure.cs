@@ -23,15 +23,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
             IDictionary<string, object?> mutationParams,
-            HttpContext httpContext,
-            Config.Operation operationType)
+            HttpContext httpContext)
         : base(
               metadataProvider: sqlMetadataProvider,
               authorizationResolver: authorizationResolver,
               gQLFilterParser: gQLFilterParser,
               entityName: entityName,
               httpContext: httpContext,
-              operationType: operationType)
+              operationType: Config.Operation.Delete)
         {
             SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();
 

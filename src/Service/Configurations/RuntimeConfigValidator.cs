@@ -375,7 +375,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
         /// <summary>
         /// Method to validate that the REST/GraphQL path prefix is well formed and does not contain
-        /// any disallowed characters.
+        /// any forbidden characters.
         /// </summary>
         /// <param name="apiPath">path prefix for rest/graphql apis</param>
         /// <param name="apiType">Either REST or GraphQL</param>

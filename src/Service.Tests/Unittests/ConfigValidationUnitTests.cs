@@ -1415,7 +1415,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Validate Rest and GraphQL prefix path and throw exception with appropriate error messages
+        /// Validate Rest and GraphQL prefix path and matches the thrown exception with appropriate error messages
         /// on failure.
         /// </summary>
         /// <param name="apiPathPrefix">API path prefix</param>

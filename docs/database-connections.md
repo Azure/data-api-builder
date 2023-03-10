@@ -1,6 +1,6 @@
 # Database connections in Data API builder
 
-In order to work properly, Data API builder needs to connect to a target database. To do that a connection string must be supplied in the [configuration file](./configuration-file.md)
+In order to work properly, Data API builder needs to connect to a target database. To do that, a connection string must be supplied in the [configuration file](./configuration-file.md)
 
 ## Connection Resiliency
 

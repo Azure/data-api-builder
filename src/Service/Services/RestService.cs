@@ -9,7 +9,6 @@ using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Web;
-using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
@@ -33,7 +32,6 @@ namespace Azure.DataApiBuilder.Service.Services
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationService _authorizationService;
         private readonly ISqlMetadataProvider _sqlMetadataProvider;
-        private readonly IAuthorizationResolver _authorizationResolver;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
 
         public RestService(
@@ -42,7 +40,6 @@ namespace Azure.DataApiBuilder.Service.Services
             ISqlMetadataProvider sqlMetadataProvider,
             IHttpContextAccessor httpContextAccessor,
             IAuthorizationService authorizationService,
-            IAuthorizationResolver authorizationResolver,
             RuntimeConfigProvider runtimeConfigProvider
             )
         {
@@ -51,7 +48,6 @@ namespace Azure.DataApiBuilder.Service.Services
             _httpContextAccessor = httpContextAccessor;
             _authorizationService = authorizationService;
             _sqlMetadataProvider = sqlMetadataProvider;
-            _authorizationResolver = authorizationResolver;
             _runtimeConfigProvider = runtimeConfigProvider;
         }
 
@@ -178,24 +174,6 @@ namespace Azure.DataApiBuilder.Service.Services
                     context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
                     RequestParser.ParseQueryString(context, _sqlMetadataProvider);
                 }
-            }
-
-            string role = GetHttpContext().Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
-            Config.Operation operation = HttpVerbToOperations(GetHttpContext().Request.Method);
-            string dbPolicy = _authorizationResolver.ProcessDBPolicy(entityName, role, operation, GetHttpContext());
-            if (!string.IsNullOrEmpty(dbPolicy))
-            {
-                // Since dbPolicy is nothing but filters to be added by virtue of database policy, we prefix it with
-                // ?$filter= so that it conforms with the format followed by other filter predicates.
-                // This helps the ODataVisitor helpers to parse the policy text properly.
-                dbPolicy = "?$filter=" + dbPolicy;
-
-                // Parse and save the values that are needed to later generate queries in the given RestRequestContext.
-                // DbPolicyClause is an Abstract Syntax Tree representing the parsed policy text.
-                context.DbPolicyClause = _sqlMetadataProvider.GetODataParser().GetFilterClause(
-                    filterQueryString: dbPolicy,
-                    resourcePath: $"{context.EntityName}.{context.DatabaseObject.FullName}",
-                    customResolver: new ClaimsTypeDataUriResolver());
             }
 
             // At this point for DELETE, the primary key should be populated in the Request Context.
@@ -421,6 +399,10 @@ namespace Azure.DataApiBuilder.Service.Services
             return (entityName, primaryKeyRoute);
         }
 
+        /// <summary>
+        /// Gets the httpContext for the current request.
+        /// </summary>
+        /// <returns>Request's httpContext.</returns>
         private HttpContext GetHttpContext()
         {
             return _httpContextAccessor.HttpContext!;

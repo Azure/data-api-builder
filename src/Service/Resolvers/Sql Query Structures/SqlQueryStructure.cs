@@ -133,13 +133,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ISqlMetadataProvider sqlMetadataProvider,
             IAuthorizationResolver authorizationResolver,
             RuntimeConfigProvider runtimeConfigProvider,
-            GQLFilterParser gQLFilterParser)
+            GQLFilterParser gQLFilterParser,
+            HttpContext httpContext)
             : this(sqlMetadataProvider,
                 authorizationResolver,
                 gQLFilterParser,
                 predicates: null,
                 entityName: context.EntityName,
-                counter: new IncrementingInteger())
+                counter: new IncrementingInteger(),
+                httpContext: httpContext)
         {
             IsListQuery = context.IsMany;
             SourceAlias = $"{DatabaseObject.SchemaName}_{DatabaseObject.Name}";
@@ -192,24 +194,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         message: "$filter query parameter is not well formed.",
                         statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
-                        innerException: ex);
-                }
-            }
-
-            if (context.DbPolicyClause is not null)
-            {
-                // Similar to how we have added FilterPredicates above,
-                // we will add DbPolicyPredicates here.
-                try
-                {
-                    ProcessOdataClause(context.DbPolicyClause);
-                }
-                catch (Exception ex)
-                {
-                    throw new DataApiBuilderException(
-                        message: "Policy query parameter is not well formed.",
-                        statusCode: HttpStatusCode.Forbidden,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed,
                         innerException: ex);
                 }
             }
@@ -287,7 +271,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                   gQLFilterParser,
                   predicates: null,
                   entityName: entityName,
-                  counter)
+                  counter: counter
+                  )
         {
             _ctx = ctx;
             IOutputType outputType = schemaField.Type;
@@ -346,17 +331,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 AddGraphQLFields(queryField.SelectionSet.Selections, runtimeConfigProvider);
             }
 
-            // Get HttpContext from IMiddlewareContext and fail if resolved value is null.
-            if (!_ctx.ContextData.TryGetValue(nameof(HttpContext), out object? httpContextValue))
-            {
-                throw new DataApiBuilderException(
-                    message: "No HttpContext found in GraphQL Middleware Context.",
-                    statusCode: System.Net.HttpStatusCode.Forbidden,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
-            }
-
-            HttpContext httpContext = (HttpContext)httpContextValue!;
-
+            HttpContext httpContext = GraphQLFilterParser.TryGetHttpContextFromMiddlewareContext(ctx);
             // Process Authorization Policy of the entity being processed.
             AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(Config.Operation.Read, queryStructure: this, httpContext, authorizationResolver, sqlMetadataProvider);
 
@@ -453,8 +428,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             GQLFilterParser gQLFilterParser,
             List<Predicate>? predicates = null,
             string entityName = "",
-            IncrementingInteger? counter = null)
-            : base(metadataProvider, authorizationResolver, gQLFilterParser, predicates, entityName, counter)
+            IncrementingInteger? counter = null,
+            HttpContext? httpContext = null)
+            : base(metadataProvider,
+                  authorizationResolver,
+                  gQLFilterParser, predicates,
+                  entityName,
+                  counter,
+                  httpContext,
+                  Config.Operation.Read)
         {
             JoinQueries = new();
             PaginationMetadata = new(this);

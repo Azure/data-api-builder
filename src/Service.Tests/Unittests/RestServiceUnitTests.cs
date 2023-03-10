@@ -163,7 +163,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 sqlMetadataProvider.Object,
                 httpContextAccessor.Object,
                 authorizationService.Object,
-                authorizationResolver,
                 runtimeConfigProvider);
         }
 

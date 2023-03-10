@@ -938,10 +938,10 @@ namespace Cli.Tests
         /// </summary>
         public static void SetUpTestFilesForCosmosDB_NoSQL()
         {
-          if (!File.Exists(_cosmosdb_nosql_graphql_schema_file))
-          {
-            File.Create(_cosmosdb_nosql_graphql_schema_file);
-          }
+            if (!File.Exists(_cosmosdb_nosql_graphql_schema_file))
+            {
+                File.Create(_cosmosdb_nosql_graphql_schema_file);
+            }
         }
     }
 }

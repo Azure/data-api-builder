@@ -17,6 +17,7 @@ namespace Cli.Tests
         [TestInitialize]
         public void SetupLoggerForCLI()
         {
+            File.Create("schema.gql");
             TestHelper.SetupTestLoggerForCLI();
         }
 

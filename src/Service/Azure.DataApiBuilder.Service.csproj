@@ -45,10 +45,10 @@
     </ItemGroup>
 
 
-    <!-- <ItemGroup>
+    <!-- <ItemGroup> -->
         <!-- extends watching group to include .json and .gql files -->
-        <Watch Include="**\*.json;**\*.gql" Exclude="obj\**\*;bin\**\*" />
-    </ItemGroup> -->
+        <!-- <Watch Include="**\*.json;**\*.gql" Exclude="obj\**\*;bin\**\*" /> -->
+    <!-- </ItemGroup> -->
 
 
     <ItemGroup>

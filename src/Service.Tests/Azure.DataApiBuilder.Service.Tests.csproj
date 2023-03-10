@@ -36,6 +36,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="**/*.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="schema.gql">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

@@ -71,7 +71,6 @@ namespace Cli.Tests
         [TestMethod]
         public void CosmosDbPostgreSqlDatabase()
         {
-            SetUpTestFilesForCosmosDB_NoSQL();
             InitOptions options = new(
                 databaseType: DatabaseType.cosmosdb_postgresql,
                 connectionString: "testconnectionstring",
@@ -154,13 +153,12 @@ namespace Cli.Tests
         [TestMethod]
         public void CosmosDbNoSqlDatabase()
         {
-            SetUpTestFilesForCosmosDB_NoSQL();
             InitOptions options = new(
                 databaseType: DatabaseType.cosmosdb_nosql,
                 connectionString: "testconnectionstring",
                 cosmosNoSqlDatabase: "testdb",
                 cosmosNoSqlContainer: "testcontainer",
-                graphQLSchemaPath: "schemafile",
+                graphQLSchemaPath: "schema.gql",
                 setSessionContext: false,
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
@@ -176,7 +174,7 @@ namespace Cli.Tests
                     ""options"": {
                         ""database"": ""testdb"",
                         ""container"": ""testcontainer"",
-                        ""schema"": ""schemafile""
+                        ""schema"": ""schema.gql""
                     }
                 },
                 ""entities"": {}
@@ -192,25 +190,21 @@ namespace Cli.Tests
         /// <summary>
         /// Verify that if graphQLSchema file is not present, we will get error.
         /// </summary>
-        [DataRow(false, false, DisplayName = "FAIL: GraphQL Schema file not found.")]
-        [DataRow(true, true, DisplayName = "PASS: GraphQL Schema file found.")]
+        [DataRow(false, "no-schema.gql", false, DisplayName = "FAIL: GraphQL Schema file not found.")]
+        [DataRow(true, "schema.gql", true, DisplayName = "PASS: GraphQL Schema file found.")]
         [DataTestMethod]
         public void VerifyGraphQLSchemaFileAvailabilityForCosmosDB(
             bool schemaFileAvailable,
+            string schemaFileName,
             bool expectSuccess
         )
         {
-            if (schemaFileAvailable)
-            {
-                SetUpTestFilesForCosmosDB_NoSQL();
-            }
-
             InitOptions options = new(
                 databaseType: DatabaseType.cosmosdb_nosql,
                 connectionString: "testconnectionstring",
                 cosmosNoSqlDatabase: "somedb",
                 cosmosNoSqlContainer: "somecontainer",
-                graphQLSchemaPath: _cosmosdb_nosql_graphql_schema_file,
+                graphQLSchemaPath: schemaFileName,
                 setSessionContext: false,
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
@@ -227,7 +221,7 @@ namespace Cli.Tests
         [DataRow("", "testcontainer", "testschema", false, DisplayName = "database is empty.")]
         [DataRow("testDatabase", "testcontainer", "", false, DisplayName = "database is provided, Schema is null.")]
         [DataRow("testDatabase", null, "", false, DisplayName = "database is provided, container and Schema is null/empty.")]
-        [DataRow("testDatabase", null, "testSchema", true, DisplayName = "database and schema provided, container is null/empty.")]
+        [DataRow("testDatabase", null, "schema.gql", true, DisplayName = "database and schema provided, container is null/empty.")]
         [DataTestMethod]
         public void VerifyRequiredOptionsForCosmosDbNoSqlDatabase(
             string? cosmosDatabase,
@@ -235,7 +229,6 @@ namespace Cli.Tests
             string? graphQLSchema,
             bool expectedResult)
         {
-            SetUpTestFilesForCosmosDB_NoSQL();
             InitOptions options = new(
                 databaseType: DatabaseType.cosmosdb_nosql,
                 connectionString: "testconnectionstring",
@@ -420,11 +413,6 @@ namespace Cli.Tests
             if (File.Exists(_testRuntimeConfig))
             {
                 File.Delete(_testRuntimeConfig);
-            }
-
-            if (File.Exists(_cosmosdb_nosql_graphql_schema_file))
-            {
-                File.Delete(_cosmosdb_nosql_graphql_schema_file);
             }
         }
     }

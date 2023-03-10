@@ -258,8 +258,8 @@ namespace Azure.DataApiBuilder.Service.Models
             {
                 throw new DataApiBuilderException(
                     message: "No HttpContext found in GraphQL Middleware Context.",
-                    statusCode: System.Net.HttpStatusCode.Forbidden,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
+                    statusCode: System.Net.HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
 
             return (HttpContext)httpContextValue!;

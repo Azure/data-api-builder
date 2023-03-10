@@ -190,11 +190,10 @@ namespace Cli.Tests
         /// <summary>
         /// Verify that if graphQLSchema file is not present, we will get error.
         /// </summary>
-        [DataRow(false, "no-schema.gql", false, DisplayName = "FAIL: GraphQL Schema file not found.")]
-        [DataRow(true, "schema.gql", true, DisplayName = "PASS: GraphQL Schema file found.")]
+        [DataRow("no-schema.gql", false, DisplayName = "FAIL: GraphQL Schema file not available.")]
+        [DataRow("schema.gql", true, DisplayName = "PASS: GraphQL Schema file available.")]
         [DataTestMethod]
         public void VerifyGraphQLSchemaFileAvailabilityForCosmosDB(
-            bool schemaFileAvailable,
             string schemaFileName,
             bool expectSuccess
         )
@@ -405,11 +404,6 @@ namespace Cli.Tests
         [TestCleanup]
         public void CleanUp()
         {
-            if (File.Exists(_testRuntimeConfig))
-            {
-                File.Delete(_testRuntimeConfig);
-            }
-
             if (File.Exists(_testRuntimeConfig))
             {
                 File.Delete(_testRuntimeConfig);

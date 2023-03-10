@@ -63,13 +63,13 @@
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
-    <Content Include="DatabaseSchema-MsSQL.sql">
+    <Content Include="DatabaseSchema-MsSql.sql">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="DatabaseSchema-PostgreSQL.sql">
+    <Content Include="DatabaseSchema-PostgreSql.sql">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="DatabaseSchema-MySQL.sql">
+    <Content Include="DatabaseSchema-MySql.sql">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

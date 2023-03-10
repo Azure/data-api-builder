@@ -29,7 +29,7 @@ dab init --help
 ## CLI command line verbs and options
 
 ### **`init`**
-Initializes the runtime configuration for the Data API Builder runtime engine. It will create a new JSON file with the properties provided as options. 
+Initializes the runtime configuration for the Data API builder runtime engine. It will create a new JSON file with the properties provided as options. 
 
 **Syntax:** `dab init [options]`
 
@@ -63,7 +63,7 @@ Add new database entity to the configuration file. Make sure you already have a 
 | :---   | :--- | :--- | :--- |
 | **-s, --source** | true   | -   | Name of the source table or container.   |
 | **--permissions** | true   | -   | Permissions required to access the source table or container. Format "[role]:[actions]"   |
-| **--source.type** | false   | Table   | Type of the database object.Must be one of: [table, view, stored-procedure]   |
+| **--source.type** | false   | table   | Type of the database object.Must be one of: [table, view, stored-procedure]   |
 | **--source.params** | false   | -   | Dictionary of parameters and their values for Source object."param1:val1,param2:value2,.." for Stored-Procedures.   |
 | **--source.key-fields** | false   | -   | The field(s) to be used as primary keys for tables and views only. Comma separated values. Example `--source.key-fields "id,name,type"`  |
 | **--rest** | false   | case sensitive entity name.  | Route for REST API. Example:<br/> `--rest: false` -> Disables REST API  calls for this entity.<br/> `--rest: true` -> Entity name becomes the rest path.<br/> `--rest: "customPathName"` -> Provided customPathName becomes the REST path.|

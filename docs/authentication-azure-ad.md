@@ -85,19 +85,19 @@ Where the`APP_ID` is the "Application (client) ID" and the `TENANT_ID` is the "D
 
 Make sure you are logged in to AZ CLI with the account that you want to use to authenticate against Data API builder.
 
-```sh
+```shell
 az login
 ```
 
 and select the subscription where you have [configured the Data API builder App Registration](#configure-server-app-registration).
 
-```sh
+```shell
 az account set --subscription <subscription name or id>
 ```
 
 then run the following command to try to authenticate against the newly created scope:
 
-```sh
+```shell
 az account get-access-token --scope api://<Application ID>/Endpoint.Access
 ```
 
@@ -107,7 +107,7 @@ It should return an error like the following:
 AADSTS65001: The user or administrator has not consented to use the application with ID '<AZ CLI Application ID GUID>' named 'Microsoft Azure CLI'. Send an interactive authorization request for this user and resource.
 ```
 
-The \<AZ CLI Application ID GUID\>, which represents AZ CLI, must be allowed to authenticate against the Data API builder Azure AD Application. To do that, search for the "Data API builder" application in the Azure Portal or go to the Azure Active Directory portal blade and select **App Registrations**. Select the "Data API builder" application and then:
+The '\<AZ CLI Application ID GUID\>', which represents AZ CLI, must be allowed to authenticate against the Data API builder Azure AD Application. To do that, search for the "Data API builder" application in the Azure Portal or go to the Azure Active Directory portal blade and select **App Registrations**. Select the "Data API builder" application and then:
 
 1. Navigate to **Expose an API** from your App Registration overview page.
    1. Under *Authorized client applications*, select **Add a client application**
@@ -176,14 +176,14 @@ To test out that authentication is working fine, you can update your configurati
 
 You can use any HTTP client now to send an authenticated request. Firstly get the token:
 
-```sh
+```shell
 az account get-access-token --scope api://<Application ID>/Endpoint.Access --query "accessToken" -o tsv
 ```
 
 then you can use the obtained access token to issue a successful authenticated request to a protected endpoint:
 
-```sh
-curl -k -r GET -H 'Authorization: Bearer ey...xA' -H 'X-MS-API-ROLE: Sample.Role' https://localhost:5001/api/Book
+```shell
+curl -k -r GET -H 'Authorization: Bearer ey...' -H 'X-MS-API-ROLE: Sample.Role' https://localhost:5001/api/Book
 ```
 
 ## Create Postman Client App Registration

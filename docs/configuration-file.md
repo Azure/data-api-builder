@@ -90,6 +90,12 @@ make sure to replace the **VERSION-suffix** placeholder with the version you wan
 https://dataapibuilder.azureedge.net/schemas/v0.4.11-alpha/dab.draft.schema.json
 ```
 
+the **latest** version of the schema is always available at
+
+```txt
+https://dataapibuilder.azureedge.net/schemas/latest/dab.draft.schema.json 
+```
+
 ### Data Source
 
 The `data-source` element contains the information needed to connect to the backend database.
@@ -104,9 +110,10 @@ The `data-source` element contains the information needed to connect to the back
 `database-type` is a `enum string` and is used to specify what is the used backend database. Allowed values are:
 
 + `mssql`: for Azure SQL DB, Azure SQL MI and SQL Server
-+ `postgresql`: for PostgresSQL
++ `postgresql`: for PostgreSQL
 + `mysql`: for MySQL
-+ `cosmos`: for Cosmos DB
++ `cosmosdb_nosql`: for Cosmos DB NoSQL API
++ `cosmosdb_postgresql`: for Cosmos DB PostgreSQL API
 
 while `connection-string` contains the ADO.NET connection string that Data API builder will use to connect to the backend database
 

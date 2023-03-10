@@ -7,11 +7,11 @@
 
 ### Configuration
 
-Views can be used similar to how a table can be used in Data API builder. View usage must be defined by specifying the source type for the entity as `view`. Along with that `key-fields` must be provided, so that Data API builder knows how it can identify and return a single item, if needed.
+Views can be used similar to how a table can be used in Data API builder. View usage must be defined by specifying the source type for the entity as `view`. Along with that the `key-fields` property must be provided, so that Data API builder knows how it can identify and return a single item, if needed.
 
 If you have a view, for example [`dbo.vw_books_details`](../samples/getting-started/azure-sql-db/library.azure-sql.sql#L112) it can be exposed using the following `dab` command:
 
-```sh
+```shell
 dab add BookDetail --source dbo.vw_books_details --source.type View --source.key-fields "id" --permissions "anonymous:read"
 ```
 
@@ -47,7 +47,7 @@ Stored procedures can be used as objects related to entities exposed by Data API
 
 If you have a stored procedure, for example [`dbo.stp_get_all_cowritten_books_by_author`](../samples/getting-started/azure-sql-db/library.azure-sql.sql#L138) it can be exposed using the following `dab` command:
 
-```sh
+```shell
 dab add GetCowrittenBooksByAuthor --source dbo.stp_get_all_cowritten_books_by_author --source.type "stored-procedure" source.params "searchType:s" --permissions "anonymous:execute" --rest.methods "get" --graphql.operation "query"
 ```
 
@@ -75,7 +75,7 @@ the `dab-config.json` file will look like the following:
 }
 ```
 
-The `parameters` defines which parameters should be exposed and to provide default values to be passed to the stored procedure parameters, if those are not provided in the HTTP request.
+The `parameters` defines which parameters should be exposed and also provides default values to be passed to the stored procedure parameters, if those are not provided in the HTTP request.
 
 **Limitations**:
 
@@ -87,7 +87,7 @@ The `parameters` defines which parameters should be exposed and to provide defau
 
 ### REST support for stored procedures
 
-The REST endpoint behavior for a stored procedure backed entity can be configured to support one or multiple HTTP verbs (GET, POST, PUT, PATCH, DELETE). The REST section of the entity would look like the following:
+The REST endpoint behavior, for stored procedure backed entity, can be configured to support one or multiple HTTP verbs (GET, POST, PUT, PATCH, DELETE). The REST section of the entity would look like the following:
 
 ```json
 "rest": {
@@ -152,17 +152,11 @@ type GetCowrittenBooksByAuthor {
 }
 ```
 
-In the schema, both query and mutation operations for stored procedures will have `execute` as a prefix. For the above stored procedure the exact query name field generated would be `executeGetCowrittenBooksByAuthor`
+In the schema, both query and mutation operations for stored procedures will have `execute` as a prefix. For the above stored procedure the exact query name field generated would be `executeGetCowrittenBooksByAuthor`. The GraphQL type that will be generated is the following:
 
 ```graphql
 type Query {
-  """
-  Execute Stored-Procedure GetCowrittenBooksByAuthor and get results from the database
-  """
   executeGetCowrittenBooksByAuthor(
-    """
-    parameters for GetCowrittenBooksByAuthor stored-procedure
-    """
     searchType: String = "S"
   ): [GetCowrittenBooksByAuthor!]!
 }
@@ -182,22 +176,11 @@ Runtime configuration:
 }
 ```
 
-GraphQL Schema Components: type and mutation field:
+The GraphQL schema that will be generated is the following:
 
 ```graphql
 type Mutation {
-  type GetCowrittenBooksByAuthor {
-    id: Int!
-    title: String
-  }
-
-  """
-  Execute Stored-Procedure GetCowrittenBooksByAuthor and get results from the database
-  """
   executeGetCowrittenBooksByAuthor(
-    """
-    parameters for GetCowrittenBooksByAuthor stored-procedure
-    """
     searchType: String = "S"
   ): [GetCowrittenBooksByAuthor!]!
 }

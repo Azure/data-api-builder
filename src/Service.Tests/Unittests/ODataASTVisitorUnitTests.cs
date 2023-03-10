@@ -336,7 +336,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 _sqlMetadataProvider,
                 authorizationResolver,
                 _runtimeConfigProvider,
-                new GQLFilterParser(_sqlMetadataProvider));
+                new GQLFilterParser(_sqlMetadataProvider),
+                null); // setting httpContext as null for the tests.
             return new ODataASTVisitor(structure.Object, _sqlMetadataProvider);
         }
 

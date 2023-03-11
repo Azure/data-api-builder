@@ -24,6 +24,22 @@ Before running the code, ensure you have the correct version of .NET installed (
 
 If you're using Visual Studio, you can configure a launch profile to start the CLI and run the appropriate command (e.g. `start`) with debugging enabled. This will allow you to set breakpoints and step through the code. Also, ensure that the launch profile is configured with a working directory that points to your config file.
 
+#### Visual Studio
+
+1. Select the **Startup Project** `Azure.DataGateway.Service`.
+2. Select a **debug profile** for database type: `MsSql`, `PostgreSql`,`CosmosDb_NoSql`, or `MySql`.
+3. Select **Clean Solution**
+4. Select **Build Solution** (Do not select rebuild, as any changes to configuration files may not be reflected in the build folder.)
+5. Start runtime
+
+#### An alternative way to generate config files
+
+The following steps outline an alternative way of generating config files to assist with local development.
+
+1. The **ConfigGenerators** directory contains text files with DAB commands for each database type.
+2. Based on your choice of database, in the respective text file, update the **connection-string** property of the **init** command.
+3. Execute the command `dotnet build -p:generateConfigFileForDbType=<database_type>` in the directory `data-api-builder\src` to build the project and generate the config file that can be used when starting DAB. The config file will be generated in the directory `data-api-builder\src\Service`. `mssql`, `postgresql`,`cosmosdb_nosql` and `mysql` are the values that can be used with `generateConfigFileForDbType`. Only the config file for the specified database type will be generated.
+
 ### Integration Testing
 
 Primarily DAb uses integration tests to verify the engine operates correctly in how it creates queries and reads/writes against the database. For the integration tests to be run you will need to have the database configured with the expected schema and connection string set in the configuration files.

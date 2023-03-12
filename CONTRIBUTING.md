@@ -26,7 +26,7 @@ If you're using Visual Studio, you can configure a launch profile to start the C
 
 #### Visual Studio
 
-1. Select the **Startup Project** `Azure.DataGateway.Service`.
+1. Select the **Startup Project** `Azure.DataApiBuilder.Service`.
 2. Select a **debug profile** for database type: `MsSql`, `PostgreSql`,`CosmosDb_NoSql`, or `MySql`.
 3. Select **Clean Solution**
 4. Select **Build Solution** (Do not select rebuild, as any changes to configuration files may not be reflected in the build folder.)
@@ -44,7 +44,7 @@ The following steps outline an alternative way of generating config files to ass
 
 Primarily DAb uses integration tests to verify the engine operates correctly in how it creates queries and reads/writes against the database. For the integration tests to be run you will need to have the database configured with the expected schema and connection string set in the configuration files.
 
-#### Running Sql (MsSql, Postgres, MySql) tests
+#### Running Sql (MsSql, PostgreSQL, MySql) tests
 
 To run the SQL tests locally you will need to:
 

@@ -16,7 +16,7 @@ We very much welcome issues to help us improve the project. When submitting an i
 
 ## Working with the code
 
-Data API builder (DAb) is a .NET application written in C#, consisting of several core projects, Auth, CLI, Config, Service and GraphQLBuilder. There are also test projects for the CLI and Service.
+Data API builder (DAB) is a .NET application written in C#, consisting of several core projects, Auth, CLI, Config, Service and GraphQLBuilder. There are also test projects for the CLI and Service.
 
 ### Running locally
 
@@ -44,7 +44,7 @@ The following steps outline an alternative way of generating config files to ass
 
 ### Integration Testing
 
-Primarily DAb uses integration tests to verify the engine operates correctly in how it creates queries and reads/writes against the database. For the integration tests to be run you will need to have the database configured with the expected schema and connection string set in the configuration files.
+Primarily DAB uses integration tests to verify the engine operates correctly in how it creates queries and reads/writes against the database. For the integration tests to be run you will need to have the database configured with the expected schema and connection string set in the configuration files.
 
 #### Running Sql (MsSql, PostgreSQL, MySql) tests
 

@@ -1472,7 +1472,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 else
                 {
                     ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                    RuntimeConfigValidator.ValidateGraphQLPathForRelationalDbs(configuration));
+                    RuntimeConfigValidator.ValidateGraphQLPath(configuration));
 
                     if (IsPathContainingReservedCharacters)
                     {
@@ -1491,6 +1491,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             else
             {
                 RuntimeConfigValidator.ValidateRestPathForRelationalDbs(configuration);
+                RuntimeConfigValidator.ValidateGraphQLPath(configuration);
             }
         }
 

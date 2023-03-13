@@ -42,7 +42,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         private static readonly string _invalidPathChars = @"[\.:\?#/\[\]@!$&'()\*\+,;=]+";
 
         //  Regex to validate rest/graphql custom path prefix.
-        private static readonly Regex _invalidPathCharsRgx = new(_invalidPathChars, RegexOptions.Compiled);
+        public static readonly Regex _invalidPathCharsRgx = new(_invalidPathChars, RegexOptions.Compiled);
 
         // Regex used to extract all claimTypes in policy. It finds all the substrings which are
         // of the form @claims.*** delimited by space character,end of the line or end of the string.
@@ -325,7 +325,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         public static void ValidateGlobalEndpointRouteConfig(RuntimeConfig runtimeConfig)
         {
             ValidateRestPathForRelationalDbs(runtimeConfig);
-            ValidateGraphQLPathForRelationalDbs(runtimeConfig);
+            ValidateGraphQLPath(runtimeConfig);
             // Do not check for conflicts if GraphQL or REST endpoints are disabled.
             if (!runtimeConfig.GraphQLGlobalSettings.Enabled || !runtimeConfig.RestGlobalSettings.Enabled)
             {
@@ -359,18 +359,18 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
             string restPath = runtimeConfig.RestGlobalSettings.Path;
 
-            ValidateRestAndGraphQLPath(restPath, "REST");
+            ValidateApiPath(restPath, ApiType.REST);
         }
 
         /// <summary>
         /// Method to validate that the GraphQL path prefix.
         /// </summary>
         /// <param name="runtimeConfig"></param>
-        public static void ValidateGraphQLPathForRelationalDbs(RuntimeConfig runtimeConfig)
+        public static void ValidateGraphQLPath(RuntimeConfig runtimeConfig)
         {
             string graphqlPath = runtimeConfig.GraphQLGlobalSettings.Path;
 
-            ValidateRestAndGraphQLPath(graphqlPath, "GraphQL");
+            ValidateApiPath(graphqlPath, ApiType.GraphQL);
         }
 
         /// <summary>
@@ -380,7 +380,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <param name="apiPath">path prefix for rest/graphql apis</param>
         /// <param name="apiType">Either REST or GraphQL</param>
         /// <exception cref="DataApiBuilderException"></exception>
-        private static void ValidateRestAndGraphQLPath(string apiPath, string apiType)
+        private static void ValidateApiPath(string apiPath, ApiType apiType)
         {
             if (string.IsNullOrEmpty(apiPath))
             {
@@ -402,10 +402,22 @@ namespace Azure.DataApiBuilder.Service.Configurations
             apiPath = apiPath.Substring(1);
 
             // API path prefix should not contain any reserved characters.
+            ValidateIfApiPathContainsReservedCharacters(apiPath, apiType);
+        }
+
+        /// <summary>
+        /// Method to validate that the REST/GraphQL path prefix does not contain
+        /// any forbidden characters.
+        /// </summary>
+        /// <param name="apiPath">path prefix for rest/graphql apis</param>
+        /// <param name="apiType">Either REST or GraphQL</param>
+        /// <exception cref="DataApiBuilderException"></exception>
+        public static void ValidateIfApiPathContainsReservedCharacters(string apiPath, ApiType apiType)
+        {
             if (_invalidPathCharsRgx.IsMatch(apiPath))
             {
                 string errorMessage = INVALID_GRAPHQL_PATH_WITH_RESERVED_CHAR_ERR_MSG;
-                if ("REST".Equals(apiType))
+                if (ApiType.REST.Equals(apiType))
                 {
                     errorMessage = INVALID_REST_PATH_WITH_RESERVED_CHAR_ERR_MSG;
                 }

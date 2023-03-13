@@ -121,6 +121,12 @@ namespace Cli
                 return false;
             }
 
+            if ((DoesApiPathContainsReservedCharacters(restPath, ApiType.REST))
+                || DoesApiPathContainsReservedCharacters(options.GraphQLPath, ApiType.GraphQL))
+            {
+                return false;
+            }
+
             RuntimeConfig runtimeConfig = new(
                 Schema: dabSchemaLink,
                 DataSource: dataSource,

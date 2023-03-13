@@ -9,9 +9,11 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Unicode;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Humanizer;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Config.AuthenticationConfig;
+using static Azure.DataApiBuilder.Service.Configurations.RuntimeConfigValidator;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
 /// <summary>
@@ -350,6 +352,32 @@ namespace Cli
                     audience,
                     issuer));
             return defaultGlobalSettings;
+        }
+
+        /// <summary>
+        /// Returns true if the api path contains any reserved characters like "[\.:\?#/\[\]@!$&'()\*\+,;=]+"
+        /// </summary>
+        /// <param name="apiPath">path prefix for rest/graphql apis</param>
+        /// <param name="apiType">Either REST or GraphQL</param>
+        public static bool DoesApiPathContainsReservedCharacters(string? apiPath, ApiType apiType)
+        {
+            // apiPath is null only in case of cosmosDB and apiType=REST. For this case, validation is not required.
+            // Since, cosmosDB do not support REST calls.
+            if (apiPath is null)
+            {
+                return false;
+            }
+
+            try
+            {
+                ValidateIfApiPathContainsReservedCharacters(apiPath, apiType);
+                return false;
+            }
+            catch (DataApiBuilderException ex)
+            {
+                _logger.LogError(ex.Message);
+                return true;
+            }
         }
 
         /// <summary>

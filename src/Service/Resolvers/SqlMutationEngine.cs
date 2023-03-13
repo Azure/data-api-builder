@@ -68,7 +68,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="context">context of graphql mutation</param>
         /// <param name="parameters">parameters in the mutation query.</param>
         /// <returns>JSON object result and its related pagination metadata</returns>
-        public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> parameters)
+        public async Task<Tuple<JsonDocument?, IMetadata?>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> parameters)
         {
             if (context.Selection.Type.IsListType())
             {
@@ -85,7 +85,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 entityName = modelName;
             }
 
-            Tuple<JsonDocument, IMetadata>? result = null;
+            Tuple<JsonDocument?, IMetadata?>? result = null;
             Config.Operation mutationOperation = MutationBuilder.DetermineMutationOperationTypeBasedOnInputType(graphqlMutationName);
 
             // If authorization fails, an exception will be thrown and request execution halts.
@@ -110,8 +110,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     && Convert.ToInt32(value) == 0
                     && result is not null && result.Item1 is not null)
                 {
-                    result = new Tuple<JsonDocument, IMetadata>(
-                        default(JsonDocument)!,
+                    result = new Tuple<JsonDocument?, IMetadata?>(
+                        default(JsonDocument),
                         PaginationMetadata.MakeEmptyPaginationMetadata());
                 }
             }

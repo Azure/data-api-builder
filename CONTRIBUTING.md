@@ -26,6 +26,8 @@ If you're using Visual Studio, you can configure a launch profile to start the C
 
 #### Visual Studio
 
+Before running the code in Visual Studio you must be sure to have your config file correctly populated with a valid connection string to your configured back end. Once you have the back end running and your configuration file set correctly you may do the following to run the code in Visual Studio without using the CLI.
+
 1. Select the **Startup Project** `Azure.DataGateway.Service`.
 2. Select a **debug profile** for database type: `MsSql`, `PostgreSql`,`CosmosDb_NoSql`, or `MySql`.
 3. Select **Clean Solution**

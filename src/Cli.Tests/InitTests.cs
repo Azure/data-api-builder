@@ -219,7 +219,7 @@ namespace Cli.Tests
 
         /// <summary>
         /// Test to verify creation of initial config with special characters
-        /// such as [!,@,#,$,%,^,&,*,(,)," "] in connection-string.
+        /// such as [!,@,#,$,%,^,&,*, ,(,)] in connection-string.
         /// </summary>
         [TestMethod]
         public void TestSpecialCharactersInConnectionString()

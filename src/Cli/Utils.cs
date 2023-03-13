@@ -259,6 +259,7 @@ namespace Cli
 
         /// <summary>
         /// Returns the Serialization option used to convert objects into JSON.
+        /// Not escaping any special unicode characters.
         /// Ignoring properties with null values.
         /// Keeping all the keys in lowercase.
         /// </summary>

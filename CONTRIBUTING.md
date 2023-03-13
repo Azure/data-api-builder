@@ -55,7 +55,7 @@ To run the SQL tests locally you will need to:
 1. Set the connection string in `dab-config.<engine>.json`.
    - Note - do not commit the connection string to the repo.
 
-Test can then be run using the following commands:
+Tests can then be run using the following commands:
 
 - `dotnet test --filter "TestCategory=MsSql"` for SQL Server
 - `dotnet test --filter "TestCategory=PostgreSql"` for Postgres

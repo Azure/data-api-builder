@@ -218,6 +218,45 @@ namespace Cli.Tests
         }
 
         /// <summary>
+        /// Test to verify creation of initial config with special characters in connection-string.
+        /// </summary>
+        [TestMethod]
+        public void TestSpecialCharactersInConnectionString()
+        {
+            InitOptions options = new(
+                databaseType: DatabaseType.mssql,
+                connectionString: "a!string@with#some$special%characters^to&check*proper(serialization)including space.",
+                cosmosNoSqlDatabase: null,
+                cosmosNoSqlContainer: null,
+                graphQLSchemaPath: null,
+                setSessionContext: false,
+                hostMode: HostModeType.Production,
+                corsOrigin: null,
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                config: _testRuntimeConfig);
+
+            _basicRuntimeConfig =
+            @"{" +
+                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                @"""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""a!string@with#some$special%characters^to&check*proper(serialization)including space."",
+                    ""options"":{
+                        ""set-session-context"": false
+                    }
+                },
+                ""entities"": {}
+            }";
+
+            // Adding runtime settings to the above basic config
+            string expectedRuntimeConfig = AddPropertiesToJson(
+                _basicRuntimeConfig,
+                GetDefaultTestRuntimeSettingString()
+            );
+            RunTest(options, expectedRuntimeConfig);
+        }
+
+        /// <summary>
         /// Test to verify that an error is thrown when user tries to
         /// initialize a config with a file name that already exists.
         /// </summary>

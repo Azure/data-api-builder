@@ -12,11 +12,16 @@ namespace Cli.Tests
         private string _basicRuntimeConfig = string.Empty;
 
         /// <summary>
-        /// Setup the logger for CLI
+        /// Setup the logger and test file for CLI
         /// </summary>
-        [TestInitialize]
-        public void SetupLoggerForCLI()
+        [ClassInitialize]
+        public static void Setup()
         {
+            if (!File.Exists(_testSchemaFile))
+            {
+                File.Create(_testSchemaFile);
+            }
+
             TestHelper.SetupTestLoggerForCLI();
         }
 
@@ -158,7 +163,7 @@ namespace Cli.Tests
                 connectionString: "testconnectionstring",
                 cosmosNoSqlDatabase: "testdb",
                 cosmosNoSqlContainer: "testcontainer",
-                graphQLSchemaPath: "schema.gql",
+                graphQLSchemaPath: _testSchemaFile,
                 setSessionContext: false,
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
@@ -174,7 +179,7 @@ namespace Cli.Tests
                     ""options"": {
                         ""database"": ""testdb"",
                         ""container"": ""testcontainer"",
-                        ""schema"": ""schema.gql""
+                        ""schema"": ""test-schema.gql""
                     }
                 },
                 ""entities"": {}
@@ -191,7 +196,7 @@ namespace Cli.Tests
         /// Verify that if graphQLSchema file is not present, we will get error.
         /// </summary>
         [DataRow("no-schema.gql", false, DisplayName = "FAIL: GraphQL Schema file not available.")]
-        [DataRow("schema.gql", true, DisplayName = "PASS: GraphQL Schema file available.")]
+        [DataRow("test-schema.gql", true, DisplayName = "PASS: GraphQL Schema file available.")]
         [DataTestMethod]
         public void VerifyGraphQLSchemaFileAvailabilityForCosmosDB(
             string schemaFileName,
@@ -220,7 +225,7 @@ namespace Cli.Tests
         [DataRow("", "testcontainer", "testschema", false, DisplayName = "database is empty.")]
         [DataRow("testDatabase", "testcontainer", "", false, DisplayName = "database is provided, Schema is null.")]
         [DataRow("testDatabase", null, "", false, DisplayName = "database is provided, container and Schema is null/empty.")]
-        [DataRow("testDatabase", null, "schema.gql", true, DisplayName = "database and schema provided, container is null/empty.")]
+        [DataRow("testDatabase", null, "test-schema.gql", true, DisplayName = "database and schema provided, container is null/empty.")]
         [DataTestMethod]
         public void VerifyRequiredOptionsForCosmosDbNoSqlDatabase(
             string? cosmosDatabase,

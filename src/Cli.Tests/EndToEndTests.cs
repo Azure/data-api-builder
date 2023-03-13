@@ -15,6 +15,7 @@ public class EndToEndTests
     [TestInitialize]
     public void SetupLoggerForCLI()
     {
+        File.Create("test-schema.gql");
         TestHelper.SetupTestLoggerForCLI();
     }
 
@@ -26,7 +27,7 @@ public class EndToEndTests
     {
         string[] args = { "init", "-c", _testRuntimeConfig, "--database-type", "cosmosdb_nosql",
                           "--connection-string", "localhost:5000", "--cosmosdb_nosql-database",
-                          "graphqldb", "--cosmosdb_nosql-container", "planet", "--graphql-schema", "schema.gql", "--cors-origin", "localhost:3000,www.nolocalhost.com:80" };
+                          "graphqldb", "--cosmosdb_nosql-container", "planet", "--graphql-schema", "test-schema.gql", "--cors-origin", "localhost:3000,www.nolocalhost.com:80" };
         Program.Main(args);
 
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
@@ -37,7 +38,7 @@ public class EndToEndTests
         Assert.IsNotNull(runtimeConfig.DataSource.CosmosDbNoSql);
         Assert.AreEqual("graphqldb", runtimeConfig.DataSource.CosmosDbNoSql.Database);
         Assert.AreEqual("planet", runtimeConfig.DataSource.CosmosDbNoSql.Container);
-        Assert.AreEqual("schema.gql", runtimeConfig.DataSource.CosmosDbNoSql.GraphQLSchemaPath);
+        Assert.AreEqual("test-schema.gql", runtimeConfig.DataSource.CosmosDbNoSql.GraphQLSchemaPath);
         Assert.IsNotNull(runtimeConfig.RuntimeSettings);
         Assert.IsNotNull(runtimeConfig.HostGlobalSettings);
 

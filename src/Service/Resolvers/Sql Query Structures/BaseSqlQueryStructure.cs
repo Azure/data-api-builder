@@ -15,6 +15,7 @@ using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
+using Microsoft.AspNetCore.Http;
 using Microsoft.OData.UriParser;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
@@ -51,10 +52,27 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             GQLFilterParser gQLFilterParser,
             List<Predicate>? predicates = null,
             string entityName = "",
-            IncrementingInteger? counter = null)
+            IncrementingInteger? counter = null,
+            HttpContext? httpContext = null,
+            Config.Operation operationType = Config.Operation.None
+            )
             : base(metadataProvider, authorizationResolver, gQLFilterParser, predicates, entityName, counter)
         {
             Joins = new();
+
+            // For GraphQL read operation, we are deliberately not passing httpContext to this point
+            // and hence it will take its default value i.e. null here.
+            // For GraphQL read operation, the database policy predicates are added later in the Sql{*}QueryStructure classes.
+            if (httpContext is not null)
+            {
+                AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
+                operationType,
+                this,
+                httpContext,
+                authorizationResolver,
+                metadataProvider
+                );
+            }
         }
 
         /// <summary>

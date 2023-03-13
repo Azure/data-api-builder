@@ -229,7 +229,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 if (dbDataReader.HasRows)
                 {
-                    DbResultSetRow row = new();
+                    DbResultSetRow dbResultSetRow = new();
                     DataTable? schemaTable = dbDataReader.GetSchemaTable();
 
                     if (schemaTable is not null)
@@ -246,16 +246,16 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             int colIndex = dbDataReader.GetOrdinal(columnName);
                             if (!dbDataReader.IsDBNull(colIndex))
                             {
-                                row.Columns.Add(columnName, dbDataReader[columnName]);
+                                dbResultSetRow.Columns.Add(columnName, dbDataReader[columnName]);
                             }
                             else
                             {
-                                row.Columns.Add(columnName, value: null);
+                                dbResultSetRow.Columns.Add(columnName, value: null);
                             }
                         }
                     }
 
-                    dbResultSet.Rows.Add(row);
+                    dbResultSet.Rows.Add(dbResultSetRow);
                 }
             }
 

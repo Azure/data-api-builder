@@ -17,9 +17,9 @@ namespace Cli.Tests
         [ClassInitialize]
         public static void Setup()
         {
-            if (!File.Exists(_testSchemaFile))
+            if (!File.Exists(TEST_SCHEMA_FILE))
             {
-                File.Create(_testSchemaFile);
+                File.Create(TEST_SCHEMA_FILE);
             }
 
             TestHelper.SetupTestLoggerForCLI();
@@ -43,7 +43,7 @@ namespace Cli.Tests
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
                 restPath: "rest-api",
-                config: _testRuntimeConfig);
+                config: TEST_RUNTIME_CONFIG_FILE);
 
             _basicRuntimeConfig =
             @"{" +
@@ -87,7 +87,7 @@ namespace Cli.Tests
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
                 restPath: "/rest-endpoint",
-                config: _testRuntimeConfig);
+                config: TEST_RUNTIME_CONFIG_FILE);
 
             _basicRuntimeConfig =
             @"{" +
@@ -127,7 +127,7 @@ namespace Cli.Tests
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                config: _testRuntimeConfig);
+                config: TEST_RUNTIME_CONFIG_FILE);
 
             _basicRuntimeConfig =
             @"{" +
@@ -163,12 +163,12 @@ namespace Cli.Tests
                 connectionString: "testconnectionstring",
                 cosmosNoSqlDatabase: "testdb",
                 cosmosNoSqlContainer: "testcontainer",
-                graphQLSchemaPath: _testSchemaFile,
+                graphQLSchemaPath: TEST_SCHEMA_FILE,
                 setSessionContext: false,
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                config: _testRuntimeConfig);
+                config: TEST_RUNTIME_CONFIG_FILE);
 
             _basicRuntimeConfig =
             @"{" +
@@ -196,7 +196,7 @@ namespace Cli.Tests
         /// Verify that if graphQLSchema file is not present, we will get error.
         /// </summary>
         [DataRow("no-schema.gql", false, DisplayName = "FAIL: GraphQL Schema file not available.")]
-        [DataRow("test-schema.gql", true, DisplayName = "PASS: GraphQL Schema file available.")]
+        [DataRow(TEST_SCHEMA_FILE, true, DisplayName = "PASS: GraphQL Schema file available.")]
         [DataTestMethod]
         public void VerifyGraphQLSchemaFileAvailabilityForCosmosDB(
             string schemaFileName,
@@ -213,7 +213,7 @@ namespace Cli.Tests
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                config: _testRuntimeConfig);
+                config: TEST_RUNTIME_CONFIG_FILE);
 
             Assert.AreEqual(expectSuccess, ConfigGenerator.TryCreateRuntimeConfig(options, out _));
         }
@@ -225,7 +225,7 @@ namespace Cli.Tests
         [DataRow("", "testcontainer", "testschema", false, DisplayName = "database is empty.")]
         [DataRow("testDatabase", "testcontainer", "", false, DisplayName = "database is provided, Schema is null.")]
         [DataRow("testDatabase", null, "", false, DisplayName = "database is provided, container and Schema is null/empty.")]
-        [DataRow("testDatabase", null, "test-schema.gql", true, DisplayName = "database and schema provided, container is null/empty.")]
+        [DataRow("testDatabase", null, TEST_SCHEMA_FILE, true, DisplayName = "database and schema provided, container is null/empty.")]
         [DataTestMethod]
         public void VerifyRequiredOptionsForCosmosDbNoSqlDatabase(
             string? cosmosDatabase,
@@ -243,7 +243,7 @@ namespace Cli.Tests
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                config: _testRuntimeConfig);
+                config: TEST_RUNTIME_CONFIG_FILE);
 
             Assert.AreEqual(expectedResult, ConfigGenerator.TryCreateRuntimeConfig(options, out _));
         }
@@ -265,7 +265,7 @@ namespace Cli.Tests
                 hostMode: HostModeType.Development,
                 corsOrigin: new List<string>() { },
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                config: _testRuntimeConfig);
+                config: TEST_RUNTIME_CONFIG_FILE);
 
             // Config generated successfully for the first time.
             Assert.AreEqual(true, ConfigGenerator.TryGenerateConfig(options));
@@ -316,7 +316,7 @@ namespace Cli.Tests
                 authenticationProvider: authenticationProvider,
                 audience: audience,
                 issuer: issuer,
-                config: _testRuntimeConfig);
+                config: TEST_RUNTIME_CONFIG_FILE);
 
             _basicRuntimeConfig =
             @"{" +
@@ -350,11 +350,11 @@ namespace Cli.Tests
         public void EnsureFailureReInitializingExistingConfigWithDifferentCase()
         {
             // Should PASS, new file is being created
-            InitOptions initOptionsWithAllLowerCaseFileName = GetSampleInitOptionsWithFileName(_testRuntimeConfig);
+            InitOptions initOptionsWithAllLowerCaseFileName = GetSampleInitOptionsWithFileName(TEST_RUNTIME_CONFIG_FILE);
             Assert.AreEqual(true, ConfigGenerator.TryGenerateConfig(initOptionsWithAllLowerCaseFileName));
 
             // same file with all uppercase letters
-            InitOptions initOptionsWithAllUpperCaseFileName = GetSampleInitOptionsWithFileName(_testRuntimeConfig.ToUpper());
+            InitOptions initOptionsWithAllUpperCaseFileName = GetSampleInitOptionsWithFileName(TEST_RUNTIME_CONFIG_FILE.ToUpper());
             // Platform Dependent
             // Windows,MacOs: Should FAIL - File Exists is Case insensitive
             // Unix: Should PASS - File Exists is Case sensitive
@@ -409,9 +409,9 @@ namespace Cli.Tests
         [TestCleanup]
         public void CleanUp()
         {
-            if (File.Exists(_testRuntimeConfig))
+            if (File.Exists(TEST_RUNTIME_CONFIG_FILE))
             {
-                File.Delete(_testRuntimeConfig);
+                File.Delete(TEST_RUNTIME_CONFIG_FILE);
             }
         }
     }

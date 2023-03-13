@@ -368,6 +368,10 @@ namespace Cli
                 return false;
             }
 
+            if (apiPath.StartsWith('/')) {
+                apiPath = apiPath.Substring(1);
+            }
+
             try
             {
                 ValidateIfApiPathContainsReservedCharacters(apiPath, apiType);

@@ -367,8 +367,10 @@ namespace Cli
             {
                 return false;
             }
-
-            if (apiPath.StartsWith('/')) {
+            
+            // removing leading '/' before checking for forbidden characters.
+            if (apiPath.StartsWith('/'))
+            {
                 apiPath = apiPath.Substring(1);
             }
 

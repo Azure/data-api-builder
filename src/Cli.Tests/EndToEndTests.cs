@@ -13,7 +13,7 @@ public class EndToEndTests
     /// Setup the logger for CLI
     /// </summary>
     [ClassInitialize]
-    public void SetupLoggerForCLI()
+    public static void SetupLoggerForCLI()
     {
         File.Create("test-schema.gql");
         TestHelper.SetupTestLoggerForCLI();

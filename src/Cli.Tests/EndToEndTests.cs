@@ -12,9 +12,10 @@ public class EndToEndTests
     /// <summary>
     /// Setup the logger for CLI
     /// </summary>
-    [TestInitialize]
+    [ClassInitialize]
     public void SetupLoggerForCLI()
     {
+        File.Create("test-schema.gql");
         TestHelper.SetupTestLoggerForCLI();
     }
 
@@ -24,7 +25,6 @@ public class EndToEndTests
     [TestMethod]
     public void TestInitForCosmosDBNoSql()
     {
-        File.Create("test-schema.gql");
         string[] args = { "init", "-c", _testRuntimeConfig, "--database-type", "cosmosdb_nosql",
                           "--connection-string", "localhost:5000", "--cosmosdb_nosql-database",
                           "graphqldb", "--cosmosdb_nosql-container", "planet", "--graphql-schema", "test-schema.gql", "--cors-origin", "localhost:3000,www.nolocalhost.com:80" };

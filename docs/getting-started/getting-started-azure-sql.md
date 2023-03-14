@@ -89,7 +89,7 @@ As you can see there the `data-source` property specifies that our chosen `datab
 
 > Take a look at the [DAB Configuration File Guide](../configuration-file.md) document to learn more.
 
-With the configuration file in place, then it's time to start defining which entities you want to expose via the API.
+With the configuration file in place, it's time to start defining which entities you want to expose via the API.
 
 ## Add Book and Author entities
 

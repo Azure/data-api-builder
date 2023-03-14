@@ -10,37 +10,40 @@ For Data API Builder, the format used for a MySQL connection is shown below base
 
 1. If MySQL server has SSL enabled, use the ADO.NET connection string format with SSL mode as required. If using an Azure MySQL Database, remember to download and install the [public SSL certificate](https://dl.cacerts.digicert.com/DigiCertGlobalRootCA.crt.pem) in the **Trusted Root certification authorities store** on the client machine using **certmgr.msc** Management Console on your local Windows system. If using an Azure cloud service like Azure App Service, you can copy the certificate to a folder on the App Service file system and add the argument **SslCa** using the full certificate path as shown below.
 
-    ```
-    Server=<server-address>;Database=<database-name>;User ID=<username>;Password=<password>;Sslmode=Required;SslCa=<path-to-certificate>";
-    ```
-    
+   ```
+   Server=<server-address>;Database=<database-name>;User ID=<username>;Password=<password>;Sslmode=Required;SslCa=<path-to-certificate>";
+   ```
+
 2. If MySQL does not have SSL enabled, you can use the ADO.NET connection string format without the SSL mode parameter
-    ```
-    Server=<server-address>;Database=<database-name>;User ID=<username>;Password=<password>;
-    ```
+   ```
+   Server=<server-address>;Database=<database-name>;User ID=<username>;Password=<password>;
+   ```
 
 ## Create the database objects
 
-Create the database `booksdb` with tables to represent Authors, Books and the many-to-many relationship between Authors and Books. Execute this [sample script for books schema and data](../samples/getting-started/azure-mysql-db/exercise/exercise-library.azure-mysql.sql) in the MySQL Database you decided to use.
+Create the database `booksdb` with tables to represent Authors, Books and the many-to-many relationship between Authors and Books. Execute this [sample script for books schema and data](../../samples/getting-started/azure-mysql-db/library.azure-mysql.sql) in the MySQL Database you decided to use.
 
 - `authors`: Table containing authors
 - `books`: Table containing books
 - `books_authors`: Table associating books with respective authors
 
 ## Creating a configuration file for DAB
+
 The Data API Builder engine needs a configuration file. There you'll define which database DAB targets, and which entities and associated properties are to be exposed by the API.
 
-For this getting started guide, you will use DAB CLI to initialize your configuration file. Run the following command and use the connection string based on whether SSL is enabled or not. Please review the **Get the database connection string** section above. 
+For this getting started guide, you will use DAB CLI to initialize your configuration file. Run the following command and use the connection string based on whether SSL is enabled or not. Please review the **Get the database connection string** section above.
 
 ```bash
 dab init  --config "dab-config.MySql.json" --database-type mysql --connection-string "<mysql-connection-string-ssl-or-non-ssl>" --host-mode "Development" --authenticate-devmode-requests false --cors-origin "http://localhost:5000"
 
-The output would look like 
+The output would look like
 ```
+
     Using config file: dab-config.MySql.json
     Config file generated.
     SUGGESTION: Use 'dab add <options>' to add new entities in your config.
-```
+
+````
 
 The command will generate a config file called dab-config.MySql.json looking like this:
 
@@ -76,16 +79,18 @@ The command will generate a config file called dab-config.MySql.json looking lik
   },
   "entities": {}
 }
-```
+````
+
 As you can see there the `data-source` property specifies that our chosen `database-type` is `mysql`, with the `connection-string` we passed to DAB CLI.
 
 > Take a look at the [DAB Configuration File Guide](../configuration-file.md) document to learn more. With the configuration file in place, then it's time to start defining which entities you want to expose via the API.
-    
+
 ## Add Book entities
 
 Now, you'll want to expose the `books` table as REST and/or GraphQL endpoints. To do that, add the following information to the `entities` section of the configuration file.
 
 Run the DAB CLI command as shown below to create the entity called Books
+
 ```
     dab add Book --config "dab-config.MySql.json" --source books --permissions "anonymous:create,read,update,delete"
     Using config file: dab-config.MySql.json
@@ -114,22 +119,24 @@ Start by adding the `Book` entity:
 }
 ```
 
-within the `entities` object you can create any entity with any name (as long as it is valid for REST and GraphQL). The name `Book`, in this case, will be used to build the REST path and the GraphQL type. Within the entity you have the `source` element that specifies which table contains the entity data. In our case is `books`. You can add other entities for `authors` table and `books_authors` table using `dab add` CLI command. 
+within the `entities` object you can create any entity with any name (as long as it is valid for REST and GraphQL). The name `Book`, in this case, will be used to build the REST path and the GraphQL type. Within the entity you have the `source` element that specifies which table contains the entity data. In our case is `books`. You can add other entities for `authors` table and `books_authors` table using `dab add` CLI command.
 
 > **NOTE**: Entities names are case sensitive, and they will be exposed via REST and GraphQL as you have typed them.
 
-After that, the permissions for the exposed entity are defined via the `permissions` element; it allows you to be sure that only those users making a request with the right claims will be able to access the entity and its data. 
+After that, the permissions for the exposed entity are defined via the `permissions` element; it allows you to be sure that only those users making a request with the right claims will be able to access the entity and its data.
 
-> **BEST PRACTICE**: It is recommeneded to use the *singular* form for entities names. For GraphQL, the Data API builder engine will automatically use the correct plural form to generate the final GraphQL schema whenever a *list* of entity items will be returned. More on this behaviour in the [GraphQL documentation](./../graphql.md).
+> **BEST PRACTICE**: It is recommeneded to use the _singular_ form for entities names. For GraphQL, the Data API builder engine will automatically use the correct plural form to generate the final GraphQL schema whenever a _list_ of entity items will be returned. More on this behaviour in the [GraphQL documentation](./../graphql.md).
 
 ## Start Data API builder for Azure MySQL Database
 
 To start the DAB API builder with the configuration file, run the following command:
-```   
+
+```
     dab start -c dab-config.MySql.json
 ```
 
-The output would look like 
+The output would look like
+
 ```
 Using config file: dab-config.MySql.json
 Starting the runtime engine...
@@ -144,6 +151,7 @@ info: Microsoft.Hosting.Lifetime[14]
 info: Microsoft.Hosting.Lifetime[14]
       Now listening on: https://localhost:5001
 ```
+
 The Data API builder engine is running and is ready to accept requests.
 
 ## Query the endpoints
@@ -184,8 +192,8 @@ The GET verb also supports several query parameters that allow you to manipulate
 - `$orderby`: return items in the specified order
 - `$first`: the top `n` items to return
 - `$filter`: expression to filter the returned items
-- `$select`:  list of field names to be returned
- 
+- `$select`: list of field names to be returned
+
 For more details on how they can be used, refer to the [REST documentation](../rest.md)
 
 ### GraphQL endpoint
@@ -220,7 +228,7 @@ Stop the engine (`Ctrl+C`). Relationships must be defined on each entity where y
 ```
     dab update Author --relationship "books" --cardinality "many" --target.entity "Book" --linking.object "dbo.books_authors"
 ```
-    
+
 which will create the relationships section in the Author entity:
 
 ```json
@@ -289,8 +297,7 @@ Once this is done, you can restart the Data API builder engine. Then, you can ex
 
 ```graphql
 {
-  books(filter: { title: { eq: "Nightfall" } })
-  {
+  books(filter: { title: { eq: "Nightfall" } }) {
     items {
       id
       title
@@ -311,10 +318,7 @@ that will return all the authors of "Nightfall" book, or like:
 {
   authors(
     filter: {
-        or: [
-          { first_name: { eq: "Isaac" } }
-          { last_name: { eq: "Asimov" } }
-        ]
+      or: [{ first_name: { eq: "Isaac" } }, { last_name: { eq: "Asimov" } }]
     }
   ) {
     items {
@@ -333,4 +337,3 @@ that will return all the authors of "Nightfall" book, or like:
 that will return all the books written by Isaac Asimov.
 
 Congratulations, you have just created a fully working backend to support your modern applications!
-

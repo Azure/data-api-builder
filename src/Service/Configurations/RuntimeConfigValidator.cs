@@ -417,7 +417,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             if (_invalidPathCharsRgx.IsMatch(apiPath))
             {
                 string errorMessage = INVALID_GRAPHQL_PATH_WITH_RESERVED_CHAR_ERR_MSG;
-                if (ApiType.REST.Equals(apiType))
+                if (apiType is ApiType.REST)
                 {
                     errorMessage = INVALID_REST_PATH_WITH_RESERVED_CHAR_ERR_MSG;
                 }

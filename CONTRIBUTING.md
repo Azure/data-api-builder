@@ -22,7 +22,7 @@ Data API builder (DAB) is a .NET application written in C#, consisting of severa
 
 Before running the code, ensure you have the correct version of .NET installed (refer to the [global.json](global.json) file) and open the solution from `src/Azure.DataApiBuilder.Service.sln` in Visual Studio (or other editor of choice).
 
-The next step is to ensure you have a config file for DAb defined. If you want to use the sample one [you can use the generator tool](#an-alternative-way-to-generate-config-files), otherwise, ensure that the `dab-config.<engine>.json` file is in the `src/Service` directory (and if the database is CosmosDb_NoSql the GraphQL schema file too).
+The next step is to ensure you have a config file for DAB defined. If you want to use the sample one [you can use the generator tool](#an-alternative-way-to-generate-config-files), otherwise, ensure that the `dab-config.<engine>.json` file is in the `src/Service` directory (and if the database is CosmosDb_NoSql the GraphQL schema file too).
 
 Make sure the config has a valid connection string, or you use the [`@env` syntax to reference an environment variable](docs/configuration-file.md#accessing-environment-variables).
 

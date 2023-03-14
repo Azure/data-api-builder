@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -218,17 +219,17 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public async Task<DbOperationResultRow>
-            ExtractRowFromDbDataReader(DbDataReader dbDataReader, List<string>? args = null)
+        public async Task<DbResultSet>
+            ExtractResultSetFromDbDataReader(DbDataReader dbDataReader, List<string>? args = null)
         {
-            DbOperationResultRow dbOperationResultRow = new(
-                columns: new(),
-                resultProperties: GetResultProperties(dbDataReader).Result ?? new());
+            DbResultSet dbResultSet =
+                new(resultProperties: GetResultProperties(dbDataReader).Result ?? new());
 
-            if (await ReadAsync(dbDataReader))
+            while (await ReadAsync(dbDataReader))
             {
                 if (dbDataReader.HasRows)
                 {
+                    DbResultSetRow dbResultSetRow = new();
                     DataTable? schemaTable = dbDataReader.GetSchemaTable();
 
                     if (schemaTable is not null)
@@ -245,37 +246,41 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             int colIndex = dbDataReader.GetOrdinal(columnName);
                             if (!dbDataReader.IsDBNull(colIndex))
                             {
-                                dbOperationResultRow.Columns.Add(columnName, dbDataReader[columnName]);
+                                dbResultSetRow.Columns.Add(columnName, dbDataReader[columnName]);
                             }
                             else
                             {
-                                dbOperationResultRow.Columns.Add(columnName, value: null);
+                                dbResultSetRow.Columns.Add(columnName, value: null);
                             }
                         }
                     }
+
+                    dbResultSet.Rows.Add(dbResultSetRow);
                 }
             }
 
-            return dbOperationResultRow;
+            return dbResultSet;
         }
 
         /// <inheritdoc />
-        /// <Note>This function is a DbDataReader handler of type Func<DbDataReader, List<string>?, Task<TResult?>>
+        /// <Note>This function is a DbDataReader handler of type Func<DbDataReader, List<string>?, Task<TResult>>
         /// The parameter args is not used but is added to conform to the signature of the DbDataReader handler
         /// function argument of ExecuteQueryAsync.</Note>
         public async Task<JsonArray> GetJsonArrayAsync(
             DbDataReader dbDataReader,
             List<string>? args = null)
         {
-            DbOperationResultRow dbOperationResultRow = await ExtractRowFromDbDataReader(dbDataReader);
+            DbResultSet dbResultSet = await ExtractResultSetFromDbDataReader(dbDataReader);
             JsonArray resultArray = new();
 
-            while (dbOperationResultRow.Columns.Count > 0)
+            foreach (DbResultSetRow dbResultSetRow in dbResultSet.Rows)
             {
-                JsonElement result =
-                    JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(dbOperationResultRow.Columns));
-                resultArray.Add(result);
-                dbOperationResultRow = await ExtractRowFromDbDataReader(dbDataReader);
+                if (dbResultSetRow.Columns.Count > 0)
+                {
+                    JsonElement result =
+                        JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(dbResultSetRow.Columns));
+                    resultArray.Add(result);
+                }
             }
 
             return resultArray;
@@ -310,25 +315,25 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <inheritdoc />
         /// <Note>This function is a DbDataReader handler of type
         /// Func<DbDataReader, List<string>?, Task<TResult?>></Note>
-        public async Task<DbOperationResultRow> GetMultipleResultSetsIfAnyAsync(
+        public async Task<DbResultSet> GetMultipleResultSetsIfAnyAsync(
             DbDataReader dbDataReader, List<string>? args = null)
         {
-            DbOperationResultRow dbOperationResultRow
-                = await ExtractRowFromDbDataReader(dbDataReader);
+            DbResultSet dbResultSet
+                = await ExtractResultSetFromDbDataReader(dbDataReader);
 
             /// Processes a second result set from DbDataReader if it exists.
             /// In MsSQL upsert:
             /// result set #1: result of the UPDATE operation.
             /// result set #2: result of the INSERT operation.
-            if (dbOperationResultRow.Columns.Count > 0)
+            if (dbResultSet.Rows.Count > 0 && dbResultSet.Rows.FirstOrDefault()!.Columns.Count > 0)
             {
-                dbOperationResultRow.ResultProperties.Add(SqlMutationEngine.IS_FIRST_RESULT_SET, true);
-                return dbOperationResultRow;
+                dbResultSet.ResultProperties.Add(SqlMutationEngine.IS_FIRST_RESULT_SET, true);
+                return dbResultSet;
             }
             else if (await dbDataReader.NextResultAsync())
             {
                 // Since no first result set exists, we return the second result set.
-                return await ExtractRowFromDbDataReader(dbDataReader);
+                return await ExtractResultSetFromDbDataReader(dbDataReader);
             }
             else
             {
@@ -348,7 +353,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 }
             }
 
-            return dbOperationResultRow;
+            return dbResultSet;
         }
 
         /// <inheritdoc />

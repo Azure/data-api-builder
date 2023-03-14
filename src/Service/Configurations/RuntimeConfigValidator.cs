@@ -516,7 +516,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                 }
                             }
 
-                            if (!IsValidDatabasePolicyForAction(configOperation) && runtimeConfig.DatabaseType is DatabaseType.mysql)
+                            if (runtimeConfig.DatabaseType is not DatabaseType.mssql && !IsValidDatabasePolicyForAction(configOperation))
                             {
                                 throw new DataApiBuilderException(
                                     message: $"The Create action does not support defining a database policy." +

@@ -22,7 +22,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="context">Middleware context of the mutation</param>
         /// <param name="parameters">parameters in the mutation query.</param>
         /// <returns>JSON object result and a metadata object required to resolve the result</returns>
-        public Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context,
+        public Task<Tuple<JsonDocument?, IMetadata?>> ExecuteAsync(IMiddlewareContext context,
             IDictionary<string, object?> parameters);
 
         /// <summary>

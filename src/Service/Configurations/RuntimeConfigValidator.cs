@@ -42,7 +42,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         private static readonly string _invalidPathChars = @"[\.:\?#/\[\]@!$&'()\*\+,;=]+";
 
         //  Regex to validate rest/graphql custom path prefix.
-        public static readonly Regex _invalidPathCharsRgx = new(_invalidPathChars, RegexOptions.Compiled);
+        public static readonly Regex _invalidApiPathCharsRgx = new(_invalidPathChars, RegexOptions.Compiled);
 
         // Regex used to extract all claimTypes in policy. It finds all the substrings which are
         // of the form @claims.*** delimited by space character,end of the line or end of the string.
@@ -414,7 +414,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <exception cref="DataApiBuilderException"></exception>
         public static void ValidateIfApiPathContainsReservedCharacters(string apiPath, ApiType apiType)
         {
-            if (_invalidPathCharsRgx.IsMatch(apiPath))
+            if (_invalidApiPathCharsRgx.IsMatch(apiPath))
             {
                 string errorMessage = INVALID_GRAPHQL_PATH_WITH_RESERVED_CHAR_ERR_MSG;
                 if (apiType is ApiType.REST)

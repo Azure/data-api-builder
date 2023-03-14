@@ -69,13 +69,13 @@ namespace Azure.DataApiBuilder.Service.Services
                 if (context.Selection.Type.IsListType())
                 {
                     // Both Query and Mutation execute the same SQL statement for Stored Procedure.
-                    Tuple<IEnumerable<JsonDocument>, IMetadata> result = await _queryEngine.ExecuteListAsync(context, parameters);
+                    Tuple<IEnumerable<JsonDocument>, IMetadata?> result = await _queryEngine.ExecuteListAsync(context, parameters);
                     context.Result = GetListOfClonedElements(result.Item1);
                     SetNewMetadata(context, result.Item2);
                 }
                 else
                 {
-                    Tuple<JsonDocument, IMetadata> result = await _mutationEngine.ExecuteAsync(context, parameters);
+                    Tuple<JsonDocument?, IMetadata?> result = await _mutationEngine.ExecuteAsync(context, parameters);
                     SetContextResult(context, result.Item1);
                     SetNewMetadata(context, result.Item2);
                 }
@@ -86,13 +86,13 @@ namespace Azure.DataApiBuilder.Service.Services
 
                 if (context.Selection.Type.IsListType())
                 {
-                    Tuple<IEnumerable<JsonDocument>, IMetadata> result = await _queryEngine.ExecuteListAsync(context, parameters);
+                    Tuple<IEnumerable<JsonDocument>, IMetadata?> result = await _queryEngine.ExecuteListAsync(context, parameters);
                     context.Result = GetListOfClonedElements(result.Item1);
                     SetNewMetadata(context, result.Item2);
                 }
                 else
                 {
-                    Tuple<JsonDocument, IMetadata> result = await _queryEngine.ExecuteAsync(context, parameters);
+                    Tuple<JsonDocument?, IMetadata?> result = await _queryEngine.ExecuteAsync(context, parameters);
                     SetContextResult(context, result.Item1);
                     SetNewMetadata(context, result.Item2);
                 }
@@ -115,7 +115,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 if (TryGetPropertyFromParent(context, out jsonElement))
                 {
                     IMetadata metadata = GetMetadata(context);
-                    using JsonDocument innerObject = _queryEngine.ResolveInnerObject(jsonElement, context.Selection.Field, ref metadata);
+                    using JsonDocument? innerObject = _queryEngine.ResolveInnerObject(jsonElement, context.Selection.Field, ref metadata);
                     if (innerObject is not null)
                     {
                         context.Result = innerObject.RootElement.Clone();
@@ -151,7 +151,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         /// <param name="context">Context to store result.</param>
         /// <param name="result">Result to store in context.</param>
-        private static void SetContextResult(IMiddlewareContext context, JsonDocument result)
+        private static void SetContextResult(IMiddlewareContext context, JsonDocument? result)
         {
             if (result is not null)
             {
@@ -365,7 +365,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <summary>
         /// Set new metadata and reset the depth that the metadata has persisted
         /// </summary>
-        private static void SetNewMetadata(IMiddlewareContext context, IMetadata metadata)
+        private static void SetNewMetadata(IMiddlewareContext context, IMetadata? metadata)
         {
             context.ScopedContextData = context.ScopedContextData.SetItem(_contextMetadata, metadata);
         }

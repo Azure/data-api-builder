@@ -28,7 +28,7 @@ More details on Azure SQL and SQL Server connection strings can be found here: h
 
 ## Create the database objects
 
-Create the database tables needed to represent Authors, Books and the many-to-many relationship between Authors and Books. You can find the `library.azure-sql.sql` script in the [/samples/getting-started/azure-sql-db](../samples/getting-started/azure-sql-db) folder in this GitHub repo. You can use it to create three tables, along with sample data:
+Create the database tables needed to represent Authors, Books and the many-to-many relationship between Authors and Books. You can find the `library.azure-sql.sql` script in the [/samples/getting-started/azure-sql-db](../../samples/getting-started/azure-sql-db) folder in this GitHub repo. You can use it to create three tables, along with sample data:
 
 - `dbo.authors`: Table containing authors
 - `dbo.books`: Table containing books
@@ -87,9 +87,9 @@ The command will generate a config file called `dab-config.json` looking like th
 
 As you can see there the `data-source` property specifies that our chosen `database-type` is `mssql`, with the `connection-string` we passed to DAB CLI.
 
->Take a look at the [DAB Configuration File Guide](../configuration-file.md) document to learn more.
+> Take a look at the [DAB Configuration File Guide](../configuration-file.md) document to learn more.
 
-With the configuration file in place, then it's time to start defining which entities you want to expose via the API.
+With the configuration file in place, it's time to start defining which entities you want to expose via the API.
 
 ## Add Book and Author entities
 
@@ -150,7 +150,7 @@ You can also add the `Book` entity now, applying the same concepts you just lear
 
 that's all is needed at the moment. Data API builder is ready to be run.
 
-> **BEST PRACTICE**: It is recommended to use the *singular* form for entities names. For GraphQL, the Data API builder engine will automatically use the correct plural form to generate the final GraphQL schema whenever a *list* of entity items will be returned. More on this behavior in the [GraphQL documentation](./../graphql.md).
+> **BEST PRACTICE**: It is recommended to use the _singular_ form for entities names. For GraphQL, the Data API builder engine will automatically use the correct plural form to generate the final GraphQL schema whenever a _list_ of entity items will be returned. More on this behavior in the [GraphQL documentation](./../graphql.md).
 
 > **BEST PRACTICE**: It is recommended to use Pascal Casing for the entity names, so that the generated GraphQL types, queries and mutations will be easier to read.
 
@@ -215,8 +215,8 @@ The GET verb also supports several query parameters (also case sensitive) that a
 - `$orderby`: return items in the specified order
 - `$first`: the top `n` items to return
 - `$filter`: expression to filter the returned items
-- `$select`:  list of field names to be returned
- 
+- `$select`: list of field names to be returned
+
 For more details on how they can be used, refer to the [REST documentation](../rest.md)
 
 ### GraphQL endpoint
@@ -326,8 +326,7 @@ Once this is done, you can now restart the Data API builder engine, and using Gr
 
 ```graphql
 {
-  books(filter: { title: { eq: "Nightfall" } })
-  {
+  books(filter: { title: { eq: "Nightfall" } }) {
     items {
       id
       title
@@ -348,10 +347,7 @@ that will return all the authors of "Nightfall" book, or like:
 {
   authors(
     filter: {
-        and: [
-          { first_name: { eq: "Isaac" } }
-          { last_name: { eq: "Asimov" } }
-        ]
+      and: [{ first_name: { eq: "Isaac" } }, { last_name: { eq: "Asimov" } }]
     }
   ) {
     items {

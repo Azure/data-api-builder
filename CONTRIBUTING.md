@@ -22,7 +22,9 @@ Data API builder (DAB) is a .NET application written in C#, consisting of severa
 
 Before running the code, ensure you have the correct version of .NET installed (refer to the [global.json](global.json) file) and open the solution from `src/Azure.DataApiBuilder.Service.sln` in Visual Studio (or other editor of choice).
 
-If you're using Visual Studio, you can configure a launch profile to start the CLI and run the appropriate command (e.g. `start`) with debugging enabled. This will allow you to set breakpoints and step through the code. Also, ensure that the launch profile is configured with a working directory that points to your config file.
+The next step is to ensure you have a config file for DAb defined. If you want to use the sample one [you can use the generator tool](#an-alternative-way-to-generate-config-files), otherwise, ensure that the `dab-config.<engine>.json` file is in the `src/Service` directory (and if the database is CosmosDb_NoSql the GraphQL schema file too).
+
+Make sure the config has a valid connection string, or you use the [`@env` syntax to reference an environment variable](docs/configuration-file.md#accessing-environment-variables).
 
 #### Visual Studio
 
@@ -52,7 +54,7 @@ To run the SQL tests locally you will need to:
 
 1. Setup a database using the server(s) that you want to test against.
 1. Create the database schema using the `DatabaseSchema-<engine>.sql` file.
-1. Set the connection string in `dab-config.<engine>.json`.
+1. Set the connection string in `dab-config.<engine>.json` or use the [`@env` syntax to reference an environment variable](docs/configuration-file.md#accessing-environment-variables).
    - Note - do not commit the connection string to the repo.
 
 Tests can then be run using the following commands:

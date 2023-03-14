@@ -1490,8 +1490,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
             else
             {
-                RuntimeConfigValidator.ValidateRestPathForRelationalDbs(configuration);
-                RuntimeConfigValidator.ValidateGraphQLPath(configuration);
+                if ("REST".Equals(apiType))
+                {
+                    RuntimeConfigValidator.ValidateRestPathForRelationalDbs(configuration);
+                }
+                else
+                {
+                    RuntimeConfigValidator.ValidateGraphQLPath(configuration);
+                }
             }
         }
 

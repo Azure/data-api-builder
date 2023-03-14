@@ -359,13 +359,13 @@ namespace Cli
         /// </summary>
         /// <param name="apiPath">path prefix for rest/graphql apis</param>
         /// <param name="apiType">Either REST or GraphQL</param>
-        public static bool DoesApiPathContainsReservedCharacters(string? apiPath, ApiType apiType)
+        public static bool IsApiPathValid(string? apiPath, ApiType apiType)
         {
             // apiPath is null only in case of cosmosDB and apiType=REST. For this case, validation is not required.
             // Since, cosmosDB do not support REST calls.
             if (apiPath is null)
             {
-                return false;
+                return true;
             }
 
             // removing leading '/' before checking for forbidden characters.
@@ -377,12 +377,12 @@ namespace Cli
             try
             {
                 ValidateIfApiPathContainsReservedCharacters(apiPath, apiType);
-                return false;
+                return true;
             }
             catch (DataApiBuilderException ex)
             {
                 _logger.LogError(ex.Message);
-                return true;
+                return false;
             }
         }
 

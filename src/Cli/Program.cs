@@ -44,7 +44,7 @@ namespace Cli
 
             // Parsing user arguments and executing required methods.
             ParserResult<object>? result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions, ExportOptions>(args)
-                .WithParsed<InitOptions>(options =>
+                .WithParsed((Action<InitOptions>)(options =>
                 {
                     cliLogger.LogInformation($"{PRODUCT_NAME} {GetProductVersion()}");
                     bool isSuccess = ConfigGenerator.TryGenerateConfig(options);
@@ -57,8 +57,8 @@ namespace Cli
                     {
                         cliLogger.LogError($"Could not generate config file.");
                     }
-                })
-                .WithParsed<AddOptions>(options =>
+                }))
+                .WithParsed((Action<AddOptions>)(options =>
                 {
                     cliLogger.LogInformation($"{PRODUCT_NAME} {GetProductVersion()}");
                     if (!IsEntityProvided(options.Entity, cliLogger, command: "add"))
@@ -78,8 +78,8 @@ namespace Cli
                         cliLogger.LogError($"Could not add entity: {options.Entity} with source: {options.Source}" +
                             $" and permissions: {string.Join(SEPARATOR, options.Permissions.ToArray())}.");
                     }
-                })
-                .WithParsed<UpdateOptions>(options =>
+                }))
+                .WithParsed((Action<UpdateOptions>)(options =>
                 {
                     cliLogger.LogInformation($"{PRODUCT_NAME} {GetProductVersion()}");
                     if (!IsEntityProvided(options.Entity, cliLogger, command: "update"))
@@ -97,8 +97,8 @@ namespace Cli
                     {
                         cliLogger.LogError($"Could not update the entity: {options.Entity}.");
                     }
-                })
-                .WithParsed<StartOptions>(options =>
+                }))
+                .WithParsed((Action<StartOptions>)(options =>
                 {
                     cliLogger.LogInformation($"{PRODUCT_NAME} {GetProductVersion()}");
                     bool isSuccess = ConfigGenerator.TryStartEngineWithOptions(options);
@@ -107,8 +107,8 @@ namespace Cli
                     {
                         cliLogger.LogError("Failed to start the engine.");
                     }
-                })
-                .WithParsed<ExportOptions>(options =>
+                }))
+                .WithParsed((Action<ExportOptions>)(options =>
                 {
                     StartOptions startOptions = new(false, LogLevel.None, true, options.Config!);
 
@@ -122,18 +122,43 @@ namespace Cli
 
                     if (options.GraphQL)
                     {
-                        Task.Delay(1000).Wait();
-                        HttpClient client = new() { BaseAddress = new Uri("http://localhost:5000/graphql") };
-                        IntrospectionClient introspectionClient = new();
-                        Task<HotChocolate.Language.DocumentNode> response = introspectionClient.DownloadSchemaAsync(client);
-                        response.Wait();
+                        int retryCount = 5;
+                        int tries = 0;
 
-                        HotChocolate.Language.DocumentNode node = response.Result;
-                        File.WriteAllText(Path.Combine(options.OutputDirectory, options.GraphQLSchemaFile), node.ToString());
+                        while (tries < retryCount)
+                        {
+                            try
+                            {
+                                HttpClient client = new() { BaseAddress = new Uri("http://localhost:5000/graphql") };
+                                IntrospectionClient introspectionClient = new();
+                                Task<HotChocolate.Language.DocumentNode> response = introspectionClient.DownloadSchemaAsync(client);
+                                response.Wait();
+
+                                HotChocolate.Language.DocumentNode node = response.Result;
+
+                                if (!Directory.Exists(options.OutputDirectory))
+                                {
+                                    Directory.CreateDirectory(options.OutputDirectory);
+                                }
+
+                                string outputPath = Path.Combine(options.OutputDirectory, options.GraphQLSchemaFile);
+                                File.WriteAllText(outputPath, node.ToString());
+                                break;
+                            }
+                            catch
+                            {
+                                tries++;
+                            }
+                        }
+
+                        if (tries == retryCount)
+                        {
+                            cliLogger.LogError("Failed to export GraphQL schema.");
+                        }
                     }
 
                     cancellationTokenSource.Cancel();
-                })
+                }))
                 .WithNotParsed(err =>
                 {
                     /// System.CommandLine considers --help and --version as NonParsed Errors

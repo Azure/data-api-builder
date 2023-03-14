@@ -175,14 +175,15 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("1 eq @item.col2", Config.Operation.Read, false, DisplayName = "Database Policy defined for Read passes")]
         [DataRow("2 eq @item.col3", Config.Operation.Update, false, DisplayName = "Database Policy defined for Update passes")]
         [DataRow("2 eq @item.col3", Config.Operation.Delete, false, DisplayName = "Database Policy defined for Delete passes")]
-        public void AddDatabasePolicyToCreateOperationPermission(string dbPolicy, Config.Operation action, bool errorExpected)
+        public void AddDatabasePolicyToCreateOperationForMySql(string dbPolicy, Config.Operation action, bool errorExpected)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
                 roleName: AuthorizationHelpers.TEST_ROLE,
                 operation: action,
                 includedCols: new HashSet<string> { "col1", "col2", "col3" },
-                databasePolicy: dbPolicy
+                databasePolicy: dbPolicy,
+                dbType: DatabaseType.mysql
                 );
             RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
 

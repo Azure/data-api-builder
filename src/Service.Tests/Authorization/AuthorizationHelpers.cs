@@ -69,7 +69,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             HashSet<string>? excludedCols = null,
             string? databasePolicy = null,
             string? requestPolicy = null,
-            string authProvider = "AppService"
+            string authProvider = "AppService",
+            DatabaseType dbType = DatabaseType.mssql
             )
         {
             Field? fieldsForRole = null;
@@ -124,7 +125,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
+                DataSource: new DataSource(DatabaseType: dbType),
                 RuntimeSettings: runtimeSettings,
                 Entities: entityMap
                 );

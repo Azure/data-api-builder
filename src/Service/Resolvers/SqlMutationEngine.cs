@@ -331,11 +331,20 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 if (context.OperationType is Config.Operation.Insert)
                 {
-                    if (mutationResultRow is null || mutationResultRow.Columns.Count == 0)
+                    if (mutationResultRow is null)
                     {
                         // this case should not happen, we throw an exception
                         // which will be returned as an Unexpected Internal Server Error
                         throw new Exception();
+                    }
+
+                    if (mutationResultRow.Columns.Count == 0)
+                    {
+                        throw new DataApiBuilderException(
+                            message: "Could not insert row with given values.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
+                            );
                     }
 
                     string primaryKeyRoute = ConstructPrimaryKeyRoute(context, mutationResultRow.Columns);

@@ -14,6 +14,7 @@ using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
+using Microsoft.AspNetCore.Http;
 
 namespace Azure.DataApiBuilder.Service.Models
 {
@@ -206,7 +207,7 @@ namespace Azure.DataApiBuilder.Service.Models
             // its predicates are obtained from recursively parsing the nested filter
             // and an additional predicate to reflect the join between main query and this exists subquery.
             SqlExistsQueryStructure existsQuery = new(
-                ctx,
+                TryGetHttpContextFromMiddlewareContext(ctx),
                 _metadataProvider,
                 queryStructure.AuthorizationResolver,
                 this,
@@ -242,6 +243,26 @@ namespace Azure.DataApiBuilder.Service.Models
             {
                 queryStructure.Parameters.Add(key, value);
             }
+        }
+
+        /// <summary>
+        /// Helper method to get the HttpContext from the MiddlewareContext.
+        /// </summary>
+        /// <param name="ctx">Middleware context for the object.</param>
+        /// <returns></returns>
+        /// <exception cref="DataApiBuilderException">throws exception when http context could not be found.</exception>
+        public HttpContext TryGetHttpContextFromMiddlewareContext(IMiddlewareContext ctx)
+        {
+            // Get HttpContext from IMiddlewareContext and fail if resolved value is null.
+            if (!ctx.ContextData.TryGetValue(nameof(HttpContext), out object? httpContextValue))
+            {
+                throw new DataApiBuilderException(
+                    message: "No HttpContext found in GraphQL Middleware Context.",
+                    statusCode: System.Net.HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
+            return (HttpContext)httpContextValue!;
         }
 
         /// <summary>
@@ -460,7 +481,7 @@ namespace Azure.DataApiBuilder.Service.Models
                 predicates.Push(new PredicateOperand(new Predicate(
                     new PredicateOperand(column),
                     op,
-                    new PredicateOperand(processLiteral ? $"@{processLiterals(value)}" : value.ToString()))
+                    new PredicateOperand(processLiteral ? $"{processLiterals(value)}" : value.ToString()))
                 ));
             }
 

@@ -1,10 +1,21 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 # ASP.NET Core (.NET Framework)
 # Build and test ASP.NET Core projects targeting the full .NET Framework.
 # Add steps that publish symbols, save build artifacts, and more:
 # https://learn.microsoft.com/azure/devops/pipelines/languages/dotnet-core
 
 trigger:
-- main
+  batch: true
+  branches:
+    include:
+    - main
+    - gh-readonly-queue/main
+    - release/*
+  paths:
+    exclude:
+    - docs
 
 pool:
   vmImage: 'ubuntu-latest' # examples of other options: 'macOS-10.15', 'windows-2019'
@@ -19,7 +30,7 @@ variables:
   # The counter is reset when the minor version is updated.
   patch: $[counter(format('{0}_{1}', variables['build.reason'], variables['minor']), 0)]
   isReleaseBuild: $(isNugetRelease)
-  additionalProperties.version: 'https://dataapibuilder.azureedge.net/schemas/v$(major).$(minor).$(patch)-beta/dab.draft.schema.json'
+  additionalProperties.version: 'https://dataapibuilder.azureedge.net/schemas/v$(major).$(minor).$(patch)/dab.draft.schema.json'
 
 steps:
 - task: NuGetAuthenticate@1
@@ -96,6 +107,27 @@ steps:
     contents: 'dab.draft.schema.json'
     targetFolder: '$(Build.ArtifactStagingDirectory)'
 
+- task: ms.vss-governance-buildtask.governance-build-task-component-detection.ComponentGovernanceComponentDetection@0
+  displayName: 'Component Governance Detection'
+  inputs:
+    alertWarningLevel: Medium
+    failOnAlert: true
+
+- task: notice@0
+  # This will generate the NOTICE.txt for distribution
+  displayName: Generate NOTICE file
+  inputs:
+    outputfile: $(Build.SourcesDirectory)/NOTICE.txt
+    outputformat: text
+
+- task: PowerShell@2
+  displayName: "Add Additional Licenses to NOTICE file"
+  inputs:
+    targetType: 'filePath'
+    filePath: $(System.DefaultWorkingDirectory)/scripts/notice-generation.ps1
+    # Artifact Staging Directory used to temporarily store downloaded ChilliCream license.
+    arguments: $(Build.ArtifactStagingDirectory) $(Build.SourcesDirectory)
+
 - template: templates/code-signing.yml
   parameters:
     # This is the path that will be used for packing nuget package.
@@ -121,14 +153,14 @@ steps:
   displayName: "Package DAB to multiple platforms"
   inputs:
     targetType: 'filePath'
-    filePath: $(System.DefaultWorkingDirectory)/publish.ps1
+    filePath: $(System.DefaultWorkingDirectory)/scripts/publish.ps1
     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) -Package
 
 - task: PowerShell@2
   displayName: "Smoke Test for DAB CLI"
   inputs:
     targetType: 'filePath'
-    filePath: $(System.DefaultWorkingDirectory)/dab-smoke-test-script.ps1
+    filePath: $(System.DefaultWorkingDirectory)/scripts/dab-smoke-test-script.ps1
     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(Agent.OS)  $(dabVersion)
 
 # Sign the binaries that were generated per platform
@@ -141,7 +173,7 @@ steps:
   displayName: "Zip the binaries after signing"
   inputs:
     targetType: 'filePath'
-    filePath: $(System.DefaultWorkingDirectory)/publish.ps1
+    filePath: $(System.DefaultWorkingDirectory)/scripts/publish.ps1
     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) -CreateZip
 
 # Generating SBOM manifest for Dab files
@@ -150,12 +182,21 @@ steps:
   inputs:
       BuildDropPath: '$(Build.ArtifactStagingDirectory)'
 
+# Downloads the manifest file from the latest GitHub Release.
+- task: DownloadGitHubRelease@0
+  inputs:
+    connection: 'DataApiBuilder'
+    userRepository: '$(Build.Repository.Name)'
+    defaultVersionType: 'latest'
+    itemPattern: 'dab-manifest.json'
+    downloadPath: '$(Build.ArtifactStagingDirectory)'
+
 # Generating Manifest File for generated Zip package
 - task: PowerShell@2
   displayName: "Generate Manifest File"
   inputs:
     targetType: 'filePath'
-    filePath: $(System.DefaultWorkingDirectory)/create_manifest_file.ps1
+    filePath: $(System.DefaultWorkingDirectory)/scripts/create-manifest-file.ps1
     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) $(isReleaseBuild)
 
 # This code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
@@ -163,10 +204,11 @@ steps:
   displayName: "Upload build artifacts"
   inputs:
     targetPath: '$(Build.ArtifactStagingDirectory)' 
+    publishLocation: 'pipeline'
 
 - task: NuGetCommand@2
   displayName: 'Publish Nuget to Internal Feed'
-  condition: eq(variables.isReleaseBuild, 'true')
+  condition: and(succeeded(), eq(variables.isReleaseBuild, 'true'))
   inputs:
     command: 'push'
     feedsToUse: 'select'
@@ -178,7 +220,7 @@ steps:
 
 - task: NuGetCommand@2
   displayName: 'Publish Nuget to Nuget.org'
-  condition: eq(variables.isReleaseBuild, 'true')
+  condition: and(succeeded(), eq(variables.isReleaseBuild, 'true'))
   inputs:
     command: push
     packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
@@ -194,14 +236,14 @@ steps:
 # Create a draft release with Assets
 - task: GitHubRelease@1
   displayName: "Draft Github Release"
-  condition: eq(variables.isReleaseBuild, 'true')
+  condition: and(succeeded(), eq(variables.isReleaseBuild, 'true'))
   inputs:
     gitHubConnection: 'DataApiBuilder'
     repositoryName: '$(Build.Repository.Name)'
     action: 'create'
     target: '$(Build.SourceVersion)'
     tagSource: 'userSpecifiedTag'
-    tag: 'v$(dabVersion)-beta'
+    tag: 'v$(dabVersion)'
     title: 'New Release: Data API Builder for Azure Databases'
     assets: |
       $(Build.ArtifactStagingDirectory)/**/*.nupkg
@@ -226,7 +268,7 @@ steps:
 # Build a docker image and push it to the container registry.
 - task: Docker@2
   displayName: "Build and push docker image to Azure Container Registry"
-  condition: eq(variables.isReleaseBuild, 'false')
+  condition: and(succeeded(), eq(variables.isReleaseBuild, 'false'))
   inputs:
     containerRegistry: 'CosmosDB GraphQL/Hawaii'
     repository: 'dab/$(Build.SourceBranch)'
@@ -240,7 +282,7 @@ steps:
 # Tag the image with the value of the releaseName variable and nuget release version.
 - task: Docker@2
   displayName: "Build and push docker image to Azure Container Registry tagged with releaseName and nuget release version"
-  condition: eq(variables.isReleaseBuild, 'true')
+  condition: and(succeeded(), eq(variables.isReleaseBuild, 'true'))
   inputs:
     containerRegistry: 'CosmosDB GraphQL/Hawaii'
     repository: 'dab'
@@ -250,3 +292,19 @@ steps:
       $(BuildDate)-$(Build.SourceVersion)
       $(releaseName)
       $(dabVersion)
+
+# Build a docker image and push it to ACR for publishing to MCR.
+# This step will pick the image with name `public/azure-databases/data-api-builder` and push to MCR.
+# This image will also be available in DockerHub.
+# Tag the image with dab version and latest.
+- task: Docker@2
+  displayName: "Build and push docker image to ACR for publishing to MCR"
+  condition: and(succeeded(), eq(variables.isReleaseBuild, 'true'))
+  inputs:
+    containerRegistry: 'CosmosDB GraphQL/Hawaii'
+    repository: 'public/azure-databases/data-api-builder'
+    command: 'buildAndPush'
+    Dockerfile: '**/Dockerfile'
+    tags: |
+      $(dabVersion)
+      latest

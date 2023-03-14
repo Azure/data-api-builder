@@ -106,19 +106,20 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <returns></returns>
         public string Build(SqlUpsertQueryStructure structure)
         {
+            string predicates = JoinPredicateStrings(Build(structure.Predicates), structure.DbPolicyPredicates);
             if (structure.IsFallbackToUpdate)
             {
                 return $"UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
                     $"OUTPUT {MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted)} " +
-                    $"WHERE {Build(structure.Predicates)};";
+                    $"WHERE {predicates};";
             }
             else
             {
                 return $"SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;BEGIN TRANSACTION; UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
                     $"WITH(UPDLOCK) SET {Build(structure.UpdateOperations, ", ")} " +
                     $"OUTPUT {MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted)} " +
-                    $"WHERE {Build(structure.Predicates)} " +
+                    $"WHERE {predicates} " +
                     $"IF @@ROWCOUNT = 0 " +
                     $"BEGIN; " +
                     $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} ({Build(structure.InsertColumns)}) " +

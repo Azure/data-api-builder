@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Service.Models;
 using Microsoft.AspNetCore.Http;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
@@ -30,7 +31,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public Task<TResult?> ExecuteQueryAsync<TResult>(
             string sqltext,
             IDictionary<string, object?> parameters,
-            Func<DbDataReader, List<string>?, Task<TResult?>>? dataReaderHandler,
+            Func<DbDataReader, List<string>?, Task<TResult>>? dataReaderHandler,
             HttpContext? httpContext = null,
             List<string>? args = null);
 
@@ -41,7 +42,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="dbDataReader">A DbDataReader.</param>
         /// <param name="args">List of string arguments if any.</param>
         /// <returns>A JsonArray with each element corresponding to the row (ColumnName : columnValue) in the dbDataReader.</returns>
-        public Task<JsonArray?> GetJsonArrayAsync(
+        public Task<JsonArray> GetJsonArrayAsync(
             DbDataReader dbDataReader,
             List<string>? args = null);
 
@@ -62,10 +63,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         /// <param name="dbDataReader">A DbDataReader</param>
         /// <param name="args">List of columns to extract. Extracts all if unspecified.</param>
-        /// <returns>A tuple of 2 dictionaries:
-        /// 1. A dictionary representing the row in <c>ColumnName: Value</c> format, null if no row was found
-        /// 2. A dictionary of properties of the Db Data Reader like RecordsAffected, HasRows.</returns>
-        public Task<Tuple<Dictionary<string, object?>?, Dictionary<string, object>>?> ExtractRowFromDbDataReader(
+        /// <returns>Single row read from DbDataReader.</returns>
+        public Task<DbOperationResultRow> ExtractRowFromDbDataReader(
                 DbDataReader dbDataReader,
                 List<string>? args = null);
 
@@ -76,11 +75,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         /// <param name="dbDataReader">A DbDataReader.</param>
         /// <param name="args">The arguments to this handler - args[0] = primary key in pretty format, args[1] = entity name.</param>
-        /// <returns>A tuple of 2 dictionaries:
-        /// 1. A dictionary representing the row in <c>ColumnName: Value</c> format.
-        /// 2. A dictionary of properties of the DbDataReader like RecordsAffected, HasRows.
-        /// If the first result set is being returned, has the property "IsFirstResultSet" set to true in this dictionary.</returns>
-        public Task<Tuple<Dictionary<string, object?>?, Dictionary<string, object>>?> GetMultipleResultSetsIfAnyAsync(
+        /// <returns>Single row read from DbDataReader.
+        /// If the first result set is being returned, DbOperationResultRow.ResultProperties dictionary has
+        /// the property "IsFirstResultSet" set to true.</returns>
+        public Task<DbOperationResultRow> GetMultipleResultSetsIfAnyAsync(
                 DbDataReader dbDataReader,
                 List<string>? args = null);
 
@@ -90,7 +88,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="dbDataReader">A DbDataReader.</param>
         /// <param name="args">List of string arguments if any.</param>
         /// <returns>A dictionary of properties of the DbDataReader like RecordsAffected, HasRows.</returns>
-        public Task<Dictionary<string, object>?> GetResultProperties(
+        public Task<Dictionary<string, object>> GetResultProperties(
                 DbDataReader dbDataReader,
                 List<string>? args = null);
 

@@ -52,6 +52,12 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                         name = name + "_star"
                     }
                 },
+                moon = new
+                {
+                    id = id,
+                    name = "first moon",
+                    details = "12 Craters"
+                },
                 tags = new[] { "tag1", "tag2" }
             };
         }

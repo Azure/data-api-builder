@@ -11,6 +11,7 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Resolvers;
+using Microsoft.AspNetCore.Http;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
@@ -35,8 +36,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
             IDictionary<string, object?> mutationParams,
+            HttpContext httpContext,
             bool isIncrementalUpdate)
-        : base(sqlMetadataProvider, authorizationResolver, gQLFilterParser, entityName: entityName)
+        : base(
+              metadataProvider: sqlMetadataProvider,
+              authorizationResolver: authorizationResolver,
+              gQLFilterParser: gQLFilterParser,
+              entityName: entityName,
+              httpContext: httpContext,
+              operationType: Config.Operation.Update)
         {
             UpdateOperations = new();
             OutputColumns = GenerateOutputColumns();
@@ -87,8 +95,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ISqlMetadataProvider sqlMetadataProvider,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
-            IDictionary<string, object?> mutationParams)
-            : base(sqlMetadataProvider, authorizationResolver, gQLFilterParser, entityName: entityName)
+            IDictionary<string, object?> mutationParams,
+            HttpContext httpContext)
+            : base(
+                  metadataProvider: sqlMetadataProvider,
+                  authorizationResolver: authorizationResolver,
+                  gQLFilterParser: gQLFilterParser,
+                  entityName: entityName,
+                  httpContext: httpContext,
+                  operationType: Config.Operation.Update)
         {
             UpdateOperations = new();
             SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();
@@ -158,7 +173,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     new PredicateOperand(
                         new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, backingColumn!)),
                     PredicateOperation.Equal,
-                    new PredicateOperand($"@{MakeParamWithValue(null)}")
+                    new PredicateOperand($"{MakeParamWithValue(null)}")
                 );
             }
             else
@@ -167,7 +182,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     new PredicateOperand(
                         new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, param.Key)),
                     PredicateOperation.Equal,
-                    new PredicateOperand($"@{MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString()!, param.Key))}"));
+                    new PredicateOperand($"{MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString()!, param.Key))}"));
             }
 
             return predicate;

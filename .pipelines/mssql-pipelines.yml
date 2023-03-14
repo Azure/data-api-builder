@@ -1,9 +1,20 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 # MsSql Integration Testing Pipeline config is split into two jobs:
 # 1) LinuxTests -> Run SQL Server 2019 in Linux Docker Image
 # 2) WindowsTests -> Run LocalDB preinstalled on
 
 trigger:
-- main
+  batch: true
+  branches:
+    include:
+    - main
+    - gh-readonly-queue/main
+    - release/*
+  paths:
+    exclude:
+    - docs
 
 jobs:
 - job: linux

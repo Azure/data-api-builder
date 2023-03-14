@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -1208,6 +1209,189 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        [TestMethod]
+        public async Task CollectionQueryWithInlineFragmentOverlappingFields()
+        {
+            string query = @"
+query {
+    books(first: 10) {
+        __typename
+        items {
+            id
+            title
+            ... on book { id }
+        }
+    }
+}
+            ";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync(query, "books", false);
+
+            Assert.AreEqual(10, response.GetProperty("items").GetArrayLength());
+        }
+
+        [TestMethod]
+        public async Task CollectionQueryWithInlineFragmentNonOverlappingFields()
+        {
+            string query = @"
+query {
+    books(first: 10) {
+        __typename
+        items {
+            title
+            ... on book { id }
+        }
+    }
+}
+            ";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync(query, "books", false);
+
+            Assert.AreEqual(10, response.GetProperty("items").GetArrayLength());
+        }
+
+        [TestMethod]
+        public async Task CollectionQueryWithFragmentOverlappingFields()
+        {
+            string query = @"
+query {
+    books(first: 10) {
+        __typename
+        items {
+            id
+            title
+            ... b
+        }
+    }
+}
+
+fragment b on book { id }
+            ";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync(query, "books", false);
+
+            Assert.AreEqual(10, response.GetProperty("items").GetArrayLength());
+        }
+
+        [TestMethod]
+        public async Task CollectionQueryWithFragmentNonOverlappingFields()
+        {
+            string query = @"
+query {
+    books(first: 10) {
+        __typename
+        items {
+            title
+            ... b
+        }
+    }
+}
+
+fragment b on book { id }
+            ";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync(query, "books", false);
+
+            Assert.AreEqual(10, response.GetProperty("items").GetArrayLength());
+        }
+
+        [TestMethod]
+        public async Task QueryWithInlineFragmentOverlappingFields()
+        {
+            string query = @"
+query {
+    book_by_pk(id: 1) {
+        __typename
+        id
+        title
+        ... on book { id }
+    }
+}
+            ";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync(query, "book_by_pk", false);
+
+            Assert.AreEqual(1, response.GetProperty("id").GetInt32());
+        }
+
+        [TestMethod]
+        public async Task QueryWithInlineFragmentNonOverlappingFields()
+        {
+            string query = @"
+query {
+    book_by_pk(id: 1) {
+        __typename
+        title
+        ... on book { id }
+    }
+}
+            ";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync(query, "book_by_pk", false);
+
+            Assert.AreEqual(1, response.GetProperty("id").GetInt32());
+        }
+
+        [TestMethod]
+        public async Task QueryWithFragmentOverlappingFields()
+        {
+            string query = @"
+query {
+    book_by_pk(id: 1) {
+        __typename
+        id
+        title
+        ... p
+    }
+}
+
+fragment p on book { id }
+            ";
+            JsonElement response = await ExecuteGraphQLRequestAsync(query, "book_by_pk", false);
+
+            Assert.AreEqual(1, response.GetProperty("id").GetInt32());
+        }
+
+        [TestMethod]
+        public async Task QueryWithFragmentNonOverlappingFields()
+        {
+            string query = @"
+query {
+    book_by_pk(id: 1) {
+        __typename
+        title
+        ... p
+    }
+}
+
+fragment p on book { id }
+            ";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync(query, "book_by_pk", false);
+
+            Assert.AreEqual(1, response.GetProperty("id").GetInt32());
+        }
+
+        [TestMethod]
+        public async Task GraphQLQueryWithMultipleOfTheSameFieldReturnsFieldOnce()
+        {
+            string query = @"
+query {
+    books(first: 10) {
+        items {
+            id
+            id
+        }
+    }
+}
+            ";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync(query, "books", false);
+
+            Assert.AreEqual(10, response.GetProperty("items").GetArrayLength());
+            Assert.AreEqual(1, response.GetProperty("items").EnumerateArray().First().GetProperty("id").GetInt32());
         }
 
         #endregion

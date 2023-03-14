@@ -1,33 +1,25 @@
-# Running Data API Builder for Azure Databases using a container
+# Running Data API builder for Azure Databases using a container
 
-Login into the `hawaiiacr` Azure Container Registry:
-
-```bash
-az acr login --name hawaiiacr
-```
-
-once you are logged in you can run Data API Builder from Docker:
+With Docker, you can run Data API builder using a container from `mcr.microsoft.com/azure-databases/data-api-builder`:
 
 ```sh
-docker run -it -v <configuration-file>://App/<configuration-file> -p 5000:5000 hawaiiacr.azurecr.io/dab:<tag> --ConfigFileName <configuration-file>
+docker run -it -v <configuration-file>:/App/<configuration-file> -p 5000:5000 mcr.microsoft.com/azure-databases/data-api-builder:<tag> --ConfigFileName <configuration-file>
 ```
 
-For example, if:
+The proceeding command makes the following assumptions:
 
-- you are working in the `c:\data-api-builder` folder
-- the configuration file you want to use in the `samples` folder and is named `my-sample-dab-config.json`
-- you want to use the 0.2.52 (Sept2022 release)
-
-the command to run is the following:
+- Let's say you are in the directory: `C:\data-api-builder` folder
+- The configuration file you want to use in the `samples` folder and is named `my-sample-dab-config.json`
+- You want to use the latest release which can be identified from the [Releases](https://github.com/Azure/data-api-builder/releases) page. For Example, If you would like to use the image with the tag `0.5.34`, run the following command:
 
 ```bash
-docker run -it -v "c:\data-api-builder\samples://App/samples" -p 5000:5000 hawaiiacr.azurecr.io/dab:0.2.52 --ConfigFileName ./samples/my-sample-dab-config.json
+docker run -it -v "c:\data-api-builder\samples:/App/samples" -p 5000:5000 mcr.microsoft.com/azure-databases/data-api-builder:0.5.34 --ConfigFileName ./samples/my-sample-dab-config.json
 ```
 
-There is also the option to use one of the provided Docker compose files, available in the `docker` folder:
+You may also use one of the provided Docker compose files, available in the `docker` folder:
 
-```bash
+```shell
 docker compose -f "./docker-compose.yml" up
 ```
 
-In this case, also make sure to change the docker-compose file configuration so that the volume will point to the configuration file you want to use.
+When using your own Docker compose file, make sure you update your docker-compose file to point to the configuration file you want to use.

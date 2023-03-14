@@ -157,7 +157,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                     }
 
                     // Attempts to get list of unique columns present in request metadata.
-                    restContext.CalculateCumulativeColumns(_logger);
+                    restContext.CalculateCumulativeColumns(_logger, httpContext);
 
                     // Two operations must be checked when HTTP operation is PUT or PATCH,
                     // otherwise, just one operation is checked.

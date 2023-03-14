@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 # static analysis
 
 parameters:
@@ -23,18 +26,8 @@ jobs:
       packageType: sdk
       version: 6.0.x
 
-  #Analyze source code for type of content and target types to help determine which tools to run
-  - task: securedevelopmentteam.vss-secure-development-tools.build-task-autoapplicability.AutoApplicability@1
-    displayName: 'AutoApplicability'
-    inputs:
-      VerboseWriter: true
-      ExternalRelease: true
-      InternalRelease: true
-      IsService: true
-      IsSoftware: true
-
   # Analyze source and build output text files for credentials
-  - task: securedevelopmentteam.vss-secure-development-tools.build-task-credscan.CredScan@2
+  - task: CredScan@3
     displayName: 'CredScan'
     inputs:
       toolMajorVersion: V2
@@ -44,23 +37,19 @@ jobs:
       verboseOutput: false
 
   # Scan text elements including code, code comments, and content/web pages, for sensitive terms based on legal, cultural, or geopolitical reasons
-  - task: securedevelopmentteam.vss-secure-development-tools.build-task-policheck.PoliCheck@1
+  - task: PoliCheck@2
     displayName: 'PoliCheck'
     inputs:
       targetType: F
 
   # AntiMalware scan
-  - task: securedevelopmentteam.vss-secure-development-tools.build-task-antimalware.AntiMalware@3
+  - task: AntiMalware@4
     displayName: 'AntiMalware'
     inputs:
       EnableServices: true
       SignatureFreshness: OneDay
       # Signature refreshes on Hosted Agents can sometimes have a delay of a day or two.
       TreatStaleSignatureAs: Warning
-
-  # Run checks for recently discovered vulnerabilities which are not yet incorporated to another tool
-  - task: securedevelopmentteam.vss-secure-development-tools.build-task-vulnerabilityassessment.VulnerabilityAssessment@0
-    displayName: 'Vulnerability Assessment'
 
   - task: DotNetCoreCLI@2
     displayName: Build Azure.DataApiBuilder.sln
@@ -70,23 +59,24 @@ jobs:
       configuration: '${{ parameters.BuildConfiguration }}'
       publishTestResults: true
 
-  - task: ms.vss-governance-buildtask.governance-build-task-component-detection.ComponentGovernanceComponentDetection@0
-    displayName: 'Component Governance Detection' #https://docs.opensource.microsoft.com/tools/cg.html
+  - task: securedevelopmentteam.vss-secure-development-tools.build-task-binskim.BinSkim@4
+    displayName: 'BinSkim'
     inputs:
-      alertWarningLevel: Medium
-      failOnAlert: true
+      InputType: Basic
+      AnalyzeTargetGlob: $(Build.SourcesDirectory)\**.dll;$(Build.SourcesDirectory)\**.exe;-:f|$(Build.SourcesDirectory)\**\Microsoft.Azure.Cosmos.ServiceInterop.dll
+      AnalyzeIgnorePdbLoadError: true
 
-#  - task: securedevelopmentteam.vss-secure-development-tools.build-task-binskim.BinSkim@3
-#    displayName: 'BinSkim'
-#    inputs:
-#      InputType: Basic
+  - task: Semmle@1
+    displayName: 'Run CodeQL (Semmle) (csharp)'
+    inputs:
+      sourceCodeDirectory: '$(Build.SourcesDirectory)'
 
   # Publish Analysis Results (position after all tools ran)
-  - task: securedevelopmentteam.vss-secure-development-tools.build-task-publishsecurityanalysislogs.PublishSecurityAnalysisLogs@2
+  - task: securedevelopmentteam.vss-secure-development-tools.build-task-publishsecurityanalysislogs.PublishSecurityAnalysisLogs@3
     displayName: 'Publish Security Analysis Logs'
 
   # The Post-Analysis build task will analyze the log files produced by the tools, and introduce a build break
-  - task: securedevelopmentteam.vss-secure-development-tools.build-task-postanalysis.PostAnalysis@1
+  - task: securedevelopmentteam.vss-secure-development-tools.build-task-postanalysis.PostAnalysis@2
     displayName: 'Post Analysis'
     inputs:
       AllTools: true

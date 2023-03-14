@@ -10,6 +10,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
+using Microsoft.AspNetCore.Http;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
@@ -64,8 +65,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
             IDictionary<string, object?> mutationParams,
-            bool incrementalUpdate)
-        : base(sqlMetadataProvider, authorizationResolver, gQLFilterParser, entityName: entityName)
+            bool incrementalUpdate,
+            HttpContext httpContext)
+        : base(
+              metadataProvider: sqlMetadataProvider,
+              authorizationResolver: authorizationResolver,
+              gQLFilterParser: gQLFilterParser,
+              entityName: entityName,
+              operationType: Config.Operation.Update,
+              httpContext: httpContext)
         {
             UpdateOperations = new();
             InsertColumns = new();
@@ -128,7 +136,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     Predicate predicate = new(
                         new PredicateOperand(new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, columnName: backingColumn!)),
                         PredicateOperation.Equal,
-                        new PredicateOperand($"@{paramIdentifier}")
+                        new PredicateOperand($"{paramIdentifier}")
                     );
 
                     // We are guaranteed by the RequestValidator, that a primary key column is in the URL, not body.
@@ -189,7 +197,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             InsertColumns.Add(columnName);
             string paramName;
             paramName = ColumnToParam[columnName];
-            Values.Add($"@{paramName}");
+            Values.Add($"{paramName}");
         }
 
         /// <summary>

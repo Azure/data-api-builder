@@ -4,7 +4,7 @@
   "title": "Data API Builder",
   "description": "Schema for Data API Builder engine",
   "additionalProperties": {
-    "version": "https://dataapibuilder.azureedge.net/schemas/vmajor.minor.patch-beta/dab.draft.schema.json"
+    "version": "https://dataapibuilder.azureedge.net/schemas/vmajor.minor.patch/dab.draft.schema.json"
   },
   "type": "object",
   "properties": {
@@ -129,6 +129,10 @@
             "path": {
               "default": "/api",
               "type": "string"
+            },
+            "enabled": {
+              "type": "boolean",
+              "description": "Allow enabling/disabling REST requests for all entities."
             }
           }
         },
@@ -143,6 +147,10 @@
             "path": {
               "default": "/graphql",
               "type": "string"
+            },
+            "enabled": {
+              "type": "boolean",
+              "description": "Allow enabling/disabling GraphQL requests for all entities."
             }
           }
         },
@@ -283,11 +291,11 @@
                       "items": {
                         "type": "string",
                         "enum": [
-                          "GET",
-                          "POST",
-                          "PUT",
-                          "PATCH",
-                          "DELETE"
+                          "get",
+                          "post",
+                          "put",
+                          "patch",
+                          "delete"
                         ]
                       }
                     }
@@ -407,7 +415,14 @@
               "source": {
                 "properties": {
                   "type": {
-                    "const": "stored-procedure"
+                    "oneOf": [
+                      {
+                        "const": "table"
+                      },
+                      {
+                        "const": "view"
+                      }
+                    ]
                   }
                 }
               }
@@ -435,19 +450,13 @@
                           "items": {
                             "oneOf": [
                               {
-                                "type": "string",
-                                "enum": [
-                                  "execute"
-                                ]
+                                "$ref": "#/$defs/action"
                               },
                               {
                                 "type": "object",
                                 "properties": {
                                   "action": {
-                                    "type": "string",
-                                    "enum": [
-                                      "execute"
-                                    ]
+                                    "$ref": "#/$defs/action"
                                   },
                                   "fields": {
                                     "type": "object",
@@ -514,13 +523,21 @@
                           "items": {
                             "oneOf": [
                               {
-                                "$ref": "#/$defs/action"
+                                "type": "string",
+                                "enum": [
+                                  "execute",
+                                  "*"
+                                ]
                               },
                               {
                                 "type": "object",
                                 "properties": {
                                   "action": {
-                                    "$ref": "#/$defs/action"
+                                    "type": "string",
+                                    "enum": [
+                                      "execute",
+                                      "*"
+                                    ]
                                   },
                                   "fields": {
                                     "type": "object",

@@ -94,11 +94,17 @@ namespace Azure.DataApiBuilder.Config
     {
         public Field(HashSet<string>? include, HashSet<string>? exclude)
         {
-            Include = include is null ? new() : new(include);
+            // Include being null indicates that it was not specified in the config.
+            // This is used later (in authorization resolver) as an indicator that
+            // Include resolves to all fields present in the config.
+            // And so, unlike Exclude, we don't initialize it with an empty set when null.
+            Include = include;
+
+            // Exclude when null, is initialized with an empty set - no field is excluded.
             Exclude = exclude is null ? new() : new(exclude);
         }
         [property: JsonPropertyName("include")]
-        public HashSet<string> Include { get; set; }
+        public HashSet<string>? Include { get; set; }
         [property: JsonPropertyName("exclude")]
         public HashSet<string> Exclude { get; set; }
     }

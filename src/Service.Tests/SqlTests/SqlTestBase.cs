@@ -228,6 +228,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         protected static void SetUpSQLMetadataProvider()
         {
             _sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
 
             switch (DatabaseEngine)
             {
@@ -239,7 +240,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     _queryExecutor = new PostgreSqlQueryExecutor(
                         _runtimeConfigProvider,
                         _dbExceptionParser,
-                        pgQueryExecutorLogger.Object);
+                        pgQueryExecutorLogger.Object,
+                        httpContextAccessor.Object);
                     _sqlMetadataProvider =
                         new PostgreSqlMetadataProvider(
                             _runtimeConfigProvider,
@@ -255,7 +257,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     _queryExecutor = new MsSqlQueryExecutor(
                         _runtimeConfigProvider,
                         _dbExceptionParser,
-                        msSqlQueryExecutorLogger.Object);
+                        msSqlQueryExecutorLogger.Object,
+                        httpContextAccessor.Object);
                     _sqlMetadataProvider =
                         new MsSqlMetadataProvider(
                             _runtimeConfigProvider,
@@ -270,7 +273,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     _queryExecutor = new MySqlQueryExecutor(
                         _runtimeConfigProvider,
                         _dbExceptionParser,
-                        mySqlQueryExecutorLogger.Object);
+                        mySqlQueryExecutorLogger.Object,
+                        httpContextAccessor.Object);
                     _sqlMetadataProvider =
                          new MySqlMetadataProvider(
                              _runtimeConfigProvider,

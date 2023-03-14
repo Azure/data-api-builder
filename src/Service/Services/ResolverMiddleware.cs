@@ -70,13 +70,13 @@ namespace Azure.DataApiBuilder.Service.Services
                 {
                     // Both Query and Mutation execute the same SQL statement for Stored Procedure.
                     Tuple<IEnumerable<JsonDocument>, IMetadata> result = await _queryEngine.ExecuteListAsync(context, parameters);
-                    context.Result = result.Item1;
+                    context.Result = GetListOfClonedElements(result.Item1);
                     SetNewMetadata(context, result.Item2);
                 }
                 else
                 {
                     Tuple<JsonDocument, IMetadata> result = await _mutationEngine.ExecuteAsync(context, parameters);
-                    context.Result = result.Item1;
+                    SetContextResult(context, result.Item1);
                     SetNewMetadata(context, result.Item2);
                 }
             }
@@ -87,13 +87,13 @@ namespace Azure.DataApiBuilder.Service.Services
                 if (context.Selection.Type.IsListType())
                 {
                     Tuple<IEnumerable<JsonDocument>, IMetadata> result = await _queryEngine.ExecuteListAsync(context, parameters);
-                    context.Result = result.Item1;
+                    context.Result = GetListOfClonedElements(result.Item1);
                     SetNewMetadata(context, result.Item2);
                 }
                 else
                 {
                     Tuple<JsonDocument, IMetadata> result = await _queryEngine.ExecuteAsync(context, parameters);
-                    context.Result = result.Item1;
+                    SetContextResult(context, result.Item1);
                     SetNewMetadata(context, result.Item2);
                 }
             }
@@ -115,7 +115,16 @@ namespace Azure.DataApiBuilder.Service.Services
                 if (TryGetPropertyFromParent(context, out jsonElement))
                 {
                     IMetadata metadata = GetMetadata(context);
-                    context.Result = _queryEngine.ResolveInnerObject(jsonElement, context.Selection.Field, ref metadata);
+                    using JsonDocument innerObject = _queryEngine.ResolveInnerObject(jsonElement, context.Selection.Field, ref metadata);
+                    if (innerObject is not null)
+                    {
+                        context.Result = innerObject.RootElement.Clone();
+                    }
+                    else
+                    {
+                        context.Result = null;
+                    }
+
                     SetNewMetadata(context, metadata);
                 }
             }
@@ -134,6 +143,43 @@ namespace Azure.DataApiBuilder.Service.Services
             }
 
             await _next(context);
+        }
+
+        /// <summary>
+        /// Set the context's result and dispose properly. If result is not null
+        /// clone root and dispose, otherwise set to null.
+        /// </summary>
+        /// <param name="context">Context to store result.</param>
+        /// <param name="result">Result to store in context.</param>
+        private static void SetContextResult(IMiddlewareContext context, JsonDocument result)
+        {
+            if (result is not null)
+            {
+                context.Result = result.RootElement.Clone();
+                result.Dispose();
+            }
+            else
+            {
+                context.Result = null;
+            }
+        }
+
+        /// <summary>
+        /// Create and return a list of cloned root elements from a collection of JsonDocuments.
+        /// Dispose of each JsonDocument after its root element is cloned.
+        /// </summary>
+        /// <param name="docList">List of JsonDocuments to clone and dispose.</param>
+        /// <returns>List of cloned root elements.</returns>
+        private static IEnumerable<JsonElement> GetListOfClonedElements(IEnumerable<JsonDocument> docList)
+        {
+            List<JsonElement> result = new();
+            foreach (JsonDocument jsonDoc in docList)
+            {
+                result.Add(jsonDoc.RootElement.Clone());
+                jsonDoc.Dispose();
+            }
+
+            return result;
         }
 
         /// <summary>
@@ -167,7 +213,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
         protected static bool TryGetPropertyFromParent(IMiddlewareContext context, out JsonElement jsonElement)
         {
-            JsonDocument result = context.Parent<JsonDocument>();
+            JsonDocument result = JsonDocument.Parse(JsonSerializer.Serialize(context.Parent<JsonElement>()));
             if (result is null)
             {
                 jsonElement = default;
@@ -179,7 +225,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
         protected static bool IsInnerObject(IMiddlewareContext context)
         {
-            return context.Selection.Field.Type.IsObjectType() && context.Parent<JsonDocument>() != default;
+            return context.Selection.Field.Type.IsObjectType() && context.Parent<JsonElement?>() is not null;
         }
 
         /// <summary>

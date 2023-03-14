@@ -1,4 +1,4 @@
-# What's New in Data API Builder 0.5.0
+# What's New in Data API builder 0.5.0
 
 - [Public Microsoft.DataApiBuilder nuget](#public-microsoftdataapibuilder-nuget)
 - [Public JSON Schema](#public-json-schema)

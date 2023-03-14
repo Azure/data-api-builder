@@ -56,12 +56,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public MsSqlQueryExecutor(
             RuntimeConfigProvider runtimeConfigProvider,
             DbExceptionParser dbExceptionParser,
-            ILogger<IQueryExecutor> logger)
+            ILogger<IQueryExecutor> logger,
+            IHttpContextAccessor httpContextAccessor)
             : base(dbExceptionParser,
                   logger,
                   new SqlConnectionStringBuilder(
                       runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString),
-                  runtimeConfigProvider)
+                  runtimeConfigProvider,
+                  httpContextAccessor)
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
 
@@ -150,7 +152,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             catch (CredentialUnavailableException ex)
             {
-                QueryExecutorLogger.LogWarning($"Attempt to retrieve a managed identity access token using DefaultAzureCredential" +
+                QueryExecutorLogger.LogWarning($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContextAccessor.HttpContext)}" +
+                    $"Attempt to retrieve a managed identity access token using DefaultAzureCredential" +
                     $" failed due to: \n{ex}");
             }
 
@@ -177,15 +180,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             // Counter to generate different param name for each of the sessionParam.
             IncrementingInteger counter = new();
-            const string paramNamePrefix = "session_param";
+            const string SESSION_PARAM_NAME = $"{BaseQueryStructure.PARAM_NAME_PREFIX}session_param";
             StringBuilder sessionMapQuery = new();
 
             foreach ((string claimType, Claim claim) in sessionParams)
             {
-                string paramName = $"{paramNamePrefix}{counter.Next()}";
+                string paramName = $"{SESSION_PARAM_NAME}{counter.Next()}";
                 parameters.Add(paramName, claim.Value);
                 // Append statement to set read only param value - can be set only once for a connection.
-                string statementToSetReadOnlyParam = "EXEC sp_set_session_context " + $"'{claimType}', @" + paramName + ", @read_only = 1;";
+                string statementToSetReadOnlyParam = "EXEC sp_set_session_context " + $"'{claimType}', " + paramName + ", @read_only = 1;";
                 sessionMapQuery = sessionMapQuery.Append(statementToSetReadOnlyParam);
             }
 

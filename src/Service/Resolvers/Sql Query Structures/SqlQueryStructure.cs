@@ -133,13 +133,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ISqlMetadataProvider sqlMetadataProvider,
             IAuthorizationResolver authorizationResolver,
             RuntimeConfigProvider runtimeConfigProvider,
-            GQLFilterParser gQLFilterParser)
+            GQLFilterParser gQLFilterParser,
+            HttpContext httpContext)
             : this(sqlMetadataProvider,
                 authorizationResolver,
                 gQLFilterParser,
                 predicates: null,
                 entityName: context.EntityName,
-                counter: new IncrementingInteger())
+                counter: new IncrementingInteger(),
+                httpContext: httpContext)
         {
             IsListQuery = context.IsMany;
             SourceAlias = $"{DatabaseObject.SchemaName}_{DatabaseObject.Name}";
@@ -192,24 +194,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         message: "$filter query parameter is not well formed.",
                         statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
-                        innerException: ex);
-                }
-            }
-
-            if (context.DbPolicyClause is not null)
-            {
-                // Similar to how we have added FilterPredicates above,
-                // we will add DbPolicyPredicates here.
-                try
-                {
-                    ProcessOdataClause(context.DbPolicyClause);
-                }
-                catch (Exception ex)
-                {
-                    throw new DataApiBuilderException(
-                        message: "Policy query parameter is not well formed.",
-                        statusCode: HttpStatusCode.Forbidden,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed,
                         innerException: ex);
                 }
             }
@@ -287,7 +271,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                   gQLFilterParser,
                   predicates: null,
                   entityName: entityName,
-                  counter)
+                  counter: counter
+                  )
         {
             _ctx = ctx;
             IOutputType outputType = schemaField.Type;
@@ -346,17 +331,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 AddGraphQLFields(queryField.SelectionSet.Selections, runtimeConfigProvider);
             }
 
-            // Get HttpContext from IMiddlewareContext and fail if resolved value is null.
-            if (!_ctx.ContextData.TryGetValue(nameof(HttpContext), out object? httpContextValue))
-            {
-                throw new DataApiBuilderException(
-                    message: "No HttpContext found in GraphQL Middleware Context.",
-                    statusCode: System.Net.HttpStatusCode.Forbidden,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
-            }
-
-            HttpContext httpContext = (HttpContext)httpContextValue!;
-
+            HttpContext httpContext = GraphQLFilterParser.TryGetHttpContextFromMiddlewareContext(ctx);
             // Process Authorization Policy of the entity being processed.
             AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(Config.Operation.Read, queryStructure: this, httpContext, authorizationResolver, sqlMetadataProvider);
 
@@ -453,8 +428,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             GQLFilterParser gQLFilterParser,
             List<Predicate>? predicates = null,
             string entityName = "",
-            IncrementingInteger? counter = null)
-            : base(metadataProvider, authorizationResolver, gQLFilterParser, predicates, entityName, counter)
+            IncrementingInteger? counter = null,
+            HttpContext? httpContext = null)
+            : base(metadataProvider,
+                  authorizationResolver,
+                  gQLFilterParser, predicates,
+                  entityName,
+                  counter,
+                  httpContext,
+                  Config.Operation.Read)
         {
             JoinQueries = new();
             PaginationMetadata = new(this);
@@ -484,7 +466,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                                                     columnName: columnName,
                                                     tableAlias: SourceAlias)),
                     PredicateOperation.Equal,
-                    new PredicateOperand($"@{MakeParamWithValue(parameter.Value)}")
+                    new PredicateOperand($"{MakeParamWithValue(parameter.Value)}")
                 ));
             }
         }
@@ -506,8 +488,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 {
                     column.TableAlias = SourceAlias;
                     column.ParamName = column.Value is not null ?
-                        "@" + MakeParamWithValue(GetParamAsColumnSystemType(column.Value!.ToString()!, column.ColumnName)) :
-                        "@" + MakeParamWithValue(null);
+                        MakeParamWithValue(GetParamAsColumnSystemType(column.Value!.ToString()!, column.ColumnName)) :
+                        MakeParamWithValue(null);
                 }
             }
             catch (ArgumentException ex)
@@ -542,7 +524,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     Predicates.Add(new Predicate(
                         new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, backingColumn, SourceAlias)),
                         op,
-                        new PredicateOperand($"@{parameterName}")));
+                        new PredicateOperand($"{parameterName}")));
                 }
                 else
                 {
@@ -605,6 +587,43 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             foreach (ISelectionNode node in selections)
             {
+                if (node.Kind == SyntaxKind.FragmentSpread)
+                {
+                    if (_ctx == null)
+                    {
+                        throw new DataApiBuilderException(
+                            message: "No GraphQL context exists",
+                            statusCode: HttpStatusCode.InternalServerError,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                    }
+
+                    FragmentSpreadNode fragmentSpread = (FragmentSpreadNode)node;
+                    DocumentNode document = _ctx.Document;
+                    FragmentDefinitionNode fragmentDocumentNode = document.GetNodes()
+                        .Where(n => n.Kind == SyntaxKind.FragmentDefinition)
+                        .Cast<FragmentDefinitionNode>()
+                        .Where(n => n.Name.Value == fragmentSpread.Name.Value)
+                        .First();
+
+                    AddGraphQLFields(fragmentDocumentNode.SelectionSet.Selections, runtimeConfigProvider);
+                    return;
+                }
+
+                if (node.Kind == SyntaxKind.InlineFragment)
+                {
+                    InlineFragmentNode inlineFragment = (InlineFragmentNode)node;
+                    AddGraphQLFields(inlineFragment.SelectionSet.Selections, runtimeConfigProvider);
+                    return;
+                }
+
+                if (node.Kind != SyntaxKind.Field)
+                {
+                    throw new DataApiBuilderException(
+                        $"The current node has a SyntaxKind of {node.Kind} which is unsupported.",
+                        HttpStatusCode.InternalServerError,
+                        DataApiBuilderException.SubStatusCodes.NotSupported);
+                }
+
                 FieldNode field = (FieldNode)node;
                 string fieldName = field.Name.Value;
 
@@ -614,7 +633,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 {
                     continue;
                 }
-                else if (field.SelectionSet is null)
+
+                if (field.SelectionSet is null)
                 {
                     if (MetadataProvider.TryGetBackingColumn(EntityName, fieldName, out string? name)
                         && !string.IsNullOrWhiteSpace(name))
@@ -794,7 +814,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         protected void AddColumn(string columnName, string labelName)
         {
-            Columns.Add(new LabelledColumn(DatabaseObject.SchemaName, DatabaseObject.Name, columnName, label: labelName, SourceAlias));
+            LabelledColumn column = new(DatabaseObject.SchemaName, DatabaseObject.Name, columnName, label: labelName, SourceAlias);
+            if (!Columns.Contains(column))
+            {
+                Columns.Add(column);
+            }
         }
 
         /// <summary>
@@ -842,7 +866,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             foreach (LabelledColumn column in Columns)
             {
-                ColumnLabelToParam.Add(column.Label, $"@{MakeParamWithValue(column.Label)}");
+                ColumnLabelToParam.Add(column.Label, $"{MakeParamWithValue(column.Label)}");
             }
         }
     }

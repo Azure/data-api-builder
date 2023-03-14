@@ -58,6 +58,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// </summary>
         [DataTestMethod]
         [DataRow("anonymous", new object[] { "execute" }, null, null, true, false, DisplayName = "Stored-procedure with valid execute permission only")]
+        [DataRow("anonymous", new object[] { "*" }, null, null, true, false, DisplayName = "Stored-procedure with valid wildcard permission only, which resolves to execute")]
         [DataRow("anonymous", new object[] { "execute", "read" }, null, null, false, false, DisplayName = "Invalidly define operation in excess of execute")]
         [DataRow("anonymous", new object[] { "create", "read" }, null, null, false, false, DisplayName = "Stored-procedure with create-read permission")]
         [DataRow("anonymous", new object[] { "update", "read" }, null, null, false, false, DisplayName = "Stored-procedure with update-read permission")]
@@ -69,6 +70,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("anonymous", new object[] { "update", "create" }, null, null, false, false, DisplayName = "Stored-procedure with update-create permission")]
         [DataRow("anonymous", new object[] { "delete", "read", "update" }, null, null, false, false, DisplayName = "Stored-procedure with delete-read-update permission")]
         [DataRow("anonymous", new object[] { "execute" }, "authenticated", new object[] { "execute" }, true, false, DisplayName = "Stored-procedure with valid execute permission on all roles")]
+        [DataRow("anonymous", new object[] { "*" }, "authenticated", new object[] { "*" }, true, false, DisplayName = "Stored-procedure with valid wildcard permission on all roles, which resolves to execute")]
         [DataRow("anonymous", new object[] { "execute" }, "authenticated", new object[] { "create" }, false, true, DisplayName = "Stored-procedure with valid execute and invalid create permission")]
         public void InvalidCRUDForStoredProcedure(
             string role1,
@@ -1190,7 +1192,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             };
 
-            RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(globalSettings: settings, dataSource: null);
+            RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(globalSettings: settings, dataSource: new(DatabaseType.mssql));
             string expectedErrorMessage = "Conflicting GraphQL and REST path configuration.";
 
             try
@@ -1326,6 +1328,301 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             entityMap.Add(targetEntity, sampleEntity2);
 
             return entityMap;
+        }
+
+        /// <summary>
+        /// Tests whether the REST path prefix is well formed or not.
+        /// </summary>
+        /// <param name="restPathPrefix">REST path prefix</param>
+        /// <param name="expectedErrorMessage">Expected error message in case an exception is thrown.</param>
+        /// <param name="expectError">Exception expected</param>
+        // @"[\.:\?#/\[\]@!$&'()\*\+,;=]+";
+        [DataTestMethod]
+        [DataRow("/.", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved character .")]
+        [DataRow("/:", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved character :")]
+        [DataRow("/?", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved character ?")]
+        [DataRow("/#", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved character #")]
+        [DataRow("//", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved character /")]
+        [DataRow("/[", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved character [")]
+        [DataRow("/)", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved character )")]
+        [DataRow("/@", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved character @")]
+        [DataRow("/!", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved character !")]
+        [DataRow("/$", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved character $")]
+        [DataRow("/&", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved character &")]
+        [DataRow("/'", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved character '")]
+        [DataRow("/+", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved character +")]
+        [DataRow("/;", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved character .")]
+        [DataRow("/=", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved character .")]
+        [DataRow("/?#*(=", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing multiple reserved characters /?#*(=")]
+        [DataRow("/+&,", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved characters /+&,")]
+        [DataRow("/@)", RuntimeConfigValidator.BADLY_FORMED_REST_PATH_ERR_MSG, true,
+            DisplayName = "Rest path prefix containing reserved characters /@)")]
+        [DataRow("", "REST path prefix cannot be null or empty.", true,
+            DisplayName = "Empty Rest path prefix.")]
+        [DataRow(null, "REST path prefix cannot be null or empty.", true,
+            DisplayName = "Null Rest path prefix.")]
+        [DataRow("?", "REST path should start with a '/'.", true,
+            DisplayName = "Rest path prefix not starting with forward slash.")]
+        [DataRow("/-rest-api", null, false,
+            DisplayName = "Rest path prefix containing hyphen (-)")]
+        [DataRow("/rest api", null, false,
+            DisplayName = "Rest path prefix containing space in between")]
+        [DataRow("/ restapi", null, false,
+            DisplayName = "Rest path prefix containing space at the start")]
+        [DataRow("/ rest_api", null, false,
+            DisplayName = "Rest path prefix containing space at the start and underscore in between.")]
+        [DataRow("/", null, false,
+            DisplayName = "Rest path containing only a forward slash.")]
+        public void ValidateRestPathIsWellFormed(
+            string restPathPrefix,
+            string expectedErrorMessage,
+            bool expectError)
+        {
+            Dictionary<GlobalSettingsType, object> settings = new()
+            {
+                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings()) },
+                { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings(){ Path = restPathPrefix }) }
+
+            };
+
+            RuntimeConfig configuration =
+                ConfigurationTests.InitMinimalRuntimeConfig(globalSettings: settings, dataSource: new(DatabaseType.mssql));
+
+            if (expectError)
+            {
+                DataApiBuilderException ex =
+                    Assert.ThrowsException<DataApiBuilderException>(() =>
+                    RuntimeConfigValidator.ValidateRestPathForRelationalDbs(configuration));
+                Assert.AreEqual(expectedErrorMessage, ex.Message);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+            }
+            else
+            {
+                RuntimeConfigValidator.ValidateRestPathForRelationalDbs(configuration);
+            }
+        }
+
+        /// <summary>
+        /// Method to validate that the validations for include/exclude fields for an entity
+        /// work as expected.
+        /// </summary>
+        /// <param name="databasePolicy">Database policy for a particular role/action combination for an entity.</param>
+        /// <param name="isFieldsPresent">Boolean variable representing whether fields section is present in config.</param>
+        /// <param name="includedFields">Fields that are accessible to user for the role/action combination.</param>
+        /// <param name="excludedFields">Fields that are inaccessible to user for the role/action combination.</param>
+        /// <param name="exceptionExpected">Whether an exception is expected (true when validation fails).</param>
+        [DataTestMethod]
+        [DataRow(@"""@item.id ne 140""", true, "[]", @"[ ""name"" ]", true,
+            DisplayName = "Empty array for included fields and db policy referencing some field.")]
+        [DataRow(@"""""", true, "[]", @"[ ""name"" ]", false,
+            DisplayName = "Empty array for included fields and empty db policy.")]
+        [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", true, @"[ ""id"", ""name"" ]", @"[ ""title"" ]", false,
+            DisplayName = "All fields referenced by db policy present in included.")]
+        [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", true, @"[ ""id"" ]", @"[""name""]", true,
+            DisplayName = "One field referenced by db policy present in excluded.")]
+        [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", true, @"[]", @"[]", true,
+            DisplayName = "Empty arrays for included/excluded fields and non-empty database policy.")]
+        [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", true, null, null, false,
+            DisplayName = "NULL included/excluded fields and non-empty database policy.")]
+        [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", true, null,
+            @"[ ""id"", ""name"" ]", true,
+            DisplayName = "NULL included fields and fields referenced in database policy are excluded.")]
+        [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", true, null,
+            @"[""title""]", false,
+            DisplayName = "NULL included fields and fields referenced in database policy are not excluded.")]
+        [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", true, @"[ ""*"" ]",
+            null, false, DisplayName = "NULL excluded fields and fields referenced in database policy are included via wildcard")]
+        [DataRow(@"""@item.id ne @claims.userId and @item.name eq @claims.userDetails""", false, null,
+            null, false,
+            DisplayName = "fields section absent.")]
+        public void TestFieldInclusionExclusion(
+            string databasePolicy,
+            bool isFieldsPresent,
+            string includedFields,
+            string excludedFields,
+            bool exceptionExpected)
+        {
+
+            string fields = string.Empty;
+
+            if (isFieldsPresent)
+            {
+                string prefix = @",""fields"": {";
+                string includeFields = includedFields is null ? string.Empty : @"""include"" : " + includedFields;
+                string joinIncludeExclude = includedFields is not null && excludedFields is not null ? "," : string.Empty;
+                string excludeFields = excludedFields is null ? string.Empty : @"""exclude"" : " + excludedFields;
+                string postfix = "}";
+                fields = prefix + includeFields + joinIncludeExclude + excludeFields + postfix;
+            }
+
+            string runtimeConfigString = @"{
+                    " +
+                @"""$schema"": ""test_schema""," +
+                @"""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""testconnectionstring"",
+                    ""options"":{
+                        ""set-session-context"": false
+                    }
+                },
+                ""runtime"": {
+                    ""host"": {
+                    ""mode"": ""development"",
+                    ""authentication"": {
+                        ""provider"": ""StaticWebApps""
+                    }
+                  }
+                },
+                ""entities"": {
+                    ""Publisher"":{
+                        ""source"": ""publishers"",
+                        ""permissions"": [
+                           {
+                            ""role"": ""anonymous"",
+                            ""actions"": [
+                               {
+                                ""action"": ""Read"",
+                                ""policy"": {
+                                    ""database"":" + databasePolicy +
+                                  @"}" + fields +
+                               @"}
+                            ]
+                           }
+                         ]
+                        }
+                    }
+                }";
+
+            RuntimeConfig runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(runtimeConfigString, RuntimeConfig.SerializerOptions);
+            runtimeConfig!.DetermineGlobalSettings();
+            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+
+            // Perform validation on the permissions in the config and assert the expected results.
+            if (exceptionExpected)
+            {
+                DataApiBuilderException ex =
+                    Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
+                Assert.AreEqual("Not all the columns required by policy are accessible.", ex.Message);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+            }
+            else
+            {
+                configValidator.ValidatePermissionsInConfig(runtimeConfig);
+            }
+        }
+
+        /// <summary>
+        /// Method to validate that any field set (included/excluded) if misconfigured, thorws an exception during
+        /// config validation stage. If any field set contains a wildcard and any other field, we consider it as misconfigured.
+        /// </summary>
+        /// <param name="databasePolicy">Database policy for a particular role/action combination for an entity.</param>
+        /// <param name="includedFields">Fields that are accessible to user for the role/action combination.</param>
+        /// <param name="excludedFields">Fields that are inaccessible to user for the role/action combination.</param>
+        /// <param name="exceptionExpected">Whether an exception is expected (true when validation fails).</param>
+        /// <param name="misconfiguredColumnSet">Name of the misconfigured column set (included/excluded).</param>
+        [DataTestMethod]
+        [DataRow(@"""@item.id ne 140""", @"[ ""*"", ""id"" ]", @"[ ""name"" ]", true, "included",
+            DisplayName = "Included fields containing wildcard and another field.")]
+        [DataRow(@"""@item.id ne 140""", @"[ ""*"", ""id"" ]", @"[ ""*"", ""name"" ]", true, "excluded",
+            DisplayName = "Excluded fields containing wildcard and another field.")]
+        [DataRow(@"""@item.id ne 140""", null, @"[ ""*"", ""name"" ]", true, "excluded",
+            DisplayName = "Excluded fields containing wildcard and another field and included fields is null.")]
+        [DataRow(@"""@item.id ne 140""", @"[ ""*"", ""name"" ]", null, true, "included",
+            DisplayName = "Included fields containing wildcard and another field and excluded fields is null.")]
+        [DataRow(@"""@item.id ne 140""", @"[ ""*"" ]", @"[ ""name"" ]", false, null,
+            DisplayName = "Well configured include/exclude fields.")]
+        public void ValidateMisconfiguredColumnSets(
+            string databasePolicy,
+            string includedFields,
+            string excludedFields,
+            bool exceptionExpected,
+            string misconfiguredColumnSet)
+        {
+
+            string fields = string.Empty;
+
+            string prefix = @",""fields"": {";
+            string includeFields = includedFields is null ? string.Empty : @"""include"" : " + includedFields;
+            string joinIncludeExclude = includedFields is not null && excludedFields is not null ? "," : string.Empty;
+            string excludeFields = excludedFields is null ? string.Empty : @"""exclude"" : " + excludedFields;
+            string postfix = "}";
+            fields = prefix + includeFields + joinIncludeExclude + excludeFields + postfix;
+
+            string runtimeConfigString = @"{
+                    " +
+                @"""$schema"": ""test_schema""," +
+                @"""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""testconnectionstring"",
+                    ""options"":{
+                        ""set-session-context"": false
+                    }
+                },
+                ""runtime"": {
+                    ""host"": {
+                    ""mode"": ""development"",
+                    ""authentication"": {
+                        ""provider"": ""StaticWebApps""
+                    }
+                  }
+                },
+                ""entities"": {
+                    ""Publisher"":{
+                        ""source"": ""publishers"",
+                        ""permissions"": [
+                           {
+                            ""role"": ""anonymous"",
+                            ""actions"": [
+                               {
+                                ""action"": ""Read"",
+                                ""policy"": {
+                                    ""database"":" + databasePolicy +
+                                  @"}" + fields +
+                               @"}
+                            ]
+                           }
+                         ]
+                        }
+                    }
+                }";
+
+            RuntimeConfig runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(runtimeConfigString, RuntimeConfig.SerializerOptions);
+            runtimeConfig!.DetermineGlobalSettings();
+            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+
+            // Perform validation on the permissions in the config and assert the expected results.
+            if (exceptionExpected)
+            {
+                DataApiBuilderException ex =
+                    Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
+                Assert.AreEqual($"No other field can be present with wildcard in the {misconfiguredColumnSet} " +
+                    $"set for: entity:Publisher, role:anonymous, action:Read", ex.Message);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+            }
+            else
+            {
+                configValidator.ValidatePermissionsInConfig(runtimeConfig);
+            }
         }
     }
 }

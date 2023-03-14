@@ -6,19 +6,15 @@ set -euo pipefail
 # Azure configuration
 FILE=".env"
 if [[ -f $FILE ]]; then
-	echo "loading from .env" | tee -a log.txt
+	echo "loading from .env"
     export $(egrep . $FILE | xargs -n1)
 else
 	cat << EOF > .env
 RESOURCE_GROUP=""
-APP_NAME=""
-APP_PLAN_NAME=""
-DAB_CONFIG_FILE=""
 STORAGE_ACCOUNT=""
-IMAGE_NAME=""
-IMAGE_REGISTRY_USER=""
-IMAGE_REGISTRY_PASSWORD=""
 LOCATION=""
+CONTAINER_INSTANCE_NAME="dm-dab-aci"
+DAB_CONFIG_FILE="./dab-config.json"
 EOF
 	echo "Enviroment file (.env) not detected."
 	echo "Please configure values for your environment in the created .env file and run the script again."
@@ -30,53 +26,46 @@ echo "starting"
 cat << EOF > log.txt
 EOF
 
-echo "creating resource group '$RESOURCE_GROUP'" | tee -a log.txt
-az group create -g $RESOURCE_GROUP --location $LOCATION \
+echo "creating resource group '$RESOURCE_GROUP'"  | tee -a log.txt
+az group create --name $RESOURCE_GROUP --location $LOCATION \
     -o json >> log.txt
 
 echo "creating storage account: '$STORAGE_ACCOUNT'" | tee -a log.txt
-az storage account create -n $STORAGE_ACCOUNT -g $RESOURCE_GROUP --sku Standard_LRS \
-	-o json >> log.txt	
-	
+az storage account create --name $STORAGE_ACCOUNT --resource-group $RESOURCE_GROUP --location $LOCATION --sku Standard_LRS \
+    -o json >> log.txt
+
 echo "retrieving storage connection string" | tee -a log.txt
 STORAGE_CONNECTION_STRING=$(az storage account show-connection-string --name $STORAGE_ACCOUNT -g $RESOURCE_GROUP -o tsv)
+
 echo 'creating file share' | tee -a log.txt
-az storage share create -n config --connection-string $STORAGE_CONNECTION_STRING \
-	-o json >> log.txt
+az storage share create -n dab-config --connection-string $STORAGE_CONNECTION_STRING \
+    -o json >> log.txt
 
 echo "uploading configuration file '$DAB_CONFIG_FILE'" | tee -a log.txt
-az storage file upload --share-name config --source $DAB_CONFIG_FILE --connection-string $STORAGE_CONNECTION_STRING \
-    -o json >> log.txt
-
-echo "creating app plan '$APP_PLAN_NAME'" | tee -a log.txt
-az appservice plan create -n $APP_PLAN_NAME -g $RESOURCE_GROUP --sku P1V2 --is-linux --location $LOCATION \
-    -o json >> log.txt
-
-echo "retrieving app plan id" | tee -a log.txt
-aspid=$(az appservice plan show -g $RESOURCE_GROUP -n $APP_PLAN_NAME --query "id" --out tsv) 
-
-echo "creating webapp '$APP_NAME'" | tee -a log.txt
-az webapp create -g $RESOURCE_GROUP -p "$aspid" -n $APP_NAME -i $IMAGE_NAME -s $IMAGE_REGISTRY_USER -w $IMAGE_REGISTRY_PASSWORD \
+az storage file upload --source $DAB_CONFIG_FILE --path dab-config.json --share-name dab-config --connection-string $STORAGE_CONNECTION_STRING \
     -o json >> log.txt
 
 echo "retrieving storage key" | tee -a log.txt
-asak=$(az storage account keys list -g $RESOURCE_GROUP -n $STORAGE_ACCOUNT --query "[0].value" -o tsv)
+STORAGE_KEY=$(az storage account keys list -g $RESOURCE_GROUP -n $STORAGE_ACCOUNT --query '[0].value' -o tsv) 
 
-echo "configure webapp storage-account" | tee -a log.txt
-az webapp config storage-account add -g $RESOURCE_GROUP -n $APP_NAME --custom-id config --storage-type AzureFiles --share-name config --account-name $STORAGE_ACCOUNT --access-key "${asak}" --mount-path /App/config \
+echo "creating container" | tee -a log.txt
+az container create -g $RESOURCE_GROUP --name $CONTAINER_INSTANCE_NAME \
+  --image  mcr.microsoft.com/azure-databases/data-api-builder:latest \
+  --ports 5000 \
+  --ip-address public \
+  --cpu 2 \
+  --memory 4 \
+  --os-type Linux \
+  --azure-file-volume-mount-path /dab-config \
+  --azure-file-volume-account-name $STORAGE_ACCOUNT \
+  --azure-file-volume-account-key $STORAGE_KEY \
+  --azure-file-volume-share-name dab-config \
+  --command-line "dotnet Azure.DataApiBuilder.Service.dll --ConfigFileName /dab-config/dab-config.json" \
     -o json >> log.txt
 
-echo "configure cors" | tee -a log.txt
-az webapp cors add -g $RESOURCE_GROUP -n $APP_NAME --allowed-origins "*" \
-    -o json >> log.txt
+echo "retrieving IP address" | tee -a log.txt
+CONTAINER_PUBLIC_IP=$(az container show -g dm-dab-rg -n dmdabaci --query "ipAddress.ip" -o tsv)
 
-echo "configure webapp appsettings" | tee -a log.txt
-az webapp config appsettings set -g $RESOURCE_GROUP -n $APP_NAME --settings WEBSITES_PORT=5000 \
-    -o json >> log.txt
-
-DAB_CONFIG_FILE_NAME=${DAB_CONFIG_FILE}
-echo "updating webapp siteConfig to use $DAB_CONFIG_FILE_NAME" | tee -a log.txt
-az webapp update -g $RESOURCE_GROUP -n $APP_NAME --set siteConfig.appCommandLine="dotnet Azure.DataApiBuilder.Service.dll --ConfigFileName /App/config/$DAB_CONFIG_FILE_NAME" \
-    -o json >> log.txt
+echo "container available at http://$CONTAINER_PUBLIC_IP:5000" | tee -a log.txt
 
 echo "done" | tee -a log.txt

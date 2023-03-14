@@ -123,7 +123,7 @@ within the `entities` object you can create any entity with any name (as long as
 
 > **NOTE**: Entities names are case sensitive, and they will be exposed via REST and GraphQL as you have typed them.
 
-After that, the permissions for the exposed entity are defined via the `permissions` element; it allows you to be sure that only those users making a request with the right claims will be able to access the entity and its data.
+After that, the permissions for the exposed entity are defined via the `permissions` element; it ensures that only those users making a request with the right claims will be able to access the entity and its data.
 
 > **BEST PRACTICE**: It is recommeneded to use the _singular_ form for entities names. For GraphQL, the Data API builder engine will automatically use the correct plural form to generate the final GraphQL schema whenever a _list_ of entity items will be returned. More on this behaviour in the [GraphQL documentation](./../graphql.md).
 

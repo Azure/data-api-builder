@@ -26,8 +26,6 @@ To connect to a local PostgreSQL Server, the connection string looks like:
 `Server={your_server};Database={your_database};Port=5432;User Id={your_username};Password={your_password};Ssl Mode=Require;`
 ```
 
-
-
 ## Create the database objects
 
 Create the database tables needed to represent Authors, Books and the many-to-many relationship between Authors and Books. You can find the `library.postgresql.sql` script in the [/samples/getting-started/azure-postgresql](../../samples/getting-started/azure-postgresql/) folder in the GitHub repo. You can use it to create three tables, along with sample data:

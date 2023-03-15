@@ -73,7 +73,7 @@ This will log the information as follows:
 
 ## Get started using `dab` CLI
 
-To quickly get started using the CLI, make sure you have read the [Getting Started](./getting-started/getting-started.md) guide to become familiar with basic Data API builder concepts and then use the [Getting started with Data API builder (`dab`) CLI](./getting-started/getting-started-dab-cli.md) to learn how to use the CLI tool.
+To quickly get started using the CLI, make sure you have read the [Getting Started](./getting-started/getting-started.md) guide to become familiar with basic Data API builder concepts and then use [`dab` CLI](./dab-cli.md) to learn how to use the CLI tool.
 
 ## Uninstall `dab` CLI
 

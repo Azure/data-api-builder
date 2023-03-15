@@ -376,7 +376,7 @@ namespace Cli
 
             try
             {
-                pathContainsReservedCharacters(apiPath, apiType);
+                ApiPathInvalidCharacterCheck(apiPath, apiType);
                 return true;
             }
             catch (DataApiBuilderException ex)

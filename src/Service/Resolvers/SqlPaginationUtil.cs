@@ -97,7 +97,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Wrapper for CreatePaginationConnectionFromJsonElement
         /// Disposes the JsonDocument passed to it
         /// <summary>
-        public static JsonDocument CreatePaginationConnectionFromJsonDocument(JsonDocument jsonDocument, PaginationMetadata paginationMetadata)
+        public static JsonDocument CreatePaginationConnectionFromJsonDocument(JsonDocument? jsonDocument, PaginationMetadata paginationMetadata)
         {
             // necessary for MsSql because it doesn't coalesce list query results like Postgres
             if (jsonDocument is null)

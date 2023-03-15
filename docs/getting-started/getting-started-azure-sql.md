@@ -123,7 +123,7 @@ within the `entities` object you can create any entity with any name (as long as
 
 After that, the permissions for the exposed entity are defined via the `permission` element; it allows you to be sure that only those users making a request with the right claims will be able to access the entity and its data. In this getting started tutorial, we're allowing anyone, without the need to be authenticated, to perform all the CRUD operations to the `Author` entity.
 
-You can also add the `Book` entity now, applying the same concepts you just learnt for the `Author` entity. Once you have added the `Book` entity, the `entities` object of configuration file will look like the following:
+You can also add the `Book` entity now, applying the same concepts you just learned for the `Author` entity. Once you have added the `Book` entity, the `entities` object of the configuration file will look like the following:
 
 ```json
 "entities": {

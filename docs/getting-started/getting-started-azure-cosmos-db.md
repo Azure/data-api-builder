@@ -213,7 +213,7 @@ will return the first five books ordered by title in descending order.
 
 ## GraphQL operations on entity relationships
 
-With your GraphQL endpoint operational, you probably want to take advantage of GraphQL's ability to handle complex requests. For example, you may want to get all the Books in your library along with the Authors they have written. We have defined the data models in such a way that they can be queried at once.
+With your GraphQL endpoint operational, you probably want to take advantage of GraphQL's ability to handle complex requests. For example, you may want to get all the Books in your library along with the Authors who have written them. We have defined the data models in such a way that they can be queried at once.
 
 Using GraphQL you can now execute queries like:
 

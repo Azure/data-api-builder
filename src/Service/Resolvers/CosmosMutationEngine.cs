@@ -241,7 +241,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="context">context of graphql mutation</param>
         /// <param name="parameters">parameters in the mutation query.</param>
         /// <returns>JSON object result</returns>
-        public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context,
+        public async Task<Tuple<JsonDocument?, IMetadata?>> ExecuteAsync(IMiddlewareContext context,
             IDictionary<string, object?> parameters)
         {
             string graphQLType = context.Selection.Field.Type.NamedType().Name.Value;
@@ -258,7 +258,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // fixme
             JObject jObject = await ExecuteAsync(parameters, mutation);
 #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
-            return new Tuple<JsonDocument, IMetadata>((jObject is null) ? null! : JsonDocument.Parse(jObject.ToString()), null);
+            return new Tuple<JsonDocument?, IMetadata?>((jObject is null) ? null! : JsonDocument.Parse(jObject.ToString()), null);
 #pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
         }
 

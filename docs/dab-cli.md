@@ -112,7 +112,4 @@ Start the runtime engine with the provided configuration file for serving REST a
 
 **NOTE:** 
 1. One cannot have both verbose and LogLevel.
-2. To Know more about different Logging levels, see: https://learn.microsoft.com/en-us/dotnet/api/microsoft.extensions.logging.loglevel?view=dotnet-plat-ext-6.0
-
-## Getting started
-The [Getting Started](./getting-started/getting-started.md) document provides a quick overview of the `dab` CLI.
+2. To learn more about different logging levels, see: https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.loglevel?view=dotnet-plat-ext-6.0

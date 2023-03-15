@@ -39,7 +39,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             if (!context.Request.Headers.TryGetValue(AuthorizationResolver.CLIENT_ROLE_HEADER, out StringValues roleHeaderValue))
             {
                 throw new DataApiBuilderException(
-                    message: "No ClientRoleHeader found in GraphQL Middleware Context.",
+                    message: "No ClientRoleHeader found in request context.",
                     statusCode: System.Net.HttpStatusCode.Forbidden,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
             }

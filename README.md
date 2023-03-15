@@ -45,7 +45,7 @@ Documentation is available in the [`docs`](./docs) folder.
 
 Several samples are available already. To follow the [Getting Started](./docs/getting-started/getting-started.md) tutorial you'll find the associated code in the `./samples` folder.
 
-More samples, including end-to-end samples using the most common frontend frameworks, are available in the [https://github.com/Azure-Samples/data-api-builder] repository.
+More samples, including end-to-end samples using the most common frontend frameworks, are available in the dedicated [samples](https://github.com/Azure-Samples/data-api-builder) repository.
 
 ## Known Issues
 

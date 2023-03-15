@@ -402,7 +402,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             apiPath = apiPath.Substring(1);
 
             // API path prefix should not contain any reserved characters.
-            ValidateIfApiPathContainsReservedCharacters(apiPath, apiType);
+            pathContainsReservedCharacters(apiPath, apiType);
         }
 
         /// <summary>
@@ -412,7 +412,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <param name="apiPath">path prefix for rest/graphql apis</param>
         /// <param name="apiType">Either REST or GraphQL</param>
         /// <exception cref="DataApiBuilderException"></exception>
-        public static void ValidateIfApiPathContainsReservedCharacters(string apiPath, ApiType apiType)
+        public static void pathContainsReservedCharacters(string apiPath, ApiType apiType)
         {
             if (_invalidApiPathCharsRgx.IsMatch(apiPath))
             {

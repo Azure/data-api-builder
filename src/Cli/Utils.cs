@@ -376,7 +376,7 @@ namespace Cli
 
             try
             {
-                ValidateIfApiPathContainsReservedCharacters(apiPath, apiType);
+                pathContainsReservedCharacters(apiPath, apiType);
                 return true;
             }
             catch (DataApiBuilderException ex)

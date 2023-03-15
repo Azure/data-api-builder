@@ -1395,14 +1395,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void ValidateApiPathIsWellFormed(
             string apiPathPrefix,
             string expectedErrorMessage,
-            bool IsPathContainingReservedCharacters,
+            bool pathContainsReservedCharacters,
             ApiType apiType,
             bool expectError)
         {
             ValidateRestAndGraphQLPathIsWellFormed(
                 apiPathPrefix,
                 expectedErrorMessage,
-                IsPathContainingReservedCharacters,
+                pathContainsReservedCharacters,
                 apiType,
                 expectError
             );
@@ -1414,13 +1414,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// </summary>
         /// <param name="apiPathPrefix">API path prefix</param>
         /// <param name="expectedErrorMessage">Expected error message in case an exception is thrown.</param>
-        /// <param name="IsPathContainingReservedCharacters">Boolean indicating if path prefix contains reserved characters.</param>
+        /// <param name="pathContainsReservedCharacters">Boolean indicating if path prefix contains reserved characters.</param>
         /// <param name="expectError">Exception expected</param>
         /// <param name="apiType">Either REST or GraphQL</param>
         private static void ValidateRestAndGraphQLPathIsWellFormed(
             string apiPathPrefix,
             string expectedErrorMessage,
-            bool IsPathContainingReservedCharacters,
+            bool pathContainsReservedCharacters,
             ApiType apiType,
             bool expectError)
         {
@@ -1454,7 +1454,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     ex = Assert.ThrowsException<DataApiBuilderException>(() =>
                     RuntimeConfigValidator.ValidateRestPathForRelationalDbs(configuration));
 
-                    if (IsPathContainingReservedCharacters)
+                    if (pathContainsReservedCharacters)
                     {
                         expectedErrorMessage = INVALID_REST_PATH_WITH_RESERVED_CHAR_ERR_MSG;
                     }
@@ -1468,7 +1468,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     ex = Assert.ThrowsException<DataApiBuilderException>(() =>
                     RuntimeConfigValidator.ValidateGraphQLPath(configuration));
 
-                    if (IsPathContainingReservedCharacters)
+                    if (pathContainsReservedCharacters)
                     {
                         expectedErrorMessage = INVALID_GRAPHQL_PATH_WITH_RESERVED_CHAR_ERR_MSG;
                     }

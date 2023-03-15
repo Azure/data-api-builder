@@ -52,7 +52,7 @@ The command will generate a config file called `dab-config.json` looking like th
 
 ```json
 {
-  "$schema": "dab.draft-01.schema.json",
+  "$schema": "https://dataapibuilder.azureedge.net/schemas/v{dab-version}/dab.draft.schema.json",
   "data-source": {
     "database-type": "mssql",
     "options": {
@@ -272,7 +272,7 @@ The element under `relationship` is used to add a field - `books` in the sample 
 - `target.entity`: Which entity, defined in the same configuration file, will be used in this relationship. For this sample is `Book` as we are creating the relationship on the `Author` entity.
 - `linking.object`: the database table used to support the many-to-many relationship. That table is the `dbo.books_authors`. If you are creating a simple One-to-Many or Many-to-One relationship, this field is not needed.
 
-Data API Builder will automatically figure out what are the columns that are used to support the relationship between all the involved parts by analyzing the foreign key constraints that exist between the involved tables. For this reason the configuration is done! (If you don't have foreign keys you can always manually specify the columns you want to use to navigate from one table to another. More on this in the [relationships documentation](../relationships.md))
+Data API builder will automatically figure out what are the columns that are used to support the relationship between all the involved parts by analyzing the foreign key constraints that exist between the involved tables. For this reason the configuration is done! (If you don't have foreign keys you can always manually specify the columns you want to use to navigate from one table to another. More on this in the [relationships documentation](../relationships.md))
 
 The `Author` entity should now look like the following:
 

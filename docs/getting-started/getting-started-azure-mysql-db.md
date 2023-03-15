@@ -4,9 +4,9 @@ Make sure you have read the [Getting Started](getting-started.md) document. As m
 
 ## Get the database connection string
 
-There are several ways to get an Azure MySQL Database connection string. See [how to connect and query with MySQL](https://learn.microsoft.com/azure/purview/register-scan-azure-mysql-database).
+There are several ways to get an Azure MySQL Database connection string. See [how to connect and query with MySQL](https://learn.microsoft.com/azure/mysql/flexible-server/connect-csharp).
 
-For Data API Builder, the format used for a MySQL connection is shown below based on SSL configuration:
+For Data API builder, the format used for a MySQL connection is shown below based on SSL configuration:
 
 1. If MySQL server has SSL enabled, use the ADO.NET connection string format with SSL mode as required. If using an Azure MySQL Database, remember to download and install the [public SSL certificate](https://dl.cacerts.digicert.com/DigiCertGlobalRootCA.crt.pem) in the **Trusted Root certification authorities store** on the client machine using **certmgr.msc** Management Console on your local Windows system. If using an Azure cloud service like Azure App Service, you can copy the certificate to a folder on the App Service file system and add the argument **SslCa** using the full certificate path as shown below.
 
@@ -29,27 +29,19 @@ Create the database `booksdb` with tables to represent Authors, Books and the ma
 
 ## Creating a configuration file for DAB
 
-The Data API Builder engine needs a configuration file. There, you'll define which database DAB targets, and which entities and associated properties are to be exposed by the API.
+The Data API builder engine needs a [configuration file](../configuration-file.md). There, you'll define which database DAB targets, and which entities and associated properties are to be exposed by the API.
 
 For this getting started guide, you will use DAB CLI to initialize your configuration file. Run the following command and use the connection string based on whether SSL is enabled or not. Please review the **Get the database connection string** section above.
 
 ```bash
 dab init  --config "dab-config.MySql.json" --database-type mysql --connection-string "<mysql-connection-string-ssl-or-non-ssl>" --host-mode "Development" --authenticate-devmode-requests false --cors-origin "http://localhost:5000"
-
-The output would look like
 ```
-
-    Using config file: dab-config.MySql.json
-    Config file generated.
-    SUGGESTION: Use 'dab add <options>' to add new entities in your config.
-
-````
 
 The command will generate a config file called dab-config.MySql.json looking like this:
 
 ```json
 {
-  "$schema": "dab.draft-01.schema.json",
+  "$schema": "https://dataapibuilder.azureedge.net/schemas/v{dab-version}/dab.draft.schema.json",
   "data-source": {
     "database-type": "mysql",
     "connection-string": "Server=demoazuredbmysql.mysql.database.azure.com;User ID=dbusername;Password=<Password>;database=<dbname>;Sslmode=Required;SslCa=<path-to-SSLcert>"
@@ -57,19 +49,18 @@ The command will generate a config file called dab-config.MySql.json looking lik
   ,
   "runtime": {
     "rest": {
+      "enabled": true,
       "path": "/api"
     },
     "graphql": {
+      "enabled": true,
       "allow-introspection": true,
       "path": "/graphql"
     },
     "host": {
       "mode": "development",
-      "authenticate-devmode-requests": false,
       "cors": {
-        "origins": [
-          "http://localhost:5000"
-        ],
+        "origins": [],
         "allow-credentials": false
       },
       "authentication": {
@@ -87,18 +78,15 @@ As you can see there the `data-source` property specifies that our chosen `datab
 
 ## Add Book entities
 
-Now, you'll want to expose the `books` table as REST and/or GraphQL endpoints. To do that, add the following information to the `entities` section of the configuration file.
+Now, you'll want to expose the `books` table as REST and/or GraphQL endpoints.
 
 Run the DAB CLI command as shown below to create the entity called Books
 
 ```
     dab add Book --config "dab-config.MySql.json" --source books --permissions "anonymous:create,read,update,delete"
-    Using config file: dab-config.MySql.json
-    Added new entity: Book with source: books to config: dab-config.MySql.json with permissions: anonymous:create,read,update,delete.
-    SUGGESTION: Use 'dab update <options>' to update any entities in your config.
 ```
 
-Start by adding the `Book` entity:
+This will add the following information to the `entities` section of the configuration file.
 
 ```json
 "entities": {
@@ -123,9 +111,36 @@ within the `entities` object you can create any entity with any name (as long as
 
 > **NOTE**: Entities names are case sensitive, and they will be exposed via REST and GraphQL as you have typed them.
 
-After that, the permissions for the exposed entity are defined via the `permissions` element; it ensures that only those users making a request with the right claims will be able to access the entity and its data.
-
 > **BEST PRACTICE**: It is recommeneded to use the _singular_ form for entities names. For GraphQL, the Data API builder engine will automatically use the correct plural form to generate the final GraphQL schema whenever a _list_ of entity items will be returned. More on this behaviour in the [GraphQL documentation](./../graphql.md).
+
+After that, the permissions for the exposed entity are defined via the `permissions` element; it ensures that only those users making a request with the right claims will be able to access the entity and its data. In this getting started tutorial, we're allowing anyone, without the need to be authenticated, to perform all the CRUD operations on the `Book` entity.
+
+You can also add the `Author` entity now, applying the same concepts you just learnt for the `Book` entity. Once you have added the `Author` entity, the `entities` object of configuration file will look like the following:
+
+```json
+"entities": {
+    "Author": {
+      "source": "authors",
+      "permissions": [
+        {
+          "actions": ["*"],
+          "role": "anonymous"
+        }
+      ]
+    },
+    "Book": {
+      "source": "books",
+      "permissions": [
+        {
+          "actions": ["*"],
+          "role": "anonymous"
+        }
+      ]
+    }
+  }
+```
+
+that's all is needed at the moment. Data API builder is ready to be run.
 
 ## Start Data API builder for Azure MySQL Database
 
@@ -138,10 +153,6 @@ To start the DAB API builder with the configuration file, run the following comm
 The output would look like
 
 ```
-Using config file: dab-config.MySql.json
-Starting the runtime engine...
-info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[63]
-      User profile is available. Using 'xxxxxxxxxxxxxxxxxxxxxxx' as key repository and Windows DPAPI to encrypt keys at rest.
 info: Azure.DataApiBuilder.Service.Services.ISqlMetadataProvider[0]
       Book path: /api/Book
 info: Azure.DataApiBuilder.Service.Configurations.RuntimeConfigValidator[0]
@@ -187,7 +198,7 @@ GET /api/Book/id/1000
 
 The ability to filter by primary key is supported by all verbs with the exception of POST as that verb is used to create a new item and therefore searching an item by its primary key is not applicable.
 
-The GET verb also supports several query parameters that allow you to manipulate and refine the requested data:
+The GET verb also supports several query parameters (also case sensitive) that allow you to manipulate and refine the requested data:
 
 - `$orderby`: return items in the specified order
 - `$first`: the top `n` items to return
@@ -221,7 +232,7 @@ will return the first five books ordered by title in descending order.
 
 ## Adding entities relationships
 
-Everything is now up and working, and now you probably want to take advantage as much as possible of GraphQL capabilities to handle complex queries by sending just one request. For example you may want to get all the Authors in your library along with the books they have written. In order to achieve that you need to let Data API Builder know that you want such relationship to be available to be used in queries.
+Everything is now up and working, and now you probably want to take advantage as much as possible of GraphQL capabilities to handle complex queries by sending just one request. For example you may want to get all the Authors in your library along with the books they have written. In order to achieve that you need to let Data API builder know that you want such relationship to be available to be used in queries.
 
 Stop the engine (`Ctrl+C`). Relationships must be defined on each entity where you want to have them. For example to create a relationship between a Book and its Authors, you can use the following DAB CLI command:
 
@@ -229,7 +240,7 @@ Stop the engine (`Ctrl+C`). Relationships must be defined on each entity where y
     dab update Author --relationship "books" --cardinality "many" --target.entity "Book" --linking.object "dbo.books_authors"
 ```
 
-which will create the relationships section in the Author entity:
+which will create the relationships section in the `Author` entity:
 
 ```json
 "relationships": {
@@ -245,9 +256,9 @@ The element under `relationship` is used to add a field - `books` in the sample 
 
 - `cardinality`: set to `many` as an author can be associated with more than one book
 - `target.entity`: Which entity, defined in the same configuration file, will be used in this relationship. For this sample, it is `Book` as we are creating the relationship on the `Author` entity.
-- `linking.object`: the database table used to support the many-to-many relationship. That table is the `books_authors`.
+- `linking.object`: the database table used to support the many-to-many relationship. That table is the `books_authors`. If you are creating a simple One-to-Many or Many-to-One relationship, this field is not needed.
 
-Data API Builder will automatically figure out which columns are used to support the relationship between all the involved parts by analyzing the foreign key constraints that exist between the involved tables. For this reason, the configuration is done! (If you don't have foreign keys, you can always manually specify the columns you want to use to navigate between table relationships. More on this in the [relationships documentation](../relationships.md))
+Data API builder will automatically figure out which columns are used to support the relationship between all the involved parts by analyzing the foreign key constraints that exist between the involved tables. For this reason, the configuration is done! (If you don't have foreign keys, you can always manually specify the columns you want to use to navigate between table relationships. More on this in the [relationships documentation](../relationships.md))
 
 The `Author` entity should now look like the following:
 

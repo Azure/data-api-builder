@@ -37,8 +37,9 @@ namespace Azure.DataApiBuilder.Service.Configurations
         // The claimType is invalid if there is a match found.
         private static readonly Regex _invalidClaimCharsRgx = new(_invalidClaimChars, RegexOptions.Compiled);
 
-        // Any reserved character is not allowed to be present in
-        // the rest/graphql custom path. Refer here: https://www.rfc-editor.org/rfc/rfc3986#page-12.
+        // "Reserved characters as defined in RFC3986 are not allowed to be present in the
+        // REST/GraphQL custom path because they are acceptable to be present in URIs.
+        // " Refer here: https://www.rfc-editor.org/rfc/rfc3986#page-12.
         private static readonly string _invalidPathChars = @"[\.:\?#/\[\]@!$&'()\*\+,;=]+";
 
         //  Regex to validate rest/graphql custom path prefix.

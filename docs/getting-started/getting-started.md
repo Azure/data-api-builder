@@ -25,7 +25,7 @@ dotnet --list-sdks
 
 ## Installing DAB CLI
 
-Data API Builder provides a CLI tool to simplify configuration and execution of the engine. You can install the DAB CLI using [.NET tools](https://docs.microsoft.com/en-us/dotnet/core/tools/global-tools):
+Data API builder provides a CLI tool to simplify configuration and execution of the engine. You can install the DAB CLI using [.NET tools](https://docs.microsoft.com/en-us/dotnet/core/tools/global-tools):
 
 ```shell
 dotnet tool install --global Microsoft.DataApiBuilder 

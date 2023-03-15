@@ -80,8 +80,9 @@ The `parameters` defines which parameters should be exposed and also provides de
 **Limitations**:
 
 1. Only the first result set returned by the stored procedure will be used by Data API builder.
-2. For both REST and GraphQL endpoints: when a stored procedure parameter is specified both in the configuration file and in the URL query string, the parameter in the URL query string will take precedence.
-3. Entities backed by a stored procedure do not have all the capabilities automatically provided for entities backed by tables, collections or views. 
+2. Only those stored procedures whose metadata for the first result set can be described by [`sys.dm_exec_describe_first_result_set`](https://learn.microsoft.com/sql/relational-databases/system-dynamic-management-views/sys-dm-exec-describe-first-result-set-transact-sql) are supported. 
+3. For both REST and GraphQL endpoints: when a stored procedure parameter is specified both in the configuration file and in the URL query string, the parameter in the URL query string will take precedence.
+4. Entities backed by a stored procedure do not have all the capabilities automatically provided for entities backed by tables, collections or views. 
     1. Stored procedure backed entities do not support pagination, ordering, or filtering. Nor do such entities support returning items specified by primary key values.
     2. Field/parameter level authorization rules are not supported.
 

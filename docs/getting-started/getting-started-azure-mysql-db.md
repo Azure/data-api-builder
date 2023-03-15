@@ -113,7 +113,7 @@ within the `entities` object you can create any entity with any name (as long as
 
 > **BEST PRACTICE**: It is recommeneded to use the _singular_ form for entities names. For GraphQL, the Data API builder engine will automatically use the correct plural form to generate the final GraphQL schema whenever a _list_ of entity items will be returned. More on this behaviour in the [GraphQL documentation](./../graphql.md).
 
-After that, the permissions for the exposed entity are defined via the `permissions` element; it ensures that only those users making a request with the right claims will be able to access the entity and its data. In this getting started tutorial, we're allowing anyone, without the need to be authenticated, to perform all the CRUD operations to the `Book` entity.
+After that, the permissions for the exposed entity are defined via the `permissions` element; it ensures that only those users making a request with the right claims will be able to access the entity and its data. In this getting started tutorial, we're allowing anyone, without the need to be authenticated, to perform all the CRUD operations on the `Book` entity.
 
 You can also add the `Author` entity now, applying the same concepts you just learnt for the `Book` entity. Once you have added the `Author` entity, the `entities` object of configuration file will look like the following:
 

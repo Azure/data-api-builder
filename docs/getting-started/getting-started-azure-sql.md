@@ -28,7 +28,7 @@ More details on Azure SQL and SQL Server connection strings can be found here: h
 
 ## Create the database objects
 
-Create the database tables needed to represent Authors, Books and the many-to-many relationship between Authors and Books. You can find the `library.azure-sql.sql` script in the [/samples/getting-started/azure-sql-db](../../samples/getting-started/azure-sql-db) folder in this GitHub repo. You can use it to create three tables, along with sample data:
+Create the database tables needed to represent Authors, Books and the many-to-many relationship between Authors and Books. You can use the [library.azure-sql.sql](../../samples/getting-started/azure-sql-db/library.azure-sql.sql) script to create three tables, along with sample data:
 
 - `dbo.authors`: Table containing authors
 - `dbo.books`: Table containing books
@@ -52,13 +52,13 @@ The command will generate a config file called `dab-config.json` looking like th
 
 ```json
 {
-  "$schema": "dab.draft-01.schema.json",
+  "$schema": "https://dataapibuilder.azureedge.net/schemas/v{dab-version}/dab.draft.schema.json",
   "data-source": {
     "database-type": "mssql",
+    "options": {
+      "set-session-context": false
+    },
     "connection-string": "Server=localhost;Database=<database-name>;User ID=<user>;Password=<password>;TrustServerCertificate=true"
-  },
-  "mssql": {
-    "set-session-context": true
   },
   "runtime": {
     "rest": {
@@ -123,7 +123,7 @@ within the `entities` object you can create any entity with any name (as long as
 
 After that, the permissions for the exposed entity are defined via the `permission` element; it allows you to be sure that only those users making a request with the right claims will be able to access the entity and its data. In this getting started tutorial, we're allowing anyone, without the need to be authenticated, to perform all the CRUD operations to the `Author` entity.
 
-You can also add the `Book` entity now, applying the same concepts you just learnt for the `Author` entity. Once you have added the `Author` entity, the `entities` object of configuration file will look like the following:
+You can also add the `Book` entity now, applying the same concepts you just learned for the `Author` entity. Once you have added the `Book` entity, the `entities` object of the configuration file will look like the following:
 
 ```json
 "entities": {
@@ -269,10 +269,10 @@ which will create the `relationships` section in the `Author` entity:
 The element under `relationship` is used to add a field - `books` in the sample - to the generated GraphQL object, so that one will be able to navigate the relationship between an Author and their Books. Within the `books` element there are three fields:
 
 - `cardinality`: set to `many` as an author can be associated with more than one book
-- `target.entity`: Which entity, defined in the same configuration file, will be used in this relationship. For this sample is `book` as we are creating the relationship on the `Author` entity.
+- `target.entity`: Which entity, defined in the same configuration file, will be used in this relationship. For this sample is `Book` as we are creating the relationship on the `Author` entity.
 - `linking.object`: the database table used to support the many-to-many relationship. That table is the `dbo.books_authors`. If you are creating a simple One-to-Many or Many-to-One relationship, this field is not needed.
 
-Data API Builder will automatically figure out what are the columns that are used to support the relationship between all the involved parts by analyzing the foreign key constraints that exist between the involved tables. For this reason the configuration is done! (If you don't have foreign keys you can always manually specify the columns you want to use to navigate from one table to another. More on this in the [relationships documentation](../relationships.md))
+Data API builder will automatically figure out what are the columns that are used to support the relationship between all the involved parts by analyzing the foreign key constraints that exist between the involved tables. For this reason the configuration is done! (If you don't have foreign keys you can always manually specify the columns you want to use to navigate from one table to another. More on this in the [relationships documentation](../relationships.md))
 
 The `Author` entity should now look like the following:
 
@@ -371,7 +371,7 @@ Congratulations, you have just created a fully working backend to support your m
 
 If you want to practice what you have learned, here's a little exercise you can do on your own
 
-- Using the database setup script `/samples/getting-started/azure-sql-db/exercise/exercise.library.azure-sql.sql`:
+- Using the database setup script [`/samples/getting-started/azure-sql-db/exercise/exercise.library.azure-sql.sql`](../../samples/getting-started/azure-sql-db/exercise/exercise-library.azure-sql.sql):
   - add the table `dbo.series` which will store series names (for example: [Foundation Series](https://en.wikipedia.org/wiki/Foundation_series))
   - update the `dbo.books` table by adding a column named `series_id`
   - update the `dbo.books` table by adding a foreign key constraint on the `dbo.series` table

@@ -193,7 +193,8 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Verify that if graphQLSchema file is not present, we will get error.
+        /// Verify that if graphQLSchema file is not present, config file won't be generated.
+        /// It will show an error stating the graphQL schema file not found.
         /// </summary>
         [DataRow("no-schema.gql", false, DisplayName = "FAIL: GraphQL Schema file not available.")]
         [DataRow(TEST_SCHEMA_FILE, true, DisplayName = "PASS: GraphQL Schema file available.")]

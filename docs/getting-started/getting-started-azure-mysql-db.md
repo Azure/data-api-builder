@@ -46,7 +46,6 @@ The command will generate a config file called dab-config.MySql.json looking lik
     "database-type": "mysql",
     "connection-string": "Server=demoazuredbmysql.mysql.database.azure.com;User ID=dbusername;Password=<Password>;database=<dbname>;Sslmode=Required;SslCa=<path-to-SSLcert>"
   },
-  ,
   "runtime": {
     "rest": {
       "enabled": true,

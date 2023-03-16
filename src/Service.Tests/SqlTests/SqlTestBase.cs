@@ -349,6 +349,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="isExpectedErrorMsgSubstr">When set to true, will look for a substring 'expectedErrorMessage'
         /// in the actual error message to verify the test result. This is helpful when the actual error message is dynamic and changes
         /// on every single run of the test.</param>
+        /// <param name="clientRoleHeader">The custom role In whose context the request will be executed.</param>
         /// <returns></returns>
         protected static async Task SetupAndRunRestApiTest(
             string primaryKeyRoute,
@@ -369,7 +370,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             bool paginated = false,
             int verifyNumRecords = -1,
             bool expectJson = true,
-            bool isExpectedErrorMsgSubstr = false)
+            bool isExpectedErrorMsgSubstr = false,
+            string clientRoleHeader = null)
         {
             // Create the rest endpoint using the path and entity name.
             string restEndPoint = restPath + "/" + entityNameOrPath;
@@ -422,6 +424,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 {
                     request.Headers.Add(key, value.ToString());
                 }
+            }
+
+            if (clientRoleHeader is not null)
+            {
+                request.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER,clientRoleHeader.ToString());
+                request.Headers.Add(AuthenticationConfig.CLIENT_PRINCIPAL_HEADER,
+                    AuthTestHelper.CreateStaticWebAppsEasyAuthToken(addAuthenticated: true,specificRole: clientRoleHeader));
             }
 
             // Send request to the engine.

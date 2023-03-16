@@ -762,6 +762,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY species asc, treeId asc
                       LIMIT 101
                   ) AS subq"
+            },
+            {
+                "FindManyTestWithDatabasePolicy",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'name', name)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _foreignKeyTableName + @"
+                      WHERE id != 1234 or id > 1940
+                      ORDER BY id asc
+                      LIMIT 101
+                  ) AS subq"
             }
         };
 

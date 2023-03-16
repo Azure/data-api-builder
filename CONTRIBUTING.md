@@ -60,7 +60,7 @@ To run the SQL tests locally you will need to:
 Tests can then be run using the following commands:
 
 - `dotnet test --filter "TestCategory=MsSql"` for SQL Server
-- `dotnet test --filter "TestCategory=PostgreSql"` for Postgres
+- `dotnet test --filter "TestCategory=PostgreSql"` for PostgreSQL
 - `dotnet test --filter "TestCategory=MySql"` for MySql
 
 Alternatively, you can execute the tests from Visual Studio.

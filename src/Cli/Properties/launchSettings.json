@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "Cli": {
+      "commandName": "Project",
+      "commandLineArgs": "start",
+      "httpPort": 5002
+    }
+  }
+}

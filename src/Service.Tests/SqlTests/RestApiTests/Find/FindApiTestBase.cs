@@ -1015,7 +1015,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         /// </summary>
         /// <returns></returns>
         [TestMethod]
-        public virtual async Task FindTestOnTableWithDatabasePolicy()
+        public async Task FindTestOnTableWithDatabasePolicy()
         {
             await SetupAndRunRestApiTest(
                primaryKeyRoute: null,

@@ -589,11 +589,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         /// <summary>
-        /// Test to validate that PATCH operation on inaccessible row fails.
+        /// Test to validate that PATCH operation on inaccessible row (by virtue of database policy) fails.
         /// </summary>
         /// <returns></returns>
         [TestMethod]
-        public virtual async Task PatchOneInAccessibleRowWithDatabasePolicy()
+        public virtual async Task PatchOneUpdateInAccessibleRowWithDatabasePolicy()
         {
             string requestBody = @"
             {

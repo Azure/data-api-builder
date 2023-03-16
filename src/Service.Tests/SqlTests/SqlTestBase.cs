@@ -349,7 +349,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="isExpectedErrorMsgSubstr">When set to true, will look for a substring 'expectedErrorMessage'
         /// in the actual error message to verify the test result. This is helpful when the actual error message is dynamic and changes
         /// on every single run of the test.</param>
-        /// <param name="clientRoleHeader">The custom role In whose context the request will be executed.</param>
+        /// <param name="clientRoleHeader">The custom role in whose context the request will be executed.</param>
         /// <returns></returns>
         protected static async Task SetupAndRunRestApiTest(
             string primaryKeyRoute,

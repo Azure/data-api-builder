@@ -1023,8 +1023,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                entityNameOrPath: _foreignKeyEntityName,
                sqlQuery: GetQuery("FindManyTestWithDatabasePolicy"),
                clientRoleHeader: "policy_tester_REST"
-           );
+            );
 
+            await SetupAndRunRestApiTest(
+               primaryKeyRoute: "id/1234",
+               queryString: string.Empty,
+               entityNameOrPath: _foreignKeyEntityName,
+               sqlQuery: GetQuery("FindInAccessibleRowWithDatabasePolicy"),
+               clientRoleHeader: "policy_tester_REST"
+           );
         }
 
         #endregion

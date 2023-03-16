@@ -773,6 +773,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         LIMIT 101
                     ) AS subq
                 "
+            },
+            {
+                "FindInAccessibleRowWithDatabasePolicy",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT  ""id"", ""name""
+                        FROM " + _foreignKeyTableName + @"
+                        WHERE ""id"" = 1234 and (""id"" != 1234 or ""id"" > 1940)
+                        ORDER BY ""id"" asc
+                        LIMIT 101
+                    ) AS subq
+                "
             }
         };
 

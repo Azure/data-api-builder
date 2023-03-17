@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -66,7 +65,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         /// <param name="context">HotChocolate Request Pipeline context containing request metadata</param>
         /// <param name="parameters">GraphQL Query Parameters from schema retrieved from ResolverMiddleware.GetParametersFromSchemaAndQueryFields()</param>
-        public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
+        public async Task<Tuple<JsonDocument?, IMetadata?>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> parameters)
         {
             SqlQueryStructure structure = new(
                 context,
@@ -78,13 +77,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             if (structure.PaginationMetadata.IsPaginated)
             {
-                return new Tuple<JsonDocument, IMetadata>(
+                return new Tuple<JsonDocument?, IMetadata?>(
                     SqlPaginationUtil.CreatePaginationConnectionFromJsonDocument(await ExecuteAsync(structure), structure.PaginationMetadata),
                     structure.PaginationMetadata);
             }
             else
             {
-                return new Tuple<JsonDocument, IMetadata>(
+                return new Tuple<JsonDocument?, IMetadata?>(
                     await ExecuteAsync(structure),
                     structure.PaginationMetadata);
             }
@@ -94,9 +93,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Executes the given IMiddlewareContext of the GraphQL and expecting result of stored-procedure execution as
         /// list of Jsons and the relevant pagination metadata back.
         /// </summary>
-        public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
+        public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata?>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object?> parameters)
         {
-            if (_sqlMetadataProvider.GraphQLStoredProcedureExposedNameToEntityNameMap.TryGetValue(context.Selection.Field.Name.Value, out string entityName))
+            if (_sqlMetadataProvider.GraphQLStoredProcedureExposedNameToEntityNameMap.TryGetValue(context.Selection.Field.Name.Value, out string? entityName))
             {
                 SqlExecuteStructure sqlExecuteStructure = new(
                     entityName,
@@ -105,7 +104,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     _gQLFilterParser,
                     parameters);
 
-                return new Tuple<IEnumerable<JsonDocument>, IMetadata>(
+                return new Tuple<IEnumerable<JsonDocument>, IMetadata?>(
                         FormatStoredProcedureResultAsJsonList(await ExecuteAsync(sqlExecuteStructure)),
                         PaginationMetadata.MakeEmptyPaginationMetadata());
             }
@@ -120,7 +119,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     _gQLFilterParser);
 
                 string queryString = _queryBuilder.Build(structure);
-                List<JsonDocument> jsonListResult =
+                List<JsonDocument>? jsonListResult =
                     await _queryExecutor.ExecuteQueryAsync(
                         queryString,
                         structure.Parameters,
@@ -129,11 +128,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 if (jsonListResult is null)
                 {
-                    return new Tuple<IEnumerable<JsonDocument>, IMetadata>(new List<JsonDocument>(), null);
+                    return new Tuple<IEnumerable<JsonDocument>, IMetadata?>(new List<JsonDocument>(), null);
                 }
                 else
                 {
-                    return new Tuple<IEnumerable<JsonDocument>, IMetadata>(jsonListResult, structure.PaginationMetadata);
+                    return new Tuple<IEnumerable<JsonDocument>, IMetadata?>(jsonListResult, structure.PaginationMetadata);
                 }
             }
         }
@@ -148,8 +147,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 _sqlMetadataProvider,
                 _authorizationResolver,
                 _runtimeConfigProvider,
-                _gQLFilterParser);
-            using JsonDocument queryJson = await ExecuteAsync(structure);
+                _gQLFilterParser,
+                _httpContextAccessor.HttpContext!);
+            using JsonDocument? queryJson = await ExecuteAsync(structure);
             // queryJson is null if dbreader had no rows to return
             // If no rows/empty table, return an empty json array
             return queryJson is null ? FormatFindResult(JsonDocument.Parse("[]"), context) :
@@ -168,7 +168,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 _authorizationResolver,
                 _gQLFilterParser,
                 context.ResolvedParameters);
-            using JsonDocument queryJson = await ExecuteAsync(structure);
+            using JsonDocument? queryJson = await ExecuteAsync(structure);
             // queryJson is null if dbreader had no rows to return
             // If no rows/empty result set, return an empty json array
             return queryJson is null ? OkResponse(JsonDocument.Parse("[]").RootElement.Clone()) :
@@ -212,7 +212,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             // nextLink is the URL needed to get the next page of records using the same query options
             // with $after base64 encoded for opaqueness
-            string path = UriHelper.GetEncodedUrl(_httpContextAccessor.HttpContext.Request).Split('?')[0];
+            string path = UriHelper.GetEncodedUrl(_httpContextAccessor.HttpContext!.Request).Split('?')[0];
             JsonElement nextLink = SqlPaginationUtil.CreateNextLink(
                                   path,
                                   nvc: context!.ParsedQueryString,
@@ -265,7 +265,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public JsonDocument ResolveInnerObject(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
+        public JsonDocument? ResolveInnerObject(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
         {
             PaginationMetadata parentMetadata = (PaginationMetadata)metadata;
             PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name.Value];
@@ -283,7 +283,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public object ResolveListType(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
+        public object? ResolveListType(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
         {
             PaginationMetadata parentMetadata = (PaginationMetadata)metadata;
             PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name.Value];
@@ -296,11 +296,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         // <summary>
         // Given the SqlQueryStructure structure, obtains the query text and executes it against the backend.
         // </summary>
-        private async Task<JsonDocument> ExecuteAsync(SqlQueryStructure structure)
+        private async Task<JsonDocument?> ExecuteAsync(SqlQueryStructure structure)
         {
             // Open connection and execute query using _queryExecutor
             string queryString = _queryBuilder.Build(structure);
-            JsonDocument jsonDocument =
+            JsonDocument? jsonDocument =
                 await _queryExecutor.ExecuteQueryAsync(
                     queryString,
                     structure.Parameters,
@@ -314,18 +314,18 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         // Unlike a normal query, result from database may not be JSON. Instead we treat output as SqlMutationEngine does (extract by row).
         // As such, this could feasibly be moved to the mutation engine. 
         // </summary>
-        private async Task<JsonDocument> ExecuteAsync(SqlExecuteStructure structure)
+        private async Task<JsonDocument?> ExecuteAsync(SqlExecuteStructure structure)
         {
             string queryString = _queryBuilder.Build(structure);
 
-            JsonArray resultArray =
+            JsonArray? resultArray =
                 await _queryExecutor.ExecuteQueryAsync(
                     queryString,
                     structure.Parameters,
                     _queryExecutor.GetJsonArrayAsync,
                     _httpContextAccessor.HttpContext!);
 
-            JsonDocument jsonDocument = null;
+            JsonDocument? jsonDocument = null;
 
             // If result set is non-empty, parse rows from json array into JsonDocument
             if (resultArray is not null && resultArray.Count > 0)

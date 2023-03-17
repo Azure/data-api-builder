@@ -288,7 +288,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         protected static async Task ResetDbStateAsync()
         {
             await _queryExecutor.ExecuteQueryAsync<object>(
-                File.ReadAllText($"{DatabaseEngine}Books.sql"),
+                File.ReadAllText($"DatabaseSchema-{DatabaseEngine}.sql"),
                 parameters: null,
                 dataReaderHandler: null);
         }

@@ -250,7 +250,7 @@ SELECT
 	value,
     CONCAT('Test Item #' , value)
 FROM 
-    GENERATE_SERIES(1, 10000, 1) as value
+    GENERATE_SERIES(1, 10000, 1) as value;
 
 INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (1, 'Incompatible GraphQL Name', 'Compatible GraphQL Name');
 INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (3, 'Old Value', 'Record to be Updated');

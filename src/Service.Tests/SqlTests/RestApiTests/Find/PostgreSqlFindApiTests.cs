@@ -430,6 +430,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 "
             },
             {
+                "FindMany_MappedColumn_NoOrderByQueryParameter",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT id AS bkid, bkname AS name
+                        FROM " + _integrationMappedPaginationTableName + @"
+                        ORDER BY id asc
+                        LIMIT 100
+                    ) AS subq
+                "
+            },
+            {
                 "FindTestWithFirstMultiKeyPagination",
                 @"
                     SELECT to_jsonb(subq) AS data

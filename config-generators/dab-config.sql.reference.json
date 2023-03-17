@@ -965,6 +965,20 @@
       ],
       "rest": true,
       "graphql": true
+    },
+    "MappedBookmarks": {
+      "source": "mappedbookmarks",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "*" ]
+        }
+      ],
+      "mappings": {
+        "id": "bkid",
+        "bkname": "name"
+      },
+      "rest": true
     }
   }
 }

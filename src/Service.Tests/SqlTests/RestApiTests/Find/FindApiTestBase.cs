@@ -575,6 +575,24 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             );
         }
 
+        /// <summary>
+        /// Tests the REST Api for Find operation using sorting
+        /// with integer type and null values.
+        /// </summary>
+        [TestMethod]
+        public async Task FindMany_MappedColumn_NoOrderByQueryParameter()
+        {
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"Value\":100,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"mappedbookmarks\",\"ColumnName\":\"bkid\"}}]");
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entityNameOrPath: _integrationMappedPaginationEntityName,
+                sqlQuery: GetQuery(nameof(FindMany_MappedColumn_NoOrderByQueryParameter)),
+                paginated: true,
+                expectedAfterQueryString: $"?$after={Uri.EscapeDataString(after)}"
+            );
+        }
+
         [TestMethod]
         public async Task FindTestWithQueryStringSelect_NoOrderBy()
         {

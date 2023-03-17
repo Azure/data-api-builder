@@ -274,6 +274,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
+                "FindMany_MappedColumn_NoOrderByQueryParameter",
+                $"SELECT TOP 100 id AS bkid, bkname AS name FROM mappedbookmarks " +
+                $"ORDER BY id asc " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
                 "FindTestWithQueryStringSelect_NoOrderBy",
                 $"SELECT id AS typeid, int_types FROM type_table " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"

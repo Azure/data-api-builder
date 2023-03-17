@@ -30,6 +30,7 @@ DROP TABLE IF EXISTS sales;
 DROP TABLE IF EXISTS graphql_incompatible;
 DROP TABLE IF EXISTS GQLmappings;
 DROP TABLE IF EXISTS bookmarks;
+DROP TABLE IF EXISTS mappedbookmarks;
 
 CREATE TABLE publishers(
     id int AUTO_INCREMENT PRIMARY KEY,
@@ -192,6 +193,11 @@ CREATE TABLE bookmarks(
     bkname text NOT NULL
 );
 
+CREATE TABLE mappedbookmarks(
+    id int AUTO_INCREMENT PRIMARY KEY,
+    bkname text NOT NULL
+);
+
 ALTER TABLE books
 ADD CONSTRAINT book_publisher_fk
 FOREIGN KEY (publisher_id)
@@ -241,6 +247,19 @@ REFERENCES series(id)
 ON DELETE CASCADE;
 
 INSERT INTO bookmarks (id, bkname)
+WITH RECURSIVE nums AS (
+    SELECT 1 AS id
+    UNION ALL
+    SELECT id + 1 AS id
+    FROM nums
+    WHERE nums.id <= 999
+)
+SELECT 
+id,
+concat('Test Item #', id)
+FROM nums;
+
+INSERT INTO mappedbookmarks (id, bkname)
 WITH RECURSIVE nums AS (
     SELECT 1 AS id
     UNION ALL

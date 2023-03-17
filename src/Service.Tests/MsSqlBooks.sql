@@ -44,6 +44,7 @@ DROP TABLE IF EXISTS revenues;
 DROP TABLE IF EXISTS graphql_incompatible;
 DROP TABLE IF EXISTS GQLmappings;
 DROP TABLE IF EXISTS bookmarks;
+DROP TABLE IF EXISTS mappedbookmarks;
 DROP SCHEMA IF EXISTS [foo];
 COMMIT;
 
@@ -227,6 +228,12 @@ CREATE TABLE bookmarks
 (
 	id int IDENTITY(1,1) PRIMARY KEY,
 	bkname nvarchar(1000) NOT NULL
+)
+
+CREATE TABLE mappedbookmarks
+(
+	id int IDENTITY(1,1) PRIMARY KEY,
+	bkname nvarchar(50) NOT NULL
 ) 
 
 ALTER TABLE books
@@ -302,6 +309,16 @@ FROM
     GENERATE_SERIES(1, 10000, 1)
 
 SET IDENTITY_INSERT bookmarks OFF
+
+SET IDENTITY_INSERT mappedbookmarks ON
+INSERT INTO mappedbookmarks ([id], [bkname])
+SELECT
+	[value],
+    'Test Item #' + format([value], '00000')
+FROM 
+    GENERATE_SERIES(1, 10000, 1)
+
+SET IDENTITY_INSERT mappedbookmarks OFF
 
 SET IDENTITY_INSERT books ON
 INSERT INTO books(id, title, publisher_id)

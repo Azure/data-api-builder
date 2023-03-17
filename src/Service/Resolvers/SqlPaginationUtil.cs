@@ -122,13 +122,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// The JSON is encoded in base64 for opaqueness. The cursor should function as a token that the user copies and pastes
         /// without needing to understand how it works.
         /// </summary>
-        public static string MakeCursorFromJsonElement(JsonElement element,
-                                                        List<string> primaryKey,
-                                                        List<OrderByColumn>? orderByColumns,
-                                                        string entityName = "",
-                                                        string schemaName = "",
-                                                        string tableName = "",
-                                                        ISqlMetadataProvider? sqlMetadataProvider = null)
+        public static string MakeCursorFromJsonElement(
+            JsonElement element,
+            List<string> primaryKey,
+            List<OrderByColumn>? orderByColumns,
+            string entityName = "",
+            string schemaName = "",
+            string tableName = "",
+            ISqlMetadataProvider? sqlMetadataProvider = null)
         {
             List<PaginationColumn> cursorJson = new();
             JsonSerializerOptions options = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
@@ -169,16 +170,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 }
             }
 
-            // primary key columns are used in ordering
-            // for tie-breaking and must be included.
-            // iterate through primary key list and check if
-            // each column is in the set of remaining primary
-            // keys, add to cursor any columns that are in the
-            // set of remaining primary keys and then remove that
-            // column from this remaining key set. This way we
-            // iterate in the same order as the ordering of the
-            // primary key columns, and verify all primary key
-            // columns have been added to the cursor.
+            // Primary key columns must be included in the orderBy query parameter in the nextLink cursor to break ties between result set records.
+            // Iterate through list of (composite) primary key(s) and when a primary key column exists in the remaining keys collection:
+            // 1.) Add that column as one of the pagination columns in the orderBy query parameter in the generated nextLink cursor.
+            // 2.) Remove the column from the remaining keys collection.
+            // This loop enables consistent iteration over the list of primary key columns which:
+            // - Maintains the order of the primary key columns as they exist in the database.
+            // - Ensures all primary key columns have been added to the nextLink cursor.
             foreach (string column in primaryKey)
             {
                 if (remainingKeys.Contains(column))

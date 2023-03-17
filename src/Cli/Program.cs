@@ -110,7 +110,7 @@ namespace Cli
                 }))
                 .WithParsed((Action<ExportOptions>)(options =>
                 {
-                    StartOptions startOptions = new(false, LogLevel.None, true, options.Config!);
+                    StartOptions startOptions = new(false, LogLevel.None, false, options.Config!);
 
                     CancellationTokenSource cancellationTokenSource = new();
                     CancellationToken cancellationToken = cancellationTokenSource.Token;
@@ -129,7 +129,11 @@ namespace Cli
                         {
                             try
                             {
-                                HttpClient client = new() { BaseAddress = new Uri("http://localhost:5000/graphql") };
+                                HttpClient client = new(
+                                    new HttpClientHandler { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator }
+                                )
+                                { BaseAddress = new Uri("https://localhost:5001/graphql") };
+
                                 IntrospectionClient introspectionClient = new();
                                 Task<HotChocolate.Language.DocumentNode> response = introspectionClient.DownloadSchemaAsync(client);
                                 response.Wait();

@@ -448,6 +448,26 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
+        /// Validates that a proper nextLink is created for FindMany requests which do not
+        /// restrict results with query parameters. Engine default paging mechanisms are used
+        /// when > 100 records will be present in result set.
+        /// expectedAfterQueryString starts with ?$, and not &$, because it is the only query parameter.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTest_NoQueryParams_PaginationNextLink()
+        {
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"Value\":100,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"bookmarks\",\"ColumnName\":\"id\"}}]");
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entityNameOrPath: _integrationPaginationEntityName,
+                sqlQuery: GetQuery(nameof(FindTest_NoQueryParams_PaginationNextLink)),
+                expectedAfterQueryString: $"?$after={Uri.EscapeDataString(after)}",
+                paginated: true
+            );
+        }
+
+        /// <summary>
         /// Tests the REST Api for Find operation using $first to
         /// limit the number of records returned with multiple column
         /// primary key in the table.
@@ -552,6 +572,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$select=typeid,int_types&$orderby=int_types",
                 entityNameOrPath: _integrationTypeEntity,
                 sqlQuery: GetQuery(nameof(FindTestWithIntTypeNullValuesOrderByAsc))
+            );
+        }
+
+        [TestMethod]
+        public async Task FindTestWithQueryStringSelect_NoOrderBy()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$select=typeid,int_types",
+                entityNameOrPath: _integrationTypeEntity,
+                sqlQuery: GetQuery(nameof(FindTestWithQueryStringSelect_NoOrderBy))
             );
         }
 

@@ -43,6 +43,7 @@ DROP TABLE IF EXISTS authors_history;
 DROP TABLE IF EXISTS revenues;
 DROP TABLE IF EXISTS graphql_incompatible;
 DROP TABLE IF EXISTS GQLmappings;
+DROP TABLE IF EXISTS bookmarks;
 DROP SCHEMA IF EXISTS [foo];
 COMMIT;
 
@@ -222,6 +223,12 @@ CREATE TABLE GQLmappings (
     column3 varchar(max)
 )
 
+CREATE TABLE bookmarks
+(
+	id int IDENTITY(1,1) PRIMARY KEY,
+	bkname nvarchar(1000) NOT NULL
+) 
+
 ALTER TABLE books
 ADD CONSTRAINT book_publisher_fk
 FOREIGN KEY (publisher_id)
@@ -285,6 +292,16 @@ INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (1, 'Incompatible 
 INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (3, 'Old Value', 'Record to be Updated');
 INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (4, 'Lost Record', 'Record to be Deleted');
 INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (5, 'Filtered Record', 'Record to be Filtered on Find');
+
+SET IDENTITY_INSERT bookmarks ON
+INSERT INTO bookmarks ([id], [bkname])
+SELECT
+	[value],
+    'Test Item #' + format([value], '00000')
+FROM 
+    GENERATE_SERIES(1, 10000, 1)
+
+SET IDENTITY_INSERT bookmarks OFF
 
 SET IDENTITY_INSERT books ON
 INSERT INTO books(id, title, publisher_id)

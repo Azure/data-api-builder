@@ -418,6 +418,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 "
             },
             {
+                "FindTest_NoQueryParams_PaginationNextLink",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationPaginationTableName + @"
+                        ORDER BY id asc
+                        LIMIT 100
+                    ) AS subq
+                "
+            },
+            {
                 "FindTestWithFirstMultiKeyPagination",
                 @"
                     SELECT to_jsonb(subq) AS data

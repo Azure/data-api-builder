@@ -29,6 +29,7 @@ DROP TABLE IF EXISTS series;
 DROP TABLE IF EXISTS sales;
 DROP TABLE IF EXISTS graphql_incompatible;
 DROP TABLE IF EXISTS GQLmappings;
+DROP TABLE IF EXISTS bookmarks;
 
 CREATE TABLE publishers(
     id int AUTO_INCREMENT PRIMARY KEY,
@@ -186,6 +187,11 @@ CREATE TABLE GQLmappings (
     column3 text
 );
 
+CREATE TABLE bookmarks(
+    id int AUTO_INCREMENT PRIMARY KEY,
+    bkname text NOT NULL
+);
+
 ALTER TABLE books
 ADD CONSTRAINT book_publisher_fk
 FOREIGN KEY (publisher_id)
@@ -233,6 +239,19 @@ ADD CONSTRAINT comics_series_fk
 FOREIGN KEY (series_id)
 REFERENCES series(id)
 ON DELETE CASCADE;
+
+INSERT INTO bookmarks (id, bkname)
+WITH RECURSIVE nums AS (
+    SELECT 1 AS id
+    UNION ALL
+    SELECT id + 1 AS id
+    FROM nums
+    WHERE nums.id <= 999
+)
+SELECT 
+id,
+concat('Test Item #', id)
+FROM nums;
 
 INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (1, 'Incompatible GraphQL Name', 'Compatible GraphQL Name');
 INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (3, 'Old Value', 'Record to be Updated');

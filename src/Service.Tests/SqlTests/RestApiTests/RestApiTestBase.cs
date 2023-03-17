@@ -13,6 +13,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
     {
         protected static readonly string _integrationEntityName = "Book";
         protected static readonly string _integrationTableName = "books";
+        protected static readonly string _integrationPaginationEntityName = "Bookmarks";
+        protected static readonly string _integrationPaginationTableName = "bookmarks";
         protected static readonly string _foreignKeyTableName = "publishers";
         protected static readonly string _entityWithCompositePrimaryKey = "Review";
         protected static readonly string _tableWithCompositePrimaryKey = "reviews";

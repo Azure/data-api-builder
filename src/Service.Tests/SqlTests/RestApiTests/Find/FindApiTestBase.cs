@@ -576,8 +576,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
-        /// Tests the REST Api for Find operation using sorting
-        /// with integer type and null values.
+        /// Validates that a proper nextLink is created for FindMany requests which do not
+        /// restrict results with query parameters AND the entity under test has mapped columns, including primary key column(s).
+        /// Engine default paging mechanisms are used when > 100 records will be present in result set.
+        /// expectedAfterQueryString starts with ?$, and not &$, because it is the only query parameter.
         /// </summary>
         [TestMethod]
         public async Task FindMany_MappedColumn_NoOrderByQueryParameter()

@@ -235,6 +235,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
+                "FindTest_OrderByNotFirstQueryParam_PaginationNextLink",
+                $"SELECT TOP 100 id FROM { _integrationPaginationTableName } " +
+                $"ORDER BY id asc " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
                 "FindTestWithFirstMultiKeyPagination",
                 $"SELECT TOP 1 * FROM REVIEWS " +
                 $"WHERE 1=1 " +

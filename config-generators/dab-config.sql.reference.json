@@ -972,6 +972,12 @@
         {
           "role": "anonymous",
           "actions": [ "*" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "*"
+          ]
         }
       ],
       "mappings": {

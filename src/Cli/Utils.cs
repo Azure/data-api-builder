@@ -376,7 +376,7 @@ namespace Cli
 
             try
             {
-                ApiPathInvalidCharacterCheck(apiPath, apiType);
+                DoApiPathInvalidCharCheck(apiPath, apiType);
                 return true;
             }
             catch (DataApiBuilderException ex)

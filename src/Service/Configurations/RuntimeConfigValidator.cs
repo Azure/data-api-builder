@@ -38,7 +38,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         private static readonly Regex _invalidClaimCharsRgx = new(_invalidClaimChars, RegexOptions.Compiled);
 
         // "Reserved characters as defined in RFC3986 are not allowed to be present in the
-        // REST/GraphQL custom path because they are acceptable to be present in URIs.
+        // REST/GraphQL custom path because they are not acceptable to be present in URIs.
         // " Refer here: https://www.rfc-editor.org/rfc/rfc3986#page-12.
         private static readonly string _invalidPathChars = @"[\.:\?#/\[\]@!$&'()\*\+,;=]+";
 
@@ -403,7 +403,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             apiPath = apiPath.Substring(1);
 
             // API path prefix should not contain any reserved characters.
-            ApiPathInvalidCharacterCheck(apiPath, apiType);
+            DoApiPathInvalidCharCheck(apiPath, apiType);
         }
 
         /// <summary>
@@ -413,7 +413,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <param name="apiPath">path prefix for rest/graphql apis</param>
         /// <param name="apiType">Either REST or GraphQL</param>
         /// <exception cref="DataApiBuilderException"></exception>
-        public static void ApiPathInvalidCharacterCheck(string apiPath, ApiType apiType)
+        public static void DoApiPathInvalidCharCheck(string apiPath, ApiType apiType)
         {
             if (_invalidApiPathCharsRgx.IsMatch(apiPath))
             {

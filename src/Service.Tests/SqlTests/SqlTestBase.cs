@@ -428,9 +428,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
             if (clientRoleHeader is not null)
             {
-                request.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER,clientRoleHeader.ToString());
+                request.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, clientRoleHeader.ToString());
                 request.Headers.Add(AuthenticationConfig.CLIENT_PRINCIPAL_HEADER,
-                    AuthTestHelper.CreateStaticWebAppsEasyAuthToken(addAuthenticated: true,specificRole: clientRoleHeader));
+                    AuthTestHelper.CreateStaticWebAppsEasyAuthToken(addAuthenticated: true, specificRole: clientRoleHeader));
             }
 
             // Send request to the engine.

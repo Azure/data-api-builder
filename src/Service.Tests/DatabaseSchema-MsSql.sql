@@ -306,7 +306,7 @@ SELECT
 	[value],
     'Test Item #' + format([value], '00000')
 FROM 
-    GENERATE_SERIES(1, 10000, 1)
+    GENERATE_SERIES(1, 10000, 1);
 
 SET IDENTITY_INSERT bookmarks OFF
 
@@ -316,7 +316,7 @@ SELECT
 	[value],
     'Test Item #' + format([value], '00000')
 FROM 
-    GENERATE_SERIES(1, 10000, 1)
+    GENERATE_SERIES(1, 10000, 1);
 
 SET IDENTITY_INSERT mappedbookmarks OFF
 

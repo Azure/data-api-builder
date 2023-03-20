@@ -274,7 +274,7 @@ namespace Cli.Tests
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
                 restDisabled: RestDisabled,
                 graphqlDisabled: GraphQLDisabled,
-                config: _testRuntimeConfig);
+                config: TEST_RUNTIME_CONFIG_FILE);
 
             Assert.AreEqual(expectedResult, ConfigGenerator.TryCreateRuntimeConfig(options, out _));
         }

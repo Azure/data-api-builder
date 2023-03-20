@@ -46,12 +46,6 @@
 
 
     <ItemGroup>
-        <!-- extends watching group to include .json and .gql files -->
-        <Watch Include="**\*.json;**\*.gql" Exclude="obj\**\*;bin\**\*" />
-    </ItemGroup>
-
-
-    <ItemGroup>
         <Watch Remove="dab-config.CosmosDb_NoSql.json" />
         <Watch Remove="dab-config.json" />
         <Watch Remove="dab-config.MsSql.json" />

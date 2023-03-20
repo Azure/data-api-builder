@@ -47,7 +47,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null)
                 ;
@@ -123,7 +123,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
                 );
@@ -200,7 +200,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
                 );
@@ -274,7 +274,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
                 );
@@ -376,7 +376,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
                 );
@@ -448,7 +448,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
                 );
@@ -563,7 +563,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
                 );
@@ -687,7 +687,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
                 );
@@ -732,7 +732,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
                 );
@@ -777,7 +777,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
                 );
@@ -830,7 +830,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { },
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
             );
@@ -892,7 +892,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { },
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
             );
@@ -957,7 +957,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { },
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
             );
@@ -1079,7 +1079,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { },
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
             );
@@ -1175,7 +1175,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { },
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
             );
@@ -1252,7 +1252,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
                 );
@@ -1289,7 +1289,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { "id:Identity", "name:Company Name" },
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
                 );
@@ -1358,7 +1358,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: null,
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
                 );
@@ -1418,7 +1418,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { "Macaroni:Mac & Cheese", "region:United State's Region", "russian:русский", "chinese:中文" },
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
                 );
@@ -1488,7 +1488,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: new string[] { "name:Company Name", "addr:Company Address", "number:Contact Details" },
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
                 );
@@ -1571,7 +1571,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: null,
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: restMethods,
                 graphQLOperationForStoredProcedure: graphQLOperation
                 );
@@ -1694,7 +1694,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: null,
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: restMethods,
                 graphQLOperationForStoredProcedure: graphQLOperation
                 );
@@ -1736,7 +1736,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
                 );
@@ -1801,7 +1801,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: new string[] { },
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
                 );
@@ -1854,7 +1854,7 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 map: null,
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
                 );
@@ -1894,7 +1894,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: mappings.Split(','),
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
                 );
@@ -1949,7 +1949,7 @@ namespace Cli.Tests
                 linkingTargetFields: new string[] { },
                 relationshipFields: new string[] { },
                 map: null,
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
             );

@@ -537,6 +537,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     (dbResultSet.Rows.FirstOrDefault() ?? new DbResultSetRow()) : null;
                 if (dbResultSetRow is not null && dbResultSetRow.Columns.Count == 0)
                 {
+                    if (operationType is Config.Operation.Create)
+                    {
+                        throw new DataApiBuilderException(
+                            message: "Could not insert row with given values.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
+                            );
+                    }
+
                     string searchedPK;
                     if (primaryKeyExposedColumnNames.Count > 0)
                     {

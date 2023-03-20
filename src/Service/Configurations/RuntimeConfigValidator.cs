@@ -83,13 +83,13 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 _logger);
 
             ValidateAuthenticationConfig();
+            ValidateGlobalEndpointRouteConfig(runtimeConfig);
 
             // Running these graphQL validations only in development mode to ensure
             // fast startup of engine in production mode.
             if (runtimeConfig.GraphQLGlobalSettings.Enabled
                  && runtimeConfig.HostGlobalSettings.Mode is HostModeType.Development)
             {
-                ValidateGlobalEndpointRouteConfig(runtimeConfig);
                 ValidateEntityNamesInConfig(runtimeConfig.Entities);
                 ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(runtimeConfig.Entities);
             }
@@ -325,6 +325,15 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <param name="runtimeConfig"></param>
         public static void ValidateGlobalEndpointRouteConfig(RuntimeConfig runtimeConfig)
         {
+            // Both REST and GraphQL endpoints cannot be disabled at the same time.
+            if (!runtimeConfig.RestGlobalSettings.Enabled && !runtimeConfig.GraphQLGlobalSettings.Enabled)
+            {
+                throw new DataApiBuilderException(
+                    message: $"Both GraphQL and REST endpoints are disabled.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+            }
+
             ValidateRestPathForRelationalDbs(runtimeConfig);
             ValidateGraphQLPath(runtimeConfig);
             // Do not check for conflicts if GraphQL or REST endpoints are disabled.

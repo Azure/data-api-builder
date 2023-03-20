@@ -87,7 +87,7 @@ public class EndToEndTests
     public void TestInitializingRestAndGraphQLGlobalSettings()
     {
         string[] args = { "init", "-c", _testRuntimeConfig, "--database-type", "mssql", "--rest.path", "/rest-api",
-                          "--rest.disabled", "--graphql.path", "/graphql-api", "--graphql.disabled" };
+                          "--rest.disabled", "--graphql.path", "/graphql-api" };
         Program.Main(args);
 
         RuntimeConfig? runtimeConfig = TryGetRuntimeConfig(_testRuntimeConfig);
@@ -98,7 +98,7 @@ public class EndToEndTests
         Assert.AreEqual("/rest-api", runtimeConfig.RestGlobalSettings.Path);
         Assert.IsFalse(runtimeConfig.RestGlobalSettings.Enabled);
         Assert.AreEqual("/graphql-api", runtimeConfig.GraphQLGlobalSettings.Path);
-        Assert.IsFalse(runtimeConfig.GraphQLGlobalSettings.Enabled);
+        Assert.IsTrue(runtimeConfig.GraphQLGlobalSettings.Enabled);
     }
 
     /// <summary>

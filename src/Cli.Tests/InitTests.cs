@@ -218,6 +218,36 @@ namespace Cli.Tests
         }
 
         /// <summary>
+        /// Verify that if both REST and GraphQL is disabled, we will get error.
+        /// </summary>
+        [DataRow(true, true, false, DisplayName = "Both REST and GraphQL disabled.")]
+        [DataRow(true, false, true, DisplayName = "REST disabled, and GraphQL enabled.")]
+        [DataRow(false, true, true, DisplayName = "REST enabled, and GraphQL disabled.")]
+        [DataRow(false, false, true, DisplayName = "Both REST and GraphQL are enabled.")]
+        [DataTestMethod]
+        public void EnsureFailureWhenBothRestAndGraphQLAreDisabled(
+            bool RestDisabled,
+            bool GraphQLDisabled,
+            bool expectedResult)
+        {
+            InitOptions options = new(
+                databaseType: DatabaseType.mssql,
+                connectionString: "testconnectionstring",
+                cosmosNoSqlDatabase: null,
+                cosmosNoSqlContainer: null,
+                graphQLSchemaPath: null,
+                setSessionContext: false,
+                hostMode: HostModeType.Production,
+                corsOrigin: null,
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                restDisabled: RestDisabled,
+                graphqlDisabled: GraphQLDisabled,
+                config: _testRuntimeConfig);
+
+            Assert.AreEqual(expectedResult, ConfigGenerator.TryCreateRuntimeConfig(options, out _));
+        }
+
+        /// <summary>
         /// Test to verify that an error is thrown when user tries to
         /// initialize a config with a file name that already exists.
         /// </summary>

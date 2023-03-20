@@ -126,6 +126,12 @@ namespace Cli
                 return false;
             }
 
+            if (options.RestDisabled && options.GraphQLDisabled)
+            {
+                _logger.LogError($"Both Rest and GraphQL cannot be disabled together.");
+                return false;
+            }
+
             RuntimeConfig runtimeConfig = new(
                 Schema: dabSchemaLink,
                 DataSource: dataSource,

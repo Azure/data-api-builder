@@ -1496,6 +1496,55 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Tests whether conflicting global REST/GraphQL fail config validation.
+        /// </summary>
+        /// <param name="restEnabled">Boolean flag to indicate if REST endpoints are enabled globally.</param>
+        /// <param name="graphqlEnabled">Boolean flag to indicate if GraphQL endpoints are enabled globally.</param>
+        /// <param name="expectError">Boolean flag to indicate if exception is expected.</param>
+        [DataRow(true, true, false, DisplayName = "Both REST and GraphQL enabled.")]
+        [DataRow(true, false, false, DisplayName = "REST enabled, and GraphQL disabled.")]
+        [DataRow(false, true, false, DisplayName = "REST disabled, and GraphQL enabled.")]
+        [DataRow(false, false, true, DisplayName = "Both REST and GraphQL are disabled.")]
+        [DataTestMethod]
+        public void EnsureFailureWhenBothRestAndGraphQLAreDisabled(
+            bool restEnabled,
+            bool graphqlEnabled,
+            bool expectError)
+        {
+            Dictionary<GlobalSettingsType, object> settings = new()
+            {
+                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){ Enabled =  restEnabled}) },
+                { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings(){ Enabled = graphqlEnabled }) }
+
+            };
+
+            RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(globalSettings: settings, dataSource: new(DatabaseType.mssql));
+            string expectedErrorMessage = "Both GraphQL and REST endpoints are disabled.";
+
+            try
+            {
+                RuntimeConfigValidator.ValidateGlobalEndpointRouteConfig(configuration);
+
+                if (expectError)
+                {
+                    Assert.Fail(message: "Global endpoint route config validation expected to fail.");
+                }
+            }
+            catch (DataApiBuilderException ex)
+            {
+                if (expectError)
+                {
+                    Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: ex.StatusCode);
+                    Assert.AreEqual(expected: expectedErrorMessage, actual: ex.Message);
+                }
+                else
+                {
+                    Assert.Fail(message: "Global endpoint route config validation not expected to fail.");
+                }
+            }
+        }
+
+        /// <summary>
         /// Method to validate that the validations for include/exclude fields for an entity
         /// work as expected.
         /// </summary>

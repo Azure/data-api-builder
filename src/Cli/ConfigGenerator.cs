@@ -82,6 +82,12 @@ namespace Cli
                         return false;
                     }
 
+                    if (!File.Exists(graphQLSchemaPath))
+                    {
+                        _logger.LogError($"GraphQL Schema File: {graphQLSchemaPath} not found.");
+                        return false;
+                    }
+
                     // If the option --rest.path is specified for cosmosdb_nosql, log a warning because
                     // rest is not supported for cosmosdb_nosql yet.
                     if (!GlobalSettings.REST_DEFAULT_PATH.Equals(restPath))

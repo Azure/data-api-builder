@@ -293,6 +293,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             );
         }
 
+        [TestMethod]
+        public virtual async Task InsertOneWithDatabasePolicy()
+        {
+            string requestBody = @"
+            {
+                ""name"": ""New publisher""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entityNameOrPath: _foreignKeyEntityName,
+                sqlQuery: string.Empty,
+                operationType: Config.Operation.Insert,
+                requestBody: requestBody,
+                exceptionExpected: true,
+                expectedErrorMessage: "Could not insert row with given values.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString(),
+                clientRoleHeader: "policy_tester_REST"
+            );
+        }
+
         #region RestApiTestBase Overrides
 
         public override string GetQuery(string key)

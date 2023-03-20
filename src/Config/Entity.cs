@@ -636,4 +636,13 @@ namespace Azure.DataApiBuilder.Config
     public record SingularPlural(
             [property: JsonPropertyName("singular")] string Singular,
             [property: JsonPropertyName("plural")] string? Plural);
+
+    /// <summary>
+    /// Different types of APIs supported by runtime engine.
+    /// </summary>
+    public enum ApiType
+    {
+        REST,
+        GraphQL
+    }
 }

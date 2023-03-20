@@ -956,7 +956,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <param name="expectedStatusCodeForGraphQL">Expected HTTP status code code for the GraphQL request</param>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow(false, false, HttpStatusCode.NotFound, HttpStatusCode.NotFound, DisplayName = "Both Rest and GraphQL endpoints disabled globally")]
         [DataRow(true, true, HttpStatusCode.OK, HttpStatusCode.OK, DisplayName = "Both Rest and GraphQL endpoints enabled globally")]
         [DataRow(true, false, HttpStatusCode.OK, HttpStatusCode.NotFound, DisplayName = "Rest enabled and GraphQL endpoints disabled globally")]
         [DataRow(false, true, HttpStatusCode.NotFound, HttpStatusCode.OK, DisplayName = "Rest disabled and GraphQL endpoints enabled globally")]

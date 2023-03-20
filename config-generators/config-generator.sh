@@ -32,7 +32,7 @@ commandFilesBasePath=$absolutePath;
 pathToDLL=$(find $cliOutputPath -name Microsoft.DataApiBuilder.dll | head -n 1)
 
 #Change the working directory to where the config file needs to be generated.
-workingDirectory="$absolutePath/../src/Service/"
+workingDirectory="$absolutePath/../src/Service.Tests/"
 cd $workingDirectory;
 
 #Generates the config files for the selected database types.

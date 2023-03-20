@@ -342,8 +342,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     {
                         throw new DataApiBuilderException(
                             message: "Could not insert row with given values.",
-                            statusCode: HttpStatusCode.BadRequest,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
+                            statusCode: HttpStatusCode.Forbidden,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
                             );
                     }
 
@@ -541,8 +541,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     {
                         throw new DataApiBuilderException(
                             message: "Could not insert row with given values.",
-                            statusCode: HttpStatusCode.BadRequest,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
+                            statusCode: HttpStatusCode.Forbidden,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
                             );
                     }
 

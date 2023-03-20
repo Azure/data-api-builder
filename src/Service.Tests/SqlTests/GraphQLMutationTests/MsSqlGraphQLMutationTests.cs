@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             await InsertMutationFailingDatabasePolicy(
                 dbQuery: msSqlQuery,
                 errorMessage: errorMessage,
-                roleName: "policy_tester_GraphQL");
+                roleName: "database_policy_tester");
         }
 
         /// <summary>

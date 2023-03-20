@@ -293,8 +293,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             );
         }
 
+        /// <summary>
+        /// Test to validate failure of insert operation which does not satisfy the database policy.
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
-        public virtual async Task InsertOneWithDatabasePolicy()
+        public virtual async Task InsertOneFailingDatabasePolicy()
         {
             string requestBody = @"
             {
@@ -309,10 +313,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 operationType: Config.Operation.Insert,
                 requestBody: requestBody,
                 exceptionExpected: true,
-                expectedErrorMessage: "Could not insert row with given values.",
-                expectedStatusCode: HttpStatusCode.BadRequest,
-                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString(),
-                clientRoleHeader: "policy_tester_REST"
+                expectedStatusCode: HttpStatusCode.Forbidden,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed.ToString(),
+                clientRoleHeader: "database_policy_tester"
             );
         }
 

@@ -65,7 +65,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             SqlTestHelper.TestForErrorInGraphQLResponse(
                 result.ToString(),
                 message: errorMessage,
-                statusCode: $"{DataApiBuilderException.SubStatusCodes.BadRequest}"
+                statusCode: $"{DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed}"
             );
 
             string dbResponse = await GetDatabaseResultAsync(dbQuery);

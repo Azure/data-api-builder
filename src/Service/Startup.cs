@@ -626,8 +626,7 @@ namespace Azure.DataApiBuilder.Service
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Unable to complete runtime " +
-                    $"initialization operations due to: \n{ex}");
+                _logger.LogError(ex, $"Unable to complete runtime initialization. Refer to exception for error details.");
                 return false;
             }
         }

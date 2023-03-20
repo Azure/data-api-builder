@@ -116,12 +116,14 @@ steps:
 - task: notice@0
   # This will generate the NOTICE.txt for distribution
   displayName: Generate NOTICE file
+  condition: and(succeeded(), eq(variables.isReleaseBuild, 'true'))
   inputs:
     outputfile: $(Build.SourcesDirectory)/NOTICE.txt
     outputformat: text
 
 - task: PowerShell@2
   displayName: "Add Additional Licenses to NOTICE file"
+  condition: and(succeeded(), eq(variables.isReleaseBuild, 'true'))
   inputs:
     targetType: 'filePath'
     filePath: $(System.DefaultWorkingDirectory)/scripts/notice-generation.ps1

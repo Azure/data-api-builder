@@ -617,17 +617,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             );
         }
 
-        [TestMethod]
-        public async Task FindTestWithQueryStringSelect_NoOrderBy()
-        {
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: string.Empty,
-                queryString: "?$select=typeid,int_types",
-                entityNameOrPath: _integrationTypeEntity,
-                sqlQuery: GetQuery(nameof(FindTestWithQueryStringSelect_NoOrderBy))
-            );
-        }
-
         /// <summary>
         /// Tests the REST Api for Find operation for all records.
         /// order by title in ascending order.

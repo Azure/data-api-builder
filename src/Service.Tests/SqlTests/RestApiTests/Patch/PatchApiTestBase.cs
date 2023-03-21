@@ -589,12 +589,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         /// <summary>
-        /// Test to validate that PATCH operation on inaccessible row (by virtue of database policy) fails.
+        /// Test to validate that PATCH operation which does not satisfy the database policy ("@item.id ne 1234")
+        /// has no rows accessible to update and thus fails.
         /// </summary>
         /// <returns></returns>
         [TestMethod]
         public virtual async Task PatchOneUpdateInAccessibleRowWithDatabasePolicy()
         {
+            // Perform PATCH update with upsert incrmental semantics.
             string requestBody = @"
             {
                 ""name"": ""New Publisher""
@@ -614,6 +616,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     clientRoleHeader: "database_policy_tester"
                     );
 
+            // Perform PATCH update with update semantics.
             Dictionary<string, StringValues> headerDictionary = new()
             {
                 { "If-Match", "*" }

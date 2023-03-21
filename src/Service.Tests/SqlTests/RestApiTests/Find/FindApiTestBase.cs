@@ -1011,9 +1011,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
-        /// Test to validate that the database policy filters are added to the query for FIND operation.
+        /// Test to validate that the database policy filter ("@item.id ne 1234 or @item.id gt 1940") is added to the query for FIND operation,
+        /// and the corresponding rows are filtered out (not returned) from the result.
         /// </summary>
-        /// <returns></returns>
         [TestMethod]
         public async Task FindTestOnTableWithDatabasePolicy()
         {

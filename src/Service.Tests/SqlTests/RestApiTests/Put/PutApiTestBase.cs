@@ -156,6 +156,30 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         }
 
         /// <summary>
+        /// Test to validate that PUT update on a row accessible to the user after applying database policy
+        /// filters executes successfully.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public virtual async Task PutOneUpdateAccessibleRowWithDatabasePolicy()
+        {
+            string requestBody = @"
+            {
+                ""name"": ""New Publisher""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/2345",
+                    queryString: null,
+                    entityNameOrPath: _foreignKeyEntityName,
+                    sqlQuery: GetQuery("PutOneUpdateAccessibleRowWithDatabasePolicy"),
+                    operationType: Config.Operation.Upsert,
+                    requestBody: requestBody,
+                    clientRoleHeader: "database_policy_tester"
+                    );
+        }
+
+        /// <summary>
         /// Tests the PutOne functionality with a REST PUT request
         /// with item that does NOT exist, results in an insert with
         /// the specified ID as table does NOT have Identity() PK column.

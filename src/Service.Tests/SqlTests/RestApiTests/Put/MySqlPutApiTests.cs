@@ -250,6 +250,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         };
 
         #region overridden tests
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOneUpdateAccessibleRowWithDatabasePolicy()
+        {
+            throw new NotImplementedException();
+        }
+
         [TestMethod]
         [Ignore]
         public override Task PutOneInsertInViewTest()

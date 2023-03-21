@@ -133,7 +133,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 else
                 {
                     throw new DataApiBuilderException(
-                    message: $"{columnName} is not a valid field of {DatabaseObject.Name}",
+                    message: $"{columnName} is not a valid field of {EntityName}",
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
                     );
@@ -341,30 +341,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return outputColumns;
         }
 
-        ///<summary>
-        /// Gets the value of the parameter cast as the system type
-        /// of the column this parameter is associated with
-        ///</summary>
-        /// <exception cref="ArgumentException">columnName is not a valid column of table or param
-        /// does not have a valid value type</exception>
-        protected object GetParamAsColumnSystemType(string param, string columnName)
-        {
-            Type systemType = GetColumnSystemType(columnName);
-            try
-            {
-                return ParseParamAsSystemType(param, systemType);
-            }
-            catch (Exception e) when (e is FormatException || e is ArgumentNullException || e is OverflowException)
-            {
-                throw new DataApiBuilderException(
-                    message: $"Parameter \"{param}\" cannot be resolved as column \"{columnName}\" " +
-                        $"with type \"{systemType.Name}\".",
-                    statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
-                    innerException: e);
-            }
-        }
-
         /// <summary>
         /// Tries to parse the string parameter to the given system type
         /// Useful for inferring parameter types for columns or procedure parameters
@@ -520,7 +496,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         /// <summary>
         /// Gets the value of the parameter cast as the system type
-        /// of the stored procedure parameter this parameter is associated with
         /// </summary>
         protected object GetParamAsSystemType(string param, string paramName, Type systemType)
         {

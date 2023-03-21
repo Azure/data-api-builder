@@ -187,7 +187,7 @@
           ]
         },
         {
-          "role": "policy_tester_REST",
+          "role": "database_policy_tester",
           "actions": [
             {
               "action": "Update",

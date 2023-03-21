@@ -1022,7 +1022,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                queryString: string.Empty,
                entityNameOrPath: _foreignKeyEntityName,
                sqlQuery: GetQuery("FindManyTestWithDatabasePolicy"),
-               clientRoleHeader: "policy_tester_REST"
+               clientRoleHeader: "database_policy_tester"
             );
 
             await SetupAndRunRestApiTest(
@@ -1030,7 +1030,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                queryString: string.Empty,
                entityNameOrPath: _foreignKeyEntityName,
                sqlQuery: GetQuery("FindInAccessibleRowWithDatabasePolicy"),
-               clientRoleHeader: "policy_tester_REST"
+               clientRoleHeader: "database_policy_tester"
            );
         }
 

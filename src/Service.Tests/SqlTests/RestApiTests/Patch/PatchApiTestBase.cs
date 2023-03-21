@@ -611,7 +611,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     expectedErrorMessage: $"Cannot perform INSERT and could not find {_foreignKeyEntityName} with primary key <id: 1234> to perform UPDATE on.",
                     expectedStatusCode: HttpStatusCode.NotFound,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString(),
-                    clientRoleHeader: "policy_tester_REST"
+                    clientRoleHeader: "database_policy_tester"
                     );
 
             Dictionary<string, StringValues> headerDictionary = new()
@@ -631,7 +631,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     expectedErrorMessage: $"No Update could be performed, record not found",
                     expectedStatusCode: HttpStatusCode.PreconditionFailed,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString(),
-                    clientRoleHeader: "policy_tester_REST"
+                    clientRoleHeader: "database_policy_tester"
                     );
 
         }

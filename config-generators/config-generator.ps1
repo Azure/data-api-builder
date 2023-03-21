@@ -30,7 +30,7 @@ $commandsFilesBasePath = $PSScriptRoot;
 $pathToDabDLL = Get-ChildItem -Path $cliBuildOutputPath -Recurse -include "Microsoft.DataApiBuilder.dll" | Select-Object -ExpandProperty FullName -First 1
 
 #Change the working directory to where the config file needs to be generated.
-$workingDirectory = $PSScriptRoot + "\..\src\Service\";
+$workingDirectory = $PSScriptRoot + "\..\src\Service.Tests\";
 Set-Location $workingDirectory;
 
 #Generates the config files for the selected database types.

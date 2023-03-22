@@ -15,7 +15,7 @@ trigger:
     - release/*
   paths:
     exclude:
-    - docs
+    - docs/*
 
 pool:
   vmImage: 'ubuntu-latest' # examples of other options: 'macOS-10.15', 'windows-2019'

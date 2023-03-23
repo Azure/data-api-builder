@@ -82,7 +82,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             string actualJson = @"{
                                     // Link for latest draft schema.
-                                    ""$schema"":""https://dataapibuilder.azureedge.net/schemas/vmajor.minor.patch-alpha/dab.draft.schema.json"",
+                                    ""$schema"":""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
                                     ""data-source"": {
                                     ""database-type"": ""mssql"",
                                         ""options"": {
@@ -93,7 +93,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                                     }
                                 }";
             string expectedJson = @"{
-                                    ""$schema"":""https://dataapibuilder.azureedge.net/schemas/vmajor.minor.patch-alpha/dab.draft.schema.json"",
+                                    ""$schema"":""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
                                     ""data-source"": {
                                     ""database-type"": ""mssql"",
                                         ""options"": {

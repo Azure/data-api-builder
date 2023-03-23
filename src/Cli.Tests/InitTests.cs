@@ -288,7 +288,7 @@ namespace Cli.Tests
         {
             InitOptions options = new(
                 databaseType: DatabaseType.mssql,
-                connectionString: "a!string@with#some$special%characters^to&check*proper(serialization)including space.",
+                connectionString: "A!string@with#some$special%characters^to&check*proper(serialization)including space.",
                 cosmosNoSqlDatabase: null,
                 cosmosNoSqlContainer: null,
                 graphQLSchemaPath: null,
@@ -296,14 +296,14 @@ namespace Cli.Tests
                 hostMode: HostModeType.Production,
                 corsOrigin: null,
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                config: _testRuntimeConfig);
+                config: TEST_RUNTIME_CONFIG_FILE);
 
             _basicRuntimeConfig =
             @"{" +
                 @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
                 @"""data-source"": {
                     ""database-type"": ""mssql"",
-                    ""connection-string"": ""a!string@with#some$special%characters^to&check*proper(serialization)including space."",
+                    ""connection-string"": ""A!string@with#some$special%characters^to&check*proper(serialization)including space."",
                     ""options"":{
                         ""set-session-context"": false
                     }

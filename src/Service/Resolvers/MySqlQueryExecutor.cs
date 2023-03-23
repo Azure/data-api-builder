@@ -61,6 +61,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             _attemptToSetAccessToken =
                 ShouldManagedIdentityAccessBeAttempted();
 
+            // Force always allow user variables
+            ConnectionStringBuilder.AllowUserVariables = true;
+
             if (runtimeConfigProvider.IsLateConfigured)
             {
                 ConnectionStringBuilder.SslMode = MySqlSslMode.VerifyFull;

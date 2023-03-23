@@ -44,6 +44,9 @@ update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tes
 update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tester_06:create,delete"
 update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tester_06:update" --fields.include "*"
 update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tester_06:read" --fields.include "*" --policy-database "@item.id eq 1940"
+update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tester_REST:read" --policy-database "@item.id ne 1234 or @item.id gt 1940"
+update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tester_REST:create"
+update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tester_REST:update" --policy-database "@item.id ne 1234"
 update Stock --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete" --rest commodities --graphql true --relationship stocks_price --target.entity stocks_price --cardinality one
 update Book --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete"
 update Book --config "dab-config.PostgreSql.json" --relationship publishers --target.entity Publisher --cardinality one

@@ -1074,6 +1074,30 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// Test to validate that the database policy filters are added to the query for FIND operation.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task FindTestOnTableWithDatabasePolicy()
+        {
+            await SetupAndRunRestApiTest(
+               primaryKeyRoute: null,
+               queryString: string.Empty,
+               entityNameOrPath: _foreignKeyEntityName,
+               sqlQuery: GetQuery("FindManyTestWithDatabasePolicy"),
+               clientRoleHeader: "policy_tester_REST"
+            );
+
+            await SetupAndRunRestApiTest(
+               primaryKeyRoute: "id/1234",
+               queryString: string.Empty,
+               entityNameOrPath: _foreignKeyEntityName,
+               sqlQuery: GetQuery("FindInAccessibleRowWithDatabasePolicy"),
+               clientRoleHeader: "policy_tester_REST"
+           );
+        }
+
         #endregion
 
         #region Negative Tests

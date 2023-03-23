@@ -432,6 +432,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
+                "FindManyTestWithDatabasePolicy",
+                $"SELECT [id], [name] FROM { _foreignKeyTableName } " +
+                $"WHERE [id] != 1234 or [id] > 1940 " +
+                $"ORDER BY [id] asc " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindInAccessibleRowWithDatabasePolicy",
+                $"SELECT [id], [name] FROM { _foreignKeyTableName } " +
+                $"WHERE [id] = 1234 and ([id] != 1234 or [id] > 1940)" +
+                $"ORDER BY [id] asc " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
                 "FindAllOnTableWithSecPolicy",
                 $"SELECT [id], [category], [revenue], [accessible_role] FROM { _tableWithSecurityPolicy } " +
                 $"WHERE [id] <= 2 " +

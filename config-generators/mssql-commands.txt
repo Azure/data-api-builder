@@ -35,6 +35,8 @@ add UpdateBookTitle --config "dab-config.MsSql.json" --source "update_book_title
 add GetAuthorsHistoryByFirstName --config "dab-config.MsSql.json" --source "get_authors_history_by_first_name" --source.type "stored-procedure" --source.params "firstName:Aaron" --permissions "anonymous:execute" --rest true --graphql SearchAuthorByFirstName
 add InsertAndDisplayAllBooksUnderGivenPublisher --config "dab-config.MsSql.json" --source "insert_and_display_all_books_for_given_publisher" --source.type "stored-procedure" --source.params "title:MyTitle,publisher_name:MyPublisher" --permissions "anonymous:execute" --rest true --graphql true
 add GQLmappings --config "dab-config.MsSql.json" --source "GQLmappings" --permissions "anonymous:*" --rest true --graphql true
+add Bookmarks --config "dab-config.MsSql.json" --source "bookmarks" --permissions "anonymous:*" --rest true --graphql true
+add MappedBookmarks --config "dab-config.MsSql.json" --source "mappedbookmarks" --permissions "anonymous:*" --rest true --graphql true
 update GQLmappings --config "dab-config.MsSql.json" --map "__column1:column1,__column2:column2" --permissions "authenticated:*"
 update Publisher --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship books --target.entity Book --cardinality many
 update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_01:create,delete"
@@ -126,3 +128,5 @@ update UpdateBookTitle --config "dab-config.MsSql.json" --permissions "authentic
 update Sales --config "dab-config.MsSql.json" --permissions "authenticated:*"
 update GetAuthorsHistoryByFirstName --config "dab-config.MsSql.json" --permissions "authenticated:execute"
 update InsertAndDisplayAllBooksUnderGivenPublisher --config "dab-config.MsSql.json" --permissions "authenticated:execute"
+update Bookmarks --config "dab-config.MsSql.json" --permissions "authenticated:*"
+update MappedBookmarks --config "dab-config.MsSql.json" --permissions "authenticated:*" --map "id:bkid,bkname:name"

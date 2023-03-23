@@ -150,7 +150,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             }
             else
             {
-                // Json Property in error response which the holds the actual exception properties.
+                // Json Property in error response which holds the actual exception properties.
                 string PARENT_PROPERTY_ERROR = "error";
 
                 //Generate expected error object

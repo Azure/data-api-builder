@@ -51,7 +51,7 @@ dab --version
 which should output something like:
 
 ```bash
-dab 0.5.34
+Microsoft.DataApiBuilder 0.5.34
 ```
 
 Where `0.5.34` is the version of DAB CLI that you have installed on your machine.

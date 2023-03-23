@@ -301,22 +301,32 @@ INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (4, 'Lost Record',
 INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (5, 'Filtered Record', 'Record to be Filtered on Find');
 
 SET IDENTITY_INSERT bookmarks ON
+DECLARE @UpperBound INT = 10000;
+WITH cteN(Number) AS
+(
+  SELECT TOP(10000) ROW_NUMBER() OVER (ORDER BY s1.[object_id])
+  FROM sys.all_columns AS s1
+  CROSS JOIN sys.all_columns AS s2
+)
 INSERT INTO bookmarks ([id], [bkname])
-SELECT
-	[value],
-    'Test Item #' + format([value], '00000')
-FROM 
-    GENERATE_SERIES(1, 10000, 1);
-
+SELECT 
+[Number], 
+'Test Item #' + format([Number], '00000')
+FROM cteN WHERE [Number] <= @UpperBound;
 SET IDENTITY_INSERT bookmarks OFF
 
-SET IDENTITY_INSERT mappedbookmarks ON
+SET IDENTITY_INSERT mappedbookmarks ON;
+WITH cteN(Number) AS
+(
+  SELECT TOP(10000) ROW_NUMBER() OVER (ORDER BY s1.[object_id])
+  FROM sys.all_columns AS s1
+  CROSS JOIN sys.all_columns AS s2
+)
 INSERT INTO mappedbookmarks ([id], [bkname])
-SELECT
-	[value],
-    'Test Item #' + format([value], '00000')
-FROM 
-    GENERATE_SERIES(1, 10000, 1);
+SELECT 
+[Number], 
+'Test Item #' + format([Number], '00000')
+FROM cteN WHERE [Number] <= @UpperBound;
 
 SET IDENTITY_INSERT mappedbookmarks OFF
 

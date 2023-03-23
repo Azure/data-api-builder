@@ -150,7 +150,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             }
             else
             {
-                // Json Property in error which the holds the actual exception properties.
+                // Json Property in error response which the holds the actual exception properties.
                 string PARENT_PROPERTY_ERROR = "error";
 
                 //Generate expected error object
@@ -158,7 +158,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 string expectedStatusCode = expectedErrorObj.GetProperty(PROPERTY_STATUS).ToString();
                 string expectedSubStatusCode = expectedErrorObj.GetProperty(PROPERTY_CODE).ToString();
 
-                if ("403".Equals(expectedStatusCode))
+                if ((int)HttpStatusCode.Forbidden == int.Parse(expectedStatusCode))
                 {
                     // In case of forbidden requests (403 status code), responseBody is read as empty.
                     Assert.IsTrue(string.IsNullOrEmpty(responseBody));

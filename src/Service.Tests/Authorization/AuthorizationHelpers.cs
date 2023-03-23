@@ -59,6 +59,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// <param name="excludedCols">columns NOT allowed for operation</param>
         /// <param name="databasePolicy">database policy for operation</param>
         /// <param name="requestPolicy">request policy for operation</param>
+        /// <param name="authProvider">Authentication provider</param>
+        /// <param name="dbType">Database type configured.</param>
         /// <returns></returns>
         public static RuntimeConfig InitRuntimeConfig(
             string entityName = TEST_ENTITY,

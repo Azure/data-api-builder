@@ -60,7 +60,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
 
         /// <summary>
         /// <code>Do: </code> Inserts new Publisher with name = 'New publisher'
-        /// <code>Check: </code> Mutation fails because the database policy is not satisfied by the mutation.
+        /// <code>Check: </code> Mutation fails because the database policy (@item.name ne 'New publisher') prohibits insertion of records with name = 'New publisher'.
         /// </summary>
         [TestMethod]
         public async Task InsertMutationFailingDatabasePolicy()

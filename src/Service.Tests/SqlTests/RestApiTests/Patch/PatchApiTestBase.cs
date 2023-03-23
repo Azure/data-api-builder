@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -585,14 +586,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     exceptionExpected: true,
                     expectedErrorMessage: RequestValidator.PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE,
                     expectedStatusCode: HttpStatusCode.BadRequest
-                    );
+            );
         }
 
         /// <summary>
-        /// Test to validate that PATCH operation which does not satisfy the database policy ("@item.id ne 1234")
-        /// has no rows accessible to update and thus fails.
+        /// Test to validate that PATCH operation fails because the database policy("@item.id ne 1234")
+        /// restricts modifying records where id is not 1234.
         /// </summary>
-        /// <returns></returns>
         [TestMethod]
         public virtual async Task PatchOneUpdateInAccessibleRowWithDatabasePolicy()
         {

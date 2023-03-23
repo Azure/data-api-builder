@@ -41,13 +41,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// <code>Do: </code> Attempt to insert a new publisher with name not allowed by database policy.
-        /// <code>Check: </code> Mutation fails with expected exception.
+        /// <code>Do: </code> Attempt to insert a new publisher with name not allowed by database policy (@item.name ne 'New publisher')
+        /// <code>Check: </code> Mutation fails with expected authorization failure.
         /// </summary>
         /// <param name="dbQuery">SELECT query to validate expected result.</param>
         /// <param name="errorMessage">Expected error message.</param>
         /// <param name="roleName">Custom client role in whose context this authenticated request will be executed</param>
-        /// <returns></returns>
         public async Task InsertMutationFailingDatabasePolicy(string dbQuery, string errorMessage, string roleName)
         {
             string graphQLMutationName = "createPublisher";
@@ -70,6 +69,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
 
             string dbResponse = await GetDatabaseResultAsync(dbQuery);
             using JsonDocument dbResponseJson = JsonDocument.Parse(dbResponse);
+
+            // Assert that the create mutation fails to insert the record into the table and that the select query returns no result.
             Assert.AreEqual(dbResponseJson.RootElement.GetProperty("count").GetInt64(), 0);
         }
 

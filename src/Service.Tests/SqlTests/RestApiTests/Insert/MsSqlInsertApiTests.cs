@@ -294,9 +294,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         }
 
         /// <summary>
-        /// Test to validate failure of insert operation which does not satisfy the database policy.
+        /// Test to validate failure of an insert operation which tries to insert a record
+        /// that not satisfy the database policy (@item.name ne 'New publisher')
         /// </summary>
-        /// <returns></returns>
         [TestMethod]
         public virtual async Task InsertOneFailingDatabasePolicy()
         {

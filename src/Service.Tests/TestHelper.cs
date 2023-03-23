@@ -237,5 +237,23 @@ namespace Azure.DataApiBuilder.Service.Tests
             },
             ""entities"": {}" +
           "}";
+
+        public static void ChangeHostTypeInConfigFile(string fileName, HostModeType hostModeType, string databaseType)
+        {
+            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(databaseType);
+            RuntimeConfig config = configProvider.GetRuntimeConfiguration();
+            HostGlobalSettings customHostGlobalSettings = config.HostGlobalSettings with { Mode = hostModeType };
+            JsonElement serializedCustomHostGlobalSettings =
+                JsonSerializer.SerializeToElement(customHostGlobalSettings, RuntimeConfig.SerializerOptions);
+            Dictionary<GlobalSettingsType, object> customRuntimeSettings = new(config.RuntimeSettings);
+            customRuntimeSettings.Remove(GlobalSettingsType.Host);
+            customRuntimeSettings.Add(GlobalSettingsType.Host, serializedCustomHostGlobalSettings);
+            RuntimeConfig configWithCustomHostMode =
+                config with { RuntimeSettings = customRuntimeSettings };
+            File.WriteAllText(
+                fileName,
+                JsonSerializer.Serialize(configWithCustomHostMode, RuntimeConfig.SerializerOptions));
+
+        }
     }
 }

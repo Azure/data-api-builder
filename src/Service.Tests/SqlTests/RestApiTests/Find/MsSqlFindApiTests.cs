@@ -229,6 +229,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
+                "FindTest_NoQueryParams_PaginationNextLink",
+                $"SELECT TOP 100 * FROM { _integrationPaginationTableName } " +
+                $"ORDER BY id asc " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTest_OrderByNotFirstQueryParam_PaginationNextLink",
+                $"SELECT TOP 100 id FROM { _integrationPaginationTableName } " +
+                $"ORDER BY id asc " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
                 "FindTestWithFirstMultiKeyPagination",
                 $"SELECT TOP 1 * FROM REVIEWS " +
                 $"WHERE 1=1 " +
@@ -265,6 +277,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 "FindTestWithIntTypeNullValuesOrderByAsc",
                 $"SELECT id AS typeid, int_types FROM type_table " +
                 $"ORDER BY int_types asc, id asc " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindMany_MappedColumn_NoOrderByQueryParameter",
+                $"SELECT TOP 100 id AS bkid, bkname AS name FROM mappedbookmarks " +
+                $"ORDER BY id asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {

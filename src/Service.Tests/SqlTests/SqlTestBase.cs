@@ -11,7 +11,6 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
-using System.Web;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
@@ -24,6 +23,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -467,7 +467,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     string baseUrl = HttpClient.BaseAddress.ToString() + restPath + "/" + entityNameOrPath;
                     if (!string.IsNullOrEmpty(queryString))
                     {
-                        baseUrl = baseUrl + "?" + HttpUtility.ParseQueryString(queryString).ToString();
+                        // Parse query string with AspNetCore components for consistent URI encoding.
+                        baseUrl = QueryHelpers.AddQueryString(uri: baseUrl, queryString: QueryHelpers.ParseQuery(queryString));
                     }
 
                     string dbResult = await GetDatabaseResultAsync(sqlQuery, expectJson);

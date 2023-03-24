@@ -589,6 +589,54 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         /// <summary>
+        /// Test to validate that PATCH operation on inaccessible row (by virtue of database policy) fails.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public virtual async Task PatchOneUpdateInAccessibleRowWithDatabasePolicy()
+        {
+            string requestBody = @"
+            {
+                ""name"": ""New Publisher""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/1234",
+                    queryString: null,
+                    entityNameOrPath: _foreignKeyEntityName,
+                    sqlQuery: string.Empty,
+                    operationType: Config.Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    exceptionExpected: true,
+                    expectedErrorMessage: $"Cannot perform INSERT and could not find {_foreignKeyEntityName} with primary key <id: 1234> to perform UPDATE on.",
+                    expectedStatusCode: HttpStatusCode.NotFound,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString(),
+                    clientRoleHeader: "policy_tester_REST"
+                    );
+
+            Dictionary<string, StringValues> headerDictionary = new()
+            {
+                { "If-Match", "*" }
+            };
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/1234",
+                    queryString: null,
+                    entityNameOrPath: _foreignKeyEntityName,
+                    sqlQuery: string.Empty,
+                    operationType: Config.Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    headers: new HeaderDictionary(headerDictionary),
+                    exceptionExpected: true,
+                    expectedErrorMessage: $"No Update could be performed, record not found",
+                    expectedStatusCode: HttpStatusCode.PreconditionFailed,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString(),
+                    clientRoleHeader: "policy_tester_REST"
+                    );
+
+        }
+
+        /// <summary>
         /// Test to verify that we throw exception for invalid/bad
         /// PATCH requests on views.
         /// </summary>

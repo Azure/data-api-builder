@@ -185,6 +185,24 @@
             "Create",
             "Delete"
           ]
+        },
+        {
+          "role": "policy_tester_REST",
+          "actions": [
+            {
+              "action": "Update",
+              "policy": {
+                "database": "@item.id ne 1234"
+              }
+            },
+            "Create",
+            {
+              "action": "Read",
+              "policy": {
+                "database": "@item.id ne 1234 or @item.id gt 1940"
+              }
+            }
+          ]
         }
       ],
       "relationships": {

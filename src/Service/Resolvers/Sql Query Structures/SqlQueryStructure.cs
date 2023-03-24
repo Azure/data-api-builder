@@ -489,7 +489,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                      MakeParamWithValue(GetParamAsSystemType(column.Value!.ToString()!, column.ColumnName, GetColumnSystemType(column.ColumnName))) :
                      MakeParamWithValue(null);
             }
-            
+
             PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(afterJsonValues.ToList());
         }
 

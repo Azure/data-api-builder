@@ -44,18 +44,18 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 if (requestParams.TryGetValue(paramKey, out object? requestParamValue))
                 {
                     // Parameterize, then add referencing parameter to ProcedureParameters dictionary
-                        string? parametrizedName = null;
-                        if (requestParamValue is not null)
-                        {
-                            Type systemType = GetUnderlyingStoredProcedureDefinition().Parameters[paramKey].SystemType!;
-                            parametrizedName = MakeParamWithValue(GetParamAsSystemType(requestParamValue.ToString()!, paramKey, systemType));
-                        }
-                        else
-                        {
-                            parametrizedName = MakeParamWithValue(null);
-                        }
+                    string? parametrizedName = null;
+                    if (requestParamValue is not null)
+                    {
+                        Type systemType = GetUnderlyingStoredProcedureDefinition().Parameters[paramKey].SystemType!;
+                        parametrizedName = MakeParamWithValue(GetParamAsSystemType(requestParamValue.ToString()!, paramKey, systemType));
+                    }
+                    else
+                    {
+                        parametrizedName = MakeParamWithValue(null);
+                    }
 
-                        ProcedureParameters.Add(paramKey, $"{parametrizedName}");
+                    ProcedureParameters.Add(paramKey, $"{parametrizedName}");
                 }
                 else
                 {

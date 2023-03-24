@@ -122,7 +122,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else
             {
-                if(MetadataProvider.IsDevelopmentMode())
+                if (MetadataProvider.IsDevelopmentMode())
                 {
                     throw new DataApiBuilderException(
                     message: $"{columnName} is not a valid column of {DatabaseObject.Name}",

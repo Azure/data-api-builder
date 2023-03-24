@@ -297,11 +297,16 @@ namespace Azure.DataApiBuilder.Service.Tests
         {
             switch (httpMethod)
             {
-                case "GET": return HttpMethod.Get;
-                case "POST": return HttpMethod.Post;
-                case "PUT": return HttpMethod.Put;
-                case "PATCH": return HttpMethod.Patch;
-                case "DELETE": return HttpMethod.Delete;
+                case "GET":
+                    return HttpMethod.Get;
+                case "POST":
+                    return HttpMethod.Post;
+                case "PUT":
+                    return HttpMethod.Put;
+                case "PATCH":
+                    return HttpMethod.Patch;
+                case "DELETE":
+                    return HttpMethod.Delete;
                 default:
                     throw new DataApiBuilderException(
                         message: "HTTP Verb Type not supported.",

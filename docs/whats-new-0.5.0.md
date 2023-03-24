@@ -27,7 +27,7 @@ dotnet tool install --global Microsoft.DataApiBuilder
 The Json schema is available here:
 
 ```text
-https://dataapibuilder.azureedge.net/schemas/v0.5.0-beta/dab.draft.schema.json
+https://github.com/Azure/data-api-builder/releases/download/v0.5.0-beta/dab.draft.schema.json
 ```
 
 This will give you intellisense if you are using an IDE, like VS Code, that supports JSON Schemas. Take a look at `basic-empty-dab-config.json` in the `samples` folder, to have a starting point when manually creating the `dab-config.json` file.

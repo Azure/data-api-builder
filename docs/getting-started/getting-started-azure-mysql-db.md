@@ -41,7 +41,7 @@ The command will generate a config file called dab-config.MySql.json looking lik
 
 ```json
 {
-  "$schema": "https://dataapibuilder.azureedge.net/schemas/v{dab-version}/dab.draft.schema.json",
+  "$schema": "https://github.com/Azure/data-api-builder/releases/download/v{dab-version}/dab.draft.schema.json",
   "data-source": {
     "database-type": "mysql",
     "connection-string": "Server=demoazuredbmysql.mysql.database.azure.com;User ID=dbusername;Password=<Password>;database=<dbname>;Sslmode=Required;SslCa=<path-to-SSLcert>"

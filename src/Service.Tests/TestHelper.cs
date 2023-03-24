@@ -3,10 +3,13 @@
 
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
+using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -16,6 +19,14 @@ namespace Azure.DataApiBuilder.Service.Tests
 {
     public class TestHelper
     {
+
+        public const string REQUESTBODY = @"
+                    {
+                        ""title"": ""New book"",
+                        ""publisher_id"": ""one""
+                    }
+                ";
+
         /// <summary>
         /// Given the testing environment, retrieve the config path.
         /// </summary>
@@ -238,7 +249,7 @@ namespace Azure.DataApiBuilder.Service.Tests
             ""entities"": {}" +
           "}";
 
-        public static void ChangeHostTypeInConfigFile(string fileName, HostModeType hostModeType, string databaseType)
+        public static void ChangeHostTypeInConfigFile(HostModeType hostModeType, string databaseType)
         {
             RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(databaseType);
             RuntimeConfig config = configProvider.GetRuntimeConfiguration();
@@ -251,9 +262,26 @@ namespace Azure.DataApiBuilder.Service.Tests
             RuntimeConfig configWithCustomHostMode =
                 config with { RuntimeSettings = customRuntimeSettings };
             File.WriteAllText(
-                fileName,
+                "custom-config.json",
                 JsonSerializer.Serialize(configWithCustomHostMode, RuntimeConfig.SerializerOptions));
 
+        }
+
+        public static HttpMethod GetHttpMethod(string httpMethod)
+        {
+            switch (httpMethod)
+            {
+                case "GET": return HttpMethod.Get;
+                case "POST": return HttpMethod.Post;
+                case "PUT": return HttpMethod.Put;
+                case "PATCH": return HttpMethod.Patch;
+                case "DELETE": return HttpMethod.Delete;
+                default:
+                    throw new DataApiBuilderException(
+                        message: "HTTP Request Type not supported.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
+            }
         }
     }
 }

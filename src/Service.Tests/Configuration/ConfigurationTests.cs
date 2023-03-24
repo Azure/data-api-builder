@@ -947,6 +947,172 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
+        /// Validates the error message that is shown for requests with incorrect parameter type
+        /// when the engine is running in Production mode. The error messages in Production mode is
+        /// very generic to not reveal information about the underlying database objects backing the entity.
+        /// This test runs against a PostgreSql database.
+        /// </summary>
+        /// <param name="requestType">Type of REST request</param>
+        /// <param name="requestPath">Endpoint for the REST request</param>
+        /// <param name="expectedErrorMessage">Right error message that should be shown to the end user</param>
+        [DataTestMethod]
+        [TestCategory(TestCategory.POSTGRESQL)]
+        [DataRow("GET", "/api/Book/id/one", "Invalid value provided for field: id", DisplayName = "Validates generic error message for a bad GET request on tables in production mode for PostrgeSql")]
+        [DataRow("GET", "/api/books_view_all/id/one", "Invalid value provided for field: id", DisplayName = "Validates generic error message for a bad GET request on views in production mode for PostrgeSql")]
+        [DataRow("POST","/api/Book", "Invalid value provided for field: publisher_id", DisplayName = "Validates generic error message for a bad POST request on tables in production mode for PostrgeSql")]
+        [DataRow("PUT", "/api/books_view_all/id/one", "Invalid value provided for field: id", DisplayName = "Validates generic error message for a bad PUT request on tables in production mode for PostrgeSql")]
+        [DataRow("PATCH", "/api/books_view_all/id/one", "Invalid value provided for field: id", DisplayName = "Validates generic error message for a bad PATCH request on tables in production mode for PostrgeSql")]
+        [DataRow("DELETE", "/api/books_view_all/id/one", "Invalid value provided for field: id", DisplayName = "Validates generic error message for a bad DELETE request on tables in production mode for PostrgeSql")]
+
+        public async Task TestErrorMessageForRestApiForPostgreSql(
+            string requestType,
+            string requestPath,
+            string expectedErrorMessage)
+        {
+            const string CUSTOM_CONFIG = "custom-config.json";
+            TestHelper.ChangeHostTypeInConfigFile(HostModeType.Production, TestCategory.POSTGRESQL);
+            string[] args = new[]
+            {
+                    $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                HttpMethod httpMethod = TestHelper.GetHttpMethod(requestType);       
+                HttpRequestMessage request;
+                if("GET".Equals(requestType, comparisonType: StringComparison.OrdinalIgnoreCase) ||
+                   "DELETE".Equals(requestType, comparisonType: StringComparison.OrdinalIgnoreCase))
+                {
+                    request = new(httpMethod, requestPath);
+                }
+                else
+                {
+                    request = new(httpMethod, requestPath)
+                    {
+                        Content = JsonContent.Create(TestHelper.REQUESTBODY)
+                    };
+                }
+                
+                HttpResponseMessage response = await client.SendAsync(request);
+                string body = await response.Content.ReadAsStringAsync();
+                Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
+                Assert.IsTrue(body.Contains(expectedErrorMessage));                       
+            }
+        }
+
+        /// <summary>
+        /// Validates the error message that is shown for requests with incorrect parameter type
+        /// when the engine is running in Production mode. The error messages in Production mode is
+        /// very generic to not reveal information about the underlying database objects backing the entity.
+        /// This test runs against a MsSql database.
+        /// </summary>
+        /// <param name="requestType">Type of REST request</param>
+        /// <param name="requestPath">Endpoint for the REST request</param>
+        /// <param name="expectedErrorMessage">Right error message that should be shown to the end user</param>
+        [DataTestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        [DataRow("GET", "/api/Book/id/one", "Invalid value provided for field: id", DisplayName = "Validates generic error message for a bad GET request on tables in production mode for MsSql")]
+        [DataRow("GET", "/api/books_view_all/id/one", "Invalid value provided for field: id", DisplayName = "Validates generic error message for a bad GET request on views in production mode for MsSql")]
+        [DataRow("GET", "/api/GetBook?id=one", "Invalid value provided for field: id", DisplayName = "Validates generic error message for a bad GET request on stored-procedure in production mode for MsSql")]
+        [DataRow("POST","/api/Book", "Invalid value provided for field: publisher_id", DisplayName = "Validates generic error message for a bad POST request on tables in production mode for MsSql")]
+        [DataRow("PUT", "/api/books_view_all/id/one", "Invalid value provided for field: id", DisplayName = "Validates generic error message for a bad PUT request on tables in production mode for MsSql")]
+        [DataRow("PATCH", "/api/books_view_all/id/one", "Invalid value provided for field: id", DisplayName = "Validates generic error message for a bad PATCH request on tables in production mode for MsSql")]
+        [DataRow("DELETE", "/api/books_view_all/id/one", "Invalid value provided for field: id", DisplayName = "Validates generic error message for a bad DELETE request on tables in production mode for MsSql")]
+
+        public async Task TestErrorMessageForRestApiForMsSql(
+            string requestType,
+            string requestPath,
+            string expectedErrorMessage)
+        {
+            const string CUSTOM_CONFIG = "custom-config.json";
+            TestHelper.ChangeHostTypeInConfigFile(HostModeType.Production, TestCategory.MSSQL);
+            string[] args = new[]
+            {
+                    $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                HttpMethod httpMethod = TestHelper.GetHttpMethod(requestType);       
+                HttpRequestMessage request;
+                if("GET".Equals(requestType, comparisonType: StringComparison.OrdinalIgnoreCase) ||
+                   "DELETE".Equals(requestType, comparisonType: StringComparison.OrdinalIgnoreCase))
+                {
+                    request = new(httpMethod, requestPath);
+                }
+                else
+                {
+                    request = new(httpMethod, requestPath)
+                    {
+                        Content = JsonContent.Create(TestHelper.REQUESTBODY)
+                    };
+                }
+                
+                HttpResponseMessage response = await client.SendAsync(request);
+                string body = await response.Content.ReadAsStringAsync();
+                Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
+                Assert.IsTrue(body.Contains(expectedErrorMessage));                       
+            }
+        }
+
+        /// <summary>
+        /// Validates the error message that is shown for requests with incorrect parameter type
+        /// when the engine is running in Production mode. The error messages in Production mode is
+        /// very generic to not reveal information about the underlying database objects backing the entity.
+        /// This test runs against a MySql database.
+        /// </summary>
+        /// <param name="requestType">Type of REST request</param>
+        /// <param name="requestPath">Endpoint for the REST request</param>
+        /// <param name="expectedErrorMessage">Right error message that should be shown to the end user</param>
+        [DataTestMethod]
+        [TestCategory(TestCategory.MYSQL)]
+        [DataRow("GET", "/api/Book/id/one", "Invalid value provided for field: id", DisplayName = "Validates generic error message for a bad GET request on tables in production mode for MySql")]
+        [DataRow("GET", "/api/books_view_all/id/one", "Invalid value provided for field: id", DisplayName = "Validates generic error message for a bad GET request on views in production mode for MySql")]
+        [DataRow("POST","/api/Book", "Invalid value provided for field: publisher_id", DisplayName = "Validates generic error message for a bad POST request on tables in production mode for MySql")]
+        [DataRow("PUT", "/api/books_view_all/id/one", "Invalid value provided for field: id", DisplayName = "Validates generic error message for a bad PUT request on tables in production mode for MySql")]
+        [DataRow("PATCH", "/api/books_view_all/id/one", "Invalid value provided for field: id", DisplayName = "Validates generic error message for a bad PATCH request on tables in production mode for MySql")]
+        [DataRow("DELETE", "/api/books_view_all/id/one", "Invalid value provided for field: id", DisplayName = "Validates generic error message for a bad DELETE request on tables in production mode for MySql")]
+
+        public async Task TestErrorMessageForRestApiForMySql(
+            string requestType,
+            string requestPath,
+            string expectedErrorMessage)
+        {
+            const string CUSTOM_CONFIG = "custom-config.json";
+            TestHelper.ChangeHostTypeInConfigFile(HostModeType.Production, TestCategory.MYSQL);
+            string[] args = new[]
+            {
+                    $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                HttpMethod httpMethod = TestHelper.GetHttpMethod(requestType);       
+                HttpRequestMessage request;
+                if("GET".Equals(requestType, comparisonType: StringComparison.OrdinalIgnoreCase) ||
+                   "DELETE".Equals(requestType, comparisonType: StringComparison.OrdinalIgnoreCase))
+                {
+                    request = new(httpMethod, requestPath);
+                }
+                else
+                {
+                    request = new(httpMethod, requestPath)
+                    {
+                        Content = JsonContent.Create(TestHelper.REQUESTBODY)
+                    };
+                }
+                
+                HttpResponseMessage response = await client.SendAsync(request);
+                string body = await response.Content.ReadAsStringAsync();
+                Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
+                Assert.IsTrue(body.Contains(expectedErrorMessage));                       
+            }
+        }
+
+        /// <summary>
         /// Tests that the when Rest or GraphQL is disabled Globally,
         /// any requests made will get a 404 response.
         /// </summary>

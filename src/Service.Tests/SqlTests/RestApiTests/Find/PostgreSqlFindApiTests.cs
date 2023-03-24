@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Net;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -882,22 +881,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         public override Task FindStoredProcedureWithNonexistentParameter()
         {
             throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        public async Task TestBadRequest()
-        {
-            TestHelper.ChangeHostTypeInConfigFile("dab-config.PostgreSql.json", Config.HostModeType.Production, DatabaseEngine);
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: "id/one",
-                queryString: string.Empty,
-                entityNameOrPath: _integrationEntityName,
-                sqlQuery: null,
-                exceptionExpected: true,
-                expectedErrorMessage: "Invalid value provided for field: id",
-                expectedStatusCode: HttpStatusCode.BadRequest
-            );
-            TestHelper.ChangeHostTypeInConfigFile("dab-config.PostgreSql.json", Config.HostModeType.Development, DatabaseEngine);
         }
 
         public override string GetDefaultSchema()

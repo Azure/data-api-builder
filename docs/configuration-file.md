@@ -78,22 +78,27 @@ The configuration file has a `$schema` property as the first property in the con
 "$schema": "..."
 ```
 
-From version 0.4.11-alpha schema is available at:
+From version 0.3.7-alpha schema is available at:
 
 ```txt
-https://dataapibuilder.azureedge.net/schemas/<VERSION>-<suffix>/dab.draft.schema.json
+https://github.com/Azure/data-api-builder/releases/download/<VERSION>-<suffix>/dab.draft.schema.json
 ```
 
 make sure to replace the **VERSION-suffix** placeholder with the version you want to use, for example:
 
 ```txt
-https://dataapibuilder.azureedge.net/schemas/v0.4.11-alpha/dab.draft.schema.json
+https://github.com/Azure/data-api-builder/releases/download/v0.3.7-alpha/dab.draft.schema.json
+```
+
+If there are no suffix, then simply ignore it, for example:
+```txt
+https://github.com/Azure/data-api-builder/releases/download/v0.5.34/dab.draft.schema.json
 ```
 
 the **latest** version of the schema is always available at
 
 ```txt
-https://dataapibuilder.azureedge.net/schemas/latest/dab.draft.schema.json 
+https://github.com/Azure/data-api-builder/releases/latest/download/dab.draft.schema.json
 ```
 
 ### Data Source
@@ -592,7 +597,7 @@ This is a sample config file to give an idea of how the json config consumed by 
 
 ```json
 {
-  "$schema": "https://dataapibuilder.azureedge.net/schemas/v0.5.0-beta/dab.draft.schema.json",
+  "$schema": "https://github.com/Azure/data-api-builder/releases/download/v{dab-version}/dab.draft.schema.json",
   "data-source": {
     "database-type": "mssql",
     "connection-string": "Server=localhost;Database=PlaygroundDB;User ID=PlaygroundUser;Password=ReplaceMe;TrustServerCertificate=false;Encrypt=True"

@@ -46,7 +46,7 @@ The command will generate a config file called `dab-config.json` looking like th
 
 ```json
 {
-  "$schema": "dab.draft-01.schema.json",
+  "$schema": "https://github.com/Azure/data-api-builder/releases/download/v{dab-version}/dab.draft.schema.json",
   "data-source": {
     "database-type": "mssql",
     "connection-string": "Server=localhost;Database=PlaygroundDB;User ID=PlaygroundUser;Password=ReplaceMe;TrustServerCertificate=true"

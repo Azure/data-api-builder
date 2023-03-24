@@ -13,9 +13,6 @@ trigger:
     - main
     - gh-readonly-queue/main
     - release/*
-  paths:
-    exclude:
-    - docs/*
 
 pool:
   vmImage: 'ubuntu-latest' # examples of other options: 'macOS-10.15', 'windows-2019'

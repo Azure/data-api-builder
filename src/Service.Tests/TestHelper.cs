@@ -19,14 +19,6 @@ namespace Azure.DataApiBuilder.Service.Tests
 {
     public class TestHelper
     {
-
-        public const string REQUESTBODY = @"
-                    {
-                        ""title"": ""New book"",
-                        ""publisher_id"": ""one""
-                    }
-                ";
-
         /// <summary>
         /// Given the testing environment, retrieve the config path.
         /// </summary>
@@ -249,7 +241,34 @@ namespace Azure.DataApiBuilder.Service.Tests
             ""entities"": {}" +
           "}";
 
-        public static void ChangeHostTypeInConfigFile(HostModeType hostModeType, string databaseType)
+        /// <summary>
+        /// A valid REST API request body with correct parameter types for all the fields.
+        /// </summary>
+        public const string REQUEST_BODY_WITH_CORRECT_PARAM_TYPES = @"
+                    {
+                        ""title"": ""New book"",
+                        ""publisher_id"": 1234
+                    }
+                ";
+
+        /// <summary>
+        /// An invalid REST API request body with incorrect parameter type for publisher_id field.
+        /// </summary>
+        public const string REQUEST_BODY_WITH_INCORRECT_PARAM_TYPES = @"
+                    {
+                        ""title"": ""New book"",
+                        ""publisher_id"": ""one""
+                    }
+                ";
+
+        /// <summary>
+        /// Utility method that reads the config file for a given database type and constructs a
+        /// new config file with changes just in the host mode section.
+        /// </summary>
+        /// <param name="configFileName">Name of the new config file to be constructed</param>
+        /// <param name="hostModeType">HostMode for the engine</param>
+        /// <param name="databaseType">Database type</param>
+        public static void ChangeHostTypeInConfigFile(string configFileName, HostModeType hostModeType, string databaseType)
         {
             RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(databaseType);
             RuntimeConfig config = configProvider.GetRuntimeConfiguration();
@@ -262,11 +281,18 @@ namespace Azure.DataApiBuilder.Service.Tests
             RuntimeConfig configWithCustomHostMode =
                 config with { RuntimeSettings = customRuntimeSettings };
             File.WriteAllText(
-                "custom-config.json",
+                configFileName,
                 JsonSerializer.Serialize(configWithCustomHostMode, RuntimeConfig.SerializerOptions));
 
         }
 
+        /// <summary>
+        /// Utility method that fetches the HTTP method as HttpMethod type
+        /// from the given string type.
+        /// </summary>
+        /// <param name="httpMethod"></param>
+        /// <returns></returns>
+        /// <exception cref="DataApiBuilderException"></exception>
         public static HttpMethod GetHttpMethod(string httpMethod)
         {
             switch (httpMethod)
@@ -278,7 +304,7 @@ namespace Azure.DataApiBuilder.Service.Tests
                 case "DELETE": return HttpMethod.Delete;
                 default:
                     throw new DataApiBuilderException(
-                        message: "HTTP Request Type not supported.",
+                        message: "HTTP Verb Type not supported.",
                         statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
             }

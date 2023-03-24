@@ -20,24 +20,44 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         public static FieldDefinitionNode GenerateStoredProcedureSchema(
             NameNode name,
             Entity entity,
-            IEnumerable<string>? rolesAllowed = null)
+            DatabaseObject dbObject,
+            IEnumerable<string>? rolesAllowed = null,
+            ObjectTypeDefinitionNode? objectTypeDefinitionNode = null
+            )
         {
             List<InputValueDefinitionNode> inputValues = new();
             List<DirectiveNode> fieldDefinitionNodeDirectives = new();
+            Dictionary<string, FieldDefinitionNode> spGraphQLParameters = new();
+
+            StoredProcedureDefinition spdef = ((DatabaseStoredProcedure)dbObject).StoredProcedureDefinition;
+
+            if (objectTypeDefinitionNode is not null)
+            {
+                // We're only getting the output result set column names, not the parameter names.
+                // Maybe just use the entityDefinition, and add validation that it is in fact have proper param names defined in config.
+                foreach (FieldDefinitionNode node in objectTypeDefinitionNode.Fields)
+                {
+                    spGraphQLParameters.TryAdd(node.Name.ToString(), node);
+                }
+            }
 
             if (entity.Parameters is not null)
             {
                 foreach (string param in entity.Parameters.Keys)
                 {
-                    Tuple<string, IValueNode> defaultGraphQLValue = GetGraphQLTypeAndNodeTypeFromStringValue(entity.Parameters[param].ToString()!);
+                    // parameters from the runtime config have values that may not cast exactly to the value type defined in the database.
+                    // the param name and the output result set column name may differ, so we need access to both here. Which requires a DBobject from sqlmetadataprovider.
+                    string defaultValueFromConfig = ((JsonElement)entity.Parameters[param]).ToString();
+                    Tuple<string, IValueNode> defaultGraphQLValue = ConvertValueToGraphQLType(defaultValueFromConfig, parameterDefinition: spdef.Parameters[param]);
+
                     inputValues.Add(
                         new(
                             location: null,
-                            new(param),
-                            new StringValueNode($"parameters for {name.Value} stored-procedure"),
-                            new NamedTypeNode(defaultGraphQLValue.Item1),
+                            name: new(param),
+                            description: new StringValueNode($"parameters for {name.Value} stored-procedure"),
+                            type: new NamedTypeNode(defaultGraphQLValue.Item1),
                             defaultValue: defaultGraphQLValue.Item2,
-                            new List<DirectiveNode>())
+                            directives: new List<DirectiveNode>())
                         );
                 }
             }

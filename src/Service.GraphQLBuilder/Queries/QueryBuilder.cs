@@ -39,7 +39,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             DatabaseType databaseType,
             IDictionary<string, Entity> entities,
             Dictionary<string, InputObjectTypeDefinitionNode> inputTypes,
-            Dictionary<string, EntityMetadata>? entityPermissionsMap = null)
+            Dictionary<string, EntityMetadata>? entityPermissionsMap = null,
+            Dictionary<string, DatabaseObject>? dbObjects = null
+            )
         {
             List<FieldDefinitionNode> queryFields = new();
             List<ObjectTypeDefinitionNode> returnTypes = new();
@@ -61,7 +63,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
 
                         if (isSPDefinedAsQuery && rolesAllowedForExecute.Any())
                         {
-                            queryFields.Add(GraphQLStoredProcedureBuilder.GenerateStoredProcedureSchema(name, entity, rolesAllowedForExecute));
+                            if (dbObjects is not null && dbObjects.TryGetValue(entityName, out DatabaseObject? dbObject) && dbObject is not null)
+                            {
+                                queryFields.Add(GraphQLStoredProcedureBuilder.GenerateStoredProcedureSchema(name, entity, dbObject, rolesAllowedForExecute));
+                            }
                         }
                     }
                     else

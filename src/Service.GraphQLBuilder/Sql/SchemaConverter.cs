@@ -68,25 +68,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
 
                 if (databaseObject.SourceType is not SourceType.StoredProcedure && column.DefaultValue is not null)
                 {
-                    IValueNode arg = column.DefaultValue switch
-                    {
-                        byte value => new ObjectValueNode(new ObjectFieldNode(BYTE_TYPE, new IntValueNode(value))),
-                        short value => new ObjectValueNode(new ObjectFieldNode(SHORT_TYPE, new IntValueNode(value))),
-                        int value => new ObjectValueNode(new ObjectFieldNode(INT_TYPE, value)),
-                        long value => new ObjectValueNode(new ObjectFieldNode(LONG_TYPE, new IntValueNode(value))),
-                        string value => new ObjectValueNode(new ObjectFieldNode(STRING_TYPE, value)),
-                        bool value => new ObjectValueNode(new ObjectFieldNode(BOOLEAN_TYPE, value)),
-                        float value => new ObjectValueNode(new ObjectFieldNode(SINGLE_TYPE, new SingleType().ParseValue(value))),
-                        double value => new ObjectValueNode(new ObjectFieldNode(FLOAT_TYPE, value)),
-                        decimal value => new ObjectValueNode(new ObjectFieldNode(DECIMAL_TYPE, new FloatValueNode(value))),
-                        DateTime value => new ObjectValueNode(new ObjectFieldNode(DATETIME_TYPE, new DateTimeType().ParseResult(value))),
-                        DateTimeOffset value => new ObjectValueNode(new ObjectFieldNode(DATETIME_TYPE, new DateTimeType().ParseValue(value))),
-                        byte[] value => new ObjectValueNode(new ObjectFieldNode(BYTEARRAY_TYPE, new ByteArrayType().ParseValue(value))),
-                        _ => throw new DataApiBuilderException(
-                            message: $"The type {column.DefaultValue.GetType()} is not supported as a GraphQL default value",
-                            statusCode: HttpStatusCode.InternalServerError,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping)
-                    };
+                    IValueNode arg = CreateValueNodeFromDbObjectMetadata(column.DefaultValue);
 
                     directives.Add(new DirectiveNode(DefaultValueDirectiveType.DirectiveName, new ArgumentNode("value", arg)));
                 }
@@ -249,6 +231,37 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                         statusCode: HttpStatusCode.InternalServerError,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping)
             };
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="metadataValue"></param>
+        /// <returns></returns>
+        /// <exception cref="DataApiBuilderException"></exception>
+        public static IValueNode CreateValueNodeFromDbObjectMetadata(object metadataValue)
+        {
+            IValueNode arg = metadataValue switch
+            {
+                byte value => new ObjectValueNode(new ObjectFieldNode(BYTE_TYPE, new IntValueNode(value))),
+                short value => new ObjectValueNode(new ObjectFieldNode(SHORT_TYPE, new IntValueNode(value))),
+                int value => new ObjectValueNode(new ObjectFieldNode(INT_TYPE, value)),
+                long value => new ObjectValueNode(new ObjectFieldNode(LONG_TYPE, new IntValueNode(value))),
+                string value => new ObjectValueNode(new ObjectFieldNode(STRING_TYPE, value)),
+                bool value => new ObjectValueNode(new ObjectFieldNode(BOOLEAN_TYPE, value)),
+                float value => new ObjectValueNode(new ObjectFieldNode(SINGLE_TYPE, new SingleType().ParseValue(value))),
+                double value => new ObjectValueNode(new ObjectFieldNode(FLOAT_TYPE, value)),
+                decimal value => new ObjectValueNode(new ObjectFieldNode(DECIMAL_TYPE, new FloatValueNode(value))),
+                DateTime value => new ObjectValueNode(new ObjectFieldNode(DATETIME_TYPE, new DateTimeType().ParseResult(value))),
+                DateTimeOffset value => new ObjectValueNode(new ObjectFieldNode(DATETIME_TYPE, new DateTimeType().ParseValue(value))),
+                byte[] value => new ObjectValueNode(new ObjectFieldNode(BYTEARRAY_TYPE, new ByteArrayType().ParseValue(value))),
+                _ => throw new DataApiBuilderException(
+                    message: $"The type {metadataValue.GetType()} is not supported as a GraphQL default value",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping)
+            };
+
+            return arg;
         }
     }
 }

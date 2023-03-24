@@ -2,9 +2,12 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Sql;
 using HotChocolate.Language;
 using HotChocolate.Types;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
@@ -211,22 +214,34 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <summary>
         /// Parse a given string value to supported GraphQL Type and GraphQLValueNode
         /// </summary>
-        public static Tuple<string, IValueNode> GetGraphQLTypeAndNodeTypeFromStringValue(string stringValue)
+        /// <param name="defaultValueFromConfig"></param>
+        /// <param name="node"></param>
+        /// <returns></returns>
+        /// <exception cref="DataApiBuilderException"></exception>
+        public static Tuple<string, IValueNode> ConvertValueToGraphQLType(string defaultValueFromConfig, ParameterDefinition parameterDefinition)
         {
-            if (int.TryParse(stringValue, out int integerValue))
+            string paramValueType = SchemaConverter.GetGraphQLTypeForColumnType(type: parameterDefinition.SystemType);
+            //string fieldValueType = field.Type.NamedType().Name.Value;
+            Tuple<string, IValueNode> valueNode = paramValueType switch
             {
-                return new(LONG_TYPE, new IntValueNode(integerValue));
-            }
-            else if (double.TryParse(stringValue, out double floatingValue))
-            {
-                return new(FLOAT_TYPE, new FloatValueNode(floatingValue));
-            }
-            else if (bool.TryParse(stringValue, out bool booleanValue))
-            {
-                return new(BOOLEAN_TYPE, new BooleanValueNode(booleanValue));
-            }
+                BYTE_TYPE => new(BYTE_TYPE, new IntValueNode(byte.Parse(defaultValueFromConfig))),
+                SHORT_TYPE => new(SHORT_TYPE, new IntValueNode(short.Parse(defaultValueFromConfig))),
+                INT_TYPE => new(INT_TYPE, new IntValueNode(int.Parse(defaultValueFromConfig))),
+                LONG_TYPE => new(LONG_TYPE, new IntValueNode(long.Parse(defaultValueFromConfig))),
+                STRING_TYPE => new(STRING_TYPE, new StringValueNode(defaultValueFromConfig)),
+                BOOLEAN_TYPE => new(BOOLEAN_TYPE, new BooleanValueNode(bool.Parse(defaultValueFromConfig))),
+                SINGLE_TYPE => new(SINGLE_TYPE, new SingleType().ParseValue(defaultValueFromConfig)),
+                FLOAT_TYPE => new(FLOAT_TYPE, new FloatValueNode(double.Parse(defaultValueFromConfig))),
+                DECIMAL_TYPE => new(DECIMAL_TYPE, new FloatValueNode(decimal.Parse(defaultValueFromConfig))),
+                DATETIME_TYPE => new(DATETIME_TYPE, new DateTimeType().ParseResult(DateTime.Parse(defaultValueFromConfig))),
+                BYTEARRAY_TYPE => new(BYTEARRAY_TYPE, new ByteArrayType().ParseValue(defaultValueFromConfig)),
+                _ => throw new DataApiBuilderException(
+                    message: $"The parameter value {defaultValueFromConfig} provided in configuration cannot be converted to the type {paramValueType}",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping)
+            };
 
-            return new(STRING_TYPE, new StringValueNode(stringValue));
+            return valueNode;
         }
     }
 }

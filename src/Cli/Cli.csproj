@@ -39,6 +39,10 @@
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(TF_BUILD)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="CommandLineParser" />
     <PackageReference Include="Humanizer.Core" />

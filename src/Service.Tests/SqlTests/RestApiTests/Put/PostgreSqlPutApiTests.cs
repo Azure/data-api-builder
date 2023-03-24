@@ -37,6 +37,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 "
             },
             {
+                "PutOneUpdateAccessibleRowWithDatabasePolicy",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, name
+                        FROM " + _foreignKeyTableName + @"
+                        WHERE id = 2345 AND name = 'New Publisher' AND id != 1234
+                    ) AS subq
+                "
+            },
+            {
                 "PutOne_Update_Default_Test",
                 @"
                     SELECT to_jsonb(subq) AS data

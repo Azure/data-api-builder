@@ -11,12 +11,12 @@ For Data API builder, the format used for a MySQL connection is shown below base
 1. If MySQL server has SSL enabled, use the ADO.NET connection string format with SSL mode as required. If using an Azure MySQL Database, remember to download and install the [public SSL certificate](https://dl.cacerts.digicert.com/DigiCertGlobalRootCA.crt.pem) in the **Trusted Root certification authorities store** on the client machine using **certmgr.msc** Management Console on your local Windows system. If using an Azure cloud service like Azure App Service, you can copy the certificate to a folder on the App Service file system and add the argument **SslCa** using the full certificate path as shown below.
 
    ```
-   Server=<server-address>;Database=<database-name>;User ID=<username>;Password=<password>;Sslmode=Required;SslCa=<path-to-certificate>";
+   Server=<server-address>;Database=<database-name>;User ID=<username>;Password=<password>;Sslmode=Required;SslCa=<path-to-certificate>;Allow User Variables=true;
    ```
 
 2. If MySQL does not have SSL enabled, you can use the ADO.NET connection string format without the SSL mode parameter
    ```
-   Server=<server-address>;Database=<database-name>;User ID=<username>;Password=<password>;
+   Server=<server-address>;Database=<database-name>;User ID=<username>;Password=<password>;Allow User Variables=true;
    ```
 
 ## Create the database objects

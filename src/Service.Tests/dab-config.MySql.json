@@ -1212,6 +1212,45 @@
       },
       "rest": true,
       "graphql": true
+    },
+    "Bookmarks": {
+      "source": "bookmarks",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "*"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "*"
+          ]
+        }
+      ],
+      "rest": true,
+      "graphql": true
+    },
+    "MappedBookmarks": {
+      "source": "mappedbookmarks",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "*" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "*"
+          ]
+        }
+      ],
+      "mappings": {
+        "id": "bkid",
+        "bkname": "name"
+      },
+      "rest": true
     }
   }
 }

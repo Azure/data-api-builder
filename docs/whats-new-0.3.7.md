@@ -16,7 +16,7 @@ Details on how to install the latest version are here: [Installing DAB CLI](./ge
 JSON Schema has been published here:
 
 ```text
-https://dataapibuilder.azureedge.net/schemas/v0.3.7-alpha/dab.draft.schema.json
+https://github.com/Azure/data-api-builder/releases/download/v0.3.7-alpha/dab.draft.schema.json
 ```
 
 This will give you intellisense if you are using an IDE, like VS Code, that supports JSON Schemas. Take a look at `basic-empty-dab-config.json` in the `samples` folder, to have a starting point when manually creating the `dab-config.json` file.

@@ -973,7 +973,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             string expectedErrorMessage)
         {
             const string CUSTOM_CONFIG = "custom-config.json";
-            TestHelper.ChangeHostTypeInConfigFile(CUSTOM_CONFIG, HostModeType.Production, TestCategory.POSTGRESQL);
+            TestHelper.ConstructNewConfigWithSpecifiedHostMode(CUSTOM_CONFIG, HostModeType.Production, TestCategory.POSTGRESQL);
             string[] args = new[]
             {
                     $"--ConfigFileName={CUSTOM_CONFIG}"
@@ -1032,7 +1032,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             string expectedErrorMessage)
         {
             const string CUSTOM_CONFIG = "custom-config.json";
-            TestHelper.ChangeHostTypeInConfigFile(CUSTOM_CONFIG, HostModeType.Production, TestCategory.MSSQL);
+            TestHelper.ConstructNewConfigWithSpecifiedHostMode(CUSTOM_CONFIG, HostModeType.Production, TestCategory.MSSQL);
             string[] args = new[]
             {
                     $"--ConfigFileName={CUSTOM_CONFIG}"
@@ -1090,7 +1090,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             string expectedErrorMessage)
         {
             const string CUSTOM_CONFIG = "custom-config.json";
-            TestHelper.ChangeHostTypeInConfigFile(CUSTOM_CONFIG, HostModeType.Production, TestCategory.MYSQL);
+            TestHelper.ConstructNewConfigWithSpecifiedHostMode(CUSTOM_CONFIG, HostModeType.Production, TestCategory.MYSQL);
             string[] args = new[]
             {
                     $"--ConfigFileName={CUSTOM_CONFIG}"

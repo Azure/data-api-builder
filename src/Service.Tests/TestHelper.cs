@@ -268,7 +268,7 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// <param name="configFileName">Name of the new config file to be constructed</param>
         /// <param name="hostModeType">HostMode for the engine</param>
         /// <param name="databaseType">Database type</param>
-        public static void ChangeHostTypeInConfigFile(string configFileName, HostModeType hostModeType, string databaseType)
+        public static void ConstructNewConfigWithSpecifiedHostMode(string configFileName, HostModeType hostModeType, string databaseType)
         {
             RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(databaseType);
             RuntimeConfig config = configProvider.GetRuntimeConfiguration();

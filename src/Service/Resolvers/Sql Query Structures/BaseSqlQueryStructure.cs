@@ -122,22 +122,21 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else
             {
+                string errorMessage = string.Empty;
                 if (MetadataProvider.IsDevelopmentMode())
                 {
-                    throw new DataApiBuilderException(
-                    message: $"{columnName} is not a valid column of {DatabaseObject.Name}",
-                    statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
-                    );
+                    errorMessage = $"{columnName} is not a valid column of {DatabaseObject.Name}";
                 }
                 else
                 {
-                    throw new DataApiBuilderException(
-                    message: $"{columnName} is not a valid field of {EntityName}",
+                    errorMessage = $"{columnName} is not a valid field of {EntityName}";                    
+                }
+
+                throw new DataApiBuilderException(
+                    message: errorMessage,
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
                     );
-                }
             }
         }
 
@@ -509,37 +508,30 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     e is ArgumentNullException ||
                     e is OverflowException)
                 {
+                    string errorMessage = string.Empty;
                     if (MetadataProvider.IsDevelopmentMode())
                     {
                         if (MetadataProvider.EntityToDatabaseObject[EntityName].SourceType is SourceType.StoredProcedure)
                         {
-                            throw new DataApiBuilderException(
-                                message: $@"Parameter ""{param}"" cannot be resolved as stored procedure parameter ""{paramName}"" " +
-                        $@"with type ""{systemType.Name}"".",
-                                statusCode: HttpStatusCode.BadRequest,
-                                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
-                                innerException: e
-                                );
+                            errorMessage = $@"Parameter ""{param}"" cannot be resolved as stored procedure parameter ""{paramName}"" " +
+                                    $@"with type ""{systemType.Name}"".";
                         }
                         else
                         {
-                            throw new DataApiBuilderException(
-                                message: $"Parameter \"{param}\" cannot be resolved as column \"{paramName}\" " +
-                                    $"with type \"{systemType.Name}\".",
-                                statusCode: HttpStatusCode.BadRequest,
-                                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
-                                innerException: e);
+                            errorMessage = $"Parameter \"{param}\" cannot be resolved as column \"{paramName}\" " +
+                                    $"with type \"{systemType.Name}\".";
                         }
-
                     }
                     else
                     {
-                        throw new DataApiBuilderException(
-                                message: $"Invalid value provided for field: {paramName}",
+                        errorMessage = $"Invalid value provided for field: {paramName}";
+                    }
+
+                    throw new DataApiBuilderException(
+                                message: errorMessage,
                                 statusCode: HttpStatusCode.BadRequest,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
                                 innerException: e);
-                    }
                 }
 
                 throw;

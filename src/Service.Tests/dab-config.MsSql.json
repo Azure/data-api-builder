@@ -1,11 +1,11 @@
 {
-  "$schema": "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json",
+  "$schema": "../../schemas/dab.draft.schema.json",
   "data-source": {
     "database-type": "mssql",
     "options": {
       "set-session-context": true
     },
-    "connection-string": "Server=tcp:127.0.0.1,1433;Persist Security Info=False;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=False;Connection Timeout=5;"
+    "connection-string": "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=sa;Password=REPLACEME;MultipleActiveResultSets=False;Connection Timeout=5;"
   },
   "runtime": {
     "rest": {
@@ -1112,6 +1112,7 @@
             {
               "action": "Read",
               "fields": {
+                "include": [],
                 "exclude": [
                   "*"
                 ]
@@ -1230,7 +1231,7 @@
       },
       "graphql": {
         "type": true,
-        "operation": "query"
+        "operation": "Query"
       }
     },
     "GetBook": {
@@ -1290,7 +1291,7 @@
       },
       "graphql": {
         "type": true,
-        "operation": "mutation"
+        "operation": "Mutation"
       }
     },
     "InsertBook": {
@@ -1324,7 +1325,7 @@
       },
       "graphql": {
         "type": true,
-        "operation": "mutation"
+        "operation": "Mutation"
       }
     },
     "CountBooks": {
@@ -1354,7 +1355,7 @@
       },
       "graphql": {
         "type": true,
-        "operation": "mutation"
+        "operation": "Mutation"
       }
     },
     "DeleteLastInsertedBook": {
@@ -1384,7 +1385,7 @@
       },
       "graphql": {
         "type": true,
-        "operation": "mutation"
+        "operation": "Mutation"
       }
     },
     "UpdateBookTitle": {
@@ -1418,7 +1419,7 @@
       },
       "graphql": {
         "type": true,
-        "operation": "mutation"
+        "operation": "Mutation"
       }
     },
     "GetAuthorsHistoryByFirstName": {
@@ -1454,7 +1455,7 @@
           "singular": "SearchAuthorByFirstName",
           "plural": "SearchAuthorByFirstNames"
         },
-        "operation": "mutation"
+        "operation": "Mutation"
       }
     },
     "InsertAndDisplayAllBooksUnderGivenPublisher": {
@@ -1488,7 +1489,7 @@
       },
       "graphql": {
         "type": true,
-        "operation": "mutation"
+        "operation": "Mutation"
       }
     },
     "GQLmappings": {
@@ -1538,9 +1539,7 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [
-            "*"
-          ]
+          "actions": [ "*" ]
         },
         {
           "role": "authenticated",
@@ -1553,8 +1552,7 @@
         "id": "bkid",
         "bkname": "name"
       },
-      "rest": true,
-      "graphql": true
+      "rest": true
     }
   }
 }

@@ -117,7 +117,8 @@ namespace Azure.DataApiBuilder.Service.Services
                             isList: string.IsNullOrEmpty(primaryKeyRoute));
                         break;
                     case Config.Operation.Insert:
-                        JsonElement insertPayloadRoot = RequestValidator.ValidateInsertRequest(queryString, requestBody);
+                        RequestValidator.ValidatePrimaryKeyRouteAndQueryStringInURL(operationType, primaryKeyRoute, queryString);
+                        JsonElement insertPayloadRoot = RequestValidator.TryValidateAndParseRequestBody(requestBody);
                         context = new InsertRequestContext(
                             entityName,
                             dbo: dbObject,
@@ -132,7 +133,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
                         break;
                     case Config.Operation.Delete:
-                        RequestValidator.ValidateDeleteRequest(primaryKeyRoute);
+                        RequestValidator.ValidatePrimaryKeyRouteAndQueryStringInURL(operationType, primaryKeyRoute);
                         context = new DeleteRequestContext(entityName,
                                                            dbo: dbObject,
                                                            isList: false);
@@ -141,7 +142,8 @@ namespace Azure.DataApiBuilder.Service.Services
                     case Config.Operation.UpdateIncremental:
                     case Config.Operation.Upsert:
                     case Config.Operation.UpsertIncremental:
-                        JsonElement upsertPayloadRoot = RequestValidator.ValidateUpdateOrUpsertRequest(primaryKeyRoute, requestBody);
+                        RequestValidator.ValidatePrimaryKeyRouteAndQueryStringInURL(operationType, primaryKeyRoute);
+                        JsonElement upsertPayloadRoot = RequestValidator.TryValidateAndParseRequestBody(requestBody);
                         context = new UpsertRequestContext(
                             entityName,
                             dbo: dbObject,
@@ -270,10 +272,10 @@ namespace Azure.DataApiBuilder.Service.Services
                 case Config.Operation.UpdateIncremental:
                 case Config.Operation.Upsert:
                 case Config.Operation.UpsertIncremental:
-                    // Stored procedure call is semantically identical for all methods except Find, so we can
-                    // effectively reuse the ValidateInsertRequest - throws error if query string is nonempty
-                    // and parses the body into json
-                    JsonElement requestPayloadRoot = RequestValidator.ValidateInsertRequest(queryString, requestBody);
+                    // Stored procedure call is semantically identical for all methods except Find.
+                    // So, we can effectively treat it as Insert operation - throws error if query string is non empty.
+                    RequestValidator.ValidatePrimaryKeyRouteAndQueryStringInURL(Config.Operation.Insert, queryString);
+                    JsonElement requestPayloadRoot = RequestValidator.TryValidateAndParseRequestBody(requestBody);
                     context = new StoredProcedureRequestContext(
                         entityName,
                         dbo: dbObject,

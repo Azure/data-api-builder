@@ -264,8 +264,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         #region Negative Tests
 
         [TestMethod]
-        public virtual async Task InsertOneWithInvalidQueryStringTest()
+        public virtual async Task InsertOneWithPrimaryKeyOrQueryStringInURLTest()
         {
+            // Validate that it is not allowed to specify query string in the URL for POST requests.
             string requestBody = @"
             {
                 ""title"": ""My New Book"",
@@ -281,6 +282,26 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: RequestValidator.QUERY_STRING_INVALID_USAGE_ERR_MESSAGE,
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+
+            // Validate that it is not allowed to specify primary key in the URL for POST requests.
+            requestBody = @"
+            {
+                ""categoryid"": 0,
+                ""pieceid"": 4,
+                ""categoryName"": ""SciFi""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/0/pieceid/4",
+                queryString: "?$ll",
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: string.Empty,
+                operationType: Config.Operation.Insert,
+                requestBody: requestBody,
+                exceptionExpected: true,
+                expectedErrorMessage: RequestValidator.PRIMARY_KEY_INVALID_USAGE_ERR_MESSAGE,
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }

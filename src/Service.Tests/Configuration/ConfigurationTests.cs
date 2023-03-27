@@ -957,17 +957,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <param name="expectedErrorMessage">Right error message that should be shown to the end user</param>
         [DataTestMethod]
         [TestCategory(TestCategory.POSTGRESQL)]
-        [DataRow("GET", "/api/Book/id/one", null, "Invalid value provided for field: id", DisplayName = "Validates the error message for a GET request with incorrect primary key parameter type on a table in production mode for PostrgeSql")]
-        [DataRow("GET", "/api/books_view_all/id/one", null, "Invalid value provided for field: id", DisplayName = "Validates the error message for a GET request with incorrect primary key parameter on a view in production mode for PostrgeSql")]
-        [DataRow("POST", "/api/Book", TestHelper.REQUEST_BODY_WITH_INCORRECT_PARAM_TYPES, "Invalid value provided for field: publisher_id", DisplayName = "Validates the error message for a POST request with incorrect primary key parameter type on a table in production mode for PostrgeSql")]
-        [DataRow("PUT", "/api/Book/id/one", TestHelper.REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validate the error message for a PUT request with incorrect primary key parameter type on a table in production mode for PostrgeSql")]
-        [DataRow("PUT", "/api/Book/id/1", TestHelper.REQUEST_BODY_WITH_INCORRECT_PARAM_TYPES, "Invalid value provided for field: publisher_id", DisplayName = "Validates the error message for a PUT request with incorrect parameter type in the request body on a table in production mode for PostrgeSql")]
-        [DataRow("PATCH", "/api/Book/id/one", TestHelper.REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validates the error message for a PATCH request with incorrect primary key parameter type on a table in production mode for PostrgeSql")]
-        [DataRow("PATCH", "/api/Book/id/1", TestHelper.REQUEST_BODY_WITH_INCORRECT_PARAM_TYPES, "Invalid value provided for field: publisher_id", DisplayName = "Validates the error message for a PATCH request with incorrect primary key on a table in production mode for PostrgeSql")]
-        [DataRow("DELETE", "/api/Book/id/one", TestHelper.REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validates the error message for a DELETE request with incorrect primary key on a table in production mode for PostrgeSql")]
+        [DataRow(RestMethod.Get, "/api/Book/id/one", null, "Invalid value provided for field: id", DisplayName = "Validates the error message for a GET request with incorrect primary key parameter type on a table in production mode for PostrgeSql")]
+        [DataRow(RestMethod.Get, "/api/books_view_all/id/one", null, "Invalid value provided for field: id", DisplayName = "Validates the error message for a GET request with incorrect primary key parameter on a view in production mode for PostrgeSql")]
+        [DataRow(RestMethod.Post, "/api/Book", TestHelper.REQUEST_BODY_WITH_INCORRECT_PARAM_TYPES, "Invalid value provided for field: publisher_id", DisplayName = "Validates the error message for a POST request with incorrect primary key parameter type on a table in production mode for PostrgeSql")]
+        [DataRow(RestMethod.Put, "/api/Book/id/one", TestHelper.REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validate the error message for a PUT request with incorrect primary key parameter type on a table in production mode for PostrgeSql")]
+        [DataRow(RestMethod.Put, "/api/Book/id/1", TestHelper.REQUEST_BODY_WITH_INCORRECT_PARAM_TYPES, "Invalid value provided for field: publisher_id", DisplayName = "Validates the error message for a PUT request with incorrect parameter type in the request body on a table in production mode for PostrgeSql")]
+        [DataRow(RestMethod.Patch, "/api/Book/id/one", TestHelper.REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validates the error message for a PATCH request with incorrect primary key parameter type on a table in production mode for PostrgeSql")]
+        [DataRow(RestMethod.Patch, "/api/Book/id/1", TestHelper.REQUEST_BODY_WITH_INCORRECT_PARAM_TYPES, "Invalid value provided for field: publisher_id", DisplayName = "Validates the error message for a PATCH request with incorrect primary key on a table in production mode for PostrgeSql")]
+        [DataRow(RestMethod.Delete, "/api/Book/id/one", TestHelper.REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validates the error message for a DELETE request with incorrect primary key on a table in production mode for PostrgeSql")]
 
         public async Task TestErrorMessageForRestApiForPostgreSql(
-            string requestType,
+            RestMethod requestType,
             string requestPath,
             string requestBody,
             string expectedErrorMessage)
@@ -982,10 +982,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
             {
-                HttpMethod httpMethod = TestHelper.GetHttpMethod(requestType);
+                HttpMethod httpMethod = SqlTestHelper.ConvertRestMethodToHttpMethod(requestType);
                 HttpRequestMessage request;
-                if ("GET".Equals(requestType, comparisonType: StringComparison.OrdinalIgnoreCase) ||
-                   "DELETE".Equals(requestType, comparisonType: StringComparison.OrdinalIgnoreCase))
+                if (requestType is RestMethod.Get || requestType is RestMethod.Delete)
                 {
                     request = new(httpMethod, requestPath);
                 }
@@ -1015,18 +1014,18 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <param name="expectedErrorMessage">Right error message that should be shown to the end user</param>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow("GET", "/api/Book/id/one", null, "Invalid value provided for field: id", DisplayName = "Validates the error message for a GET request with incorrect primary key parameter type on a table in production mode for MsSql database")]
-        [DataRow("GET", "/api/books_view_all/id/one", null, "Invalid value provided for field: id", DisplayName = "Validates the error message for a GET request with incorrect primary key parameter type on a view in production mode for MsSql")]
-        [DataRow("GET", "/api/GetBook?id=one", TestHelper.REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validates the error message for a GET request on a stored-procedure with incorrect parameter type in production mode for MsSql")]
-        [DataRow("POST", "/api/Book", TestHelper.REQUEST_BODY_WITH_INCORRECT_PARAM_TYPES, "Invalid value provided for field: publisher_id", DisplayName = "Validates the error message for a POST request with incorrect parameter type in the request body on a table in production mode for MsSql")]
-        [DataRow("PUT", "/api/Book/id/one", TestHelper.REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validates the error message for a PUT request with incorrect primary key parameter type on a table in production mode for MsSql")]
-        [DataRow("PUT", "/api/Book/id/1", TestHelper.REQUEST_BODY_WITH_INCORRECT_PARAM_TYPES, "Invalid value provided for field: publisher_id", DisplayName = "Validates the error message for a bad PUT request with incorrect parameter type in the request body on a table in production mode for MsSql")]
-        [DataRow("PATCH", "/api/Book/id/one", TestHelper.REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validates the error message for a PATCH request with incorrect primary key parameter type on a table in production mode for MsSql")]
-        [DataRow("PATCH", "/api/Book/id/1", TestHelper.REQUEST_BODY_WITH_INCORRECT_PARAM_TYPES, "Invalid value provided for field: publisher_id", DisplayName = "Validates the error message for a PATCH request with incorrect parameter type in the request body on a table in production mode for MsSql")]
-        [DataRow("DELETE", "/api/Book/id/one", TestHelper.REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validates the error message for a DELETE request with incorrect primary key parameter type on a table in production mode for MsSql")]
+        [DataRow(RestMethod.Get, "/api/Book/id/one", null, "Invalid value provided for field: id", DisplayName = "Validates the error message for a GET request with incorrect primary key parameter type on a table in production mode for MsSql database")]
+        [DataRow(RestMethod.Get, "/api/books_view_all/id/one", null, "Invalid value provided for field: id", DisplayName = "Validates the error message for a GET request with incorrect primary key parameter type on a view in production mode for MsSql")]
+        [DataRow(RestMethod.Get, "/api/GetBook?id=one", TestHelper.REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validates the error message for a GET request on a stored-procedure with incorrect parameter type in production mode for MsSql")]
+        [DataRow(RestMethod.Post, "/api/Book", TestHelper.REQUEST_BODY_WITH_INCORRECT_PARAM_TYPES, "Invalid value provided for field: publisher_id", DisplayName = "Validates the error message for a POST request with incorrect parameter type in the request body on a table in production mode for MsSql")]
+        [DataRow(RestMethod.Put, "/api/Book/id/one", TestHelper.REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validates the error message for a PUT request with incorrect primary key parameter type on a table in production mode for MsSql")]
+        [DataRow(RestMethod.Put, "/api/Book/id/1", TestHelper.REQUEST_BODY_WITH_INCORRECT_PARAM_TYPES, "Invalid value provided for field: publisher_id", DisplayName = "Validates the error message for a bad PUT request with incorrect parameter type in the request body on a table in production mode for MsSql")]
+        [DataRow(RestMethod.Patch, "/api/Book/id/one", TestHelper.REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validates the error message for a PATCH request with incorrect primary key parameter type on a table in production mode for MsSql")]
+        [DataRow(RestMethod.Patch, "/api/Book/id/1", TestHelper.REQUEST_BODY_WITH_INCORRECT_PARAM_TYPES, "Invalid value provided for field: publisher_id", DisplayName = "Validates the error message for a PATCH request with incorrect parameter type in the request body on a table in production mode for MsSql")]
+        [DataRow(RestMethod.Delete, "/api/Book/id/one", TestHelper.REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validates the error message for a DELETE request with incorrect primary key parameter type on a table in production mode for MsSql")]
 
         public async Task TestErrorMessageForRestApiForMsSql(
-            string requestType,
+            RestMethod requestType,
             string requestPath,
             string requestBody,
             string expectedErrorMessage)
@@ -1041,10 +1040,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
             {
-                HttpMethod httpMethod = TestHelper.GetHttpMethod(requestType);
+                HttpMethod httpMethod = SqlTestHelper.ConvertRestMethodToHttpMethod(requestType);
                 HttpRequestMessage request;
-                if ("GET".Equals(requestType, comparisonType: StringComparison.OrdinalIgnoreCase) ||
-                   "DELETE".Equals(requestType, comparisonType: StringComparison.OrdinalIgnoreCase))
+                if (requestType is RestMethod.Get || requestType is RestMethod.Delete)
                 {
                     request = new(httpMethod, requestPath);
                 }
@@ -1074,17 +1072,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <param name="expectedErrorMessage">Right error message that should be shown to the end user</param>
         [DataTestMethod]
         [TestCategory(TestCategory.MYSQL)]
-        [DataRow("GET", "/api/Book/id/one", null, "Invalid value provided for field: id", DisplayName = "Validates the error message for a GET request with incorrect primary key parameter type on a table in production mode for MySql")]
-        [DataRow("GET", "/api/books_view_all/id/one", null, "Invalid value provided for field: id", DisplayName = "Validates the error message for a GET request with incorrect primary key parameter on a view in production mode for MySql")]
-        [DataRow("POST", "/api/Book", TestHelper.REQUEST_BODY_WITH_INCORRECT_PARAM_TYPES, "Invalid value provided for field: publisher_id", DisplayName = "Validates the error message for a POST request with incorrect parameter type in the request body on a table in production mode for MySql")]
-        [DataRow("PUT", "/api/Book/id/one", TestHelper.REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validates the error message for a PUT request with incorrect primary key parameter type on a table in production mode for MySql")]
-        [DataRow("PUT", "/api/Book/id/1", TestHelper.REQUEST_BODY_WITH_INCORRECT_PARAM_TYPES, "Invalid value provided for field: publisher_id", DisplayName = "Validates the error message for a PUT request with incorrect parameter type in the request body on a table in production mode for MySql")]
-        [DataRow("PATCH", "/api/Book/id/one", TestHelper.REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validates the error message for a PATCH request with incorrect primary key parameter type on a table in production mode for MySql")]
-        [DataRow("PATCH", "/api/Book/id/1", TestHelper.REQUEST_BODY_WITH_INCORRECT_PARAM_TYPES, "Invalid value provided for field: publisher_id", DisplayName = "Validates the error message for a PATCH request with incorrect parameter type in the request body on a table in production mode for MySql")]
-        [DataRow("DELETE", "/api/Book/id/one", TestHelper.REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validates the error message for a DELETE request with incorrect primary key parameter type on a table in production mode for MySql")]
+        [DataRow(RestMethod.Get, "/api/Book/id/one", null, "Invalid value provided for field: id", DisplayName = "Validates the error message for a GET request with incorrect primary key parameter type on a table in production mode for MySql")]
+        [DataRow(RestMethod.Get, "/api/books_view_all/id/one", null, "Invalid value provided for field: id", DisplayName = "Validates the error message for a GET request with incorrect primary key parameter on a view in production mode for MySql")]
+        [DataRow(RestMethod.Post, "/api/Book", TestHelper.REQUEST_BODY_WITH_INCORRECT_PARAM_TYPES, "Invalid value provided for field: publisher_id", DisplayName = "Validates the error message for a POST request with incorrect parameter type in the request body on a table in production mode for MySql")]
+        [DataRow(RestMethod.Put, "/api/Book/id/one", TestHelper.REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validates the error message for a PUT request with incorrect primary key parameter type on a table in production mode for MySql")]
+        [DataRow(RestMethod.Put, "/api/Book/id/1", TestHelper.REQUEST_BODY_WITH_INCORRECT_PARAM_TYPES, "Invalid value provided for field: publisher_id", DisplayName = "Validates the error message for a PUT request with incorrect parameter type in the request body on a table in production mode for MySql")]
+        [DataRow(RestMethod.Patch, "/api/Book/id/one", TestHelper.REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validates the error message for a PATCH request with incorrect primary key parameter type on a table in production mode for MySql")]
+        [DataRow(RestMethod.Patch, "/api/Book/id/1", TestHelper.REQUEST_BODY_WITH_INCORRECT_PARAM_TYPES, "Invalid value provided for field: publisher_id", DisplayName = "Validates the error message for a PATCH request with incorrect parameter type in the request body on a table in production mode for MySql")]
+        [DataRow(RestMethod.Delete, "/api/Book/id/one", TestHelper.REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validates the error message for a DELETE request with incorrect primary key parameter type on a table in production mode for MySql")]
 
         public async Task TestErrorMessageForRestApiForMySql(
-            string requestType,
+            RestMethod requestType,
             string requestPath,
             string requestBody,
             string expectedErrorMessage)
@@ -1099,10 +1097,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
             {
-                HttpMethod httpMethod = TestHelper.GetHttpMethod(requestType);
+                HttpMethod httpMethod = SqlTestHelper.ConvertRestMethodToHttpMethod(requestType);
                 HttpRequestMessage request;
-                if ("GET".Equals(requestType, comparisonType: StringComparison.OrdinalIgnoreCase) ||
-                   "DELETE".Equals(requestType, comparisonType: StringComparison.OrdinalIgnoreCase))
+                if (requestType is RestMethod.Get || requestType is RestMethod.Delete)
                 {
                     request = new(httpMethod, requestPath);
                 }

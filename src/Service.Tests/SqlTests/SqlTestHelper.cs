@@ -223,7 +223,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// </summary>
         /// <param name="restMethod"></param>
         /// <returns>HttpMethod corresponding the RestMethod provided as input.</returns>
-        private static HttpMethod ConvertRestMethodToHttpMethod(RestMethod? restMethod)
+        public static HttpMethod ConvertRestMethodToHttpMethod(RestMethod? restMethod)
         {
             switch (restMethod)
             {

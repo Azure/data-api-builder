@@ -285,34 +285,5 @@ namespace Azure.DataApiBuilder.Service.Tests
                 JsonSerializer.Serialize(configWithCustomHostMode, RuntimeConfig.SerializerOptions));
 
         }
-
-        /// <summary>
-        /// Utility method that fetches the HTTP method as HttpMethod type
-        /// from the given string type.
-        /// </summary>
-        /// <param name="httpMethod"></param>
-        /// <returns></returns>
-        /// <exception cref="DataApiBuilderException"></exception>
-        public static HttpMethod GetHttpMethod(string httpMethod)
-        {
-            switch (httpMethod)
-            {
-                case "GET":
-                    return HttpMethod.Get;
-                case "POST":
-                    return HttpMethod.Post;
-                case "PUT":
-                    return HttpMethod.Put;
-                case "PATCH":
-                    return HttpMethod.Patch;
-                case "DELETE":
-                    return HttpMethod.Delete;
-                default:
-                    throw new DataApiBuilderException(
-                        message: "HTTP Verb Type not supported.",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
-            }
-        }
     }
 }

@@ -161,7 +161,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 if ((int)HttpStatusCode.Forbidden == int.Parse(expectedStatusCode))
                 {
                     // In case of forbidden requests (403 status code), responseBody is read as empty.
-                    Assert.IsTrue(string.IsNullOrEmpty(responseBody));
+                    Assert.IsTrue(response.StatusCode.ToString().Equals(expectedStatusCode));
                     return;
                 }
 

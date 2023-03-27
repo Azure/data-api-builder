@@ -198,7 +198,12 @@
                 "database": "@item.id ne 1234"
               }
             },
-            "Create",
+            {
+              "action": "Create",
+              "policy": {
+                "database": "@item.name ne 'New publisher'"
+              }
+            },
             {
               "action": "Read",
               "policy": {

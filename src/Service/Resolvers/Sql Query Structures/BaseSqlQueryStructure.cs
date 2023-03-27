@@ -122,14 +122,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else
             {
-                string errorMessage = string.Empty;
+                string errorMessage;
                 if (MetadataProvider.IsDevelopmentMode())
                 {
                     errorMessage = $"{columnName} is not a valid column of {DatabaseObject.Name}";
                 }
                 else
                 {
-                    errorMessage = $"{columnName} is not a valid field of {EntityName}";                    
+                    errorMessage = $"{columnName} is not a valid field of {EntityName}";
                 }
 
                 throw new DataApiBuilderException(
@@ -508,7 +508,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     e is ArgumentNullException ||
                     e is OverflowException)
                 {
-                    string errorMessage = string.Empty;
+                    string errorMessage;
                     if (MetadataProvider.IsDevelopmentMode())
                     {
                         if (MetadataProvider.EntityToDatabaseObject[EntityName].SourceType is SourceType.StoredProcedure)

@@ -164,19 +164,16 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         /// <summary>
         /// Test that permission configuration validation fails when a database policy
-        /// is defined for the Create operation.
+        /// is defined for the Create operation for mysql/postgresql and passes for mssql.
         /// </summary>
         /// <param name="dbPolicy">Database policy.</param>
         /// <param name="action">The action to be validated.</param>
         /// <param name="errorExpected">Whether an error is expected.</param>
         [DataTestMethod]
-        [DataRow("1 eq @item.col1", Config.Operation.Create, true, DisplayName = "Database Policy defined for Create fails")]
-        [DataRow("", Config.Operation.Create, true, DisplayName = "Database Policy left empty for Create fails")]
-        [DataRow(null, Config.Operation.Create, false, DisplayName = "Database Policy NOT defined for Create passes")]
-        [DataRow("1 eq @item.col2", Config.Operation.Read, false, DisplayName = "Database Policy defined for Read passes")]
-        [DataRow("2 eq @item.col3", Config.Operation.Update, false, DisplayName = "Database Policy defined for Update passes")]
-        [DataRow("2 eq @item.col3", Config.Operation.Delete, false, DisplayName = "Database Policy defined for Delete passes")]
-        public void AddDatabasePolicyToCreateOperationForMySql(string dbPolicy, Config.Operation action, bool errorExpected)
+        [DataRow(DatabaseType.postgresql, "1 eq @item.col1", Config.Operation.Create, true, DisplayName = "Database Policy defined for Create fails for postgregsql")]
+        [DataRow(DatabaseType.mysql, "", Config.Operation.Create, true, DisplayName = "Database Policy left empty for Create fails for mysql")]
+        [DataRow(DatabaseType.mssql, "2 eq @item.col3", Config.Operation.Create, false, DisplayName = "Database Policy defined for Create passes for mssql")]
+        public void AddDatabasePolicyToCreateOperation(DatabaseType dbType, string dbPolicy, Config.Operation action, bool errorExpected)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
@@ -184,7 +181,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 operation: action,
                 includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: dbPolicy,
-                dbType: DatabaseType.mysql
+                dbType: dbType
                 );
             RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
 

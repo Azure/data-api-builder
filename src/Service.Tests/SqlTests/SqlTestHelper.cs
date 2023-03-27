@@ -175,7 +175,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 // Convert the escaped characters into their unescaped form.
                 responseBody = Regex.Unescape(responseBody);
 
-                // Generate actual error obbject
+                // Generate actual error object
                 JsonElement actualErrorObj = JsonDocument.Parse(responseBody).RootElement.GetProperty(PARENT_PROPERTY_ERROR);
                 string actualStatusCode = actualErrorObj.GetProperty(PROPERTY_STATUS).ToString();
                 string actualSubStatusCode = actualErrorObj.GetProperty(PROPERTY_CODE).ToString();

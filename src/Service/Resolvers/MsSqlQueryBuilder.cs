@@ -7,7 +7,6 @@ using System.Linq;
 using System.Text;
 using Azure.DataApiBuilder.Service.Models;
 using Microsoft.Data.SqlClient;
-using Microsoft.IdentityModel.Tokens;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {

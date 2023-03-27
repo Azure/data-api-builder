@@ -27,7 +27,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="root">Root of GraphQL schema</param>
         /// <param name="databaseType">i.e. MSSQL, MySQL, Postgres, Cosmos</param>
         /// <param name="entities">Map of entityName -> EntityMetadata</param>
-        /// <returns></returns>
+        /// <param name="entityPermissionsMap">Permissions metadata defined in runtime config.</param>
+        /// <param name="dbObjects">Database object metadata</param>
+        /// <returns>Mutations DocumentNode</returns>
         public static DocumentNode Build(
             DocumentNode root,
             DatabaseType databaseType,
@@ -58,7 +60,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                         {
                             if (dbObjects is not null && dbObjects.TryGetValue(entityName, out DatabaseObject? dbObject) && dbObject is not null)
                             {
-                                AddMutationsForStoredProcedure(dbEntityName, entityPermissionsMap, name, entities, mutationFields, objectTypeDefinitionNode, dbObject);
+                                AddMutationsForStoredProcedure(dbEntityName, entityPermissionsMap, name, entities, mutationFields, dbObject);
                             }
                             else
                             {
@@ -149,14 +151,13 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             NameNode name,
             IDictionary<string, Entity> entities,
             List<FieldDefinitionNode> mutationFields,
-            ObjectTypeDefinitionNode objectTypeDefinitionNode,
             DatabaseObject dbObject
             )
         {
             IEnumerable<string> rolesAllowedForMutation = IAuthorizationResolver.GetRolesForOperation(dbEntityName, operation: Operation.Execute, entityPermissionsMap);
             if (rolesAllowedForMutation.Count() > 0)
             {
-                mutationFields.Add(GraphQLStoredProcedureBuilder.GenerateStoredProcedureSchema(name, entities[dbEntityName], dbObject, rolesAllowedForMutation, objectTypeDefinitionNode));
+                mutationFields.Add(GraphQLStoredProcedureBuilder.GenerateStoredProcedureSchema(name, entities[dbEntityName], dbObject, rolesAllowedForMutation));
             }
         }
 

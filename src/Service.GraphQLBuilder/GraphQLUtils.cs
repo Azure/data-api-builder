@@ -173,7 +173,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// </summary>
         /// <param name="fieldDirectives">Collection of directives on GraphQL field.</param>
         /// <param name="modelName">Value of @model directive, if present.</param>
-        /// <returns></returns>
+        /// <returns>True when name resolution succeeded, false otherwise.</returns>
         public static bool TryExtractGraphQLFieldModelName(IDirectiveCollection fieldDirectives, [NotNullWhen(true)] out string? modelName)
         {
             foreach (Directive dir in fieldDirectives)
@@ -212,16 +212,18 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         }
 
         /// <summary>
-        /// Parse a given string value to supported GraphQL Type and GraphQLValueNode
+        /// Translates a string value from the runtime configuration, to a GraphQL *ValueNode which represents
+        /// a supported GraphQL type. The target value type is referenced from the parameterDefinition which
+        /// holds database schema metadata.
         /// </summary>
-        /// <param name="defaultValueFromConfig"></param>
-        /// <param name="node"></param>
-        /// <returns></returns>
-        /// <exception cref="DataApiBuilderException"></exception>
+        /// <param name="defaultValueFromConfig">String representation of default value defined in runtime config.</param>
+        /// <param name="parameterDefinition">Database schema metadata for stored procedure parameter which include value and value type.</param>
+        /// <returns>Tuple where first item is the string representation of a GraphQLType (e.g. "Byte", "Int", "Decimal")
+        /// and the second item is the GraphQL *type*ValueNode </returns>
+        /// <exception cref="DataApiBuilderException">Raised when parameter casting fails due to unsupported type.</exception>
         public static Tuple<string, IValueNode> ConvertValueToGraphQLType(string defaultValueFromConfig, ParameterDefinition parameterDefinition)
         {
             string paramValueType = SchemaConverter.GetGraphQLTypeForColumnType(type: parameterDefinition.SystemType);
-            //string fieldValueType = field.Type.NamedType().Name.Value;
             Tuple<string, IValueNode> valueNode = paramValueType switch
             {
                 BYTE_TYPE => new(BYTE_TYPE, new IntValueNode(byte.Parse(defaultValueFromConfig))),

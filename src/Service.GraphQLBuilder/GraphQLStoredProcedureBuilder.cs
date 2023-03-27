@@ -15,38 +15,35 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <summary>
         /// Helper function to create StoredProcedure Schema for GraphQL.
         /// It uses the parameters to build the arguments and returns a list
-        /// of the StoredProcedure GraphQL object.
+        /// of the StoredProcedure GraphQL object. 
         /// </summary>
+        /// <param name="name">Name used for InputValueDefinition name.</param>
+        /// <param name="entity">Entity's runtime config metadata.</param>
+        /// <param name="dbObject">Stored procedure database schema metadata.</param>
+        /// <param name="rolesAllowed">Role authorization metadata.</param>
+        /// <returns>Stored procedure mutation field.</returns>
         public static FieldDefinitionNode GenerateStoredProcedureSchema(
             NameNode name,
             Entity entity,
             DatabaseObject dbObject,
-            IEnumerable<string>? rolesAllowed = null,
-            ObjectTypeDefinitionNode? objectTypeDefinitionNode = null
+            IEnumerable<string>? rolesAllowed = null
             )
         {
             List<InputValueDefinitionNode> inputValues = new();
             List<DirectiveNode> fieldDefinitionNodeDirectives = new();
-            Dictionary<string, FieldDefinitionNode> spGraphQLParameters = new();
 
-            StoredProcedureDefinition spdef = ((DatabaseStoredProcedure)dbObject).StoredProcedureDefinition;
-
-            if (objectTypeDefinitionNode is not null)
-            {
-                // We're only getting the output result set column names, not the parameter names.
-                // Maybe just use the entityDefinition, and add validation that it is in fact have proper param names defined in config.
-                foreach (FieldDefinitionNode node in objectTypeDefinitionNode.Fields)
-                {
-                    spGraphQLParameters.TryAdd(node.Name.ToString(), node);
-                }
-            }
+            // StoredProcedureDefinition contains both output result set column and input parameter metadata
+            // which are needed because parameter and column names can differ.
+            StoredProcedureDefinition spdef = (StoredProcedureDefinition)dbObject.SourceDefinition;
 
             if (entity.Parameters is not null)
             {
                 foreach (string param in entity.Parameters.Keys)
                 {
-                    // parameters from the runtime config have values that may not cast exactly to the value type defined in the database.
-                    // the param name and the output result set column name may differ, so we need access to both here. Which requires a DBobject from sqlmetadataprovider.
+                    // Input parameters defined in the runtime config may denote values that may not cast
+                    // to the exact value type defined in the database schema.
+                    // e.g. Runtime config parameter value set as 1, while database schema denotes value type decimal.
+                    // Without database metadata, there is no way to know to cast 1 to a decimal versus an integer.
                     string defaultValueFromConfig = ((JsonElement)entity.Parameters[param]).ToString();
                     Tuple<string, IValueNode> defaultGraphQLValue = ConvertValueToGraphQLType(defaultValueFromConfig, parameterDefinition: spdef.Parameters[param]);
 

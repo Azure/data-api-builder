@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using Azure.DataApiBuilder.Service.Models;
 using Microsoft.Data.SqlClient;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
@@ -62,11 +63,22 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public string Build(SqlInsertStructure structure)
         {
             string predicates = JoinPredicateStrings(structure.DbPolicyPredicates);
-            return $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} ({Build(structure.InsertColumns)}) " +
+            string insertColumns = Build(structure.InsertColumns);
+
+            if (string.IsNullOrEmpty(structure.DbPolicyPredicates))
+            {
+                return $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} ({insertColumns}) " +
                     $"OUTPUT {MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted)} " +
-                    $"SELECT {Build(structure.InsertColumns)} " +
-                    $"FROM (VALUES({string.Join(", ", structure.Values)})) T({Build(structure.InsertColumns)}) " +
+                    $"SELECT {insertColumns} " +
+                    $"FROM (VALUES({string.Join(", ", structure.Values)})) T({insertColumns}) " +
                     $"WHERE {predicates};";
+            }
+            else
+            {
+                return $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} ({insertColumns}) " +
+                    $"OUTPUT {MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted)} " +
+                    $"VALUES ({string.Join(", ", structure.Values)});";
+            }
         }
 
         /// <inheritdoc />

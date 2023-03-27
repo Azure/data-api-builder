@@ -25,6 +25,8 @@ add ArtOfWar --config "dab-config.PostgreSql.json" --source "aow" --rest true --
 add series --config "dab-config.PostgreSql.json" --source "series" --permissions "anonymous:*"
 add Sales --config "dab-config.PostgreSql.json" --source "sales" --permissions "anonymous:*" --rest true --graphql true
 add GQLmappings --config "dab-config.PostgreSql.json" --source "gqlmappings" --permissions "anonymous:*" --rest true --graphql true
+add Bookmarks --config "dab-config.PostgreSql.json" --source "bookmarks" --permissions "anonymous:*" --rest true --graphql true
+add MappedBookmarks --config "dab-config.PostgreSql.json" --source "mappedbookmarks" --permissions "anonymous:*" --rest true --graphql true
 update GQLmappings --config "dab-config.PostgreSql.json" --map "__column1:column1,__column2:column2" --permissions "authenticated:*"
 update Publisher --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship books --target.entity Book --cardinality many
 update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tester_01:create,delete"
@@ -42,6 +44,9 @@ update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tes
 update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tester_06:create,delete"
 update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tester_06:update" --fields.include "*"
 update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tester_06:read" --fields.include "*" --policy-database "@item.id eq 1940"
+update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tester_REST:read" --policy-database "@item.id ne 1234 or @item.id gt 1940"
+update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tester_REST:create"
+update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tester_REST:update" --policy-database "@item.id ne 1234"
 update Stock --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete" --rest commodities --graphql true --relationship stocks_price --target.entity stocks_price --cardinality one
 update Book --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete"
 update Book --config "dab-config.PostgreSql.json" --relationship publishers --target.entity Publisher --cardinality one
@@ -104,3 +109,5 @@ update Journal --config "dab-config.PostgreSql.json" --permissions "policy_teste
 update Journal --config "dab-config.PostgreSql.json" --permissions "authorizationHandlerTester:read"
 update ArtOfWar --config "dab-config.PostgreSql.json" --permissions "authenticated:*" --map "DetailAssessmentAndPlanning:始計,WagingWar:作戰,StrategicAttack:謀攻,NoteNum:┬─┬ノ( º _ ºノ)"
 update Sales --config "dab-config.PostgreSql.json" --permissions "authenticated:*"
+update Bookmarks --config "dab-config.PostgreSql.json" --permissions "authenticated:*"
+update MappedBookmarks --config "dab-config.PostgreSql.json" --permissions "authenticated:*" --map "id:bkid,bkname:name"

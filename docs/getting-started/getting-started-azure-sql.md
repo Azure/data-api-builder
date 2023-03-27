@@ -52,7 +52,7 @@ The command will generate a config file called `dab-config.json` looking like th
 
 ```json
 {
-  "$schema": "https://dataapibuilder.azureedge.net/schemas/v{dab-version}/dab.draft.schema.json",
+  "$schema": "https://github.com/Azure/data-api-builder/releases/download/v{dab-version}/dab.draft.schema.json",
   "data-source": {
     "database-type": "mssql",
     "options": {

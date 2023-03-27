@@ -1,5 +1,6 @@
 # What's New in Data API builder
 
+- [Version 0.5.35](#version-035)
 - [Version 0.5.34](#version-0534)
 - [Version 0.5.32](#version-0532)
 - [Version 0.5.0](#version-050)
@@ -7,6 +8,11 @@
 - [Version 0.3.7](#version-037)
 
 Details on how to install the latest version are here: [Installing DAB CLI](./getting-started/getting-started.md#installing-dab-cli)
+
+## Version 0.5.35
+
+- Force `Allow User Variables=true` for MySql connections fixing PUT/PATCH requests
+- Improve mapped column handling for REST pagination and NextLink creation fixes
 
 ## Version 0.5.34
 

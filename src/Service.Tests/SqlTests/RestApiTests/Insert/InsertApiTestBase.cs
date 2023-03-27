@@ -263,6 +263,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
 
         #region Negative Tests
 
+        /// <summary>
+        /// Test to validate that an exception is encountered when the user specifies primary key route or query string for a POST request via REST.
+        /// </summary>
         [TestMethod]
         public virtual async Task InsertOneWithPrimaryKeyOrQueryStringInURLTest()
         {

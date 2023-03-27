@@ -87,7 +87,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             InsertColumns.Add(columnName);
             string paramName;
 
-            if (value != null)
+            if (value is not null)
             {
                 paramName = MakeParamWithValue(
                     GetParamAsSystemType(value.ToString()!, columnName, GetColumnSystemType(columnName)));

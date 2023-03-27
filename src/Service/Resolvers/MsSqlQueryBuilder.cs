@@ -64,7 +64,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string predicates = JoinPredicateStrings(structure.DbPolicyPredicates);
             string insertColumns = Build(structure.InsertColumns);
 
-            if (string.IsNullOrEmpty(structure.DbPolicyPredicates))
+            if (!string.IsNullOrEmpty(structure.DbPolicyPredicates))
             {
                 return $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} ({insertColumns}) " +
                     $"OUTPUT {MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted)} " +

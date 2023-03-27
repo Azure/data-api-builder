@@ -92,7 +92,7 @@ https://github.com/Azure/data-api-builder/releases/download/v0.3.7-alpha/dab.dra
 
 If there are no suffix, then simply ignore it, for example:
 ```txt
-https://github.com/Azure/data-api-builder/releases/download/v0.5.34/dab.draft.schema.json
+https://github.com/Azure/data-api-builder/releases/download/v0.5.35/dab.draft.schema.json
 ```
 
 the **latest** version of the schema is always available at

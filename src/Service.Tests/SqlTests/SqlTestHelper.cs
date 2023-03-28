@@ -158,13 +158,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 string expectedStatusCode = expectedErrorObj.GetProperty(PROPERTY_STATUS).ToString();
                 string expectedSubStatusCode = expectedErrorObj.GetProperty(PROPERTY_CODE).ToString();
 
-                if ((int)HttpStatusCode.Forbidden == int.Parse(expectedStatusCode))
-                {
-                    // In case of forbidden requests (403 status code), responseBody is read as empty.
-                    Assert.IsTrue(HttpStatusCode.Forbidden ==  response.StatusCode);
-                    return;
-                }
-
                 // Quote(") has to be treated differently than other unicode characters
                 // as it has to be added with a preceding backslash.
                 responseBody = Regex.Replace(responseBody, @"\\u0022", @"\\""");

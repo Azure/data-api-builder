@@ -17,7 +17,8 @@ add books_view_all --config "dab-config.PostgreSql.json" --source books_view_all
 add books_view_with_mapping --config "dab-config.PostgreSql.json" --source books_view_with_mapping --source.type "view" --permissions "anonymous:*" --rest true --graphql true
 add stocks_view_selected --config "dab-config.PostgreSql.json" --source stocks_view_selected --source.type "view" --source.key-fields "categoryid,pieceid" --permissions "anonymous:*" --rest true --graphql true
 add books_publishers_view_composite --config "dab-config.PostgreSql.json" --source books_publishers_view_composite --source.type "view" --source.key-fields "id,pub_id" --permissions "anonymous:*" --rest true --graphql true
-add books_publishers_view_composite_insertable --config "dab-config.PostgreSql.json" --source books_publishers_view_composite_insertable --source.type "view" --source.key-fields "id" --permissions "anonymous:*" --rest true --graphql trueadd Notebook --config "dab-config.PostgreSql.json" --source "notebooks" --permissions "anonymous:read" --rest true --graphql true --fields.include "*" --policy-database "@item ne 1"
+add books_publishers_view_composite_insertable --config "dab-config.PostgreSql.json" --source books_publishers_view_composite_insertable --source.type "view" --source.key-fields "id" --permissions "anonymous:*" --rest true --graphql true
+add Notebook --config "dab-config.PostgreSql.json" --source "notebooks" --permissions "anonymous:read" --rest true --graphql true --fields.include "*" --policy-database "@item ne 1"
 add Journal --config "dab-config.PostgreSql.json" --source "journals" --rest true --graphql true --permissions "policy_tester_noupdate:create,delete"
 add ArtOfWar --config "dab-config.PostgreSql.json" --source "aow" --rest true --graphql false --permissions "anonymous:*"
 add series --config "dab-config.PostgreSql.json" --source "series" --permissions "anonymous:*"

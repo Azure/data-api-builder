@@ -17,8 +17,8 @@ add Fungus --config "dab-config.MsSql.json" --source fungi --permissions "anonym
 add books_view_all --config "dab-config.MsSql.json" --source books_view_all --source.type "view" --source.key-fields "id" --permissions "anonymous:*" --rest true --graphql true
 add books_view_with_mapping --config "dab-config.MsSql.json" --source books_view_with_mapping --source.type "view" --source.key-fields "id" --permissions "anonymous:*" --rest true --graphql true
 add stocks_view_selected --config "dab-config.MsSql.json" --source stocks_view_selected --source.type "view" --source.key-fields "categoryid,pieceid" --permissions "anonymous:*" --rest true --graphql true
-add books_publishers_view_composite --config "dab-config.MsSql.json" --source books_publishers_view_composite --source.type "view" --source.key-fields "id" --permissions "anonymous:*" --rest true --graphql true
-add books_publishers_view_composite_insertable --config "dab-config.MsSql.json" --source books_publishers_view_composite_insertable --source.type "view" --source.key-fields "id" --permissions "anonymous:*" --rest true --graphql true
+add books_publishers_view_composite --config "dab-config.MsSql.json" --source books_publishers_view_composite --source.type "view" --source.key-fields "id,pub_id" --permissions "anonymous:*" --rest true --graphql true
+add books_publishers_view_composite_insertable --config "dab-config.MsSql.json" --source books_publishers_view_composite_insertable --source.type "view" --source.key-fields "id,publisher_id" --permissions "anonymous:*" --rest true --graphql true
 add Empty --config "dab-config.MsSql.json" --source "empty_table" --permissions "authenticated:create,read,update,delete" --rest true
 add Notebook --config "dab-config.MsSql.json" --source "notebooks" --permissions "anonymous:read" --rest true --graphql true --fields.include "*" --policy-database "@item ne 1"
 add Journal --config "dab-config.MsSql.json" --source "journals" --rest true --graphql true --permissions "policy_tester_noupdate:create,delete"

@@ -26,6 +26,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _integration_NonAutoGenPK_TableName = "magazines";
         protected static readonly string _integration_AutoGenNonPK_EntityName = "Comic";
         protected static readonly string _integration_AutoGenNonPK_TableName = "comics";
+        protected static readonly string _Composite_NonAutoGenPK_EntityName = "Stock";
         protected static readonly string _Composite_NonAutoGenPK_TableName = "stocks";
         protected static readonly string _integrationEntityHasColumnWithSpace = "Broker";
         protected static readonly string _integrationTableHasColumnWithSpace = "brokers";

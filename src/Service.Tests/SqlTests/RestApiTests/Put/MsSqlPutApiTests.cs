@@ -36,6 +36,30 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "PutOneUpdateWithUpdateDatabasePolicySatisfied",
+                $"SELECT [categoryid], [pieceid], [categoryName], [piecesAvailable]," +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
+                $"WHERE [categoryid] = 100 AND [pieceid] = 0 AND [categoryName] = 'SciFi' " +
+                $"AND [piecesAvailable] = 8  AND [piecesRequired] = 5 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PutOneInsertWithInsertDatabasePolicySatisfied",
+                $"SELECT [categoryid], [pieceid], [categoryName], [piecesAvailable]," +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
+                $"WHERE [categoryid] = 0 AND [pieceid] = 5 AND [categoryName] = 'SciFi' " +
+                $"AND [piecesAvailable] = 0  AND [piecesRequired] = 0 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PutOneInsertWithBothDatabasePoliciesSatisfied",
+                $"SELECT [categoryid], [pieceid], [categoryName], [piecesAvailable]," +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
+                $"WHERE [categoryid] = 1 AND [pieceid] = 5 AND [categoryName] = 'SciFi' " +
+                $"AND [piecesAvailable] = 0  AND [piecesRequired] = 0 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
                 "PutOne_Update_Default_Test",
                 $"SELECT [id], [book_id], [content] FROM { _tableWithCompositePrimaryKey } " +
                 $"WHERE [id] = 568 AND [book_id] = 1 AND [content]='Good book to read' " +

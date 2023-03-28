@@ -58,6 +58,8 @@ update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_R
 update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_REST:create"
 update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_REST:update" --policy-database "@item.id ne 1234"
 update Stock --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --rest commodities --graphql true --relationship stocks_price --target.entity stocks_price --cardinality one
+update Stock --config "dab-config.MsSql.json" --permissions "database_policy_tester:update" --policy-database "@item.categoryid ne 0"
+update Stock --config "dab-config.MsSql.json" --permissions "database_policy_tester:create" --policy-database "@item.pieceid ne 6"
 update Book --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete"
 update Book --config "dab-config.MsSql.json" --relationship publishers --target.entity Publisher --cardinality one
 update Book --config "dab-config.MsSql.json" --relationship websiteplacement --target.entity BookWebsitePlacement --cardinality one

@@ -129,6 +129,7 @@ namespace Cli
                         {
                             try
                             {
+                                // CodeQL[SM02185] Loading internal server connection
                                 HttpClient client = new(
                                     new HttpClientHandler { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator }
                                 )

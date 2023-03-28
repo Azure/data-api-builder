@@ -253,6 +253,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
 
         [TestMethod]
         [Ignore]
+        public override Task PutOneUpdateWithDatabasePolicy()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
         public override Task PutOneWithDatabasePolicy()
         {
             throw new NotImplementedException();

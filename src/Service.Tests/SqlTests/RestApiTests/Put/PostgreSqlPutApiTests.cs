@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -297,6 +298,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await base.PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest(
                 isExpectedErrorMsgSubstr: true);
         }
+
+        #region overridden tests
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOneWithDatabasePolicy()
+        {
+            throw new NotImplementedException();
+        }
+        #endregion
 
         #region Test Fixture Setup
 

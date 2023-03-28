@@ -41,10 +41,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public string? FilterPredicates { get; set; }
 
         /// <summary>
-        /// DbPolicyPredicates is a string that represents the filter portion of our query
-        /// in the WHERE Clause added by virtue of the database policy. For operations like PUT/PATCH, we may have
-        /// 2 database policies, one for the update operation and the other for insert operation. For simpler operations
-        /// like GET, POST, DELETE, only one policy would be present.
+        /// Stores the database policies for all the constituent operations which get appended to the WHERE Clause.
+        /// For operations like PUT/PATCH, we may have 2 database policies, one for the update operation and the other for insert operation.
+        /// For simpler operations like GET, POST, DELETE, only one policy would be present.
         /// </summary>
         public Dictionary<Config.Operation, string?> DbPolicyPredicatesForOperation { get; set; } = new();
 
@@ -485,12 +484,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// for GraphQL requests with the ODataASTVisitor to populate DbPolicyPredicates.
         /// Processing will also occur for GraphQL sub-queries.
         /// </summary>
-        /// <param name="odataClause">FilterClause from processed runtime configuration permissions Policy:Database</param>
+        /// <param name="dbPolicyClause">FilterClause from processed runtime configuration permissions Policy:Database</param>
         /// <param name="operation">CRUD operation for which the database policy predicates are to be evaluated.</param>
         /// <exception cref="DataApiBuilderException">Thrown when the OData visitor traversal fails. Possibly due to malformed clause.</exception>
-        public void ProcessOdataClause(FilterClause? odataClause, Config.Operation operation)
+        public void ProcessOdataClause(FilterClause? dbPolicyClause, Config.Operation operation)
         {
-            if (odataClause is null)
+            if (dbPolicyClause is null)
             {
                 DbPolicyPredicatesForOperation[operation] = null;
                 return;
@@ -499,7 +498,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ODataASTVisitor visitor = new(this, this.MetadataProvider);
             try
             {
-                DbPolicyPredicatesForOperation[operation] = GetFilterPredicatesFromOdataClause(odataClause, visitor);
+                DbPolicyPredicatesForOperation[operation] = GetFilterPredicatesFromOdataClause(dbPolicyClause, visitor);
             }
             catch (Exception ex)
             {

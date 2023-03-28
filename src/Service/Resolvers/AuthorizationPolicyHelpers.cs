@@ -99,7 +99,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
-        /// For compound operations like Upsert,UpsertIncremental, resolves them into their corresponding constituent elemental operations i.e. Create,Update.
+        /// Helper method to resolve compound operations like Upsert,UpsertIncrementa into their corresponding constituent elemental operations i.e. Create,Update.
         /// For simple operations, returns the operation itself.
         /// </summary>
         /// <param name="operation">Operation to be resolved.</param>

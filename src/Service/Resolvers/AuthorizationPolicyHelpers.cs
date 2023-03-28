@@ -106,11 +106,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <returns>Constituent operations for the operation.</returns>
         private static List<Config.Operation> ResolveCompoundOperationToElementalOperations(Config.Operation operation)
         {
-            switch(operation)
+            switch (operation)
             {
                 case Config.Operation.Upsert:
                 case Config.Operation.UpsertIncremental:
-                    return new List<Config.Operation> {  Config.Operation.Update, Config.Operation.Create };
+                    return new List<Config.Operation> { Config.Operation.Update, Config.Operation.Create };
                 default:
                     return new List<Config.Operation> { operation };
             }

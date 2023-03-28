@@ -485,7 +485,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// for GraphQL requests with the ODataASTVisitor to populate DbPolicyPredicates.
         /// Processing will also occur for GraphQL sub-queries.
         /// </summary>
-        /// <param name="dbPolicyClause">FilterClause from processed runtime configuration permissions Policy:Database</param>
+        /// <param name="odataClause">FilterClause from processed runtime configuration permissions Policy:Database</param>
+        /// <param name="operation">CRUD operation for which the database policy predicates are to be evaluated.</param>
         /// <exception cref="DataApiBuilderException">Thrown when the OData visitor traversal fails. Possibly due to malformed clause.</exception>
         public void ProcessOdataClause(FilterClause? odataClause, Config.Operation operation)
         {

@@ -537,6 +537,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     (dbResultSet.Rows.FirstOrDefault() ?? new DbResultSetRow()) : null;
                 if (dbResultSetRow is not null && dbResultSetRow.Columns.Count == 0)
                 {
+                    // For GraphQL, insert operation corresponds to Create action.
                     if (operationType is Config.Operation.Create)
                     {
                         throw new DataApiBuilderException(

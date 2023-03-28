@@ -14,7 +14,7 @@ add Tree --config "dab-config.PostgreSql.json" --source trees --permissions "ano
 add Shrub --config "dab-config.PostgreSql.json" --source trees --permissions "anonymous:create,read,update,delete" --rest plants
 add Fungus --config "dab-config.PostgreSql.json" --source fungi --permissions "anonymous:create,read,update,delete" --graphql "fungus:fungi"
 add books_view_all --config "dab-config.PostgreSql.json" --source books_view_all --source.type "view" --source.key-fields "id" --permissions "anonymous:*" --rest true --graphql true
-add books_view_with_mapping --config "dab-config.PostgreSql.json" --source books_view_with_mapping --source.type "view" --permissions "anonymous:*" --rest true --graphql true
+add books_view_with_mapping --config "dab-config.PostgreSql.json" --source books_view_with_mapping --source.type "view" --source.key-fields "id" --permissions "anonymous:*" --rest true --graphql true
 add stocks_view_selected --config "dab-config.PostgreSql.json" --source stocks_view_selected --source.type "view" --source.key-fields "categoryid,pieceid" --permissions "anonymous:*" --rest true --graphql true
 add books_publishers_view_composite --config "dab-config.PostgreSql.json" --source books_publishers_view_composite --source.type "view" --source.key-fields "id,pub_id" --permissions "anonymous:*" --rest true --graphql true
 add books_publishers_view_composite_insertable --config "dab-config.PostgreSql.json" --source books_publishers_view_composite_insertable --source.type "view" --source.key-fields "id" --permissions "anonymous:*" --rest true --graphql true

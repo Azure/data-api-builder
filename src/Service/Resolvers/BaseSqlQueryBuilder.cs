@@ -24,6 +24,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public const string TABLE_NAME_PARAM = "tableName";
 
         /// <summary>
+        /// Predicate added to the query when no valid predicates exist.
+        /// </summary>
+        public const string BASE_PREDICATE = "1 = 1";
+
+        /// <summary>
         /// Adds database specific quotes to string identifier
         /// </summary>
         public abstract string QuoteIdentifier(string ident);
@@ -32,7 +37,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public virtual string Build(BaseSqlQueryStructure structure)
         {
             string predicates = new(JoinPredicateStrings(
-                       structure.DbPolicyPredicates,
+                       structure.DbPolicyPredicatesForOperation[Config.Operation.Read],
                        Build(structure.Predicates)));
 
             string query = $"SELECT 1 " +
@@ -368,7 +373,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             if (!validPredicates.Any())
             {
-                return "1 = 1";
+                return BASE_PREDICATE;
             }
 
             return string.Join(" AND ", validPredicates);

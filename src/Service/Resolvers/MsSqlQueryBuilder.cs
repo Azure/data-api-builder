@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
@@ -39,7 +40,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         x => $" OUTER APPLY ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)}({dataIdent})"));
 
             string predicates = JoinPredicateStrings(
-                                    structure.DbPolicyPredicates,
+                                    structure.DbPolicyPredicatesForOperation[Config.Operation.Read],
                                     structure.FilterPredicates,
                                     Build(structure.Predicates),
                                     Build(structure.PaginationMetadata.PaginationPredicate));
@@ -71,7 +72,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public string Build(SqlUpdateStructure structure)
         {
             string predicates = JoinPredicateStrings(
-                                   structure.DbPolicyPredicates,
+                                   structure.DbPolicyPredicatesForOperation[Config.Operation.Update],
                                    Build(structure.Predicates));
 
             return $"UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
@@ -84,7 +85,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public string Build(SqlDeleteStructure structure)
         {
             string predicates = JoinPredicateStrings(
-                       structure.DbPolicyPredicates,
+                       structure.DbPolicyPredicatesForOperation[Config.Operation.Delete],
                        Build(structure.Predicates));
 
             return $"DELETE FROM {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
@@ -106,28 +107,46 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <returns></returns>
         public string Build(SqlUpsertQueryStructure structure)
         {
-            string predicates = JoinPredicateStrings(Build(structure.Predicates), structure.DbPolicyPredicates);
+            string updatePredicates = JoinPredicateStrings(Build(structure.Predicates), structure.DbPolicyPredicatesForOperation[Config.Operation.Update]);
+            string insertPredicates = JoinPredicateStrings(structure.DbPolicyPredicatesForOperation[Config.Operation.Create]);
             if (structure.IsFallbackToUpdate)
             {
                 return $"UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
                     $"OUTPUT {MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted)} " +
-                    $"WHERE {predicates};";
+                    $"WHERE {updatePredicates};";
             }
             else
             {
-                return $"SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;BEGIN TRANSACTION; UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
+                string updateQuery = $"SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;BEGIN TRANSACTION; UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
                     $"WITH(UPDLOCK) SET {Build(structure.UpdateOperations, ", ")} " +
                     $"OUTPUT {MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted)} " +
-                    $"WHERE {predicates} " +
-                    $"IF @@ROWCOUNT = 0 " +
-                    $"BEGIN; " +
-                    $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} ({Build(structure.InsertColumns)}) " +
-                    $"OUTPUT {MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted)} " +
-                    $"VALUES ({string.Join(", ", structure.Values)}) " +
-                    $"END; COMMIT TRANSACTION";
-            }
+                    $"WHERE {updatePredicates} ";
+                string insertQuery;
+                string insertColumns = Build(structure.InsertColumns);
+                if (insertPredicates.Equals(BASE_PREDICATE))
+                {
+                    insertQuery = $"IF @@ROWCOUNT = 0 " +
+                        $"BEGIN; " +
+                        $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} ({insertColumns}) " +
+                        $"OUTPUT {MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted)} " +
+                        $"VALUES ({string.Join(", ", structure.Values)}) " +
+                        $"END; COMMIT TRANSACTION";
+                }
+                else
+                {
+                    insertQuery = $"IF @@ROWCOUNT = 0 " +
+                        $"BEGIN; " +
+                        $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} ({insertColumns}) " +
+                        $"OUTPUT {MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted)} " +
+                        $"SELECT {insertColumns} " +
+                        $"FROM (VALUES({string.Join(", ", structure.Values)})) T({insertColumns}) " +
+                        $"WHERE {insertPredicates} " +
+                        $"END; COMMIT TRANSACTION";
+                }
 
+                return updateQuery + insertQuery;
+            }
         }
 
         /// <summary>

@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.Generic;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -45,25 +46,25 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             string clientRoleHeader = roleHeaderValue.ToString();
+            List<Config.Operation> elementalOperations = ResolveCompoundOperationToElementalOperations(operation: operationType);
 
-            string dbQueryPolicy = authorizationResolver.ProcessDBPolicy(
+            // Add the database policy predicates for each of the constituent operations.
+            foreach (Config.Operation elementalOperation in elementalOperations)
+            {
+                string dbQueryPolicy = authorizationResolver.ProcessDBPolicy(
                 queryStructure.EntityName,
                 clientRoleHeader,
-                operationType,
+                elementalOperation,
                 context);
 
-            FilterClause? filterClause = GetDBPolicyClauseForQueryStructure(
-                dbQueryPolicy,
-                entityName: queryStructure.EntityName,
-                resourcePath: queryStructure.DatabaseObject.FullName,
-                sqlMetadataProvider);
+                FilterClause? filterClause = GetDBPolicyClauseForQueryStructure(
+                    dbQueryPolicy,
+                    entityName: queryStructure.EntityName,
+                    resourcePath: queryStructure.DatabaseObject.FullName,
+                    sqlMetadataProvider);
 
-            if (filterClause is null)
-            {
-                return;
+                queryStructure.ProcessOdataClause(filterClause, elementalOperation);
             }
-
-            queryStructure.ProcessOdataClause(filterClause);
         }
 
         /// <summary>
@@ -95,6 +96,24 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// For compound operations like Upsert,UpsertIncremental, resolves them into their corresponding constituent elemental operations i.e. Create,Update.
+        /// For simple operations, returns the operation itself.
+        /// </summary>
+        /// <param name="operation">Operation to be resolved.</param>
+        /// <returns>Constituent operations for the operation.</returns>
+        private static List<Config.Operation> ResolveCompoundOperationToElementalOperations(Config.Operation operation)
+        {
+            switch(operation)
+            {
+                case Config.Operation.Upsert:
+                case Config.Operation.UpsertIncremental:
+                    return new List<Config.Operation> {  Config.Operation.Update, Config.Operation.Create };
+                default:
+                    return new List<Config.Operation> { operation };
+            }
         }
     }
 }

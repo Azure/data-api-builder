@@ -36,7 +36,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             fromSql += string.Join("", structure.JoinQueries.Select(x => $" LEFT OUTER JOIN LATERAL ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)} ON TRUE"));
 
             string predicates = JoinPredicateStrings(
-                                    structure.DbPolicyPredicates,
+                                    structure.DbPolicyPredicatesForOperation[Config.Operation.Read],
                                     structure.FilterPredicates,
                                     Build(structure.Predicates),
                                     Build(structure.PaginationMetadata.PaginationPredicate));
@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public string Build(SqlUpdateStructure structure)
         {
             string predicates = JoinPredicateStrings(
-                                   structure.DbPolicyPredicates,
+                                   structure.DbPolicyPredicatesForOperation[Config.Operation.Update],
                                    Build(structure.Predicates));
 
             return $"UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
@@ -91,7 +91,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public string Build(SqlDeleteStructure structure)
         {
             string predicates = JoinPredicateStrings(
-                       structure.DbPolicyPredicates,
+                       structure.DbPolicyPredicatesForOperation[Config.Operation.Delete],
                        Build(structure.Predicates));
 
             return $"DELETE FROM {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
@@ -110,7 +110,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             // https://stackoverflow.com/questions/42668720/check-if-postgres-query-inserted-or-updated-via-upsert
             // relying on xmax to detect insert vs update breaks for views
-            string predicates = JoinPredicateStrings(Build(structure.Predicates), structure.DbPolicyPredicates);
+            string predicates = JoinPredicateStrings(Build(structure.Predicates), structure.DbPolicyPredicatesForOperation[Config.Operation.Update]);
             string updateQuery = $"UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
                 $"SET {Build(structure.UpdateOperations, ", ")} " +
                 $"WHERE {predicates} " +

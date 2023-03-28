@@ -72,7 +72,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
               authorizationResolver: authorizationResolver,
               gQLFilterParser: gQLFilterParser,
               entityName: entityName,
-              operationType: Config.Operation.Update,
+              operationType: Config.Operation.Upsert,
               httpContext: httpContext)
         {
             UpdateOperations = new();

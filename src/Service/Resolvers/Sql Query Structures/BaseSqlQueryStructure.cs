@@ -42,9 +42,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         /// <summary>
         /// DbPolicyPredicates is a string that represents the filter portion of our query
-        /// in the WHERE Clause added by virtue of the database policy.
+        /// in the WHERE Clause added by virtue of the database policy. For operations like PUT/PATCH, we may have
+        /// 2 database policies, one for the update operation and the other for insert operation. For simpler operations
+        /// like GET, POST, DELETE, only one policy would be present.
         /// </summary>
-        public string? DbPolicyPredicates { get; set; }
+        public Dictionary<Config.Operation, string?> DbPolicyPredicatesForOperation { get; set; } = new();
 
         public BaseSqlQueryStructure(
             ISqlMetadataProvider metadataProvider,
@@ -485,12 +487,18 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         /// <param name="dbPolicyClause">FilterClause from processed runtime configuration permissions Policy:Database</param>
         /// <exception cref="DataApiBuilderException">Thrown when the OData visitor traversal fails. Possibly due to malformed clause.</exception>
-        public void ProcessOdataClause(FilterClause odataClause)
+        public void ProcessOdataClause(FilterClause? odataClause, Config.Operation operation)
         {
+            if (odataClause is null)
+            {
+                DbPolicyPredicatesForOperation[operation] = null;
+                return;
+            }
+
             ODataASTVisitor visitor = new(this, this.MetadataProvider);
             try
             {
-                DbPolicyPredicates = GetFilterPredicatesFromOdataClause(odataClause, visitor);
+                DbPolicyPredicatesForOperation[operation] = GetFilterPredicatesFromOdataClause(odataClause, visitor);
             }
             catch (Exception ex)
             {

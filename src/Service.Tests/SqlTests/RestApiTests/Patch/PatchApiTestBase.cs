@@ -589,7 +589,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         /// <summary>
-        /// Test to validate that PATCH operation on inaccessible row (by virtue of database policy) fails.
+        /// Test to validate failure of PATCH operation which does not satisfy either of the database policies defined for
+        /// update/create operation.
         /// </summary>
         /// <returns></returns>
         [TestMethod]

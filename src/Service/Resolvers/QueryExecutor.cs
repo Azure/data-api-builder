@@ -330,16 +330,17 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 dbResultSet.ResultProperties.Add(SqlMutationEngine.IS_FIRST_RESULT_SET, true);
                 return dbResultSet;
             }
-            else if (await dbDataReader.NextResultAsync())
+            else if (await dbDataReader.NextResultAsync() && (dbResultSet = await ExtractResultSetFromDbDataReader(dbDataReader)).Rows.Count > 0)
             {
-                // Since no first result set exists, we return the second result set.
-                return await ExtractResultSetFromDbDataReader(dbDataReader);
+                // Since second result set exists with row count > 0, insert operation returned some records.
+                return dbResultSet;
             }
             else
             {
                 // This is the case where UPDATE and INSERT both return no results.
                 // e.g. a situation where the item with the given PK doesn't exist so there's
                 // no update and PK is auto generated so no insert can happen.
+                // Another situation can be when both insert and update operations are restricted by the database policies.
                 if (args is not null && args.Count == 2)
                 {
                     string prettyPrintPk = args[0];

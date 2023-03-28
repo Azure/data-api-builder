@@ -118,7 +118,7 @@ namespace Azure.DataApiBuilder.Service.Services
                         break;
                     case Config.Operation.Insert:
                         RequestValidator.ValidatePrimaryKeyRouteAndQueryStringInURL(operationType, primaryKeyRoute, queryString);
-                        JsonElement insertPayloadRoot = RequestValidator.TryValidateAndParseRequestBody(requestBody);
+                        JsonElement insertPayloadRoot = RequestValidator.ValidateAndParseRequestBody(requestBody);
                         context = new InsertRequestContext(
                             entityName,
                             dbo: dbObject,
@@ -143,7 +143,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     case Config.Operation.Upsert:
                     case Config.Operation.UpsertIncremental:
                         RequestValidator.ValidatePrimaryKeyRouteAndQueryStringInURL(operationType, primaryKeyRoute);
-                        JsonElement upsertPayloadRoot = RequestValidator.TryValidateAndParseRequestBody(requestBody);
+                        JsonElement upsertPayloadRoot = RequestValidator.ValidateAndParseRequestBody(requestBody);
                         context = new UpsertRequestContext(
                             entityName,
                             dbo: dbObject,
@@ -275,7 +275,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     // Stored procedure call is semantically identical for all methods except Find.
                     // So, we can effectively treat it as Insert operation - throws error if query string is non empty.
                     RequestValidator.ValidatePrimaryKeyRouteAndQueryStringInURL(Config.Operation.Insert, queryString);
-                    JsonElement requestPayloadRoot = RequestValidator.TryValidateAndParseRequestBody(requestBody);
+                    JsonElement requestPayloadRoot = RequestValidator.ValidateAndParseRequestBody(requestBody);
                     context = new StoredProcedureRequestContext(
                         entityName,
                         dbo: dbObject,

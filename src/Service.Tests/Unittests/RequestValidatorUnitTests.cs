@@ -160,7 +160,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             if (expectsException)
             {
                 DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
-                    action: () => RequestValidator.TryValidateAndParseRequestBody(requestBody),
+                    action: () => RequestValidator.ValidateAndParseRequestBody(requestBody),
                     message: RequestValidator.REQUEST_BODY_INVALID_JSON_ERR_MESSAGE);
 
                 Assert.AreEqual(expected: HttpStatusCode.BadRequest, actual: dabException.StatusCode);
@@ -168,7 +168,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
             else
             {
-                RequestValidator.TryValidateAndParseRequestBody(requestBody);
+                RequestValidator.ValidateAndParseRequestBody(requestBody);
             }
         }
         #endregion

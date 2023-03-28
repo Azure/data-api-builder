@@ -185,7 +185,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <exception cref="DataApiBuilderException">Thrown when request body is invalid JSON
         /// or JSON is a batch request (mutation of more than one entity in a single request).</exception>
         /// <returns>JsonElement representing the body of the request.</returns>
-        public static JsonElement TryValidateAndParseRequestBody(string requestBody)
+        public static JsonElement ValidateAndParseRequestBody(string requestBody)
         {
             JsonElement mutationPayloadRoot = new();
 
@@ -219,7 +219,8 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Performs validations on primary key route and queryString specified in the request URL, who specifics depend on the type of operation being executed.
+        /// Performs validations on primary key route and queryString specified in the request URL, whose specifics depend on the type of operation being executed.
+        /// Eg. a POST request cannot have primary key route/query string in the URL while it is mandatory for a PUT/PATCH/DELETE request to have a primary key route in the URL.
         /// </summary>
         /// <param name="operationType">Type of operation being executed.</param>
         /// <param name="primaryKeyRoute">URL route e.g. "Entity/id/1"</param>

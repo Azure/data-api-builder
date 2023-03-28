@@ -269,7 +269,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         [TestMethod]
         public virtual async Task InsertOneWithPrimaryKeyOrQueryStringInURLTest()
         {
-            // Validate that it is not allowed to specify query string in the URL for POST requests.
+            // Validate that a POST request is not allowed to include a query string in the URL.
             string requestBody = @"
             {
                 ""title"": ""My New Book"",
@@ -288,7 +288,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
 
-            // Validate that it is not allowed to specify primary key in the URL for POST requests.
+            //Validate that a POST request is not allowed to include primary key in the URL.
             requestBody = @"
             {
                 ""categoryid"": 0,

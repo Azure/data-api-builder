@@ -239,26 +239,6 @@ namespace Azure.DataApiBuilder.Service.Tests
           "}";
 
         /// <summary>
-        /// A valid REST API request body with correct parameter types for all the fields.
-        /// </summary>
-        public const string REQUEST_BODY_WITH_CORRECT_PARAM_TYPES = @"
-                    {
-                        ""title"": ""New book"",
-                        ""publisher_id"": 1234
-                    }
-                ";
-
-        /// <summary>
-        /// An invalid REST API request body with incorrect parameter type for publisher_id field.
-        /// </summary>
-        public const string REQUEST_BODY_WITH_INCORRECT_PARAM_TYPES = @"
-                    {
-                        ""title"": ""New book"",
-                        ""publisher_id"": ""one""
-                    }
-                ";
-
-        /// <summary>
         /// Utility method that reads the config file for a given database type and constructs a
         /// new config file with changes just in the host mode section.
         /// </summary>

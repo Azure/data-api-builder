@@ -129,8 +129,7 @@ namespace Cli
                         {
                             try
                             {
-                                // CodeQL[SM02185] Loading internal server connection
-                                HttpClient client = new(
+                                HttpClient client = new( // CodeQL[SM02185] Loading internal server connection
                                     new HttpClientHandler { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator }
                                 )
                                 { BaseAddress = new Uri("https://localhost:5001/graphql") };

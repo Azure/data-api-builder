@@ -20,7 +20,7 @@ namespace Azure.DataApiBuilder.Service.Services
         public const string REQUEST_BODY_INVALID_JSON_ERR_MESSAGE = "Request body contains invalid JSON.";
         public const string BATCH_MUTATION_UNSUPPORTED_ERR_MESSAGE = "A Mutation operation on more than one entity in a single request is not yet supported.";
         public const string QUERY_STRING_INVALID_USAGE_ERR_MESSAGE = "Query string for this HTTP request type is an invalid URL.";
-        public const string PRIMARY_KEY_INVALID_USAGE_ERR_MESSAGE = "Primary key for POST request can't be specified in request URL. Use request body instead.";
+        public const string PRIMARY_KEY_INVALID_USAGE_ERR_MESSAGE = "Primary key for POST requests can't be specified in the request URL. Use request body instead.";
         public const string PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE = "Primary Key for this HTTP request type is required.";
 
         /// <summary>

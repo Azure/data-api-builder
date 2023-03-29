@@ -278,7 +278,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
 
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?/id/5001",
+                queryString: "?$filter=id eq 5001",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: string.Empty,
                 operationType: Config.Operation.Insert,

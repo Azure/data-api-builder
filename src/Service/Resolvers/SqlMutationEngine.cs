@@ -333,7 +333,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 {
                     if (mutationResultRow is null)
                     {
-                        // this case should not happen, we throw an exception
+                        // Ideally this case should not happen, however may occur due to unexpected reasons,
+                        // like the DbDataReader being null. We throw an exception
                         // which will be returned as an Unexpected Internal Server Error
                         throw new Exception();
                     }

@@ -94,7 +94,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else
             {
-                paramName = MakeParamWithValue(null);
+                paramName = MakeParamWithValue(value: null);
             }
 
             Values.Add($"{paramName}");

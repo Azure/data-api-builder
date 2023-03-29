@@ -52,7 +52,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     }
                     else
                     {
-                        parametrizedName = MakeParamWithValue(null);
+                        parametrizedName = MakeParamWithValue(value: null);
                     }
 
                     ProcedureParameters.Add(paramKey, $"{parametrizedName}");

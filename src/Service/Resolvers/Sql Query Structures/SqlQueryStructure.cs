@@ -487,7 +487,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 column.TableAlias = SourceAlias;
                 column.ParamName = column.Value is not null ?
                      MakeParamWithValue(GetParamAsSystemType(column.Value!.ToString()!, column.ColumnName, GetColumnSystemType(column.ColumnName))) :
-                     MakeParamWithValue(null);
+                     MakeParamWithValue(value: null);
             }
 
             PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(afterJsonValues.ToList());

@@ -193,19 +193,19 @@
           "role": "database_policy_tester",
           "actions": [
             {
-              "action": "update",
+              "action": "Update",
               "policy": {
                 "database": "@item.id ne 1234"
               }
             },
             {
-              "action": "create",
+              "action": "Create",
               "policy": {
                 "database": "@item.name ne 'New publisher'"
               }
             },
             {
-              "action": "read",
+              "action": "Read",
               "policy": {
                 "database": "@item.id ne 1234 or @item.id gt 1940"
               }

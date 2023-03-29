@@ -171,6 +171,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="errorExpected">Whether an error is expected.</param>
         [DataTestMethod]
         [DataRow(DatabaseType.postgresql, "1 eq @item.col1", Config.Operation.Create, true, DisplayName = "Database Policy defined for Create fails for postgregsql")]
+        [DataRow(DatabaseType.postgresql, null, Config.Operation.Create, false, DisplayName = "Database Policy set as null for Create passes.")]
         [DataRow(DatabaseType.mysql, "", Config.Operation.Create, true, DisplayName = "Database Policy left empty for Create fails for mysql")]
         [DataRow(DatabaseType.mssql, "2 eq @item.col3", Config.Operation.Create, false, DisplayName = "Database Policy defined for Create passes for mssql")]
         public void AddDatabasePolicyToCreateOperation(DatabaseType dbType, string dbPolicy, Config.Operation action, bool errorExpected)

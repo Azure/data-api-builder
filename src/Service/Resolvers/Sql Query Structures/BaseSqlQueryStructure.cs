@@ -496,6 +496,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// Gets the value of the parameter cast as the system type
         /// </summary>
+        /// <param name="param">Parameter value as a string</param>
+        /// <param name="paramName">Parameter name</param>
+        /// <param name="systemType">System type to which the parameter value is parsed to</param>
+        /// <returns>The parameter value parsed to the specified system type</returns>
+        /// <exception cref="DataApiBuilderException">Throws a DataApiBuilderException when the conversion of parameter value to the specified system type fails. The error message returned will be different in development
+        /// and production modes. In production mode, the error message returned will be generic so as to not reveal information about the database object backing the entity</exception>
         protected object GetParamAsSystemType(string param, string paramName, Type systemType)
         {
             try

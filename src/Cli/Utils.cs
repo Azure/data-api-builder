@@ -660,7 +660,7 @@ namespace Cli
             IEnumerable<string>? parameters,
             IEnumerable<string>? keyFields)
         {
-            if (SourceType.StoredProcedure.Equals(sourceType))
+            if (sourceType is SourceType.StoredProcedure)
             {
                 if (keyFields is not null && keyFields.Any())
                 {
@@ -678,7 +678,7 @@ namespace Cli
                 }
 
                 // For Views
-                if (SourceType.View.Equals(sourceType) && (keyFields is null || !keyFields.Any()))
+                if (sourceType is SourceType.View && (keyFields is null || !keyFields.Any()))
                 {
                     _logger.LogError("Key-fields are mandatory for views, but not provided.");
                     return false;

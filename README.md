@@ -53,7 +53,7 @@ List of known issues and possible workarounds, where applicable and possible, is
 
 ## Development Roadmap
 
-Do you what to know what we're working on and what is the planned development roadmap for Data API builder? Or do you have some wonderful idea on how to improve Data API builder and what to share them? Go here: https://github.com/Azure/data-api-builder/discussions/1377
+Do you want to know what we're working on and what is the planned development roadmap for Data API builder? Or do you have some wonderful ideas on how to improve Data API builder and want to share them? Go here: https://github.com/Azure/data-api-builder/discussions/1377
 
 ## How to Contribute
 

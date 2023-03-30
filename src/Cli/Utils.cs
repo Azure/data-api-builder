@@ -683,7 +683,6 @@ namespace Cli
                     _logger.LogError("Key-fields are mandatory for views, but not provided.");
                     return false;
                 }
-
             }
 
             return true;

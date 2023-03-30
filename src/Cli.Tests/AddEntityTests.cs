@@ -264,6 +264,8 @@ namespace Cli.Tests
         [DataRow("stored-procedure", new string[] { "param1:value1,param1:223" }, null, "*", false, DisplayName = "Parameters containing duplicate keys are not allowed")]
         [DataRow("view", new string[] { "param1:value1" }, null, "*", false, DisplayName = "Source Parameters incorrectly used with View")]
         [DataRow("table", new string[] { "param1:value1" }, null, "*", false, DisplayName = "Source Parameters incorrectly used with Table")]
+        [DataRow("view", new string[] { "param1:value1" }, new string[] { "col1", "col2" }, "*", false, DisplayName = "Source Parameters and Keyfields incorrectly used with View")]
+        [DataRow("table", new string[] { "param1:value1" }, new string[] { "col1", "col2" }, "*", false, DisplayName = "Source Parameters and Keyfields incorrectly used with Table")]
         [DataRow("table-view", new string[] { "param1:value1" }, null, "*", false, DisplayName = "Invalid Source Type")]
         public void TestAddNewEntityWithSourceObjectHavingValidFields(
             string? sourceType,

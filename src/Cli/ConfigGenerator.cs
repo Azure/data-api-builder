@@ -789,7 +789,7 @@ namespace Cli
 
             }
 
-            // No need to validate pairing if there is no change to the source object
+            // No need to validate parameter and key field usage when there are no changes to the source object defined in 'options'
             if ((options.SourceType is not null
                 || (options.SourceParameters is not null && options.SourceParameters.Any())
                 || (options.SourceKeyFields is not null && options.SourceKeyFields.Any()))

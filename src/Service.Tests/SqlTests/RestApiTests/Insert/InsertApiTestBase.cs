@@ -263,9 +263,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
 
         #region Negative Tests
 
+        /// <summary>
+        /// Test to validate that an exception is encountered when the user specifies primary key route or query string for a POST request via REST.
+        /// </summary>
         [TestMethod]
-        public virtual async Task InsertOneWithInvalidQueryStringTest()
+        public virtual async Task InsertOneWithPrimaryKeyOrQueryStringInURLTest()
         {
+            // Validate that a POST request is not allowed to include a query string in the URL.
             string requestBody = @"
             {
                 ""title"": ""My New Book"",
@@ -274,13 +278,33 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
 
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?/id/5001",
+                queryString: "?$filter=id eq 5001",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: string.Empty,
                 operationType: Config.Operation.Insert,
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: RequestValidator.QUERY_STRING_INVALID_USAGE_ERR_MESSAGE,
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+
+            //Validate that a POST request is not allowed to include primary key in the URL.
+            requestBody = @"
+            {
+                ""categoryid"": 0,
+                ""pieceid"": 4,
+                ""categoryName"": ""SciFi""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/0/pieceid/4",
+                queryString: string.Empty,
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: string.Empty,
+                operationType: Config.Operation.Insert,
+                requestBody: requestBody,
+                exceptionExpected: true,
+                expectedErrorMessage: RequestValidator.PRIMARY_KEY_INVALID_USAGE_ERR_MESSAGE,
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }

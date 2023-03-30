@@ -129,7 +129,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 }
                 else
                 {
-                    errorMessage = $"{columnName} is not a valid field of {EntityName}";
+                    string fieldNameToBeDisplayedInErrorMsg = columnName;
+                    if (MetadataProvider.TryGetExposedColumnName(EntityName, columnName, out string? exposedColumnName))
+                    {
+                        fieldNameToBeDisplayedInErrorMsg = exposedColumnName!;
+                    }
+
+                    errorMessage = $"{fieldNameToBeDisplayedInErrorMsg} is not a valid field of {EntityName}";
                 }
 
                 throw new DataApiBuilderException(
@@ -530,7 +536,17 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     }
                     else
                     {
-                        errorMessage = $"Invalid value provided for field: {paramName}";
+                        string fieldNameToBeDisplayedInErrorMessage = paramName;
+
+                        if (MetadataProvider.EntityToDatabaseObject[EntityName].SourceType is SourceType.Table || MetadataProvider.EntityToDatabaseObject[EntityName].SourceType is SourceType.View)
+                        {
+                            if (MetadataProvider.TryGetExposedColumnName(EntityName, paramName, out string? exposedName))
+                            {
+                                fieldNameToBeDisplayedInErrorMessage = exposedName!;
+                            }
+                        }
+
+                        errorMessage = $"Invalid value provided for field: {fieldNameToBeDisplayedInErrorMessage}";
                     }
 
                     throw new DataApiBuilderException(

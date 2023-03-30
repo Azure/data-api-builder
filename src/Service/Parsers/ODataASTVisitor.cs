@@ -17,11 +17,13 @@ namespace Azure.DataApiBuilder.Service.Parsers
     {
         private BaseSqlQueryStructure _struct;
         private ISqlMetadataProvider _metadataProvider;
+        public Config.Operation operation;
 
-        public ODataASTVisitor(BaseSqlQueryStructure structure, ISqlMetadataProvider metadataProvider)
+        public ODataASTVisitor(BaseSqlQueryStructure structure, ISqlMetadataProvider metadataProvider, Config.Operation operation = Config.Operation.None)
         {
             _struct = structure;
             _metadataProvider = metadataProvider;
+            this.operation = operation;
         }
 
         /// <summary>
@@ -61,6 +63,12 @@ namespace Azure.DataApiBuilder.Service.Parsers
         public override string Visit(SingleValuePropertyAccessNode nodeIn)
         {
             _metadataProvider.TryGetBackingColumn(_struct.EntityName, nodeIn.Property.Name, out string? backingColumnName);
+
+            if (operation is Config.Operation.Create)
+            {
+                _struct.FieldsReferencedInDbPolicyForCreateAction.Add(backingColumnName!);
+            }
+
             return _metadataProvider.GetQueryBuilder().QuoteIdentifier(backingColumnName!);
         }
 

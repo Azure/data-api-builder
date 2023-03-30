@@ -47,6 +47,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             string clientRoleHeader = roleHeaderValue.ToString();
             List<Config.Operation> elementalOperations = ResolveCompoundOperationToElementalOperations(operation: operationType);
+            ODataASTVisitor visitor = new(queryStructure, sqlMetadataProvider);
 
             // Add the database policy predicates for each of the constituent operations.
             foreach (Config.Operation elementalOperation in elementalOperations)
@@ -63,7 +64,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     resourcePath: queryStructure.DatabaseObject.FullName,
                     sqlMetadataProvider);
 
-                queryStructure.ProcessOdataClause(filterClause, elementalOperation);
+                // Update the operation for which the oData clause is being processed.
+                visitor.operation = elementalOperation;
+                queryStructure.ProcessOdataClause(filterClause, elementalOperation, visitor);
             }
         }
 

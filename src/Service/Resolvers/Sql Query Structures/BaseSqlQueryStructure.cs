@@ -47,6 +47,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public Dictionary<Config.Operation, string?> DbPolicyPredicatesForOperation { get; set; } = new();
 
+        /// <summary>
+        /// Collection of all the fields referenced in the database policy for create action.
+        /// The fields referenced in the database policy should be a subset of the fields that are being inserted via the insert statement,
+        /// as then only we would be able to make them a part of our SELECT FROM clause from the temporary table.
+        /// This will only be populated for PUT/PATCH/POST operation.
+        /// </summary>
+        public HashSet<string> FieldsReferencedInDbPolicyForCreateAction { get; set; } = new();
+
         public BaseSqlQueryStructure(
             ISqlMetadataProvider metadataProvider,
             IAuthorizationResolver authorizationResolver,
@@ -486,8 +494,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         /// <param name="dbPolicyClause">FilterClause from processed runtime configuration permissions Policy:Database</param>
         /// <param name="operation">CRUD operation for which the database policy predicates are to be evaluated.</param>
+        /// <param name="visitor">Used to traverse the FilterClause AST into its corresponding string representation.</param>
         /// <exception cref="DataApiBuilderException">Thrown when the OData visitor traversal fails. Possibly due to malformed clause.</exception>
-        public void ProcessOdataClause(FilterClause? dbPolicyClause, Config.Operation operation)
+        public void ProcessOdataClause(FilterClause? dbPolicyClause, Config.Operation operation, ODataASTVisitor visitor)
         {
             if (dbPolicyClause is null)
             {
@@ -495,7 +504,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 return;
             }
 
-            ODataASTVisitor visitor = new(this, this.MetadataProvider);
             try
             {
                 DbPolicyPredicatesForOperation[operation] = GetFilterPredicatesFromOdataClause(dbPolicyClause, visitor);

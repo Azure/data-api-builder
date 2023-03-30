@@ -95,6 +95,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
+
+            if (FieldsReferencedInDbPolicyForCreateAction.Count > 0)
+            {
+                // If all the fields referenced by database policy for create action are not present in the set of fields to be inserted,
+                // the insert operation cannot be performed. So, we fall back to update operation.
+                IsFallbackToUpdate = true;
+            }
         }
 
         /// <summary>
@@ -194,6 +201,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="columnName">The name of the column.</param>
         private void PopulateColumnsAndParams(string columnName)
         {
+            FieldsReferencedInDbPolicyForCreateAction.Remove(columnName);
             InsertColumns.Add(columnName);
             string paramName;
             paramName = ColumnToParam[columnName];

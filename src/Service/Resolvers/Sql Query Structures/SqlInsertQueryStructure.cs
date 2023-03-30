@@ -77,6 +77,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
                 PopulateColumnsAndParams(backingColumn!, param.Value);
             }
+
+            if (FieldsReferencedInDbPolicyForCreateAction.Count > 0)
+            {
+                // This indicates that one or more fields referenced in the database policy are not a part of the insert statement.
+                throw new DataApiBuilderException(
+                    message: "One or more fields referenced by the database policy are not present in the request.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
         }
 
         /// <summary>
@@ -88,8 +97,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private void PopulateColumnsAndParams(string columnName, object? value)
         {
             InsertColumns.Add(columnName);
-            string paramName;
 
+            // If the column is referenced in the database policy, we remove it from the set.
+            FieldsReferencedInDbPolicyForCreateAction.Remove(columnName);
+
+            string paramName;
             try
             {
                 if (value != null)

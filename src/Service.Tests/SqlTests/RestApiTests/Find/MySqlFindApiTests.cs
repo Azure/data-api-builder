@@ -868,6 +868,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             return _queryMap[key];
         }
 
+        #region Tests for features yet to be implemented
         // Pending Stored Procedure Support
         [TestMethod]
         [Ignore]
@@ -903,6 +904,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         {
             throw new NotImplementedException();
         }
-
+        #endregion
     }
 }

@@ -226,6 +226,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
             );
         }
+        #endregion
+
+        #region Tests for features yet to be implemented
 
         [TestMethod]
         [Ignore]
@@ -250,7 +253,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         {
             throw new NotImplementedException();
         }
-
         #endregion
 
         #region Test Fixture Setup

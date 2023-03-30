@@ -299,7 +299,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 isExpectedErrorMsgSubstr: true);
         }
 
-        #region overridden tests
+        #region Tests for features yet to be implemented
 
         /// <summary>
         /// Using TestIgnore because the feature for database policy support for insert via PUT/PATCH operation is not implemented for PostgreSql yet.

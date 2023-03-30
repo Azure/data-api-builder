@@ -249,7 +249,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             }
         };
 
-        #region overridden tests
+        #region Tests for features yet to be implemented
 
         /// <summary>
         /// Using TestIgnore because the feature for database policy support for PUT/PATCH operation is not implemented for MySql yet.
@@ -298,7 +298,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         {
             throw new NotImplementedException();
         }
-
         #endregion
 
         #region Test Fixture Setup

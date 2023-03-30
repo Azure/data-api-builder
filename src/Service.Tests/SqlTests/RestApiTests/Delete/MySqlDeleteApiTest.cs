@@ -26,12 +26,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Delete
             }
         };
 
+        #region Tests for features yet to be implemented
         [TestMethod]
         [Ignore]
         public void DeleteOneInViewBadRequestTest()
         {
             throw new NotImplementedException();
         }
+        #endregion
 
         #region Test Fixture Setup
 

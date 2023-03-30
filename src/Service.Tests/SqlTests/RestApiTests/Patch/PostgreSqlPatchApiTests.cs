@@ -206,7 +206,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 isExpectedErrorMsgSubstr: true);
         }
 
-        #region overridden tests
+        #region Tests for features yet to be implemented
 
         [TestMethod]
         [Ignore]

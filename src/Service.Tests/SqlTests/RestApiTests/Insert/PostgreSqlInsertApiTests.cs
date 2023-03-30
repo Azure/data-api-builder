@@ -246,6 +246,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 isExpectedErrorMsgSubstr: true
             );
         }
+        #endregion
+
+        #region Tests for features yet to be implemented
 
         /// <summary>
         /// Using TestIgnore because the feature for database policy support for POST operation is not implemented for PostgreSql yet.
@@ -263,7 +266,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         {
             throw new NotImplementedException();
         }
-
         #endregion
 
         #region Test Fixture Setup

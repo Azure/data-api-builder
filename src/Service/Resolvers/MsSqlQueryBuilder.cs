@@ -61,10 +61,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <inheritdoc />
         public string Build(SqlInsertStructure structure)
         {
-
-            return $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} ({Build(structure.InsertColumns)}) " +
-                    $"OUTPUT {MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted)} " +
-                    $"VALUES ({string.Join(", ", structure.Values)});";
+            string predicates = JoinPredicateStrings(structure.DbPolicyPredicates);
+            string insertColumns = Build(structure.InsertColumns);
+            string insertIntoStatementPrefix = $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} ({insertColumns}) " +
+                $"OUTPUT {MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted)} ";
+            string values = string.IsNullOrEmpty(structure.DbPolicyPredicates) ?
+                $"VALUES ({string.Join(", ", structure.Values)});" : $"SELECT {insertColumns} FROM (VALUES({string.Join(", ", structure.Values)})) T({insertColumns}) WHERE {predicates};";
+            StringBuilder insertQuery = new(insertIntoStatementPrefix);
+            return insertQuery.Append(values).ToString();
         }
 
         /// <inheritdoc />

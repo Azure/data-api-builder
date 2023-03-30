@@ -639,14 +639,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         /// <summary>
-        /// Test to validate failure of PATCH operation which does not satisfy either of the database policies defined for
-        /// update/create operation.
+        /// Validate failure of Patch operation which fails to satisfy policies configured for both
+        /// insert ("@item.pieceid ne 6") and update("@item.categoryid ne 0") operations.
         /// </summary>
         [TestMethod]
-        public virtual async Task PatchOneInAccessibleRowWithDatabasePolicy()
+        public virtual async Task PatchOneInaccessibleRowWithDatabasePolicy()
         {
-            // Validate failure of Patch operation which fails to satisfy policies configured for both insert ("@item.pieceid ne 6") and
-            // update("@item.categoryid ne 0") operations.
             string requestBody = @"
             {
                 ""categoryName"": ""SciFi""

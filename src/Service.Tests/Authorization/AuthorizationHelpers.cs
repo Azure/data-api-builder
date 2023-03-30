@@ -59,6 +59,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// <param name="excludedCols">columns NOT allowed for operation</param>
         /// <param name="databasePolicy">database policy for operation</param>
         /// <param name="requestPolicy">request policy for operation</param>
+        /// <param name="authProvider">Authentication provider</param>
+        /// <param name="dbType">Database type configured.</param>
         /// <returns></returns>
         public static RuntimeConfig InitRuntimeConfig(
             string entityName = TEST_ENTITY,
@@ -69,7 +71,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             HashSet<string>? excludedCols = null,
             string? databasePolicy = null,
             string? requestPolicy = null,
-            string authProvider = "AppService"
+            string authProvider = "AppService",
+            DatabaseType dbType = DatabaseType.mssql
             )
         {
             Field? fieldsForRole = null;
@@ -124,7 +127,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
+                DataSource: new DataSource(DatabaseType: dbType),
                 RuntimeSettings: runtimeSettings,
                 Entities: entityMap
                 );

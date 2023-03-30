@@ -7,6 +7,7 @@ using System.Data.Common;
 using System.Net;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.Data.SqlClient;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
@@ -68,5 +69,16 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="e">The exception thrown as a result of execution of the request.</param>
         /// <returns>status code to be returned in the response.</returns>
         public abstract HttpStatusCode GetHttpStatusCodeForException(DbException e);
+
+        /// <summary>
+        /// Helper method to determine whether an exception occurred because of attempting to insert a new record with duplicate primary key.
+        /// </summary>
+        /// <param name="ex">The exception to analyse.</param>
+        /// <returns>Boolean indicating whether exception occurred because of primary key conflict.</returns>
+        public static bool IsPrimaryKeyConflictException(Exception? ex)
+        {
+            return ex is not null && ex is SqlException &&
+                ((SqlException)ex).Number.ToString().Equals(MsSqlDbExceptionParser.PRIMARY_KEY_CONFLICT_EXCEPTION_CODE);
+        }
     }
 }

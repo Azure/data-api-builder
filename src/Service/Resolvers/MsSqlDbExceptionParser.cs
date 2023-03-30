@@ -15,6 +15,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     /// </summary>
     public class MsSqlDbExceptionParser : DbExceptionParser
     {
+        // Error code for duplicate primary key exception. Required to check if an exception with this error code is thrown by upsert/upsertIncremental operation.
+        public static string PRIMARY_KEY_CONFLICT_EXCEPTION_CODE = "2627";
+
         public MsSqlDbExceptionParser(RuntimeConfigProvider configProvider) : base(configProvider)
         {
             // HashSet of Error codes ('Number') which are to be considered as bad requests.

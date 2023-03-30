@@ -241,6 +241,23 @@
             "update",
             "delete"
           ]
+        },
+        {
+          "role": "database_policy_tester",
+          "actions": [
+            {
+              "action": "Create",
+              "policy": {
+                "database": "@item.pieceid ne 6"
+              }
+            },
+            {
+              "action": "Update",
+              "policy": {
+                "database": "@item.categoryid ne 0"
+              }
+            }
+          ]
         }
       ],
       "relationships": {

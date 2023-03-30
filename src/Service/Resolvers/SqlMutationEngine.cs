@@ -667,12 +667,29 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 kv_pair => $"{kv_pair.Key}: {kv_pair.Value}"
                 )) + ">";
 
-            return await _queryExecutor.ExecuteQueryAsync(
+            try
+            {
+                return await _queryExecutor.ExecuteQueryAsync(
                        queryString,
                        queryParameters,
                        _queryExecutor.GetMultipleResultSetsIfAnyAsync,
                        GetHttpContext(),
                        new List<string> { prettyPrintPk, entityName });
+            }
+            catch (DataApiBuilderException ex)
+            {
+                if (DbExceptionParser.IsPrimaryKeyConflictException(ex.InnerException))
+                {
+                    // For PUT/PATCH operations, when a primary key conflict occurs during insertion, it indicates that the
+                    // database policy for update operation is not satisfied while that of insert operation, if there is one, is satisfied.
+                    throw new DataApiBuilderException(
+                        message: "Authorization Failure: Access Not Allowed.",
+                        statusCode: HttpStatusCode.Forbidden,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
+                }
+
+                throw ex;
+            }
         }
 
         /// <summary>

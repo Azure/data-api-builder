@@ -318,7 +318,7 @@ namespace Cli.Tests
             );
             RunTest(options, expectedRuntimeConfig);
         }
-        
+
         /// <summary>
         /// Test to verify that an error is thrown when user tries to
         /// initialize a config with a file name that already exists.

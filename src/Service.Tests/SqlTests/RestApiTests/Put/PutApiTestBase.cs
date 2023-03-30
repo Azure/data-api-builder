@@ -176,7 +176,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     sqlQuery: GetQuery("PutOneUpdateAccessibleRowWithDatabasePolicy"),
                     operationType: Config.Operation.Upsert,
                     requestBody: requestBody,
-                    clientRoleHeader: "policy_tester_REST",
+                    clientRoleHeader: "database_policy_tester",
                     expectedStatusCode: HttpStatusCode.OK
                     );
         }

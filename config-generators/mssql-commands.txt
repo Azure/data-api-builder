@@ -54,9 +54,9 @@ update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_0
 update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_06:create,delete"
 update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_06:update" --fields.include "*"
 update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_06:read" --fields.include "*" --policy-database "@item.id eq 1940"
-update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_REST:read" --policy-database "@item.id ne 1234 or @item.id gt 1940"
-update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_REST:create"
-update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_REST:update" --policy-database "@item.id ne 1234"
+update Publisher --config "dab-config.MsSql.json" --permissions "database_policy_tester:read" --policy-database "@item.id ne 1234 or @item.id gt 1940"
+update Publisher --config "dab-config.MsSql.json" --permissions "database_policy_tester:update" --policy-database "@item.id ne 1234"
+update Publisher --config "dab-config.MsSql.json" --permissions "database_policy_tester:create" --policy-database "@item.name ne 'New publisher'"
 update Stock --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --rest commodities --graphql true --relationship stocks_price --target.entity stocks_price --cardinality one
 update Stock --config "dab-config.MsSql.json" --permissions "database_policy_tester:update" --policy-database "@item.categoryid ne 0"
 update Stock --config "dab-config.MsSql.json" --permissions "database_policy_tester:create" --policy-database "@item.pieceid ne 6"

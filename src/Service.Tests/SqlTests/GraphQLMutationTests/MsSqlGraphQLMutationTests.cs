@@ -59,6 +59,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
+        /// <code>Do: </code> Inserts new Publisher with name = 'New publisher'
+        /// <code>Check: </code> Mutation fails because the database policy (@item.name ne 'New publisher') prohibits insertion of records with name = 'New publisher'.
+        /// </summary>
+        [TestMethod]
+        public async Task InsertMutationFailingDatabasePolicy()
+        {
+            string errorMessage = "Could not insert row with given values.";
+            string msSqlQuery = @"
+                SELECT count(*) as count
+                   FROM [publishers]
+                WHERE [name] = 'New publisher'
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            await InsertMutationFailingDatabasePolicy(
+                dbQuery: msSqlQuery,
+                errorMessage: errorMessage,
+                roleName: "database_policy_tester");
+        }
+
+        /// <summary>
         /// <code>Do: </code> Inserts new book using variables to set its title and publisher_id
         /// <code>Check: </code> If book with the expected values of the new book is present in the database and
         /// if the mutation query has returned the correct information

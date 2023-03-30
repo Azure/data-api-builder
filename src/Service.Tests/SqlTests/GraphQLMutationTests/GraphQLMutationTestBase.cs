@@ -41,6 +41,40 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
+        /// <code>Do: </code> Attempt to insert a new publisher with name not allowed by database policy (@item.name ne 'New publisher')
+        /// <code>Check: </code> Mutation fails with expected authorization failure.
+        /// </summary>
+        /// <param name="dbQuery">SELECT query to validate expected result.</param>
+        /// <param name="errorMessage">Expected error message.</param>
+        /// <param name="roleName">Custom client role in whose context this authenticated request will be executed</param>
+        public async Task InsertMutationFailingDatabasePolicy(string dbQuery, string errorMessage, string roleName)
+        {
+            string graphQLMutationName = "createPublisher";
+            string graphQLMutation = @"
+                mutation {
+                    createPublisher(item: { name: ""New publisher"" }) {
+                        id
+                        name
+                    }
+                }
+            ";
+
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, clientRoleHeader: roleName, isAuthenticated: true);
+
+            SqlTestHelper.TestForErrorInGraphQLResponse(
+                result.ToString(),
+                message: errorMessage,
+                statusCode: $"{DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed}"
+            );
+
+            string dbResponse = await GetDatabaseResultAsync(dbQuery);
+            using JsonDocument dbResponseJson = JsonDocument.Parse(dbResponse);
+
+            // Assert that the create mutation fails to insert the record into the table and that the select query returns no result.
+            Assert.AreEqual(dbResponseJson.RootElement.GetProperty("count").GetInt64(), 0);
+        }
+
+        /// <summary>
         /// <code>Do: </code> Inserts new book using variables to set its title and publisher_id
         /// <code>Check: </code> If book with the expected values of the new book is present in the database and
         /// if the mutation query has returned the correct information

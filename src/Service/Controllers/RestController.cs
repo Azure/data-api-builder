@@ -221,15 +221,8 @@ namespace Azure.DataApiBuilder.Service.Controllers
             {
                 _logger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}{ex.Message}");
                 _logger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}{ex.StackTrace}");
-                if (ex.SubStatusCode is DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed)
-                {
-                    return new ForbidResult();
-                }
-                else
-                {
-                    Response.StatusCode = (int)ex.StatusCode;
-                    return ErrorResponse(ex.SubStatusCode.ToString(), ex.Message, ex.StatusCode);
-                }
+                Response.StatusCode = (int)ex.StatusCode;
+                return ErrorResponse(ex.SubStatusCode.ToString(), ex.Message, ex.StatusCode);
             }
             catch (Exception ex)
             {

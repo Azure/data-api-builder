@@ -122,24 +122,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else
             {
-                string errorMessage;
-                if (MetadataProvider.IsDevelopmentMode())
-                {
-                    errorMessage = $"{columnName} is not a valid column of {DatabaseObject.Name}";
-                }
-                else
-                {
-                    string fieldNameToBeDisplayedInErrorMsg = columnName;
-                    if (MetadataProvider.TryGetExposedColumnName(EntityName, columnName, out string? exposedColumnName))
-                    {
-                        fieldNameToBeDisplayedInErrorMsg = exposedColumnName!;
-                    }
-
-                    errorMessage = $"{fieldNameToBeDisplayedInErrorMsg} is not a valid field of {EntityName}";
-                }
-
                 throw new DataApiBuilderException(
-                    message: errorMessage,
+                    message: $"{columnName} is not a valid column of {DatabaseObject.Name}",
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
                     );

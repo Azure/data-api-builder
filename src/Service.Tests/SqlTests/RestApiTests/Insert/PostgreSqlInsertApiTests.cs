@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
@@ -244,6 +245,23 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString(),
                 isExpectedErrorMsgSubstr: true
             );
+        }
+
+        /// <summary>
+        /// Using TestIgnore because the feature for database policy support for POST operation is not implemented for PostgreSql yet.
+        /// </summary>
+        [TestMethod]
+        [Ignore]
+        public override Task InsertOneFailingDatabasePolicy()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task InsertOneInTableWithFieldsInDbPolicyNotPresentInBody()
+        {
+            throw new NotImplementedException();
         }
 
         #endregion

@@ -234,6 +234,23 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             throw new NotImplementedException();
         }
 
+        /// <summary>
+        /// Using TestIgnore because the feature for database policy support for POST operation is not implemented for MySql yet.
+        /// </summary>
+        [TestMethod]
+        [Ignore]
+        public override Task InsertOneFailingDatabasePolicy()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task InsertOneInTableWithFieldsInDbPolicyNotPresentInBody()
+        {
+            throw new NotImplementedException();
+        }
+
         #endregion
 
         #region Test Fixture Setup

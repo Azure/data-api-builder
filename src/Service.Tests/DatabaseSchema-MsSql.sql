@@ -144,6 +144,8 @@ CREATE TABLE type_table(
     decimal_types decimal(38, 19),
     boolean_types bit,
     datetime_types datetime,
+    datetime2_types datetime2,
+    datetimeoffset_types datetimeoffset,
     bytearray_types varbinary(max),
     guid_types uniqueidentifier DEFAULT newid()
 );

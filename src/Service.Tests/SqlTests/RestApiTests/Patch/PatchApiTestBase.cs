@@ -585,16 +585,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     exceptionExpected: true,
                     expectedErrorMessage: RequestValidator.PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE,
                     expectedStatusCode: HttpStatusCode.BadRequest
-                    );
+            );
         }
 
         /// <summary>
-        /// Test to validate that PATCH operation on inaccessible row (by virtue of database policy) fails.
+        /// Test to validate that PATCH operation fails because the database policy("@item.id ne 1234")
+        /// restricts modifying records where id is not 1234.
         /// </summary>
-        /// <returns></returns>
         [TestMethod]
         public virtual async Task PatchOneUpdateInAccessibleRowWithDatabasePolicy()
         {
+            // Perform PATCH update with upsert incrmental semantics.
             string requestBody = @"
             {
                 ""name"": ""New Publisher""
@@ -611,9 +612,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     expectedErrorMessage: $"Cannot perform INSERT and could not find {_foreignKeyEntityName} with primary key <id: 1234> to perform UPDATE on.",
                     expectedStatusCode: HttpStatusCode.NotFound,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString(),
-                    clientRoleHeader: "policy_tester_REST"
+                    clientRoleHeader: "database_policy_tester"
                     );
 
+            // Perform PATCH update with update semantics.
             Dictionary<string, StringValues> headerDictionary = new()
             {
                 { "If-Match", "*" }
@@ -631,7 +633,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     expectedErrorMessage: $"No Update could be performed, record not found",
                     expectedStatusCode: HttpStatusCode.PreconditionFailed,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString(),
-                    clientRoleHeader: "policy_tester_REST"
+                    clientRoleHeader: "database_policy_tester"
                     );
 
         }

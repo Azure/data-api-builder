@@ -331,11 +331,24 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 if (context.OperationType is Config.Operation.Insert)
                 {
-                    if (mutationResultRow is null || mutationResultRow.Columns.Count == 0)
+                    if (mutationResultRow is null)
                     {
-                        // this case should not happen, we throw an exception
+                        // Ideally this case should not happen, however may occur due to unexpected reasons,
+                        // like the DbDataReader being null. We throw an exception
                         // which will be returned as an Unexpected Internal Server Error
-                        throw new Exception();
+                        throw new DataApiBuilderException(
+                            message: "An unexpected error occurred while trying to execute the query.",
+                            statusCode: HttpStatusCode.InternalServerError,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                    }
+
+                    if (mutationResultRow.Columns.Count == 0)
+                    {
+                        throw new DataApiBuilderException(
+                            message: "Could not insert row with given values.",
+                            statusCode: HttpStatusCode.Forbidden,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
+                            );
                     }
 
                     string primaryKeyRoute = ConstructPrimaryKeyRoute(context, mutationResultRow.Columns);
@@ -528,6 +541,16 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     (dbResultSet.Rows.FirstOrDefault() ?? new DbResultSetRow()) : null;
                 if (dbResultSetRow is not null && dbResultSetRow.Columns.Count == 0)
                 {
+                    // For GraphQL, insert operation corresponds to Create action.
+                    if (operationType is Config.Operation.Create)
+                    {
+                        throw new DataApiBuilderException(
+                            message: "Could not insert row with given values.",
+                            statusCode: HttpStatusCode.Forbidden,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
+                            );
+                    }
+
                     string searchedPK;
                     if (primaryKeyExposedColumnNames.Count > 0)
                     {

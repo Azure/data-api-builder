@@ -150,6 +150,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             }
             else
             {
+                // Json Property in error response which holds the actual exception properties.
+                string PARENT_PROPERTY_ERROR = "error";
+
+                //Generate expected error object
+                JsonElement expectedErrorObj = JsonDocument.Parse(expected).RootElement.GetProperty(PARENT_PROPERTY_ERROR);
+                string expectedStatusCode = expectedErrorObj.GetProperty(PROPERTY_STATUS).ToString();
+                string expectedSubStatusCode = expectedErrorObj.GetProperty(PROPERTY_CODE).ToString();
+
                 // Quote(") has to be treated differently than other unicode characters
                 // as it has to be added with a preceding backslash.
                 responseBody = Regex.Replace(responseBody, @"\\u0022", @"\\""");
@@ -160,18 +168,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 // Convert the escaped characters into their unescaped form.
                 responseBody = Regex.Unescape(responseBody);
 
-                // Json Property in error which the holds the actual exception properties. 
-                string PARENT_PROPERTY_ERROR = "error";
-
-                // Generate actual and expected error JObjects to assert that they are equal.
-                JsonElement expectedErrorObj = JsonDocument.Parse(expected).RootElement.GetProperty(PARENT_PROPERTY_ERROR);
+                // Generate actual error object
                 JsonElement actualErrorObj = JsonDocument.Parse(responseBody).RootElement.GetProperty(PARENT_PROPERTY_ERROR);
+                string actualStatusCode = actualErrorObj.GetProperty(PROPERTY_STATUS).ToString();
+                string actualSubStatusCode = actualErrorObj.GetProperty(PROPERTY_CODE).ToString();
 
-                // Assert that the exception subStatusCode(code) and statusCode(status) are equal.
-                Assert.AreEqual(expectedErrorObj.GetProperty(PROPERTY_STATUS).ToString(),
-                    actualErrorObj.GetProperty(PROPERTY_STATUS).ToString());
-                Assert.AreEqual(expectedErrorObj.GetProperty(PROPERTY_CODE).ToString(),
-                    actualErrorObj.GetProperty(PROPERTY_CODE).ToString());
+                // Assert that the expected and actual subStatusCodes/statusCodes are equal.
+                Assert.AreEqual(expectedStatusCode, actualStatusCode);
+                Assert.AreEqual(expectedSubStatusCode, actualSubStatusCode);
 
                 // Assert that the actual and expected error messages are same (if needed by the test),
                 // or the expectedErrorMessage is present as a substring in the actual error message.
@@ -180,11 +184,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 if (isExpectedErrorMsgSubstr)
                 {
                     Assert.IsTrue(actualErrorMsg.Contains(expectedErrorMsg, StringComparison.OrdinalIgnoreCase));
+                    return;
                 }
-                else
-                {
-                    Assert.AreEqual(expectedErrorMsg, actualErrorMsg);
-                }
+
+                Assert.AreEqual(expectedErrorMsg, actualErrorMsg);
             }
         }
 

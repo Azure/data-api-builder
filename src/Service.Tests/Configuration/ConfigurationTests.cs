@@ -1042,7 +1042,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// This Test validates that support. It creates a custom config with a view and no keyfields specified.
         /// Both Rest and GraphQL queries are tested to return Success.
         /// </summary>
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
         public async Task TestEngineSupportViewsWithoutKeyFieldsInConfigForMsSQL()
         {
             Dictionary<GlobalSettingsType, object> settings = new()

@@ -188,6 +188,24 @@
             "Create",
             "Delete"
           ]
+        },
+        {
+          "role": "policy_tester_REST",
+          "actions": [
+            {
+              "action": "Update",
+              "policy": {
+                "database": "@item.id ne 1234"
+              }
+            },
+            "Create",
+            {
+              "action": "Read",
+              "policy": {
+                "database": "@item.id ne 1234 or @item.id gt 1940"
+              }
+            }
+          ]
         }
       ],
       "relationships": {
@@ -1496,6 +1514,45 @@
       },
       "rest": true,
       "graphql": true
+    },
+    "Bookmarks": {
+      "source": "bookmarks",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "*"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "*"
+          ]
+        }
+      ],
+      "rest": true,
+      "graphql": true
+    },
+    "MappedBookmarks": {
+      "source": "mappedbookmarks",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "*" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "*"
+          ]
+        }
+      ],
+      "mappings": {
+        "id": "bkid",
+        "bkname": "name"
+      },
+      "rest": true
     }
   }
 }

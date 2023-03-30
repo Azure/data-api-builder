@@ -25,7 +25,7 @@ $RIDs = "win-x64", "linux-x64", "osx-x64"
 foreach ($RID in $RIDs) {
     $fileName = "dab_$RID-$DabVersion.zip"
     $filePath = "$BuildOutputDir/publish/$BuildConfiguration/$RID/$fileName"
-    $download_url = "https://dataapibuilder.azureedge.net/releases/download/$versionTag/$fileName"
+    $download_url = "https://github.com/Azure/data-api-builder/releases/download/$versionTag/$fileName"
     $fileHashInfo = Get-FileHash $filePath
     $hash = $fileHashInfo.Hash
     switch ($RID) {
@@ -49,7 +49,7 @@ $nugetFileName = "Microsoft.DataApiBuilder.$DabVersion.nupkg"
 $nugetFilePath = "$BuildOutputDir/nupkg/$nugetFileName"
 $fileHashInfo = Get-FileHash $nugetFilePath
 $nuget_file_hash = $fileHashInfo.Hash
-$download_url_nuget = "https://dataapibuilder.azureedge.net/releases/download/$versionTag/$nugetFileName"
+$download_url_nuget = "https://github.com/Azure/data-api-builder/releases/download/$versionTag/$nugetFileName"
 
 # Creating new block to insert latest version 
 $latestBlock = @'

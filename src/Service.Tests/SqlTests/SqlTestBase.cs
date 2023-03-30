@@ -11,7 +11,6 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
-using System.Web;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
@@ -24,6 +23,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -349,6 +349,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="isExpectedErrorMsgSubstr">When set to true, will look for a substring 'expectedErrorMessage'
         /// in the actual error message to verify the test result. This is helpful when the actual error message is dynamic and changes
         /// on every single run of the test.</param>
+        /// <param name="clientRoleHeader">The custom role in whose context the request will be executed.</param>
         /// <returns></returns>
         protected static async Task SetupAndRunRestApiTest(
             string primaryKeyRoute,
@@ -369,7 +370,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             bool paginated = false,
             int verifyNumRecords = -1,
             bool expectJson = true,
-            bool isExpectedErrorMsgSubstr = false)
+            bool isExpectedErrorMsgSubstr = false,
+            string clientRoleHeader = null)
         {
             // Create the rest endpoint using the path and entity name.
             string restEndPoint = restPath + "/" + entityNameOrPath;
@@ -424,6 +426,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 }
             }
 
+            if (clientRoleHeader is not null)
+            {
+                request.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, clientRoleHeader.ToString());
+                request.Headers.Add(AuthenticationConfig.CLIENT_PRINCIPAL_HEADER,
+                    AuthTestHelper.CreateStaticWebAppsEasyAuthToken(addAuthenticated: true, specificRole: clientRoleHeader));
+            }
+
             // Send request to the engine.
             HttpResponseMessage response = await HttpClient.SendAsync(request);
 
@@ -458,7 +467,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     string baseUrl = HttpClient.BaseAddress.ToString() + restPath + "/" + entityNameOrPath;
                     if (!string.IsNullOrEmpty(queryString))
                     {
-                        baseUrl = baseUrl + "?" + HttpUtility.ParseQueryString(queryString).ToString();
+                        // Parse query string with AspNetCore components for consistent URI encoding.
+                        baseUrl = QueryHelpers.AddQueryString(uri: baseUrl, queryString: QueryHelpers.ParseQuery(queryString));
                     }
 
                     string dbResult = await GetDatabaseResultAsync(sqlQuery, expectJson);

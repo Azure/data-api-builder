@@ -10,7 +10,7 @@ namespace Cli.Tests
 
         // test schema for cosmosDB
         public const string TEST_SCHEMA_FILE = "test-schema.gql";
-        public const string DAB_DRAFT_SCHEMA_TEST_PATH = "https://dataapibuilder.azureedge.net/schemas/vmajor.minor.patch/dab.draft.schema.json";
+        public const string DAB_DRAFT_SCHEMA_TEST_PATH = "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json";
 
         /// <summary>
         /// Adds the entity properties to the configuration and returns the updated configuration json as a string.

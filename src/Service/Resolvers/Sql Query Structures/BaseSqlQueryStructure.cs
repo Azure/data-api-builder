@@ -46,6 +46,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public string? DbPolicyPredicates { get; set; }
 
+        /// <summary>
+        /// Collection of all the fields referenced in the database policy for create action.
+        /// The fields referenced in the database policy should be a subset of the fields that are being inserted via the insert statement,
+        /// as then only we would be able to make them a part of our SELECT FROM clause from the temporary table.
+        /// This will only be populated for POST operation currently.
+        /// </summary>
+        public HashSet<string> FieldsReferencedInDbPolicyForCreateAction { get; set; } = new();
+
         public BaseSqlQueryStructure(
             ISqlMetadataProvider metadataProvider,
             IAuthorizationResolver authorizationResolver,
@@ -484,13 +492,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Processing will also occur for GraphQL sub-queries.
         /// </summary>
         /// <param name="dbPolicyClause">FilterClause from processed runtime configuration permissions Policy:Database</param>
+        /// <param name="operation">CRUD operation for which the database policy predicates are to be evaluated.</param>
         /// <exception cref="DataApiBuilderException">Thrown when the OData visitor traversal fails. Possibly due to malformed clause.</exception>
-        public void ProcessOdataClause(FilterClause odataClause)
+        public void ProcessOdataClause(FilterClause dbPolicyClause, Config.Operation operation)
         {
-            ODataASTVisitor visitor = new(this, this.MetadataProvider);
+            ODataASTVisitor visitor = new(this, MetadataProvider, operation);
             try
             {
-                DbPolicyPredicates = GetFilterPredicatesFromOdataClause(odataClause, visitor);
+                DbPolicyPredicates = GetFilterPredicatesFromOdataClause(dbPolicyClause, visitor);
             }
             catch (Exception ex)
             {

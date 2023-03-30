@@ -251,6 +251,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
 
         #region overridden tests
 
+        /// <summary>
+        /// Using TestIgnore because the feature for database policy support for PUT/PATCH operation is not implemented for MySql yet.
+        /// </summary>
         [TestMethod]
         [Ignore]
         public override Task PutOneUpdateWithDatabasePolicy()
@@ -258,6 +261,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             throw new NotImplementedException();
         }
 
+        /// <summary>
+        /// Using TestIgnore because the feature for database policy support for PUT/PATCH operation is not implemented for MySql yet.
+        /// </summary>
         [TestMethod]
         [Ignore]
         public override Task PutOneWithDatabasePolicy()

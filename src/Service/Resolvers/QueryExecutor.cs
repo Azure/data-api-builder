@@ -316,7 +316,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <Note>This function is a DbDataReader handler of type
         /// Func<DbDataReader, List<string>?, Task<TResult?>></Note>
         public async Task<DbResultSet> GetMultipleResultSetsIfAnyAsync(
-            DbDataReader dbDataReader, List<string>? args = null)
+            DbDataReader dbDataReader, List<string>? args)
         {
             DbResultSet dbResultSet
                 = await ExtractResultSetFromDbDataReader(dbDataReader);
@@ -341,20 +341,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 // e.g. a situation where the item with the given PK doesn't exist so there's
                 // no update and PK is auto generated so no insert can happen.
                 // Another situation can be when both insert and update operations are restricted by the database policies.
-                if (args is not null && args.Count == 2)
-                {
-                    string prettyPrintPk = args[0];
-                    string entityName = args[1];
+                string prettyPrintPk = args![0];
+                string entityName = args[1];
 
-                    throw new DataApiBuilderException(
-                        message: $"Cannot perform INSERT and could not find {entityName} " +
-                            $"with primary key {prettyPrintPk} to perform UPDATE on.",
-                            statusCode: HttpStatusCode.NotFound,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
-                }
+                throw new DataApiBuilderException(
+                    message: $"Cannot perform INSERT and could not find {entityName} " +
+                        $"with primary key {prettyPrintPk} to perform UPDATE on.",
+                        statusCode: HttpStatusCode.NotFound,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
-
-            return dbResultSet;
         }
 
         /// <inheritdoc />

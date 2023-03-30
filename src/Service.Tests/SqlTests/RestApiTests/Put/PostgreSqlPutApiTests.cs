@@ -301,6 +301,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
 
         #region overridden tests
 
+        /// <summary>
+        /// Using TestIgnore because the feature for database policy support for insert via PUT/PATCH operation is not implemented for PostgreSql yet.
+        /// </summary>
         [TestMethod]
         [Ignore]
         public override Task PutOneWithDatabasePolicy()

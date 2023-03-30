@@ -7,7 +7,6 @@ using System.Reflection;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Text.Unicode;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Humanizer;
@@ -261,6 +260,7 @@ namespace Cli
 
         /// <summary>
         /// Returns the Serialization option used to convert objects into JSON.
+        /// Not escaping any special unicode characters.
         /// Ignoring properties with null values.
         /// Keeping all the keys in lowercase.
         /// </summary>
@@ -268,7 +268,7 @@ namespace Cli
         {
             JsonSerializerOptions? options = new()
             {
-                Encoder = JavaScriptEncoder.Create(UnicodeRanges.All),
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
                 WriteIndented = true,
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
                 PropertyNamingPolicy = new LowerCaseNamingPolicy(),

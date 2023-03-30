@@ -332,7 +332,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else if (await dbDataReader.NextResultAsync())
             {
-                if ((dbResultSet = await ExtractResultSetFromDbDataReader(dbDataReader)).Rows.Count > 0){
+                if ((dbResultSet = await ExtractResultSetFromDbDataReader(dbDataReader)).Rows.Count > 0)
+                {
                     return dbResultSet;
                 }
                 else

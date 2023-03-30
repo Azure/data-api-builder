@@ -336,7 +336,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         // Ideally this case should not happen, however may occur due to unexpected reasons,
                         // like the DbDataReader being null. We throw an exception
                         // which will be returned as an Unexpected Internal Server Error
-                        throw new Exception();
+                        throw new DataApiBuilderException(
+                            message: "An unexpected error occurred while trying to execute the query.",
+                            statusCode: HttpStatusCode.InternalServerError,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
                     }
 
                     if (mutationResultRow.Columns.Count == 0)

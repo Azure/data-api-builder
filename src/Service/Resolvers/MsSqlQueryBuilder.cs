@@ -6,7 +6,6 @@ using System.Data.Common;
 using System.Linq;
 using System.Text;
 using Azure.DataApiBuilder.Service.Models;
-using HotChocolate.Language;
 using Microsoft.Data.SqlClient;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
@@ -68,7 +67,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 $"OUTPUT {MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted)} ";
             string values = string.IsNullOrEmpty(structure.DbPolicyPredicates) ?
                 $"VALUES ({string.Join(", ", structure.Values)});" : $"SELECT {insertColumns} FROM (VALUES({string.Join(", ", structure.Values)})) T({insertColumns}) WHERE {predicates};";
-            StringBuilder insertQuery = new (insertIntoStatementPrefix);
+            StringBuilder insertQuery = new(insertIntoStatementPrefix);
             return insertQuery.Append(values).ToString();
         }
 

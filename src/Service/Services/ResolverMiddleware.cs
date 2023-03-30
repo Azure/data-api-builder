@@ -9,13 +9,16 @@ using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Resolvers;
+using HotChocolate.Configuration;
 using HotChocolate.Execution;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
+using HotChocolate.Types.Descriptors.Definitions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
+using RequestDelegate = HotChocolate.Execution.RequestDelegate;
 
 namespace Azure.DataApiBuilder.Service.Services
 {
@@ -30,7 +33,8 @@ namespace Azure.DataApiBuilder.Service.Services
         internal readonly IQueryEngine _queryEngine;
         internal readonly IMutationEngine _mutationEngine;
 
-        public ResolverMiddleware(FieldDelegate next,
+        public ResolverMiddleware(
+            FieldDelegate next,
             IQueryEngine queryEngine,
             IMutationEngine mutationEngine)
         {
@@ -51,15 +55,7 @@ namespace Azure.DataApiBuilder.Service.Services
         public async Task InvokeAsync(IMiddlewareContext context)
         {
             JsonElement jsonElement;
-            if (context.ContextData.TryGetValue("HttpContext", out object? value))
-            {
-                if (value is not null)
-                {
-                    HttpContext httpContext = (HttpContext)value;
-                    StringValues clientRoleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
-                    context.ContextData.TryAdd(key: AuthorizationResolver.CLIENT_ROLE_HEADER, value: clientRoleHeader);
-                }
-            }
+
 
             if (context.Selection.Field.Coordinate.TypeName.Value == "Mutation")
             {
@@ -69,13 +65,15 @@ namespace Azure.DataApiBuilder.Service.Services
                 if (context.Selection.Type.IsListType())
                 {
                     // Both Query and Mutation execute the same SQL statement for Stored Procedure.
-                    Tuple<IEnumerable<JsonDocument>, IMetadata?> result = await _queryEngine.ExecuteListAsync(context, parameters);
+                    Tuple<IEnumerable<JsonDocument>, IMetadata?> result =
+                        await _queryEngine.ExecuteListAsync(context, parameters);
                     context.Result = GetListOfClonedElements(result.Item1);
                     SetNewMetadata(context, result.Item2);
                 }
                 else
                 {
-                    Tuple<JsonDocument?, IMetadata?> result = await _mutationEngine.ExecuteAsync(context, parameters);
+                    Tuple<JsonDocument?, IMetadata?> result =
+                        await _mutationEngine.ExecuteAsync(context, parameters);
                     SetContextResult(context, result.Item1);
                     SetNewMetadata(context, result.Item2);
                 }
@@ -86,13 +84,15 @@ namespace Azure.DataApiBuilder.Service.Services
 
                 if (context.Selection.Type.IsListType())
                 {
-                    Tuple<IEnumerable<JsonDocument>, IMetadata?> result = await _queryEngine.ExecuteListAsync(context, parameters);
+                    Tuple<IEnumerable<JsonDocument>, IMetadata?> result =
+                        await _queryEngine.ExecuteListAsync(context, parameters);
                     context.Result = GetListOfClonedElements(result.Item1);
                     SetNewMetadata(context, result.Item2);
                 }
                 else
                 {
-                    Tuple<JsonDocument?, IMetadata?> result = await _queryEngine.ExecuteAsync(context, parameters);
+                    Tuple<JsonDocument?, IMetadata?> result =
+                        await _queryEngine.ExecuteAsync(context, parameters);
                     SetContextResult(context, result.Item1);
                     SetNewMetadata(context, result.Item2);
                 }
@@ -103,7 +103,9 @@ namespace Azure.DataApiBuilder.Service.Services
                 // anything for it.
                 if (TryGetPropertyFromParent(context, out jsonElement))
                 {
-                    context.Result = RepresentsNullValue(jsonElement) ? null : PreParseLeaf(context, jsonElement.ToString());
+                    context.Result = RepresentsNullValue(jsonElement)
+                        ? null
+                        : PreParseLeaf(context, jsonElement.ToString());
                 }
             }
             else if (IsInnerObject(context))
@@ -115,7 +117,11 @@ namespace Azure.DataApiBuilder.Service.Services
                 if (TryGetPropertyFromParent(context, out jsonElement))
                 {
                     IMetadata metadata = GetMetadata(context);
-                    using JsonDocument? innerObject = _queryEngine.ResolveInnerObject(jsonElement, context.Selection.Field, ref metadata);
+                    using JsonDocument? innerObject = _queryEngine.ResolveInnerObject(
+                        jsonElement,
+                        context.Selection.Field,
+                        ref metadata);
+
                     if (innerObject is not null)
                     {
                         context.Result = innerObject.RootElement.Clone();
@@ -137,7 +143,10 @@ namespace Azure.DataApiBuilder.Service.Services
                 if (TryGetPropertyFromParent(context, out jsonElement))
                 {
                     IMetadata metadata = GetMetadata(context);
-                    context.Result = _queryEngine.ResolveListType(jsonElement, context.Selection.Field, ref metadata);
+                    context.Result = _queryEngine.ResolveListType(
+                        jsonElement,
+                        context.Selection.Field,
+                        ref metadata);
                     SetNewMetadata(context, metadata);
                 }
             }
@@ -170,9 +179,11 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         /// <param name="docList">List of JsonDocuments to clone and dispose.</param>
         /// <returns>List of cloned root elements.</returns>
-        private static IEnumerable<JsonElement> GetListOfClonedElements(IEnumerable<JsonDocument> docList)
+        private static IEnumerable<JsonElement> GetListOfClonedElements(
+            IEnumerable<JsonDocument> docList)
         {
             List<JsonElement> result = new();
+
             foreach (JsonDocument jsonDoc in docList)
             {
                 result.Add(jsonDoc.RootElement.Clone());
@@ -195,7 +206,8 @@ namespace Azure.DataApiBuilder.Service.Services
         private static object PreParseLeaf(IMiddlewareContext context, string leafJson)
         {
             IType leafType = context.Selection.Field.Type is NonNullType
-                 ? context.Selection.Field.Type.NullableType() : context.Selection.Field.Type;
+                ? context.Selection.Field.Type.NullableType()
+                : context.Selection.Field.Type;
             return leafType switch
             {
                 ByteType => byte.Parse(leafJson),
@@ -211,21 +223,28 @@ namespace Azure.DataApiBuilder.Service.Services
             return string.IsNullOrEmpty(element.ToString()) && element.GetRawText() == "null";
         }
 
-        protected static bool TryGetPropertyFromParent(IMiddlewareContext context, out JsonElement jsonElement)
+        protected static bool TryGetPropertyFromParent(
+            IMiddlewareContext context,
+            out JsonElement jsonElement)
         {
-            JsonDocument result = JsonDocument.Parse(JsonSerializer.Serialize(context.Parent<JsonElement>()));
+            JsonDocument result =
+                JsonDocument.Parse(JsonSerializer.Serialize(context.Parent<JsonElement>()));
+
             if (result is null)
             {
                 jsonElement = default;
                 return false;
             }
 
-            return result.RootElement.TryGetProperty(context.Selection.Field.Name.Value, out jsonElement);
+            return result.RootElement.TryGetProperty(
+                context.Selection.Field.Name.Value,
+                out jsonElement);
         }
 
         protected static bool IsInnerObject(IMiddlewareContext context)
         {
-            return context.Selection.Field.Type.IsObjectType() && context.Parent<JsonElement?>() is not null;
+            return context.Selection.Field.Type.IsObjectType() &&
+                context.Parent<JsonElement?>() is not null;
         }
 
         /// <summary>
@@ -235,7 +254,10 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <param name="value">the IValueNode from which to extract the value</param>
         /// <param name="argumentSchema">describes the schema of the argument that the IValueNode represents</param>
         /// <param name="variables">the request context variable values needed to resolve value nodes represented as variables</param>
-        public static object? ExtractValueFromIValueNode(IValueNode value, IInputField argumentSchema, IVariableValueCollection variables)
+        public static object? ExtractValueFromIValueNode(
+            IValueNode value,
+            IInputField argumentSchema,
+            IVariableValueCollection variables)
         {
             // extract value from the variable if the IValueNode is a variable
             if (value.Kind == SyntaxKind.Variable)
@@ -276,12 +298,16 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Key: (string) argument field name
         /// Value: (object) argument value
         /// </summary>
-        public static IDictionary<string, object?> GetParametersFromSchemaAndQueryFields(IObjectField schema, FieldNode query, IVariableValueCollection variables)
+        public static IDictionary<string, object?> GetParametersFromSchemaAndQueryFields(
+            IObjectField schema,
+            FieldNode query,
+            IVariableValueCollection variables)
         {
             IDictionary<string, object?> parameters = new Dictionary<string, object?>();
 
             // Fill the parameters dictionary with the default argument values
             IFieldCollection<IInputField> argumentSchemas = schema.Arguments;
+
             foreach (IInputField argument in argumentSchemas)
             {
                 if (argument.DefaultValue != null)
@@ -297,6 +323,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
             // Overwrite the default values with the passed in arguments
             IReadOnlyList<ArgumentNode> passedArguments = query.Arguments;
+
             foreach (ArgumentNode argument in passedArguments)
             {
                 string argumentName = argument.Name.Value;
@@ -349,9 +376,13 @@ namespace Azure.DataApiBuilder.Service.Services
             return (InputObjectType)(InnerMostType(field.Type));
         }
 
-        protected static IDictionary<string, object?> GetParametersFromContext(IMiddlewareContext context)
+        protected static IDictionary<string, object?> GetParametersFromContext(
+            IMiddlewareContext context)
         {
-            return GetParametersFromSchemaAndQueryFields(context.Selection.Field, context.Selection.SyntaxNode, context.Variables);
+            return GetParametersFromSchemaAndQueryFields(
+                context.Selection.Field,
+                context.Selection.SyntaxNode,
+                context.Variables);
         }
 
         /// <summary>
@@ -367,7 +398,57 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         private static void SetNewMetadata(IMiddlewareContext context, IMetadata? metadata)
         {
-            context.ScopedContextData = context.ScopedContextData.SetItem(_contextMetadata, metadata);
+            context.ScopedContextData =
+                context.ScopedContextData.SetItem(_contextMetadata, metadata);
         }
+    }
+}
+
+/// <summary>
+/// This request middleware will build up our request state and will be invoke once per request.
+/// </summary>
+internal sealed class BuildRequestStateMiddleware
+{
+    private readonly RequestDelegate _next;
+
+    public BuildRequestStateMiddleware(RequestDelegate next)
+    {
+        _next = next;
+    }
+
+    public async ValueTask InvokeAsync(IRequestContext context)
+    {
+        if (context.ContextData.TryGetValue(nameof(HttpContext), out object? value) &&
+            value is HttpContext httpContext)
+        {
+            StringValues clientRoleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
+            context.ContextData.TryAdd(key: AuthorizationResolver.CLIENT_ROLE_HEADER, value: clientRoleHeader);
+        }
+
+        await _next(context).ConfigureAwait(false);
+    }
+}
+
+internal sealed class ResolverTypeInterceptor : TypeInterceptor
+{
+    public override void OnBeforeCompleteType(
+        ITypeCompletionContext completionContext,
+        DefinitionBase? definition,
+        IDictionary<string, object?> contextData)
+    {
+        // We are only interested in object types here as only object types can have resolvers.
+        if (completionContext.Type is not ObjectType objectType &&
+            definition is not ObjectTypeDefinition objectTypeDef)
+        {
+            return;
+        }
+
+        if (completionContext.IsQueryType ?? false) { }
+        else if (completionContext.IsMutationType ?? false) { }
+        else if (completionContext.IsSubscriptionType ?? false)
+        {
+            throw new NotSupportedException();
+        }
+        else { }
     }
 }

@@ -279,7 +279,7 @@ namespace Cli.Tests
             Assert.AreEqual(expectedResult, ConfigGenerator.TryCreateRuntimeConfig(options, out _));
         }
 
-                /// <summary>
+        /// <summary>
         /// Test to verify creation of initial config with special characters
         /// such as [!,@,#,$,%,^,&,*, ,(,)] in connection-string.
         /// </summary>

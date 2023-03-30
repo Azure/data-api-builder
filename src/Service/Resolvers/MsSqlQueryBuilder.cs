@@ -121,6 +121,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     $"WITH(UPDLOCK) SET {Build(structure.UpdateOperations, ", ")} " +
                     $"OUTPUT {MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted)} " +
                     $"WHERE {updatePredicates} ";
+                StringBuilder upsertQuery = new(updateQuery);
                 string insertQuery;
                 string insertColumns = Build(structure.InsertColumns);
                 if (insertPredicates.Equals(BASE_PREDICATE))
@@ -144,7 +145,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         $"END; COMMIT TRANSACTION";
                 }
 
-                return updateQuery + insertQuery;
+                return upsertQuery.Append(insertQuery).ToString();
             }
         }
 

@@ -212,8 +212,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         }
 
         /// <summary>
-        /// Translates a string value from the runtime configuration, to a GraphQL *ValueNode which represents
-        /// a supported GraphQL type. The target value type is referenced from the parameterDefinition which
+        /// Translates a JSON string or number value defined in the runtime configuration to a GraphQL {Type}ValueNode which represents
+        /// the associated GraphQL type. The target value type is referenced from the passed in parameterDefinition which
         /// holds database schema metadata.
         /// </summary>
         /// <param name="defaultValueFromConfig">String representation of default value defined in runtime config.</param>
@@ -223,7 +223,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <exception cref="DataApiBuilderException">Raised when parameter casting fails due to unsupported type.</exception>
         public static Tuple<string, IValueNode> ConvertValueToGraphQLType(string defaultValueFromConfig, ParameterDefinition parameterDefinition)
         {
-            string paramValueType = SchemaConverter.GetGraphQLTypeForColumnType(type: parameterDefinition.SystemType);
+            string paramValueType = SchemaConverter.GetGraphQLTypeFromSystemType(type: parameterDefinition.SystemType);
             Tuple<string, IValueNode> valueNode = paramValueType switch
             {
                 BYTE_TYPE => new(BYTE_TYPE, new IntValueNode(byte.Parse(defaultValueFromConfig))),
@@ -232,11 +232,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                 LONG_TYPE => new(LONG_TYPE, new IntValueNode(long.Parse(defaultValueFromConfig))),
                 STRING_TYPE => new(STRING_TYPE, new StringValueNode(defaultValueFromConfig)),
                 BOOLEAN_TYPE => new(BOOLEAN_TYPE, new BooleanValueNode(bool.Parse(defaultValueFromConfig))),
-                SINGLE_TYPE => new(SINGLE_TYPE, new SingleType().ParseValue(defaultValueFromConfig)),
+                SINGLE_TYPE => new(SINGLE_TYPE, new SingleType().ParseValue(float.Parse(defaultValueFromConfig))),
                 FLOAT_TYPE => new(FLOAT_TYPE, new FloatValueNode(double.Parse(defaultValueFromConfig))),
                 DECIMAL_TYPE => new(DECIMAL_TYPE, new FloatValueNode(decimal.Parse(defaultValueFromConfig))),
                 DATETIME_TYPE => new(DATETIME_TYPE, new DateTimeType().ParseResult(DateTime.Parse(defaultValueFromConfig))),
-                BYTEARRAY_TYPE => new(BYTEARRAY_TYPE, new ByteArrayType().ParseValue(defaultValueFromConfig)),
+                BYTEARRAY_TYPE => new(BYTEARRAY_TYPE, new ByteArrayType().ParseValue(Convert.FromBase64String(defaultValueFromConfig))),
                 _ => throw new DataApiBuilderException(
                     message: $"The parameter value {defaultValueFromConfig} provided in configuration cannot be converted to the type {paramValueType}",
                     statusCode: HttpStatusCode.InternalServerError,

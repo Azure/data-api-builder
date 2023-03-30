@@ -47,7 +47,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         /// Mock the entityPermissionsMap which resolves which roles need to be included
         /// in an authorize directive used on a GraphQL object type definition.
         /// </summary>
-        /// <param name="entityName">Entity for which authorization permissions need to be resolved.</param>
+        /// <param name="entityNames">Entity for which authorization permissions need to be resolved.</param>
         /// <param name="operations">Actions performed on entity to resolve authorization permissions.</param>
         /// <param name="roles">Collection of role names allowed to perform action on entity.</param>
         /// <returns>EntityPermissionsMap Key/Value collection.</returns>
@@ -88,20 +88,50 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         }
 
         /// <summary>
-        /// Creates a stored procedure backed entity using the provided metadata.
+        /// Creates a stored procedure backed entity using the supplied metadata.
         /// </summary>
         /// <param name="graphQLTypeName">Desired GraphQL type name.</param>
         /// <param name="graphQLOperation">Query or Mutation</param>
-        /// <param name="permissionOperations">Collection of permission operations (CRUD+Execute)</param>
+        /// <param name="permissionOperations">Collection of permission operations (CRUD+Execute). Default: Execute</param>
+        /// <param name="dbObjectName">Name of object in the database. Default: foo</param>
+        /// <param name="parameters">Collection of defined stored procedure parameters</param>
+        /// <param name="keyFields">The field(s) to be used as primary keys.</param>
         /// <returns>Stored procedure backed entity.</returns>
-        public static Entity GenerateStoredProcedureEntity(string graphQLTypeName, GraphQLOperation? graphQLOperation, string[] permissionOperations)
+        public static Entity GenerateStoredProcedureEntity(
+            string graphQLTypeName,
+            GraphQLOperation? graphQLOperation,
+            string[] permissionOperations = null,
+            string dbObjectName = "foo",
+            Dictionary<string, object> parameters = null,
+            string[] keyFields = null
+            )
         {
-            Entity entity = new(Source: new DatabaseObjectSource(SourceType.StoredProcedure, Name: "foo", Parameters: null, KeyFields: null),
-                              Rest: null,
-                              GraphQL: JsonSerializer.SerializeToElement(new GraphQLStoredProcedureEntityVerboseSettings(Type: graphQLTypeName, GraphQLOperation: graphQLOperation.ToString())),
-                              Permissions: new[] { new PermissionSetting(role: "anonymous", operations: permissionOperations) },
-                              Relationships: new(),
-                              Mappings: new());
+            DatabaseObjectSource dbObjectSource = new(
+                Type: SourceType.StoredProcedure,
+                Name: dbObjectName,
+                Parameters: parameters,
+                KeyFields: keyFields);
+
+            GraphQLStoredProcedureEntityVerboseSettings graphQLSettings = new(
+                Type: graphQLTypeName,
+                GraphQLOperation: graphQLOperation.ToString());
+
+            PermissionOperation operation = new(
+                Name: Config.Operation.Execute,
+                Fields: null,
+                Policy: null);
+
+            PermissionSetting permissions = new(
+                role: "anonymous",
+                operations: permissionOperations ?? new object[] { JsonSerializer.SerializeToElement(operation) });
+
+            Entity entity = new(
+                Source: dbObjectSource,
+                Rest: null,
+                GraphQL: JsonSerializer.SerializeToElement(graphQLSettings),
+                Permissions: new[] { permissions },
+                Relationships: new(),
+                Mappings: new());
 
             // Ensures default GraphQL operation is "mutation" for stored procedures unless defined otherwise.
             entity.TryProcessGraphQLNamingConfig();

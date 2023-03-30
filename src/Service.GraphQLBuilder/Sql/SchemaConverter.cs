@@ -96,7 +96,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                             exposedColumnName = columnAlias;
                         }
 
-                        NamedTypeNode fieldType = new(GetGraphQLTypeForColumnType(column.SystemType));
+                        NamedTypeNode fieldType = new(GetGraphQLTypeFromSystemType(column.SystemType));
                         FieldDefinitionNode field = new(
                             location: null,
                             new(exposedColumnName),
@@ -208,9 +208,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         }
 
         /// <summary>
-        /// Get the GraphQL type equivalent from ColumnType
+        /// Get the GraphQL type equivalent from passed in system Type
         /// </summary>
-        public static string GetGraphQLTypeForColumnType(Type type)
+        /// <param name="type">System type.</param>
+        /// <exception cref="DataApiBuilderException">Raised when the provided type does not map to a supported
+        /// GraphQL type.</exception>"
+        public static string GetGraphQLTypeFromSystemType(Type type)
         {
             return type.Name switch
             {

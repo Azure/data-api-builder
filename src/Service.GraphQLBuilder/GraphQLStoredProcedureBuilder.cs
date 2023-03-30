@@ -36,6 +36,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             // which are needed because parameter and column names can differ.
             StoredProcedureDefinition spdef = (StoredProcedureDefinition)dbObject.SourceDefinition;
 
+            // Create input value definitions from parameters defined in runtime config. 
             if (entity.Parameters is not null)
             {
                 foreach (string param in entity.Parameters.Keys)
@@ -101,18 +102,18 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         }
 
         /// <summary>
-        /// Helper method to create a default result field for stored-procedure which does not
-        /// return any row.
+        /// Create and return a default GraphQL result field for a stored-procedure which doesn't
+        /// define a result set and doesn't return any rows.
         /// </summary>
         public static FieldDefinitionNode GetDefaultResultFieldForStoredProcedure()
         {
             return new(
                 location: null,
-                new("result"),
+                name: new("result"),
                 description: new StringValueNode("Contains output of stored-procedure execution"),
-                new List<InputValueDefinitionNode>(),
-                new StringType().ToTypeNode(),
-                new List<DirectiveNode>());
+                arguments: new List<InputValueDefinitionNode>(),
+                type: new StringType().ToTypeNode(),
+                directives: new List<DirectiveNode>());
         }
     }
 }

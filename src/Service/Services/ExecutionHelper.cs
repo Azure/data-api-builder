@@ -5,20 +5,14 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Resolvers;
-using HotChocolate.Configuration;
 using HotChocolate.Execution;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
-using HotChocolate.Types.Descriptors.Definitions;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Primitives;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
-using RequestDelegate = HotChocolate.Execution.RequestDelegate;
 
 namespace Azure.DataApiBuilder.Service.Services
 {
@@ -26,14 +20,14 @@ namespace Azure.DataApiBuilder.Service.Services
     /// The field resolver middleware that is used by the schema executor to resolve
     /// the queries and mutations
     /// </summary>
-    public class ResolverMiddleware
+    internal sealed class ExecutionHelper
     {
         private static readonly string _contextMetadata = "metadata";
         internal readonly FieldDelegate _next;
         internal readonly IQueryEngine _queryEngine;
         internal readonly IMutationEngine _mutationEngine;
 
-        public ResolverMiddleware(
+        public ExecutionHelper(
             FieldDelegate next,
             IQueryEngine queryEngine,
             IMutationEngine mutationEngine)
@@ -57,56 +51,10 @@ namespace Azure.DataApiBuilder.Service.Services
             JsonElement jsonElement;
 
 
-            if (context.Selection.Field.Coordinate.TypeName.Value == "Mutation")
+            
+            if (context.Selection.Field.Type.IsLeafType())
             {
-                IDictionary<string, object?> parameters = GetParametersFromContext(context);
-
-                // Only Stored-Procedure has ListType as returnType for Mutation
-                if (context.Selection.Type.IsListType())
-                {
-                    // Both Query and Mutation execute the same SQL statement for Stored Procedure.
-                    Tuple<IEnumerable<JsonDocument>, IMetadata?> result =
-                        await _queryEngine.ExecuteListAsync(context, parameters);
-                    context.Result = GetListOfClonedElements(result.Item1);
-                    SetNewMetadata(context, result.Item2);
-                }
-                else
-                {
-                    Tuple<JsonDocument?, IMetadata?> result =
-                        await _mutationEngine.ExecuteAsync(context, parameters);
-                    SetContextResult(context, result.Item1);
-                    SetNewMetadata(context, result.Item2);
-                }
-            }
-            else if (context.Selection.Field.Coordinate.TypeName.Value == "Query")
-            {
-                IDictionary<string, object?> parameters = GetParametersFromContext(context);
-
-                if (context.Selection.Type.IsListType())
-                {
-                    Tuple<IEnumerable<JsonDocument>, IMetadata?> result =
-                        await _queryEngine.ExecuteListAsync(context, parameters);
-                    context.Result = GetListOfClonedElements(result.Item1);
-                    SetNewMetadata(context, result.Item2);
-                }
-                else
-                {
-                    Tuple<JsonDocument?, IMetadata?> result =
-                        await _queryEngine.ExecuteAsync(context, parameters);
-                    SetContextResult(context, result.Item1);
-                    SetNewMetadata(context, result.Item2);
-                }
-            }
-            else if (context.Selection.Field.Type.IsLeafType())
-            {
-                // This means this field is a scalar, so we don't need to do
-                // anything for it.
-                if (TryGetPropertyFromParent(context, out jsonElement))
-                {
-                    context.Result = RepresentsNullValue(jsonElement)
-                        ? null
-                        : PreParseLeaf(context, jsonElement.ToString());
-                }
+                
             }
             else if (IsInnerObject(context))
             {
@@ -152,6 +100,65 @@ namespace Azure.DataApiBuilder.Service.Services
             }
 
             await _next(context);
+        }
+        
+        public async ValueTask ExecuteQueryAsync(IMiddlewareContext context)
+        {
+            IDictionary<string, object?> parameters = GetParametersFromContext(context);
+
+            if (context.Selection.Type.IsListType())
+            {
+                Tuple<IEnumerable<JsonDocument>, IMetadata?> result =
+                    await _queryEngine.ExecuteListAsync(context, parameters);
+                context.Result = GetListOfClonedElements(result.Item1);
+                SetNewMetadata(context, result.Item2);
+            }
+            else
+            {
+                Tuple<JsonDocument?, IMetadata?> result =
+                    await _queryEngine.ExecuteAsync(context, parameters);
+                SetContextResult(context, result.Item1);
+                SetNewMetadata(context, result.Item2);
+            }
+        }
+        
+        public async ValueTask ExecuteMutateAsync(IMiddlewareContext context)
+        {
+            if (context.Selection.Field.Coordinate.TypeName.Value == "Mutation")
+            {
+                IDictionary<string, object?> parameters = GetParametersFromContext(context);
+
+                // Only Stored-Procedure has ListType as returnType for Mutation
+                if (context.Selection.Type.IsListType())
+                {
+                    // Both Query and Mutation execute the same SQL statement for Stored Procedure.
+                    Tuple<IEnumerable<JsonDocument>, IMetadata?> result =
+                        await _queryEngine.ExecuteListAsync(context, parameters);
+                    context.Result = GetListOfClonedElements(result.Item1);
+                    SetNewMetadata(context, result.Item2);
+                }
+                else
+                {
+                    Tuple<JsonDocument?, IMetadata?> result =
+                        await _mutationEngine.ExecuteAsync(context, parameters);
+                    SetContextResult(context, result.Item1);
+                    SetNewMetadata(context, result.Item2);
+                }
+            }
+        }
+        
+        public object? ExecuteLeafFieldAsync(IPureResolverContext context)
+        {
+            // This means this field is a scalar, so we don't need to do
+            // anything for it.
+            if (TryGetPropertyFromParent(context, out JsonElement jsonElement))
+            {
+                return RepresentsNullValue(jsonElement) 
+                    ? null 
+                    : PreParseLeaf(context, jsonElement.ToString());
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -203,7 +210,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// e.g. "1" despite being a valid byte value is parsed improperly by HotChocolate so we preparse it
         /// to an actual byte value then feed the result to HotChocolate
         /// </remarks>
-        private static object PreParseLeaf(IMiddlewareContext context, string leafJson)
+        private static object PreParseLeaf(IPureResolverContext context, string leafJson)
         {
             IType leafType = context.Selection.Field.Type is NonNullType
                 ? context.Selection.Field.Type.NullableType()
@@ -220,11 +227,12 @@ namespace Azure.DataApiBuilder.Service.Services
 
         public static bool RepresentsNullValue(JsonElement element)
         {
+            // TODO: why does this not check the element kind?
             return string.IsNullOrEmpty(element.ToString()) && element.GetRawText() == "null";
         }
 
         protected static bool TryGetPropertyFromParent(
-            IMiddlewareContext context,
+            IPureResolverContext context,
             out JsonElement jsonElement)
         {
             JsonDocument result =
@@ -401,54 +409,5 @@ namespace Azure.DataApiBuilder.Service.Services
             context.ScopedContextData =
                 context.ScopedContextData.SetItem(_contextMetadata, metadata);
         }
-    }
-}
-
-/// <summary>
-/// This request middleware will build up our request state and will be invoke once per request.
-/// </summary>
-internal sealed class BuildRequestStateMiddleware
-{
-    private readonly RequestDelegate _next;
-
-    public BuildRequestStateMiddleware(RequestDelegate next)
-    {
-        _next = next;
-    }
-
-    public async ValueTask InvokeAsync(IRequestContext context)
-    {
-        if (context.ContextData.TryGetValue(nameof(HttpContext), out object? value) &&
-            value is HttpContext httpContext)
-        {
-            StringValues clientRoleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
-            context.ContextData.TryAdd(key: AuthorizationResolver.CLIENT_ROLE_HEADER, value: clientRoleHeader);
-        }
-
-        await _next(context).ConfigureAwait(false);
-    }
-}
-
-internal sealed class ResolverTypeInterceptor : TypeInterceptor
-{
-    public override void OnBeforeCompleteType(
-        ITypeCompletionContext completionContext,
-        DefinitionBase? definition,
-        IDictionary<string, object?> contextData)
-    {
-        // We are only interested in object types here as only object types can have resolvers.
-        if (completionContext.Type is not ObjectType objectType &&
-            definition is not ObjectTypeDefinition objectTypeDef)
-        {
-            return;
-        }
-
-        if (completionContext.IsQueryType ?? false) { }
-        else if (completionContext.IsMutationType ?? false) { }
-        else if (completionContext.IsSubscriptionType ?? false)
-        {
-            throw new NotSupportedException();
-        }
-        else { }
     }
 }

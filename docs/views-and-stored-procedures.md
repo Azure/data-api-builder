@@ -15,6 +15,8 @@ If you have a view, for example [`dbo.vw_books_details`](../samples/getting-star
 dab add BookDetail --source dbo.vw_books_details --source.type View --source.key-fields "id" --permissions "anonymous:read"
 ```
 
+**NOTE: --source.key-fields is mandatory for views when generating config through CLI.**
+
 the `dab-config.json` file will look like the following:
 
 ```json

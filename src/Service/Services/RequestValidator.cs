@@ -20,6 +20,7 @@ namespace Azure.DataApiBuilder.Service.Services
         public const string REQUEST_BODY_INVALID_JSON_ERR_MESSAGE = "Request body contains invalid JSON.";
         public const string BATCH_MUTATION_UNSUPPORTED_ERR_MESSAGE = "A Mutation operation on more than one entity in a single request is not yet supported.";
         public const string QUERY_STRING_INVALID_USAGE_ERR_MESSAGE = "Query string for this HTTP request type is an invalid URL.";
+        public const string PRIMARY_KEY_INVALID_USAGE_ERR_MESSAGE = "Primary key for POST requests can't be specified in the request URL. Use request body instead.";
         public const string PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE = "Primary Key for this HTTP request type is required.";
 
         /// <summary>
@@ -177,13 +178,14 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Validates the primarykeyroute is populated with respect to an Update or Upsert operation.
+        /// Validates the request body is a valid JSON string and is not a JSON array since we only
+        /// support point operations.
         /// </summary>
         /// <param name="requestBody">Request body content</param>
         /// <exception cref="DataApiBuilderException">Thrown when request body is invalid JSON
         /// or JSON is a batch request (mutation of more than one entity in a single request).</exception>
         /// <returns>JsonElement representing the body of the request.</returns>
-        public static JsonElement ParseRequestBody(string requestBody)
+        public static JsonElement ValidateAndParseRequestBody(string requestBody)
         {
             JsonElement mutationPayloadRoot = new();
 
@@ -217,56 +219,58 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Validates the request body and queryString with respect to an Insert operation.
+        /// Performs validations on primary key route and queryString specified in the request URL, whose specifics depend on the type of operation being executed.
+        /// Eg. a POST request cannot have primary key route/query string in the URL while it is mandatory for a PUT/PATCH/DELETE request to have a primary key route in the URL.
         /// </summary>
+        /// <param name="operationType">Type of operation being executed.</param>
+        /// <param name="primaryKeyRoute">URL route e.g. "Entity/id/1"</param>
         /// <param name="queryString">queryString e.g. "$?filter="</param>
-        /// <param name="requestBody">The string JSON body from the request.</param>
-        /// <exception cref="DataApiBuilderException">Raised when queryString is present or invalid JSON in requestBody is found.</exception>
-        public static JsonElement ValidateInsertRequest(string queryString, string requestBody)
+        /// <exception cref="DataApiBuilderException">Raised when primaryKeyRoute/queryString fail the validations for the operation.</exception>
+        public static void ValidatePrimaryKeyRouteAndQueryStringInURL(Config.Operation operationType, string? primaryKeyRoute = null, string? queryString = null)
         {
-            if (!string.IsNullOrEmpty(queryString))
+            bool isPrimaryKeyRouteEmpty = string.IsNullOrEmpty(primaryKeyRoute);
+            bool isQueryStringEmpty = string.IsNullOrEmpty(queryString);
+
+            switch (operationType)
             {
-                throw new DataApiBuilderException(
-                    message: QUERY_STRING_INVALID_USAGE_ERR_MESSAGE,
-                    statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-            }
+                case Config.Operation.Insert:
+                    if (!isPrimaryKeyRouteEmpty)
+                    {
+                        throw new DataApiBuilderException(
+                            message: PRIMARY_KEY_INVALID_USAGE_ERR_MESSAGE,
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    }
 
-            return ParseRequestBody(requestBody);
-        }
+                    if (!isQueryStringEmpty)
+                    {
+                        throw new DataApiBuilderException(
+                            message: QUERY_STRING_INVALID_USAGE_ERR_MESSAGE,
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    }
 
-        /// <summary>
-        /// Validates the primarykeyroute is populated with respect to an Update or Upsert operation.
-        /// </summary>
-        /// <param name="primaryKeyRoute">URL route e.g. "Entity/id/1"</param>
-        /// <param name="requestBody">The string JSON body from the request.</param>
-        /// <exception cref="DataApiBuilderException">Raised when either primary key route is absent or invalid JSON in requestBody is found.</exception>
-        public static JsonElement ValidateUpdateOrUpsertRequest(string? primaryKeyRoute, string requestBody)
-        {
-            if (string.IsNullOrWhiteSpace(primaryKeyRoute))
-            {
-                throw new DataApiBuilderException(
-                    message: PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE,
-                    statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-            }
+                    break;
+                case Config.Operation.Delete:
+                case Config.Operation.Update:
+                case Config.Operation.UpdateIncremental:
+                case Config.Operation.Upsert:
+                case Config.Operation.UpsertIncremental:
+                    /// Validate that the primarykeyroute is populated for these operations.
+                    if (isPrimaryKeyRouteEmpty)
+                    {
+                        throw new DataApiBuilderException(
+                            message: PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE,
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    }
 
-            return ParseRequestBody(requestBody);
-        }
-
-        /// <summary>
-        /// Validates the primarykeyroute is populated with respect to a Delete operation.
-        /// </summary>
-        /// <param name="primaryKeyRoute">URL route e.g. "Entity/id/1"</param>
-        /// <exception cref="DataApiBuilderException">Raised when primary key route is absent</exception>
-        public static void ValidateDeleteRequest(string? primaryKeyRoute)
-        {
-            if (string.IsNullOrWhiteSpace(primaryKeyRoute))
-            {
-                throw new DataApiBuilderException(
-                    message: PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE,
-                    statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    break;
+                default:
+                    throw new DataApiBuilderException(
+                        message: "Unexpected operation encountered. Cannot perform validations on URL components.",
+                        statusCode: HttpStatusCode.InternalServerError,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
             }
         }
 

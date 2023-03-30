@@ -1058,7 +1058,7 @@ type Foo @model(name:""Foo"") {{
                 DatabaseType.mssql,
                 new Dictionary<string, Entity> { { entityName, entity } },
                 entityPermissionsMap: _entityPermissions,
-                dbObjects: new Dictionary<string, DatabaseObject> { { entityName, spDbObj} }
+                dbObjects: new Dictionary<string, DatabaseObject> { { entityName, spDbObj } }
             );
 
             const string FIELDNOTFOUND_ERROR = "The expected mutation field schema was not detected.";

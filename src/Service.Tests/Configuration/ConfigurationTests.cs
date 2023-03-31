@@ -1223,7 +1223,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
         }
 
-        [TestMethod]
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
         public async Task TestX()
         {
             RuntimeConfig configuration = ConfigurationTests.InitBasicRuntimeConfigWithNoEntity();

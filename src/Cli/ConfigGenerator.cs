@@ -783,12 +783,17 @@ namespace Cli
 
                 if (IsStoredProcedureConvertedToOtherTypes(entity, options) || IsEntityBeingConvertedToStoredProcedure(entity, options))
                 {
-                    _logger.LogWarning($"Stored procedures can be configured only with {Operation.Execute.ToString()} action whereas tables/views are configured with CRUD actions. Update the actions configured for all the roles for this entity.");
+                    _logger.LogWarning($"Stored procedures can be configured only with the {Operation.Execute.ToString()} action whereas," +
+                            " tables/views are configured with CRUD actions. Update the actions configured for all the roles for this entity.");
                 }
 
             }
 
-            if (!VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
+            // No need to validate parameter and key field usage when there are no changes to the source object defined in 'options'
+            if ((options.SourceType is not null
+                || (options.SourceParameters is not null && options.SourceParameters.Any())
+                || (options.SourceKeyFields is not null && options.SourceKeyFields.Any()))
+                && !VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
                     updatedSourceType,
                     options.SourceParameters,
                     options.SourceKeyFields))

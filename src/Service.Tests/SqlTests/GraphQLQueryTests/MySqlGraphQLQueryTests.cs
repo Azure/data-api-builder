@@ -471,6 +471,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await TestQueryOnCompositeView(mySqlQuery);
         }
 
+        [TestMethod]
+        public async Task TestX()
+        {
+            await TestX(TestCategory.MYSQL);
+        }
+
         #endregion
     }
 }

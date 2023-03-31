@@ -3,6 +3,15 @@
 
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Collections.Generic;
+using System.IO;
+using System.Net.Http;
+using System.Net.Http.Json;
+using System.Text.Json;
+using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Authorization;
+using Microsoft.AspNetCore.TestHost;
+using Azure.DataApiBuilder.Service.Tests.Configuration;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
 {
@@ -344,6 +353,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         {
             string msSqlQuery = $"SELECT TOP 5 id, name FROM books_publishers_view_composite ORDER BY id FOR JSON PATH, INCLUDE_NULL_VALUES";
             await base.TestQueryOnCompositeView(msSqlQuery);
+        }
+
+        [TestMethod]
+        public async Task TestX()
+        {
+            await TestX(TestCategory.MSSQL);
         }
 
         #endregion

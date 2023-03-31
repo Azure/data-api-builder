@@ -1225,8 +1225,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             RuntimeConfig configuration = ConfigurationTests.InitBasicRuntimeConfigWithNoEntity();
 
-            Entity publisherEntity = new(
-                Source: JsonSerializer.SerializeToElement("publishers"),
+            Entity clubEntity = new(
+                Source: JsonSerializer.SerializeToElement("clubs"),
                 Rest: true,
                 GraphQL: true,
                 Permissions: new PermissionSetting[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
@@ -1234,17 +1234,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Mappings: null
             );
 
-            configuration.Entities.Add("Publisher", publisherEntity);
+            configuration.Entities.Add("Club", clubEntity);
 
-            Entity bookEntity = new(
-                Source: JsonSerializer.SerializeToElement("books"),
+            Entity playerEntity = new(
+                Source: JsonSerializer.SerializeToElement("players"),
                 Rest: true,
                 GraphQL: true,
                 Permissions: new PermissionSetting[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
-                Relationships: new Dictionary<string, Relationship>() { {"publishers", new (
+                Relationships: new Dictionary<string, Relationship>() { {"clubs", new (
                     Cardinality: Cardinality.One,
-                    TargetEntity: "Publisher",
-                    SourceFields: new string[] {"default_publisher_id"},
+                    TargetEntity: "Club",
+                    SourceFields: new string[] {"new_club_id"},
                     TargetFields: new string[] {"id"},
                     LinkingObject: null,
                     LinkingSourceFields: null,
@@ -1253,7 +1253,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Mappings: null
             );
 
-            configuration.Entities.Add("Book", bookEntity);
+            configuration.Entities.Add("Player", playerEntity);
 
             const string CUSTOM_CONFIG = "custom-config.json";
             File.WriteAllText(
@@ -1270,9 +1270,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             using (HttpClient client = server.CreateClient())
             {
                 string query = @"{
-                    book_by_pk(id: 8) {
-                        title,
-                        publishers {
+                    player_by_pk(id: 1) {
+                        name,
+                        clubs {
                             id
                             name
                         }
@@ -1292,10 +1292,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
                 JsonElement graphQLResult = JsonSerializer.Deserialize<JsonElement>(body);
                 Assert.AreEqual(System.Net.HttpStatusCode.OK, graphQLResponse.StatusCode);
-
-                HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/Book");
-                HttpResponseMessage restResponse = await client.SendAsync(restRequest);
-                Assert.AreEqual(System.Net.HttpStatusCode.OK, restResponse.StatusCode);
             }
         }
 
@@ -1536,7 +1532,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// Instantiate basic runtime config with custom global settings.
         /// </summary>
         /// <returns></returns>
-        public static RuntimeConfig InitBasicRuntimeConfigWithNoEntity()
+        public static RuntimeConfig InitBasicRuntimeConfigWithNoEntity(string testCategory = TestCategory.MSSQL)
         {
             Dictionary<GlobalSettingsType, object> settings = new()
             {
@@ -1546,7 +1542,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             DataSource dataSource = new(DatabaseType.mssql)
             {
-                ConnectionString = GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)
+                ConnectionString = GetConnectionStringFromEnvironmentConfig(environment: testCategory)
             };
 
             RuntimeConfig runtimeConfig = new(

@@ -12,6 +12,8 @@ DROP TABLE IF EXISTS authors;
 DROP TABLE IF EXISTS book_website_placements;
 DROP TABLE IF EXISTS website_users;
 DROP TABLE IF EXISTS books;
+DROP TABLE IF EXISTS players;
+DROP TABLE IF EXISTS clubs;
 DROP TABLE IF EXISTS publishers;
 DROP TABLE IF EXISTS magazines;
 DROP TABLE IF EXISTS stocks_price;
@@ -41,6 +43,18 @@ CREATE TABLE books(
     id int AUTO_INCREMENT PRIMARY KEY,
     title text NOT NULL,
     publisher_id int NOT NULL
+);
+
+CREATE TABLE players(
+    id int AUTO_INCREMENT PRIMARY KEY,
+    name text NOT NULL,
+    current_club_id int NOT NULL,
+    new_club_id int NOT NULL
+);
+
+CREATE TABLE clubs(
+    id int AUTO_INCREMENT PRIMARY KEY,
+    name text NOT NULL
 );
 
 CREATE TABLE book_website_placements(

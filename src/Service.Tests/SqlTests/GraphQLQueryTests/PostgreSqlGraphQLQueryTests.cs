@@ -349,6 +349,12 @@ FROM
             await base.TestQueryOnCompositeView(postgresQuery);
         }
 
+        [TestMethod]
+        public async Task TestX()
+        {
+            await TestX(TestCategory.POSTGRESQL);
+        }
+
         #endregion
     }
 }

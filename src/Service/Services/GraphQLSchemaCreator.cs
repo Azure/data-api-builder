@@ -96,8 +96,8 @@ namespace Azure.DataApiBuilder.Service.Services
                 .AddDocument(MutationBuilder.Build(root, _databaseType, _entities, _authorizationResolver.EntityPermissionsMap))
                 // Enable the OneOf directive (https://github.com/graphql/graphql-spec/pull/825) to support the DefaultValue type
                 .ModifyOptions(o => o.EnableOneOf = true)
-                // Add our custom middleware for GraphQL resolvers
-                .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine));
+                // Adds our type interceptor that will create the resolvers.
+                .TryAddTypeInterceptor(new ResolverTypeInterceptor(new ExecutionHelper(_queryEngine, _mutationEngine)));
         }
 
         /// <summary>

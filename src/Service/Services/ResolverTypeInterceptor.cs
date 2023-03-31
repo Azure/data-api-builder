@@ -15,6 +15,8 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
     private readonly FieldMiddlewareDefinition _queryMiddleware;
     private readonly FieldMiddlewareDefinition _mutationMiddleware;
     private readonly PureFieldDelegate _leafFieldResolver;
+    private readonly PureFieldDelegate _objectFieldResolver;
+    private readonly PureFieldDelegate _listFieldResolver;
     
     public ResolverTypeInterceptor(ExecutionHelper executionHelper)
     {
@@ -35,6 +37,8 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
                 });
 
         _leafFieldResolver = ctx => ExecutionHelper.ExecuteLeafField(ctx);
+        _objectFieldResolver = ctx => executionHelper.ExecuteObjectField(ctx);
+        _listFieldResolver = ctx => executionHelper.ExecuteListField(ctx);
     }
     
     public override void OnBeforeCompleteType(
@@ -80,7 +84,14 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
                     {
                         field.PureResolver = _leafFieldResolver;
                     }
-                    else if()
+                    else if (type.IsObjectType())
+                    {
+                        field.PureResolver = _objectFieldResolver;
+                    }
+                    else if (type.IsListType())
+                    {
+                        field.PureResolver = _listFieldResolver;
+                    }
                 }
                 
             }

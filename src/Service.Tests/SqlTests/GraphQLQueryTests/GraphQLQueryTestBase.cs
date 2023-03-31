@@ -1459,9 +1459,9 @@ query {
         }
 
         [TestMethod]
-        public async Task TestConfigTakesPrecedenceForRelationshipOverDB(string testEnvironment)
+        public async Task TestConfigTakesPrecedenceForRelationshipOverDB(DatabaseType dbType, string testEnvironment)
         {
-            RuntimeConfig configuration = ConfigurationTests.InitBasicRuntimeConfigWithNoEntity(testEnvironment);
+            RuntimeConfig configuration = ConfigurationTests.InitBasicRuntimeConfigWithNoEntity(dbType, testEnvironment);
 
             Entity clubEntity = new(
                 Source: JsonSerializer.SerializeToElement("clubs"),

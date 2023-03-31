@@ -1457,7 +1457,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// Instantiate basic runtime config with custom global settings.
         /// </summary>
         /// <returns></returns>
-        public static RuntimeConfig InitBasicRuntimeConfigWithNoEntity(string testCategory = TestCategory.MSSQL)
+        public static RuntimeConfig InitBasicRuntimeConfigWithNoEntity(
+            DatabaseType dbType = DatabaseType.mssql,
+            string testCategory = TestCategory.MSSQL)
         {
             Dictionary<GlobalSettingsType, object> settings = new()
             {
@@ -1465,7 +1467,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings(){ }) }
             };
 
-            DataSource dataSource = new(DatabaseType.mssql)
+            DataSource dataSource = new(dbType)
             {
                 ConnectionString = GetConnectionStringFromEnvironmentConfig(environment: testCategory)
             };

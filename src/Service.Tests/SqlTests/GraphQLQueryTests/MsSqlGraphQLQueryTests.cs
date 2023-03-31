@@ -3,6 +3,7 @@
 
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Azure.DataApiBuilder.Config;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
 {
@@ -349,7 +350,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         [TestMethod]
         public async Task TestConfigTakesPrecedenceForRelationshipOverDB()
         {
-            await TestConfigTakesPrecedenceForRelationshipOverDB(TestCategory.MSSQL);
+            await TestConfigTakesPrecedenceForRelationshipOverDB(DatabaseType.mssql, TestCategory.MSSQL);
         }
 
         #endregion

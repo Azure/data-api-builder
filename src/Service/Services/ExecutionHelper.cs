@@ -106,9 +106,9 @@ namespace Azure.DataApiBuilder.Service.Services
             // anything for it.
             if (TryGetPropertyFromParent(context, out JsonElement jsonElement))
             {
-                return RepresentsNullValue(jsonElement) 
-                    ? null 
-                    : PreParseLeaf(context, jsonElement.ToString());
+                return jsonElement.ValueKind is not (JsonValueKind.Undefined or JsonValueKind.Null) 
+                    ? PreParseLeaf(context, jsonElement.ToString()) 
+                    : null;
             }
 
             return null;
@@ -199,12 +199,6 @@ namespace Azure.DataApiBuilder.Service.Services
                 ByteArrayType => Convert.FromBase64String(leafJson),
                 _ => leafJson
             };
-        }
-
-        public static bool RepresentsNullValue(JsonElement element)
-        {
-            // TODO: why does this not check the element kind?
-            return string.IsNullOrEmpty(element.ToString()) && element.GetRawText() == "null";
         }
 
         protected static bool TryGetPropertyFromParent(

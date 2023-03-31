@@ -59,7 +59,8 @@ CREATE TABLE publishers(
 CREATE TABLE books(
     id int IDENTITY(5001, 1) PRIMARY KEY,
     title varchar(max) NOT NULL,
-    publisher_id int NOT NULL
+    publisher_id int NOT NULL,
+    default_publisher_id int DEFAULT(1234) NOT NULL
 );
 
 CREATE TABLE book_website_placements(

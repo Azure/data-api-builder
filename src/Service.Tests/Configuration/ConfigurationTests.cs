@@ -1244,7 +1244,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Relationships: new Dictionary<string, Relationship>() { {"publishers", new (
                     Cardinality: Cardinality.One,
                     TargetEntity: "Publisher",
-                    SourceFields: new string[] {"new_pub_id"},
+                    SourceFields: new string[] {"default_publisher_id"},
                     TargetFields: new string[] {"id"},
                     LinkingObject: null,
                     LinkingSourceFields: null,

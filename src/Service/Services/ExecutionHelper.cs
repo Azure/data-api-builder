@@ -147,7 +147,7 @@ namespace Azure.DataApiBuilder.Service.Services
             }
         }
         
-        public object? ExecuteLeafFieldAsync(IPureResolverContext context)
+        public static object? ExecuteLeafFieldAsync(IPureResolverContext context)
         {
             // This means this field is a scalar, so we don't need to do
             // anything for it.
@@ -235,7 +235,8 @@ namespace Azure.DataApiBuilder.Service.Services
             IPureResolverContext context,
             out JsonElement jsonElement)
         {
-            JsonDocument result =
+            // TODO : why is this done?
+            JsonDocument result = 
                 JsonDocument.Parse(JsonSerializer.Serialize(context.Parent<JsonElement>()));
 
             if (result is null)

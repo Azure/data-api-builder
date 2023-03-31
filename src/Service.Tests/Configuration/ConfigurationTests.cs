@@ -1038,7 +1038,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// Engine supports config with views that do not have keyfields specified in the config for MsSQL.
+        /// Engine supports config with some views that do not have keyfields specified in the config for MsSQL.
         /// This Test validates that support. It creates a custom config with a view and no keyfields specified.
         /// It checks both Rest and GraphQL queries are tested to return Success.
         /// </summary>

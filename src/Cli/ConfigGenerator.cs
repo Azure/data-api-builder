@@ -783,7 +783,7 @@ namespace Cli
 
                 if (IsStoredProcedureConvertedToOtherTypes(entity, options) || IsEntityBeingConvertedToStoredProcedure(entity, options))
                 {
-                    _logger.LogWarning($"Stored procedures can be configured only with {Operation.Execute.ToString()} action whereas," +
+                    _logger.LogWarning($"Stored procedures can be configured only with the {Operation.Execute.ToString()} action whereas," +
                             " tables/views are configured with CRUD actions. Update the actions configured for all the roles for this entity.");
                 }
 

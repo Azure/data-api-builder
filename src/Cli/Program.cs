@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using CommandLine;
-using HotChocolate.Utilities.Introspection;
 using Microsoft.Extensions.Logging;
 using static Cli.Utils;
 
@@ -110,58 +109,7 @@ namespace Cli
                 }))
                 .WithParsed((Action<ExportOptions>)(options =>
                 {
-                    StartOptions startOptions = new(false, LogLevel.None, false, options.Config!);
-
-                    CancellationTokenSource cancellationTokenSource = new();
-                    CancellationToken cancellationToken = cancellationTokenSource.Token;
-
-                    Task server = Task.Run(() =>
-                    {
-                        _ = ConfigGenerator.TryStartEngineWithOptions(startOptions);
-                    }, cancellationToken);
-
-                    if (options.GraphQL)
-                    {
-                        int retryCount = 5;
-                        int tries = 0;
-
-                        while (tries < retryCount)
-                        {
-                            try
-                            {
-                                HttpClient client = new( // CodeQL[SM02185] Loading internal server connection
-                                    new HttpClientHandler { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator }
-                                )
-                                { BaseAddress = new Uri("https://localhost:5001/graphql") };
-
-                                IntrospectionClient introspectionClient = new();
-                                Task<HotChocolate.Language.DocumentNode> response = introspectionClient.DownloadSchemaAsync(client);
-                                response.Wait();
-
-                                HotChocolate.Language.DocumentNode node = response.Result;
-
-                                if (!Directory.Exists(options.OutputDirectory))
-                                {
-                                    Directory.CreateDirectory(options.OutputDirectory);
-                                }
-
-                                string outputPath = Path.Combine(options.OutputDirectory, options.GraphQLSchemaFile);
-                                File.WriteAllText(outputPath, node.ToString());
-                                break;
-                            }
-                            catch
-                            {
-                                tries++;
-                            }
-                        }
-
-                        if (tries == retryCount)
-                        {
-                            cliLogger.LogError("Failed to export GraphQL schema.");
-                        }
-                    }
-
-                    cancellationTokenSource.Cancel();
+                    Exporter.Export(options, cliLogger);
                 }))
                 .WithNotParsed(err =>
                 {

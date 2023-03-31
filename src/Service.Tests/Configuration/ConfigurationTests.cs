@@ -1100,6 +1100,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
                 HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
                 Assert.AreEqual(HttpStatusCode.OK, graphQLResponse.StatusCode);
+                string body = await graphQLResponse.Content.ReadAsStringAsync();
+                Assert.IsFalse(body.Contains("errors")); // In GraphQL, All errors end up in the errors array, no matter what kind of error they are.
 
                 HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/books_view_all");
                 HttpResponseMessage restResponse = await client.SendAsync(restRequest);

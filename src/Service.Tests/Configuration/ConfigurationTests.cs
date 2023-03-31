@@ -1007,9 +1007,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 };
 
                 HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
-                string body = await graphQLResponse.Content.ReadAsStringAsync();
-
-                JsonElement graphQLResult = JsonSerializer.Deserialize<JsonElement>(body);
                 Assert.AreEqual(expectedStatusCodeForGraphQL, graphQLResponse.StatusCode);
 
                 HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/Book");
@@ -1291,7 +1288,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
                 HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
                 string body = await graphQLResponse.Content.ReadAsStringAsync();
-                Console.WriteLine(body);
+                Assert.AreEqual("test", body);
 
                 JsonElement graphQLResult = JsonSerializer.Deserialize<JsonElement>(body);
                 Assert.AreEqual(System.Net.HttpStatusCode.OK, graphQLResponse.StatusCode);

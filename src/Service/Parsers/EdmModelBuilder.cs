@@ -69,56 +69,9 @@ namespace Azure.DataApiBuilder.Service.Parsers
                     // each column represents a property of the current entity we are adding
                     foreach (string column in sourceDefinition.Columns.Keys)
                     {
-                        // need to convert our column system type to an Edm type
                         Type columnSystemType = sourceDefinition.Columns[column].SystemType;
-                        EdmPrimitiveTypeKind type = EdmPrimitiveTypeKind.None;
-                        if (columnSystemType.IsArray)
-                        {
-                            columnSystemType = columnSystemType.GetElementType()!;
-                        }
-
-                        switch (columnSystemType.Name)
-                        {
-                            case "String":
-                                type = EdmPrimitiveTypeKind.String;
-                                break;
-                            case "Guid":
-                                type = EdmPrimitiveTypeKind.Guid;
-                                break;
-                            case "Byte":
-                                type = EdmPrimitiveTypeKind.Byte;
-                                break;
-                            case "Int16":
-                                type = EdmPrimitiveTypeKind.Int16;
-                                break;
-                            case "Int32":
-                                type = EdmPrimitiveTypeKind.Int32;
-                                break;
-                            case "Int64":
-                                type = EdmPrimitiveTypeKind.Int64;
-                                break;
-                            case "Single":
-                                type = EdmPrimitiveTypeKind.Single;
-                                break;
-                            case "Double":
-                                type = EdmPrimitiveTypeKind.Double;
-                                break;
-                            case "Decimal":
-                                type = EdmPrimitiveTypeKind.Decimal;
-                                break;
-                            case "Boolean":
-                                type = EdmPrimitiveTypeKind.Boolean;
-                                break;
-                            case "DateTime":
-                                type = EdmPrimitiveTypeKind.DateTimeOffset;
-                                break;
-                            case "Date":
-                                type = EdmPrimitiveTypeKind.Date;
-                                break;
-                            default:
-                                throw new ArgumentException($"Column type" +
-                                    $" {columnSystemType.Name} not yet supported.");
-                        }
+                        // need to convert our column system type to an Edm type
+                        EdmPrimitiveTypeKind type = GetEdmPrimitiveTypeFromSystemType(columnSystemType);
 
                         // here we must use the correct aliasing for the column name
                         // which is on a per entity basis.
@@ -147,6 +100,42 @@ namespace Azure.DataApiBuilder.Service.Parsers
             }
 
             return this;
+        }
+
+        /// <summary>
+        /// Given the system type, returns the corresponding primitive type kind.
+        /// </summary>
+        /// <param name="columnSystemType">Type of the column.</param>
+        /// <returns>EdmPrimitiveTypeKind</returns>
+        /// <exception cref="ArgumentException">Throws when the column</exception>
+        private static EdmPrimitiveTypeKind GetEdmPrimitiveTypeFromSystemType(Type columnSystemType)
+        {
+            if (columnSystemType.IsArray)
+            {
+                columnSystemType = columnSystemType.GetElementType()!;
+            }
+
+            EdmPrimitiveTypeKind type = columnSystemType.Name switch
+            {
+                "String" => EdmPrimitiveTypeKind.String,
+                "Guid" => EdmPrimitiveTypeKind.Guid,
+                "Byte" => EdmPrimitiveTypeKind.Byte,
+                "Int16" => EdmPrimitiveTypeKind.Int16,
+                "Int32" => EdmPrimitiveTypeKind.Int32,
+                "Int64" => EdmPrimitiveTypeKind.Int64,
+                "Single" => EdmPrimitiveTypeKind.Single,
+                "Double" => EdmPrimitiveTypeKind.Double,
+                "Decimal" => EdmPrimitiveTypeKind.Decimal,
+                "Boolean" => EdmPrimitiveTypeKind.Boolean,
+                "DateTime" => EdmPrimitiveTypeKind.DateTimeOffset,
+                "DateTimeOffset" => EdmPrimitiveTypeKind.DateTimeOffset,
+                "Date" => EdmPrimitiveTypeKind.Date,
+                "TimeSpan" => EdmPrimitiveTypeKind.TimeOfDay,
+                _ => throw new ArgumentException($"Column type" +
+                        $" {columnSystemType.Name} not yet supported.")
+            };
+
+            return type;
         }
 
         /// <summary>

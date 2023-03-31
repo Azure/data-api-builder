@@ -24,6 +24,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes
             descriptor.Field(DECIMAL_TYPE).Type<DecimalType>();
             descriptor.Field(DATETIME_TYPE).Type<DateTimeType>();
             descriptor.Field(BYTEARRAY_TYPE).Type<ByteArrayType>();
+            descriptor.Field(TIMESPAN_TYPE).Type<TimeSpanType>();
         }
     }
 }

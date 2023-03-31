@@ -82,6 +82,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                         DateTime value => new ObjectValueNode(new ObjectFieldNode(DATETIME_TYPE, new DateTimeType().ParseResult(value))),
                         DateTimeOffset value => new ObjectValueNode(new ObjectFieldNode(DATETIME_TYPE, new DateTimeType().ParseValue(value))),
                         byte[] value => new ObjectValueNode(new ObjectFieldNode(BYTEARRAY_TYPE, new ByteArrayType().ParseValue(value))),
+                        TimeSpan value => new ObjectValueNode(new ObjectFieldNode(TIMESPAN_TYPE, new TimeSpanType().ParseValue(value))),
                         _ => throw new DataApiBuilderException(
                             message: $"The type {column.DefaultValue.GetType()} is not supported as a GraphQL default value",
                             statusCode: HttpStatusCode.InternalServerError,
@@ -244,6 +245,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 "Boolean" => BOOLEAN_TYPE,
                 "DateTime" => DATETIME_TYPE,
                 "Byte[]" => BYTEARRAY_TYPE,
+                "TimeSpan" => TIMESPAN_TYPE,
                 _ => throw new DataApiBuilderException(
                         message: $"Column type {type} not handled by case. Please add a case resolving {type} to the appropriate GraphQL type",
                         statusCode: HttpStatusCode.InternalServerError,

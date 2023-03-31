@@ -48,7 +48,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                 STRING_TYPE,
                 BOOLEAN_TYPE,
                 DATETIME_TYPE,
-                BYTEARRAY_TYPE
+                BYTEARRAY_TYPE,
+                TIMESPAN_TYPE
             };
             string name = typeNode.NamedType().Name.Value;
             return inBuiltTypes.Contains(name);

@@ -34,7 +34,7 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
                     await next(context).ConfigureAwait(false);
                 });
 
-        _leafFieldResolver = ctx => ExecutionHelper.ExecuteLeafFieldAsync(ctx);
+        _leafFieldResolver = ctx => ExecutionHelper.ExecuteLeafField(ctx);
     }
     
     public override void OnBeforeCompleteType(

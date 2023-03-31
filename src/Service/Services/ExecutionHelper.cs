@@ -3,11 +3,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Resolvers;
+using HotChocolate;
 using HotChocolate.Execution;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
@@ -22,86 +24,17 @@ namespace Azure.DataApiBuilder.Service.Services
     /// </summary>
     internal sealed class ExecutionHelper
     {
-        private static readonly string _contextMetadata = "metadata";
-        internal readonly FieldDelegate _next;
         internal readonly IQueryEngine _queryEngine;
         internal readonly IMutationEngine _mutationEngine;
 
         public ExecutionHelper(
-            FieldDelegate next,
             IQueryEngine queryEngine,
             IMutationEngine mutationEngine)
         {
-            _next = next;
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
         }
 
-        /// <summary>
-        /// HotChocolate invokes this method when this ResolverMiddleware is utilized
-        /// in the request pipeline.
-        /// From this method, the Query and Mutation engines are executed, and the execution
-        /// results saved in the IMiddlewareContext's result property.
-        /// </summary>
-        /// <seealso cref="https://chillicream.com/docs/hotchocolate/execution-engine/field-middleware"/>
-        /// <param name="context">HotChocolate middleware context containing request metadata.</param>
-        /// <returns>Does not explicitly return data.</returns>
-        public async Task InvokeAsync(IMiddlewareContext context)
-        {
-            JsonElement jsonElement;
-
-
-            
-            if (context.Selection.Field.Type.IsLeafType())
-            {
-                
-            }
-            else if (IsInnerObject(context))
-            {
-                // This means it's a field that has another custom type as its
-                // type, so there is a full JSON object inside this key. For
-                // example such a JSON object could have been created by a
-                // One-To-Many join.
-                if (TryGetPropertyFromParent(context, out jsonElement))
-                {
-                    IMetadata metadata = GetMetadata(context);
-                    using JsonDocument? innerObject = _queryEngine.ResolveInnerObject(
-                        jsonElement,
-                        context.Selection.Field,
-                        ref metadata);
-
-                    if (innerObject is not null)
-                    {
-                        context.Result = innerObject.RootElement.Clone();
-                    }
-                    else
-                    {
-                        context.Result = null;
-                    }
-
-                    SetNewMetadata(context, metadata);
-                }
-            }
-            else if (context.Selection.Type.IsListType())
-            {
-                // This means the field is a list and HotChocolate requires
-                // that to be returned as a List of JsonDocuments. For example
-                // such a JSON list could have been created by a One-To-Many
-                // join.
-                if (TryGetPropertyFromParent(context, out jsonElement))
-                {
-                    IMetadata metadata = GetMetadata(context);
-                    context.Result = _queryEngine.ResolveListType(
-                        jsonElement,
-                        context.Selection.Field,
-                        ref metadata);
-                    SetNewMetadata(context, metadata);
-                }
-            }
-
-            await _next(context);
-        }
-        
         public async ValueTask ExecuteQueryAsync(IMiddlewareContext context)
         {
             IDictionary<string, object?> parameters = GetParametersFromContext(context);
@@ -110,7 +43,17 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 Tuple<IEnumerable<JsonDocument>, IMetadata?> result =
                     await _queryEngine.ExecuteListAsync(context, parameters);
-                context.Result = GetListOfClonedElements(result.Item1);
+                
+                // this will be run after the query / mutation has completed. 
+                context.RegisterForCleanup(() =>
+                {
+                    foreach (JsonDocument document in result.Item1)
+                    {
+                        document.Dispose();
+                    }
+                });
+                
+                context.Result = result.Item1.Select(t => t.RootElement).ToArray();
                 SetNewMetadata(context, result.Item2);
             }
             else
@@ -134,7 +77,17 @@ namespace Azure.DataApiBuilder.Service.Services
                     // Both Query and Mutation execute the same SQL statement for Stored Procedure.
                     Tuple<IEnumerable<JsonDocument>, IMetadata?> result =
                         await _queryEngine.ExecuteListAsync(context, parameters);
-                    context.Result = GetListOfClonedElements(result.Item1);
+                    
+                    // this will be run after the query / mutation has completed. 
+                    context.RegisterForCleanup(() =>
+                    {
+                        foreach (JsonDocument document in result.Item1)
+                        {
+                            document.Dispose();
+                        }
+                    });
+                    
+                    context.Result = result.Item1.Select(t => t.RootElement).ToArray();
                     SetNewMetadata(context, result.Item2);
                 }
                 else
@@ -147,7 +100,7 @@ namespace Azure.DataApiBuilder.Service.Services
             }
         }
         
-        public static object? ExecuteLeafFieldAsync(IPureResolverContext context)
+        public static object? ExecuteLeafField(IPureResolverContext context)
         {
             // This means this field is a scalar, so we don't need to do
             // anything for it.
@@ -161,6 +114,49 @@ namespace Azure.DataApiBuilder.Service.Services
             return null;
         }
 
+        public object? ExecuteObjectField(IPureResolverContext context)
+        {
+            // This means it's a field that has another custom type as its
+            // type, so there is a full JSON object inside this key. For
+            // example such a JSON object could have been created by a
+            // One-To-Many join.
+            if (TryGetPropertyFromParent(context, out JsonElement propertyValue))
+            {
+                IMetadata metadata = GetMetadata(context);
+                propertyValue = _queryEngine.ResolveInnerObject(
+                    propertyValue,
+                    context.Selection.Field,
+                    ref metadata);
+
+                if (propertyValue.ValueKind is not JsonValueKind.Undefined and not JsonValueKind.Null)
+                {
+                    return propertyValue;
+                }
+            }
+            
+            return null;
+        }
+        
+        public object? ExecuteListField(IPureResolverContext context)
+        {
+            // This means the field is a list and HotChocolate requires
+            // that to be returned as a List of JsonDocuments. For example
+            // such a JSON list could have been created by a One-To-Many
+            // join.
+            if (TryGetPropertyFromParent(context, out JsonElement propertyValue))
+            {
+                IMetadata metadata = GetMetadata(context);
+                object? result = _queryEngine.ResolveListType(
+                    propertyValue,
+                    context.Selection.Field,
+                    ref metadata);
+                SetNewMetadata(context, metadata);
+                return result;
+            }
+
+            return null;
+        }
+ 
         /// <summary>
         /// Set the context's result and dispose properly. If result is not null
         /// clone root and dispose, otherwise set to null.
@@ -171,33 +167,13 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             if (result is not null)
             {
-                context.Result = result.RootElement.Clone();
-                result.Dispose();
+                context.RegisterForCleanup(() => result.Dispose());
+                context.Result = result.RootElement;
             }
             else
             {
                 context.Result = null;
             }
-        }
-
-        /// <summary>
-        /// Create and return a list of cloned root elements from a collection of JsonDocuments.
-        /// Dispose of each JsonDocument after its root element is cloned.
-        /// </summary>
-        /// <param name="docList">List of JsonDocuments to clone and dispose.</param>
-        /// <returns>List of cloned root elements.</returns>
-        private static IEnumerable<JsonElement> GetListOfClonedElements(
-            IEnumerable<JsonDocument> docList)
-        {
-            List<JsonElement> result = new();
-
-            foreach (JsonDocument jsonDoc in docList)
-            {
-                result.Add(jsonDoc.RootElement.Clone());
-                jsonDoc.Dispose();
-            }
-
-            return result;
         }
 
         /// <summary>
@@ -233,21 +209,17 @@ namespace Azure.DataApiBuilder.Service.Services
 
         protected static bool TryGetPropertyFromParent(
             IPureResolverContext context,
-            out JsonElement jsonElement)
+            out JsonElement propertyValue)
         {
-            // TODO : why is this done?
-            JsonDocument result = 
-                JsonDocument.Parse(JsonSerializer.Serialize(context.Parent<JsonElement>()));
+            JsonElement parent = context.Parent<JsonElement>();
 
-            if (result is null)
+            if (parent.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
             {
-                jsonElement = default;
+                propertyValue = default;
                 return false;
             }
 
-            return result.RootElement.TryGetProperty(
-                context.Selection.Field.Name.Value,
-                out jsonElement);
+            return parent.TryGetProperty(context.Selection.Field.Name.Value, out propertyValue);
         }
 
         protected static bool IsInnerObject(IMiddlewareContext context)
@@ -393,22 +365,51 @@ namespace Azure.DataApiBuilder.Service.Services
                 context.Selection.SyntaxNode,
                 context.Variables);
         }
-
+        
         /// <summary>
         /// Get metadata from context
         /// </summary>
-        private static IMetadata GetMetadata(IMiddlewareContext context)
+        private static IMetadata GetMetadata(IPureResolverContext context)
         {
-            return (IMetadata)context.ScopedContextData[_contextMetadata]!;
+            // The pure resolver context has not access to the scoped context data,
+            // I will change that for version 14. The following code is a workaround
+            // and store the metadata per root field on the global context.
+            return (IMetadata)context.ContextData[GetMetadataKey(context.Path)]!;
+        }
+
+        private static string GetMetadataKey(Path path)
+        {
+            Path current = path;
+            
+            if(current.Parent is RootPathSegment)
+            {
+                return ((NamePathSegment)current).Name;
+            }
+            
+            while(current.Parent is not null)
+            {
+                current = current.Parent;
+                
+                if(current.Parent is RootPathSegment)
+                {
+                    return ((NamePathSegment)current).Name;
+                }   
+            }
+            
+            throw new InvalidOperationException("The path is not rooted.");
+        }
+
+        private static string GetMetadataKey(IFieldSelection rootSelection)
+        {
+            return rootSelection.ResponseName;
         }
 
         /// <summary>
         /// Set new metadata and reset the depth that the metadata has persisted
         /// </summary>
-        private static void SetNewMetadata(IMiddlewareContext context, IMetadata? metadata)
+        private static void SetNewMetadata(IPureResolverContext context, IMetadata? metadata)
         {
-            context.ScopedContextData =
-                context.ScopedContextData.SetItem(_contextMetadata, metadata);
+            context.ContextData.Add(GetMetadataKey(context.Selection), metadata);
         }
     }
 }

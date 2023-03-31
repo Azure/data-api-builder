@@ -1007,12 +1007,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 };
 
                 HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
+                string body = await graphQLResponse.Content.ReadAsStringAsync();
+
+                JsonElement graphQLResult = JsonSerializer.Deserialize<JsonElement>(body);
                 Assert.AreEqual(expectedStatusCodeForGraphQL, graphQLResponse.StatusCode);
 
                 HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/Book");
                 HttpResponseMessage restResponse = await client.SendAsync(restRequest);
                 Assert.AreEqual(expectedStatusCodeForREST, restResponse.StatusCode);
-
             }
 
             // Hosted Scenario
@@ -1218,6 +1220,85 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             catch (Exception ex)
             {
                 Assert.IsTrue(expectError, message: "Startup was not expected to fail. " + ex.Message);
+            }
+        }
+
+        [TestMethod]
+        public async Task TestX()
+        {
+            RuntimeConfig configuration = ConfigurationTests.InitBasicRuntimeConfigWithNoEntity();
+            
+            Entity publisherEntity = new(
+                Source: JsonSerializer.SerializeToElement("publishers"),
+                Rest: true,
+                GraphQL: true,
+                Permissions: new PermissionSetting[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: null,
+                Mappings: null
+            );
+
+            configuration.Entities.Add("Publisher", publisherEntity);
+
+            Entity bookEntity = new(
+                Source: JsonSerializer.SerializeToElement("books"),
+                Rest: true,
+                GraphQL: true,
+                Permissions: new PermissionSetting[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: new Dictionary<string, Relationship>() { {"publishers", new (
+                    Cardinality: Cardinality.One,
+                    TargetEntity: "Publisher",
+                    SourceFields: new string[] {"new_pub_id"},
+                    TargetFields: new string[] {"id"},
+                    LinkingObject: null,
+                    LinkingSourceFields: null,
+                    LinkingTargetFields: null
+                )}},
+                Mappings: null
+            );
+
+            configuration.Entities.Add("Book", bookEntity);
+            
+            const string CUSTOM_CONFIG = "custom-config.json";
+            File.WriteAllText(
+                CUSTOM_CONFIG,
+                JsonSerializer.Serialize(configuration, RuntimeConfig.SerializerOptions));
+
+            string[] args = new[]
+            {
+                    $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            // Non-Hosted Scenario
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                string query = @"{
+                    book_by_pk(id: 8) {
+                        title,
+                        publishers {
+                            id
+                            name
+                        }
+                    }
+                }";
+
+                object payload = new { query };
+
+                HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
+                {
+                    Content = JsonContent.Create(payload)
+                };
+
+                HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
+                string body = await graphQLResponse.Content.ReadAsStringAsync();
+                Console.WriteLine(body);
+
+                JsonElement graphQLResult = JsonSerializer.Deserialize<JsonElement>(body);
+                Assert.AreEqual(System.Net.HttpStatusCode.OK, graphQLResponse.StatusCode);
+
+                HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/Book");
+                HttpResponseMessage restResponse = await client.SendAsync(restRequest);
+                Assert.AreEqual(System.Net.HttpStatusCode.OK, restResponse.StatusCode);
             }
         }
 
@@ -1448,6 +1529,34 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 DataSource: dataSource,
                 RuntimeSettings: globalSettings,
                 Entities: entityMap
+                );
+
+            runtimeConfig.DetermineGlobalSettings();
+            return runtimeConfig;
+        }
+
+        /// <summary>
+        /// Instantiate basic runtime config with custom global settings.
+        /// </summary>
+        /// <returns></returns>
+        public static RuntimeConfig InitBasicRuntimeConfigWithNoEntity()
+        {
+            Dictionary<GlobalSettingsType, object> settings = new()
+            {
+                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){ }) },
+                { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings(){ }) }
+            };
+
+            DataSource dataSource = new(DatabaseType.mssql)
+            {
+                ConnectionString = GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)
+            };
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "IntegrationTestMinimalSchema",
+                DataSource: dataSource,
+                RuntimeSettings: settings,
+                Entities: new Dictionary<string, Entity>()
                 );
 
             runtimeConfig.DetermineGlobalSettings();

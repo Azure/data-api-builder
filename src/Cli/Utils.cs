@@ -648,7 +648,8 @@ namespace Cli
 
         /// <summary>
         /// This method checks that parameter is only used with Stored Procedure, while
-        /// key-fields only with table/views.
+        /// key-fields only with table/views. Also ensures that key-fields are always 
+        /// provided for views.
         /// </summary>
         /// <param name="sourceType">type of the source object.</param>
         /// <param name="parameters">IEnumerable string containing parameters for stored-procedure.</param>
@@ -659,7 +660,7 @@ namespace Cli
             IEnumerable<string>? parameters,
             IEnumerable<string>? keyFields)
         {
-            if (SourceType.StoredProcedure.Equals(sourceType))
+            if (sourceType is SourceType.StoredProcedure)
             {
                 if (keyFields is not null && keyFields.Any())
                 {
@@ -669,9 +670,17 @@ namespace Cli
             }
             else
             {
+                // For Views and Tables
                 if (parameters is not null && parameters.Any())
                 {
                     _logger.LogError("Tables/Views don't support parameters.");
+                    return false;
+                }
+
+                // For Views
+                if (sourceType is SourceType.View && (keyFields is null || !keyFields.Any()))
+                {
+                    _logger.LogError("Key-fields are mandatory for views, but not provided.");
                     return false;
                 }
             }

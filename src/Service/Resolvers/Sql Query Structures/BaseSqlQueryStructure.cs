@@ -486,61 +486,56 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// Gets the value of the parameter cast as the system type
         /// </summary>
-        /// <param name="param">Parameter value as a string</param>
-        /// <param name="paramName">Parameter name</param>
+        /// <param name="paramValue">Parameter value as a string</param>
+        /// <param name="fieldName">Field name whose value is being converted to the specified system type. This is used only for constructing the error messages incase of conversion failures</param>
         /// <param name="systemType">System type to which the parameter value is parsed to</param>
         /// <returns>The parameter value parsed to the specified system type</returns>
         /// <exception cref="DataApiBuilderException">Throws a DataApiBuilderException when the conversion of parameter value to the specified system type fails. The error message returned will be different in development
         /// and production modes. In production mode, the error message returned will be generic so as to not reveal information about the database object backing the entity</exception>
-        protected object GetParamAsSystemType(string param, string paramName, Type systemType)
+        protected object GetParamAsSystemType(string paramValue, string fieldName, Type systemType)
         {
             try
             {
-                return ParseParamAsSystemType(param, systemType);
+                return ParseParamAsSystemType(paramValue, systemType);
             }
-            catch (Exception e)
+            catch (Exception e) when (e is FormatException || e is ArgumentNullException || e is OverflowException)
             {
-                if (e is FormatException ||
-                    e is ArgumentNullException ||
-                    e is OverflowException)
+
+                string errorMessage;
+                if (MetadataProvider.IsDevelopmentMode())
                 {
-                    string errorMessage;
-                    if (MetadataProvider.IsDevelopmentMode())
+                    if (MetadataProvider.EntityToDatabaseObject[EntityName].SourceType is SourceType.StoredProcedure)
                     {
-                        if (MetadataProvider.EntityToDatabaseObject[EntityName].SourceType is SourceType.StoredProcedure)
-                        {
-                            errorMessage = $@"Parameter ""{param}"" cannot be resolved as stored procedure parameter ""{paramName}"" " +
-                                    $@"with type ""{systemType.Name}"".";
-                        }
-                        else
-                        {
-                            errorMessage = $"Parameter \"{param}\" cannot be resolved as column \"{paramName}\" " +
-                                    $"with type \"{systemType.Name}\".";
-                        }
+                        errorMessage = $@"Parameter ""{paramValue}"" cannot be resolved as stored procedure parameter ""{fieldName}"" " +
+                                $@"with type ""{systemType.Name}"".";
                     }
                     else
                     {
-                        string fieldNameToBeDisplayedInErrorMessage = paramName;
+                        errorMessage = $"Parameter \"{paramValue}\" cannot be resolved as column \"{fieldName}\" " +
+                                $"with type \"{systemType.Name}\".";
+                    }
+                }
+                else
+                {
+                    string fieldNameToBeDisplayedInErrorMessage = fieldName;
 
-                        if (MetadataProvider.EntityToDatabaseObject[EntityName].SourceType is SourceType.Table || MetadataProvider.EntityToDatabaseObject[EntityName].SourceType is SourceType.View)
+                    if (MetadataProvider.EntityToDatabaseObject[EntityName].SourceType is SourceType.Table || MetadataProvider.EntityToDatabaseObject[EntityName].SourceType is SourceType.View)
+                    {
+                        if (MetadataProvider.TryGetExposedColumnName(EntityName, fieldName, out string? exposedName))
                         {
-                            if (MetadataProvider.TryGetExposedColumnName(EntityName, paramName, out string? exposedName))
-                            {
-                                fieldNameToBeDisplayedInErrorMessage = exposedName!;
-                            }
+                            fieldNameToBeDisplayedInErrorMessage = exposedName!;
                         }
-
-                        errorMessage = $"Invalid value provided for field: {fieldNameToBeDisplayedInErrorMessage}";
                     }
 
-                    throw new DataApiBuilderException(
-                        message: errorMessage,
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
-                        innerException: e);
+                    errorMessage = $"Invalid value provided for field: {fieldNameToBeDisplayedInErrorMessage}";
                 }
 
-                throw;
+                throw new DataApiBuilderException(
+                    message: errorMessage,
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                    innerException: e);
+
             }
         }
 

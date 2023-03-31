@@ -164,7 +164,6 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Returns true when the engine is running in Development mode. When running in Production
         /// mode, it returns false.
         /// </summary>
-        /// <returns></returns>
         public bool IsDevelopmentMode();
     }
 }

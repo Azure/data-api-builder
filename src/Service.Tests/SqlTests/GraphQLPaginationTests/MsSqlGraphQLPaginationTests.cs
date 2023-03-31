@@ -48,6 +48,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             DisplayName = "Test after token for datetime values.")]
         [DataRow("bytearray_types", "\"AAAAAA==\"", "\"/////w==\"", 3, 4,
             DisplayName = "Test after token for bytearray values.")]
+        [DataRow("datetimeoffset_types", "\"AAAAAA==\"", "\"/////w==\"", 3, 4,
+            DisplayName = "Test after token for datetimeoffset values.")]
         [TestMethod]
         public override async Task RequestAfterTokenOnly(
             string exposedFieldName,

@@ -58,6 +58,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("datetime_types eq  2023-01-24T12:51:59Z", "([datetime_types] = @param1)", DisplayName = "Equate datetime types.")]
         [DataRow("bytearray_types eq 1000", "([bytearray_types] = @param1)", DisplayName = "Equate bytearray types.")]
         [DataRow("guid_types eq 9A19103F-16F7-4668-BE54-9A1E7A4F7556", "([guid_types] = @param1)", DisplayName = "Equate guid types.")]
+        [DataRow("datetimeoffset_types eq 9999-12-31 23:59:59.9999999+14:00",
+            "([datetimeoffset_types] = @param1)", DisplayName = "Equate datetimeoffset types.")]
         [TestMethod]
         public void VisitorLeftFieldRightConstantFilterTest(string filterExp, string expectedPredicate)
         {

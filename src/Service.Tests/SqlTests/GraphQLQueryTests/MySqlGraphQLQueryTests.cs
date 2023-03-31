@@ -472,9 +472,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         [TestMethod]
-        public async Task TestX()
+        public async Task TestConfigTakesPrecedenceForRelationshipOverDB()
         {
-            await TestX(TestCategory.MYSQL);
+            await TestConfigTakesPrecedenceForRelationshipOverDB(TestCategory.MYSQL);
         }
 
         #endregion

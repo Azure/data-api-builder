@@ -1,20 +1,20 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Linq;
-using System.Text.Json;
-using System.Threading.Tasks;
-using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
-using Microsoft.AspNetCore.TestHost;
+using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
 {
@@ -1459,7 +1459,7 @@ query {
         }
 
         [TestMethod]
-        public async Task TestX(string testEnvironment)
+        public async Task TestConfigTakesPrecedenceForRelationshipOverDB(string testEnvironment)
         {
             RuntimeConfig configuration = ConfigurationTests.InitBasicRuntimeConfigWithNoEntity(testEnvironment);
 
@@ -1526,9 +1526,9 @@ query {
 
                 HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
                 string body = await graphQLResponse.Content.ReadAsStringAsync();
-                Assert.AreEqual("test", body);
 
                 JsonElement graphQLResult = JsonSerializer.Deserialize<JsonElement>(body);
+                Assert.AreEqual("test", graphQLResult);
                 Assert.AreEqual(System.Net.HttpStatusCode.OK, graphQLResponse.StatusCode);
             }
         }

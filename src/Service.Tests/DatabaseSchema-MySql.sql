@@ -218,6 +218,12 @@ FOREIGN KEY (publisher_id)
 REFERENCES publishers (id)
 ON DELETE CASCADE;
 
+ALTER TABLE players
+ADD CONSTRAINT player_club_fk
+FOREIGN KEY (current_club_id)
+REFERENCES clubs (id)
+ON DELETE CASCADE;
+
 ALTER TABLE book_website_placements
 ADD CONSTRAINT book_website_placement_book_fk
 FOREIGN KEY (book_id)
@@ -292,6 +298,11 @@ INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (4, 'Lost Record',
 INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (5, 'Filtered Record', 'Record to be Filtered on Find');
 INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd'), (1940, 'Policy Publisher 01'), (1941, 'Policy Publisher 02'), (1156, 'The First Publisher');
 INSERT INTO authors(id, name, birthdate) VALUES (123, 'Jelte', '2001-01-01'), (124, 'Aniruddh', '2002-02-02'), (125, 'Aniruddh', '2001-01-01'), (126, 'Aaron', '2001-01-01');
+INSERT INTO clubs(id, name) VALUES (1111, 'Manchester United'), (1112, 'FC Barcelona'), (1113, 'Real Madrid');
+INSERT INTO players(id, name, current_club_id, new_club_id)
+    VALUES 
+        (1, 'Cristiano Ronaldo', 1113, 1111),
+        (2, 'Leonel Messi', 1112, 1113);
 INSERT INTO books(id, title, publisher_id)
     VALUES
         (1, 'Awesome book', 1234),
@@ -343,6 +354,8 @@ ALTER TABLE reviews AUTO_INCREMENT = 5001;
 ALTER TABLE comics AUTO_INCREMENT = 5001;
 ALTER TABLE type_table AUTO_INCREMENT = 5001;
 ALTER TABLE sales AUTO_INCREMENT = 5001;
+ALTER TABLE players AUTO_INCREMENT = 5001;
+ALTER TABLE clubs AUTO_INCREMENT = 5001;
 
 prepare stmt1 from  'CREATE VIEW books_view_all AS SELECT * FROM books';
 

@@ -3,15 +3,6 @@
 
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Collections.Generic;
-using System.IO;
-using System.Net.Http;
-using System.Net.Http.Json;
-using System.Text.Json;
-using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Service.Authorization;
-using Microsoft.AspNetCore.TestHost;
-using Azure.DataApiBuilder.Service.Tests.Configuration;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
 {
@@ -356,9 +347,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         [TestMethod]
-        public async Task TestX()
+        public async Task TestConfigTakesPrecedenceForRelationshipOverDB()
         {
-            await TestX(TestCategory.MSSQL);
+            await TestConfigTakesPrecedenceForRelationshipOverDB(TestCategory.MSSQL);
         }
 
         #endregion

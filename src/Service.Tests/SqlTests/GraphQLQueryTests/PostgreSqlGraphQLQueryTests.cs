@@ -350,9 +350,9 @@ FROM
         }
 
         [TestMethod]
-        public async Task TestX()
+        public async Task TestConfigTakesPrecedenceForRelationshipOverDB()
         {
-            await TestX(TestCategory.POSTGRESQL);
+            await TestConfigTakesPrecedenceForRelationshipOverDB(TestCategory.POSTGRESQL);
         }
 
         #endregion

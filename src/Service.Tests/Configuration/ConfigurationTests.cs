@@ -1038,6 +1038,78 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
+        /// Engine supports config with some views that do not have keyfields specified in the config for MsSQL.
+        /// This Test validates that support. It creates a custom config with a view and no keyfields specified.
+        /// It checks both Rest and GraphQL queries are tested to return Success.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task TestEngineSupportViewsWithoutKeyFieldsInConfigForMsSQL()
+        {
+            Dictionary<GlobalSettingsType, object> settings = new()
+            {
+                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){}) },
+                { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings(){}) }
+            };
+
+            DataSource dataSource = new(DatabaseType.mssql)
+            {
+                ConnectionString = GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)
+            };
+
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(globalSettings: settings, dataSource: dataSource);
+
+            const string CUSTOM_CONFIG = "custom-config.json";
+            Entity viewEntity = new(
+                Source: JsonSerializer.SerializeToElement("books_view_all"),
+                Rest: true,
+                GraphQL: true,
+                Permissions: new PermissionSetting[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: null,
+                Mappings: null
+            );
+
+            configuration.Entities.Add("books_view_all", viewEntity);
+
+            File.WriteAllText(
+                CUSTOM_CONFIG,
+                JsonSerializer.Serialize(configuration, RuntimeConfig.SerializerOptions));
+
+            string[] args = new[]
+            {
+                    $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                string query = @"{
+                    books_view_alls {
+                        items{
+                            id
+                            title
+                        }
+                    }
+                }";
+
+                object payload = new { query };
+
+                HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
+                {
+                    Content = JsonContent.Create(payload)
+                };
+
+                HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
+                Assert.AreEqual(HttpStatusCode.OK, graphQLResponse.StatusCode);
+                string body = await graphQLResponse.Content.ReadAsStringAsync();
+                Assert.IsFalse(body.Contains("errors")); // In GraphQL, All errors end up in the errors array, no matter what kind of error they are.
+
+                HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/books_view_all");
+                HttpResponseMessage restResponse = await client.SendAsync(restRequest);
+                Assert.AreEqual(HttpStatusCode.OK, restResponse.StatusCode);
+            }
+        }
+
+        /// <summary>
         /// Tests that Startup.cs properly handles EasyAuth authentication configuration.
         /// AppService as Identity Provider while in Production mode will result in startup error.
         /// An Azure AppService environment has environment variables on the host which indicate

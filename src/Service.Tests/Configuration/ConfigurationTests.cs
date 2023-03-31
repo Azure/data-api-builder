@@ -1227,7 +1227,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         public async Task TestX()
         {
             RuntimeConfig configuration = ConfigurationTests.InitBasicRuntimeConfigWithNoEntity();
-            
+
             Entity publisherEntity = new(
                 Source: JsonSerializer.SerializeToElement("publishers"),
                 Rest: true,
@@ -1257,7 +1257,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             );
 
             configuration.Entities.Add("Book", bookEntity);
-            
+
             const string CUSTOM_CONFIG = "custom-config.json";
             File.WriteAllText(
                 CUSTOM_CONFIG,

@@ -196,6 +196,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                         new List<DirectiveNode> {
                             new(RelationshipDirectiveType.DirectiveName,
                                 new ArgumentNode("target", GetDefinedSingularName(targetEntityName, referencedEntity)),
+                                new ArgumentNode("targetEntity", targetEntityName),
                                 new ArgumentNode("cardinality", relationship.Cardinality.ToString()))
                         });
 

@@ -96,8 +96,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         /// <summary>
         /// Test a field of the nested filter is null.
         /// </summary>
-        [TestMethod]
-        public async Task TestNestedFilterFieldIsNull()
+        [DataTestMethod]
+        [DataRow("Authenticated", false, "", DisplayName = "No nested filter AuthZ error")]
+        [DataRow("TestNestedFilterFieldIsNull_ColumnForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_FIELD_AUTHZ_FAILURE, DisplayName = "Excluded column in nested filter entity, AuthZ failure")]
+        [DataRow("TestNestedFilterFieldIsNull_EntityReadForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_ENTITY_AUTHZ_FAILURE, DisplayName = "Nested filter entity read access forbidden, AuthZ failure")]
+        public async Task TestNestedFilterFieldIsNull(string roleName, bool expectsError, string errorMessageFragment)
         {
             string existsPredicate = $@"
                 EXISTS( SELECT 1
@@ -106,7 +109,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                         AND [table1].[categoryid] = [table0].[categoryid]
                         AND [table1].[pieceid] = [table0].[pieceid])";
 
-            await TestNestedFilterFieldIsNull(existsPredicate);
+            await TestNestedFilterFieldIsNull(existsPredicate, roleName, expectsError, errorMsgFragment: errorMessageFragment);
         }
 
         /// <summary>

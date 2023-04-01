@@ -84,7 +84,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                         AND table1.categoryid = table0.categoryid
                         AND table1.pieceid = table0.pieceid)";
 
-            await TestNestedFilterFieldIsNull(existsPredicate);
+            await TestNestedFilterFieldIsNull(existsPredicate, roleName: "authenticated");
         }
 
         /// <summary>

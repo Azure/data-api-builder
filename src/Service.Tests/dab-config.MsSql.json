@@ -226,14 +226,6 @@
       "source": "stocks",
       "permissions": [
         {
-          "role": "anonymous",
-          "actions": [
-            "create",
-            "read",
-            "update"
-          ]
-        },
-        {
           "role": "authenticated",
           "actions": [
             "create",
@@ -241,6 +233,14 @@
             "update",
             "delete"
           ]
+        },
+        {
+          "role": "TestNestedFilterFieldIsNull_ColumnForbidden",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "TestNestedFilterFieldIsNull_EntityReadForbidden",
+          "actions": [ "read" ]
         }
       ],
       "relationships": {
@@ -799,12 +799,6 @@
       "source": "stocks_price",
       "permissions": [
         {
-          "role": "anonymous",
-          "actions": [
-            "read"
-          ]
-        },
-        {
           "role": "authenticated",
           "actions": [
             "create",
@@ -812,6 +806,21 @@
             "delete",
             "update"
           ]
+        },
+        {
+          "role": "TestNestedFilterFieldIsNull_ColumnForbidden",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [ "price" ]
+              }
+            }
+          ]
+        },
+        {
+          "role": "TestNestedFilterFieldIsNull_EntityReadForbidden",
+          "actions": [ "create" ]
         }
       ],
       "rest": false

@@ -348,8 +348,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         [DataTestMethod]
-        [DataRow(false, "1113", "Real Madrid", DisplayName = "No Overriding of existing relationship in DB.")]
-        [DataRow(true, "1111", "Manchester United", DisplayName = "Overriding existing relationship in DB.")]
+        [DataRow(false, 1113, "Real Madrid", DisplayName = "No Overriding of existing relationship in DB.")]
+        [DataRow(true, 1111, "Manchester United", DisplayName = "Overriding existing relationship in DB.")]
         public async Task TestConfigTakesPrecedenceForRelationshipOverDB(
             bool isOverridingDbRelationship,
             int club_id,

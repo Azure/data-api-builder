@@ -1539,7 +1539,7 @@ query {
                 string body = await graphQLResponse.Content.ReadAsStringAsync();
 
                 JsonElement graphQLResult = JsonSerializer.Deserialize<JsonElement>(body);
-                Assert.AreEqual(club_id, Convert.ToInt32(graphQLResult.GetProperty("data").GetProperty("player_by_pk").GetProperty("clubs").GetProperty("id")));
+                Assert.AreEqual(club_id.ToString(), graphQLResult.GetProperty("data").GetProperty("player_by_pk").GetProperty("clubs").GetProperty("id").ToString());
                 Assert.AreEqual(club_name, graphQLResult.GetProperty("data").GetProperty("player_by_pk").GetProperty("clubs").GetProperty("name").ToString());
                 Assert.AreEqual(System.Net.HttpStatusCode.OK, graphQLResponse.StatusCode);
             }

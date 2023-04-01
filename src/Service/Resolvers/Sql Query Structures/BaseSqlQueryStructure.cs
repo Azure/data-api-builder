@@ -376,8 +376,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 "Double" => double.Parse(param),
                 "Decimal" => decimal.Parse(param),
                 "Boolean" => bool.Parse(param),
-                "DateTime" => DateTime.Parse(param),
+                "DateTime" => DateTimeOffset.Parse(param),
                 "DateTimeOffset" => DateTimeOffset.Parse(param),
+                "Date" => DateOnly.Parse(param),
                 "Guid" => Guid.Parse(param),
                 _ => throw new NotSupportedException($"{systemType.Name} is not supported")
             };

@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -1459,9 +1458,15 @@ query {
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString());
         }
 
+        /// <summary>
+        /// Test to check that sourceFields and targetFields for relationship provided in the config
+        /// overrides relationship fields defined in DB.
+        /// In this Test the result changes when we override the source and target fields in the config.
+        /// </summary>
         [TestMethod]
-        public async Task TestConfigTakesPrecedenceForRelationshipOverDB(
-            bool isOverridingDbRelationship,
+        public async Task TestConfigTakesPrecedenceForRelationshipFieldsOverDB(
+            string[] sourceFields,
+            string[] targetFields,
             int club_id,
             string club_name,
             DatabaseType dbType,
@@ -1480,26 +1485,20 @@ query {
 
             configuration.Entities.Add("Club", clubEntity);
 
-            Dictionary<string, Relationship> relationshipMap = null;
-            if (isOverridingDbRelationship)
-            {
-                relationshipMap = new Dictionary<string, Relationship>() { {"clubs", new (
-                    Cardinality: Cardinality.One,
-                    TargetEntity: "Club",
-                    SourceFields: new string[] {"new_club_id"},
-                    TargetFields: new string[] {"id"},
-                    LinkingObject: null,
-                    LinkingSourceFields: null,
-                    LinkingTargetFields: null
-                )}};
-            }
-
             Entity playerEntity = new(
                 Source: JsonSerializer.SerializeToElement("players"),
                 Rest: true,
                 GraphQL: true,
                 Permissions: new PermissionSetting[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
-                Relationships: relationshipMap,
+                Relationships: new Dictionary<string, Relationship>() { {"clubs", new (
+                    Cardinality: Cardinality.One,
+                    TargetEntity: "Club",
+                    SourceFields: sourceFields,
+                    TargetFields: targetFields,
+                    LinkingObject: null,
+                    LinkingSourceFields: null,
+                    LinkingTargetFields: null
+                )}},
                 Mappings: null
             );
 
@@ -1539,9 +1538,6 @@ query {
                 string body = await graphQLResponse.Content.ReadAsStringAsync();
 
                 JsonElement graphQLResult = JsonSerializer.Deserialize<JsonElement>(body);
-                Assert.AreEqual("graphql", body);
-                Assert.AreEqual("graphql", graphQLResult.GetProperty("data").ToString());
-                Assert.AreEqual("graphql", graphQLResult.GetProperty("data").GetProperty("player_by_pk").ToString());
                 Assert.AreEqual(club_id, graphQLResult.GetProperty("data").GetProperty("player_by_pk").GetProperty("clubs").GetProperty("id").GetDouble());
                 Assert.AreEqual(club_name, graphQLResult.GetProperty("data").GetProperty("player_by_pk").GetProperty("clubs").GetProperty("name").ToString());
                 Assert.AreEqual(System.Net.HttpStatusCode.OK, graphQLResponse.StatusCode);

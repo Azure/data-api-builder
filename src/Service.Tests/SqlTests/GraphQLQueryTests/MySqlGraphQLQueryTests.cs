@@ -2,8 +2,8 @@
 // Licensed under the MIT License.
 
 using System.Threading.Tasks;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Azure.DataApiBuilder.Config;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
 {

@@ -1480,7 +1480,8 @@ query {
             configuration.Entities.Add("Club", clubEntity);
 
             Dictionary<string, Relationship> relationshipMap = null;
-            if(isOverridingDbRelationship) {
+            if (isOverridingDbRelationship)
+            {
                 relationshipMap = new Dictionary<string, Relationship>() { {"clubs", new (
                     Cardinality: Cardinality.One,
                     TargetEntity: "Club",

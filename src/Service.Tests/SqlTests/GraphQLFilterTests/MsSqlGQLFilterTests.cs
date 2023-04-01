@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
@@ -26,9 +27,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
 
         /// <summary>
         /// Test Nested Filter for Many-One relationship.
+        /// Also validates authorization failure behavior when the referenced nested entity
+        /// or referenced nested entity column has permission restrictions for the given role.
         /// </summary>
-        [TestMethod]
-        public async Task TestNestedFilterManyOne()
+        [DataTestMethod]
+        [DataRow("Authenticated", false, "", DisplayName = "No nested filter AuthZ error")]
+        [DataRow("TestNestedFilterManyOne_ColumnForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_FIELD_AUTHZ_FAILURE, DisplayName = "Excluded column in nested filter entity, AuthZ failure")]
+        [DataRow("TestNestedFilterManyOne_EntityReadForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_ENTITY_AUTHZ_FAILURE, DisplayName = "Nested filter entity read access forbidden, AuthZ failure")]
+        public async Task TestNestedFilterManyOne(string roleName, bool expectsError, string errorMessageFragment)
         {
             string existsPredicate = $@"
                 EXISTS( SELECT 1
@@ -36,7 +42,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                         WHERE [table1].[name] = 'Foundation'
                         AND [table0].[series_id] = [table1].[id] )";
 
-            await TestNestedFilterManyOne(existsPredicate);
+            await TestNestedFilterManyOne(existsPredicate, roleName, expectsError, errorMsgFragment: errorMessageFragment);
         }
 
         [TestMethod]
@@ -55,8 +61,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         /// <summary>
         /// Test Nested Filter for One-Many relationship
         /// </summary>
-        [TestMethod]
-        public async Task TestNestedFilterOneMany()
+        [DataTestMethod]
+        [DataRow("Authenticated", false, "", DisplayName = "No nested filter AuthZ error")]
+        [DataRow("TestNestedFilterOneMany_ColumnForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_FIELD_AUTHZ_FAILURE, DisplayName = "Excluded column in nested filter entity, AuthZ failure")]
+        [DataRow("TestNestedFilterOneMany_EntityReadForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_ENTITY_AUTHZ_FAILURE, DisplayName = "Nested filter entity read access forbidden, AuthZ failure")]
+        public async Task TestNestedFilterOneMany(string roleName, bool expectsError, string errorMessageFragment)
         {
             string existsPredicate = $@"
                 EXISTS( SELECT 1
@@ -64,7 +73,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                         WHERE [table1].[title] = 'Cinderella'
                         AND [table1].[series_id] = [table0].[id] )";
 
-            await TestNestedFilterOneMany(existsPredicate);
+            await TestNestedFilterOneMany(existsPredicate, roleName, expectsError, errorMsgFragment: errorMessageFragment);
         }
 
         /// <summary>

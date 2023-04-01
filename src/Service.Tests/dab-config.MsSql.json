@@ -5,7 +5,7 @@
     "options": {
       "set-session-context": true
     },
-    "connection-string": "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=sa;Password=REPLACEME;MultipleActiveResultSets=False;Connection Timeout=5;"
+    "connection-string": "Server=SEANLSURFACEB2;Database=DataGatewayFeatureDev;Integrated Security=True;trustServerCertificate=true;Persist Security Info=False;MultipleActiveResultSets=False;Connection Timeout=5;"
   },
   "runtime": {
     "rest": {
@@ -18,16 +18,16 @@
       "path": "/graphql"
     },
     "host": {
-      "mode": "development",
+      "authentication": {
+        "provider": "StaticWebApps"
+      },
       "cors": {
         "origins": [
           "http://localhost:5000"
         ],
         "allow-credentials": false
       },
-      "authentication": {
-        "provider": "StaticWebApps"
-      }
+      "mode": "development"
     }
   },
   "entities": {
@@ -675,14 +675,6 @@
       "source": "comics",
       "permissions": [
         {
-          "role": "anonymous",
-          "actions": [
-            "create",
-            "read",
-            "update"
-          ]
-        },
-        {
           "role": "authenticated",
           "actions": [
             "create",
@@ -690,6 +682,31 @@
             "update",
             "delete"
           ]
+        },
+        {
+          "role": "TestNestedFilterManyOne_ColumnForbidden",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "TestNestedFilterManyOne_EntityReadForbidden",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "TestNestedFilterOneMany_ColumnForbidden",
+          "actions": [
+            {
+              "action": "Read",
+              "fields": {
+                "exclude": [
+                  "categoryName"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "role": "TestNestedFilterOneMany_EntityReadForbidden",
+          "actions": [ "Create", "Update", "Delete" ]
         }
       ],
       "relationships": {
@@ -1177,10 +1194,35 @@
       "source": "series",
       "permissions": [
         {
-          "role": "anonymous",
+          "role": "authenticated",
           "actions": [
             "*"
           ]
+        },
+        {
+          "role": "TestNestedFilterManyOne_ColumnForbidden",
+          "actions": [
+            {
+              "action": "Read",
+              "fields": {
+                "exclude": [
+                  "name"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "role": "TestNestedFilterManyOne_EntityReadForbidden",
+          "actions": [ "Create", "Update", "Delete" ]
+        },
+        {
+          "role": "TestNestedFilterOneMany_EntityReadForbidden",
+          "actions": [ "Read" ]
+        },
+        {
+          "role": "TestNestedFilterOneMany_ColumnForbidden",
+          "actions": [ "Read" ]
         }
       ],
       "relationships": {

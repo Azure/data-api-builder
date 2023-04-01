@@ -36,7 +36,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                         WHERE table1.name = 'Foundation'
                         AND table0.series_id = table1.id )";
 
-            await TestNestedFilterManyOne(existsPredicate);
+            await TestNestedFilterManyOne(existsPredicate, roleName: "authenticated");
         }
 
         /// <summary>
@@ -51,7 +51,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                         WHERE table1.title = 'Cinderella'
                         AND table1.series_id = table0.id )";
 
-            await TestNestedFilterOneMany(existsPredicate);
+            await TestNestedFilterOneMany(existsPredicate, roleName: "authenticated");
         }
 
         /// <summary>

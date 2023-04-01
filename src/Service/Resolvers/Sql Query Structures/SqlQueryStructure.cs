@@ -331,7 +331,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 AddGraphQLFields(queryField.SelectionSet.Selections, runtimeConfigProvider);
             }
 
-            HttpContext httpContext = GraphQLFilterParser.TryGetHttpContextFromMiddlewareContext(ctx);
+            HttpContext httpContext = GraphQLFilterParser.GetHttpContextFromMiddlewareContext(ctx);
             // Process Authorization Policy of the entity being processed.
             AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(Config.Operation.Read, queryStructure: this, httpContext, authorizationResolver, sqlMetadataProvider);
 

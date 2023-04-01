@@ -51,7 +51,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Directives
         /// </summary>
         /// <param name="infield">The input field that is expected to have a relationship directive defined on it.</param>
         /// <returns>The name of the target object if the relationship is found, null otherwise.</returns>
-        public static string? GetTarget(InputField infield)
+        public static string? GetTarget(IInputField infield)
         {
             Directive? directive = (Directive?)infield.Directives.FirstOrDefault(d => d.Name.Value == DirectiveName);
             DirectiveNode? directiveNode = directive?.ToNode();

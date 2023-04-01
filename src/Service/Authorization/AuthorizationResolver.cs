@@ -139,38 +139,49 @@ namespace Azure.DataApiBuilder.Service.Authorization
             // Columns.Count() will never be zero because this method is called after a check ensures Count() > 0
             Assert.IsFalse(columns.Count() == 0, message: "columns.Count() should be greater than 0.");
 
-            OperationMetadata operationToColumnMap = EntityPermissionsMap[entityName].RoleToOperationMap[roleName].OperationToColumnMap[operation];
-
-            // Each column present in the request is an "exposedColumn".
-            // Authorization permissions reference "backingColumns"
-            // Resolve backingColumn name to check authorization.
-            // Failure indicates that request contain invalid exposedColumn for entity.
-            foreach (string exposedColumn in columns)
+            //OperationMetadata operationToColumnMap = EntityPermissionsMap[entityName].RoleToOperationMap[roleName].OperationToColumnMap[operation];
+            if (!EntityPermissionsMap[entityName].RoleToOperationMap.TryGetValue(roleName, out RoleMetadata? roleMetadata) && roleMetadata is null)
             {
-                if (_metadataProvider.TryGetBackingColumn(entityName, field: exposedColumn, out string? backingColumn))
-                {
-                    // backingColumn will not be null when TryGetBackingColumn() is true.
-                    if (operationToColumnMap.Excluded.Contains(backingColumn!) ||
-                        !operationToColumnMap.Included.Contains(backingColumn!))
-                    {
-                        // If column is present in excluded OR excluded='*'
-                        // If column is absent from included and included!=*
-                        // return false
-                        return false;
-                    }
-                }
-                else
-                {
-                    // This check will not be needed once exposedName mapping validation is added.
-                    throw new DataApiBuilderException(
-                        message: "Invalid field name provided.",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ExposedColumnNameMappingError
-                        );
-                }
+                return false;
             }
 
-            return true;
+            // Short circuit when OperationMetadata lookup fails, when lookup succeeds, opMetadata will be populated and 
+            if (roleMetadata.OperationToColumnMap.TryGetValue(operation, out OperationMetadata? operationToColumnMap) && operationToColumnMap is not null)
+            {
+                // Each column present in the request is an "exposedColumn".
+                // Authorization permissions reference "backingColumns"
+                // Resolve backingColumn name to check authorization.
+                // Failure indicates that request contain invalid exposedColumn for entity.
+                foreach (string exposedColumn in columns)
+                {
+                    if (_metadataProvider.TryGetBackingColumn(entityName, field: exposedColumn, out string? backingColumn))
+                    {
+                        // backingColumn will not be null when TryGetBackingColumn() is true.
+                        if (operationToColumnMap.Excluded.Contains(backingColumn!) ||
+                            !operationToColumnMap.Included.Contains(backingColumn!))
+                        {
+                            // If column is present in excluded OR excluded='*'
+                            // If column is absent from included and included!=*
+                            // return false
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        // This check will not be needed once exposedName mapping validation is added.
+                        throw new DataApiBuilderException(
+                            message: "Invalid field name provided.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ExposedColumnNameMappingError
+                            );
+                    }
+                }
+
+                return true;
+            }
+
+            // OperationMetadata lookup failed.
+            return false;
         }
 
         /// <inheritdoc />
@@ -648,10 +659,22 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// <param name="entityName">EntityName whose operationMetadata will be searched.</param>
         /// <param name="field">Field to lookup operation permissions</param>
         /// <param name="operation">Specific operation to get collection of roles</param>
-        /// <returns>Collection of role names allowed to perform operation on Entity's field.</returns>
+        /// <returns>Collection of role names allowed to perform operation on Entity's field. Empty list when zero roles
+        /// have permission to perform the {operation} on the provided field.</returns>
         public IEnumerable<string> GetRolesForField(string entityName, string field, Config.Operation operation)
         {
-            return EntityPermissionsMap[entityName].FieldToRolesMap[field][operation];
+            // A field may not exist in FieldToRolesMap when that field is not an included column (implicitly or explicitly) in
+            // any role.
+            if (EntityPermissionsMap[entityName].FieldToRolesMap.TryGetValue(field, out Dictionary<Config.Operation, List<string>>? operationToRoles)
+                && operationToRoles is not null)
+            {
+                if (operationToRoles.TryGetValue(operation, out List<string>? roles) && roles is not null)
+                {
+                    return roles;
+                }
+            }
+
+            return new List<string>();
         }
 
         /// <summary>

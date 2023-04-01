@@ -15,6 +15,7 @@ using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
 using Microsoft.AspNetCore.Http;
+using static Azure.DataApiBuilder.Service.Authorization.AuthorizationResolver;
 
 namespace Azure.DataApiBuilder.Service.Models
 {
@@ -113,13 +114,65 @@ namespace Azure.DataApiBuilder.Service.Models
                     List<ObjectFieldNode> subfields = (List<ObjectFieldNode>)fieldValue;
 
                     // Preserve the name value present in the filter.
+                    // In some cases, 'name' represents a relationship field on a source entity,
+                    // and not a field on a relationship target entity.
+                    // Additionally, 'name' may not be the same as the relationship's target entity because
+                    // runtime configuration supports overriding the entity name in the source entity configuration.
+                    // e.g.
+                    // comics (Source entity)  series (Target entity)
+                    // - id                    - id
+                    // - myseries [series]     - name
+                    // e.g. GraphQL request
+                    // {  comics ( filter: { myseries: { name: { eq: 'myName' } } } ) { <field selection> } }
                     string backingColumnName = name;
+
                     _metadataProvider.TryGetBackingColumn(queryStructure.EntityName, field: name, out string? resolvedBackingColumnName);
+
+                    // When runtime configuration defines relationship metadata,
+                    // an additional field on the entity representing GraphQL type
+                    // will exist. That "relationship field" does not represent a column in
+                    // the representative database table and will not have an entry in authorization
+                    // rules. Authorization is handled by permissions defined for the relationship's
+                    // target entity.
+                    bool relationshipField = true;
                     if (!string.IsNullOrWhiteSpace(resolvedBackingColumnName))
                     {
                         backingColumnName = resolvedBackingColumnName;
+                        relationshipField = false;
                     }
 
+                    // Do not perform field (column) authorization unless the field is not a relationship field.
+                    // The recursive behavior of SqlExistsQueryStructure compilation, this column check only occurs
+                    // when access to the column's owner entity is confirmed.
+                    if (!relationshipField)
+                    {
+                        string? relationshipTargetEntity = RelationshipDirectiveType.GetTarget(filterArgumentSchema);
+
+                        if (relationshipTargetEntity is null)
+                        {
+                            throw new DataApiBuilderException(
+                                message: "No relationship exists with the entity referenced in the filter.",
+                                statusCode: HttpStatusCode.BadRequest,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+                        }
+
+                        bool columnAccessPermitted = queryStructure.AuthorizationResolver.AreColumnsAllowedForOperation(
+                            entityName: relationshipTargetEntity,
+                            roleName: GetHttpContextFromMiddlewareContext(ctx).Request.Headers[CLIENT_ROLE_HEADER],
+                            operation: Config.Operation.Read,
+                            columns: new[] { backingColumnName });
+
+                        if (!columnAccessPermitted)
+                        {
+                            throw new DataApiBuilderException(
+                                message: DataApiBuilderException.GRAPHQL_NESTEDFILTER_FIELD_AUTHZ_FAILURE,
+                                statusCode: HttpStatusCode.Forbidden,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
+                        }
+                    }
+
+                    // A non-standard InputType is inferred to be referencing an entity.
+                    // Example: {entityName}FilterInput
                     if (!StandardQueryInputs.IsStandardInputType(filterInputObjectType.Name))
                     {
                         if (sourceDefinition.PrimaryKey.Count != 0)
@@ -200,6 +253,21 @@ namespace Azure.DataApiBuilder.Service.Models
             }
 
             string nestedFilterEntityName = _metadataProvider.GetEntityName(targetGraphQLTypeNameForFilter);
+
+            // Validate that the field referenced in the nested input filter can be accessed.
+            bool entityAccessPermitted = queryStructure.AuthorizationResolver.AreRoleAndOperationDefinedForEntity(
+                entityName: nestedFilterEntityName,
+                roleName: GetHttpContextFromMiddlewareContext(ctx).Request.Headers[CLIENT_ROLE_HEADER],
+                operation: Config.Operation.Read);
+
+            if (!entityAccessPermitted)
+            {
+                throw new DataApiBuilderException(
+                    message: DataApiBuilderException.GRAPHQL_NESTEDFILTER_ENTITY_AUTHZ_FAILURE,
+                    statusCode: HttpStatusCode.Forbidden,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
+            }
+
             List<Predicate> predicatesForExistsQuery = new();
 
             // Create an SqlExistsQueryStructure as the predicate operand of Exists predicate
@@ -207,7 +275,7 @@ namespace Azure.DataApiBuilder.Service.Models
             // its predicates are obtained from recursively parsing the nested filter
             // and an additional predicate to reflect the join between main query and this exists subquery.
             SqlExistsQueryStructure existsQuery = new(
-                TryGetHttpContextFromMiddlewareContext(ctx),
+                GetHttpContextFromMiddlewareContext(ctx),
                 _metadataProvider,
                 queryStructure.AuthorizationResolver,
                 this,
@@ -249,9 +317,9 @@ namespace Azure.DataApiBuilder.Service.Models
         /// Helper method to get the HttpContext from the MiddlewareContext.
         /// </summary>
         /// <param name="ctx">Middleware context for the object.</param>
-        /// <returns></returns>
+        /// <returns>HttpContext</returns>
         /// <exception cref="DataApiBuilderException">throws exception when http context could not be found.</exception>
-        public HttpContext TryGetHttpContextFromMiddlewareContext(IMiddlewareContext ctx)
+        public HttpContext GetHttpContextFromMiddlewareContext(IMiddlewareContext ctx)
         {
             // Get HttpContext from IMiddlewareContext and fail if resolved value is null.
             if (!ctx.ContextData.TryGetValue(nameof(HttpContext), out object? httpContextValue))

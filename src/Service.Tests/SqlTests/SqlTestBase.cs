@@ -527,7 +527,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             string queryName,
             bool isAuthenticated,
             Dictionary<string, object> variables = null,
-            string clientRoleHeader = null)
+            string clientRoleHeader = null,
+            bool expectsError = false)
         {
             RuntimeConfigProvider configProvider = _application.Services.GetService<RuntimeConfigProvider>();
             return await GraphQLRequestExecutor.PostGraphQLRequestAsync(

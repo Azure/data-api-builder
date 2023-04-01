@@ -265,7 +265,7 @@
                       "items": {
                         "type": "string"
                       },
-                      "description": "List of fields to be used as primary keys"
+                      "description": "List of fields to be used as primary keys. Mandatory field for views when generated through the CLI."
                     }
                   },
                   "required": [

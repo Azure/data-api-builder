@@ -350,7 +350,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// <inheritdoc />
         [DataTestMethod]
         [DataRow(null, null, 1113, "Real Madrid", DisplayName = "No Overriding of existing relationship fields in DB.")]
-        [DataRow(new string[] {"new_club_id"}, new string[] {"id"}, 1111, "Manchester United", DisplayName = "Overriding existing relationship fields in DB.")]
+        [DataRow(new string[] { "new_club_id" }, new string[] { "id" }, 1111, "Manchester United", DisplayName = "Overriding existing relationship fields in DB.")]
         public async Task TestConfigTakesPrecedenceForRelationshipFieldsOverDB(
             string[] sourceFields,
             string[] targetFields,

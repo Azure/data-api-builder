@@ -1,5 +1,7 @@
 init --config "dab-config.PostgreSql.json" --database-type postgresql --connection-string "Host=localhost;Database=datagatewaytest;username=REPLACEME;password=REPLACEME" --host-mode Development --cors-origin "http://localhost:5000"
 add Publisher --config "dab-config.PostgreSql.json" --source publishers --permissions "anonymous:read"
+add Player --config "dab-config.MsSql.json" --source players --permissions "anonymous:read"
+add Club --config "dab-config.MsSql.json" --source clubs --permissions "anonymous:read"
 add Stock --config "dab-config.PostgreSql.json" --source stocks --permissions "anonymous:create,read,update"
 add Book --config "dab-config.PostgreSql.json" --source books --permissions "anonymous:create,read,update,delete" --graphql "book:books"
 add BookWebsitePlacement --config "dab-config.PostgreSql.json" --source book_website_placements --permissions "anonymous:read"

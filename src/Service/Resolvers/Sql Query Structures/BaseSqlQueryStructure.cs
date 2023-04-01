@@ -490,7 +490,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="fieldName">Field name whose value is being converted to the specified system type. This is used only for constructing the error messages incase of conversion failures</param>
         /// <param name="systemType">System type to which the parameter value is parsed to</param>
         /// <returns>The parameter value parsed to the specified system type</returns>
-        /// <exception cref="DataApiBuilderException">Throws a DataApiBuilderException when the conversion of parameter value to the specified system type fails. The error message returned will be different in development
+        /// <exception cref="DataApiBuilderException">Raised when the conversion of parameter value to the specified system type fails. The error message returned will be different in development
         /// and production modes. In production mode, the error message returned will be generic so as to not reveal information about the database object backing the entity</exception>
         protected object GetParamAsSystemType(string fieldValue, string fieldName, Type systemType)
         {
@@ -502,9 +502,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
 
                 string errorMessage;
+                SourceType sourceTypeOfDbObject = MetadataProvider.EntityToDatabaseObject[EntityName].SourceType;
                 if (MetadataProvider.IsDevelopmentMode())
                 {
-                    if (MetadataProvider.EntityToDatabaseObject[EntityName].SourceType is SourceType.StoredProcedure)
+                    if (sourceTypeOfDbObject is SourceType.StoredProcedure)
                     {
                         errorMessage = $@"Parameter ""{fieldValue}"" cannot be resolved as stored procedure parameter ""{fieldName}"" " +
                                 $@"with type ""{systemType.Name}"".";
@@ -518,8 +519,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 else
                 {
                     string fieldNameToBeDisplayedInErrorMessage = fieldName;
-
-                    if (MetadataProvider.EntityToDatabaseObject[EntityName].SourceType is SourceType.Table || MetadataProvider.EntityToDatabaseObject[EntityName].SourceType is SourceType.View)
+                    if (sourceTypeOfDbObject is SourceType.Table || sourceTypeOfDbObject is SourceType.View)
                     {
                         if (MetadataProvider.TryGetExposedColumnName(EntityName, fieldName, out string? exposedName))
                         {

@@ -347,10 +347,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await base.TestQueryOnCompositeView(msSqlQuery);
         }
 
-        [TestMethod]
-        public async Task TestConfigTakesPrecedenceForRelationshipOverDB()
+        [DataTestMethod]
+        [DataRow(false, "1113", "Real Madrid", DisplayName = "No Overriding of existing relationship in DB.")]
+        [DataRow(true, "1111", "Manchester United", DisplayName = "Overriding existing relationship in DB.")]
+        public async Task TestConfigTakesPrecedenceForRelationshipOverDB(
+            bool isOverridingDbRelationship,
+            int club_id,
+            string club_name)
         {
-            await TestConfigTakesPrecedenceForRelationshipOverDB(DatabaseType.mssql, TestCategory.MSSQL);
+            await TestConfigTakesPrecedenceForRelationshipOverDB(
+                isOverridingDbRelationship,
+                club_id,
+                club_name,
+                DatabaseType.mssql,
+                TestCategory.MSSQL);
         }
 
         #endregion

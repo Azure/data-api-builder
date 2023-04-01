@@ -1459,7 +1459,12 @@ query {
         }
 
         [TestMethod]
-        public async Task TestConfigTakesPrecedenceForRelationshipOverDB(DatabaseType dbType, string testEnvironment)
+        public async Task TestConfigTakesPrecedenceForRelationshipOverDB(
+            bool isOverridingDbRelationship,
+            int club_id,
+            string club_name,
+            DatabaseType dbType,
+            string testEnvironment)
         {
             RuntimeConfig configuration = ConfigurationTests.InitBasicRuntimeConfigWithNoEntity(dbType, testEnvironment);
 
@@ -1474,12 +1479,9 @@ query {
 
             configuration.Entities.Add("Club", clubEntity);
 
-            Entity playerEntity = new(
-                Source: JsonSerializer.SerializeToElement("players"),
-                Rest: true,
-                GraphQL: true,
-                Permissions: new PermissionSetting[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
-                Relationships: new Dictionary<string, Relationship>() { {"clubs", new (
+            Dictionary<string, Relationship> relationshipMap = null;
+            if(isOverridingDbRelationship) {
+                relationshipMap = new Dictionary<string, Relationship>() { {"clubs", new (
                     Cardinality: Cardinality.One,
                     TargetEntity: "Club",
                     SourceFields: new string[] {"new_club_id"},
@@ -1487,7 +1489,15 @@ query {
                     LinkingObject: null,
                     LinkingSourceFields: null,
                     LinkingTargetFields: null
-                )}},
+                )}};
+            }
+
+            Entity playerEntity = new(
+                Source: JsonSerializer.SerializeToElement("players"),
+                Rest: true,
+                GraphQL: true,
+                Permissions: new PermissionSetting[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: relationshipMap,
                 Mappings: null
             );
 
@@ -1503,7 +1513,6 @@ query {
                     $"--ConfigFileName={CUSTOM_CONFIG}"
             };
 
-            // Non-Hosted Scenario
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
             {
@@ -1528,7 +1537,8 @@ query {
                 string body = await graphQLResponse.Content.ReadAsStringAsync();
 
                 JsonElement graphQLResult = JsonSerializer.Deserialize<JsonElement>(body);
-                Assert.AreEqual("test", graphQLResult);
+                Assert.AreEqual(club_id, graphQLResult.GetProperty("data").GetProperty("player_by_pk").GetProperty("clubs").GetProperty("id").GetInt32());
+                Assert.AreEqual(club_name, graphQLResult.GetProperty("data").GetProperty("player_by_pk").GetProperty("clubs").GetProperty("name").ToString());
                 Assert.AreEqual(System.Net.HttpStatusCode.OK, graphQLResponse.StatusCode);
             }
         }

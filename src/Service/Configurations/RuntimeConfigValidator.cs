@@ -27,7 +27,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
     public class RuntimeConfigValidator : IConfigValidator
     {
         private readonly IFileSystem _fileSystem;
-        private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private readonly ILogger<RuntimeConfigValidator> _logger;
 
         // Only characters from a-z,A-Z,0-9,.,_ are allowed to be present within the claimType.

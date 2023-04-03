@@ -64,6 +64,18 @@ public class RuntimeConfigLoader
     }
 
     /// <summary>
+    /// Tries to load the config file using its default name and for the default environment.
+    /// </summary>
+    /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
+    /// <returns>True if the config was loaded, otherwise false.</returns>
+    public bool TryLoadDefaultConfig(out RuntimeConfig? config)
+    {
+        string filename = GetFileName(Environment.GetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME), false);
+
+        return TryLoadConfig(filename, out config);
+    }
+
+    /// <summary>
     /// Precedence of environments is
     /// 1) Value of DAB_ENVIRONMENT.
     /// 2) Value of ASPNETCORE_ENVIRONMENT.

@@ -30,13 +30,13 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using CorsOptions = Azure.DataApiBuilder.Config.CorsOptions;
 
 namespace Azure.DataApiBuilder.Service
 {
     public class Startup
     {
         private ILogger<Startup> _logger;
-        private ILogger<RuntimeConfigProvider> _configProviderLogger;
 
         public static LogLevel MinimumLogLevel = LogLevel.Error;
 
@@ -44,13 +44,10 @@ namespace Azure.DataApiBuilder.Service
 
         public const string NO_HTTPS_REDIRECT_FLAG = "--no-https-redirect";
 
-        public Startup(IConfiguration configuration,
-            ILogger<Startup> logger,
-            ILogger<RuntimeConfigProvider> configProviderLogger)
+        public Startup(IConfiguration configuration, ILogger<Startup> logger)
         {
             Configuration = configuration;
             _logger = logger;
-            _configProviderLogger = configProviderLogger;
         }
 
         public IConfiguration Configuration { get; }
@@ -58,12 +55,13 @@ namespace Azure.DataApiBuilder.Service
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            RuntimeConfigPath runtimeConfigPath = new();
-            Configuration.Bind(runtimeConfigPath);
+            IFileSystem fileSystem = new FileSystem();
+            RuntimeConfigLoader configLoader = new(fileSystem);
+            RuntimeConfigProvider configProvider = new(configLoader);
 
-            RuntimeConfigProvider runtimeConfigurationProvider = new(runtimeConfigPath, _configProviderLogger);
-            services.AddSingleton(runtimeConfigurationProvider);
-
+            services.AddSingleton(fileSystem);
+            services.AddSingleton(configProvider);
+            services.AddSingleton(configLoader);
             services.AddSingleton(implementationFactory: (serviceProvider) =>
             {
                 ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
@@ -83,37 +81,27 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<IQueryEngine>(implementationFactory: (serviceProvider) =>
             {
                 RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-                RuntimeConfig runtimeConfig = configProvider.GetRuntimeConfiguration();
+                RuntimeConfig runtimeConfig = configProvider.GetConfig();
 
-                switch (runtimeConfig.DatabaseType)
+                return runtimeConfig.DataSource.DatabaseType switch
                 {
-                    case DatabaseType.cosmosdb_nosql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<CosmosQueryEngine>(serviceProvider);
-                    case DatabaseType.mssql:
-                    case DatabaseType.postgresql:
-                    case DatabaseType.mysql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<SqlQueryEngine>(serviceProvider);
-                    default:
-                        throw new NotSupportedException(runtimeConfig.DatabaseTypeNotSupportedMessage);
-                }
+                    DatabaseType.CosmosDB_NoSQL => ActivatorUtilities.GetServiceOrCreateInstance<CosmosQueryEngine>(serviceProvider),
+                    DatabaseType.MSSQL or DatabaseType.PostgreSQL or DatabaseType.MySQL => ActivatorUtilities.GetServiceOrCreateInstance<SqlQueryEngine>(serviceProvider),
+                    _ => throw new NotSupportedException(runtimeConfig.DataSource.DatabaseTypeNotSupportedMessage),
+                };
             });
 
             services.AddSingleton<IMutationEngine>(implementationFactory: (serviceProvider) =>
             {
                 RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-                RuntimeConfig runtimeConfig = configProvider.GetRuntimeConfiguration();
+                RuntimeConfig runtimeConfig = configProvider.GetConfig();
 
-                switch (runtimeConfig.DatabaseType)
+                return runtimeConfig.DataSource.DatabaseType switch
                 {
-                    case DatabaseType.cosmosdb_nosql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<CosmosMutationEngine>(serviceProvider);
-                    case DatabaseType.mssql:
-                    case DatabaseType.postgresql:
-                    case DatabaseType.mysql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<SqlMutationEngine>(serviceProvider);
-                    default:
-                        throw new NotSupportedException(runtimeConfig.DatabaseTypeNotSupportedMessage);
-                }
+                    DatabaseType.CosmosDB_NoSQL => ActivatorUtilities.GetServiceOrCreateInstance<CosmosMutationEngine>(serviceProvider),
+                    DatabaseType.MSSQL or DatabaseType.PostgreSQL or DatabaseType.MySQL => ActivatorUtilities.GetServiceOrCreateInstance<SqlMutationEngine>(serviceProvider),
+                    _ => throw new NotSupportedException(runtimeConfig.DataSource.DatabaseTypeNotSupportedMessage),
+                };
             });
 
             services.AddSingleton<ILogger<IQueryExecutor>>(implementationFactory: (serviceProvider) =>
@@ -124,42 +112,31 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<IQueryExecutor>(implementationFactory: (serviceProvider) =>
             {
                 RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-                RuntimeConfig runtimeConfig = configProvider.GetRuntimeConfiguration();
+                RuntimeConfig runtimeConfig = configProvider.GetConfig();
 
-                switch (runtimeConfig.DatabaseType)
+                return runtimeConfig.DataSource.DatabaseType switch
                 {
-                    case DatabaseType.cosmosdb_nosql:
-                        return null!;
-                    case DatabaseType.mssql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<MsSqlQueryExecutor>(serviceProvider);
-                    case DatabaseType.postgresql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<PostgreSqlQueryExecutor>(serviceProvider);
-                    case DatabaseType.mysql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<MySqlQueryExecutor>(serviceProvider);
-                    default:
-                        throw new NotSupportedException(
-                            runtimeConfig.DatabaseTypeNotSupportedMessage);
-                }
+                    DatabaseType.CosmosDB_NoSQL => null!,
+                    DatabaseType.MSSQL => ActivatorUtilities.GetServiceOrCreateInstance<MsSqlQueryExecutor>(serviceProvider),
+                    DatabaseType.PostgreSQL => ActivatorUtilities.GetServiceOrCreateInstance<PostgreSqlQueryExecutor>(serviceProvider),
+                    DatabaseType.MySQL => ActivatorUtilities.GetServiceOrCreateInstance<MySqlQueryExecutor>(serviceProvider),
+                    _ => throw new NotSupportedException(runtimeConfig.DataSource.DatabaseTypeNotSupportedMessage),
+                };
             });
 
             services.AddSingleton<IQueryBuilder>(implementationFactory: (serviceProvider) =>
             {
                 RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-                RuntimeConfig runtimeConfig = configProvider.GetRuntimeConfiguration();
+                RuntimeConfig runtimeConfig = configProvider.GetConfig();
 
-                switch (runtimeConfig.DatabaseType)
+                return runtimeConfig.DataSource.DatabaseType switch
                 {
-                    case DatabaseType.cosmosdb_nosql:
-                        return null!;
-                    case DatabaseType.mssql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<MsSqlQueryBuilder>(serviceProvider);
-                    case DatabaseType.postgresql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<PostgresQueryBuilder>(serviceProvider);
-                    case DatabaseType.mysql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<MySqlQueryBuilder>(serviceProvider);
-                    default:
-                        throw new NotSupportedException(runtimeConfig.DatabaseTypeNotSupportedMessage);
-                }
+                    DatabaseType.CosmosDB_NoSQL => null!,
+                    DatabaseType.MSSQL => ActivatorUtilities.GetServiceOrCreateInstance<MsSqlQueryBuilder>(serviceProvider),
+                    DatabaseType.PostgreSQL => ActivatorUtilities.GetServiceOrCreateInstance<PostgresQueryBuilder>(serviceProvider),
+                    DatabaseType.MySQL => ActivatorUtilities.GetServiceOrCreateInstance<MySqlQueryBuilder>(serviceProvider),
+                    _ => throw new NotSupportedException(runtimeConfig.DataSource.DatabaseTypeNotSupportedMessage),
+                };
             });
 
             services.AddSingleton<ILogger<ISqlMetadataProvider>>(implementationFactory: (serviceProvider) =>
@@ -171,47 +148,36 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<ISqlMetadataProvider>(implementationFactory: (serviceProvider) =>
             {
                 RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-                RuntimeConfig runtimeConfig = configProvider.GetRuntimeConfiguration();
+                RuntimeConfig runtimeConfig = configProvider.GetConfig();
 
-                switch (runtimeConfig.DatabaseType)
+                return runtimeConfig.DataSource.DatabaseType switch
                 {
-                    case DatabaseType.cosmosdb_nosql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<CosmosSqlMetadataProvider>(serviceProvider);
-                    case DatabaseType.mssql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<MsSqlMetadataProvider>(serviceProvider);
-                    case DatabaseType.postgresql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<PostgreSqlMetadataProvider>(serviceProvider);
-                    case DatabaseType.mysql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<MySqlMetadataProvider>(serviceProvider);
-                    default:
-                        throw new NotSupportedException(runtimeConfig.DatabaseTypeNotSupportedMessage);
-                }
+                    DatabaseType.CosmosDB_NoSQL => ActivatorUtilities.GetServiceOrCreateInstance<CosmosSqlMetadataProvider>(serviceProvider),
+                    DatabaseType.MSSQL => ActivatorUtilities.GetServiceOrCreateInstance<MsSqlMetadataProvider>(serviceProvider),
+                    DatabaseType.PostgreSQL => ActivatorUtilities.GetServiceOrCreateInstance<PostgreSqlMetadataProvider>(serviceProvider),
+                    DatabaseType.MySQL => ActivatorUtilities.GetServiceOrCreateInstance<MySqlMetadataProvider>(serviceProvider),
+                    _ => throw new NotSupportedException(runtimeConfig.DataSource.DatabaseTypeNotSupportedMessage),
+                };
             });
 
             services.AddSingleton<DbExceptionParser>(implementationFactory: (serviceProvider) =>
             {
                 RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-                RuntimeConfig runtimeConfig = configProvider.GetRuntimeConfiguration();
+                RuntimeConfig runtimeConfig = configProvider.GetConfig();
 
-                switch (runtimeConfig.DatabaseType)
+                return runtimeConfig.DataSource.DatabaseType switch
                 {
-                    case DatabaseType.cosmosdb_nosql:
-                        return null!;
-                    case DatabaseType.mssql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<MsSqlDbExceptionParser>(serviceProvider);
-                    case DatabaseType.postgresql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<PostgreSqlDbExceptionParser>(serviceProvider);
-                    case DatabaseType.mysql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<MySqlDbExceptionParser>(serviceProvider);
-                    default:
-                        throw new NotSupportedException(runtimeConfig.DatabaseTypeNotSupportedMessage);
-                }
+                    DatabaseType.CosmosDB_NoSQL => null!,
+                    DatabaseType.MSSQL => ActivatorUtilities.GetServiceOrCreateInstance<MsSqlDbExceptionParser>(serviceProvider),
+                    DatabaseType.PostgreSQL => ActivatorUtilities.GetServiceOrCreateInstance<PostgreSqlDbExceptionParser>(serviceProvider),
+                    DatabaseType.MySQL => ActivatorUtilities.GetServiceOrCreateInstance<MySqlDbExceptionParser>(serviceProvider),
+                    _ => throw new NotSupportedException(runtimeConfig.DataSource.DatabaseTypeNotSupportedMessage),
+                };
             });
 
             services.AddSingleton<GraphQLSchemaCreator>();
             services.AddSingleton<GQLFilterParser>();
             services.AddSingleton<RestService>();
-            services.AddSingleton<IFileSystem, FileSystem>();
 
             services.AddSingleton<ILogger<RestController>>(implementationFactory: (serviceProvider) =>
             {
@@ -234,7 +200,7 @@ namespace Azure.DataApiBuilder.Service
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();
 
-            ConfigureAuthentication(services, runtimeConfigurationProvider);
+            ConfigureAuthentication(services, configProvider);
 
             services.AddAuthorization();
             services.AddSingleton<ILogger<IAuthorizationHandler>>(implementationFactory: (serviceProvider) =>
@@ -250,7 +216,7 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<IAuthorizationHandler, RestAuthorizationHandler>();
             services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
 
-            AddGraphQL(services);
+            AddGraphQLService(services);
 
             services.AddControllers();
         }
@@ -263,7 +229,7 @@ namespace Azure.DataApiBuilder.Service
         /// when determining whether to allow introspection requests to proceed.
         /// </summary>
         /// <param name="services">Service Collection</param>
-        private void AddGraphQL(IServiceCollection services)
+        private void AddGraphQLService(IServiceCollection services)
         {
             services.AddGraphQLServer()
                     .AddHttpRequestInterceptor<DefaultHttpRequestInterceptor>()
@@ -313,13 +279,13 @@ namespace Azure.DataApiBuilder.Service
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, RuntimeConfigProvider runtimeConfigProvider)
         {
             bool isRuntimeReady = false;
-            if (runtimeConfigProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
+            if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
                 // Config provided before starting the engine.
                 isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
-                if (_logger is not null && runtimeConfigProvider.RuntimeConfigPath is not null)
+                if (_logger is not null)
                 {
-                    _logger.LogInformation($"Loading config file: {runtimeConfigProvider.RuntimeConfigPath.ConfigFileName}");
+                    _logger.LogDebug("Loaded config file from {filePath}", runtimeConfigProvider.ConfigFilePath);
                 }
 
                 if (!isRuntimeReady)
@@ -330,9 +296,7 @@ namespace Azure.DataApiBuilder.Service
                         _logger.LogError("Exiting the runtime engine...");
                     }
 
-                    throw new ApplicationException(
-                        "Could not initialize the engine with the runtime config file: " +
-                        $"{runtimeConfigProvider.RuntimeConfigPath?.ConfigFileName}");
+                    throw new ApplicationException($"Could not initialize the engine with the runtime config file: {runtimeConfigProvider.ConfigFilePath}");
                 }
             }
             else
@@ -350,10 +314,7 @@ namespace Azure.DataApiBuilder.Service
                 app.UseDeveloperExceptionPage();
             }
 
-            if (!RuntimeConfigProvider.IsHttpsRedirectionDisabled)
-            {
-                app.UseHttpsRedirection();
-            }
+            app.UseHttpsRedirection();
 
             // URL Rewrite middleware MUST be called prior to UseRouting().
             // https://andrewlock.net/understanding-pathbase-in-aspnetcore/#placing-usepathbase-in-the-correct-location
@@ -362,11 +323,11 @@ namespace Azure.DataApiBuilder.Service
             app.UseRouting();
 
             // Adding CORS Middleware
-            if (runtimeConfig is not null && runtimeConfig.HostGlobalSettings.Cors is not null)
+            if (runtimeConfig is not null && runtimeConfig.Runtime.Host.Cors is not null)
             {
                 app.UseCors(CORSPolicyBuilder =>
                 {
-                    Cors corsConfig = runtimeConfig.HostGlobalSettings.Cors;
+                    CorsOptions corsConfig = runtimeConfig.Runtime.Host.Cors;
                     ConfigureCors(CORSPolicyBuilder, corsConfig);
                 });
             }
@@ -417,12 +378,12 @@ namespace Azure.DataApiBuilder.Service
             {
                 endpoints.MapControllers();
 
-                endpoints.MapGraphQL(GlobalSettings.GRAPHQL_DEFAULT_PATH).WithOptions(new GraphQLServerOptions
+                endpoints.MapGraphQL(GraphQLRuntimeOptions.DEFAULT_GRAPHQL_PATH).WithOptions(new GraphQLServerOptions
                 {
                     Tool = {
                         // Determines if accessing the endpoint from a browser
                         // will load the GraphQL Banana Cake Pop IDE.
-                        Enable = runtimeConfigProvider.IsDeveloperMode() || env.IsDevelopment()
+                        Enable = runtimeConfig?.Runtime.Host.Mode == HostMode.Development || env.IsDevelopment()
                     }
                 });
 
@@ -445,7 +406,7 @@ namespace Azure.DataApiBuilder.Service
         /// </summary>
         public static LogLevel GetLogLevelBasedOnMode(RuntimeConfig runtimeConfig)
         {
-            if (runtimeConfig.HostGlobalSettings.Mode == HostModeType.Development)
+            if (runtimeConfig.Runtime.Host.Mode == HostMode.Development)
             {
                 return LogLevel.Debug;
             }
@@ -467,7 +428,7 @@ namespace Azure.DataApiBuilder.Service
                 // If runtime config is available, set the loglevel to Error if host.mode is Production,
                 // Debug if it is Development.
                 RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-                if (configProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
+                if (configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
                 {
                     MinimumLogLevel = GetLogLevelBasedOnMode(runtimeConfig);
                 }
@@ -487,27 +448,28 @@ namespace Azure.DataApiBuilder.Service
         /// <param name="runtimeConfigurationProvider">The provider used to load runtime configuration.</param>
         private void ConfigureAuthentication(IServiceCollection services, RuntimeConfigProvider runtimeConfigurationProvider)
         {
-            if (runtimeConfigurationProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig) && runtimeConfig.AuthNConfig != null)
+            if (runtimeConfigurationProvider.TryGetConfig(out RuntimeConfig? runtimeConfig) && runtimeConfig.Runtime.Host.Authentication is not null)
             {
-                if (runtimeConfig.IsJwtConfiguredIdentityProvider())
+                AuthenticationOptions authOptions = runtimeConfig.Runtime.Host.Authentication;
+                if (!authOptions.IsAuthenticationSimulatorEnabled() && !authOptions.IsEasyAuthAuthenticationProvider())
                 {
                     services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                     .AddJwtBearer(options =>
                     {
-                        options.Audience = runtimeConfig.AuthNConfig.Jwt!.Audience;
-                        options.Authority = runtimeConfig.AuthNConfig.Jwt!.Issuer;
+                        options.Audience = authOptions.Jwt!.Audience;
+                        options.Authority = authOptions.Jwt!.Issuer;
                         options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
                         {
                             // Instructs the asp.net core middleware to use the data in the "roles" claim for User.IsInrole()
                             // See https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsprincipal.isinrole?view=net-6.0#remarks
-                            RoleClaimType = AuthenticationConfig.ROLE_CLAIM_TYPE
+                            RoleClaimType = AuthenticationOptions.ROLE_CLAIM_TYPE
                         };
                     });
                 }
-                else if (runtimeConfig.IsEasyAuthAuthenticationProvider())
+                else if (runtimeConfig.Runtime.Host.Authentication.IsEasyAuthAuthenticationProvider())
                 {
-                    EasyAuthType easyAuthType = (EasyAuthType)Enum.Parse(typeof(EasyAuthType), runtimeConfig.AuthNConfig.Provider, ignoreCase: true);
-                    bool isProductionMode = !runtimeConfigurationProvider.IsDeveloperMode();
+                    EasyAuthType easyAuthType = Enum.Parse<EasyAuthType>(runtimeConfig.Runtime.Host.Authentication.Provider, ignoreCase: true);
+                    bool isProductionMode = runtimeConfig.Runtime.Host.Mode != HostMode.Development;
                     bool appServiceEnvironmentDetected = AppServiceAuthenticationInfo.AreExpectedAppServiceEnvVarsPresent();
 
                     if (easyAuthType == EasyAuthType.AppService && !appServiceEnvironmentDetected)
@@ -528,7 +490,8 @@ namespace Azure.DataApiBuilder.Service
                     services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
                         .AddEasyAuthAuthentication(easyAuthAuthenticationProvider: easyAuthType);
                 }
-                else if (runtimeConfigurationProvider.IsDeveloperMode() && runtimeConfig.IsAuthenticationSimulatorEnabled())
+                else if (runtimeConfig.Runtime.Host.Mode == HostMode.Development &&
+                    runtimeConfig.Runtime.Host.Authentication.IsAuthenticationSimulatorEnabled())
                 {
                     services.AddAuthentication(SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME)
                         .AddSimulatorAuthentication();
@@ -572,14 +535,14 @@ namespace Azure.DataApiBuilder.Service
             try
             {
                 RuntimeConfigProvider runtimeConfigProvider = app.ApplicationServices.GetService<RuntimeConfigProvider>()!;
-                RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
+                RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
                 RuntimeConfigValidator runtimeConfigValidator = app.ApplicationServices.GetService<RuntimeConfigValidator>()!;
                 // Now that the configuration has been set, perform validation of the runtime config
                 // itself.
 
                 runtimeConfigValidator.ValidateConfig();
 
-                if (runtimeConfigProvider.IsDeveloperMode())
+                if (runtimeConfig.Runtime.Host.Mode == HostMode.Development)
                 {
                     // Running only in developer mode to ensure fast and smooth startup in production.
                     runtimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
@@ -613,7 +576,7 @@ namespace Azure.DataApiBuilder.Service
                     _logger.LogError($"Endpoint service initialization failed");
                 }
 
-                if (runtimeConfigProvider.IsDeveloperMode())
+                if (runtimeConfig.Runtime.Host.Mode == HostMode.Development)
                 {
                     // Running only in developer mode to ensure fast and smooth startup in production.
                     runtimeConfigValidator.ValidateRelationshipsInConfig(runtimeConfig, sqlMetadataProvider!);
@@ -638,7 +601,7 @@ namespace Azure.DataApiBuilder.Service
         /// <param name="builder"> The CorsPolicyBuilder that will be used to build the policy </param>
         /// <param name="corsConfig"> The cors runtime configuration specifying the allowed origins and whether credentials can be included in requests </param>
         /// <returns> The built cors policy </returns>
-        public static CorsPolicy ConfigureCors(CorsPolicyBuilder builder, Cors corsConfig)
+        public static CorsPolicy ConfigureCors(CorsPolicyBuilder builder, CorsOptions corsConfig)
         {
             string[] Origins = corsConfig.Origins is not null ? corsConfig.Origins : Array.Empty<string>();
             if (corsConfig.AllowCredentials)

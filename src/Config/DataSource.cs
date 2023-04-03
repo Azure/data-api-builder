@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Azure.DataApiBuilder.Config;
 
@@ -16,6 +17,9 @@ public record DataSource(DatabaseType DatabaseType, string ConnectionString, Dic
 
         throw new NotImplementedException();
     }
+
+    [JsonIgnore]
+    public string DatabaseTypeNotSupportedMessage => $"The provided database-type value: {DatabaseType} is currently not supported. Please check the configuration file.";
 }
 
 public interface IDataSourceOptions { }

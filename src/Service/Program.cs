@@ -2,9 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
-using System.Collections.Generic;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
@@ -46,18 +44,17 @@ namespace Azure.DataApiBuilder.Service
                 .ConfigureAppConfiguration((hostingContext, configurationBuilder) =>
                 {
                     IHostEnvironment env = hostingContext.HostingEnvironment;
-                    AddConfigurationProviders(env, configurationBuilder, args);
+                    AddConfigurationProviders(configurationBuilder, args);
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     Startup.MinimumLogLevel = GetLogLevelFromCommandLineArgs(args, out Startup.IsLogLevelOverriddenByCli);
                     ILoggerFactory? loggerFactory = GetLoggerFactoryForLogLevel(Startup.MinimumLogLevel);
                     ILogger<Startup>? startupLogger = loggerFactory.CreateLogger<Startup>();
-                    ILogger<RuntimeConfigProvider>? configProviderLogger = loggerFactory.CreateLogger<RuntimeConfigProvider>();
                     DisableHttpsRedirectionIfNeeded(args);
                     webBuilder.UseStartup(builder =>
                     {
-                        return new Startup(builder.Configuration, startupLogger, configProviderLogger);
+                        return new Startup(builder.Configuration, startupLogger);
                     });
                 });
 
@@ -136,27 +133,27 @@ namespace Azure.DataApiBuilder.Service
                 if (args[i].Equals(Startup.NO_HTTPS_REDIRECT_FLAG))
                 {
                     Console.WriteLine("Redirecting to https is disabled.");
-                    RuntimeConfigProvider.IsHttpsRedirectionDisabled = true;
+                    //RuntimeConfigProvider.IsHttpsRedirectionDisabled = true;
                     return;
                 }
             }
 
-            RuntimeConfigProvider.IsHttpsRedirectionDisabled = false;
+            //RuntimeConfigProvider.IsHttpsRedirectionDisabled = false;
         }
 
         // This is used for testing purposes only. The test web server takes in a
-        // IWebHostbuilder, instead of a IHostBuilder.
+        // IWebHostBuilder, instead of a IHostBuilder.
         public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
             .ConfigureAppConfiguration((hostingContext, builder) =>
             {
                 IHostEnvironment env = hostingContext.HostingEnvironment;
-                AddConfigurationProviders(env, builder, args);
+                AddConfigurationProviders(builder, args);
                 DisableHttpsRedirectionIfNeeded(args);
             }).UseStartup<Startup>();
 
         // This is used for testing purposes only. The test web server takes in a
-        // IWebHostbuilder, instead of a IHostBuilder.
+        // IWebHostBuilder, instead of a IHostBuilder.
         public static IWebHostBuilder CreateWebHostFromInMemoryUpdateableConfBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
             .UseStartup<Startup>();
@@ -168,23 +165,11 @@ namespace Azure.DataApiBuilder.Service
         /// <param name="configurationBuilder">The configuration builder.</param>
         /// <param name="args">The command line arguments.</param>
         private static void AddConfigurationProviders(
-            IHostEnvironment env,
             IConfigurationBuilder configurationBuilder,
             string[] args)
         {
-            string configFileName
-                = RuntimeConfigPath.GetFileNameForEnvironment(env.EnvironmentName, considerOverrides: true);
-            Dictionary<string, string> configFileNameMap = new()
-            {
-                {
-                    nameof(RuntimeConfigPath.ConfigFileName),
-                    configFileName
-                }
-            };
-
             configurationBuilder
-                .AddInMemoryCollection(configFileNameMap)
-                .AddEnvironmentVariables(prefix: RuntimeConfigPath.ENVIRONMENT_PREFIX)
+                .AddEnvironmentVariables(prefix: RuntimeConfigLoader.ENVIRONMENT_PREFIX)
                 .AddCommandLine(args);
         }
     }

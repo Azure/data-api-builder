@@ -98,7 +98,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Instantiate basic runtime config with custom global settings.
+        /// Instantiate basic runtime config with no entity.
         /// </summary>
         /// <returns></returns>
         public static RuntimeConfig InitBasicRuntimeConfigWithNoEntity(

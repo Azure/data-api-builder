@@ -26,7 +26,7 @@ internal class EntitySourceConverterFactory : JsonConverterFactory
         {
             if (reader.TokenType == JsonTokenType.String)
             {
-                return new EntitySource(reader.GetString() ?? "", EntityType.Table, new(), Enumerable.Empty<string>().ToArray());
+                return new EntitySource(reader.GetString() ?? "", EntitySourceType.Table, new(), Enumerable.Empty<string>().ToArray());
             }
 
             JsonSerializerOptions innerOptions = new(options);

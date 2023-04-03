@@ -14,6 +14,7 @@ internal class HyphenatedNamingPolicy : JsonNamingPolicy
         {
             return name.ToLower();
         }
+
         return string.Join("-", Regex.Split(name, @"(?<!^)(?=[A-Z])", RegexOptions.Compiled)).ToLower();
     }
 }

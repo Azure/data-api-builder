@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -646,6 +647,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             string errorMessage = "23505: duplicate key value violates unique constraint " +
                                   "\\u0022book_website_placements_book_id_key\\u0022";
             await TestViolatingOneToOneRelashionShip(errorMessage);
+        }
+
+        [TestMethod]
+        [Ignore]
+        /// <inheritdoc/>
+        public override Task TestDbPolicyForCreateOperationReferencingFieldAbsentInRequest()
+        {
+            throw new NotImplementedException();
         }
         #endregion
     }

@@ -362,7 +362,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Join predicate strings while ignoring empty or null predicates
         /// </summary>
         /// <param name="predicateStrings">Array of predicate strings coming from filters in query string,
-        /// primary key predicates for update operations or database policies.</param>
+        /// primary key predicates or database policies.</param>
         /// <returns>predicate strings joined with AND operator. "1=1" if there are no predicate strings.</returns>
         public string JoinPredicateStrings(params string?[] predicateStrings)
         {

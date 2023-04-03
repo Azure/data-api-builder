@@ -115,8 +115,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         /// <summary>
         /// Tests nested filter having another nested filter.
         /// </summary>
-        [TestMethod]
-        public async Task TestNestedFilterWithinNestedFilter()
+        [DataTestMethod]
+        [DataRow("Authenticated", false, "", DisplayName = "No nested filter AuthZ error")]
+        [DataRow("TestNestedFilter_ColumnForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_FIELD_AUTHZ_FAILURE, DisplayName = "Excluded column in nested filter entity, AuthZ failure")]
+        [DataRow("TestNestedFilter_EntityReadForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_ENTITY_AUTHZ_FAILURE, DisplayName = "Nested filter entity read access forbidden, AuthZ failure")]
+        public async Task TestNestedFilterWithinNestedFilter(string roleName, bool expectsError, string errorMessageFragment)
         {
             string defaultSchema = GetPreIndentDefaultSchema();
 
@@ -140,14 +143,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                                        AND [table4].[book_id] = [table2].[id])
                                        AND [table1].[name] = 'Aaron') AND [table6].[author_id] = [table1].[id])";
 
-            await TestNestedFilterWithinNestedFilter(existsPredicate);
+            await TestNestedFilterWithinNestedFilter(existsPredicate, roleName, expectsError, errorMsgFragment: errorMessageFragment);
         }
 
         /// <summary>
         /// Tests nested filter and an AND clause.
+        /// and: [
+        /// {entityOne: { fieldName: { eq: "Value" }}}
+        /// {entityTwo: { fieldName: { eq: "Value" }}}
+        /// ]
+        /// - The TestNestedFilter_* roles demonstrate how permissions can be specifically applied to the first listed entity in the and operator, e.g. entityOne
+        /// - The TestNestedFilterChained_* roles demonstrate how permissions can be specifically applied to the second listed entity in the and operator, e.g. entityTwo
         /// </summary>
-        [TestMethod]
-        public async Task TestNestedFilterWithAnd()
+        [DataTestMethod]
+        [DataRow("Authenticated", false, "", DisplayName = "No nested filter AuthZ error")]
+        [DataRow("TestNestedFilter_ColumnForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_FIELD_AUTHZ_FAILURE, DisplayName = "Excluded column in nested filter entity, AuthZ failure")]
+        [DataRow("TestNestedFilter_EntityReadForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_ENTITY_AUTHZ_FAILURE, DisplayName = "Nested filter entity read access forbidden, AuthZ failure")]
+        [DataRow("TestNestedFilterChained_ColumnForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_FIELD_AUTHZ_FAILURE, DisplayName = "Excluded column in nested filter chained entity, AuthZ failure")]
+        [DataRow("TestNestedFilterChained_EntityReadForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_ENTITY_AUTHZ_FAILURE, DisplayName = "Nested filter chained entity read access forbidden, AuthZ failure")]
+        public async Task TestNestedFilterWithAnd(string roleName, bool expectsError, string errorMessageFragment)
         {
             string defaultSchema = GetPreIndentDefaultSchema();
 
@@ -161,14 +175,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                                     WHERE [table4].[name] = 'Small Town Publisher'
                                     AND [table0].[publisher_id] = [table4].[id])";
 
-            await TestNestedFilterWithAnd(existsPredicate);
+            await TestNestedFilterWithAnd(existsPredicate, roleName, expectsError, errorMsgFragment: errorMessageFragment);
         }
 
         /// <summary>
         /// Tests nested filter alongwith an OR clause.
+        /// or: [
+        /// {entityOne: { fieldName: { eq: "Value" }}}
+        /// {entityTwo: { fieldName: { eq: "Value" }}}
+        /// ]
+        /// - The TestNestedFilter_* roles demonstrate how permissions can be specifically applied to the first listed entity in the or operator, e.g. entityOne
+        /// - The TestNestedFilterChained_* roles demonstrate how permissions can be specifically applied to the second listed entity in the or operator, e.g. entityTwo
         /// </summary>
-        [TestMethod]
-        public async Task TestNestedFilterWithOr()
+        [DataTestMethod]
+        [DataRow("Authenticated", false, "", DisplayName = "No nested filter AuthZ error")]
+        [DataRow("TestNestedFilter_ColumnForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_FIELD_AUTHZ_FAILURE, DisplayName = "Excluded column in nested filter entity, AuthZ failure")]
+        [DataRow("TestNestedFilter_EntityReadForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_ENTITY_AUTHZ_FAILURE, DisplayName = "Nested filter entity read access forbidden, AuthZ failure")]
+        [DataRow("TestNestedFilterChained_ColumnForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_FIELD_AUTHZ_FAILURE, DisplayName = "Excluded column in nested filter chained entity, AuthZ failure")]
+        [DataRow("TestNestedFilterChained_EntityReadForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_ENTITY_AUTHZ_FAILURE, DisplayName = "Nested filter chained entity read access forbidden, AuthZ failure")]
+        public async Task TestNestedFilterWithOr(string roleName, bool expectsError, string errorMessageFragment)
         {
             string defaultSchema = GetPreIndentDefaultSchema();
 
@@ -182,7 +207,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                            WHERE [table3].[name] = 'Aniruddh'
                            AND [table5].[author_id] = [table3].[id])";
 
-            await TestNestedFilterWithOr(existsPredicate);
+            await TestNestedFilterWithOr(existsPredicate, roleName, expectsError, errorMsgFragment: errorMessageFragment);
         }
 
         /// <summary>

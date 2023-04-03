@@ -115,7 +115,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                                        AND table4.book_id = table2.id)
                                        AND table1.name = 'Aaron') AND table6.author_id = table1.id)";
 
-            await TestNestedFilterWithinNestedFilter(existsPredicate);
+            await TestNestedFilterWithinNestedFilter(existsPredicate, roleName: "authenticated");
         }
 
         /// <summary>
@@ -136,7 +136,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                                     WHERE table4.name = 'Small Town Publisher'
                                     AND table0.publisher_id = table4.id)";
 
-            await TestNestedFilterWithAnd(existsPredicate);
+            await TestNestedFilterWithAnd(existsPredicate, roleName: "authenticated");
         }
 
         /// <summary>
@@ -157,7 +157,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                            WHERE table3.name = 'Aniruddh'
                            AND table5.author_id = table3.id)";
 
-            await TestNestedFilterWithOr(existsPredicate);
+            await TestNestedFilterWithOr(existsPredicate, roleName: "authenticated");
         }
 
         [TestMethod]

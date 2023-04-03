@@ -895,14 +895,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         /// Tests nested filter having another nested filter.
         /// </summary>
         [TestMethod]
-        public async Task TestNestedFilterWithinNestedFilter(string existsPredicate)
+        public async Task TestNestedFilterWithinNestedFilter(string existsPredicate, string roleName, bool expectsError = false, string errorMsgFragment = "")
         {
-            string graphQLQueryName = "books";
+            string graphQLQueryName = "booksNF";
 
             // Gets all the books written by Aaron
             // only if the title of one of his books contains 'Awesome'.
             string gqlQuery = @"{
-                books (" + QueryBuilder.FILTER_FIELD_NAME +
+                booksNF (" + QueryBuilder.FILTER_FIELD_NAME +
                     @": { authors: {
                              books: { title: { contains: ""Awesome"" }}
                              name: { eq: ""Aaron"" }
@@ -923,29 +923,35 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             JsonElement actual = await ExecuteGraphQLRequestAsync(
                 gqlQuery,
                 graphQLQueryName,
-                isAuthenticated: true);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+                isAuthenticated: true,
+                clientRoleHeader: roleName,
+                expectsError: expectsError);
+
+            if (expectsError)
+            {
+                SqlTestHelper.TestForErrorInGraphQLResponse(actual.ToString(), message: errorMsgFragment);
+            }
+            else
+            {
+                string expected = await GetDatabaseResultAsync(dbQuery);
+                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+            }
         }
 
         /// <summary>
         /// Tests nested filter and an AND clause.
         /// </summary>
         [TestMethod]
-        public async Task TestNestedFilterWithAnd(string existsPredicate)
+        public async Task TestNestedFilterWithAnd(string existsPredicate, string roleName, bool expectsError = false, string errorMsgFragment = "")
         {
-            string graphQLQueryName = "books";
+            string graphQLQueryName = "booksNF";
 
             // Gets all the books written by Aniruddh and the publisher is 'Small Town Publisher'.
             string gqlQuery = @"{
-                books (" + QueryBuilder.FILTER_FIELD_NAME +
-                    @": { authors:  {
-                          name: { eq: ""Aniruddh""}
-                          }
-                      and: {
-                       publishers: { name: { eq: ""Small Town Publisher"" } }
-                       }
-                    })
+                booksNF (" + QueryBuilder.FILTER_FIELD_NAME +
+                    @": { publishers: { name: { eq: ""Small Town Publisher"" } }
+                      and: { authors: {name: { eq: ""Aniruddh"" } }
+                    }})
                     {
                       items {
                         title
@@ -962,22 +968,32 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             JsonElement actual = await ExecuteGraphQLRequestAsync(
                 gqlQuery,
                 graphQLQueryName,
-                isAuthenticated: true);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+                isAuthenticated: true,
+                clientRoleHeader: roleName,
+                expectsError: expectsError);
+
+            if (expectsError)
+            {
+                SqlTestHelper.TestForErrorInGraphQLResponse(actual.ToString(), message: errorMsgFragment);
+            }
+            else
+            {
+                string expected = await GetDatabaseResultAsync(dbQuery);
+                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+            }
         }
 
         /// <summary>
         /// Tests nested filter alongwith an OR clause.
         /// </summary>
         [TestMethod]
-        public async Task TestNestedFilterWithOr(string existsPredicate)
+        public async Task TestNestedFilterWithOr(string existsPredicate, string roleName, bool expectsError = false, string errorMsgFragment = "")
         {
-            string graphQLQueryName = "books";
+            string graphQLQueryName = "booksNF";
 
             // Gets all the books written by Aniruddh OR if their publisher is 'TBD Publishing One'.
             string gqlQuery = @"{
-                books (" + QueryBuilder.FILTER_FIELD_NAME +
+                booksNF (" + QueryBuilder.FILTER_FIELD_NAME +
                     @": { or: [{
                         publishers: { name: { eq: ""TBD Publishing One"" } } }
                         { authors : {
@@ -1000,9 +1016,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             JsonElement actual = await ExecuteGraphQLRequestAsync(
                 gqlQuery,
                 graphQLQueryName,
-                isAuthenticated: true);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+                isAuthenticated: true,
+                clientRoleHeader: roleName,
+                expectsError: expectsError);
+
+            if (expectsError)
+            {
+                SqlTestHelper.TestForErrorInGraphQLResponse(actual.ToString(), message: errorMsgFragment);
+            }
+            else
+            {
+                string expected = await GetDatabaseResultAsync(dbQuery);
+                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+            }
         }
 
         #endregion

@@ -5,7 +5,7 @@
     "options": {
       "set-session-context": true
     },
-    "connection-string": "Server=SEANLSURFACEB2;Database=DataGatewayFeatureDev;Integrated Security=True;trustServerCertificate=true;Persist Security Info=False;MultipleActiveResultSets=False;Connection Timeout=5;"
+    "connection-string": "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=sa;Password=REPLACEME;MultipleActiveResultSets=False;Connection Timeout=5;"
   },
   "runtime": {
     "rest": {
@@ -1620,6 +1620,154 @@
         "bkname": "name"
       },
       "rest": true
+    },
+    "BookNF": {
+      "source": "books",
+      "permissions": [
+        {
+          "role": "authenticated",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        },
+        {
+          "role": "TestNestedFilter_EntityReadForbidden",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "TestNestedFilter_ColumnForbidden",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "TestNestedFilterChained_EntityReadForbidden",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "TestNestedFilterChained_ColumnForbidden",
+          "actions": [ "read" ]
+        }
+      ],
+      "relationships": {
+        "publishers": {
+          "cardinality": "one",
+          "target.entity": "PublisherNF"
+        },
+        "authors": {
+          "cardinality": "many",
+          "target.entity": "AuthorNF",
+          "linking.object": "book_author_link",
+          "linking.source.fields": [
+            "book_id"
+          ],
+          "linking.target.fields": [
+            "author_id"
+          ]
+        }
+      },
+      "mappings": {
+        "id": "id",
+        "title": "title"
+      },
+      "graphql": {
+        "type": {
+          "singular": "bookNF",
+          "plural": "booksNF"
+        }
+      }
+    },
+    "AuthorNF": {
+      "source": "authors",
+      "permissions": [
+        {
+          "role": "authenticated",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        },
+        {
+          "role": "TestNestedFilter_EntityReadForbidden",
+          "actions": [ "create" ]
+        },
+        {
+          "role": "TestNestedFilter_ColumnForbidden",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [ "name" ]
+              }
+            }
+          ]
+        },
+        {
+          "role": "TestNestedFilterChained_EntityReadForbidden",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "TestNestedFilterChained_ColumnForbidden",
+          "actions": [ "read" ]
+        }
+      ],
+      "relationships": {
+        "books": {
+          "cardinality": "many",
+          "target.entity": "BookNF",
+          "linking.object": "book_author_link"
+        }
+      },
+      "rest": true,
+      "graphql": true
+    },
+    "PublisherNF": {
+      "source": "publishers",
+      "permissions": [
+        {
+          "role": "authenticated",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        },
+        {
+          "role": "TestNestedFilter_EntityReadForbidden",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "TestNestedFilter_ColumnForbidden",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "TestNestedFilterChained_EntityReadForbidden",
+          "actions": [ "create" ]
+        },
+        {
+          "role": "TestNestedFilterChained_ColumnForbidden",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [ "name" ]
+              }
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "booksNF": {
+          "cardinality": "many",
+          "target.entity": "BookNF"
+        }
+      },
+      "rest": true,
+      "graphql": true
     }
   }
 }

@@ -1472,7 +1472,7 @@ query {
             DatabaseType dbType,
             string testEnvironment)
         {
-            RuntimeConfig configuration = ConfigurationTests.InitBasicRuntimeConfigWithNoEntity(dbType, testEnvironment);
+            RuntimeConfig configuration = SqlTestHelper.InitBasicRuntimeConfigWithNoEntity(dbType, testEnvironment);
 
             Entity clubEntity = new(
                 Source: JsonSerializer.SerializeToElement("clubs"),

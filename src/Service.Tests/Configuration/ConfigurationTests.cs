@@ -1605,36 +1605,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// Instantiate basic runtime config with custom global settings.
-        /// </summary>
-        /// <returns></returns>
-        public static RuntimeConfig InitBasicRuntimeConfigWithNoEntity(
-            DatabaseType dbType = DatabaseType.mssql,
-            string testCategory = TestCategory.MSSQL)
-        {
-            Dictionary<GlobalSettingsType, object> settings = new()
-            {
-                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){ }) },
-                { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings(){ }) }
-            };
-
-            DataSource dataSource = new(dbType)
-            {
-                ConnectionString = GetConnectionStringFromEnvironmentConfig(environment: testCategory)
-            };
-
-            RuntimeConfig runtimeConfig = new(
-                Schema: "IntegrationTestMinimalSchema",
-                DataSource: dataSource,
-                RuntimeSettings: settings,
-                Entities: new Dictionary<string, Entity>()
-                );
-
-            runtimeConfig.DetermineGlobalSettings();
-            return runtimeConfig;
-        }
-
-        /// <summary>
         /// Gets PermissionSetting object allowed to perform all actions.
         /// </summary>
         /// <param name="roleName">Name of role to assign to permission</param>

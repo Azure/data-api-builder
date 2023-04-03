@@ -15,6 +15,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Data.SqlClient;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json.Linq;
+using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationTests;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 {
@@ -94,6 +95,36 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 Console.WriteLine(response);
                 Assert.IsTrue(response.Contains(path), $"Path \"{path}\" not found in error");
             }
+        }
+
+        /// <summary>
+        /// Instantiate basic runtime config with custom global settings.
+        /// </summary>
+        /// <returns></returns>
+        public static RuntimeConfig InitBasicRuntimeConfigWithNoEntity(
+            DatabaseType dbType = DatabaseType.mssql,
+            string testCategory = TestCategory.MSSQL)
+        {
+            Dictionary<GlobalSettingsType, object> settings = new()
+            {
+                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){ }) },
+                { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings(){ }) }
+            };
+
+            DataSource dataSource = new(dbType)
+            {
+                ConnectionString = GetConnectionStringFromEnvironmentConfig(environment: testCategory)
+            };
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "IntegrationTestMinimalSchema",
+                DataSource: dataSource,
+                RuntimeSettings: settings,
+                Entities: new Dictionary<string, Entity>()
+                );
+
+            runtimeConfig.DetermineGlobalSettings();
+            return runtimeConfig;
         }
 
         /// <summary>

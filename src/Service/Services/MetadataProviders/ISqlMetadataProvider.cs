@@ -159,5 +159,11 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Retrieves the default schema name for this metadata provider.
         /// </summary>
         public string GetDefaultSchemaName();
+
+        /// <summary>
+        /// Returns true when the engine is running in Development mode. When running in Production
+        /// mode, it returns false.
+        /// </summary>
+        public bool IsDevelopmentMode();
     }
 }

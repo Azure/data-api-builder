@@ -237,5 +237,30 @@ namespace Azure.DataApiBuilder.Service.Tests
             },
             ""entities"": {}" +
           "}";
+
+        /// <summary>
+        /// Utility method that reads the config file for a given database type and constructs a
+        /// new config file with changes just in the host mode section.
+        /// </summary>
+        /// <param name="configFileName">Name of the new config file to be constructed</param>
+        /// <param name="hostModeType">HostMode for the engine</param>
+        /// <param name="databaseType">Database type</param>
+        public static void ConstructNewConfigWithSpecifiedHostMode(string configFileName, HostModeType hostModeType, string databaseType)
+        {
+            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(databaseType);
+            RuntimeConfig config = configProvider.GetRuntimeConfiguration();
+            HostGlobalSettings customHostGlobalSettings = config.HostGlobalSettings with { Mode = hostModeType };
+            JsonElement serializedCustomHostGlobalSettings =
+                JsonSerializer.SerializeToElement(customHostGlobalSettings, RuntimeConfig.SerializerOptions);
+            Dictionary<GlobalSettingsType, object> customRuntimeSettings = new(config.RuntimeSettings);
+            customRuntimeSettings.Remove(GlobalSettingsType.Host);
+            customRuntimeSettings.Add(GlobalSettingsType.Host, serializedCustomHostGlobalSettings);
+            RuntimeConfig configWithCustomHostMode =
+                config with { RuntimeSettings = customRuntimeSettings };
+            File.WriteAllText(
+                configFileName,
+                JsonSerializer.Serialize(configWithCustomHostMode, RuntimeConfig.SerializerOptions));
+
+        }
     }
 }

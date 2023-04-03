@@ -330,30 +330,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return outputColumns;
         }
 
-        ///<summary>
-        /// Gets the value of the parameter cast as the system type
-        /// of the column this parameter is associated with
-        ///</summary>
-        /// <exception cref="ArgumentException">columnName is not a valid column of table or param
-        /// does not have a valid value type</exception>
-        protected object GetParamAsColumnSystemType(string param, string columnName)
-        {
-            Type systemType = GetColumnSystemType(columnName);
-            try
-            {
-                return ParseParamAsSystemType(param, systemType);
-            }
-            catch (Exception e) when (e is FormatException || e is ArgumentNullException || e is OverflowException)
-            {
-                throw new DataApiBuilderException(
-                    message: $"Parameter \"{param}\" cannot be resolved as column \"{columnName}\" " +
-                        $"with type \"{systemType.Name}\".",
-                    statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
-                    innerException: e);
-            }
-        }
-
         /// <summary>
         /// Tries to parse the string parameter to the given system type
         /// Useful for inferring parameter types for columns or procedure parameters
@@ -508,5 +484,62 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             return filterClause.Expression.Accept<string>(visitor);
         }
+
+        /// <summary>
+        /// Gets the value of the parameter cast as the system type
+        /// </summary>
+        /// <param name="fieldValue">Field value as a string</param>
+        /// <param name="fieldName">Field name whose value is being converted to the specified system type. This is used only for constructing the error messages incase of conversion failures</param>
+        /// <param name="systemType">System type to which the parameter value is parsed to</param>
+        /// <returns>The parameter value parsed to the specified system type</returns>
+        /// <exception cref="DataApiBuilderException">Raised when the conversion of parameter value to the specified system type fails. The error message returned will be different in development
+        /// and production modes. In production mode, the error message returned will be generic so as to not reveal information about the database object backing the entity</exception>
+        protected object GetParamAsSystemType(string fieldValue, string fieldName, Type systemType)
+        {
+            try
+            {
+                return ParseParamAsSystemType(fieldValue, systemType);
+            }
+            catch (Exception e) when (e is FormatException || e is ArgumentNullException || e is OverflowException)
+            {
+
+                string errorMessage;
+                SourceType sourceTypeOfDbObject = MetadataProvider.EntityToDatabaseObject[EntityName].SourceType;
+                if (MetadataProvider.IsDevelopmentMode())
+                {
+                    if (sourceTypeOfDbObject is SourceType.StoredProcedure)
+                    {
+                        errorMessage = $@"Parameter ""{fieldValue}"" cannot be resolved as stored procedure parameter ""{fieldName}"" " +
+                                $@"with type ""{systemType.Name}"".";
+                    }
+                    else
+                    {
+                        errorMessage = $"Parameter \"{fieldValue}\" cannot be resolved as column \"{fieldName}\" " +
+                                $"with type \"{systemType.Name}\".";
+                    }
+                }
+                else
+                {
+                    string fieldNameToBeDisplayedInErrorMessage = fieldName;
+                    if (sourceTypeOfDbObject is SourceType.Table || sourceTypeOfDbObject is SourceType.View)
+                    {
+                        if (MetadataProvider.TryGetExposedColumnName(EntityName, fieldName, out string? exposedName))
+                        {
+                            fieldNameToBeDisplayedInErrorMessage = exposedName!;
+                        }
+                    }
+
+                    errorMessage = $"Invalid value provided for field: {fieldNameToBeDisplayedInErrorMessage}";
+                }
+
+                throw new DataApiBuilderException(
+                    message: errorMessage,
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                    innerException: e);
+
+            }
+        }
+
     }
 }

@@ -1,12 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
 using System.Collections.Generic;
-using System.Net;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
@@ -90,28 +87,17 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             InsertColumns.Add(columnName);
             string paramName;
 
-            try
+            if (value is not null)
             {
-                if (value != null)
-                {
-                    paramName = MakeParamWithValue(
-                        GetParamAsColumnSystemType(value.ToString()!, columnName));
-                }
-                else
-                {
-                    paramName = MakeParamWithValue(null);
-                }
+                paramName = MakeParamWithValue(
+                    GetParamAsSystemType(value.ToString()!, columnName, GetColumnSystemType(columnName)));
+            }
+            else
+            {
+                paramName = MakeParamWithValue(value: null);
+            }
 
-                Values.Add($"{paramName}");
-            }
-            catch (ArgumentException ex)
-            {
-                throw new DataApiBuilderException(
-                    message: ex.Message,
-                    statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
-                    innerException: ex);
-            }
+            Values.Add($"{paramName}");
         }
 
         /// <summary>

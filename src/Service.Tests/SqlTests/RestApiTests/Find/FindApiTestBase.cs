@@ -1732,7 +1732,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: string.Empty,
                 exceptionExpected: true,
-                expectedErrorMessage: "The GET request is invalid since it contains a request body",
+                expectedErrorMessage: "The GET request is invalid since it contains a non-empty request body",
                 expectedStatusCode: HttpStatusCode.BadRequest
                 );
         }

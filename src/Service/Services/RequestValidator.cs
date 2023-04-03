@@ -544,7 +544,7 @@ namespace Azure.DataApiBuilder.Service.Services
             if (operationType is Config.Operation.Read && !string.IsNullOrEmpty(requestBody))
             {
                 throw new DataApiBuilderException(
-                    message: "The GET request is invalid since it contains a request body",
+                    message: "The GET request is invalid since it contains a non-empty request body",
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }

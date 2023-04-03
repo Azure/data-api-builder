@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
 using System.Collections.Generic;
 using System.Net;
 using Azure.DataApiBuilder.Auth;
@@ -77,6 +76,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
                 PopulateColumnsAndParams(backingColumn!, param.Value);
             }
+
+            if (FieldsReferencedInDbPolicyForCreateAction.Count > 0)
+            {
+                // This indicates that one or more fields referenced in the database policy are not a part of the insert statement.
+                throw new DataApiBuilderException(
+                    message: "One or more fields referenced by the database policy are not present in the request body.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
         }
 
         /// <summary>
@@ -88,30 +96,23 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private void PopulateColumnsAndParams(string columnName, object? value)
         {
             InsertColumns.Add(columnName);
+
+            // If the column is referenced in the database policy, we remove it from the set.
+            FieldsReferencedInDbPolicyForCreateAction.Remove(columnName);
+
             string paramName;
 
-            try
+            if (value is not null)
             {
-                if (value != null)
-                {
-                    paramName = MakeParamWithValue(
-                        GetParamAsColumnSystemType(value.ToString()!, columnName));
-                }
-                else
-                {
-                    paramName = MakeParamWithValue(null);
-                }
+                paramName = MakeParamWithValue(
+                    GetParamAsSystemType(value.ToString()!, columnName, GetColumnSystemType(columnName)));
+            }
+            else
+            {
+                paramName = MakeParamWithValue(value: null);
+            }
 
-                Values.Add($"{paramName}");
-            }
-            catch (ArgumentException ex)
-            {
-                throw new DataApiBuilderException(
-                    message: ex.Message,
-                    statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
-                    innerException: ex);
-            }
+            Values.Add($"{paramName}");
         }
 
         /// <summary>

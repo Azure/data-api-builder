@@ -78,22 +78,27 @@ The configuration file has a `$schema` property as the first property in the con
 "$schema": "..."
 ```
 
-From version 0.4.11-alpha schema is available at:
+From version 0.3.7-alpha schema is available at:
 
 ```txt
-https://dataapibuilder.azureedge.net/schemas/<VERSION>-<suffix>/dab.draft.schema.json
+https://github.com/Azure/data-api-builder/releases/download/<VERSION>-<suffix>/dab.draft.schema.json
 ```
 
 make sure to replace the **VERSION-suffix** placeholder with the version you want to use, for example:
 
 ```txt
-https://dataapibuilder.azureedge.net/schemas/v0.4.11-alpha/dab.draft.schema.json
+https://github.com/Azure/data-api-builder/releases/download/v0.3.7-alpha/dab.draft.schema.json
+```
+
+If there are no suffix, then simply ignore it, for example:
+```txt
+https://github.com/Azure/data-api-builder/releases/download/v0.5.35/dab.draft.schema.json
 ```
 
 the **latest** version of the schema is always available at
 
 ```txt
-https://dataapibuilder.azureedge.net/schemas/latest/dab.draft.schema.json 
+https://github.com/Azure/data-api-builder/releases/latest/download/dab.draft.schema.json
 ```
 
 ### Data Source
@@ -290,10 +295,10 @@ a more complete option is to specify the full description of the database if tha
 
 where
 
-+ `object` is the name of the database object to be used
-+ `type` describes if the object is a table, a view or a stored procedure
-+ `key-fields` is a list of columns to be used to uniquely identify an item. Needed if type is `view` or if type is `table` and there is no Primary Key defined on it
-+ `parameters` is optional and can be used if type is `stored-procedure`. The key-value pairs specified in this object will be used to supply values to stored procedures parameters, in case those are not specified in the HTTP request
++ `object` is the name of the database object to be used.
++ `type` describes if the object is a table, a view or a stored procedure.
++ `key-fields` is a list of columns to be used to uniquely identify an item. Needed if type is `view` or if type is `table` and there is no Primary Key defined on it.
++ `parameters` is optional and can be used if type is `stored-procedure`. The key-value pairs specified in this object will be used to supply values to stored procedures parameters, in case those are not specified in the HTTP request.
 
 More details on how to use Views and Stored Procedure in the related documentation [Views and Stored Procedures](./views-and-stored-procedures.md)
 
@@ -592,7 +597,7 @@ This is a sample config file to give an idea of how the json config consumed by 
 
 ```json
 {
-  "$schema": "https://dataapibuilder.azureedge.net/schemas/v0.5.0-beta/dab.draft.schema.json",
+  "$schema": "https://github.com/Azure/data-api-builder/releases/download/v{dab-version}/dab.draft.schema.json",
   "data-source": {
     "database-type": "mssql",
     "connection-string": "Server=localhost;Database=PlaygroundDB;User ID=PlaygroundUser;Password=ReplaceMe;TrustServerCertificate=false;Encrypt=True"

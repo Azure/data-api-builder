@@ -18,7 +18,7 @@ Details on how to install the latest version are here: [Installing DAB CLI](./ge
 JSON Schema has been published here:
 
 ```text
-https://dataapibuilder.azureedge.net/schemas/v0.4.11-alpha/dab.draft.schema.json
+https://github.com/Azure/data-api-builder/releases/download/v0.4.11-alpha/dab.draft.schema.json
 ```
 
 This will give you intellisense if you are using an IDE, like VS Code, that supports JSON Schemas. Take a look at `basic-empty-dab-config.json` in the `samples` folder, to have a starting point when manually creating the `dab-config.json` file.
@@ -31,7 +31,7 @@ The `data-source` section in the configuration file has been updated to be consi
 
 ```json
 {
-  "$schema": "https://dataapibuilder.azureedge.net/schemas/v0.4.11-alpha/dab.draft.schema.json",
+  "$schema": "https://github.com/Azure/data-api-builder/releases/download/v0.4.11-alpha/dab.draft.schema.json",
   "data-source": {
     "database-type": "cosmosdb_nosql",
     "options": {

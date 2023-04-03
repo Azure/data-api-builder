@@ -1,19 +1,22 @@
 {
-  "$schema": "https://dataapibuilder.azureedge.net/schemas/v0.4.11-alpha/dab.draft.schema.json",
+  "$schema": "../../schemas/dab.draft.schema.json",
   "data-source": {
     "database-type": "cosmosdb_nosql",
-    "connection-string": "Connection String",
     "options": {
       "database": "graphqldb",
       "container": "planet",
       "schema": "schema.gql"
-    }
+    },
+    "connection-string": "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R\u002Bob0N8A7Cgv30VRDJIWEHLM\u002B4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw=="
   },
   "runtime": {
     "rest": {
+      "enabled": true,
       "path": "/api"
     },
     "graphql": {
+      "allow-introspection": true,
+      "enabled": true,
       "path": "/graphql"
     },
     "host": {
@@ -31,11 +34,7 @@
   },
   "entities": {
     "Planet": {
-      "source": {
-        "type": "table",
-        "object": "graphqldb.planet"
-      },
-      "rest": false,
+      "source": "graphqldb.planet",
       "permissions": [
         {
           "role": "anonymous",
@@ -65,7 +64,6 @@
     },
     "Character": {
       "source": "graphqldb.character",
-      "rest": false,
       "permissions": [
         {
           "role": "authenticated",
@@ -86,7 +84,6 @@
     },
     "StarAlias": {
       "source": "graphqldb.star",
-      "rest": false,
       "permissions": [
         {
           "role": "anonymous",
@@ -113,35 +110,6 @@
           "plural": "Stars"
         }
       }
-    },
-    "Moon": {
-      "source": {
-        "type": "table",
-        "object": "graphqldb.moon",
-        "key-fields": []
-      },
-      "rest": false,
-      "graphql": true,
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [
-            "create",
-            "read",
-            "update",
-            "delete"
-          ]
-        },
-        {
-          "role": "authenticated",
-          "actions": [
-            "create",
-            "read",
-            "update",
-            "delete"
-          ]
-        }
-      ]
     }
   }
 }

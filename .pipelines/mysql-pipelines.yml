@@ -13,9 +13,6 @@ trigger:
     - main
     - gh-readonly-queue/main
     - release/*
-  paths:
-    exclude:
-    - docs
 
 jobs:
 - job: linux

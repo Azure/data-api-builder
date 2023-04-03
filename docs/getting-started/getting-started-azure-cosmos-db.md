@@ -12,7 +12,7 @@ Create the database container needed to represent Books. There are different way
 
 Read more about [choosing partition key](https://docs.microsoft.com/en-us/azure/cosmos-db/partitioning-overview#choose-partitionkey) and [data modeling](https://docs.microsoft.com/en-us/azure/cosmos-db/sql/modeling-data)
 
-Once the container is created, we can import the sample data from `books.json` which is placed in the ['azure-cosmos-db'](../samples/getting-started/azure-cosmos-db) folder to the book collection by using the add new item option (Make sure you add one by one item) in the Azure Data Explorer.
+Once the container is created, we can import the sample data from `books.json` which is placed in ['azure-cosmos-db'](../../samples/getting-started/azure-cosmos-db/books.json) to the book collection by using the add new item option (Make sure you add one by one item) in the Azure Data Explorer.
 
 ![Cosmos DB Add New Document](../media/cosmos-insert-new.png)
 
@@ -41,7 +41,7 @@ type Author {
 
 ## Get the Cosmos DB Account connection string
 
-You can obtain the connection string by navigating to your Azure Cosmos DB account page's key blade, and select Primary connection string. Copy the value to use in the Data API Builder.
+You can obtain the connection string by navigating to your Azure Cosmos DB account page's key blade, and select Primary connection string. Copy the value to use in Data API builder.
 
 ![Cosmos DB connection string](../media/cosmos-connection.png)
 
@@ -79,9 +79,6 @@ The command will generate a config file called `dab-config.json` looking like th
     }
   },
   "runtime": {
-    "rest": {
-      "path": "/api"
-    },
     "graphql": {
       "allow-introspection": true,
       "path": "/graphql"
@@ -125,8 +122,6 @@ or by adding the `Book` entity manually to the configuration file under entities
 ```json
     "Book": {
       "source": "books",
-      "rest": false,
-      "graphql": true,
       "permissions": [
         {
           "role": "anonymous",
@@ -148,8 +143,6 @@ Once you have added the `Book` entity, the `entities` object of the configuratio
  "entities": {
     "Book": {
       "source": "books",
-      "rest": false,
-      "graphql": true,
       "permissions": [
         {
           "role": "anonymous",
@@ -185,7 +178,7 @@ info: Microsoft.Hosting.Lifetime[0]
       Application started. Press Ctrl+C to shut down.
 ```
 
-you'll be good to go, Data API Builder is up and running, ready to serve your requests.
+you'll be good to go, Data API builder is up and running, ready to serve your requests.
 
 ## Query the endpoints
 
@@ -193,7 +186,7 @@ Now that the Data API builder engine is running, you can use your favorite REST 
 
 ### REST Endpoint
 
-Unlike other databases, Data API Builder for Azure Cosmos DB does not support generating REST endpoints because there is already a[REST API endpoint](https://learn.microsoft.com/rest/api/cosmos-db/) capability built-in to the Azure Cosmos DB service.
+Unlike other databases, Data API Builder for Azure Cosmos DB does not support generating REST endpoints because there is already a [REST API endpoint](https://learn.microsoft.com/rest/api/cosmos-db/) capability built-in to the Azure Cosmos DB service.
 
 ### GraphQL endpoint
 
@@ -220,8 +213,7 @@ will return the first five books ordered by title in descending order.
 
 ## GraphQL operations on entity relationships
 
-With your GraphQL endpoint operational, you probably want to take advantage of GraphQL's ability to handle complex requests.For example, you may want to get all the Books in your library along with the Authors they have written. In order to achieve that, you need to let Data API Builder know that you want that relationship to be available to be used in queries. We have defined the
-data models in such a way that they can be queried at once.
+With your GraphQL endpoint operational, you probably want to take advantage of GraphQL's ability to handle complex requests. For example, you may want to get all the Books in your library along with the Authors who have written them. We have defined the data models in such a way that they can be queried at once.
 
 Using GraphQL you can now execute queries like:
 

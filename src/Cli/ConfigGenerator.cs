@@ -82,6 +82,12 @@ namespace Cli
                         return false;
                     }
 
+                    if (!File.Exists(graphQLSchemaPath))
+                    {
+                        _logger.LogError($"GraphQL Schema File: {graphQLSchemaPath} not found.");
+                        return false;
+                    }
+
                     // If the option --rest.path is specified for cosmosdb_nosql, log a warning because
                     // rest is not supported for cosmosdb_nosql yet.
                     if (!GlobalSettings.REST_DEFAULT_PATH.Equals(restPath))
@@ -121,6 +127,17 @@ namespace Cli
                 return false;
             }
 
+            if (!IsApiPathValid(restPath, ApiType.REST) || !IsApiPathValid(options.GraphQLPath, ApiType.GraphQL))
+            {
+                return false;
+            }
+
+            if (options.RestDisabled && options.GraphQLDisabled)
+            {
+                _logger.LogError($"Both Rest and GraphQL cannot be disabled together.");
+                return false;
+            }
+
             RuntimeConfig runtimeConfig = new(
                 Schema: dabSchemaLink,
                 DataSource: dataSource,
@@ -130,7 +147,10 @@ namespace Cli
                     options.AuthenticationProvider,
                     options.Audience,
                     options.Issuer,
-                    restPath),
+                    restPath,
+                    !options.RestDisabled,
+                    options.GraphQLPath,
+                    !options.GraphQLDisabled),
                 Entities: new Dictionary<string, Entity>());
 
             runtimeConfigJson = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());
@@ -763,12 +783,17 @@ namespace Cli
 
                 if (IsStoredProcedureConvertedToOtherTypes(entity, options) || IsEntityBeingConvertedToStoredProcedure(entity, options))
                 {
-                    _logger.LogWarning($"Stored procedures can be configured only with {Operation.Execute.ToString()} action whereas tables/views are configured with CRUD actions. Update the actions configured for all the roles for this entity.");
+                    _logger.LogWarning($"Stored procedures can be configured only with the {Operation.Execute.ToString()} action whereas," +
+                            " tables/views are configured with CRUD actions. Update the actions configured for all the roles for this entity.");
                 }
 
             }
 
-            if (!VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
+            // No need to validate parameter and key field usage when there are no changes to the source object defined in 'options'
+            if ((options.SourceType is not null
+                || (options.SourceParameters is not null && options.SourceParameters.Any())
+                || (options.SourceKeyFields is not null && options.SourceKeyFields.Any()))
+                && !VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
                     updatedSourceType,
                     options.SourceParameters,
                     options.SourceKeyFields))

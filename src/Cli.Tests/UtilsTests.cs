@@ -153,6 +153,20 @@ namespace Cli.Tests
         }
 
         /// <summary>
+        /// Test to verify that CLI is able to figure out if the api path prefix for rest/graphql contains invalid characters.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("/", ApiType.REST, true, DisplayName = "Only forward slash as api path")]
+        [DataRow("/$%^", ApiType.REST, false, DisplayName = "Api path containing only reserved characters.")]
+        [DataRow("/rest-api", ApiType.REST, true, DisplayName = "Valid api path")]
+        [DataRow("/graphql@api", ApiType.GraphQL, false, DisplayName = "Api path containing some reserved characters.")]
+        [DataRow("/api path", ApiType.REST, true, DisplayName = "Api path containing space.")]
+        public void TestApiPathIsWellFormed(string apiPath, ApiType apiType, bool expectSuccess)
+        {
+            Assert.AreEqual(expectSuccess, IsApiPathValid(apiPath, apiType));
+        }
+
+        /// <summary>
         /// Test to verify that both Audience and Issuer is mandatory when Authentication Provider is 
         /// neither EasyAuthType or Simulator. If Authentication Provider is either EasyAuth or Simulator
         /// audience and issuer are ignored.

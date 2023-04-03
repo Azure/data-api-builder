@@ -1,0 +1,1256 @@
+{
+  "$schema": "../../../schemas/dab.draft.schema.json",
+  "data-source": {
+    "database-type": "mysql",
+    "connection-string": "server=localhost;database=dab;Allow User Variables=true;uid=root;pwd=REPLACEME"
+  },
+  "runtime": {
+    "rest": {
+      "enabled": true,
+      "path": "/api"
+    },
+    "graphql": {
+      "allow-introspection": true,
+      "enabled": true,
+      "path": "/graphql"
+    },
+    "host": {
+      "mode": "development",
+      "cors": {
+        "origins": [
+          "http://localhost:5000"
+        ],
+        "allow-credentials": false
+      },
+      "authentication": {
+        "provider": "StaticWebApps"
+      }
+    }
+  },
+  "entities": {
+    "Publisher": {
+      "source": "publishers",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "read"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        },
+        {
+          "role": "policy_tester_01",
+          "actions": [
+            {
+              "action": "Read",
+              "policy": {
+                "database": "@item.id eq 1940"
+              },
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            {
+              "action": "Update",
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            "Create",
+            "Delete"
+          ]
+        },
+        {
+          "role": "policy_tester_02",
+          "actions": [
+            {
+              "action": "Read",
+              "policy": {
+                "database": "@item.id ne 1940"
+              },
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            {
+              "action": "Update",
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            "Create",
+            "Delete"
+          ]
+        },
+        {
+          "role": "policy_tester_03",
+          "actions": [
+            {
+              "action": "Read",
+              "policy": {
+                "database": "@item.id ne 1940"
+              },
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            {
+              "action": "Update",
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            "Create",
+            "Delete"
+          ]
+        },
+        {
+          "role": "policy_tester_04",
+          "actions": [
+            {
+              "action": "Read",
+              "policy": {
+                "database": "@item.id eq 1940"
+              },
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            {
+              "action": "Update",
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            "Create",
+            "Delete"
+          ]
+        },
+        {
+          "role": "policy_tester_06",
+          "actions": [
+            {
+              "action": "Read",
+              "policy": {
+                "database": "@item.id eq 1940"
+              },
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            {
+              "action": "Update",
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            "Create",
+            "Delete"
+          ]
+        },
+        {
+          "role": "database_policy_tester",
+          "actions": [
+            {
+              "action": "Update",
+              "policy": {
+                "database": "@item.id ne 1234"
+              }
+            },
+            "Create",
+            {
+              "action": "Read",
+              "policy": {
+                "database": "@item.id ne 1234 or @item.id gt 1940"
+              }
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "books": {
+          "cardinality": "many",
+          "target.entity": "Book"
+        }
+      },
+      "rest": true,
+      "graphql": true
+    },
+    "Stock": {
+      "source": "stocks",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "create",
+            "read",
+            "update"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        }
+      ],
+      "relationships": {
+        "stocks_price": {
+          "cardinality": "one",
+          "target.entity": "stocks_price"
+        }
+      },
+      "rest": {
+        "path": "/commodities"
+      },
+      "graphql": true
+    },
+    "Book": {
+      "source": "books",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        },
+        {
+          "role": "policy_tester_01",
+          "actions": [
+            {
+              "action": "Read",
+              "policy": {
+                "database": "@item.title eq \u0027Policy-Test-01\u0027"
+              },
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            {
+              "action": "Update",
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            "Create",
+            "Delete"
+          ]
+        },
+        {
+          "role": "policy_tester_02",
+          "actions": [
+            {
+              "action": "Read",
+              "policy": {
+                "database": "@item.title ne \u0027Policy-Test-01\u0027"
+              },
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            {
+              "action": "Update",
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            "Create",
+            "Delete"
+          ]
+        },
+        {
+          "role": "policy_tester_03",
+          "actions": [
+            {
+              "action": "Read",
+              "policy": {
+                "database": "@item.title eq \u0027Policy-Test-01\u0027"
+              },
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            {
+              "action": "Update",
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            "Create",
+            "Delete"
+          ]
+        },
+        {
+          "role": "policy_tester_04",
+          "actions": [
+            {
+              "action": "Read",
+              "policy": {
+                "database": "@item.title ne \u0027Policy-Test-01\u0027"
+              },
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            {
+              "action": "Update",
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            "Create",
+            "Delete"
+          ]
+        },
+        {
+          "role": "policy_tester_05",
+          "actions": [
+            {
+              "action": "Read",
+              "policy": {
+                "database": "@item.id ne 9"
+              },
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            {
+              "action": "Update",
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            "Create",
+            "Delete"
+          ]
+        },
+        {
+          "role": "policy_tester_06",
+          "actions": [
+            {
+              "action": "Read",
+              "policy": {
+                "database": "@item.id ne 10"
+              },
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            "Create",
+            "Delete",
+            {
+              "action": "Update",
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            }
+          ]
+        },
+        {
+          "role": "policy_tester_07",
+          "actions": [
+            {
+              "action": "Delete",
+              "policy": {
+                "database": "@item.id ne 9"
+              },
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            {
+              "action": "Read",
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            {
+              "action": "Update",
+              "policy": {
+                "database": "@item.id ne 9"
+              },
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            "Create"
+          ]
+        },
+        {
+          "role": "policy_tester_08",
+          "actions": [
+            {
+              "action": "Read",
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            {
+              "action": "Delete",
+              "policy": {
+                "database": "@item.id eq 9"
+              },
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            {
+              "action": "Update",
+              "policy": {
+                "database": "@item.id eq 9"
+              },
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            "Create"
+          ]
+        }
+      ],
+      "relationships": {
+        "publishers": {
+          "cardinality": "one",
+          "target.entity": "Publisher"
+        },
+        "websiteplacement": {
+          "cardinality": "one",
+          "target.entity": "BookWebsitePlacement"
+        },
+        "reviews": {
+          "cardinality": "many",
+          "target.entity": "Review"
+        },
+        "authors": {
+          "cardinality": "many",
+          "target.entity": "Author",
+          "linking.object": "book_author_link",
+          "linking.source.fields": [
+            "book_id"
+          ],
+          "linking.target.fields": [
+            "author_id"
+          ]
+        }
+      },
+      "mappings": {
+        "id": "id",
+        "title": "title"
+      },
+      "graphql": {
+        "type": {
+          "singular": "book",
+          "plural": "books"
+        }
+      }
+    },
+    "BookWebsitePlacement": {
+      "source": "book_website_placements",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "read"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "Delete",
+              "policy": {
+                "database": "@claims.userId eq @item.id"
+              },
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            "Create",
+            "Update"
+          ]
+        }
+      ],
+      "relationships": {
+        "books": {
+          "cardinality": "one",
+          "target.entity": "Book"
+        }
+      },
+      "rest": true,
+      "graphql": true
+    },
+    "Author": {
+      "source": "authors",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "read"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        }
+      ],
+      "relationships": {
+        "books": {
+          "cardinality": "many",
+          "target.entity": "Book",
+          "linking.object": "book_author_link"
+        }
+      },
+      "rest": true,
+      "graphql": true
+    },
+    "Review": {
+      "source": "reviews",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "create",
+            "read",
+            "update"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        }
+      ],
+      "relationships": {
+        "books": {
+          "cardinality": "one",
+          "target.entity": "Book"
+        }
+      },
+      "rest": true,
+      "graphql": {
+        "type": {
+          "singular": "review",
+          "plural": "reviews"
+        }
+      }
+    },
+    "Comic": {
+      "source": "comics",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "create",
+            "read",
+            "update"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        }
+      ],
+      "relationships": {
+        "myseries": {
+          "cardinality": "one",
+          "target.entity": "series"
+        }
+      },
+      "rest": true,
+      "graphql": true
+    },
+    "Broker": {
+      "source": "brokers",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "read"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "create",
+            "update",
+            "read",
+            "delete"
+          ]
+        }
+      ],
+      "graphql": false
+    },
+    "WebsiteUser": {
+      "source": "website_users",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "create",
+            "read",
+            "delete",
+            "update"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "create",
+            "read",
+            "delete",
+            "update"
+          ]
+        }
+      ],
+      "rest": false,
+      "graphql": {
+        "type": {
+          "singular": "websiteUser",
+          "plural": "websiteUsers"
+        }
+      }
+    },
+    "SupportedType": {
+      "source": "type_table",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "create",
+            "read",
+            "delete",
+            "update"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "create",
+            "read",
+            "delete",
+            "update"
+          ]
+        }
+      ],
+      "mappings": {
+        "id": "typeid"
+      }
+    },
+    "stocks_price": {
+      "source": "stocks_price",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "read"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "create",
+            "read",
+            "delete",
+            "update"
+          ]
+        }
+      ],
+      "rest": false
+    },
+    "Tree": {
+      "source": "trees",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        }
+      ],
+      "mappings": {
+        "species": "Scientific Name",
+        "region": "United State\u0027s Region"
+      },
+      "rest": true,
+      "graphql": false
+    },
+    "Shrub": {
+      "source": "trees",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        }
+      ],
+      "mappings": {
+        "species": "fancyName"
+      },
+      "rest": {
+        "path": "/plants"
+      }
+    },
+    "Fungus": {
+      "source": "fungi",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        },
+        {
+          "role": "policy_tester_01",
+          "actions": [
+            {
+              "action": "Read",
+              "policy": {
+                "database": "@item.region ne \u0027northeast\u0027"
+              },
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            }
+          ]
+        }
+      ],
+      "mappings": {
+        "spores": "hazards"
+      },
+      "rest": true,
+      "graphql": {
+        "type": {
+          "singular": "fungus",
+          "plural": "fungi"
+        }
+      }
+    },
+    "books_view_all": {
+      "source": {
+        "type": "view",
+        "object": "books_view_all"
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "*"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        }
+      ],
+      "rest": true,
+      "graphql": true
+    },
+    "books_view_with_mapping": {
+      "source": {
+        "type": "view",
+        "object": "books_view_with_mapping",
+        "key-fields": [
+          "id"
+        ]
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "*"
+          ]
+        }
+      ],
+      "mappings": {
+        "id": "book_id"
+      },
+      "rest": true,
+      "graphql": true
+    },
+    "stocks_view_selected": {
+      "source": {
+        "type": "view",
+        "object": "stocks_view_selected"
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "*"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        }
+      ],
+      "rest": true,
+      "graphql": true
+    },
+    "books_publishers_view_composite": {
+      "source": {
+        "type": "view",
+        "object": "books_publishers_view_composite"
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "*"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        }
+      ],
+      "rest": true,
+      "graphql": true
+    },
+    "books_publishers_view_composite_insertable": {
+      "source": {
+        "type": "view",
+        "object": "books_publishers_view_composite_insertable"
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "*"
+          ]
+        }
+      ],
+      "rest": true,
+      "graphql": true
+    },
+    "Empty": {
+      "source": "empty_table",
+      "permissions": [
+        {
+          "role": "authenticated",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        },
+        {
+          "role": "anonymous",
+          "actions": [
+            "read"
+          ]
+        }
+      ],
+      "rest": true
+    },
+    "Notebook": {
+      "source": "notebooks",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "Create",
+            "Update",
+            "Delete",
+            {
+              "action": "Read",
+              "policy": {
+                "database": "@item ne 1"
+              },
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            }
+          ]
+        }
+      ],
+      "rest": true,
+      "graphql": true
+    },
+    "Journal": {
+      "source": "journals",
+      "permissions": [
+        {
+          "role": "policy_tester_noupdate",
+          "actions": [
+            {
+              "action": "Read",
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            {
+              "action": "Update",
+              "policy": {
+                "database": "@item.id ne 1"
+              },
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            "Create",
+            "Delete"
+          ]
+        },
+        {
+          "role": "policy_tester_update_noread",
+          "actions": [
+            {
+              "action": "Delete",
+              "policy": {
+                "database": "@item.id eq 1"
+              },
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            {
+              "action": "Read",
+              "fields": {
+                "include": [],
+                "exclude": [
+                  "*"
+                ]
+              }
+            },
+            {
+              "action": "Update",
+              "policy": {
+                "database": "@item.id eq 1"
+              },
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            "Create"
+          ]
+        },
+        {
+          "role": "authorizationHandlerTester",
+          "actions": [
+            "read"
+          ]
+        }
+      ],
+      "rest": true,
+      "graphql": true
+    },
+    "ArtOfWar": {
+      "source": "aow",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "*"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "*"
+          ]
+        }
+      ],
+      "mappings": {
+        "DetailAssessmentAndPlanning": "始計",
+        "WagingWar": "作戰",
+        "StrategicAttack": "謀攻",
+        "NoteNum": "┬─┬ノ( º _ ºノ)"
+      },
+      "rest": true,
+      "graphql": false
+    },
+    "series": {
+      "source": "series",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "*"
+          ]
+        }
+      ],
+      "relationships": {
+        "comics": {
+          "cardinality": "many",
+          "target.entity": "Comic"
+        }
+      }
+    },
+    "Sales": {
+      "source": "sales",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "*"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "*"
+          ]
+        }
+      ],
+      "rest": true,
+      "graphql": true
+    },
+    "GQLmappings": {
+      "source": "GQLmappings",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "*"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "*"
+          ]
+        }
+      ],
+      "mappings": {
+        "__column1": "column1",
+        "__column2": "column2"
+      },
+      "rest": true,
+      "graphql": true
+    },
+    "Bookmarks": {
+      "source": "bookmarks",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "*"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "*"
+          ]
+        }
+      ],
+      "rest": true,
+      "graphql": true
+    },
+    "MappedBookmarks": {
+      "source": "mappedbookmarks",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "*" ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "*"
+          ]
+        }
+      ],
+      "mappings": {
+        "id": "bkid",
+        "bkname": "name"
+      },
+      "rest": true
+    }
+  }
+}

@@ -14,6 +14,7 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
+using Microsoft.AspNetCore.WebUtilities;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
@@ -26,13 +27,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Receives the result of a query as a JsonElement and parses:
         /// <list type="bullet">
         /// <list>*Connection.items which is trivially resolved to all the elements of the result (last  discarded if hasNextPage has been requested)</list>
-        /// <list>*Connection.endCursur which is the primary key of the last element of the result (last  discarded if hasNextPage has been requested)</list>
+        /// <list>*Connection.endCursor which is the primary key of the last element of the result (last  discarded if hasNextPage has been requested)</list>
         /// <list>*Connection.hasNextPage which is decided on whether structure.Limit() elements have been returned</list>
         /// </list>
         /// </summary>
         public static JsonDocument CreatePaginationConnectionFromJsonElement(JsonElement root, PaginationMetadata paginationMetadata)
         {
-            // maintains the conneciton JSON object *Connection
+            // Maintains the connection JSON object *Connection
             Dictionary<string, object> connectionJson = new();
 
             IEnumerable<JsonElement> rootEnumerated = root.EnumerateArray();
@@ -66,7 +67,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 }
                 else
                 {
-                    // if the result doesn't have an extra element, just return the dbResult for *Conneciton.items
+                    // if the result doesn't have an extra element, just return the dbResult for *Connection.items
                     connectionJson.Add(QueryBuilder.PAGINATION_FIELD_NAME, root.ToString()!);
                 }
             }
@@ -97,7 +98,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Wrapper for CreatePaginationConnectionFromJsonElement
         /// Disposes the JsonDocument passed to it
         /// <summary>
-        public static JsonDocument CreatePaginationConnectionFromJsonDocument(JsonDocument jsonDocument, PaginationMetadata paginationMetadata)
+        public static JsonDocument CreatePaginationConnectionFromJsonDocument(JsonDocument? jsonDocument, PaginationMetadata paginationMetadata)
         {
             // necessary for MsSql because it doesn't coalesce list query results like Postgres
             if (jsonDocument is null)
@@ -117,17 +118,18 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
-        /// Extracts the columns from the json element needed for pagination, represents them as a string in json format and base64 encodes.
+        /// Extracts the columns from the JsonElement needed for pagination, represents them as a string in json format and base64 encodes.
         /// The JSON is encoded in base64 for opaqueness. The cursor should function as a token that the user copies and pastes
         /// without needing to understand how it works.
         /// </summary>
-        public static string MakeCursorFromJsonElement(JsonElement element,
-                                                        List<string> primaryKey,
-                                                        List<OrderByColumn>? orderByColumns,
-                                                        string entityName = "",
-                                                        string schemaName = "",
-                                                        string tableName = "",
-                                                        ISqlMetadataProvider? sqlMetadataProvider = null)
+        public static string MakeCursorFromJsonElement(
+            JsonElement element,
+            List<string> primaryKey,
+            List<OrderByColumn>? orderByColumns,
+            string entityName = "",
+            string schemaName = "",
+            string tableName = "",
+            ISqlMetadataProvider? sqlMetadataProvider = null)
         {
             List<PaginationColumn> cursorJson = new();
             JsonSerializerOptions options = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
@@ -168,22 +170,19 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 }
             }
 
-            // primary key columns are used in ordering
-            // for tie-breaking and must be included.
-            // iterate through primary key list and check if
-            // each column is in the set of remaining primary
-            // keys, add to cursor any columns that are in the
-            // set of remaining primary keys and then remove that
-            // column from this remaining key set. This way we
-            // iterate in the same order as the ordering of the
-            // primary key columns, and verify all primary key
-            // columns have been added to the cursor.
+            // Primary key columns must be included in the orderBy query parameter in the nextLink cursor to break ties between result set records.
+            // Iterate through list of (composite) primary key(s) and when a primary key column exists in the remaining keys collection:
+            // 1.) Add that column as one of the pagination columns in the orderBy query parameter in the generated nextLink cursor.
+            // 2.) Remove the column from the remaining keys collection.
+            // This loop enables consistent iteration over the list of primary key columns which:
+            // - Maintains the order of the primary key columns as they exist in the database.
+            // - Ensures all primary key columns have been added to the nextLink cursor.
             foreach (string column in primaryKey)
             {
                 if (remainingKeys.Contains(column))
                 {
                     string? exposedColumnName = GetExposedColumnName(entityName, column, sqlMetadataProvider);
-                    if (TryResolveJsonElementToScalarVariable(element.GetProperty(column), out object? value))
+                    if (TryResolveJsonElementToScalarVariable(element.GetProperty(exposedColumnName), out object? value))
                     {
                         cursorJson.Add(new PaginationColumn(tableSchema: schemaName,
                                                         tableName: tableName,
@@ -494,13 +493,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 nvc["$after"] = after;
             }
 
+            string queryString = FormatQueryString(queryParameters: nvc);
+
             // ValueKind will be array so we can differentiate from other objects in the response
             // to be returned.
             string jsonString = JsonSerializer.Serialize(new[]
             {
                 new
                 {
-                    nextLink = @$"{path}?{nvc}"
+                    nextLink = @$"{path}{queryString}"
                 }
             });
             return JsonSerializer.Deserialize<JsonElement>(jsonString);
@@ -519,6 +520,39 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             uint numRecords = (uint)jsonResult.GetArrayLength();
             uint? limit = first is not null ? first : 100;
             return numRecords > limit;
+        }
+
+        /// <summary>
+        /// Creates a query string from a NameValueCollection using .NET QueryHelpers.
+        /// Addresses the limitations:
+        /// 1) NameValueCollection is not resolved as string in JSON serialization.
+        /// 2) NameValueCollection keys and values are not URL escaped.
+        /// </summary>
+        /// <param name="queryParameters">Key: $QueryParamKey Value: QueryParamValue</param>
+        /// <returns>Query string prefixed with question mark (?). Returns an empty string when
+        /// no entries exist in queryParameters.</returns>
+        public static string FormatQueryString(NameValueCollection queryParameters)
+        {
+            string queryString = "";
+            foreach (string key in queryParameters)
+            {
+                if (string.IsNullOrWhiteSpace(key))
+                {
+                    continue;
+                }
+
+                // There may be duplicate query parameter keys, so get
+                // all values associated to given key in a comma-separated list
+                // format compatible with OData expression syntax.
+                string? queryParamValues = queryParameters.Get(key);
+
+                if (!string.IsNullOrWhiteSpace(queryParamValues))
+                {
+                    queryString = QueryHelpers.AddQueryString(queryString, key, queryParamValues);
+                }
+            }
+
+            return queryString;
         }
     }
 }

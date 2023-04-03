@@ -1,6 +1,6 @@
 # Getting started with Data API builder for Azure Databases
 
-Welcome! In this guide we will help you get started with Data API builder (DAB) for Azure Databases. First you are going to get DAB running locally on your machine. Then you will use DAB to create an API for your application. You will have the option to choose between Azure SQL Database or Azure Cosmos DB as the database backend.
+Welcome! In this guide we will help you get started with Data API builder (DAB) for Azure Databases. First you are going to get DAB running locally on your machine. Then you will use DAB to create an API for your application. You will have the option to choose between Azure SQL Database, Azure Cosmos DB for NoSQL, Azure Database for MySQL or PostgreSQL as the database backend.
 
 ## Use case scenario
 
@@ -25,7 +25,7 @@ dotnet --list-sdks
 
 ## Installing DAB CLI
 
-Data API Builder provides a CLI tool to simplify configuration and execution of the engine. You can install the DAB CLI using [.NET tools](https://docs.microsoft.com/en-us/dotnet/core/tools/global-tools):
+Data API builder provides a CLI tool to simplify configuration and execution of the engine. You can install the DAB CLI using [.NET tools](https://docs.microsoft.com/en-us/dotnet/core/tools/global-tools):
 
 ```shell
 dotnet tool install --global Microsoft.DataApiBuilder 
@@ -51,12 +51,10 @@ dab --version
 which should output something like:
 
 ```bash
-dab 0.5.34
+Microsoft.DataApiBuilder 0.5.34
 ```
 
 Where `0.5.34` is the version of DAB CLI that you have installed on your machine.
-
->For detailed instructions on how to Install DAB CLI look here: [Running Data API Builder for Azure Databases using CLI](../running-using-dab-cli.md)
 
 ## Azure Database
 
@@ -66,18 +64,19 @@ It's time for you to choose which database you want to use, so you can continue 
 
 - [Getting Started with Data API builder for Azure SQL (or SQL Server)](./getting-started-azure-sql.md)
 - [Getting Started with Data API builder for Azure Cosmos DB](./getting-started-azure-cosmos-db.md)
-- [Getting Started with Data API builder for Azure Database PostgreSQL](./getting-started-azure-postgresql.md.md)
-- [Getting Started with Data API builder for Azure MySQL Database](./getting-started-azure-mysql-db.md.md)
+- [Getting Started with Data API builder for Azure Database PostgreSQL](./getting-started-azure-postgresql.md)
+- [Getting Started with Data API builder for Azure MySQL Database](./getting-started-azure-mysql-db.md)
 
 ## Further reading
 
-### Running Data API Builder using Docker
+### Running Data API builder using Docker
 
-You can use Docker to run the Data API Builder on your machine. Instructions are available here: [Running Data API Builder for Azure Databases using a container](../running-using-a-container.md)
+You can use Docker to run the Data API builder on your machine. Instructions are available here: [Running Data API builder for Azure Databases using a container](../running-using-a-container.md)
 
-### Using Data API Builder CLI to build the configuration file
+### Using Data API builder CLI to build the configuration file
 
-Data API Builder comes with a full CLI to help you run common tasks [Getting started with Data API Builder (`dab`) CLI](../getting-started/getting-started-dab-cli.md).
+Data API builder comes with a full CLI to help you run common tasks. Instructions on how to run with CLI are here: [Running using dab cli](../running-using-dab-cli.md)
+The list of supported CLI commands is available here: [Data API builder (`dab`) CLI](../dab-cli.md).
 
 ### Deploy on Azure
 

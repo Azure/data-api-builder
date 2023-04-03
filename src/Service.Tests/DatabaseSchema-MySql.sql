@@ -12,6 +12,8 @@ DROP TABLE IF EXISTS authors;
 DROP TABLE IF EXISTS book_website_placements;
 DROP TABLE IF EXISTS website_users;
 DROP TABLE IF EXISTS books;
+DROP TABLE IF EXISTS players;
+DROP TABLE IF EXISTS clubs;
 DROP TABLE IF EXISTS publishers;
 DROP TABLE IF EXISTS magazines;
 DROP TABLE IF EXISTS stocks_price;
@@ -29,6 +31,8 @@ DROP TABLE IF EXISTS series;
 DROP TABLE IF EXISTS sales;
 DROP TABLE IF EXISTS graphql_incompatible;
 DROP TABLE IF EXISTS GQLmappings;
+DROP TABLE IF EXISTS bookmarks;
+DROP TABLE IF EXISTS mappedbookmarks;
 
 CREATE TABLE publishers(
     id int AUTO_INCREMENT PRIMARY KEY,
@@ -39,6 +43,18 @@ CREATE TABLE books(
     id int AUTO_INCREMENT PRIMARY KEY,
     title text NOT NULL,
     publisher_id int NOT NULL
+);
+
+CREATE TABLE players(
+    id int AUTO_INCREMENT PRIMARY KEY,
+    name text NOT NULL,
+    current_club_id int NOT NULL,
+    new_club_id int NOT NULL
+);
+
+CREATE TABLE clubs(
+    id int AUTO_INCREMENT PRIMARY KEY,
+    name text NOT NULL
 );
 
 CREATE TABLE book_website_placements(
@@ -186,10 +202,26 @@ CREATE TABLE GQLmappings (
     column3 text
 );
 
+CREATE TABLE bookmarks(
+    id int AUTO_INCREMENT PRIMARY KEY,
+    bkname text NOT NULL
+);
+
+CREATE TABLE mappedbookmarks(
+    id int AUTO_INCREMENT PRIMARY KEY,
+    bkname text NOT NULL
+);
+
 ALTER TABLE books
 ADD CONSTRAINT book_publisher_fk
 FOREIGN KEY (publisher_id)
 REFERENCES publishers (id)
+ON DELETE CASCADE;
+
+ALTER TABLE players
+ADD CONSTRAINT player_club_fk
+FOREIGN KEY (current_club_id)
+REFERENCES clubs (id)
 ON DELETE CASCADE;
 
 ALTER TABLE book_website_placements
@@ -234,12 +266,43 @@ FOREIGN KEY (series_id)
 REFERENCES series(id)
 ON DELETE CASCADE;
 
+INSERT INTO bookmarks (id, bkname)
+WITH RECURSIVE nums AS (
+    SELECT 1 AS id
+    UNION ALL
+    SELECT id + 1 AS id
+    FROM nums
+    WHERE nums.id <= 999
+)
+SELECT 
+id,
+concat('Test Item #', id)
+FROM nums;
+
+INSERT INTO mappedbookmarks (id, bkname)
+WITH RECURSIVE nums AS (
+    SELECT 1 AS id
+    UNION ALL
+    SELECT id + 1 AS id
+    FROM nums
+    WHERE nums.id <= 999
+)
+SELECT 
+id,
+concat('Test Item #', id)
+FROM nums;
+
 INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (1, 'Incompatible GraphQL Name', 'Compatible GraphQL Name');
 INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (3, 'Old Value', 'Record to be Updated');
 INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (4, 'Lost Record', 'Record to be Deleted');
 INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (5, 'Filtered Record', 'Record to be Filtered on Find');
 INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd'), (1940, 'Policy Publisher 01'), (1941, 'Policy Publisher 02'), (1156, 'The First Publisher');
 INSERT INTO authors(id, name, birthdate) VALUES (123, 'Jelte', '2001-01-01'), (124, 'Aniruddh', '2002-02-02'), (125, 'Aniruddh', '2001-01-01'), (126, 'Aaron', '2001-01-01');
+INSERT INTO clubs(id, name) VALUES (1111, 'Manchester United'), (1112, 'FC Barcelona'), (1113, 'Real Madrid');
+INSERT INTO players(id, name, current_club_id, new_club_id)
+    VALUES 
+        (1, 'Cristiano Ronaldo', 1113, 1111),
+        (2, 'Leonel Messi', 1112, 1113);
 INSERT INTO books(id, title, publisher_id)
     VALUES
         (1, 'Awesome book', 1234),
@@ -291,6 +354,8 @@ ALTER TABLE reviews AUTO_INCREMENT = 5001;
 ALTER TABLE comics AUTO_INCREMENT = 5001;
 ALTER TABLE type_table AUTO_INCREMENT = 5001;
 ALTER TABLE sales AUTO_INCREMENT = 5001;
+ALTER TABLE players AUTO_INCREMENT = 5001;
+ALTER TABLE clubs AUTO_INCREMENT = 5001;
 
 prepare stmt1 from  'CREATE VIEW books_view_all AS SELECT * FROM books';
 

@@ -40,8 +40,11 @@ namespace Cli
             IEnumerable<string>? corsOrigin,
             string authenticationProvider,
             string? audience = null,
-            string restPath = GlobalSettings.REST_DEFAULT_PATH,
             string? issuer = null,
+            string restPath = GlobalSettings.REST_DEFAULT_PATH,
+            bool restDisabled = false,
+            string graphQLPath = GlobalSettings.GRAPHQL_DEFAULT_PATH,
+            bool graphqlDisabled = false,
             string? config = null)
             : base(config)
         {
@@ -55,8 +58,11 @@ namespace Cli
             CorsOrigin = corsOrigin;
             AuthenticationProvider = authenticationProvider;
             Audience = audience;
-            RestPath = restPath;
             Issuer = issuer;
+            RestPath = restPath;
+            RestDisabled = restDisabled;
+            GraphQLPath = graphQLPath;
+            GraphQLDisabled = graphqlDisabled;
         }
 
         [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmosdb_nosql, cosmosdb_postgresql, mysql, postgresql")]
@@ -86,14 +92,24 @@ namespace Cli
         [Option("auth.provider", Default = "StaticWebApps", Required = false, HelpText = "Specify the Identity Provider.")]
         public string AuthenticationProvider { get; }
 
-        [Option("rest.path", Default = GlobalSettings.REST_DEFAULT_PATH, Required = false, HelpText = "Specify the REST endpoint's default prefix.")]
-        public string RestPath { get; }
-
         [Option("auth.audience", Required = false, HelpText = "Identifies the recipients that the JWT is intended for.")]
         public string? Audience { get; }
 
         [Option("auth.issuer", Required = false, HelpText = "Specify the party that issued the jwt token.")]
         public string? Issuer { get; }
+
+        [Option("rest.path", Default = GlobalSettings.REST_DEFAULT_PATH, Required = false, HelpText = "Specify the REST endpoint's default prefix.")]
+        public string RestPath { get; }
+
+        [Option("rest.disabled", Default = false, Required = false, HelpText = "Disables REST endpoint for all entities.")]
+        public bool RestDisabled { get; }
+
+        [Option("graphql.path", Default = GlobalSettings.GRAPHQL_DEFAULT_PATH, Required = false, HelpText = "Specify the GraphQL endpoint's default prefix.")]
+        public string GraphQLPath { get; }
+
+        [Option("graphql.disabled", Default = false, Required = false, HelpText = "Disables GraphQL endpoint for all entities.")]
+        public bool GraphQLDisabled { get; }
+
     }
 
     /// <summary>
@@ -327,5 +343,25 @@ namespace Cli
 
         [Option("no-https-redirect", Required = false, HelpText = "Disables automatic https redirects.")]
         public bool IsHttpsRedirectionDisabled { get; }
+    }
+
+    [Verb("export", isDefault: false, HelpText = "Export the GraphQL schema as a file and save to disk", Hidden = false)]
+    public class ExportOptions : Options
+    {
+        public ExportOptions(bool graphql, string outputDirectory, string? config, string? graphqlSchemaFile) : base(config)
+        {
+            GraphQL = graphql;
+            OutputDirectory = outputDirectory;
+            GraphQLSchemaFile = graphqlSchemaFile ?? "schema.graphql";
+        }
+
+        [Option("graphql", HelpText = "Export GraphQL schema")]
+        public bool GraphQL { get; }
+
+        [Option('o', "output", HelpText = "Directory to save to", Required = true)]
+        public string OutputDirectory { get; }
+
+        [Option('g', "graphql-schema-file", HelpText = "The GraphQL schema file name (default schema.graphql)")]
+        public string GraphQLSchemaFile { get; }
     }
 }

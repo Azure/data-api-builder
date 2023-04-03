@@ -39,7 +39,7 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
                 );
@@ -68,7 +68,7 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
                 );
@@ -99,7 +99,7 @@ namespace Cli.Tests
                 fieldsToExclude: null,
                 policyRequest: null,
                 policyDatabase: null,
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
                 );
@@ -128,7 +128,7 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
             );
@@ -165,7 +165,7 @@ namespace Cli.Tests
                 fieldsToExclude: fieldsToExclude,
                 policyRequest: policyRequest,
                 policyDatabase: policyDatabase,
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
             );
@@ -206,7 +206,7 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
                 );
@@ -237,7 +237,7 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: new string[] { "Post", "Put", "Patch" },
                 graphQLOperationForStoredProcedure: "Query"
                 );
@@ -255,14 +255,17 @@ namespace Cli.Tests
         [DataRow("stored-procedure", new string[] { "param1:value1" }, null, "execute", true, DisplayName = "SourceParameters correctly included with stored procedure")]
         [DataRow("Stored-Procedure", new string[] { "param1:value1" }, null, "execute", true, DisplayName = "Stored procedure type check for Case Insensitivity")]
         [DataRow("stored-procedure", new string[] { "param1:value1" }, null, "*", true, DisplayName = "Stored procedure correctly configured with wildcard CRUD action")]
-        [DataRow("view", null, new string[] { "col1", "col2" }, "*", true, DisplayName = "Source KeyFields correctly included with with View")]
-        [DataRow("table", null, new string[] { "col1", "col2" }, "*", true, DisplayName = "Source KeyFields correctly included with with Table")]
+        [DataRow("view", null, new string[] { "col1", "col2" }, "*", true, DisplayName = "Source KeyFields correctly included with View")]
+        [DataRow("view", null, null, "*", false, DisplayName = "Mandatory KeyFields not provided with View")]
+        [DataRow("table", null, new string[] { "col1", "col2" }, "*", true, DisplayName = "Source KeyFields correctly included with Table")]
         [DataRow(null, null, new string[] { "col1", "col2" }, "*", true, DisplayName = "Source Type of table created when type not specified")]
         [DataRow(null, new string[] { "param1:value1" }, new string[] { "col1", "col2" }, "*", false, DisplayName = "KeyFields and Parameters incorrectly configured for default sourceType")]
         [DataRow("stored-procedure", null, new string[] { "col1", "col2" }, "*", false, DisplayName = "KeyFields incorrectly configured with stored procedure")]
         [DataRow("stored-procedure", new string[] { "param1:value1,param1:223" }, null, "*", false, DisplayName = "Parameters containing duplicate keys are not allowed")]
         [DataRow("view", new string[] { "param1:value1" }, null, "*", false, DisplayName = "Source Parameters incorrectly used with View")]
         [DataRow("table", new string[] { "param1:value1" }, null, "*", false, DisplayName = "Source Parameters incorrectly used with Table")]
+        [DataRow("view", new string[] { "param1:value1" }, new string[] { "col1", "col2" }, "*", false, DisplayName = "Source Parameters and Keyfields incorrectly used with View")]
+        [DataRow("table", new string[] { "param1:value1" }, new string[] { "col1", "col2" }, "*", false, DisplayName = "Source Parameters and Keyfields incorrectly used with Table")]
         [DataRow("table-view", new string[] { "param1:value1" }, null, "*", false, DisplayName = "Invalid Source Type")]
         public void TestAddNewEntityWithSourceObjectHavingValidFields(
             string? sourceType,
@@ -284,7 +287,7 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
                 );
@@ -343,7 +346,7 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: restMethods,
                 graphQLOperationForStoredProcedure: graphQLOperation
                 );
@@ -448,7 +451,7 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: restMethods,
                 graphQLOperationForStoredProcedure: graphQLOperation
                 );
@@ -484,7 +487,7 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { "level" },
                 policyRequest: null,
                 policyDatabase: null,
-                config: _testRuntimeConfig,
+                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
                 );

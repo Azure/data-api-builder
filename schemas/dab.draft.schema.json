@@ -1,10 +1,10 @@
 {
   "$schema": "https://json-schema.org/draft-07/schema",
   "$id": "#/additionalProperties/version",
-  "title": "Data API Builder",
-  "description": "Schema for Data API Builder engine",
+  "title": "Data API builder",
+  "description": "Schema for Data API builder engine",
   "additionalProperties": {
-    "version": "https://dataapibuilder.azureedge.net/schemas/vmajor.minor.patch/dab.draft.schema.json"
+    "version": "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"
   },
   "type": "object",
   "properties": {
@@ -265,7 +265,7 @@
                       "items": {
                         "type": "string"
                       },
-                      "description": "List of fields to be used as primary keys"
+                      "description": "List of fields to be used as primary keys. Mandatory field for views when generated through the CLI."
                     }
                   },
                   "required": [

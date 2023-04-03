@@ -7,11 +7,12 @@ using System.Reflection;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Text.Unicode;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Humanizer;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Config.AuthenticationConfig;
+using static Azure.DataApiBuilder.Service.Configurations.RuntimeConfigValidator;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
 /// <summary>
@@ -259,6 +260,7 @@ namespace Cli
 
         /// <summary>
         /// Returns the Serialization option used to convert objects into JSON.
+        /// Not escaping any special unicode characters.
         /// Ignoring properties with null values.
         /// Keeping all the keys in lowercase.
         /// </summary>
@@ -266,7 +268,7 @@ namespace Cli
         {
             JsonSerializerOptions? options = new()
             {
-                Encoder = JavaScriptEncoder.Create(UnicodeRanges.All),
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
                 WriteIndented = true,
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
                 PropertyNamingPolicy = new LowerCaseNamingPolicy(),
@@ -314,12 +316,21 @@ namespace Cli
                                                                                       string authenticationProvider,
                                                                                       string? audience = null,
                                                                                       string? issuer = null,
-                                                                                      string? restPath = GlobalSettings.REST_DEFAULT_PATH)
+                                                                                      string? restPath = GlobalSettings.REST_DEFAULT_PATH,
+                                                                                      bool restEnabled = true,
+                                                                                      string graphqlPath = GlobalSettings.GRAPHQL_DEFAULT_PATH,
+                                                                                      bool graphqlEnabled = true)
         {
             // Prefix rest path with '/', if not already present.
             if (restPath is not null && !restPath.StartsWith('/'))
             {
                 restPath = "/" + restPath;
+            }
+
+            // Prefix graphql path with '/', if not already present.
+            if (!graphqlPath.StartsWith('/'))
+            {
+                graphqlPath = "/" + graphqlPath;
             }
 
             Dictionary<GlobalSettingsType, object> defaultGlobalSettings = new();
@@ -328,10 +339,10 @@ namespace Cli
             // which only supports graphql.
             if (restPath is not null)
             {
-                defaultGlobalSettings.Add(GlobalSettingsType.Rest, new RestGlobalSettings(restPath));
+                defaultGlobalSettings.Add(GlobalSettingsType.Rest, new RestGlobalSettings(Enabled: restEnabled, Path: restPath));
             }
 
-            defaultGlobalSettings.Add(GlobalSettingsType.GraphQL, new GraphQLGlobalSettings());
+            defaultGlobalSettings.Add(GlobalSettingsType.GraphQL, new GraphQLGlobalSettings(Enabled: graphqlEnabled, Path: graphqlPath));
             defaultGlobalSettings.Add(
                 GlobalSettingsType.Host,
                 GetDefaultHostGlobalSettings(
@@ -341,6 +352,38 @@ namespace Cli
                     audience,
                     issuer));
             return defaultGlobalSettings;
+        }
+
+        /// <summary>
+        /// Returns true if the api path contains any reserved characters like "[\.:\?#/\[\]@!$&'()\*\+,;=]+"
+        /// </summary>
+        /// <param name="apiPath">path prefix for rest/graphql apis</param>
+        /// <param name="apiType">Either REST or GraphQL</param>
+        public static bool IsApiPathValid(string? apiPath, ApiType apiType)
+        {
+            // apiPath is null only in case of cosmosDB and apiType=REST. For this case, validation is not required.
+            // Since, cosmosDB do not support REST calls.
+            if (apiPath is null)
+            {
+                return true;
+            }
+
+            // removing leading '/' before checking for forbidden characters.
+            if (apiPath.StartsWith('/'))
+            {
+                apiPath = apiPath.Substring(1);
+            }
+
+            try
+            {
+                DoApiPathInvalidCharCheck(apiPath, apiType);
+                return true;
+            }
+            catch (DataApiBuilderException ex)
+            {
+                _logger.LogError(ex.Message);
+                return false;
+            }
         }
 
         /// <summary>
@@ -605,7 +648,8 @@ namespace Cli
 
         /// <summary>
         /// This method checks that parameter is only used with Stored Procedure, while
-        /// key-fields only with table/views.
+        /// key-fields only with table/views. Also ensures that key-fields are always 
+        /// provided for views.
         /// </summary>
         /// <param name="sourceType">type of the source object.</param>
         /// <param name="parameters">IEnumerable string containing parameters for stored-procedure.</param>
@@ -616,7 +660,7 @@ namespace Cli
             IEnumerable<string>? parameters,
             IEnumerable<string>? keyFields)
         {
-            if (SourceType.StoredProcedure.Equals(sourceType))
+            if (sourceType is SourceType.StoredProcedure)
             {
                 if (keyFields is not null && keyFields.Any())
                 {
@@ -626,9 +670,17 @@ namespace Cli
             }
             else
             {
+                // For Views and Tables
                 if (parameters is not null && parameters.Any())
                 {
                     _logger.LogError("Tables/Views don't support parameters.");
+                    return false;
+                }
+
+                // For Views
+                if (sourceType is SourceType.View && (keyFields is null || !keyFields.Any()))
+                {
+                    _logger.LogError("Key-fields are mandatory for views, but not provided.");
                     return false;
                 }
             }

@@ -149,17 +149,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             foreach (KeyValuePair<string, object> predicate in context.PrimaryKeyValuePairs)
             {
                 sqlMetadataProvider.TryGetBackingColumn(EntityName, predicate.Key, out string? backingColumn);
-                PopulateParamsAndPredicates(field: predicate.Key,
-                                            backingColumn: backingColumn!,
+                PopulateParamsAndPredicates(backingColumn: backingColumn!,
                                             value: predicate.Value);
             }
 
             foreach (KeyValuePair<string, object?> predicate in context.FieldValuePairsInBody)
             {
                 sqlMetadataProvider.TryGetBackingColumn(EntityName, predicate.Key, out string? backingColumn);
-                PopulateParamsAndPredicates(field: predicate.Key,
-                                            backingColumn: backingColumn!,
-                                            value: predicate.Value);
+                PopulateParamsAndPredicates(backingColumn: backingColumn!,
+                                            value: predicate.Value!);
             }
 
             // context.OrderByClauseOfBackingColumns will lack SourceAlias because it is created in RequestParser
@@ -501,28 +499,17 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="backingColumn">string represents the backing column of the field.</param>
         /// <param name="value">The value associated with a given field.</param>
         /// <param name="op">The predicate operation representing the comparison between field and value.</param>
-        private void PopulateParamsAndPredicates(string field, string backingColumn, object? value, PredicateOperation op = PredicateOperation.Equal)
+        private void PopulateParamsAndPredicates(string backingColumn, object value, PredicateOperation op = PredicateOperation.Equal)
         {
             try
             {
                 string parameterName;
-                if (value != null)
-                {
-                    parameterName = MakeParamWithValue(
-                        GetParamAsSystemType(value.ToString()!, backingColumn, GetColumnSystemType(backingColumn)));
-                    Predicates.Add(new Predicate(
-                        new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, backingColumn, SourceAlias)),
-                        op,
-                        new PredicateOperand($"{parameterName}")));
-                }
-                else
-                {
-                    // This case should not arise. We have issue for this to handle nullable type columns. Issue #146.
-                    throw new DataApiBuilderException(
-                        message: $"Unexpected value for column \"{field}\" provided.",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-                }
+                parameterName = MakeParamWithValue(
+                GetParamAsSystemType(value.ToString()!, backingColumn, GetColumnSystemType(backingColumn)));
+                Predicates.Add(new Predicate(
+                    new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, backingColumn, SourceAlias)),
+                    op,
+                    new PredicateOperand($"{parameterName}")));
             }
             catch (ArgumentException ex)
             {

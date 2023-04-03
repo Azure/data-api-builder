@@ -8,7 +8,6 @@ using System.CommandLine.Parsing;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
-using HotChocolate.Language;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -53,7 +52,8 @@ namespace Azure.DataApiBuilder.Service
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    Startup.MinimumLogLevel = GetLogLevelFromCommandLineArgs(args, out Startup.IsLogLevelOverriddenByCli);
+                    string[] testArgs = { "--LogLevel", "-1" };
+                    Startup.MinimumLogLevel = GetLogLevelFromCommandLineArgs(testArgs, out Startup.IsLogLevelOverriddenByCli);
                     ILoggerFactory? loggerFactory = GetLoggerFactoryForLogLevel(Startup.MinimumLogLevel);
                     ILogger<Startup>? startupLogger = loggerFactory.CreateLogger<Startup>();
                     ILogger<RuntimeConfigProvider>? configProviderLogger = loggerFactory.CreateLogger<RuntimeConfigProvider>();

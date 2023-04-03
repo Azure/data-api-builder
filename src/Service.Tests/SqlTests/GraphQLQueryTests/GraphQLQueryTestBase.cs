@@ -1536,7 +1536,7 @@ query {
 
                 HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
                 Assert.AreEqual(System.Net.HttpStatusCode.OK, graphQLResponse.StatusCode);
-                
+
                 string body = await graphQLResponse.Content.ReadAsStringAsync();
                 JsonElement graphQLResult = JsonSerializer.Deserialize<JsonElement>(body);
                 Assert.AreEqual(club_id, graphQLResult.GetProperty("data").GetProperty("player_by_pk").GetProperty("clubs").GetProperty("id").GetDouble());

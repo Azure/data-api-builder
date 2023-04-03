@@ -50,7 +50,6 @@
         <Watch Remove="dab-config.CosmosDb_NoSql.json" />
         <Watch Remove="dab-config.json" />
         <Watch Remove="dab-config.MsSql.json" />
-        <Watch Remove="dab-config.MsSql.overrides.json" />
         <Watch Remove="dab-config.MySql.json" />
         <Watch Remove="dab-config.PostgreSql.json" />
     </ItemGroup>

@@ -1712,6 +1712,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             );
         }
 
+        /// <summary>
+        /// Validates that REST Find APIs executed with a non-empty request body are
+        /// returned a HTTP BadRequest response as the request body is irrelevant for GET requests.
+        /// </summary>
         [TestMethod]
         public async Task FindApiTestWithNonEmptyRequestBody()
         {

@@ -618,6 +618,61 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         }
 
         /// <summary>
+        /// Test to validate failure of an insert operation which tries to insert a record
+        /// that doesn't satisfy the database policy (@item.name ne 'New publisher')
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneFailingDatabasePolicy()
+        {
+            string requestBody = @"
+            {
+                ""name"": ""New publisher""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entityNameOrPath: _foreignKeyEntityName,
+                sqlQuery: string.Empty,
+                operationType: Config.Operation.Insert,
+                requestBody: requestBody,
+                exceptionExpected: true,
+                expectedStatusCode: HttpStatusCode.Forbidden,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed.ToString(),
+                expectedErrorMessage: "Could not insert row with given values.",
+                clientRoleHeader: "database_policy_tester"
+            );
+        }
+
+        /// <summary>
+        /// Test to validate failure of a request when one or more fields referenced in the database policy for create operation are not provided in the request body.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneInTableWithFieldsInDbPolicyNotPresentInBody()
+        {
+            string requestBody = @"
+            {
+                ""id"": 18,
+                ""category"":""book"",
+                ""accessible_role"": ""Anonymous""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entityNameOrPath: _entityWithSecurityPolicy,
+                sqlQuery: string.Empty,
+                operationType: Config.Operation.Insert,
+                exceptionExpected: true,
+                requestBody: requestBody,
+                clientRoleHeader: "database_policy_tester",
+                expectedErrorMessage: "One or more fields referenced by the database policy are not present in the request body.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                );
+        }
+
+        /// <summary>
         /// Abstract method overridden in each of the child classes as each database has its own specific error message.
         /// Validates request failure (HTTP 400) when an invalid foreign key is provided with an insertion.
         /// </summary>

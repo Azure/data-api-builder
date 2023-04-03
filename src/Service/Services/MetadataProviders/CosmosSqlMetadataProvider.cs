@@ -23,6 +23,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         private readonly RuntimeConfig _runtimeConfig;
         private Dictionary<string, string> _partitionKeyPaths = new();
         private Dictionary<string, string> _graphQLSingularTypeToEntityNameMap = new();
+        private readonly RuntimeConfigProvider _runtimeConfigProvider;
 
         /// <inheritdoc />
         public Dictionary<string, string> GraphQLStoredProcedureExposedNameToEntityNameMap { get; set; } = new();
@@ -35,6 +36,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, IFileSystem fileSystem)
         {
             _fileSystem = fileSystem;
+            _runtimeConfigProvider = runtimeConfigProvider;
             _runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
 
             _entities = _runtimeConfig.Entities;
@@ -234,6 +236,11 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         public string GetDefaultSchemaName()
         {
             return string.Empty;
+        }
+
+        public bool IsDevelopmentMode()
+        {
+            return _runtimeConfigProvider.IsDeveloperMode();
         }
     }
 }

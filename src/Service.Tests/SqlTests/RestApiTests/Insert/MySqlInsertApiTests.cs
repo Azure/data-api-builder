@@ -226,6 +226,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
             );
         }
+        #endregion
+
+        #region Tests for features yet to be implemented
 
         [TestMethod]
         [Ignore]
@@ -234,6 +237,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             throw new NotImplementedException();
         }
 
+        [TestMethod]
+        [Ignore]
+        public override Task InsertOneFailingDatabasePolicy()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task InsertOneInTableWithFieldsInDbPolicyNotPresentInBody()
+        {
+            throw new NotImplementedException();
+        }
         #endregion
 
         #region Test Fixture Setup

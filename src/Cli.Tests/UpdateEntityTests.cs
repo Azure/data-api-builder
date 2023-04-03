@@ -1771,7 +1771,10 @@ namespace Cli.Tests
         [DataRow("stored-procedure", new string[] { "param1:value1,param2:223" }, null, "anonymous", "create,read", DisplayName = "Stored procedure with more than 1 CRUD operation")]
         [DataRow("stored-procedure", new string[] { "param1:value1,param2:223" }, null, "anonymous", "*", DisplayName = "Stored procedure with wildcard CRUD operation")]
         [DataRow("view", new string[] { "param1:value1" }, null, "anonymous", "*", DisplayName = "Source Parameters incorrectly used with View")]
+        [DataRow("view", null, null, "anonymous", "*", DisplayName = "Mandatory KeyFields for views not provided.")]
+        [DataRow("view", new string[] { "param1:value1" }, new string[] { "col1", "col2" }, "anonymous", "*", DisplayName = "Source Parameters and keyfields incorrectly used with View.")]
         [DataRow("table", new string[] { "param1:value1" }, null, "anonymous", "*", DisplayName = "Source Parameters incorrectly used with Table")]
+        [DataRow("table", new string[] { "param1:value1" }, new string[] { "col1", "col2" }, "anonymous", "*", DisplayName = "Source Parameters and keyfields incorrectly used with Table.")]
         [DataRow("table-view", new string[] { "param1:value1" }, null, "anonymous", "*", DisplayName = "Invalid Source Type")]
         public void TestUpdateSourceObjectWithInvalidFields(
             string? sourceType,

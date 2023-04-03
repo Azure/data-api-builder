@@ -482,23 +482,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 return;
             }
 
-            try
+            foreach (PaginationColumn column in afterJsonValues)
             {
-                foreach (PaginationColumn column in afterJsonValues)
-                {
-                    column.TableAlias = SourceAlias;
-                    column.ParamName = column.Value is not null ?
-                        MakeParamWithValue(GetParamAsColumnSystemType(column.Value!.ToString()!, column.ColumnName)) :
-                        MakeParamWithValue(null);
-                }
-            }
-            catch (ArgumentException ex)
-            {
-                throw new DataApiBuilderException(
-                  message: ex.Message,
-                  statusCode: HttpStatusCode.BadRequest,
-                  subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
-                  innerException: ex);
+                column.TableAlias = SourceAlias;
+                column.ParamName = column.Value is not null ?
+                     MakeParamWithValue(GetParamAsSystemType(column.Value!.ToString()!, column.ColumnName, GetColumnSystemType(column.ColumnName))) :
+                     MakeParamWithValue(value: null);
             }
 
             PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(afterJsonValues.ToList());
@@ -520,7 +509,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 if (value != null)
                 {
                     parameterName = MakeParamWithValue(
-                        GetParamAsColumnSystemType(value.ToString()!, backingColumn));
+                        GetParamAsSystemType(value.ToString()!, backingColumn, GetColumnSystemType(backingColumn)));
                     Predicates.Add(new Predicate(
                         new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, backingColumn, SourceAlias)),
                         op,

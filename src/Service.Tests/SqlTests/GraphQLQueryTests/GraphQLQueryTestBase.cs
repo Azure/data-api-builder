@@ -1,11 +1,19 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
+using Azure.DataApiBuilder.Service.Tests.Configuration;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
@@ -1448,6 +1456,92 @@ query {
 
             JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString());
+        }
+
+        /// <summary>
+        /// Test to check that sourceFields and targetFields for relationship provided in the config
+        /// overrides relationship fields defined in DB.
+        /// In this Test the result changes when we override the source and target fields in the config.
+        /// </summary>
+        [TestMethod]
+        public async Task TestConfigTakesPrecedenceForRelationshipFieldsOverDB(
+            string[] sourceFields,
+            string[] targetFields,
+            int club_id,
+            string club_name,
+            DatabaseType dbType,
+            string testEnvironment)
+        {
+            RuntimeConfig configuration = SqlTestHelper.InitBasicRuntimeConfigWithNoEntity(dbType, testEnvironment);
+
+            Entity clubEntity = new(
+                Source: JsonSerializer.SerializeToElement("clubs"),
+                Rest: true,
+                GraphQL: true,
+                Permissions: new PermissionSetting[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: null,
+                Mappings: null
+            );
+
+            configuration.Entities.Add("Club", clubEntity);
+
+            Entity playerEntity = new(
+                Source: JsonSerializer.SerializeToElement("players"),
+                Rest: true,
+                GraphQL: true,
+                Permissions: new PermissionSetting[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: new Dictionary<string, Relationship>() { {"clubs", new (
+                    Cardinality: Cardinality.One,
+                    TargetEntity: "Club",
+                    SourceFields: sourceFields,
+                    TargetFields: targetFields,
+                    LinkingObject: null,
+                    LinkingSourceFields: null,
+                    LinkingTargetFields: null
+                )}},
+                Mappings: null
+            );
+
+            configuration.Entities.Add("Player", playerEntity);
+
+            const string CUSTOM_CONFIG = "custom-config.json";
+            File.WriteAllText(
+                CUSTOM_CONFIG,
+                JsonSerializer.Serialize(configuration, RuntimeConfig.SerializerOptions));
+
+            string[] args = new[]
+            {
+                    $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                string query = @"{
+                    player_by_pk(id: 1) {
+                        name,
+                        clubs {
+                            id
+                            name
+                        }
+                    }
+                }";
+
+                object payload = new { query };
+
+                HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
+                {
+                    Content = JsonContent.Create(payload)
+                };
+
+                HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
+                Assert.AreEqual(System.Net.HttpStatusCode.OK, graphQLResponse.StatusCode);
+
+                string body = await graphQLResponse.Content.ReadAsStringAsync();
+                JsonElement graphQLResult = JsonSerializer.Deserialize<JsonElement>(body);
+                Assert.AreEqual(club_id, graphQLResult.GetProperty("data").GetProperty("player_by_pk").GetProperty("clubs").GetProperty("id").GetDouble());
+                Assert.AreEqual(club_name, graphQLResult.GetProperty("data").GetProperty("player_by_pk").GetProperty("clubs").GetProperty("name").ToString());
+            }
         }
 
         #endregion

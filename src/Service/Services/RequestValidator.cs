@@ -530,5 +530,25 @@ namespace Azure.DataApiBuilder.Service.Services
 
             return firstAsUint;
         }
+
+        /// <summary>
+        /// Validates that the request body is empty for REST Find APIs as the details present
+        /// in the request body are irrelevant for FIND APIs.
+        /// </summary>
+        /// <param name="operationType">Type of the REST operation.</param>
+        /// <param name="requestBody">Request body assosciated with the REST request.</param>
+        /// <exception cref="DataApiBuilderException">Thrown when a read request is performed with
+        /// non-empty request body.</exception>
+        public static void ValidateEmptyRequestBodyForFindApi(Config.Operation operationType, string requestBody)
+        {
+            if (operationType is Config.Operation.Read && !string.IsNullOrEmpty(requestBody))
+            {
+                throw new DataApiBuilderException(
+                    message: "The GET request is invalid since it contains a request body",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+        }
+
     }
 }

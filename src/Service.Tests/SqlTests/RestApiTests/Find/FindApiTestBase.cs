@@ -1712,6 +1712,27 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             );
         }
 
+        [TestMethod]
+        public async Task FindApiTestWithNonEmptyRequestBody()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""New Book"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/1",
+                queryString: string.Empty,
+                requestBody: requestBody,
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: string.Empty,
+                exceptionExpected: true,
+                expectedErrorMessage: "The GET request is invalid since it contains a request body",
+                expectedStatusCode: HttpStatusCode.BadRequest
+                );
+        }
+
         #endregion
     }
 }

@@ -84,6 +84,8 @@ namespace Azure.DataApiBuilder.Service.Services
                 requestBody = await reader.ReadToEndAsync();
             }
 
+            RequestValidator.ValidateEmptyRequestBodyForFindApi(operationType, requestBody);
+
             RestRequestContext context;
 
             // If request has resolved to a stored procedure entity, initialize and validate appropriate request context

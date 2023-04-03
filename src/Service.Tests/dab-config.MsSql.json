@@ -633,6 +633,17 @@
           "actions": [
             "*"
           ]
+        },
+        {
+          "role": "database_policy_tester",
+          "actions": [
+            {
+              "action": "create",
+              "policy": {
+                "database": "@item.revenue gt 1000"
+              }
+            }
+          ]
         }
       ]
     },

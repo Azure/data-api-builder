@@ -24,6 +24,8 @@ DROP TABLE IF EXISTS authors;
 DROP TABLE IF EXISTS book_website_placements;
 DROP TABLE IF EXISTS website_users;
 DROP TABLE IF EXISTS books;
+DROP TABLE IF EXISTS players;
+DROP TABLE IF EXISTS clubs;
 DROP TABLE IF EXISTS publishers;
 DROP TABLE IF EXISTS [foo].[magazines];
 DROP TABLE IF EXISTS stocks_price;
@@ -60,6 +62,18 @@ CREATE TABLE books(
     id int IDENTITY(5001, 1) PRIMARY KEY,
     title varchar(max) NOT NULL,
     publisher_id int NOT NULL
+);
+
+CREATE TABLE players(
+    id int IDENTITY(5001, 1) PRIMARY KEY,
+    name varchar(max) NOT NULL,
+    current_club_id int NOT NULL,
+    new_club_id int NOT NULL
+);
+
+CREATE TABLE clubs(
+    id int IDENTITY(5001, 1) PRIMARY KEY,
+    name varchar(max) NOT NULL
 );
 
 CREATE TABLE book_website_placements(
@@ -246,6 +260,12 @@ FOREIGN KEY (publisher_id)
 REFERENCES publishers (id)
 ON DELETE CASCADE;
 
+ALTER TABLE players
+ADD CONSTRAINT player_club_fk
+FOREIGN KEY (current_club_id)
+REFERENCES clubs (id)
+ON DELETE CASCADE;
+
 ALTER TABLE book_website_placements
 ADD CONSTRAINT book_website_placement_book_fk
 FOREIGN KEY (book_id)
@@ -294,6 +314,10 @@ ADD total AS (subtotal + tax) PERSISTED;
 SET IDENTITY_INSERT publishers ON
 INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd'), (1940, 'Policy Publisher 01'), (1941, 'Policy Publisher 02'), (1156, 'The First Publisher');
 SET IDENTITY_INSERT publishers OFF
+
+SET IDENTITY_INSERT clubs ON
+INSERT INTO clubs(id, name) VALUES (1111, 'Manchester United'), (1112, 'FC Barcelona'), (1113, 'Real Madrid');
+SET IDENTITY_INSERT clubs OFF
 
 SET IDENTITY_INSERT authors ON
 INSERT INTO authors(id, name, birthdate) VALUES (123, 'Jelte', '2001-01-01'), (124, 'Aniruddh', '2002-02-02'), (125, 'Aniruddh', '2001-01-01'), (126, 'Aaron', '2001-01-01');
@@ -351,6 +375,12 @@ VALUES (1, 'Awesome book', 1234),
 (13, 'Before Sunrise', 1234),
 (14, 'Before Sunset', 1234);
 SET IDENTITY_INSERT books OFF
+
+SET IDENTITY_INSERT players ON
+INSERT INTO players(id, name, current_club_id, new_club_id)
+VALUES (1, 'Cristiano Ronaldo', 1113, 1111),
+(2, 'Leonel Messi', 1112, 1113);
+SET IDENTITY_INSERT players OFF
 
 SET IDENTITY_INSERT book_website_placements ON
 INSERT INTO book_website_placements(id, book_id, price) VALUES (1, 1, 100), (2, 2, 50), (3, 3, 23), (4, 5, 33);

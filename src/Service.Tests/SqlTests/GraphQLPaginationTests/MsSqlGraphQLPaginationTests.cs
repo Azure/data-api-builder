@@ -43,9 +43,21 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             DisplayName = "Test after token for decimal values.")]
         [DataRow("boolean_types", "false", "true", 2, 4,
             DisplayName = "Test after token for boolean values.")]
+        [DataRow("date_types", "\"0001-01-01\"",
+            "\"9999-12-31\"", 3, 4,
+            DisplayName = "Test after token for date values.")]
         [DataRow("datetime_types", "\"1753-01-01T00:00:00.000\"",
             "\"9999-12-31T23:59:59\"", 3, 4,
             DisplayName = "Test after token for datetime values.")]
+        [DataRow("datetime2_types", "\"0001-01-01 00:00:00.0000000\"",
+            "\"9999-12-31T23:59:59.9999999\"", 3, 4,
+            DisplayName = "Test after token for datetime2 values.")]
+        [DataRow("datetimeoffset_types", "\"0001-01-01 00:00:00.0000000+0:00\"",
+            "\"9999-12-31T23:59:59.9999999+14:00\"", 3, 4,
+            DisplayName = "Test after token for datetimeoffset values.")]
+        [DataRow("smalldatetime_types", "\"1900-01-01 00:00:00\"",
+            "\"2079-06-06T00:00:00\"", 3, 4,
+            DisplayName = "Test after token for smalldate values.")]
         [DataRow("bytearray_types", "\"AAAAAA==\"", "\"/////w==\"", 3, 4,
             DisplayName = "Test after token for bytearray values.")]
         [TestMethod]

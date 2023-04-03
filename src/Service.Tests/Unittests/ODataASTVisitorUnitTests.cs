@@ -55,7 +55,16 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("float_types eq 65535.9", "([float_types] = @param1)", DisplayName = "Equate float types.")]
         [DataRow("decimal_types eq 25.5", "([decimal_types] = @param1)", DisplayName = "Equate decimal types.")]
         [DataRow("boolean_types eq true", "([boolean_types] = @param1)", DisplayName = "Equate boolean types.")]
-        [DataRow("datetime_types eq  2023-01-24T12:51:59Z", "([datetime_types] = @param1)", DisplayName = "Equate datetime types.")]
+        [DataRow("date_types eq 9999-12-31", "([date_types] = @param1)",
+            DisplayName = "Equate date types.")]
+        [DataRow("datetime_types eq  2023-01-24T12:51:59Z", "([datetime_types] = @param1)",
+            DisplayName = "Equate datetime types.")]
+        [DataRow("datetime2_types eq  9998-12-31T21:59:59.99999Z", "([datetime2_types] = @param1)",
+            DisplayName = "Equate datetime2 types.")]
+        [DataRow("datetimeoffset_types eq 9998-12-31T21:59:59.99999-14:00",
+            "([datetimeoffset_types] = @param1)", DisplayName = "Equate datetimeoffset types.")]
+        [DataRow("smalldatetime_types eq 2079-06-06", "([smalldatetime_types] = @param1)",
+            DisplayName = "Equate smalldatetime types.")]
         [DataRow("bytearray_types eq 1000", "([bytearray_types] = @param1)", DisplayName = "Equate bytearray types.")]
         [DataRow("guid_types eq 9A19103F-16F7-4668-BE54-9A1E7A4F7556", "([guid_types] = @param1)", DisplayName = "Equate guid types.")]
         [TestMethod]

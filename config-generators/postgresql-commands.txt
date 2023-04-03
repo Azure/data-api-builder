@@ -14,7 +14,7 @@ add Tree --config "dab-config.PostgreSql.json" --source trees --permissions "ano
 add Shrub --config "dab-config.PostgreSql.json" --source trees --permissions "anonymous:create,read,update,delete" --rest plants
 add Fungus --config "dab-config.PostgreSql.json" --source fungi --permissions "anonymous:create,read,update,delete" --graphql "fungus:fungi"
 add books_view_all --config "dab-config.PostgreSql.json" --source books_view_all --source.type "view" --source.key-fields "id" --permissions "anonymous:*" --rest true --graphql true
-add books_view_with_mapping --config "dab-config.PostgreSql.json" --source books_view_with_mapping --source.type "view" --permissions "anonymous:*" --rest true --graphql true
+add books_view_with_mapping --config "dab-config.PostgreSql.json" --source books_view_with_mapping --source.type "view" --source.key-fields "id" --permissions "anonymous:*" --rest true --graphql true
 add stocks_view_selected --config "dab-config.PostgreSql.json" --source stocks_view_selected --source.type "view" --source.key-fields "categoryid,pieceid" --permissions "anonymous:*" --rest true --graphql true
 add books_publishers_view_composite --config "dab-config.PostgreSql.json" --source books_publishers_view_composite --source.type "view" --source.key-fields "id,pub_id" --permissions "anonymous:*" --rest true --graphql true
 add books_publishers_view_composite_insertable --config "dab-config.PostgreSql.json" --source books_publishers_view_composite_insertable --source.type "view" --source.key-fields "id" --permissions "anonymous:*" --rest true --graphql true
@@ -44,9 +44,9 @@ update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tes
 update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tester_06:create,delete"
 update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tester_06:update" --fields.include "*"
 update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tester_06:read" --fields.include "*" --policy-database "@item.id eq 1940"
-update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tester_REST:read" --policy-database "@item.id ne 1234 or @item.id gt 1940"
-update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tester_REST:create"
-update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tester_REST:update" --policy-database "@item.id ne 1234"
+update Publisher --config "dab-config.PostgreSql.json" --permissions "database_policy_tester:read" --policy-database "@item.id ne 1234 or @item.id gt 1940"
+update Publisher --config "dab-config.PostgreSql.json" --permissions "database_policy_tester:create"
+update Publisher --config "dab-config.PostgreSql.json" --permissions "database_policy_tester:update" --policy-database "@item.id ne 1234"
 update Stock --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete" --rest commodities --graphql true --relationship stocks_price --target.entity stocks_price --cardinality one
 update Book --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete"
 update Book --config "dab-config.PostgreSql.json" --relationship publishers --target.entity Publisher --cardinality one
@@ -95,7 +95,7 @@ update Tree --config "dab-config.PostgreSql.json" --rest true --graphql false --
 update Shrub --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete" --map "species:fancyName"
 update Fungus --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete" --map "spores:hazards" --rest true
 update Fungus --config "dab-config.PostgreSql.json" --permissions "policy_tester_01:read" --fields.include "*" --policy-database "@item.region ne 'northeast'"
-update books_view_with_mapping --config "dab-config.PostgreSql.json" --source.key-fields "id" --map "id:book_id"
+update books_view_with_mapping --config "dab-config.PostgreSql.json" --map "id:book_id"
 update BookWebsitePlacement --config "dab-config.PostgreSql.json" --relationship books --target.entity Book --cardinality one
 update SupportedType --config "dab-config.PostgreSql.json" --map "id:typeid" --permissions "authenticated:create,read,delete,update" 
 update Author --config "dab-config.PostgreSql.json" --relationship books --target.entity Book --cardinality many --linking.object book_author_link

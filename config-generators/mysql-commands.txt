@@ -13,11 +13,11 @@ add stocks_price --config "dab-config.MySql.json" --source stocks_price --permis
 add Tree --config "dab-config.MySql.json" --source trees --permissions "anonymous:create,read,update,delete"
 add Shrub --config "dab-config.MySql.json" --source trees --permissions "anonymous:create,read,update,delete" --rest plants
 add Fungus --config "dab-config.MySql.json" --source fungi --permissions "anonymous:create,read,update,delete" --graphql "fungus:fungi"
-add books_view_all --config "dab-config.MySql.json" --source books_view_all --source.type "view" --permissions "anonymous:*" --rest true --graphql true
-add books_view_with_mapping --config "dab-config.MySql.json" --source books_view_with_mapping --source.type "view" --permissions "anonymous:*" --rest true --graphql true
-add stocks_view_selected --config "dab-config.MySql.json" --source stocks_view_selected --source.type "view" --permissions "anonymous:*" --rest true --graphql true
-add books_publishers_view_composite --config "dab-config.MySql.json" --source books_publishers_view_composite --source.type "view" --permissions "anonymous:*" --rest true --graphql true
-add books_publishers_view_composite_insertable --config "dab-config.MySql.json" --source books_publishers_view_composite_insertable --source.type "view" --permissions "anonymous:*" --rest true --graphql true
+add books_view_all --config "dab-config.MySql.json" --source books_view_all --source.type "view" --source.key-fields "id" --permissions "anonymous:*" --rest true --graphql true
+add books_view_with_mapping --config "dab-config.MySql.json" --source books_view_with_mapping --source.type "view" --source.key-fields "id" --permissions "anonymous:*" --rest true --graphql true
+add stocks_view_selected --config "dab-config.MySql.json" --source stocks_view_selected --source.type "view" --source.key-fields "categoryid,pieceid" --permissions "anonymous:*" --rest true --graphql true
+add books_publishers_view_composite --config "dab-config.MySql.json" --source books_publishers_view_composite --source.type "view" --source.key-fields "id,pub_id" --permissions "anonymous:*" --rest true --graphql true
+add books_publishers_view_composite_insertable --config "dab-config.MySql.json" --source books_publishers_view_composite_insertable --source.type "view" --source.key-fields "id,publisher_id" --permissions "anonymous:*" --rest true --graphql true
 add Empty --config "dab-config.MySql.json" --source "empty_table" --permissions "authenticated:create,read,update,delete" --rest true
 add Notebook --config "dab-config.MySql.json" --source "notebooks" --permissions "anonymous:read" --rest true --graphql true --fields.include "*" --policy-database "@item ne 1"
 add Journal --config "dab-config.MySql.json" --source "journals" --rest true --graphql true --permissions "policy_tester_noupdate:create,delete"
@@ -44,9 +44,9 @@ update Publisher --config "dab-config.MySql.json" --permissions "policy_tester_0
 update Publisher --config "dab-config.MySql.json" --permissions "policy_tester_06:create,delete"
 update Publisher --config "dab-config.MySql.json" --permissions "policy_tester_06:update" --fields.include "*"
 update Publisher --config "dab-config.MySql.json" --permissions "policy_tester_06:read" --fields.include "*" --policy-database "@item.id eq 1940"
-update Publisher --config "dab-config.MySql.json" --permissions "policy_tester_REST:read" --policy-database "@item.id ne 1234 or @item.id gt 1940"
-update Publisher --config "dab-config.MySql.json" --permissions "policy_tester_REST:create"
-update Publisher --config "dab-config.MySql.json" --permissions "policy_tester_REST:update" --policy-database "@item.id ne 1234"
+update Publisher --config "dab-config.MySql.json" --permissions "database_policy_tester:read" --policy-database "@item.id ne 1234 or @item.id gt 1940"
+update Publisher --config "dab-config.MySql.json" --permissions "database_policy_tester:create"
+update Publisher --config "dab-config.MySql.json" --permissions "database_policy_tester:update" --policy-database "@item.id ne 1234"
 update Stock --config "dab-config.MySql.json" --permissions "authenticated:create,read,update,delete" --rest commodities --graphql true --relationship stocks_price --target.entity stocks_price --cardinality one
 update Book --config "dab-config.MySql.json" --permissions "authenticated:create,read,update,delete"
 update Book --config "dab-config.MySql.json" --relationship publishers --target.entity Publisher --cardinality one
@@ -98,7 +98,7 @@ update Fungus --config "dab-config.MySql.json" --permissions "policy_tester_01:r
 update books_view_all --config "dab-config.MySql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true
 update stocks_view_selected --config "dab-config.MySql.json" --permissions "authenticated:create,read,update,delete"
 update books_publishers_view_composite --config "dab-config.MySql.json" --permissions "authenticated:create,read,update,delete"
-update books_view_with_mapping --config "dab-config.MySql.json" --map "id:book_id" --source.key-fields "id" 
+update books_view_with_mapping --config "dab-config.MySql.json" --map "id:book_id"
 update BookWebsitePlacement --config "dab-config.MySql.json" --relationship books --target.entity Book --cardinality one
 update SupportedType --config "dab-config.MySql.json" --map "id:typeid" --permissions "authenticated:create,read,delete,update" 
 update Author --config "dab-config.MySql.json" --relationship books --target.entity Book --cardinality many --linking.object book_author_link

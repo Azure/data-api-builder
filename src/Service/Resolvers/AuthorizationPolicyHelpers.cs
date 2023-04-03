@@ -63,7 +63,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 return;
             }
 
-            queryStructure.ProcessOdataClause(filterClause);
+            queryStructure.ProcessOdataClause(filterClause, operationType);
         }
 
         /// <summary>

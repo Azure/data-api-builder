@@ -24,6 +24,8 @@ DROP TABLE IF EXISTS authors;
 DROP TABLE IF EXISTS book_website_placements;
 DROP TABLE IF EXISTS website_users;
 DROP TABLE IF EXISTS books;
+DROP TABLE IF EXISTS players;
+DROP TABLE IF EXISTS clubs;
 DROP TABLE IF EXISTS publishers;
 DROP TABLE IF EXISTS [foo].[magazines];
 DROP TABLE IF EXISTS stocks_price;
@@ -60,6 +62,18 @@ CREATE TABLE books(
     id int IDENTITY(5001, 1) PRIMARY KEY,
     title varchar(max) NOT NULL,
     publisher_id int NOT NULL
+);
+
+CREATE TABLE players(
+    id int IDENTITY(5001, 1) PRIMARY KEY,
+    name varchar(max) NOT NULL,
+    current_club_id int NOT NULL,
+    new_club_id int NOT NULL
+);
+
+CREATE TABLE clubs(
+    id int IDENTITY(5001, 1) PRIMARY KEY,
+    name varchar(max) NOT NULL
 );
 
 CREATE TABLE book_website_placements(
@@ -143,7 +157,11 @@ CREATE TABLE type_table(
     float_types float,
     decimal_types decimal(38, 19),
     boolean_types bit,
+    date_types date,
     datetime_types datetime,
+    datetime2_types datetime2,
+    datetimeoffset_types datetimeoffset,
+    smalldatetime_types smalldatetime,
     bytearray_types varbinary(max),
     guid_types uniqueidentifier DEFAULT newid()
 );
@@ -242,6 +260,12 @@ FOREIGN KEY (publisher_id)
 REFERENCES publishers (id)
 ON DELETE CASCADE;
 
+ALTER TABLE players
+ADD CONSTRAINT player_club_fk
+FOREIGN KEY (current_club_id)
+REFERENCES clubs (id)
+ON DELETE CASCADE;
+
 ALTER TABLE book_website_placements
 ADD CONSTRAINT book_website_placement_book_fk
 FOREIGN KEY (book_id)
@@ -290,6 +314,10 @@ ADD total AS (subtotal + tax) PERSISTED;
 SET IDENTITY_INSERT publishers ON
 INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd'), (1940, 'Policy Publisher 01'), (1941, 'Policy Publisher 02'), (1156, 'The First Publisher');
 SET IDENTITY_INSERT publishers OFF
+
+SET IDENTITY_INSERT clubs ON
+INSERT INTO clubs(id, name) VALUES (1111, 'Manchester United'), (1112, 'FC Barcelona'), (1113, 'Real Madrid');
+SET IDENTITY_INSERT clubs OFF
 
 SET IDENTITY_INSERT authors ON
 INSERT INTO authors(id, name, birthdate) VALUES (123, 'Jelte', '2001-01-01'), (124, 'Aniruddh', '2002-02-02'), (125, 'Aniruddh', '2001-01-01'), (126, 'Aaron', '2001-01-01');
@@ -348,6 +376,12 @@ VALUES (1, 'Awesome book', 1234),
 (14, 'Before Sunset', 1234);
 SET IDENTITY_INSERT books OFF
 
+SET IDENTITY_INSERT players ON
+INSERT INTO players(id, name, current_club_id, new_club_id)
+VALUES (1, 'Cristiano Ronaldo', 1113, 1111),
+(2, 'Leonel Messi', 1112, 1113);
+SET IDENTITY_INSERT players OFF
+
 SET IDENTITY_INSERT book_website_placements ON
 INSERT INTO book_website_placements(id, book_id, price) VALUES (1, 1, 100), (2, 2, 50), (3, 3, 23), (4, 5, 33);
 SET IDENTITY_INSERT book_website_placements OFF
@@ -359,12 +393,27 @@ INSERT INTO reviews(id, book_id, content) VALUES (567, 1, 'Indeed a great book')
 SET IDENTITY_INSERT reviews OFF
 
 SET IDENTITY_INSERT type_table ON
-INSERT INTO type_table(id, byte_types, short_types, int_types, long_types, string_types, single_types, float_types, decimal_types, boolean_types, datetime_types, bytearray_types) VALUES
-    (1, 1, 1, 1, 1, '', 0.33, 0.33, 0.333333, 1, '1999-01-08 10:23:54', 0xABCDEF0123),
-    (2, 0, -1, -1, -1, 'lksa;jdflasdf;alsdflksdfkldj', -9.2, -9.2, -9.292929, 0, '1999-01-08 10:23:00', 0x98AB7511AABB1234),
-    (3, 0, -32768, -2147483648, -9223372036854775808, 'null', -3.4E38, -1.7E308, 2.929292E-19, 1, '1753-01-01 00:00:00.000', 0x00000000),
-    (4, 255, 32767, 2147483647, 9223372036854775807, 'null', 3.4E38, 1.7E308, 2.929292E-14, 1, '9999-12-31 23:59:59', 0xFFFFFFFF),
-    (5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO type_table(id,
+byte_types, short_types, int_types, long_types,
+string_types,
+single_types, float_types, decimal_types,
+boolean_types,
+date_types, datetime_types, datetime2_types, datetimeoffset_types, smalldatetime_types,
+bytearray_types)
+VALUES
+    (1, 1, 1, 1, 1, '', 0.33, 0.33, 0.333333, 1,
+    '1999-01-08', '1999-01-08 10:23:54', '1999-01-08 10:23:54.9999999', '1999-01-08 10:23:54.9999999-14:00', '1999-01-08 10:23:54',
+    0xABCDEF0123),
+    (2, 0, -1, -1, -1, 'lksa;jdflasdf;alsdflksdfkldj', -9.2, -9.2, -9.292929, 0,
+    '1999-01-08', '1999-01-08 10:23:00', '1999-01-08 10:23:00.9999999', '1999-01-08 10:23:00.9999999+13:00', '1999-01-08 10:23:00',
+    0x98AB7511AABB1234),
+    (3, 0, -32768, -2147483648, -9223372036854775808, 'null', -3.4E38, -1.7E308, 2.929292E-19, 1,
+    '0001-01-01', '1753-01-01 00:00:00.000', '0001-01-01 00:00:00.0000000', '0001-01-01 00:00:00.0000000+0:00', '1900-01-01 00:00:00',
+    0x00000000),
+    (4, 255, 32767, 2147483647, 9223372036854775807, 'null', 3.4E38, 1.7E308, 2.929292E-14, 1,
+    '9999-12-31', '9999-12-31 23:59:59', '9999-12-31 23:59:59.9999999', '9999-12-31 23:59:59.9999999+14:00', '2079-06-06',
+    0xFFFFFFFF),
+    (5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 SET IDENTITY_INSERT type_table OFF
 
 SET IDENTITY_INSERT sales ON

@@ -226,6 +226,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         [DataRow(typeof(decimal), DECIMAL_TYPE)]
         [DataRow(typeof(bool), BOOLEAN_TYPE)]
         [DataRow(typeof(DateTime), DATETIME_TYPE)]
+        [DataRow(typeof(DateTimeOffset), DATETIME_TYPE)]
         [DataRow(typeof(byte[]), BYTEARRAY_TYPE)]
         public void SystemTypeMapsToCorrectGraphQLType(Type systemType, string graphQLType)
         {

@@ -51,6 +51,26 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         private const int RETRY_COUNT = 5;
         private const int RETRY_WAIT_SECONDS = 1;
 
+        /// <summary>
+        /// A valid REST API request body with correct parameter types for all the fields.
+        /// </summary>
+        public const string REQUEST_BODY_WITH_CORRECT_PARAM_TYPES = @"
+                    {
+                        ""title"": ""New book"",
+                        ""publisher_id"": 1234
+                    }
+                ";
+
+        /// <summary>
+        /// An invalid REST API request body with incorrect parameter type for publisher_id field.
+        /// </summary>
+        public const string REQUEST_BODY_WITH_INCORRECT_PARAM_TYPES = @"
+                    {
+                        ""title"": ""New book"",
+                        ""publisher_id"": ""one""
+                    }
+                ";
+
         public TestContext TestContext { get; set; }
 
         [TestInitialize]
@@ -947,6 +967,65 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
+        /// Validates the error message that is returned for REST requests with incorrect parameter type
+        /// when the engine is running in Production mode. The error messages in Production mode is
+        /// very generic to not reveal information about the underlying database objects backing the entity.
+        /// This test runs against a MsSql database. However, generic error messages will be returned in Production
+        /// mode when run against PostgreSql and MySql databases.
+        /// </summary>
+        /// <param name="requestType">Type of REST request</param>
+        /// <param name="requestPath">Endpoint for the REST request</param>
+        /// <param name="expectedErrorMessage">Right error message that should be shown to the end user</param>
+        [DataTestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        [DataRow(RestMethod.Get, "/api/Book/id/one", null, "Invalid value provided for field: id", DisplayName = "Validates the error message for a GET request with incorrect primary key parameter type on a table in production mode")]
+        [DataRow(RestMethod.Get, "/api/books_view_all/id/one", null, "Invalid value provided for field: id", DisplayName = "Validates the error message for a GET request with incorrect primary key parameter type on a view in production mode")]
+        [DataRow(RestMethod.Get, "/api/GetBook?id=one", REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validates the error message for a GET request on a stored-procedure with incorrect parameter type in production mode")]
+        [DataRow(RestMethod.Get, "/api/GQLmappings/column1/one", null, "Invalid value provided for field: column1", DisplayName = "Validates the error message for a GET request with incorrect primary key parameter type with alias defined for primary key column on a table in production mode")]
+        [DataRow(RestMethod.Post, "/api/Book", REQUEST_BODY_WITH_INCORRECT_PARAM_TYPES, "Invalid value provided for field: publisher_id", DisplayName = "Validates the error message for a POST request with incorrect parameter type in the request body on a table in production mode")]
+        [DataRow(RestMethod.Put, "/api/Book/id/one", REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validates the error message for a PUT request with incorrect primary key parameter type on a table in production mode")]
+        [DataRow(RestMethod.Put, "/api/Book/id/1", REQUEST_BODY_WITH_INCORRECT_PARAM_TYPES, "Invalid value provided for field: publisher_id", DisplayName = "Validates the error message for a bad PUT request with incorrect parameter type in the request body on a table in production mode")]
+        [DataRow(RestMethod.Patch, "/api/Book/id/one", REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validates the error message for a PATCH request with incorrect primary key parameter type on a table in production mode")]
+        [DataRow(RestMethod.Patch, "/api/Book/id/1", REQUEST_BODY_WITH_INCORRECT_PARAM_TYPES, "Invalid value provided for field: publisher_id", DisplayName = "Validates the error message for a PATCH request with incorrect parameter type in the request body on a table in production mode")]
+        [DataRow(RestMethod.Delete, "/api/Book/id/one", REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validates the error message for a DELETE request with incorrect primary key parameter type on a table in production mode")]
+        public async Task TestGenericErrorMessageForRestApiInProductionMode(
+            RestMethod requestType,
+            string requestPath,
+            string requestBody,
+            string expectedErrorMessage)
+        {
+            const string CUSTOM_CONFIG = "custom-config.json";
+            TestHelper.ConstructNewConfigWithSpecifiedHostMode(CUSTOM_CONFIG, HostModeType.Production, TestCategory.MSSQL);
+            string[] args = new[]
+            {
+                    $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                HttpMethod httpMethod = SqlTestHelper.ConvertRestMethodToHttpMethod(requestType);
+                HttpRequestMessage request;
+                if (requestType is RestMethod.Get || requestType is RestMethod.Delete)
+                {
+                    request = new(httpMethod, requestPath);
+                }
+                else
+                {
+                    request = new(httpMethod, requestPath)
+                    {
+                        Content = JsonContent.Create(requestBody)
+                    };
+                }
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                string body = await response.Content.ReadAsStringAsync();
+                Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
+                Assert.IsTrue(body.Contains(expectedErrorMessage));
+            }
+        }
+
+        /// <summary>
         /// Tests that the when Rest or GraphQL is disabled Globally,
         /// any requests made will get a 404 response.
         /// </summary>
@@ -1012,7 +1091,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/Book");
                 HttpResponseMessage restResponse = await client.SendAsync(restRequest);
                 Assert.AreEqual(expectedStatusCodeForREST, restResponse.StatusCode);
-
             }
 
             // Hosted Scenario
@@ -1034,6 +1112,78 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
                 Assert.AreEqual(expected: expectedStatusCodeForGraphQL, actual: graphqlResponseCode);
 
+            }
+        }
+
+        /// <summary>
+        /// Engine supports config with some views that do not have keyfields specified in the config for MsSQL.
+        /// This Test validates that support. It creates a custom config with a view and no keyfields specified.
+        /// It checks both Rest and GraphQL queries are tested to return Success.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task TestEngineSupportViewsWithoutKeyFieldsInConfigForMsSQL()
+        {
+            Dictionary<GlobalSettingsType, object> settings = new()
+            {
+                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){}) },
+                { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings(){}) }
+            };
+
+            DataSource dataSource = new(DatabaseType.mssql)
+            {
+                ConnectionString = GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)
+            };
+
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(globalSettings: settings, dataSource: dataSource);
+
+            const string CUSTOM_CONFIG = "custom-config.json";
+            Entity viewEntity = new(
+                Source: JsonSerializer.SerializeToElement("books_view_all"),
+                Rest: true,
+                GraphQL: true,
+                Permissions: new PermissionSetting[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: null,
+                Mappings: null
+            );
+
+            configuration.Entities.Add("books_view_all", viewEntity);
+
+            File.WriteAllText(
+                CUSTOM_CONFIG,
+                JsonSerializer.Serialize(configuration, RuntimeConfig.SerializerOptions));
+
+            string[] args = new[]
+            {
+                    $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                string query = @"{
+                    books_view_alls {
+                        items{
+                            id
+                            title
+                        }
+                    }
+                }";
+
+                object payload = new { query };
+
+                HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
+                {
+                    Content = JsonContent.Create(payload)
+                };
+
+                HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
+                Assert.AreEqual(HttpStatusCode.OK, graphQLResponse.StatusCode);
+                string body = await graphQLResponse.Content.ReadAsStringAsync();
+                Assert.IsFalse(body.Contains("errors")); // In GraphQL, All errors end up in the errors array, no matter what kind of error they are.
+
+                HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/books_view_all");
+                HttpResponseMessage restResponse = await client.SendAsync(restRequest);
+                Assert.AreEqual(HttpStatusCode.OK, restResponse.StatusCode);
             }
         }
 

@@ -1493,6 +1493,11 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         public void SetPartitionKeyPath(string database, string container, string partitionKeyPath)
             => throw new NotImplementedException();
+
+        public bool IsDevelopmentMode()
+        {
+            return _runtimeConfigProvider.IsDeveloperMode();
+        }
     }
 }
 

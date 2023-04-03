@@ -74,7 +74,7 @@ namespace Azure.DataApiBuilder.Service
         private static LogLevel GetLogLevelFromCommandLineArgs(string[] args, out bool isLogLevelOverridenByCli)
         {
             Command cmd = new(name: "start");
-            Option<LogLevel> logLevelOption = new (name: "--LogLevel");
+            Option<LogLevel> logLevelOption = new(name: "--LogLevel");
             cmd.AddOption(logLevelOption);
             CommandLineConfiguration cmdConfig = new(cmd);
             Parser parser = new(cmdConfig);

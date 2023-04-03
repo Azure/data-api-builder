@@ -243,6 +243,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 "Decimal" => DECIMAL_TYPE,
                 "Boolean" => BOOLEAN_TYPE,
                 "DateTime" => DATETIME_TYPE,
+                "DateTimeOffset" => DATETIME_TYPE,
                 "Byte[]" => BYTEARRAY_TYPE,
                 _ => throw new DataApiBuilderException(
                         message: $"Column type {type} not handled by case. Please add a case resolving {type} to the appropriate GraphQL type",

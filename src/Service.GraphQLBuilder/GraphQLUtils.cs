@@ -224,26 +224,39 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         public static Tuple<string, IValueNode> ConvertValueToGraphQLType(string defaultValueFromConfig, ParameterDefinition parameterDefinition)
         {
             string paramValueType = SchemaConverter.GetGraphQLTypeFromSystemType(type: parameterDefinition.SystemType);
-            Tuple<string, IValueNode> valueNode = paramValueType switch
-            {
-                BYTE_TYPE => new(BYTE_TYPE, new IntValueNode(byte.Parse(defaultValueFromConfig))),
-                SHORT_TYPE => new(SHORT_TYPE, new IntValueNode(short.Parse(defaultValueFromConfig))),
-                INT_TYPE => new(INT_TYPE, new IntValueNode(int.Parse(defaultValueFromConfig))),
-                LONG_TYPE => new(LONG_TYPE, new IntValueNode(long.Parse(defaultValueFromConfig))),
-                STRING_TYPE => new(STRING_TYPE, new StringValueNode(defaultValueFromConfig)),
-                BOOLEAN_TYPE => new(BOOLEAN_TYPE, new BooleanValueNode(bool.Parse(defaultValueFromConfig))),
-                SINGLE_TYPE => new(SINGLE_TYPE, new SingleType().ParseValue(float.Parse(defaultValueFromConfig))),
-                FLOAT_TYPE => new(FLOAT_TYPE, new FloatValueNode(double.Parse(defaultValueFromConfig))),
-                DECIMAL_TYPE => new(DECIMAL_TYPE, new FloatValueNode(decimal.Parse(defaultValueFromConfig))),
-                DATETIME_TYPE => new(DATETIME_TYPE, new DateTimeType().ParseResult(DateTime.Parse(defaultValueFromConfig))),
-                BYTEARRAY_TYPE => new(BYTEARRAY_TYPE, new ByteArrayType().ParseValue(Convert.FromBase64String(defaultValueFromConfig))),
-                _ => throw new DataApiBuilderException(
-                    message: $"The parameter value {defaultValueFromConfig} provided in configuration cannot be converted to the type {paramValueType}",
-                    statusCode: HttpStatusCode.InternalServerError,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping)
-            };
 
-            return valueNode;
+            try
+            {
+                Tuple<string, IValueNode> valueNode = paramValueType switch
+                {
+                    BYTE_TYPE => new(BYTE_TYPE, new IntValueNode(byte.Parse(defaultValueFromConfig))),
+                    SHORT_TYPE => new(SHORT_TYPE, new IntValueNode(short.Parse(defaultValueFromConfig))),
+                    INT_TYPE => new(INT_TYPE, new IntValueNode(int.Parse(defaultValueFromConfig))),
+                    LONG_TYPE => new(LONG_TYPE, new IntValueNode(long.Parse(defaultValueFromConfig))),
+                    STRING_TYPE => new(STRING_TYPE, new StringValueNode(defaultValueFromConfig)),
+                    BOOLEAN_TYPE => new(BOOLEAN_TYPE, new BooleanValueNode(bool.Parse(defaultValueFromConfig))),
+                    SINGLE_TYPE => new(SINGLE_TYPE, new SingleType().ParseValue(float.Parse(defaultValueFromConfig))),
+                    FLOAT_TYPE => new(FLOAT_TYPE, new FloatValueNode(double.Parse(defaultValueFromConfig))),
+                    DECIMAL_TYPE => new(DECIMAL_TYPE, new FloatValueNode(decimal.Parse(defaultValueFromConfig))),
+                    DATETIME_TYPE => new(DATETIME_TYPE, new DateTimeType().ParseResult(DateTime.Parse(defaultValueFromConfig))),
+                    BYTEARRAY_TYPE => new(BYTEARRAY_TYPE, new ByteArrayType().ParseValue(Convert.FromBase64String(defaultValueFromConfig))),
+                    _ => throw new NotSupportedException(message: $"The {defaultValueFromConfig} parameter's value type [{paramValueType}] is not supported.")
+                };
+
+                return valueNode;
+            }
+            catch (Exception error) when (
+                error is FormatException ||
+                error is OverflowException ||
+                error is ArgumentException ||
+                error is NotSupportedException)
+            {
+                throw new DataApiBuilderException(
+                        message: $"The parameter value {defaultValueFromConfig} provided in configuration cannot be converted to the type {paramValueType}",
+                        statusCode: HttpStatusCode.InternalServerError,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping,
+                        innerException: error);
+            }
         }
     }
 }

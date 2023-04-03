@@ -237,11 +237,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         }
 
         /// <summary>
-        /// 
+        /// Translates system type objects to HotChocolate ObjectValueNode's of the associated value type used for GraphQL schema creation.
+        /// The HotChocolate IntValueNode has contructors for integral numeric types (byte, short, long) to
+        /// maintain the precision of the input object's value.
         /// </summary>
-        /// <param name="metadataValue"></param>
-        /// <returns></returns>
-        /// <exception cref="DataApiBuilderException"></exception>
+        /// <param name="metadataValue">Object to be converted to GraphQL ObjectValueNode</param>
+        /// <returns>The resulting IValueNode object converted from the input system type object. </returns>
+        /// <seealso cref="https://github.com/ChilliCream/graphql-platform/blob/12.18.0/src/HotChocolate/Language/src/Language.SyntaxTree/IntValueNode.cs"/>
+        /// <exception cref="DataApiBuilderException">Raised when the input argument's value type does not map to a supported GraphQL type.</exception>
         public static IValueNode CreateValueNodeFromDbObjectMetadata(object metadataValue)
         {
             IValueNode arg = metadataValue switch

@@ -47,7 +47,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         /// Mock the entityPermissionsMap which resolves which roles need to be included
         /// in an authorize directive used on a GraphQL object type definition.
         /// </summary>
-        /// <param name="entityNames">Entity for which authorization permissions need to be resolved.</param>
+        /// <param name="entityNames">Entities for which authorization permissions need to be resolved.</param>
         /// <param name="operations">Actions performed on entity to resolve authorization permissions.</param>
         /// <param name="roles">Collection of role names allowed to perform action on entity.</param>
         /// <returns>EntityPermissionsMap Key/Value collection.</returns>
@@ -95,22 +95,20 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         /// <param name="permissionOperations">Collection of permission operations (CRUD+Execute). Default: Execute</param>
         /// <param name="dbObjectName">Name of object in the database. Default: foo</param>
         /// <param name="parameters">Collection of defined stored procedure parameters</param>
-        /// <param name="keyFields">The field(s) to be used as primary keys.</param>
         /// <returns>Stored procedure backed entity.</returns>
         public static Entity GenerateStoredProcedureEntity(
             string graphQLTypeName,
             GraphQLOperation? graphQLOperation,
             string[] permissionOperations = null,
             string dbObjectName = "foo",
-            Dictionary<string, object> parameters = null,
-            string[] keyFields = null
+            Dictionary<string, object> parameters = null
             )
         {
             DatabaseObjectSource dbObjectSource = new(
                 Type: SourceType.StoredProcedure,
                 Name: dbObjectName,
                 Parameters: parameters,
-                KeyFields: keyFields);
+                KeyFields: null);
 
             GraphQLStoredProcedureEntityVerboseSettings graphQLSettings = new(
                 Type: graphQLTypeName,

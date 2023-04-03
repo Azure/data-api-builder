@@ -8,6 +8,7 @@ using System.CommandLine.Parsing;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
+using HotChocolate.Language;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -76,9 +77,7 @@ namespace Azure.DataApiBuilder.Service
             Command cmd = new(name: "start");
             Option<LogLevel> logLevelOption = new(name: "--LogLevel");
             cmd.AddOption(logLevelOption);
-            CommandLineConfiguration cmdConfig = new(cmd);
-            Parser parser = new(cmdConfig);
-            ParseResult result = parser.Parse(args);
+            ParseResult result = GetParseResult(cmd, args);
             LogLevel logLevel = result.Tokens.Count > 1 ? result.GetValueForOption<LogLevel>(logLevelOption) : LogLevel.Error;
             isLogLevelOverridenByCli = result.Tokens.Count > 1 ? true : false;
 
@@ -92,6 +91,20 @@ namespace Azure.DataApiBuilder.Service
             }
 
             return logLevel;
+        }
+
+        /// <summary>
+        /// Helper function returns ParseResult for a given command and
+        /// arguments.
+        /// </summary>
+        /// <param name="cmd">The command.</param>
+        /// <param name="args">The arguments.</param>
+        /// <returns>ParsedResult</returns>
+        private static ParseResult GetParseResult(Command cmd, string[] args)
+        {
+            CommandLineConfiguration cmdConfig = new(cmd);
+            System.CommandLine.Parsing.Parser parser = new(cmdConfig);
+            return parser.Parse(args);
         }
 
         /// <summary>
@@ -114,21 +127,22 @@ namespace Azure.DataApiBuilder.Service
         }
 
         /// <summary>
-        /// Iterate through args from cli and check for the flag `--no-https-redirect`.
+        /// Use CommandLine parser to check for the flag `--no-https-redirect`.
         /// If it is present, https redirection is disabled.
         /// By Default it is enabled.
         /// </summary>
         /// <param name="args">array that may contain flag to disable https redirection.</param>
         private static void DisableHttpsRedirectionIfNeeded(string[] args)
         {
-            for (int i = 0; i < args.Length; i++)
+            Command cmd = new(name: "start");
+            Option<string> httpsRedirectFlagOption = new(name: Startup.NO_HTTPS_REDIRECT_FLAG);
+            cmd.AddOption(httpsRedirectFlagOption);
+            ParseResult result = GetParseResult(cmd, args);
+            if (result.Tokens.Count > 0)
             {
-                if (args[i].Equals(Startup.NO_HTTPS_REDIRECT_FLAG))
-                {
-                    Console.WriteLine("Redirecting to https is disabled.");
-                    RuntimeConfigProvider.IsHttpsRedirectionDisabled = true;
-                    return;
-                }
+                Console.WriteLine("Redirecting to https is disabled.");
+                RuntimeConfigProvider.IsHttpsRedirectionDisabled = true;
+                return;
             }
 
             RuntimeConfigProvider.IsHttpsRedirectionDisabled = false;

@@ -390,7 +390,7 @@ type Table @model(name: ""table"") {
             string entityName = "MyStoredProcedure";
             string gql =
             @"
-            type StoredProcedureType @model(name:""MyStoredProcedure"") {
+            type StoredProcedureType @model(name:" + entityName + @") {
                 field1: string
             }
             ";

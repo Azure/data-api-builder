@@ -66,8 +66,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                             {
                                 throw new DataApiBuilderException(
                                     message: "GraphQL schema creation for stored procedures requires the associated database object's schema metadata.",
-                                    statusCode: HttpStatusCode.InternalServerError,
-                                    subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping);
+                                    statusCode: HttpStatusCode.ServiceUnavailable,
+                                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                             }
                         }
                     }

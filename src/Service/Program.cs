@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service
             Option<LogLevel> logLevelOption = new(name: "--LogLevel");
             cmd.AddOption(logLevelOption);
             ParseResult result = GetParseResult(cmd, args);
-            bool matchedToken = result.Tokens.Count - result.UnmatchedTokens.Count > 1;
+            bool matchedToken = result.Tokens.Count - result.UnmatchedTokens.Count - result.UnparsedTokens.Count > 1;
             LogLevel logLevel = matchedToken ? result.GetValueForOption<LogLevel>(logLevelOption) : LogLevel.Error;
             isLogLevelOverridenByCli = matchedToken ? true : false;
 
@@ -139,7 +139,7 @@ namespace Azure.DataApiBuilder.Service
             Option<string> httpsRedirectFlagOption = new(name: Startup.NO_HTTPS_REDIRECT_FLAG);
             cmd.AddOption(httpsRedirectFlagOption);
             ParseResult result = GetParseResult(cmd, args);
-            if (result.Tokens.Count - result.UnmatchedTokens.Count > 0)
+            if (result.Tokens.Count - result.UnmatchedTokens.Count - result.UnparsedTokens.Count > 0)
             {
                 Console.WriteLine("Redirecting to https is disabled.");
                 RuntimeConfigProvider.IsHttpsRedirectionDisabled = true;

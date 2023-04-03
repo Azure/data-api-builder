@@ -89,7 +89,6 @@ namespace Azure.DataApiBuilder.Service
                     $"https://learn.microsoft.com/en-us/dotnet/api/microsoft.extensions.logging.loglevel?view=dotnet-plat-ext-7.0",
                     statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-
             }
 
             return logLevel;

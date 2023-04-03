@@ -15,7 +15,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <summary>
         /// Helper function to create StoredProcedure Schema for GraphQL.
         /// It uses the parameters to build the arguments and returns a list
-        /// of the StoredProcedure GraphQL object. 
+        /// of the StoredProcedure GraphQL object.
         /// </summary>
         /// <param name="name">Name used for InputValueDefinition name.</param>
         /// <param name="entity">Entity's runtime config metadata.</param>

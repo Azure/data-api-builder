@@ -218,7 +218,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             return type.Name switch
             {
                 "String" => STRING_TYPE,
-                "Guid" => GUID_TYPE,
+                "Guid" => STRING_TYPE,
                 "Byte" => BYTE_TYPE,
                 "Int16" => SHORT_TYPE,
                 "Int32" => INT_TYPE,

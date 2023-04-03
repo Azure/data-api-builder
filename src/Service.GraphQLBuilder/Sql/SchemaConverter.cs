@@ -228,7 +228,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 "Decimal" => DECIMAL_TYPE,
                 "Boolean" => BOOLEAN_TYPE,
                 "DateTime" => DATETIME_TYPE,
-                "DateTimeOffset" => DATETIME_TYPE,
+                "DateTimeOffset" => DATETIMEOFFSET_TYPE,
                 "Byte[]" => BYTEARRAY_TYPE,
                 _ => throw new DataApiBuilderException(
                         message: $"Column type {type} not handled by case. Please add a case resolving {type} to the appropriate GraphQL type",
@@ -259,8 +259,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 float value => new ObjectValueNode(new ObjectFieldNode(SINGLE_TYPE, new SingleType().ParseValue(value))),
                 double value => new ObjectValueNode(new ObjectFieldNode(FLOAT_TYPE, value)),
                 decimal value => new ObjectValueNode(new ObjectFieldNode(DECIMAL_TYPE, new FloatValueNode(value))),
+                DateTimeOffset value => new ObjectValueNode(new ObjectFieldNode(DATETIMEOFFSET_TYPE, new DateTimeType().ParseValue(value))),
                 DateTime value => new ObjectValueNode(new ObjectFieldNode(DATETIME_TYPE, new DateTimeType().ParseResult(value))),
-                DateTimeOffset value => new ObjectValueNode(new ObjectFieldNode(DATETIME_TYPE, new DateTimeType().ParseValue(value))),
                 byte[] value => new ObjectValueNode(new ObjectFieldNode(BYTEARRAY_TYPE, new ByteArrayType().ParseValue(value))),
                 _ => throw new DataApiBuilderException(
                     message: $"The type {metadataValue.GetType()} is not supported as a GraphQL default value",

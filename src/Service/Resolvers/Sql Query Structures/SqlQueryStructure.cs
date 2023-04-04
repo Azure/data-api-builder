@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
@@ -476,32 +475,39 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public void AddPaginationPredicate(IEnumerable<PaginationColumn> afterJsonValues)
         {
-            if (!afterJsonValues.Any())
+            IEnumerator<PaginationColumn> enumerator = afterJsonValues.GetEnumerator();
+
+            if (!enumerator.MoveNext())
             {
                 // no need to create a predicate for pagination
                 return;
             }
 
+            List<PaginationColumn>? columns = null;
+            
             try
             {
-                foreach (PaginationColumn column in afterJsonValues)
+                do
                 {
+                    PaginationColumn column = enumerator.Current;
                     column.TableAlias = SourceAlias;
                     column.ParamName = column.Value is not null ?
                         MakeParamWithValue(GetParamAsColumnSystemType(column.Value!.ToString()!, column.ColumnName)) :
                         MakeParamWithValue(null);
-                }
+                    (columns ??= new List<PaginationColumn>()).Add(column);
+                }while(enumerator.MoveNext());
+                
             }
             catch (ArgumentException ex)
             {
                 throw new DataApiBuilderException(
-                  message: ex.Message,
-                  statusCode: HttpStatusCode.BadRequest,
-                  subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
-                  innerException: ex);
+                      message: ex.Message,
+                      statusCode: HttpStatusCode.BadRequest,
+                      subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                      innerException: ex);
             }
 
-            PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(afterJsonValues.ToList());
+            PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(columns);
         }
 
         /// <summary>
@@ -516,10 +522,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             try
             {
-                string parameterName;
                 if (value != null)
                 {
-                    parameterName = MakeParamWithValue(
+                    string parameterName = MakeParamWithValue(
                         GetParamAsColumnSystemType(value.ToString()!, backingColumn));
                     Predicates.Add(new Predicate(
                         new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, backingColumn, SourceAlias)),
@@ -658,7 +663,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
                     }
 
-                    IDictionary<string, object?> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field, _ctx.Variables);
+                    IDictionary<string, object?> subqueryParams = ExecutionHelper.GetParametersFromSchemaAndQueryFields(subschemaField, field, _ctx.Variables);
                     SqlQueryStructure subquery = new(
                         _ctx,
                         subqueryParams,
@@ -743,10 +748,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             HashSet<string> remainingPkCols = new(PrimaryKey());
 
-            InputObjectType orderByArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(orderByArgumentSchema);
+            InputObjectType orderByArgumentObject = ExecutionHelper.InputObjectTypeFromIInputField(orderByArgumentSchema);
             foreach (ObjectFieldNode field in orderByFields)
             {
-                object? fieldValue = ResolverMiddleware.ExtractValueFromIValueNode(
+                object? fieldValue = ExecutionHelper.ExtractValueFromIValueNode(
                     value: field.Value,
                     argumentSchema: orderByArgumentObject.Fields[field.Name.Value],
                     variables: _ctx.Variables);

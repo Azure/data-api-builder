@@ -265,7 +265,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public JsonDocument? ResolveInnerObject(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
+        public JsonElement ResolveInnerObject(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
         {
             PaginationMetadata parentMetadata = (PaginationMetadata)metadata;
             PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name.Value];
@@ -275,22 +275,25 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 return SqlPaginationUtil.CreatePaginationConnectionFromJsonElement(element, currentMetadata);
             }
-            else
-            {
-                //TODO: Try to avoid additional deserialization/serialization here.
-                return ResolverMiddleware.RepresentsNullValue(element) ? null : JsonDocument.Parse(element.ToString());
-            }
+            
+            return element;
         }
 
         /// <inheritdoc />
-        public object? ResolveListType(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
+        public IReadOnlyList<JsonElement> ResolveListType(JsonElement array, IObjectField fieldSchema, ref IMetadata metadata)
         {
             PaginationMetadata parentMetadata = (PaginationMetadata)metadata;
             PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name.Value];
             metadata = currentMetadata;
+            
+            List<JsonElement> list = new();
 
-            //TODO: Try to avoid additional deserialization/serialization here.
-            return JsonSerializer.Deserialize<List<JsonElement>>(element.ToString());
+            foreach (JsonElement element in array.EnumerateArray())
+            {
+                list.Add(element);
+            }
+            
+            return list;
         }
 
         // <summary>

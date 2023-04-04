@@ -181,6 +181,15 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 IMetadata metadata = GetMetadata(context);
                 objectValue = _queryEngine.ResolveInnerObject(objectValue, context.Selection.Field, ref metadata);
+                
+                // Since the query engine could null the object out we need to check again
+                // if its null.
+                if(objectValue.ValueKind is not JsonValueKind.Null and not JsonValueKind.Undefined)
+                {
+                    return null;
+                }
+                
+                SetNewMetadata(context, metadata);
                 return objectValue;
             }
 

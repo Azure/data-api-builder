@@ -1,11 +1,11 @@
 {
-  "$schema": "../../schemas/dab.draft.schema.json",
+  "$schema": "https://dataapibuilder.azureedge.net/schemas/vmajor.minor.patch-beta/dab.draft.schema.json",
   "data-source": {
     "database-type": "mssql",
     "options": {
       "set-session-context": true
     },
-    "connection-string": "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=sa;Password=REPLACEME;MultipleActiveResultSets=False;Connection Timeout=5;"
+    "connection-string": "Server=SEANLSURFACEB2;Database=DataGatewayFeatureDev;Integrated Security=True;trustServerCertificate=true;Persist Security Info=False;MultipleActiveResultSets=False;Connection Timeout=5;"
   },
   "runtime": {
     "rest": {
@@ -18,16 +18,16 @@
       "path": "/graphql"
     },
     "host": {
-      "authentication": {
-        "provider": "StaticWebApps"
-      },
+      "mode": "development",
       "cors": {
         "origins": [
           "http://localhost:5000"
         ],
         "allow-credentials": false
       },
-      "mode": "development"
+      "authentication": {
+        "provider": "StaticWebApps"
+      }
     }
   },
   "entities": {
@@ -193,15 +193,15 @@
           "role": "database_policy_tester",
           "actions": [
             {
-              "action": "Update",
+              "action": "Create",
               "policy": {
-                "database": "@item.id ne 1234"
+                "database": "@item.name ne \u0027New publisher\u0027"
               }
             },
             {
-              "action": "Create",
+              "action": "Update",
               "policy": {
-                "database": "@item.name ne 'New publisher'"
+                "database": "@item.id ne 1234"
               }
             },
             {
@@ -226,6 +226,15 @@
       "source": "stocks",
       "permissions": [
         {
+          "role": "anonymous",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        },
+        {
           "role": "authenticated",
           "actions": [
             "create",
@@ -236,11 +245,15 @@
         },
         {
           "role": "TestNestedFilterFieldIsNull_ColumnForbidden",
-          "actions": [ "read" ]
+          "actions": [
+            "read"
+          ]
         },
         {
           "role": "TestNestedFilterFieldIsNull_EntityReadForbidden",
-          "actions": [ "read" ]
+          "actions": [
+            "read"
+          ]
         }
       ],
       "relationships": {
@@ -686,6 +699,14 @@
       "source": "comics",
       "permissions": [
         {
+          "role": "anonymous",
+          "actions": [
+            "create",
+            "read",
+            "update"
+          ]
+        },
+        {
           "role": "authenticated",
           "actions": [
             "create",
@@ -696,11 +717,15 @@
         },
         {
           "role": "TestNestedFilterManyOne_ColumnForbidden",
-          "actions": [ "read" ]
+          "actions": [
+            "read"
+          ]
         },
         {
           "role": "TestNestedFilterManyOne_EntityReadForbidden",
-          "actions": [ "read" ]
+          "actions": [
+            "read"
+          ]
         },
         {
           "role": "TestNestedFilterOneMany_ColumnForbidden",
@@ -708,6 +733,7 @@
             {
               "action": "Read",
               "fields": {
+                "include": [],
                 "exclude": [
                   "categoryName"
                 ]
@@ -717,7 +743,11 @@
         },
         {
           "role": "TestNestedFilterOneMany_EntityReadForbidden",
-          "actions": [ "Create", "Update", "Delete" ]
+          "actions": [
+            "create",
+            "update",
+            "delete"
+          ]
         }
       ],
       "relationships": {
@@ -824,17 +854,21 @@
             {
               "action": "read",
               "fields": {
-                "exclude": [ "price" ]
+                "include": [],
+                "exclude": [
+                  "price"
+                ]
               }
             }
           ]
         },
         {
           "role": "TestNestedFilterFieldIsNull_EntityReadForbidden",
-          "actions": [ "create" ]
+          "actions": [
+            "create"
+          ]
         }
-      ],
-      "rest": false
+      ]
     },
     "Tree": {
       "source": "trees",
@@ -947,7 +981,10 @@
     "books_view_all": {
       "source": {
         "type": "view",
-        "object": "books_view_all"
+        "object": "books_view_all",
+        "key-fields": [
+          "id"
+        ]
       },
       "permissions": [
         {
@@ -994,7 +1031,11 @@
     "stocks_view_selected": {
       "source": {
         "type": "view",
-        "object": "stocks_view_selected"
+        "object": "stocks_view_selected",
+        "key-fields": [
+          "categoryid",
+          "pieceid"
+        ]
       },
       "permissions": [
         {
@@ -1019,7 +1060,11 @@
     "books_publishers_view_composite": {
       "source": {
         "type": "view",
-        "object": "books_publishers_view_composite"
+        "object": "books_publishers_view_composite",
+        "key-fields": [
+          "id",
+          "pub_id"
+        ]
       },
       "permissions": [
         {
@@ -1044,7 +1089,11 @@
     "books_publishers_view_composite_insertable": {
       "source": {
         "type": "view",
-        "object": "books_publishers_view_composite_insertable"
+        "object": "books_publishers_view_composite_insertable",
+        "key-fields": [
+          "id",
+          "publisher_id"
+        ]
       },
       "permissions": [
         {
@@ -1214,7 +1263,7 @@
       "source": "series",
       "permissions": [
         {
-          "role": "authenticated",
+          "role": "anonymous",
           "actions": [
             "*"
           ]
@@ -1225,6 +1274,7 @@
             {
               "action": "Read",
               "fields": {
+                "include": [],
                 "exclude": [
                   "name"
                 ]
@@ -1234,15 +1284,23 @@
         },
         {
           "role": "TestNestedFilterManyOne_EntityReadForbidden",
-          "actions": [ "Create", "Update", "Delete" ]
-        },
-        {
-          "role": "TestNestedFilterOneMany_EntityReadForbidden",
-          "actions": [ "Read" ]
+          "actions": [
+            "create",
+            "update",
+            "delete"
+          ]
         },
         {
           "role": "TestNestedFilterOneMany_ColumnForbidden",
-          "actions": [ "Read" ]
+          "actions": [
+            "read"
+          ]
+        },
+        {
+          "role": "TestNestedFilterOneMany_EntityReadForbidden",
+          "actions": [
+            "read"
+          ]
         }
       ],
       "relationships": {
@@ -1356,10 +1414,7 @@
           "post"
         ]
       },
-      "graphql": {
-        "type": true,
-        "operation": "Mutation"
-      }
+      "graphql": true
     },
     "InsertBook": {
       "source": {
@@ -1390,10 +1445,7 @@
           "post"
         ]
       },
-      "graphql": {
-        "type": true,
-        "operation": "Mutation"
-      }
+      "graphql": true
     },
     "CountBooks": {
       "source": {
@@ -1420,10 +1472,7 @@
           "post"
         ]
       },
-      "graphql": {
-        "type": true,
-        "operation": "Mutation"
-      }
+      "graphql": true
     },
     "DeleteLastInsertedBook": {
       "source": {
@@ -1450,10 +1499,7 @@
           "post"
         ]
       },
-      "graphql": {
-        "type": true,
-        "operation": "Mutation"
-      }
+      "graphql": true
     },
     "UpdateBookTitle": {
       "source": {
@@ -1484,10 +1530,7 @@
           "post"
         ]
       },
-      "graphql": {
-        "type": true,
-        "operation": "Mutation"
-      }
+      "graphql": true
     },
     "GetAuthorsHistoryByFirstName": {
       "source": {
@@ -1521,8 +1564,7 @@
         "type": {
           "singular": "SearchAuthorByFirstName",
           "plural": "SearchAuthorByFirstNames"
-        },
-        "operation": "Mutation"
+        }
       }
     },
     "InsertAndDisplayAllBooksUnderGivenPublisher": {
@@ -1554,10 +1596,7 @@
           "post"
         ]
       },
-      "graphql": {
-        "type": true,
-        "operation": "Mutation"
-      }
+      "graphql": true
     },
     "GQLmappings": {
       "source": "GQLmappings",
@@ -1606,7 +1645,9 @@
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "*" ]
+          "actions": [
+            "*"
+          ]
         },
         {
           "role": "authenticated",
@@ -1619,7 +1660,62 @@
         "id": "bkid",
         "bkname": "name"
       },
-      "rest": true
+      "rest": true,
+      "graphql": true
+    },
+    "PublisherNF": {
+      "source": "publishers",
+      "permissions": [
+        {
+          "role": "authenticated",
+          "actions": [
+            "Create",
+            "Read",
+            "Update",
+            "Delete"
+          ]
+        },
+        {
+          "role": "TestNestedFilter_EntityReadForbidden",
+          "actions": [
+            "read"
+          ]
+        },
+        {
+          "role": "TestNestedFilter_ColumnForbidden",
+          "actions": [
+            "read"
+          ]
+        },
+        {
+          "role": "TestNestedFilterChained_EntityReadForbidden",
+          "actions": [
+            "create"
+          ]
+        },
+        {
+          "role": "TestNestedFilterChained_ColumnForbidden",
+          "actions": [
+            {
+              "action": "Read",
+              "fields": {
+                "include": [],
+                "exclude": [
+                  "name"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "books": {
+          "cardinality": "many",
+          "target.entity": "BookNF"
+        }
+      },
+      "rest": true,
+      "graphql": true
     },
     "BookNF": {
       "source": "books",
@@ -1627,33 +1723,49 @@
         {
           "role": "authenticated",
           "actions": [
-            "create",
-            "read",
-            "update",
-            "delete"
+            "Create",
+            "Read",
+            "Update",
+            "Delete"
           ]
         },
         {
           "role": "TestNestedFilter_EntityReadForbidden",
-          "actions": [ "read" ]
+          "actions": [
+            "read"
+          ]
         },
         {
           "role": "TestNestedFilter_ColumnForbidden",
-          "actions": [ "read" ]
+          "actions": [
+            "read"
+          ]
         },
         {
           "role": "TestNestedFilterChained_EntityReadForbidden",
-          "actions": [ "read" ]
+          "actions": [
+            "read"
+          ]
         },
         {
           "role": "TestNestedFilterChained_ColumnForbidden",
-          "actions": [ "read" ]
+          "actions": [
+            "read"
+          ]
         }
       ],
       "relationships": {
         "publishers": {
           "cardinality": "one",
           "target.entity": "PublisherNF"
+        },
+        "websiteplacement": {
+          "cardinality": "one",
+          "target.entity": "BookWebsitePlacement"
+        },
+        "reviews": {
+          "cardinality": "many",
+          "target.entity": "Review"
         },
         "authors": {
           "cardinality": "many",
@@ -1671,6 +1783,7 @@
         "id": "id",
         "title": "title"
       },
+      "rest": true,
       "graphql": {
         "type": {
           "singular": "bookNF",
@@ -1684,34 +1797,51 @@
         {
           "role": "authenticated",
           "actions": [
-            "create",
-            "read",
-            "update",
-            "delete"
+            "Create",
+            "Read",
+            "Update",
+            "Delete"
           ]
         },
         {
           "role": "TestNestedFilter_EntityReadForbidden",
-          "actions": [ "create" ]
+          "actions": [
+            {
+              "action": "Create",
+              "fields": {
+                "include": [],
+                "exclude": [
+                  "name"
+                ]
+              }
+            }
+          ]
         },
         {
           "role": "TestNestedFilter_ColumnForbidden",
           "actions": [
             {
-              "action": "read",
+              "action": "Read",
               "fields": {
-                "exclude": [ "name" ]
+                "include": [],
+                "exclude": [
+                  "name"
+                ]
               }
             }
           ]
         },
         {
           "role": "TestNestedFilterChained_EntityReadForbidden",
-          "actions": [ "read" ]
+          "actions": [
+            "read"
+          ]
         },
         {
           "role": "TestNestedFilterChained_ColumnForbidden",
-          "actions": [ "read" ]
+          "actions": [
+            "read"
+          ]
         }
       ],
       "relationships": {
@@ -1719,51 +1849,6 @@
           "cardinality": "many",
           "target.entity": "BookNF",
           "linking.object": "book_author_link"
-        }
-      },
-      "rest": true,
-      "graphql": true
-    },
-    "PublisherNF": {
-      "source": "publishers",
-      "permissions": [
-        {
-          "role": "authenticated",
-          "actions": [
-            "create",
-            "read",
-            "update",
-            "delete"
-          ]
-        },
-        {
-          "role": "TestNestedFilter_EntityReadForbidden",
-          "actions": [ "read" ]
-        },
-        {
-          "role": "TestNestedFilter_ColumnForbidden",
-          "actions": [ "read" ]
-        },
-        {
-          "role": "TestNestedFilterChained_EntityReadForbidden",
-          "actions": [ "create" ]
-        },
-        {
-          "role": "TestNestedFilterChained_ColumnForbidden",
-          "actions": [
-            {
-              "action": "read",
-              "fields": {
-                "exclude": [ "name" ]
-              }
-            }
-          ]
-        }
-      ],
-      "relationships": {
-        "booksNF": {
-          "cardinality": "many",
-          "target.entity": "BookNF"
         }
       },
       "rest": true,

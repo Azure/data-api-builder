@@ -139,13 +139,13 @@ namespace Azure.DataApiBuilder.Service.Authorization
             // Columns.Count() will never be zero because this method is called after a check ensures Count() > 0
             Assert.IsFalse(columns.Count() == 0, message: "columns.Count() should be greater than 0.");
 
-            //OperationMetadata operationToColumnMap = EntityPermissionsMap[entityName].RoleToOperationMap[roleName].OperationToColumnMap[operation];
             if (!EntityPermissionsMap[entityName].RoleToOperationMap.TryGetValue(roleName, out RoleMetadata? roleMetadata) && roleMetadata is null)
             {
                 return false;
             }
 
-            // Short circuit when OperationMetadata lookup fails, when lookup succeeds, opMetadata will be populated and 
+            // Short circuit when OperationMetadata lookup fails. When lookup succeeds, operationToColumnMap will be populated
+            // to enable include/excluded column permissions lookups.
             if (roleMetadata.OperationToColumnMap.TryGetValue(operation, out OperationMetadata? operationToColumnMap) && operationToColumnMap is not null)
             {
                 // Each column present in the request is an "exposedColumn".

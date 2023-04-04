@@ -776,7 +776,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         /// <summary>
         /// Test Nested Filter for One-Many relationship
         /// </summary>
-        //[TestMethod]
+        [TestMethod]
         public async Task TestNestedFilterOneMany(string existsPredicate, string roleName, bool expectsError = false, string errorMsgFragment = "")
         {
             string graphQLQueryName = "series";

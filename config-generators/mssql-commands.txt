@@ -1,6 +1,6 @@
 init --config "dab-config.MsSql.json" --database-type mssql --set-session-context true --connection-string "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=sa;Password=REPLACEME;MultipleActiveResultSets=False;Connection Timeout=5;" --host-mode Development --cors-origin "http://localhost:5000"
 add Publisher --config "dab-config.MsSql.json" --source publishers --permissions "anonymous:read"
-add Stock --config "dab-config.MsSql.json" --source stocks --permissions "authenticated:create,read,update,delete"
+add Stock --config "dab-config.MsSql.json" --source stocks --permissions "anonymous:create,read,update,delete"
 add Book --config "dab-config.MsSql.json" --source books --permissions "anonymous:create,read,update,delete" --graphql "book:books"
 add BookWebsitePlacement --config "dab-config.MsSql.json" --source book_website_placements --permissions "anonymous:read"
 add Author --config "dab-config.MsSql.json" --source authors --permissions "anonymous:read"
@@ -59,6 +59,7 @@ update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_0
 update Publisher --config "dab-config.MsSql.json" --permissions "database_policy_tester:read" --policy-database "@item.id ne 1234 or @item.id gt 1940"
 update Publisher --config "dab-config.MsSql.json" --permissions "database_policy_tester:update" --policy-database "@item.id ne 1234"
 update Publisher --config "dab-config.MsSql.json" --permissions "database_policy_tester:create" --policy-database "@item.name ne 'New publisher'"
+update Stock --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete"
 update Stock --config "dab-config.MsSql.json" --rest commodities --graphql true --relationship stocks_price --target.entity stocks_price --cardinality one
 update Book --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete"
 update Book --config "dab-config.MsSql.json" --relationship publishers --target.entity Publisher --cardinality one

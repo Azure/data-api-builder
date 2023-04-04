@@ -5,7 +5,7 @@
     "options": {
       "set-session-context": true
     },
-    "connection-string": "Server=SEANLSURFACEB2;Database=DataGatewayFeatureDev;Integrated Security=True;trustServerCertificate=true;Persist Security Info=False;MultipleActiveResultSets=False;Connection Timeout=5;"
+    "connection-string": "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=sa;Password=REPLACEME;MultipleActiveResultSets=False;Connection Timeout=5;"
   },
   "runtime": {
     "rest": {

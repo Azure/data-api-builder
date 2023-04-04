@@ -39,7 +39,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         x => $" OUTER APPLY ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)}({dataIdent})"));
 
             string predicates = JoinPredicateStrings(
-                                    structure.DbPolicyPredicates,
+                                    structure.DbPolicyPredicatesForOperations[Config.Operation.Read],
                                     structure.FilterPredicates,
                                     Build(structure.Predicates),
                                     Build(structure.PaginationMetadata.PaginationPredicate));
@@ -61,11 +61,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <inheritdoc />
         public string Build(SqlInsertStructure structure)
         {
-            string predicates = JoinPredicateStrings(structure.DbPolicyPredicates);
+            string predicates = JoinPredicateStrings(structure.DbPolicyPredicatesForOperations[Config.Operation.Create]);
             string insertColumns = Build(structure.InsertColumns);
             string insertIntoStatementPrefix = $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} ({insertColumns}) " +
                 $"OUTPUT {MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted)} ";
-            string values = string.IsNullOrEmpty(structure.DbPolicyPredicates) ?
+            string values = predicates.Equals(BASE_PREDICATE)?
                 $"VALUES ({string.Join(", ", structure.Values)});" : $"SELECT {insertColumns} FROM (VALUES({string.Join(", ", structure.Values)})) T({insertColumns}) WHERE {predicates};";
             StringBuilder insertQuery = new(insertIntoStatementPrefix);
             return insertQuery.Append(values).ToString();
@@ -75,7 +75,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public string Build(SqlUpdateStructure structure)
         {
             string predicates = JoinPredicateStrings(
-                                   structure.DbPolicyPredicates,
+                                   structure.DbPolicyPredicatesForOperations[Config.Operation.Update],
                                    Build(structure.Predicates));
 
             return $"UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
@@ -88,7 +88,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public string Build(SqlDeleteStructure structure)
         {
             string predicates = JoinPredicateStrings(
-                       structure.DbPolicyPredicates,
+                       structure.DbPolicyPredicatesForOperations[Config.Operation.Delete],
                        Build(structure.Predicates));
 
             return $"DELETE FROM {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
@@ -110,20 +110,21 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <returns></returns>
         public string Build(SqlUpsertQueryStructure structure)
         {
-            string predicates = JoinPredicateStrings(Build(structure.Predicates), structure.DbPolicyPredicates);
+            string updatePredicates = JoinPredicateStrings(Build(structure.Predicates), structure.DbPolicyPredicatesForOperations[Config.Operation.Update]);
+            string insertPredicates = JoinPredicateStrings(structure.DbPolicyPredicatesForOperations[Config.Operation.Create]);
             if (structure.IsFallbackToUpdate)
             {
                 return $"UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
                     $"SET {Build(structure.UpdateOperations, ", ")} " +
                     $"OUTPUT {MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted)} " +
-                    $"WHERE {predicates};";
+                    $"WHERE {updatePredicates};";
             }
             else
             {
                 return $"SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;BEGIN TRANSACTION; UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
                     $"WITH(UPDLOCK) SET {Build(structure.UpdateOperations, ", ")} " +
                     $"OUTPUT {MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted)} " +
-                    $"WHERE {predicates} " +
+                    $"WHERE {updatePredicates} " +
                     $"IF @@ROWCOUNT = 0 " +
                     $"BEGIN; " +
                     $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} ({Build(structure.InsertColumns)}) " +

@@ -44,7 +44,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// DbPolicyPredicates is a string that represents the filter portion of our query
         /// in the WHERE Clause added by virtue of the database policy.
         /// </summary>
-        public string? DbPolicyPredicates { get; set; }
+        public Dictionary<Config.Operation, string?> DbPolicyPredicatesForOperations { get; set; } = new();
 
         /// <summary>
         /// Collection of all the fields referenced in the database policy for create action.
@@ -472,12 +472,18 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="dbPolicyClause">FilterClause from processed runtime configuration permissions Policy:Database</param>
         /// <param name="operation">CRUD operation for which the database policy predicates are to be evaluated.</param>
         /// <exception cref="DataApiBuilderException">Thrown when the OData visitor traversal fails. Possibly due to malformed clause.</exception>
-        public void ProcessOdataClause(FilterClause dbPolicyClause, Config.Operation operation)
+        public void ProcessOdataClause(FilterClause? dbPolicyClause, Config.Operation operation)
         {
+            if (dbPolicyClause is null)
+            {
+                DbPolicyPredicatesForOperations[operation] = null;
+                return;
+            }
+
             ODataASTVisitor visitor = new(this, MetadataProvider, operation);
             try
             {
-                DbPolicyPredicates = GetFilterPredicatesFromOdataClause(dbPolicyClause, visitor);
+                DbPolicyPredicatesForOperations[operation] = GetFilterPredicatesFromOdataClause(dbPolicyClause, visitor);
             }
             catch (Exception ex)
             {

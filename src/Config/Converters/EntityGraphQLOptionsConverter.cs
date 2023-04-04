@@ -13,8 +13,8 @@ internal class EntityGraphQLOptionsConverter : JsonConverter<EntityGraphQLOption
     {
         if (reader.TokenType == JsonTokenType.StartObject)
         {
-            string? singular = null;
-            string? plural = null;
+            string singular = string.Empty;
+            string plural = string.Empty;
             bool enabled = true;
             GraphQLOperation operation = GraphQLOperation.Query;
 
@@ -38,7 +38,7 @@ internal class EntityGraphQLOptionsConverter : JsonConverter<EntityGraphQLOption
                         case "type":
                             if (reader.TokenType == JsonTokenType.String)
                             {
-                                singular = reader.GetString();
+                                singular = reader.GetString() ?? string.Empty;
                             }
                             else if (reader.TokenType == JsonTokenType.StartObject)
                             {
@@ -56,10 +56,10 @@ internal class EntityGraphQLOptionsConverter : JsonConverter<EntityGraphQLOption
                                         switch (property2)
                                         {
                                             case "singular":
-                                                singular = reader.GetString();
+                                                singular = reader.GetString() ?? string.Empty;
                                                 break;
                                             case "plural":
-                                                plural = reader.GetString();
+                                                plural = reader.GetString() ?? string.Empty;
                                                 break;
                                         }
                                     }
@@ -79,12 +79,12 @@ internal class EntityGraphQLOptionsConverter : JsonConverter<EntityGraphQLOption
 
         if (reader.TokenType == JsonTokenType.True)
         {
-            return new EntityGraphQLOptions();
+            return new EntityGraphQLOptions(Singular: string.Empty, Plural: string.Empty, Enabled: true);
         }
 
         if (reader.TokenType == JsonTokenType.False || reader.TokenType == JsonTokenType.Null)
         {
-            return new EntityGraphQLOptions(Enabled: false);
+            return new EntityGraphQLOptions(Singular: string.Empty, Plural: string.Empty, Enabled: false);
         }
 
         throw new JsonException();

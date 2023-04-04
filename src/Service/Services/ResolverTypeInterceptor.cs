@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Configuration;
 using HotChocolate.Resolvers;
@@ -24,7 +23,7 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
             new FieldMiddlewareDefinition(
                 next => async context =>
                 {
-                    await executionHelper.ExecuteMutateAsync(context).ConfigureAwait(false);
+                    await executionHelper.ExecuteQueryAsync(context).ConfigureAwait(false);
                     await next(context).ConfigureAwait(false);
                 });
         
@@ -56,14 +55,14 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
         {
             foreach (ObjectFieldDefinition field in objectTypeDef.Fields)
             {
-                field.MiddlewareDefinitions.Add(_mutationMiddleware);
+                field.MiddlewareDefinitions.Add(_queryMiddleware);
             }
         }
         else if (completionContext.IsMutationType ?? false)
         {
             foreach (ObjectFieldDefinition field in objectTypeDef.Fields)
             {
-                field.MiddlewareDefinitions.Add(_queryMiddleware);
+                field.MiddlewareDefinitions.Add(_mutationMiddleware);
             }
         }
         else if (completionContext.IsSubscriptionType ?? false)

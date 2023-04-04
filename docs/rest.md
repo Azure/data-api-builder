@@ -229,7 +229,7 @@ In either case the result will be something like:
 
 ## PATCH
 
-With PATCH you can update the item of the specified entity. Only the specified fields will be affected. All fields not specified in the request body will not be affected
+With PATCH you can create or update the item of the specified entity. Only the specified fields will be affected. All fields not specified in the request body will not be affected. If an item with the specified primary key does not exist, a new item will be created.
 
 The query pattern is:
 

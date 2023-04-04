@@ -53,7 +53,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// Resolves a jsonElement representing a list type based on the field's schema and metadata
         /// </summary>
-        public object? ResolveListType(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata);
+        public IReadOnlyList<JsonElement> ResolveListType(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata);
 
     }
 }

@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Policy;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
@@ -19,8 +20,8 @@ using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedT
 namespace Azure.DataApiBuilder.Service.Services
 {
     /// <summary>
-    /// The field resolver middleware that is used by the schema executor to resolve
-    /// the queries and mutations
+    /// This helper class provides the various resolvers and middlewares used
+    /// during query execution.
     /// </summary>
     internal sealed class ExecutionHelper
     {
@@ -35,6 +36,12 @@ namespace Azure.DataApiBuilder.Service.Services
             _mutationEngine = mutationEngine;
         }
 
+        /// <summary>
+        /// Represents the root query resolver and fetches the initial data from the query engine.
+        /// </summary>
+        /// <param name="context">
+        /// The middleware context.
+        /// </param>
         public async ValueTask ExecuteQueryAsync(IMiddlewareContext context)
         {
             IDictionary<string, object?> parameters = GetParametersFromContext(context);
@@ -43,16 +50,17 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 Tuple<IEnumerable<JsonDocument>, IMetadata?> result =
                     await _queryEngine.ExecuteListAsync(context, parameters);
-                
+
                 // this will be run after the query / mutation has completed. 
-                context.RegisterForCleanup(() =>
-                {
-                    foreach (JsonDocument document in result.Item1)
+                context.RegisterForCleanup(
+                    () =>
                     {
-                        document.Dispose();
-                    }
-                });
-                
+                        foreach (JsonDocument document in result.Item1)
+                        {
+                            document.Dispose();
+                        }
+                    });
+
                 context.Result = result.Item1.Select(t => t.RootElement).ToArray();
                 SetNewMetadata(context, result.Item2);
             }
@@ -64,99 +72,135 @@ namespace Azure.DataApiBuilder.Service.Services
                 SetNewMetadata(context, result.Item2);
             }
         }
-        
+
+        /// <summary>
+        /// Represents the root mutation resolver and invokes the mutation on the query engine.
+        /// </summary>
+        /// <param name="context">
+        /// The middleware context.
+        /// </param>
         public async ValueTask ExecuteMutateAsync(IMiddlewareContext context)
         {
-            if (context.Selection.Field.Coordinate.TypeName.Value == "Mutation")
-            {
-                IDictionary<string, object?> parameters = GetParametersFromContext(context);
+            IDictionary<string, object?> parameters = GetParametersFromContext(context);
 
-                // Only Stored-Procedure has ListType as returnType for Mutation
-                if (context.Selection.Type.IsListType())
-                {
-                    // Both Query and Mutation execute the same SQL statement for Stored Procedure.
-                    Tuple<IEnumerable<JsonDocument>, IMetadata?> result =
-                        await _queryEngine.ExecuteListAsync(context, parameters);
-                    
-                    // this will be run after the query / mutation has completed. 
-                    context.RegisterForCleanup(() =>
+            // Only Stored-Procedure has ListType as returnType for Mutation
+            if (context.Selection.Type.IsListType())
+            {
+                // Both Query and Mutation execute the same SQL statement for Stored Procedure.
+                Tuple<IEnumerable<JsonDocument>, IMetadata?> result =
+                    await _queryEngine.ExecuteListAsync(context, parameters);
+
+                // this will be run after the query / mutation has completed. 
+                context.RegisterForCleanup(
+                    () =>
                     {
                         foreach (JsonDocument document in result.Item1)
                         {
                             document.Dispose();
                         }
                     });
-                    
-                    context.Result = result.Item1.Select(t => t.RootElement).ToArray();
-                    SetNewMetadata(context, result.Item2);
-                }
-                else
-                {
-                    Tuple<JsonDocument?, IMetadata?> result =
-                        await _mutationEngine.ExecuteAsync(context, parameters);
-                    SetContextResult(context, result.Item1);
-                    SetNewMetadata(context, result.Item2);
-                }
+
+                context.Result = result.Item1.Select(t => t.RootElement).ToArray();
+                SetNewMetadata(context, result.Item2);
+            }
+            else
+            {
+                Tuple<JsonDocument?, IMetadata?> result =
+                    await _mutationEngine.ExecuteAsync(context, parameters);
+                SetContextResult(context, result.Item1);
+                SetNewMetadata(context, result.Item2);
             }
         }
-        
+
+        /// <summary>
+        /// Represents a pure resolver for a leaf field.
+        /// This resolver extracts the field value form the json object.
+        /// </summary>
+        /// <param name="context">
+        /// The pure resolver context.
+        /// </param>
+        /// <returns>
+        /// Returns the runtime field value.
+        /// </returns>
         public static object? ExecuteLeafField(IPureResolverContext context)
         {
             // This means this field is a scalar, so we don't need to do
             // anything for it.
-            if (TryGetPropertyFromParent(context, out JsonElement jsonElement))
+            if (TryGetPropertyFromParent(context, out JsonElement fieldValue) && 
+                fieldValue.ValueKind is not (JsonValueKind.Undefined or JsonValueKind.Null))
             {
-                return jsonElement.ValueKind is not (JsonValueKind.Undefined or JsonValueKind.Null) 
-                    ? PreParseLeaf(context, jsonElement.ToString()) 
-                    : null;
+                // The selection type can be a wrapper type like NonNullType or ListType.
+                // To get the most inner type (aka the named type) we use our named type helper.
+                INamedType namedType = context.Selection.Field.Type.NamedType();
+                
+                // Each scalar in HotChocolate has a runtime type representation.
+                // In order to let scalar values flow through the GraphQL type completion
+                // efficiently we want the leaf types to match the runtime type.
+                // If that is not the case a value will go through the type converter to try to
+                // transform it into the runtime type.
+                // We also want to ensure here that we do not unnecessarily convert values to
+                // strings and than force the conversion to parse them.
+                return namedType switch
+                {
+                    StringType => fieldValue.GetSingle(), // spec
+                    ByteType => fieldValue.GetByte(),
+                    ShortType => fieldValue.GetInt16(),
+                    IntType => fieldValue.GetInt32(), // spec
+                    LongType => fieldValue.GetUInt64(),
+                    FloatType => fieldValue.GetDouble(), // spec
+                    SingleType => fieldValue.GetSingle(),
+                    DecimalType => fieldValue.GetDecimal(),
+                    DateTimeType => DateTimeOffset.Parse(fieldValue.GetString()!),
+                    DateType => DateTimeOffset.Parse(fieldValue.GetString()!),
+                    ByteArrayType => fieldValue.GetBytesFromBase64(),
+                    BooleanType => fieldValue.GetBoolean(), // spec
+                    UrlType => new Uri(fieldValue.GetString()!),
+                    UuidType => fieldValue.GetGuid(),
+                    TimeSpanType => TimeSpan.Parse(fieldValue.GetString()!),
+                    _ => fieldValue.GetString()
+                };
             }
 
             return null;
         }
 
+        /// <summary>
+        /// Represents a pure resolver for an object field.
+        /// This resolver extracts another json object from the parent json property.
+        /// </summary>
+        /// <param name="context">
+        /// The pure resolver context.
+        /// </param>
+        /// <returns>
+        /// Returns a new json object.
+        /// </returns>
         public object? ExecuteObjectField(IPureResolverContext context)
         {
-            // This means it's a field that has another custom type as its
-            // type, so there is a full JSON object inside this key. For
-            // example such a JSON object could have been created by a
-            // One-To-Many join.
-            if (TryGetPropertyFromParent(context, out JsonElement propertyValue))
+            if (TryGetPropertyFromParent(context, out JsonElement objectValue) &&
+                objectValue.ValueKind is not JsonValueKind.Null and not JsonValueKind.Undefined)
             {
                 IMetadata metadata = GetMetadata(context);
-                propertyValue = _queryEngine.ResolveInnerObject(
-                    propertyValue,
-                    context.Selection.Field,
-                    ref metadata);
-
-                if (propertyValue.ValueKind is not JsonValueKind.Undefined and not JsonValueKind.Null)
-                {
-                    return propertyValue;
-                }
+                objectValue = _queryEngine.ResolveInnerObject(objectValue, context.Selection.Field, ref metadata);
+                return objectValue;
             }
-            
+
             return null;
         }
-        
+
         public object? ExecuteListField(IPureResolverContext context)
         {
-            // This means the field is a list and HotChocolate requires
-            // that to be returned as a List of JsonDocuments. For example
-            // such a JSON list could have been created by a One-To-Many
-            // join.
-            if (TryGetPropertyFromParent(context, out JsonElement propertyValue))
+            if (TryGetPropertyFromParent(context, out JsonElement listValue) && 
+                listValue.ValueKind is not JsonValueKind.Null and not JsonValueKind.Undefined)
             {
                 IMetadata metadata = GetMetadata(context);
-                object? result = _queryEngine.ResolveListType(
-                    propertyValue,
-                    context.Selection.Field,
-                    ref metadata);
+                IReadOnlyList<JsonElement> result = _queryEngine.ResolveListType(listValue, context.Selection.Field, ref metadata);
                 SetNewMetadata(context, metadata);
                 return result;
             }
 
             return null;
         }
- 
+
         /// <summary>
         /// Set the context's result and dispose properly. If result is not null
         /// clone root and dispose, otherwise set to null.
@@ -176,32 +220,7 @@ namespace Azure.DataApiBuilder.Service.Services
             }
         }
 
-        /// <summary>
-        /// Preparse a string extracted from the json result representing a leaf.
-        /// This is helpful in cases when HotChocolate's internal resolvers cannot appropriately
-        /// parse the result so we preparse the result so it can be appropriately handled by HotChocolate
-        /// later
-        /// </summary>
-        /// <remarks>
-        /// e.g. "1" despite being a valid byte value is parsed improperly by HotChocolate so we preparse it
-        /// to an actual byte value then feed the result to HotChocolate
-        /// </remarks>
-        private static object PreParseLeaf(IPureResolverContext context, string leafJson)
-        {
-            IType leafType = context.Selection.Field.Type is NonNullType
-                ? context.Selection.Field.Type.NullableType()
-                : context.Selection.Field.Type;
-            return leafType switch
-            {
-                ByteType => byte.Parse(leafJson),
-                SingleType => Single.Parse(leafJson),
-                DateTimeType => DateTimeOffset.Parse(leafJson),
-                ByteArrayType => Convert.FromBase64String(leafJson),
-                _ => leafJson
-            };
-        }
-
-        protected static bool TryGetPropertyFromParent(
+        private static bool TryGetPropertyFromParent(
             IPureResolverContext context,
             out JsonElement propertyValue)
         {
@@ -214,12 +233,6 @@ namespace Azure.DataApiBuilder.Service.Services
             }
 
             return parent.TryGetProperty(context.Selection.Field.Name.Value, out propertyValue);
-        }
-
-        protected static bool IsInnerObject(IMiddlewareContext context)
-        {
-            return context.Selection.Field.Type.IsObjectType() &&
-                context.Parent<JsonElement?>() is not null;
         }
 
         /// <summary>
@@ -351,7 +364,7 @@ namespace Azure.DataApiBuilder.Service.Services
             return (InputObjectType)(InnerMostType(field.Type));
         }
 
-        protected static IDictionary<string, object?> GetParametersFromContext(
+        private static IDictionary<string, object?> GetParametersFromContext(
             IMiddlewareContext context)
         {
             return GetParametersFromSchemaAndQueryFields(
@@ -359,7 +372,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 context.Selection.SyntaxNode,
                 context.Variables);
         }
-        
+
         /// <summary>
         /// Get metadata from context
         /// </summary>
@@ -374,22 +387,22 @@ namespace Azure.DataApiBuilder.Service.Services
         private static string GetMetadataKey(Path path)
         {
             Path current = path;
-            
-            if(current.Parent is RootPathSegment)
+
+            if (current.Parent is RootPathSegment)
             {
                 return ((NamePathSegment)current).Name;
             }
-            
-            while(current.Parent is not null)
+
+            while (current.Parent is not null)
             {
                 current = current.Parent;
-                
-                if(current.Parent is RootPathSegment)
+
+                if (current.Parent is RootPathSegment)
                 {
                     return ((NamePathSegment)current).Name;
-                }   
+                }
             }
-            
+
             throw new InvalidOperationException("The path is not rooted.");
         }
 

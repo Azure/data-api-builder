@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -189,38 +190,20 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public JsonDocument ResolveInnerObject(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
+        public JsonElement ResolveInnerObject(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
         {
-            //TODO: Try to avoid additional deserialization/serialization here.
-            return JsonDocument.Parse(element.ToString());
+            return element;
         }
 
         /// <inheritdoc />
-        public object ResolveListType(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
+        public IReadOnlyList<JsonElement> ResolveListType(JsonElement array, IObjectField fieldSchema, ref IMetadata metadata)
         {
-            IType listType = fieldSchema.Type;
-            // Is the List type nullable? [...]! vs [...]
-            if (listType.IsNonNullType())
+            List<JsonElement> list = new();
+            foreach (JsonElement element in array.EnumerateArray())
             {
-                listType = listType.InnerType().InnerType();
+                list.Add(element);
             }
-            else
-            {
-                listType = listType.InnerType();
-            }
-
-            // Is the type of the list values nullable?
-            if (listType.IsNonNullType())
-            {
-                listType = listType.InnerType();
-            }
-
-            if (listType.IsObjectType())
-            {
-                return JsonSerializer.Deserialize<List<JsonElement>>(element);
-            }
-
-            return JsonSerializer.Deserialize(element, fieldSchema.RuntimeType);
+            return list;
         }
 
         /// <summary>

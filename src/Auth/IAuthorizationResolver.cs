@@ -94,7 +94,7 @@ namespace Azure.DataApiBuilder.Auth
         /// <param name="roleName"></param>
         /// <param name="httpVerb"></param>
         /// <returns>True if the execution of the stored procedure is permitted. Otherwise, false.</returns>
-        public bool IsStoredProcedureExecutionPermitted(string entityName, string roleName, RestMethod httpVerb);
+        public bool IsStoredProcedureExecutionPermitted(string entityName, string roleName, SupportedHttpVerb httpVerb);
 
         /// <summary>
         /// Returns a list of roles which define permissions for the provided operation.

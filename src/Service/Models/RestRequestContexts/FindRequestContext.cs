@@ -22,7 +22,7 @@ namespace Azure.DataApiBuilder.Service.Models
             PrimaryKeyValuePairs = new();
             FieldValuePairsInBody = new();
             IsMany = isList;
-            OperationType = Config.Operation.Read;
+            OperationType = Config.EntityActionOperation.Read;
         }
 
     }

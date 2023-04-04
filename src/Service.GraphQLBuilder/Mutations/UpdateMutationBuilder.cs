@@ -173,7 +173,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <returns>InputTypeName</returns>
         private static NameNode GenerateInputTypeName(string typeName)
         {
-            return new($"{Operation.Update}{typeName}Input");
+            return new($"{EntityActionOperation.Update}{typeName}Input");
         }
 
         /// <summary>

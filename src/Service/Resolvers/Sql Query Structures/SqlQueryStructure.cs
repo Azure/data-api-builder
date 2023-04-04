@@ -333,7 +333,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             HttpContext httpContext = GraphQLFilterParser.TryGetHttpContextFromMiddlewareContext(ctx);
             // Process Authorization Policy of the entity being processed.
-            AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(Config.Operation.Read, queryStructure: this, httpContext, authorizationResolver, sqlMetadataProvider);
+            AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(Config.EntityActionOperation.Read, queryStructure: this, httpContext, authorizationResolver, sqlMetadataProvider);
 
             if (outputType.IsNonNullType())
             {
@@ -436,7 +436,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                   entityName,
                   counter,
                   httpContext,
-                  Config.Operation.Read)
+                  Config.EntityActionOperation.Read)
         {
             JoinQueries = new();
             PaginationMetadata = new(this);

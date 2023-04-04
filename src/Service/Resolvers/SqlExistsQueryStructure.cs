@@ -41,7 +41,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                   entityName,
                   counter,
                   httpContext,
-                  Config.Operation.Read)
+                  Config.EntityActionOperation.Read)
         {
             SourceAlias = CreateTableAlias();
         }

@@ -16,6 +16,12 @@ public class RuntimeConfigProvider
 
     public List<RuntimeConfigLoadedHandler> RuntimeConfigLoadedHandlers { get; } = new List<RuntimeConfigLoadedHandler>();
 
+    /// <summary>
+    /// Indicates whether the config was loaded after the runtime was initialized.
+    /// </summary>
+    /// <remarks>This is most commonly used when DAB's config is provided via the <c>ConfigurationController</c>, such as when it's a hosted service.</remarks>
+    public bool IsLateConfigured { get; set; }
+
     private readonly RuntimeConfigLoader _runtimeConfigLoader;
     private RuntimeConfig? _runtimeConfig;
     public string? ConfigFilePath;

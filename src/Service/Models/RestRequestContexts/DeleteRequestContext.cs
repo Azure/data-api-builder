@@ -21,7 +21,7 @@ namespace Azure.DataApiBuilder.Service.Models
             PrimaryKeyValuePairs = new();
             FieldValuePairsInBody = new();
             IsMany = isList;
-            OperationType = Config.Operation.Delete;
+            OperationType = Config.EntityActionOperation.Delete;
         }
     }
 }

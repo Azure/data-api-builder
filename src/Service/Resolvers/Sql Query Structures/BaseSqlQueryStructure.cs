@@ -54,7 +54,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string entityName = "",
             IncrementingInteger? counter = null,
             HttpContext? httpContext = null,
-            Config.Operation operationType = Config.Operation.None
+            Config.EntityActionOperation operationType = Config.EntityActionOperation.None
             )
             : base(metadataProvider, authorizationResolver, gQLFilterParser, predicates, entityName, counter)
         {

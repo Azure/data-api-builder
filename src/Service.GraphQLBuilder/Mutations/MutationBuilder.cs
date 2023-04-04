@@ -58,9 +58,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     }
                     else
                     {
-                        AddMutations(dbEntityName, operation: Operation.Create, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
-                        AddMutations(dbEntityName, operation: Operation.Update, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
-                        AddMutations(dbEntityName, operation: Operation.Delete, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
+                        AddMutations(dbEntityName, operation: EntityActionOperation.Create, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
+                        AddMutations(dbEntityName, operation: EntityActionOperation.Update, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
+                        AddMutations(dbEntityName, operation: EntityActionOperation.Delete, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
                     }
                 }
             }
@@ -95,7 +95,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         private static void AddMutations(
             string dbEntityName,
-            Operation operation,
+            EntityActionOperation operation,
             Dictionary<string, EntityMetadata>? entityPermissionsMap,
             NameNode name,
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs,
@@ -111,13 +111,13 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             {
                 switch (operation)
                 {
-                    case Operation.Create:
+                    case EntityActionOperation.Create:
                         mutationFields.Add(CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, databaseType, entities, dbEntityName, rolesAllowedForMutation));
                         break;
-                    case Operation.Update:
+                    case EntityActionOperation.Update:
                         mutationFields.Add(UpdateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, entities, dbEntityName, databaseType, rolesAllowedForMutation));
                         break;
-                    case Operation.Delete:
+                    case EntityActionOperation.Delete:
                         mutationFields.Add(DeleteMutationBuilder.Build(name, objectTypeDefinitionNode, entities[dbEntityName], databaseType, rolesAllowedForMutation));
                         break;
                     default:
@@ -138,7 +138,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             List<FieldDefinitionNode> mutationFields
             )
         {
-            IEnumerable<string> rolesAllowedForMutation = IAuthorizationResolver.GetRolesForOperation(dbEntityName, operation: Operation.Execute, entityPermissionsMap);
+            IEnumerable<string> rolesAllowedForMutation = IAuthorizationResolver.GetRolesForOperation(dbEntityName, operation: EntityActionOperation.Execute, entityPermissionsMap);
             if (rolesAllowedForMutation.Count() > 0)
             {
                 mutationFields.Add(GraphQLStoredProcedureBuilder.GenerateStoredProcedureSchema(name, entities[dbEntityName], rolesAllowedForMutation));
@@ -151,14 +151,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// </summary>
         /// <param name="inputTypeName">Mutation name</param>
         /// <returns>Operation</returns>
-        public static Operation DetermineMutationOperationTypeBasedOnInputType(string inputTypeName)
+        public static EntityActionOperation DetermineMutationOperationTypeBasedOnInputType(string inputTypeName)
         {
             return inputTypeName switch
             {
-                string s when s.StartsWith(Operation.Execute.ToString(), StringComparison.OrdinalIgnoreCase) => Operation.Execute,
-                string s when s.StartsWith(Operation.Create.ToString(), StringComparison.OrdinalIgnoreCase) => Operation.Create,
-                string s when s.StartsWith(Operation.Update.ToString(), StringComparison.OrdinalIgnoreCase) => Operation.UpdateGraphQL,
-                _ => Operation.Delete
+                string s when s.StartsWith(EntityActionOperation.Execute.ToString(), StringComparison.OrdinalIgnoreCase) => EntityActionOperation.Execute,
+                string s when s.StartsWith(EntityActionOperation.Create.ToString(), StringComparison.OrdinalIgnoreCase) => EntityActionOperation.Create,
+                string s when s.StartsWith(EntityActionOperation.Update.ToString(), StringComparison.OrdinalIgnoreCase) => EntityActionOperation.UpdateGraphQL,
+                _ => EntityActionOperation.Delete
             };
         }
     }

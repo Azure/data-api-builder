@@ -152,7 +152,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     bool isStoredProcedure = entity.ObjectType is SourceType.StoredProcedure;
                     foreach (string column in sourceDefinition.Columns.Keys)
                     {
-                        Config.Operation operation = isStoredProcedure ? Config.Operation.Execute : Config.Operation.Read;
+                        Config.EntityActionOperation operation = isStoredProcedure ? Config.EntityActionOperation.Execute : Config.EntityActionOperation.Read;
                         IEnumerable<string> roles = _authorizationResolver.GetRolesForField(entityName, field: column, operation: operation);
                         if (!rolesAllowedForFields.TryAdd(key: column, value: roles))
                         {

@@ -29,25 +29,25 @@ namespace Azure.DataApiBuilder.Auth
         ///     Create: permitted in {Role1, Role2, ..., RoleN}
         ///     Delete: permitted in {Role1, RoleN}
         /// </summary>
-        public Dictionary<string, Dictionary<Operation, List<string>>> FieldToRolesMap { get; set; } = new();
+        public Dictionary<string, Dictionary<EntityActionOperation, List<string>>> FieldToRolesMap { get; set; } = new();
 
         /// <summary>
         /// Given the key (operation) returns a collection of roles
         /// defining config permissions for the operation.
         /// i.e. Read operation is permitted in {Role1, Role2, ..., RoleN}
         /// </summary>
-        public Dictionary<Operation, List<string>> OperationToRolesMap { get; set; } = new();
+        public Dictionary<EntityActionOperation, List<string>> OperationToRolesMap { get; set; } = new();
 
         /// <summary>
         /// Set of Http verbs enabled for Stored Procedure entities that have their REST endpoint enabled.
         /// </summary>
-        public HashSet<RestMethod> StoredProcedureHttpVerbs { get; set; } = new();
+        public HashSet<SupportedHttpVerb> StoredProcedureHttpVerbs { get; set; } = new();
 
         /// <summary>
         /// Defines the type of database object the entity represents.
         /// Examples include Table, View, StoredProcedure
         /// </summary>
-        public SourceType ObjectType { get; set; } = SourceType.Table;
+        public EntityType ObjectType { get; set; } = EntityType.Table;
     }
 
     /// <summary>
@@ -60,7 +60,7 @@ namespace Azure.DataApiBuilder.Auth
         /// <summary>
         /// Given the key (operation) returns the associated OperationMetadata object.
         /// </summary>
-        public Dictionary<Operation, OperationMetadata> OperationToColumnMap { get; set; } = new();
+        public Dictionary<EntityActionOperation, OperationMetadata> OperationToColumnMap { get; set; } = new();
     }
 
     /// <summary>

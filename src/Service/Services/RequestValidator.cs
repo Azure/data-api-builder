@@ -226,14 +226,14 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <param name="primaryKeyRoute">URL route e.g. "Entity/id/1"</param>
         /// <param name="queryString">queryString e.g. "$?filter="</param>
         /// <exception cref="DataApiBuilderException">Raised when primaryKeyRoute/queryString fail the validations for the operation.</exception>
-        public static void ValidatePrimaryKeyRouteAndQueryStringInURL(Config.Operation operationType, string? primaryKeyRoute = null, string? queryString = null)
+        public static void ValidatePrimaryKeyRouteAndQueryStringInURL(Config.EntityActionOperation operationType, string? primaryKeyRoute = null, string? queryString = null)
         {
             bool isPrimaryKeyRouteEmpty = string.IsNullOrEmpty(primaryKeyRoute);
             bool isQueryStringEmpty = string.IsNullOrEmpty(queryString);
 
             switch (operationType)
             {
-                case Config.Operation.Insert:
+                case Config.EntityActionOperation.Insert:
                     if (!isPrimaryKeyRouteEmpty)
                     {
                         throw new DataApiBuilderException(
@@ -251,11 +251,11 @@ namespace Azure.DataApiBuilder.Service.Services
                     }
 
                     break;
-                case Config.Operation.Delete:
-                case Config.Operation.Update:
-                case Config.Operation.UpdateIncremental:
-                case Config.Operation.Upsert:
-                case Config.Operation.UpsertIncremental:
+                case Config.EntityActionOperation.Delete:
+                case Config.EntityActionOperation.Update:
+                case Config.EntityActionOperation.UpdateIncremental:
+                case Config.EntityActionOperation.Upsert:
+                case Config.EntityActionOperation.UpsertIncremental:
                     /// Validate that the primarykeyroute is populated for these operations.
                     if (isPrimaryKeyRouteEmpty)
                     {
@@ -392,7 +392,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     }
                 }
 
-                bool isReplacementUpdate = (upsertRequestCtx.OperationType == Config.Operation.Upsert) ? true : false;
+                bool isReplacementUpdate = (upsertRequestCtx.OperationType == Config.EntityActionOperation.Upsert) ? true : false;
                 if (ValidateColumn(column.Value, exposedName!, fieldsInRequestBody, isReplacementUpdate))
                 {
                     unValidatedFields.Remove(exposedName!);

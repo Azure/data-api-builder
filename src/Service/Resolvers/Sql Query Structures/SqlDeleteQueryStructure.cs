@@ -30,7 +30,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
               gQLFilterParser: gQLFilterParser,
               entityName: entityName,
               httpContext: httpContext,
-              operationType: Config.Operation.Delete)
+              operationType: Config.EntityActionOperation.Delete)
         {
             SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();
 

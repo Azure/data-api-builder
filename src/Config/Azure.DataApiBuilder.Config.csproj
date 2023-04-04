@@ -30,6 +30,7 @@
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
       <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
+      <PackageReference Include="Humanizer" />
   </ItemGroup>
 
 </Project>

@@ -31,7 +31,7 @@ internal class RestRuntimeOptionsConverterFactory : JsonConverterFactory
 
             if (reader.TokenType == JsonTokenType.Null || reader.TokenType == JsonTokenType.False)
             {
-                return new RestRuntimeOptions(false, null);
+                return new RestRuntimeOptions(false);
             }
 
             JsonSerializerOptions innerOptions = new(options);

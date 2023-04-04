@@ -60,7 +60,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <param name="primaryKeyRoute">The primary key route. e.g. customerName/Xyz/saleOrderId/123</param>
         public async Task<IActionResult?> ExecuteAsync(
             string entityName,
-            Config.Operation operationType,
+            Config.EntityActionOperation operationType,
             string? primaryKeyRoute)
         {
             RequestValidator.ValidateEntity(entityName, _sqlMetadataProvider.EntityToDatabaseObject.Keys);
@@ -110,13 +110,13 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 switch (operationType)
                 {
-                    case Config.Operation.Read:
+                    case Config.EntityActionOperation.Read:
                         context = new FindRequestContext(
                             entityName,
                             dbo: dbObject,
                             isList: string.IsNullOrEmpty(primaryKeyRoute));
                         break;
-                    case Config.Operation.Insert:
+                    case Config.EntityActionOperation.Insert:
                         RequestValidator.ValidatePrimaryKeyRouteAndQueryStringInURL(operationType, primaryKeyRoute, queryString);
                         JsonElement insertPayloadRoot = RequestValidator.ValidateAndParseRequestBody(requestBody);
                         context = new InsertRequestContext(
@@ -132,16 +132,16 @@ namespace Azure.DataApiBuilder.Service.Services
                         }
 
                         break;
-                    case Config.Operation.Delete:
+                    case Config.EntityActionOperation.Delete:
                         RequestValidator.ValidatePrimaryKeyRouteAndQueryStringInURL(operationType, primaryKeyRoute);
                         context = new DeleteRequestContext(entityName,
                                                            dbo: dbObject,
                                                            isList: false);
                         break;
-                    case Config.Operation.Update:
-                    case Config.Operation.UpdateIncremental:
-                    case Config.Operation.Upsert:
-                    case Config.Operation.UpsertIncremental:
+                    case Config.EntityActionOperation.Update:
+                    case Config.EntityActionOperation.UpdateIncremental:
+                    case Config.EntityActionOperation.Upsert:
+                    case Config.EntityActionOperation.UpsertIncremental:
                         RequestValidator.ValidatePrimaryKeyRouteAndQueryStringInURL(operationType, primaryKeyRoute);
                         JsonElement upsertPayloadRoot = RequestValidator.ValidateAndParseRequestBody(requestBody);
                         context = new UpsertRequestContext(
@@ -190,14 +190,14 @@ namespace Azure.DataApiBuilder.Service.Services
 
             switch (operationType)
             {
-                case Config.Operation.Read:
+                case Config.EntityActionOperation.Read:
                     return await DispatchQuery(context);
-                case Config.Operation.Insert:
-                case Config.Operation.Delete:
-                case Config.Operation.Update:
-                case Config.Operation.UpdateIncremental:
-                case Config.Operation.Upsert:
-                case Config.Operation.UpsertIncremental:
+                case Config.EntityActionOperation.Insert:
+                case Config.EntityActionOperation.Delete:
+                case Config.EntityActionOperation.Update:
+                case Config.EntityActionOperation.UpdateIncremental:
+                case Config.EntityActionOperation.Upsert:
+                case Config.EntityActionOperation.UpsertIncremental:
                     return await DispatchMutation(context);
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
@@ -237,7 +237,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// than for requests on non-stored procedure entities.
         /// </summary>
         private void PopulateStoredProcedureContext(
-            Config.Operation operationType,
+            Config.EntityActionOperation operationType,
             DatabaseObject dbObject,
             string entityName,
             string queryString,
@@ -248,7 +248,7 @@ namespace Azure.DataApiBuilder.Service.Services
             switch (operationType)
             {
 
-                case Config.Operation.Read:
+                case Config.EntityActionOperation.Read:
                     // Parameters passed in query string, request body is ignored for find requests
                     context = new StoredProcedureRequestContext(
                         entityName,
@@ -266,15 +266,15 @@ namespace Azure.DataApiBuilder.Service.Services
                     }
 
                     break;
-                case Config.Operation.Insert:
-                case Config.Operation.Delete:
-                case Config.Operation.Update:
-                case Config.Operation.UpdateIncremental:
-                case Config.Operation.Upsert:
-                case Config.Operation.UpsertIncremental:
+                case Config.EntityActionOperation.Insert:
+                case Config.EntityActionOperation.Delete:
+                case Config.EntityActionOperation.Update:
+                case Config.EntityActionOperation.UpdateIncremental:
+                case Config.EntityActionOperation.Upsert:
+                case Config.EntityActionOperation.UpsertIncremental:
                     // Stored procedure call is semantically identical for all methods except Find.
                     // So, we can effectively treat it as Insert operation - throws error if query string is non empty.
-                    RequestValidator.ValidatePrimaryKeyRouteAndQueryStringInURL(Config.Operation.Insert, queryString);
+                    RequestValidator.ValidatePrimaryKeyRouteAndQueryStringInURL(Config.EntityActionOperation.Insert, queryString);
                     JsonElement requestPayloadRoot = RequestValidator.ValidateAndParseRequestBody(requestBody);
                     context = new StoredProcedureRequestContext(
                         entityName,
@@ -308,11 +308,11 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <returns>True if the operation is allowed. False, otherwise.</returns>
         private bool IsHttpMethodAllowedForStoredProcedure(string entityName)
         {
-            if (TryGetStoredProcedureRESTVerbs(entityName, out List<RestMethod>? httpVerbs))
+            if (TryGetStoredProcedureRESTVerbs(entityName, out List<SupportedHttpVerb>? httpVerbs))
             {
                 HttpContext? httpContext = _httpContextAccessor.HttpContext;
                 if (httpContext is not null
-                    && Enum.TryParse(httpContext.Request.Method, ignoreCase: true, out RestMethod method)
+                    && Enum.TryParse(httpContext.Request.Method, ignoreCase: true, out SupportedHttpVerb method)
                     && httpVerbs.Contains(method))
                 {
                     return true;
@@ -331,14 +331,14 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <param name="httpVerbs">Out Param: List of httpverbs configured for stored procedure backed entity.</param>
         /// <returns>True, with a list of HTTP verbs. False, when entity is not found in config
         /// or entity is not a stored procedure, and httpVerbs will be null.</returns>
-        private bool TryGetStoredProcedureRESTVerbs(string entityName, [NotNullWhen(true)] out List<RestMethod>? httpVerbs)
+        private bool TryGetStoredProcedureRESTVerbs(string entityName, [NotNullWhen(true)] out List<SupportedHttpVerb>? httpVerbs)
         {
             if (_runtimeConfigProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
             {
                 if (runtimeConfig.Entities.TryGetValue(key: entityName, out Entity? entity) && entity is not null)
                 {
-                    RestMethod[]? methods = entity.GetRestMethodsConfiguredForStoredProcedure();
-                    httpVerbs = methods is not null ? new List<RestMethod>(methods) : new();
+                    SupportedHttpVerb[]? methods = entity.GetRestMethodsConfiguredForStoredProcedure();
+                    httpVerbs = methods is not null ? new List<SupportedHttpVerb>(methods) : new();
                     return true;
                 }
             }
@@ -449,21 +449,21 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         /// <param name="httpVerb"></param>
         /// <returns>The CRUD operation for the given httpverb.</returns>
-        public static Config.Operation HttpVerbToOperations(string httpVerbName)
+        public static Config.EntityActionOperation HttpVerbToOperations(string httpVerbName)
         {
             switch (httpVerbName)
             {
                 case "POST":
-                    return Config.Operation.Create;
+                    return Config.EntityActionOperation.Create;
                 case "PUT":
                 case "PATCH":
                     // Please refer to the use of this method, which is to look out for policy based on crud operation type.
                     // Since create doesn't have filter predicates, PUT/PATCH would resolve to update operation.
-                    return Config.Operation.Update;
+                    return Config.EntityActionOperation.Update;
                 case "DELETE":
-                    return Config.Operation.Delete;
+                    return Config.EntityActionOperation.Delete;
                 case "GET":
-                    return Config.Operation.Read;
+                    return Config.EntityActionOperation.Read;
                 default:
                     throw new DataApiBuilderException(
                         message: "Unsupported operation type.",

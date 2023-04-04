@@ -18,18 +18,14 @@ public record AuthenticationOptions(string Provider, JwtOptions? Jwt)
     /// EasyAuth authentication type.
     /// </summary>
     /// <returns>True if Provider is an EasyAuth type.</returns>
-    public bool IsEasyAuthAuthenticationProvider()
-    {
-        return Enum.GetNames(typeof(EasyAuthType)).Any(x => x.Equals(Provider, StringComparison.OrdinalIgnoreCase));
-    }
+    public bool IsEasyAuthAuthenticationProvider() => Enum.GetNames(typeof(EasyAuthType)).Any(x => x.Equals(Provider, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// Returns whether the configured Provider value matches
     /// the AuthenticateDevModeRquests EasyAuth type.
     /// </summary>
     /// <returns>True when development mode should authenticate all requests.</returns>
-    public bool IsAuthenticationSimulatorEnabled()
-    {
-        return Provider.Equals(SIMULATOR_AUTHENTICATION, StringComparison.OrdinalIgnoreCase);
-    }
+    public bool IsAuthenticationSimulatorEnabled() => Provider.Equals(SIMULATOR_AUTHENTICATION, StringComparison.OrdinalIgnoreCase);
+
+    public bool IsJwtConfiguredIdentityProvider() => !IsEasyAuthAuthenticationProvider() && !IsAuthenticationSimulatorEnabled();
 };

@@ -11,17 +11,64 @@ public enum EntityType
     [EnumMember(Value = "stored-procedure")] StoredProcedure
 }
 
+/// <summary>
+/// The operations supported by the service.
+/// </summary>
+public enum EntityActionOperation
+{
+    None,
+
+    // *
+    [EnumMember(Value = "*")] All,
+
+    // Common Operations
+    Delete, Read,
+
+    // cosmosdb_nosql operations
+    Upsert, Create,
+
+    // Sql operations
+    Insert, Update, UpdateGraphQL,
+
+    // Additional
+    UpsertIncremental, UpdateIncremental,
+
+    // Only valid operation for stored procedures
+    Execute
+}
+
+/// <summary>
+/// A subset of the HTTP verb list that is supported by the REST endpoints within the service.
+/// </summary>
+public enum SupportedHttpVerb
+{
+    Get,
+    Post,
+    Put,
+    Patch,
+    Delete
+}
+
+public enum GraphQLOperation
+{
+    Query,
+    Mutation
+}
+
 public record EntitySource(string Object, EntityType Type, Dictionary<string, object> Parameters, string[] KeyFields);
 
 [JsonConverter(typeof(EntityGraphQLOptionsConverter))]
-public record EntityGraphQLOptions(string? Singular = null, string? Plural = null, bool Enabled = true);
+public record EntityGraphQLOptions(string Singular, string Plural, bool Enabled = true, GraphQLOperation Operation = GraphQLOperation.Query);
 
 [JsonConverter(typeof(EntityRestOptionsConverter))]
-public record EntityRestOptions(string? Path, string[] Methods, bool Enabled = true);
-
-public record EntityActionFields(string[] Include, string[] Exclude);
+public record EntityRestOptions(string? Path, SupportedHttpVerb[] Methods, bool Enabled = true);
+public record EntityActionFields(HashSet<string> Include, HashSet<string> Exclude);
 public record EntityActionPolicy(string Database);
-public record EntityAction(string Action, EntityActionFields Fields, EntityActionPolicy Policy);
+public record EntityAction(EntityActionOperation Action, EntityActionFields Fields, EntityActionPolicy Policy)
+{
+    public static readonly HashSet<EntityActionOperation> ValidPermissionOperations = new() { EntityActionOperation.Create, EntityActionOperation.Read, EntityActionOperation.Update, EntityActionOperation.Delete };
+    public static readonly HashSet<EntityActionOperation> ValidStoredProcedurePermissionOperations = new() { EntityActionOperation.Execute };
+}
 public record EntityPermission(string Role, EntityAction[] Actions);
 
 public record EntityRelationship(

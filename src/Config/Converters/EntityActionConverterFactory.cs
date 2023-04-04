@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace Azure.DataApiBuilder.Config.Converters;
 
@@ -24,20 +25,44 @@ internal class EntityActionConverterFactory : JsonConverterFactory
         {
             if (reader.TokenType == JsonTokenType.String)
             {
-                string? action = reader.GetString();
+                string? actionOperation = reader.GetString();
 
-                return new EntityAction(action!, new EntityActionFields(Array.Empty<string>(), Array.Empty<string>()), new EntityActionPolicy(""));
+                return new EntityAction(Enum.Parse<EntityActionOperation>(actionOperation!, true), new EntityActionFields(new(), new()), new EntityActionPolicy(""));
             }
 
             JsonSerializerOptions innerOptions = new(options);
             innerOptions.Converters.Remove(innerOptions.Converters.First(c => c is EntityActionConverterFactory));
 
-            return JsonSerializer.Deserialize<EntityAction>(ref reader, innerOptions);
+            EntityAction? action = JsonSerializer.Deserialize<EntityAction>(ref reader, innerOptions);
+
+            if (action is null)
+            {
+                return null;
+            }
+
+            return action with { Policy = action.Policy with { Database = ProcessFieldsInPolicy(action.Policy.Database) } };
         }
 
         public override void Write(Utf8JsonWriter writer, EntityAction value, JsonSerializerOptions options)
         {
             throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Helper method which takes in the database policy and returns the processed policy
+        /// without @item. directives before field names.
+        /// </summary>
+        /// <param name="policy">Raw database policy</param>
+        /// <returns>Processed policy without @item. directives before field names.</returns>
+        private static string ProcessFieldsInPolicy(string policy)
+        {
+            string fieldCharsRgx = @"@item\.([a-zA-Z0-9_]*)";
+
+            // processedPolicy would be devoid of @item. directives.
+            string processedPolicy = Regex.Replace(policy, fieldCharsRgx, (columnNameMatch) =>
+                columnNameMatch.Groups[1].Value
+            );
+            return processedPolicy;
         }
     }
 }

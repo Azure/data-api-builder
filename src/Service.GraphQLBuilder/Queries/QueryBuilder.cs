@@ -28,18 +28,20 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         /// Creates a DocumentNode containing FieldDefinitionNodes representing the FindByPK and FindAll queries
         /// Also populates the DocumentNode with return types.
         /// </summary>
-        /// <param name="root"></param>
-        /// <param name="databaseType"></param>
-        /// <param name="entities"></param>
-        /// <param name="inputTypes"></param>
-        /// <param name="entityPermissionsMap">Collection of permissions defined in runtime config.</param>
-        /// <returns></returns>
+        /// <param name="root">Root of GraphQL schema</param>
+        /// <param name="databaseType">i.e. MSSQL, MySQL, Postgres, Cosmos</param>
+        /// <param name="entities">Map of entityName -> EntityMetadata</param>
+        /// <param name="entityPermissionsMap">Permissions metadata defined in runtime config.</param>
+        /// <param name="dbObjects">Database object metadata</param>
+        /// <returns>Queries DocumentNode</returns>
         public static DocumentNode Build(
             DocumentNode root,
             DatabaseType databaseType,
             IDictionary<string, Entity> entities,
             Dictionary<string, InputObjectTypeDefinitionNode> inputTypes,
-            Dictionary<string, EntityMetadata>? entityPermissionsMap = null)
+            Dictionary<string, EntityMetadata>? entityPermissionsMap = null,
+            Dictionary<string, DatabaseObject>? dbObjects = null
+            )
         {
             List<FieldDefinitionNode> queryFields = new();
             List<ObjectTypeDefinitionNode> returnTypes = new();
@@ -61,7 +63,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
 
                         if (isSPDefinedAsQuery && rolesAllowedForExecute.Any())
                         {
-                            queryFields.Add(GraphQLStoredProcedureBuilder.GenerateStoredProcedureSchema(name, entity, rolesAllowedForExecute));
+                            if (dbObjects is not null && dbObjects.TryGetValue(entityName, out DatabaseObject? dbObject) && dbObject is not null)
+                            {
+                                queryFields.Add(GraphQLStoredProcedureBuilder.GenerateStoredProcedureSchema(name, entity, dbObject, rolesAllowedForExecute));
+                            }
                         }
                     }
                     else

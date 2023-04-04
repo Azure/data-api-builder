@@ -74,9 +74,15 @@ namespace Azure.DataApiBuilder.Service.Services
         /// At this point, we're somewhat agnostic to whether the runtime is Cosmos or SQL
         /// as we're working with GraphQL object types, regardless of where they came from.
         /// </summary>
+        /// <param name="sb">Schema builder</param>
         /// <param name="root">Root document containing the GraphQL object and input types.</param>
         /// <param name="inputTypes">Reference table of the input types for query lookup.</param>
-        private ISchemaBuilder Parse(ISchemaBuilder sb, DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes)
+        /// <param name="dbObjects">Database metadata such as parameters</param>
+        private ISchemaBuilder Parse(
+            ISchemaBuilder sb,
+            DocumentNode root,
+            Dictionary<string, InputObjectTypeDefinitionNode> inputTypes,
+            Dictionary<string, DatabaseObject> dbObjects)
         {
             return sb
                 .AddDocument(root)
@@ -91,9 +97,9 @@ namespace Azure.DataApiBuilder.Service.Services
                 .AddType<OrderByType>()
                 .AddType<DefaultValueType>()
                 // Generate the GraphQL queries from the provided objects
-                .AddDocument(QueryBuilder.Build(root, _databaseType, _entities, inputTypes, _authorizationResolver.EntityPermissionsMap))
+                .AddDocument(QueryBuilder.Build(root, _databaseType, _entities, inputTypes, _authorizationResolver.EntityPermissionsMap, dbObjects))
                 // Generate the GraphQL mutations from the provided objects
-                .AddDocument(MutationBuilder.Build(root, _databaseType, _entities, _authorizationResolver.EntityPermissionsMap))
+                .AddDocument(MutationBuilder.Build(root, _databaseType, _entities, _authorizationResolver.EntityPermissionsMap, dbObjects))
                 // Enable the OneOf directive (https://github.com/graphql/graphql-spec/pull/825) to support the DefaultValue type
                 .ModifyOptions(o => o.EnableOneOf = true)
                 // Add our custom middleware for GraphQL resolvers
@@ -117,7 +123,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 _ => throw new NotImplementedException($"This database type {_databaseType} is not yet implemented.")
             };
 
-            return Parse(schemaBuilder, root, inputTypes);
+            return Parse(schemaBuilder, root, inputTypes, _sqlMetadataProvider.EntityToDatabaseObject);
         }
 
         /// <summary>

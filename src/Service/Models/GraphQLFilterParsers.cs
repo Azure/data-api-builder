@@ -157,7 +157,7 @@ namespace Azure.DataApiBuilder.Service.Models
                         if (!columnAccessPermitted)
                         {
                             throw new DataApiBuilderException(
-                                message: DataApiBuilderException.GRAPHQL_NESTEDFILTER_FIELD_AUTHZ_FAILURE,
+                                message: DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE,
                                 statusCode: HttpStatusCode.Forbidden,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
                         }
@@ -255,7 +255,7 @@ namespace Azure.DataApiBuilder.Service.Models
             if (!entityAccessPermitted)
             {
                 throw new DataApiBuilderException(
-                    message: DataApiBuilderException.GRAPHQL_NESTEDFILTER_ENTITY_AUTHZ_FAILURE,
+                    message: DataApiBuilderException.GRAPHQL_FILTER_ENTITY_AUTHZ_FAILURE,
                     statusCode: HttpStatusCode.Forbidden,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
             }

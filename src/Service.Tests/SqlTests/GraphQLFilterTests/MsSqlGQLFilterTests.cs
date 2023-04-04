@@ -32,8 +32,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         /// </summary>
         [DataTestMethod]
         [DataRow("Authenticated", false, "", DisplayName = "No nested filter AuthZ error")]
-        [DataRow("TestNestedFilterManyOne_ColumnForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_FIELD_AUTHZ_FAILURE, DisplayName = "Excluded column in nested filter entity, AuthZ failure")]
-        [DataRow("TestNestedFilterManyOne_EntityReadForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_ENTITY_AUTHZ_FAILURE, DisplayName = "Nested filter entity read access forbidden, AuthZ failure")]
+        [DataRow("TestNestedFilterManyOne_ColumnForbidden", true, DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE, DisplayName = "Excluded column in nested filter entity, AuthZ failure")]
+        [DataRow("TestNestedFilterManyOne_EntityReadForbidden", true, DataApiBuilderException.GRAPHQL_FILTER_ENTITY_AUTHZ_FAILURE, DisplayName = "Nested filter entity read access forbidden, AuthZ failure")]
         public async Task TestNestedFilterManyOne(string roleName, bool expectsError, string errorMessageFragment)
         {
             string existsPredicate = $@"
@@ -63,8 +63,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         /// </summary>
         [DataTestMethod]
         [DataRow("Authenticated", false, "", DisplayName = "No nested filter AuthZ error")]
-        [DataRow("TestNestedFilterOneMany_ColumnForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_FIELD_AUTHZ_FAILURE, DisplayName = "Excluded column in nested filter entity, AuthZ failure")]
-        [DataRow("TestNestedFilterOneMany_EntityReadForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_ENTITY_AUTHZ_FAILURE, DisplayName = "Nested filter entity read access forbidden, AuthZ failure")]
+        [DataRow("TestNestedFilterOneMany_ColumnForbidden", true, DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE, DisplayName = "Excluded column in nested filter entity, AuthZ failure")]
+        [DataRow("TestNestedFilterOneMany_EntityReadForbidden", true, DataApiBuilderException.GRAPHQL_FILTER_ENTITY_AUTHZ_FAILURE, DisplayName = "Nested filter entity read access forbidden, AuthZ failure")]
         public async Task TestNestedFilterOneMany(string roleName, bool expectsError, string errorMessageFragment)
         {
             string existsPredicate = $@"
@@ -98,8 +98,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         /// </summary>
         [DataTestMethod]
         [DataRow("Authenticated", false, "", DisplayName = "No nested filter AuthZ error")]
-        [DataRow("TestNestedFilterFieldIsNull_ColumnForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_FIELD_AUTHZ_FAILURE, DisplayName = "Excluded column in nested filter entity, AuthZ failure")]
-        [DataRow("TestNestedFilterFieldIsNull_EntityReadForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_ENTITY_AUTHZ_FAILURE, DisplayName = "Nested filter entity read access forbidden, AuthZ failure")]
+        [DataRow("TestNestedFilterFieldIsNull_ColumnForbidden", true, DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE, DisplayName = "Excluded column in nested filter entity, AuthZ failure")]
+        [DataRow("TestNestedFilterFieldIsNull_EntityReadForbidden", true, DataApiBuilderException.GRAPHQL_FILTER_ENTITY_AUTHZ_FAILURE, DisplayName = "Nested filter entity read access forbidden, AuthZ failure")]
         public async Task TestNestedFilterFieldIsNull(string roleName, bool expectsError, string errorMessageFragment)
         {
             string existsPredicate = $@"
@@ -117,8 +117,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         /// </summary>
         [DataTestMethod]
         [DataRow("Authenticated", false, "", DisplayName = "No nested filter AuthZ error")]
-        [DataRow("TestNestedFilter_ColumnForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_FIELD_AUTHZ_FAILURE, DisplayName = "Excluded column in nested filter entity, AuthZ failure")]
-        [DataRow("TestNestedFilter_EntityReadForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_ENTITY_AUTHZ_FAILURE, DisplayName = "Nested filter entity read access forbidden, AuthZ failure")]
+        [DataRow("TestNestedFilter_ColumnForbidden", true, DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE, DisplayName = "Excluded column in nested filter entity, AuthZ failure")]
+        [DataRow("TestNestedFilter_EntityReadForbidden", true, DataApiBuilderException.GRAPHQL_FILTER_ENTITY_AUTHZ_FAILURE, DisplayName = "Nested filter entity read access forbidden, AuthZ failure")]
         public async Task TestNestedFilterWithinNestedFilter(string roleName, bool expectsError, string errorMessageFragment)
         {
             string defaultSchema = GetPreIndentDefaultSchema();
@@ -157,10 +157,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         /// </summary>
         [DataTestMethod]
         [DataRow("Authenticated", false, "", DisplayName = "No nested filter AuthZ error")]
-        [DataRow("TestNestedFilter_ColumnForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_FIELD_AUTHZ_FAILURE, DisplayName = "Excluded column in nested filter entity, AuthZ failure")]
-        [DataRow("TestNestedFilter_EntityReadForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_ENTITY_AUTHZ_FAILURE, DisplayName = "Nested filter entity read access forbidden, AuthZ failure")]
-        [DataRow("TestNestedFilterChained_ColumnForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_FIELD_AUTHZ_FAILURE, DisplayName = "Excluded column in nested filter chained entity, AuthZ failure")]
-        [DataRow("TestNestedFilterChained_EntityReadForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_ENTITY_AUTHZ_FAILURE, DisplayName = "Nested filter chained entity read access forbidden, AuthZ failure")]
+        [DataRow("TestNestedFilter_ColumnForbidden", true, DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE, DisplayName = "Excluded column in nested filter entity, AuthZ failure")]
+        [DataRow("TestNestedFilter_EntityReadForbidden", true, DataApiBuilderException.GRAPHQL_FILTER_ENTITY_AUTHZ_FAILURE, DisplayName = "Nested filter entity read access forbidden, AuthZ failure")]
+        [DataRow("TestNestedFilterChained_ColumnForbidden", true, DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE, DisplayName = "Excluded column in nested filter chained entity, AuthZ failure")]
+        [DataRow("TestNestedFilterChained_EntityReadForbidden", true, DataApiBuilderException.GRAPHQL_FILTER_ENTITY_AUTHZ_FAILURE, DisplayName = "Nested filter chained entity read access forbidden, AuthZ failure")]
         public async Task TestNestedFilterWithAnd(string roleName, bool expectsError, string errorMessageFragment)
         {
             string defaultSchema = GetPreIndentDefaultSchema();
@@ -189,10 +189,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         /// </summary>
         [DataTestMethod]
         [DataRow("Authenticated", false, "", DisplayName = "No nested filter AuthZ error")]
-        [DataRow("TestNestedFilter_ColumnForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_FIELD_AUTHZ_FAILURE, DisplayName = "Excluded column in nested filter entity, AuthZ failure")]
-        [DataRow("TestNestedFilter_EntityReadForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_ENTITY_AUTHZ_FAILURE, DisplayName = "Nested filter entity read access forbidden, AuthZ failure")]
-        [DataRow("TestNestedFilterChained_ColumnForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_FIELD_AUTHZ_FAILURE, DisplayName = "Excluded column in nested filter chained entity, AuthZ failure")]
-        [DataRow("TestNestedFilterChained_EntityReadForbidden", true, DataApiBuilderException.GRAPHQL_NESTEDFILTER_ENTITY_AUTHZ_FAILURE, DisplayName = "Nested filter chained entity read access forbidden, AuthZ failure")]
+        [DataRow("TestNestedFilter_ColumnForbidden", true, DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE, DisplayName = "Excluded column in nested filter entity, AuthZ failure")]
+        [DataRow("TestNestedFilter_EntityReadForbidden", true, DataApiBuilderException.GRAPHQL_FILTER_ENTITY_AUTHZ_FAILURE, DisplayName = "Nested filter entity read access forbidden, AuthZ failure")]
+        [DataRow("TestNestedFilterChained_ColumnForbidden", true, DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE, DisplayName = "Excluded column in nested filter chained entity, AuthZ failure")]
+        [DataRow("TestNestedFilterChained_EntityReadForbidden", true, DataApiBuilderException.GRAPHQL_FILTER_ENTITY_AUTHZ_FAILURE, DisplayName = "Nested filter chained entity read access forbidden, AuthZ failure")]
         public async Task TestNestedFilterWithOr(string roleName, bool expectsError, string errorMessageFragment)
         {
             string defaultSchema = GetPreIndentDefaultSchema();

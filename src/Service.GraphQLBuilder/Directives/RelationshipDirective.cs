@@ -10,7 +10,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Directives
 {
     public class RelationshipDirectiveType : DirectiveType
     {
-        public const string TARGET_ENTITY = "targetEntity";
         public static string DirectiveName { get; } = "relationship";
 
         protected override void Configure(IDirectiveTypeDescriptor descriptor)
@@ -22,10 +21,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Directives
             descriptor.Argument("target")
                   .Type<StringType>()
                   .Description("The name of the GraphQL type the relationship targets");
-
-            descriptor.Argument("targetEntity")
-                .Type<StringType>()
-                .Description("The name of the entity the relationship targets");
 
             descriptor.Argument("cardinality")
                   .Type<StringType>()
@@ -61,20 +56,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Directives
             Directive? directive = (Directive?)infield.Directives.FirstOrDefault(d => d.Name.Value == DirectiveName);
             DirectiveNode? directiveNode = directive?.ToNode();
             ArgumentNode? arg = directiveNode?.Arguments.First(a => a.Name.Value == "target");
-
-            return (string?)arg?.Value.Value;
-        }
-
-        /// <summary>
-        /// Gets the target entity name for an input infield with a relationship directive.
-        /// </summary>
-        /// <param name="infield">The input field that is expected to have a relationship directive defined on it.</param>
-        /// <returns>The name of the target entity if the relationship is found, null otherwise.</returns>
-        public static string? GetTargetEntity(IInputField infield)
-        {
-            Directive? directive = (Directive?)infield.Directives.FirstOrDefault(d => d.Name.Value == DirectiveName);
-            DirectiveNode? directiveNode = directive?.ToNode();
-            ArgumentNode? arg = directiveNode?.Arguments.First(a => a.Name.Value == TARGET_ENTITY);
 
             return (string?)arg?.Value.Value;
         }

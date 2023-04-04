@@ -27,7 +27,7 @@ internal class EntityActionConverterFactory : JsonConverterFactory
             {
                 string? actionOperation = reader.GetString();
 
-                return new EntityAction(Enum.Parse<EntityActionOperation>(actionOperation!, true), new EntityActionFields(), new EntityActionPolicy(""));
+                return new EntityAction(Enum.Parse<EntityActionOperation>(actionOperation!, true), new EntityActionFields(Exclude: new()), new EntityActionPolicy(""));
             }
 
             JsonSerializerOptions innerOptions = new(options);

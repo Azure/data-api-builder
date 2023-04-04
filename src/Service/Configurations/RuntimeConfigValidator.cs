@@ -442,7 +442,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                 action.Fields.Exclude.Contains(AuthorizationResolver.WILDCARD) && action.Fields.Exclude.Count > 1)
                             {
                                 // See if included or excluded columns contain wildcard and another field.
-                                // If thats the case with both of them, we specify 'included' in error.
+                                // If that's the case with both of them, we specify 'included' in error.
                                 string misconfiguredColumnSet = action.Fields.Exclude.Contains(AuthorizationResolver.WILDCARD)
                                     && action.Fields.Exclude.Count > 1 ? "excluded" : "included";
                                 string actionName = actionOp is Config.EntityActionOperation.All ? "*" : actionOp.ToString();

@@ -29,7 +29,7 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
 
             if (reader.TokenType == JsonTokenType.Null || reader.TokenType == JsonTokenType.False)
             {
-                return new GraphQLRuntimeOptions(false, null);
+                return new GraphQLRuntimeOptions(Enabled: false);
             }
 
             JsonSerializerOptions innerOptions = new(options);

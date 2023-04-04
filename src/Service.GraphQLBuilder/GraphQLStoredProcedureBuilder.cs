@@ -25,11 +25,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             List<InputValueDefinitionNode> inputValues = new();
             List<DirectiveNode> fieldDefinitionNodeDirectives = new();
 
-            if (entity.Parameters is not null)
+            if (entity.Source.Parameters is not null)
             {
-                foreach (string param in entity.Parameters.Keys)
+                foreach (string param in entity.Source.Parameters.Keys)
                 {
-                    Tuple<string, IValueNode> defaultGraphQLValue = GetGraphQLTypeAndNodeTypeFromStringValue(entity.Parameters[param].ToString()!);
+                    Tuple<string, IValueNode> defaultGraphQLValue = GetGraphQLTypeAndNodeTypeFromStringValue(entity.Source.Parameters[param].ToString()!);
                     inputValues.Add(
                         new(
                             location: null,

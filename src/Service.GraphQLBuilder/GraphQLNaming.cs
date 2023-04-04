@@ -5,7 +5,6 @@ using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
-using Humanizer;
 
 namespace Azure.DataApiBuilder.Service.GraphQLBuilder
 {

@@ -55,6 +55,12 @@ public enum GraphQLOperation
     Mutation
 }
 
+public enum Cardinality
+{
+    One,
+    Many
+}
+
 public record EntitySource(string Object, EntityType Type, Dictionary<string, object> Parameters, string[] KeyFields);
 
 [JsonConverter(typeof(EntityGraphQLOptionsConverter))]
@@ -72,7 +78,7 @@ public record EntityAction(EntityActionOperation Action, EntityActionFields Fiel
 public record EntityPermission(string Role, EntityAction[] Actions);
 
 public record EntityRelationship(
-    string Cardinality,
+    Cardinality Cardinality,
     [property: JsonPropertyName("target.entity")] string TargetEntity,
     [property: JsonPropertyName("source.fields")] string[] SourceFields,
     [property: JsonPropertyName("target.fields")] string[] TargetFields,

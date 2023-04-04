@@ -44,12 +44,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
                     // For stored procedures, only one mutation is created in the schema
                     // unlike table/views where we create one for each CUD operation.
-                    if (entities[dbEntityName].ObjectType is SourceType.StoredProcedure)
+                    if (entities[dbEntityName].Source.Type is EntityType.StoredProcedure)
                     {
                         // check graphql sp config
                         string entityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
                         Entity entity = entities[entityName];
-                        bool isSPDefinedAsMutation = entity.FetchConfiguredGraphQLOperation() is GraphQLOperation.Mutation;
+                        bool isSPDefinedAsMutation = entity.GraphQL.Operation is GraphQLOperation.Mutation;
 
                         if (isSPDefinedAsMutation)
                         {

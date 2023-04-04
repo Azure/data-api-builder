@@ -13,7 +13,7 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
     {
         if (reader.TokenType == JsonTokenType.StartObject)
         {
-            EntityRestOptions restOptions = new(Path: null, Methods: Array.Empty<string>(), Enabled: true);
+            EntityRestOptions restOptions = new(Path: null, Methods: Array.Empty<SupportedHttpVerb>(), Enabled: true);
             while (reader.Read())
             {
                 if (reader.TokenType == JsonTokenType.EndObject)
@@ -46,7 +46,7 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
                     }
 
                     case "methods":
-                        List<string> methods = new();
+                        List<SupportedHttpVerb> methods = new();
                         while (reader.Read())
                         {
                             if (reader.TokenType == JsonTokenType.StartArray)
@@ -59,7 +59,7 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
                                 break;
                             }
 
-                            methods.Add(reader.GetString()!);
+                            methods.Add(Enum.Parse<SupportedHttpVerb>(reader.GetString()!, true));
                         }
 
                         restOptions = restOptions with { Methods = methods.ToArray() };
@@ -72,12 +72,12 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
 
         if (reader.TokenType == JsonTokenType.String)
         {
-            return new EntityRestOptions(reader.GetString(), Array.Empty<string>(), true);
+            return new EntityRestOptions(reader.GetString(), Array.Empty<SupportedHttpVerb>(), true);
         }
 
         if (reader.TokenType == JsonTokenType.True || reader.TokenType == JsonTokenType.False)
         {
-            return new EntityRestOptions(null, Array.Empty<string>(), reader.GetBoolean());
+            return new EntityRestOptions(null, Array.Empty<SupportedHttpVerb>(), reader.GetBoolean());
         }
 
         throw new JsonException();

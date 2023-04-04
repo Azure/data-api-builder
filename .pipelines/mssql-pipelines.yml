@@ -114,6 +114,8 @@ jobs:
     displayName: Restore NuGet packages
     inputs:
       restoreSolution: '$(solution)'
+      feedsToUse: config
+      nugetConfigPath: Nuget.config
 
   - task: PowerShell@2
     displayName: Install SQL LocalDB

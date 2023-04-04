@@ -47,6 +47,8 @@ steps:
   displayName: Restore NuGet packages
   inputs:
     restoreSolution: '$(solution)'
+    feedsToUse: config
+    nugetConfigPath: Nuget.config
 
 - task: DotNetCoreCLI@2
   displayName: Build

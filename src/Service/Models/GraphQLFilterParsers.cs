@@ -57,12 +57,12 @@ namespace Azure.DataApiBuilder.Service.Models
             string sourceAlias = queryStructure.SourceAlias;
             SourceDefinition sourceDefinition = queryStructure.GetUnderlyingSourceDefinition();
 
-            InputObjectType filterArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(filterArgumentSchema);
+            InputObjectType filterArgumentObject = ExecutionHelper.InputObjectTypeFromIInputField(filterArgumentSchema);
 
             List<PredicateOperand> predicates = new();
             foreach (ObjectFieldNode field in fields)
             {
-                object? fieldValue = ResolverMiddleware.ExtractValueFromIValueNode(
+                object? fieldValue = ExecutionHelper.ExtractValueFromIValueNode(
                     value: field.Value,
                     argumentSchema: filterArgumentObject.Fields[field.Name.Value],
                     variables: ctx.Variables);
@@ -77,7 +77,7 @@ namespace Azure.DataApiBuilder.Service.Models
                 bool fieldIsAnd = string.Equals(name, $"{PredicateOperation.AND}", StringComparison.OrdinalIgnoreCase);
                 bool fieldIsOr = string.Equals(name, $"{PredicateOperation.OR}", StringComparison.OrdinalIgnoreCase);
 
-                InputObjectType filterInputObjectType = ResolverMiddleware.InputObjectTypeFromIInputField(filterArgumentObject.Fields[name]);
+                InputObjectType filterInputObjectType = ExecutionHelper.InputObjectTypeFromIInputField(filterArgumentObject.Fields[name]);
                 if (fieldIsAnd || fieldIsOr)
                 {
                     PredicateOperation op = fieldIsAnd ? PredicateOperation.AND : PredicateOperation.OR;
@@ -326,7 +326,7 @@ namespace Azure.DataApiBuilder.Service.Models
             List<PredicateOperand> operands = new();
             foreach (IValueNode field in fields)
             {
-                object? fieldValue = ResolverMiddleware.ExtractValueFromIValueNode(
+                object? fieldValue = ExecutionHelper.ExtractValueFromIValueNode(
                     value: field,
                     argumentSchema: argumentSchema,
                     ctx.Variables);
@@ -415,11 +415,11 @@ namespace Azure.DataApiBuilder.Service.Models
         {
             List<PredicateOperand> predicates = new();
 
-            InputObjectType argumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(argumentSchema);
+            InputObjectType argumentObject = ExecutionHelper.InputObjectTypeFromIInputField(argumentSchema);
             foreach (ObjectFieldNode field in fields)
             {
                 string name = field.Name.ToString();
-                object? value = ResolverMiddleware.ExtractValueFromIValueNode(
+                object? value = ExecutionHelper.ExtractValueFromIValueNode(
                     value: field.Value,
                     argumentSchema: argumentObject.Fields[field.Name.Value],
                     variables: ctx.Variables);

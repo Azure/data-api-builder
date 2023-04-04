@@ -10,6 +10,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Directives
 {
     public class RelationshipDirectiveType : DirectiveType
     {
+        public const string TARGET_ENTITY = "targetEntity";
         public static string DirectiveName { get; } = "relationship";
 
         protected override void Configure(IDirectiveTypeDescriptor descriptor)
@@ -73,7 +74,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Directives
         {
             Directive? directive = (Directive?)infield.Directives.FirstOrDefault(d => d.Name.Value == DirectiveName);
             DirectiveNode? directiveNode = directive?.ToNode();
-            ArgumentNode? arg = directiveNode?.Arguments.First(a => a.Name.Value == "targetEntity");
+            ArgumentNode? arg = directiveNode?.Arguments.First(a => a.Name.Value == TARGET_ENTITY);
 
             return (string?)arg?.Value.Value;
         }

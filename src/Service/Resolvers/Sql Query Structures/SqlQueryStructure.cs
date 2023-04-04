@@ -153,13 +153,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                                             value: predicate.Value);
             }
 
-            foreach (KeyValuePair<string, object?> predicate in context.FieldValuePairsInBody)
-            {
-                sqlMetadataProvider.TryGetBackingColumn(EntityName, predicate.Key, out string? backingColumn);
-                PopulateParamsAndPredicates(backingColumn: backingColumn!,
-                                            value: predicate.Value!);
-            }
-
             // context.OrderByClauseOfBackingColumns will lack SourceAlias because it is created in RequestParser
             // which may be called for any type of operation. To avoid coupling the OrderByClauseOfBackingColumns
             // to only Find, we populate the SourceAlias in this constructor where we know we have a Find operation.

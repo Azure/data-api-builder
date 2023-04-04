@@ -33,7 +33,7 @@ namespace Azure.DataApiBuilder.Auth
         /// <param name="roleName">Role defined in client role header</param>
         /// <param name="operation">Operation type: Create, Read, Update, Delete</param>
         /// <returns>True, if a matching permission entry is found.</returns>
-        public bool AreRoleAndOperationDefinedForEntity(string entityName, string roleName, Operation operation);
+        public bool AreRoleAndOperationDefinedForEntity(string entityName, string roleName, EntityActionOperation operation);
 
         /// <summary>
         /// Any columns referenced in a request's headers, URL(filter/orderby/routes), and/or body
@@ -44,7 +44,7 @@ namespace Azure.DataApiBuilder.Auth
         /// <param name="operation">Operation type: Create, Read, Update, Delete</param>
         /// <param name="columns">Compiled list of any column referenced in a request</param>
         /// <returns></returns>
-        public bool AreColumnsAllowedForOperation(string entityName, string roleName, Operation operation, IEnumerable<string> columns);
+        public bool AreColumnsAllowedForOperation(string entityName, string roleName, EntityActionOperation operation, IEnumerable<string> columns);
 
         /// <summary>
         /// Method to return the list of exposed columns for the given combination of
@@ -54,7 +54,7 @@ namespace Azure.DataApiBuilder.Auth
         /// <param name="roleName">Role defined in client role header</param>
         /// <param name="operation">Operation type: Create, Read, Update, Delete</param>
         /// <returns></returns>
-        public IEnumerable<string> GetAllowedExposedColumns(string entityName, string roleName, Operation operation);
+        public IEnumerable<string> GetAllowedExposedColumns(string entityName, string roleName, EntityActionOperation operation);
 
         /// <summary>
         /// Retrieves the policy of an operation within an entity's role entry
@@ -66,7 +66,7 @@ namespace Azure.DataApiBuilder.Auth
         /// <param name="operation">Operation type: Create, Read, Update, Delete.</param>
         /// <param name="httpContext">Contains token claims of the authenticated user used in policy evaluation.</param>
         /// <returns>Returns the parsed policy, if successfully processed, or an exception otherwise.</returns>
-        public string ProcessDBPolicy(string entityName, string roleName, Operation operation, HttpContext httpContext);
+        public string ProcessDBPolicy(string entityName, string roleName, EntityActionOperation operation, HttpContext httpContext);
 
         /// <summary>
         /// Get list of roles defined for entity within runtime configuration.. This is applicable for GraphQL when creating authorization
@@ -84,7 +84,7 @@ namespace Azure.DataApiBuilder.Auth
         /// <param name="field">Field to lookup operation permissions</param>
         /// <param name="operation">Specific operation to get collection of roles</param>
         /// <returns>Collection of role names allowed to perform operation on Entity's field.</returns>
-        public IEnumerable<string> GetRolesForField(string entityName, string field, Operation operation);
+        public IEnumerable<string> GetRolesForField(string entityName, string field, EntityActionOperation operation);
 
         /// <summary>
         /// Returns whether the httpVerb (GET, POST, PUT, PATCH, DELETE) is allowed to be performed
@@ -105,7 +105,7 @@ namespace Azure.DataApiBuilder.Auth
         /// <returns>Collection of roles. Empty list if entityPermissionsMap is null.</returns>
         public static IEnumerable<string> GetRolesForOperation(
             string entityName,
-            Operation operation,
+            EntityActionOperation operation,
             Dictionary<string, EntityMetadata>? entityPermissionsMap)
         {
             if (entityName is null)

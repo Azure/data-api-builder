@@ -62,7 +62,7 @@ public record EntityGraphQLOptions(string Singular, string Plural, bool Enabled 
 
 [JsonConverter(typeof(EntityRestOptionsConverter))]
 public record EntityRestOptions(string? Path, SupportedHttpVerb[] Methods, bool Enabled = true);
-public record EntityActionFields(HashSet<string> Include, HashSet<string> Exclude);
+public record EntityActionFields(HashSet<string>? Include = null, HashSet<string>? Exclude = null);
 public record EntityActionPolicy(string Database);
 public record EntityAction(EntityActionOperation Action, EntityActionFields Fields, EntityActionPolicy Policy)
 {

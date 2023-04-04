@@ -7,7 +7,6 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Net;
 using System.Security.Claims;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
@@ -16,10 +15,8 @@ using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Services;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
 namespace Azure.DataApiBuilder.Service.Authorization
 {
@@ -29,8 +26,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
     /// </summary>
     public class AuthorizationResolver : IAuthorizationResolver
     {
-        private ISqlMetadataProvider _metadataProvider;
-        private ILogger<AuthorizationResolver> _logger;
+        private readonly ISqlMetadataProvider _metadataProvider;
         public const string WILDCARD = "*";
         public const string CLAIM_PREFIX = "@claims.";
         public const string FIELD_PREFIX = "@item.";
@@ -42,13 +38,11 @@ namespace Azure.DataApiBuilder.Service.Authorization
 
         public AuthorizationResolver(
             RuntimeConfigProvider runtimeConfigProvider,
-            ISqlMetadataProvider sqlMetadataProvider,
-            ILogger<AuthorizationResolver> logger
+            ISqlMetadataProvider sqlMetadataProvider
             )
         {
             _metadataProvider = sqlMetadataProvider;
-            _logger = logger;
-            if (runtimeConfigProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
+            if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
                 // Datastructure constructor will pull required properties from metadataprovider.
                 SetEntityPermissionMap(runtimeConfig);
@@ -108,7 +102,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         }
 
         /// <inheritdoc />
-        public bool AreRoleAndOperationDefinedForEntity(string entityName, string roleName, Config.EntityActionOperation operation)
+        public bool AreRoleAndOperationDefinedForEntity(string entityName, string roleName, EntityActionOperation operation)
         {
             if (EntityPermissionsMap.TryGetValue(entityName, out EntityMetadata? valueOfEntityToRole))
             {
@@ -124,7 +118,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
             return false;
         }
 
-        public bool IsStoredProcedureExecutionPermitted(string entityName, string roleName, RestMethod httpVerb)
+        public bool IsStoredProcedureExecutionPermitted(string entityName, string roleName, SupportedHttpVerb httpVerb)
         {
             bool executionPermitted = EntityPermissionsMap.TryGetValue(entityName, out EntityMetadata? entityMetadata)
                 && entityMetadata is not null
@@ -134,7 +128,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         }
 
         /// <inheritdoc />
-        public bool AreColumnsAllowedForOperation(string entityName, string roleName, Config.EntityActionOperation operation, IEnumerable<string> columns)
+        public bool AreColumnsAllowedForOperation(string entityName, string roleName, EntityActionOperation operation, IEnumerable<string> columns)
         {
             // Columns.Count() will never be zero because this method is called after a check ensures Count() > 0
             Assert.IsFalse(columns.Count() == 0, message: "columns.Count() should be greater than 0.");
@@ -174,7 +168,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         }
 
         /// <inheritdoc />
-        public string ProcessDBPolicy(string entityName, string roleName, Config.EntityActionOperation operation, HttpContext httpContext)
+        public string ProcessDBPolicy(string entityName, string roleName, EntityActionOperation operation, HttpContext httpContext)
         {
             string dBpolicyWithClaimTypes = GetDBPolicyForRequest(entityName, roleName, operation);
 
@@ -199,7 +193,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// <param name="roleName">Role defined in client role header.</param>
         /// <param name="operation">Operation type: create, read, update, delete.</param>
         /// <returns>Policy string if a policy exists in config.</returns>
-        private string GetDBPolicyForRequest(string entityName, string roleName, Config.EntityActionOperation operation)
+        private string GetDBPolicyForRequest(string entityName, string roleName, EntityActionOperation operation)
         {
             if (!EntityPermissionsMap[entityName].RoleToOperationMap.TryGetValue(roleName, out RoleMetadata? roleMetadata))
             {
@@ -229,31 +223,29 @@ namespace Azure.DataApiBuilder.Service.Authorization
             {
                 EntityMetadata entityToRoleMap = new()
                 {
-                    ObjectType = entity.ObjectType
+                    ObjectType = entity.Source.Type,
                 };
 
-                bool isStoredProcedureEntity = entity.ObjectType is SourceType.StoredProcedure;
+                bool isStoredProcedureEntity = entity.Source.Type is EntityType.StoredProcedure;
                 if (isStoredProcedureEntity)
                 {
-                    RestMethod[]? methods = entity.GetRestMethodsConfiguredForStoredProcedure();
-                    if (methods is not null)
-                    {
-                        entityToRoleMap.StoredProcedureHttpVerbs = new(methods);
-                    }
+                    SupportedHttpVerb[] methods = entity.Rest.Methods;
+
+                    entityToRoleMap.StoredProcedureHttpVerbs = new(methods);
                 }
 
                 // Store the allowedColumns for anonymous role.
                 // In case the authenticated role is not defined on the entity,
                 // this will help in copying over permissions from anonymous role to authenticated role.
                 HashSet<string> allowedColumnsForAnonymousRole = new();
-                foreach (PermissionSetting permission in entity.Permissions)
+                foreach (EntityPermission permission in entity.Permissions)
                 {
                     string role = permission.Role;
                     RoleMetadata roleToOperation = new();
-                    object[] Operations = permission.Operations;
-                    foreach (JsonElement operationElement in Operations)
+                    EntityAction[] Operations = permission.Actions;
+                    foreach (EntityAction operationElement in Operations)
                     {
-                        Config.EntityActionOperation operation = Config.EntityActionOperation.None;
+                        EntityActionOperation operation = operationElement.Action;
                         OperationMetadata operationToColumn = new();
 
                         // Use a hashset to store all the backing field names
@@ -261,71 +253,53 @@ namespace Azure.DataApiBuilder.Service.Authorization
                         HashSet<string> allowedColumns = new();
                         IEnumerable<string> allTableColumns = ResolveEntityDefinitionColumns(entityName);
 
-                        // Implicitly, all table columns are 'allowed' when an operationtype is a string.
-                        // Since no granular field permissions exist for this operation within the current role.
-                        if (operationElement.ValueKind is JsonValueKind.String)
+                        if (operationElement.Fields is null)
                         {
-                            string operationName = operationElement.ToString();
-                            operation = AuthorizationResolver.WILDCARD.Equals(operationName) ? Config.EntityActionOperation.All : Enum.Parse<Config.EntityActionOperation>(operationName, ignoreCase: true);
-                            operationToColumn.Included.UnionWith(allTableColumns);
-                            allowedColumns.UnionWith(allTableColumns);
+                            operationToColumn.Included.UnionWith(ResolveEntityDefinitionColumns(entityName));
                         }
                         else
                         {
-                            // If not a string, the operationObj is expected to be an object that can be deserialized into PermissionOperation
-                            // object. We will put validation checks later to make sure this is the case.
-                            if (RuntimeConfig.TryGetDeserializedJsonString(operationElement.ToString(), out PermissionOperation? operationObj, _logger)
-                                && operationObj is not null)
+                            // When a wildcard (*) is defined for Included columns, all of the table's
+                            // columns must be resolved and placed in the operationToColumn Key/Value store.
+                            // This is especially relevant for find requests, where actual column names must be
+                            // resolved when no columns were included in a request.
+                            if (operationElement.Fields.Include is null ||
+                                (operationElement.Fields.Include.Count == 1 && operationElement.Fields.Include.Contains(WILDCARD)))
                             {
-                                operation = operationObj.Name;
-                                if (operationObj.Fields is null)
-                                {
-                                    operationToColumn.Included.UnionWith(ResolveEntityDefinitionColumns(entityName));
-                                }
-                                else
-                                {
-                                    // When a wildcard (*) is defined for Included columns, all of the table's
-                                    // columns must be resolved and placed in the operationToColumn Key/Value store.
-                                    // This is especially relevant for find requests, where actual column names must be
-                                    // resolved when no columns were included in a request.
-                                    if (operationObj.Fields.Include is null ||
-                                        (operationObj.Fields.Include.Count == 1 && operationObj.Fields.Include.Contains(WILDCARD)))
-                                    {
-                                        operationToColumn.Included.UnionWith(ResolveEntityDefinitionColumns(entityName));
-                                    }
-                                    else
-                                    {
-                                        operationToColumn.Included = operationObj.Fields.Include;
-                                    }
+                                operationToColumn.Included.UnionWith(ResolveEntityDefinitionColumns(entityName));
+                            }
+                            else
+                            {
+                                operationToColumn.Included = operationElement.Fields.Include;
+                            }
 
-                                    // When a wildcard (*) is defined for Excluded columns, all of the table's
-                                    // columns must be resolved and placed in the operationToColumn Key/Value store.
-                                    if (operationObj.Fields.Exclude.Count == 1 && operationObj.Fields.Exclude.Contains(WILDCARD))
-                                    {
-                                        operationToColumn.Excluded.UnionWith(ResolveEntityDefinitionColumns(entityName));
-                                    }
-                                    else
-                                    {
-                                        operationToColumn.Excluded = operationObj.Fields.Exclude;
-                                    }
-                                }
-
-                                if (operationObj.Policy is not null && operationObj.Policy.Database is not null)
-                                {
-                                    operationToColumn.DatabasePolicy = operationObj.Policy.Database;
-                                }
-
-                                // Calculate the set of allowed backing column names.
-                                allowedColumns.UnionWith(operationToColumn.Included.Except(operationToColumn.Excluded));
+                            // When a wildcard (*) is defined for Excluded columns, all of the table's
+                            // columns must be resolved and placed in the operationToColumn Key/Value store.
+                            if (operationElement.Fields.Exclude is null ||
+                                (operationElement.Fields.Exclude.Count == 1 && operationElement.Fields.Exclude.Contains(WILDCARD)))
+                            {
+                                operationToColumn.Excluded.UnionWith(ResolveEntityDefinitionColumns(entityName));
+                            }
+                            else
+                            {
+                                operationToColumn.Excluded = operationElement.Fields.Exclude;
                             }
                         }
+
+                        if (operationElement.Policy is not null && operationElement.Policy.Database is not null)
+                        {
+                            operationToColumn.DatabasePolicy = operationElement.Policy.Database;
+                        }
+
+                        // Calculate the set of allowed backing column names.
+                        allowedColumns.UnionWith(operationToColumn.Included.Except(operationToColumn.Excluded));
 
                         // Populate allowed exposed columns for each entity/role/operation combination during startup,
                         // so that it doesn't need to be evaluated per request.
                         PopulateAllowedExposedColumns(operationToColumn.AllowedExposedColumns, entityName, allowedColumns);
 
-                        IEnumerable<Config.EntityActionOperation> operations = GetAllOperationsForObjectType(operation, entity.ObjectType);
-                        foreach (Config.EntityActionOperation crudOperation in operations)
+                        IEnumerable<EntityActionOperation> operations = GetAllOperationsForObjectType(operation, entity.Source.Type);
+                        foreach (EntityActionOperation crudOperation in operations)
                         {
                             // Try to add the opElement to the map if not present.
                             // Builds up mapping: i.e. Operation.Create permitted in {Role1, Role2, ..., RoleN}
@@ -336,7 +310,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
 
                             foreach (string allowedColumn in allowedColumns)
                             {
-                                entityToRoleMap.FieldToRolesMap.TryAdd(key: allowedColumn, CreateOperationToRoleMap(entity.ObjectType));
+                                entityToRoleMap.FieldToRolesMap.TryAdd(key: allowedColumn, CreateOperationToRoleMap(entity.Source.Type));
                                 entityToRoleMap.FieldToRolesMap[allowedColumn][crudOperation].Add(role);
                             }
 
@@ -383,9 +357,9 @@ namespace Azure.DataApiBuilder.Service.Authorization
             entityToRoleMap.RoleToOperationMap[ROLE_AUTHENTICATED] = entityToRoleMap.RoleToOperationMap[ROLE_ANONYMOUS];
 
             // Copy over OperationToRolesMap for authenticated role from anonymous role.
-            Dictionary<Config.EntityActionOperation, OperationMetadata> allowedOperationMap =
+            Dictionary<EntityActionOperation, OperationMetadata> allowedOperationMap =
                 entityToRoleMap.RoleToOperationMap[ROLE_ANONYMOUS].OperationToColumnMap;
-            foreach (Config.EntityActionOperation operation in allowedOperationMap.Keys)
+            foreach (EntityActionOperation operation in allowedOperationMap.Keys)
             {
                 entityToRoleMap.OperationToRolesMap[operation].Add(ROLE_AUTHENTICATED);
             }
@@ -393,9 +367,9 @@ namespace Azure.DataApiBuilder.Service.Authorization
             // Copy over FieldToRolesMap for authenticated role from anonymous role.
             foreach (string allowedColumnInAnonymousRole in allowedColumnsForAnonymousRole)
             {
-                Dictionary<Config.EntityActionOperation, List<string>> allowedOperationsForField =
+                Dictionary<EntityActionOperation, List<string>> allowedOperationsForField =
                     entityToRoleMap.FieldToRolesMap[allowedColumnInAnonymousRole];
-                foreach (Config.EntityActionOperation operation in allowedOperationsForField.Keys)
+                foreach (EntityActionOperation operation in allowedOperationsForField.Keys)
                 {
                     if (allowedOperationsForField[operation].Contains(ROLE_ANONYMOUS))
                     {
@@ -413,14 +387,14 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// <param name="operation">operation type.</param>
         /// <param name="sourceType">Type of database object: Table, View, or Stored Procedure.</param>
         /// <returns>IEnumerable of all available operations.</returns>
-        public static IEnumerable<Config.EntityActionOperation> GetAllOperationsForObjectType(Config.EntityActionOperation operation, SourceType sourceType)
+        public static IEnumerable<EntityActionOperation> GetAllOperationsForObjectType(EntityActionOperation operation, EntityType sourceType)
         {
-            if (sourceType is SourceType.StoredProcedure)
+            if (sourceType is EntityType.StoredProcedure)
             {
-                return new List<Config.EntityActionOperation> { Config.EntityActionOperation.Execute };
+                return new List<EntityActionOperation> { EntityActionOperation.Execute };
             }
 
-            return operation is Config.EntityActionOperation.All ? PermissionOperation.ValidPermissionOperations : new List<Config.EntityActionOperation> { operation };
+            return operation is EntityActionOperation.All ? EntityAction.ValidPermissionOperations : new List<EntityActionOperation> { operation };
         }
 
         /// <summary>
@@ -449,7 +423,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         }
 
         /// <inheritdoc />
-        public IEnumerable<string> GetAllowedExposedColumns(string entityName, string roleName, Config.EntityActionOperation operation)
+        public IEnumerable<string> GetAllowedExposedColumns(string entityName, string roleName, EntityActionOperation operation)
         {
             return EntityPermissionsMap[entityName].RoleToOperationMap[roleName].OperationToColumnMap[operation].AllowedExposedColumns;
         }
@@ -476,10 +450,10 @@ namespace Azure.DataApiBuilder.Service.Authorization
 
                 // Only add a role claim which represents the role context evaluated for the request,
                 // as this can be via the virtue of an identity added by DAB.
-                if (!claimsInRequestContext.ContainsKey(AuthenticationConfig.ROLE_CLAIM_TYPE) &&
-                    identity.HasClaim(type: AuthenticationConfig.ROLE_CLAIM_TYPE, value: clientRoleHeader))
+                if (!claimsInRequestContext.ContainsKey(AuthenticationOptions.ROLE_CLAIM_TYPE) &&
+                    identity.HasClaim(type: AuthenticationOptions.ROLE_CLAIM_TYPE, value: clientRoleHeader))
                 {
-                    claimsInRequestContext.Add(AuthenticationConfig.ROLE_CLAIM_TYPE, new Claim(AuthenticationConfig.ROLE_CLAIM_TYPE, clientRoleHeader, ClaimValueTypes.String));
+                    claimsInRequestContext.Add(AuthenticationOptions.ROLE_CLAIM_TYPE, new Claim(AuthenticationOptions.ROLE_CLAIM_TYPE, clientRoleHeader, ClaimValueTypes.String));
                 }
 
                 // If identity is not authenticated, we don't honor any other claims present in this identity.
@@ -497,7 +471,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                      * claim.ValueType: "string"
                      */
                     // At this point, only add non-role claims to the collection and only throw an exception for duplicate non-role claims.
-                    if (!claim.Type.Equals(AuthenticationConfig.ROLE_CLAIM_TYPE) && !claimsInRequestContext.TryAdd(claim.Type, claim))
+                    if (!claim.Type.Equals(AuthenticationOptions.ROLE_CLAIM_TYPE) && !claimsInRequestContext.TryAdd(claim.Type, claim))
                     {
                         // If there are duplicate claims present in the request, return an exception.
                         throw new DataApiBuilderException(
@@ -631,7 +605,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// <param name="entityName">Entity to lookup permissions</param>
         /// <param name="operation">Operation to lookup applicable roles</param>
         /// <returns>Collection of roles.</returns>
-        public IEnumerable<string> GetRolesForOperation(string entityName, Config.EntityActionOperation operation)
+        public IEnumerable<string> GetRolesForOperation(string entityName, EntityActionOperation operation)
         {
             if (EntityPermissionsMap[entityName].OperationToRolesMap.TryGetValue(operation, out List<string>? roleList) && roleList is not null)
             {
@@ -649,7 +623,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// <param name="field">Field to lookup operation permissions</param>
         /// <param name="operation">Specific operation to get collection of roles</param>
         /// <returns>Collection of role names allowed to perform operation on Entity's field.</returns>
-        public IEnumerable<string> GetRolesForField(string entityName, string field, Config.EntityActionOperation operation)
+        public IEnumerable<string> GetRolesForField(string entityName, string field, EntityActionOperation operation)
         {
             return EntityPermissionsMap[entityName].FieldToRolesMap[field][operation];
         }
@@ -662,7 +636,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// <returns>Collection of columns in table definition.</returns>
         private IEnumerable<string> ResolveEntityDefinitionColumns(string entityName)
         {
-            if (_metadataProvider.GetDatabaseType() is DatabaseType.cosmosdb_nosql)
+            if (_metadataProvider.GetDatabaseType() is DatabaseType.CosmosDB_NoSQL)
             {
                 return new List<string>();
             }
@@ -679,22 +653,22 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// There are only five possible operations
         /// </summary>
         /// <returns>Dictionary: Key - Operation | Value - List of roles.</returns>
-        private static Dictionary<Config.EntityActionOperation, List<string>> CreateOperationToRoleMap(SourceType sourceType)
+        private static Dictionary<EntityActionOperation, List<string>> CreateOperationToRoleMap(EntityType sourceType)
         {
-            if (sourceType is SourceType.StoredProcedure)
+            if (sourceType is EntityType.StoredProcedure)
             {
-                return new Dictionary<Config.EntityActionOperation, List<string>>()
+                return new Dictionary<EntityActionOperation, List<string>>()
                 {
-                    { Config.EntityActionOperation.Execute, new List<string>()}
+                    { EntityActionOperation.Execute, new List<string>()}
                 };
             }
 
-            return new Dictionary<Config.EntityActionOperation, List<string>>()
+            return new Dictionary<EntityActionOperation, List<string>>()
             {
-                { Config.EntityActionOperation.Create, new List<string>()},
-                { Config.EntityActionOperation.Read, new List<string>()},
-                { Config.EntityActionOperation.Update, new List<string>()},
-                { Config.EntityActionOperation.Delete, new List<string>()}
+                { EntityActionOperation.Create, new List<string>()},
+                { EntityActionOperation.Read, new List<string>()},
+                { EntityActionOperation.Update, new List<string>()},
+                { EntityActionOperation.Delete, new List<string>()}
             };
         }
 

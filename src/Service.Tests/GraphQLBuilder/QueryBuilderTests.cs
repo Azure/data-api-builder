@@ -387,27 +387,40 @@ type Table @model(name: ""table"") {
         [DataRow(GraphQLOperation.Mutation, new[] { Config.Operation.Execute }, new[] { "execute" }, false, DisplayName = "Query field not generated because the configured operation is mutation.")]
         public void StoredProcedureEntityAsQueryField(GraphQLOperation? graphQLOperation, Config.Operation[] operations, string[] permissionOperations, bool expectsQueryField)
         {
+            string entityName = "MyStoredProcedure";
             string gql =
             @"
-            type StoredProcedureType @model(name:""MyStoredProcedure"") {
+            type StoredProcedureType @model(name:" + entityName + @") {
                 field1: string
             }
             ";
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
             _entityPermissions = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
-                    new string[] { "MyStoredProcedure" },
+                    new string[] { entityName },
                     operations,
                     new string[] { "anonymous", "authenticated" }
                     );
             Entity entity = GraphQLTestHelpers.GenerateStoredProcedureEntity(graphQLTypeName: "StoredProcedureType", graphQLOperation, permissionOperations);
 
+            DatabaseObject spDbObj = new DatabaseStoredProcedure(schemaName: "dbo", tableName: "dbObjectName")
+            {
+                SourceType = SourceType.StoredProcedure,
+                StoredProcedureDefinition = new()
+                {
+                    Parameters = new() {
+                        { "field1", new() { SystemType = typeof(string) } }
+                    }
+                }
+            };
+
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
                 DatabaseType.mssql,
-                new Dictionary<string, Entity> { { "MyStoredProcedure", entity } },
+                new Dictionary<string, Entity> { { entityName, entity } },
                 inputTypes: new(),
-                entityPermissionsMap: _entityPermissions
+                entityPermissionsMap: _entityPermissions,
+                dbObjects: new Dictionary<string, DatabaseObject> { { entityName, spDbObj } }
                 );
 
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);

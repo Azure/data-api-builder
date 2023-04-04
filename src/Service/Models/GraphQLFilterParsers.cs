@@ -146,10 +146,7 @@ namespace Azure.DataApiBuilder.Service.Models
                     // check only occurs when access to the column's owner entity is confirmed.
                     if (!relationshipField)
                     {
-                        // GetTarget will return the name of the target entity when the filterArgumentSchema has a relationship directive.
-                        // GetTarget returns null when the filterArgumentSchema does not have a relationship directive.
-                        // No relationship directive indicates that the input field does not represent a nested filter.
-                        string targetEntity = RelationshipDirectiveType.GetTargetEntity(filterArgumentSchema) ?? queryStructure.EntityName;
+                        string targetEntity = queryStructure.EntityName;
 
                         bool columnAccessPermitted = queryStructure.AuthorizationResolver.AreColumnsAllowedForOperation(
                             entityName: targetEntity,

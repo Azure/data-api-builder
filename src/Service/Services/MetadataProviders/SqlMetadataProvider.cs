@@ -314,6 +314,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 storedProcedureDefinition.Parameters.TryAdd(((string)row["PARAMETER_NAME"])[1..],
                     new()
                     {
+                        // row["DATA_TYPE"] has value type string so a direct cast to System.Type is not supported.
                         SystemType = SqlToCLRType((string)row["DATA_TYPE"]),
                     }
                 );

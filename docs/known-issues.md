@@ -8,6 +8,7 @@
 
 - Table with triggers error out on UPDATE. [Issue #452](https://github.com/Azure/data-api-builder/issues/452)
 - JSON data is escaped in the response. [Issue #444](https://github.com/Azure/data-api-builder/issues/444)
+- Database policies for insert via PUT/PATCH operations in REST are not yet supported. [Issue #1370](https://github.com/Azure/data-api-builder/issues/1370)
 
 ## MySQL 
 

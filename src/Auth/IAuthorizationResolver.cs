@@ -83,7 +83,8 @@ namespace Azure.DataApiBuilder.Auth
         /// <param name="entityName">EntityName whose operationMetadata will be searched.</param>
         /// <param name="field">Field to lookup operation permissions</param>
         /// <param name="operation">Specific operation to get collection of roles</param>
-        /// <returns>Collection of role names allowed to perform operation on Entity's field.</returns>
+        /// <returns>Collection of role names allowed to perform operation on Entity's field. Empty list when zero roles
+        /// have permission to perform the {operation} on the provided field.</returns>
         public IEnumerable<string> GetRolesForField(string entityName, string field, Operation operation);
 
         /// <summary>

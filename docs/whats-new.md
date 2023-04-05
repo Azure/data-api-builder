@@ -1,6 +1,6 @@
 # What's New in Data API builder
 
-- [Version 0.6.12](#version-0612)
+- [Version 0.6.13](#version-0613)
 - [Version 0.5.35](#version-035)
 - [Version 0.5.34](#version-0534)
 - [Version 0.5.32](#version-0532)
@@ -10,12 +10,12 @@
 
 Details on how to install the latest version are here: [Installing DAB CLI](./getting-started/getting-started.md#installing-dab-cli)
 
-## Version 0.6.12
-- [New CLI command to export GraphQL schema](./whats-new-0.6.12.md#new-cli-command-to-export-graphql-schema)
-- [Database policy support for create action for MsSql](./whats-new-0.6.12.md#database-policy-support-for-create-action-for-mssql)
-- [Symbols package for easy debugging](./whats-new-0.6.12.md#symbols-package-for-easy-debugging)
-- [Ability to configure GraphQL path and disable REST and GraphQL endpoints globally via CLI](./whats-new-0.6.12.md#ability-to-configure-graphql-path-and-disable-rest-and-graphql-endpoints-globally-via-cli)
-- [Key fields mandatory for adding/updating views in CLI](./whats-new-0.6.12.md#key-fields-mandatory-for-adding-and-updating-views-in-cli)
+## Version 0.6.13
+- [New CLI command to export GraphQL schema](./whats-new-0.6.13.md#new-cli-command-to-export-graphql-schema)
+- [Database policy support for create action for MsSql](./whats-new-0.6.13.md#database-policy-support-for-create-action-for-mssql)
+- [Symbols package for easy debugging](./whats-new-0.6.13.md#symbols-package-for-easy-debugging)
+- [Ability to configure GraphQL path and disable REST and GraphQL endpoints globally via CLI](./whats-new-0.6.13.md#ability-to-configure-graphql-path-and-disable-rest-and-graphql-endpoints-globally-via-cli)
+- [Key fields mandatory for adding/updating views in CLI](./whats-new-0.6.13.md#key-fields-mandatory-for-adding-and-updating-views-in-cli)
 
 ## Version 0.5.35
 

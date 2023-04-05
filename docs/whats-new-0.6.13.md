@@ -1,4 +1,4 @@
-# What's New in Data API builder 0.6.12
+# What's New in Data API builder 0.6.13
 
 - [New CLI command to export GraphQL schema](#new-cli-command-to-export-graphql-schema)
 - [Database policy support for create action for MsSql](#database-policy-support-for-create-action-for-mssql)
@@ -7,7 +7,7 @@
 - [Key fields mandatory for adding/updating views in CLI](#key-fields-mandatory-for-adding-and-updating-views-in-cli)
 - [Replacing Azure storage link with Github links](#replacing-azure-storage-link-with-github-links)
 
-The full list of release notes for this version is available here: [version 0.6.12 release notes](https://github.com/Azure/data-api-builder/releases/tag/v0.6.12)
+The full list of release notes for this version is available here: [version 0.6.13 release notes](https://github.com/Azure/data-api-builder/releases/tag/v0.6.13)
 
 ## New CLI command to export GraphQL schema
 

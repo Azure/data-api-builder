@@ -110,6 +110,29 @@
           "plural": "Stars"
         }
       }
+    },
+    "Moon": {
+      "source": "graphqldb.moon",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        }
+      ]
     }
   }
 }

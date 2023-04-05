@@ -2,7 +2,6 @@
 
 - [New CLI command to export GraphQL schema](#new-cli-command-to-export-graphql-schema)
 - [Database policy support for create action for MsSql](#database-policy-support-for-create-action-for-mssql)
-- [Symbols package for easy debugging](#symbols-package-for-easy-debugging)
 - [Ability to configure GraphQL path and disable REST and GraphQL endpoints globally via CLI](#ability-to-configure-graphql-path-and-disable-rest-and-graphql-endpoints-globally-via-cli)
 - [Key fields mandatory for adding/updating views in CLI](#key-fields-mandatory-for-adding-and-updating-views-in-cli)
 - [Replacing Azure storage link with Github links](#replacing-azure-storage-link-with-github-links)
@@ -45,10 +44,6 @@ For example:
 }
 ```
 The above configuration for `Revenue` entity indicates that the user who is performing an insert operation with role `Authenticated` is not allowed to create a record with revenue less than or equal to zero.
-
-## Symbols package for easy debugging
-
-To assist developers in debugging, we now publish a symbols package along with the primary Nuget to Nuget.org's symbol server. The users can download the symbol files (using an IDE such as Visual Studio) and step through Data API builder source code. This provides them an enhanced debugging experience.
 
 ## Ability to configure GraphQL path and disable REST and GraphQL endpoints globally via CLI
 We now support 3 more options for the `init` command:

@@ -13,7 +13,6 @@ Details on how to install the latest version are here: [Installing DAB CLI](./ge
 ## Version 0.6.13
 - [New CLI command to export GraphQL schema](./whats-new-0.6.13.md#new-cli-command-to-export-graphql-schema)
 - [Database policy support for create action for MsSql](./whats-new-0.6.13.md#database-policy-support-for-create-action-for-mssql)
-- [Symbols package for easy debugging](./whats-new-0.6.13.md#symbols-package-for-easy-debugging)
 - [Ability to configure GraphQL path and disable REST and GraphQL endpoints globally via CLI](./whats-new-0.6.13.md#ability-to-configure-graphql-path-and-disable-rest-and-graphql-endpoints-globally-via-cli)
 - [Key fields mandatory for adding/updating views in CLI](./whats-new-0.6.13.md#key-fields-mandatory-for-adding-and-updating-views-in-cli)
 

@@ -37,7 +37,7 @@ Initializes the runtime configuration for the Data API builder runtime engine. I
 
 | Options | Required    | Default Value    | Description |
 | :---   | :--- | :--- | :--- |
-| **--database-type** | true   | -   | Type of database to connect. Supported values: mssql, cosmosdb_nosql, cosmosdb_postgresql, mysql, postgresql   |
+| **--database-type** | true   | -   | Type of database to connect. Supported values: mssql, cosmosdb_nosql, mysql, postgresql   |
 | **--connection-string** | false   | ""   | Connection details to connect to the database.   |
 | **--cosmosdb_nosql-database** | true when databaseType=cosmosdb_nosql   | -   | Database name for Cosmos DB for NoSql.   |
 | **--cosmosdb_nosql-container** | false   | -   | Container name for Cosmos DB for NoSql.   |

@@ -124,8 +124,18 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         public Type GetColumnSystemType(string columnName)
         {
-            GetUnderlyingSourceDefinition().Columns.TryGetValue(columnName, out ColumnDefinition? column);
-            return column!.SystemType;
+            if (GetUnderlyingSourceDefinition().Columns.TryGetValue(columnName, out ColumnDefinition? column))
+            {
+                return column.SystemType;
+            }
+            else
+            {
+                throw new DataApiBuilderException(
+                    message: $"{columnName} is not a valid column of {DatabaseObject.Name}",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
+                    );
+            }
         }
 
         /// <summary>

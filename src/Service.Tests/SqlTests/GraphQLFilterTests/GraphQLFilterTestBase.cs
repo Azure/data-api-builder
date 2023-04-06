@@ -410,7 +410,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 @"((id > 2 AND id < 4) OR (id >= 4 AND title LIKE '%book%'))",
                 GetDefaultSchema());
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
             string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -461,7 +461,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                   (publisher_id < 1500 OR publisher_id > 2000)",
                 GetDefaultSchema());
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
             string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -482,7 +482,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
             SqlTestHelper.PerformTestEqualJsonStrings("[]", actual.ToString());
         }
 
@@ -502,7 +502,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
             SqlTestHelper.PerformTestEqualJsonStrings("[]", actual.ToString());
         }
 
@@ -529,7 +529,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 "issue_number IS NULL",
                 "foo");
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
             string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -557,7 +557,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 "issue_number IS NOT NULL",
                 "foo");
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
             string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -584,7 +584,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 "username IS NULL",
                 GetDefaultSchema());
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
             string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -611,7 +611,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 "username IS NOT NULL",
                 GetDefaultSchema());
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
             string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -643,7 +643,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 @"id >= 2",
                 GetDefaultSchema());
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
             string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -734,7 +734,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         /// Test Nested Filter for Many-One relationship.
         /// </summary>
         [TestMethod]
-        public async Task TestNestedFilterManyOne(string existsPredicate)
+        public async Task TestNestedFilterManyOne(string existsPredicate, string roleName, bool expectsError = false, string errorMsgFragment = "")
         {
             string graphQLQueryName = "comics";
             // Gets all the comics that have their series name = 'Foundation'
@@ -758,16 +758,26 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             JsonElement actual = await ExecuteGraphQLRequestAsync(
                 gqlQuery,
                 graphQLQueryName,
-                isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+                isAuthenticated: true,
+                clientRoleHeader: roleName,
+                expectsError: expectsError);
+
+            if (expectsError)
+            {
+                SqlTestHelper.TestForErrorInGraphQLResponse(actual.ToString(), message: errorMsgFragment);
+            }
+            else
+            {
+                string expected = await GetDatabaseResultAsync(dbQuery);
+                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+            }
         }
 
         /// <summary>
         /// Test Nested Filter for One-Many relationship
         /// </summary>
         [TestMethod]
-        public async Task TestNestedFilterOneMany(string existsPredicate)
+        public async Task TestNestedFilterOneMany(string existsPredicate, string roleName, bool expectsError = false, string errorMsgFragment = "")
         {
             string graphQLQueryName = "series";
             // Gets the series that have comics with categoryName containing Tales
@@ -791,9 +801,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             JsonElement actual = await ExecuteGraphQLRequestAsync(
                 gqlQuery,
                 graphQLQueryName,
-                isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+                isAuthenticated: true,
+                clientRoleHeader: roleName,
+                expectsError: expectsError);
+
+            if (expectsError)
+            {
+                SqlTestHelper.TestForErrorInGraphQLResponse(actual.ToString(), message: errorMsgFragment);
+            }
+            else
+            {
+                string expected = await GetDatabaseResultAsync(dbQuery);
+                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+            }
         }
 
         /// <summary>
@@ -823,7 +843,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             JsonElement actual = await ExecuteGraphQLRequestAsync(
                 gqlQuery,
                 graphQLQueryName,
-                isAuthenticated: false);
+                isAuthenticated: true);
             string expected = await GetDatabaseResultAsync(dbQuery);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -832,7 +852,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         /// Test a field of the nested filter is null.
         /// </summary>
         [TestMethod]
-        public async Task TestNestedFilterFieldIsNull(string existsPredicate)
+        public async Task TestNestedFilterFieldIsNull(string existsPredicate, string roleName, bool expectsError = false, string errorMsgFragment = "")
         {
             string graphQLQueryName = "stocks";
             // Gets stocks which have a null price.
@@ -856,23 +876,33 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             JsonElement actual = await ExecuteGraphQLRequestAsync(
                 gqlQuery,
                 graphQLQueryName,
-                isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+                isAuthenticated: true,
+                clientRoleHeader: roleName,
+                expectsError: expectsError);
+
+            if (expectsError)
+            {
+                SqlTestHelper.TestForErrorInGraphQLResponse(actual.ToString(), message: errorMsgFragment);
+            }
+            else
+            {
+                string expected = await GetDatabaseResultAsync(dbQuery);
+                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+            }
         }
 
         /// <summary>
         /// Tests nested filter having another nested filter.
         /// </summary>
         [TestMethod]
-        public async Task TestNestedFilterWithinNestedFilter(string existsPredicate)
+        public async Task TestNestedFilterWithinNestedFilter(string existsPredicate, string roleName, bool expectsError = false, string errorMsgFragment = "")
         {
-            string graphQLQueryName = "books";
+            string graphQLQueryName = "booksNF";
 
             // Gets all the books written by Aaron
             // only if the title of one of his books contains 'Awesome'.
             string gqlQuery = @"{
-                books (" + QueryBuilder.FILTER_FIELD_NAME +
+                booksNF (" + QueryBuilder.FILTER_FIELD_NAME +
                     @": { authors: {
                              books: { title: { contains: ""Awesome"" }}
                              name: { eq: ""Aaron"" }
@@ -893,29 +923,35 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             JsonElement actual = await ExecuteGraphQLRequestAsync(
                 gqlQuery,
                 graphQLQueryName,
-                isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+                isAuthenticated: true,
+                clientRoleHeader: roleName,
+                expectsError: expectsError);
+
+            if (expectsError)
+            {
+                SqlTestHelper.TestForErrorInGraphQLResponse(actual.ToString(), message: errorMsgFragment);
+            }
+            else
+            {
+                string expected = await GetDatabaseResultAsync(dbQuery);
+                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+            }
         }
 
         /// <summary>
         /// Tests nested filter and an AND clause.
         /// </summary>
         [TestMethod]
-        public async Task TestNestedFilterWithAnd(string existsPredicate)
+        public async Task TestNestedFilterWithAnd(string existsPredicate, string roleName, bool expectsError = false, string errorMsgFragment = "")
         {
-            string graphQLQueryName = "books";
+            string graphQLQueryName = "booksNF";
 
             // Gets all the books written by Aniruddh and the publisher is 'Small Town Publisher'.
             string gqlQuery = @"{
-                books (" + QueryBuilder.FILTER_FIELD_NAME +
-                    @": { authors:  {
-                          name: { eq: ""Aniruddh""}
-                          }
-                      and: {
-                       publishers: { name: { eq: ""Small Town Publisher"" } }
-                       }
-                    })
+                booksNF (" + QueryBuilder.FILTER_FIELD_NAME +
+                    @": { publishers: { name: { eq: ""Small Town Publisher"" } }
+                      and: { authors: {name: { eq: ""Aniruddh"" } }
+                    }})
                     {
                       items {
                         title
@@ -932,22 +968,32 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             JsonElement actual = await ExecuteGraphQLRequestAsync(
                 gqlQuery,
                 graphQLQueryName,
-                isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+                isAuthenticated: true,
+                clientRoleHeader: roleName,
+                expectsError: expectsError);
+
+            if (expectsError)
+            {
+                SqlTestHelper.TestForErrorInGraphQLResponse(actual.ToString(), message: errorMsgFragment);
+            }
+            else
+            {
+                string expected = await GetDatabaseResultAsync(dbQuery);
+                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+            }
         }
 
         /// <summary>
         /// Tests nested filter alongwith an OR clause.
         /// </summary>
         [TestMethod]
-        public async Task TestNestedFilterWithOr(string existsPredicate)
+        public async Task TestNestedFilterWithOr(string existsPredicate, string roleName, bool expectsError = false, string errorMsgFragment = "")
         {
-            string graphQLQueryName = "books";
+            string graphQLQueryName = "booksNF";
 
             // Gets all the books written by Aniruddh OR if their publisher is 'TBD Publishing One'.
             string gqlQuery = @"{
-                books (" + QueryBuilder.FILTER_FIELD_NAME +
+                booksNF (" + QueryBuilder.FILTER_FIELD_NAME +
                     @": { or: [{
                         publishers: { name: { eq: ""TBD Publishing One"" } } }
                         { authors : {
@@ -970,9 +1016,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             JsonElement actual = await ExecuteGraphQLRequestAsync(
                 gqlQuery,
                 graphQLQueryName,
-                isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+                isAuthenticated: true,
+                clientRoleHeader: roleName,
+                expectsError: expectsError);
+
+            if (expectsError)
+            {
+                SqlTestHelper.TestForErrorInGraphQLResponse(actual.ToString(), message: errorMsgFragment);
+            }
+            else
+            {
+                string expected = await GetDatabaseResultAsync(dbQuery);
+                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+            }
         }
 
         #endregion
@@ -1014,9 +1070,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             string graphQLQueryName,
             bool isAuthenticated,
             Dictionary<string, object> variables = null,
-            string clientRoleHeader = null)
+            string clientRoleHeader = null,
+            bool expectsError = false)
         {
-            JsonElement dataResult = await base.ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: isAuthenticated, variables);
+            JsonElement dataResult = await base.ExecuteGraphQLRequestAsync(
+                graphQLQuery,
+                graphQLQueryName,
+                isAuthenticated,
+                variables,
+                clientRoleHeader);
+
+            if (expectsError)
+            {
+                // ExecuteGraphQLRequestAsync returns the error property when an error is encountered.
+                // Do not further filter the returned property.
+                return dataResult;
+            }
 
             return dataResult.GetProperty("items");
         }

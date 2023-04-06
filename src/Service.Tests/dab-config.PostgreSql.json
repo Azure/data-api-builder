@@ -218,14 +218,6 @@
       "source": "stocks",
       "permissions": [
         {
-          "role": "anonymous",
-          "actions": [
-            "create",
-            "read",
-            "update"
-          ]
-        },
-        {
           "role": "authenticated",
           "actions": [
             "create",
@@ -233,6 +225,14 @@
             "update",
             "delete"
           ]
+        },
+        {
+          "role": "TestNestedFilterFieldIsNull_ColumnForbidden",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "TestNestedFilterFieldIsNull_EntityReadForbidden",
+          "actions": [ "read" ]
         }
       ],
       "relationships": {
@@ -656,14 +656,6 @@
       "source": "comics",
       "permissions": [
         {
-          "role": "anonymous",
-          "actions": [
-            "create",
-            "read",
-            "update"
-          ]
-        },
-        {
           "role": "authenticated",
           "actions": [
             "create",
@@ -671,6 +663,31 @@
             "update",
             "delete"
           ]
+        },
+        {
+          "role": "TestNestedFilterManyOne_ColumnForbidden",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "TestNestedFilterManyOne_EntityReadForbidden",
+          "actions": [ "read" ]
+        },
+        {
+          "role": "TestNestedFilterOneMany_ColumnForbidden",
+          "actions": [
+            {
+              "action": "Read",
+              "fields": {
+                "exclude": [
+                  "categoryName"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "role": "TestNestedFilterOneMany_EntityReadForbidden",
+          "actions": [ "Create", "Update", "Delete" ]
         }
       ],
       "relationships": {
@@ -763,12 +780,6 @@
       "source": "stocks_price",
       "permissions": [
         {
-          "role": "anonymous",
-          "actions": [
-            "read"
-          ]
-        },
-        {
           "role": "authenticated",
           "actions": [
             "create",
@@ -776,6 +787,21 @@
             "delete",
             "update"
           ]
+        },
+        {
+          "role": "TestNestedFilterFieldIsNull_ColumnForbidden",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [ "price" ]
+              }
+            }
+          ]
+        },
+        {
+          "role": "TestNestedFilterFieldIsNull_EntityReadForbidden",
+          "actions": [ "create" ]
         }
       ],
       "rest": false
@@ -1145,10 +1171,35 @@
       "source": "series",
       "permissions": [
         {
-          "role": "anonymous",
+          "role": "authenticated",
           "actions": [
             "*"
           ]
+        },
+        {
+          "role": "TestNestedFilterManyOne_ColumnForbidden",
+          "actions": [
+            {
+              "action": "Read",
+              "fields": {
+                "exclude": [
+                  "name"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "role": "TestNestedFilterManyOne_EntityReadForbidden",
+          "actions": [ "Create", "Update", "Delete" ]
+        },
+        {
+          "role": "TestNestedFilterOneMany_EntityReadForbidden",
+          "actions": [ "Read" ]
+        },
+        {
+          "role": "TestNestedFilterOneMany_ColumnForbidden",
+          "actions": [ "Read" ]
         }
       ],
       "relationships": {

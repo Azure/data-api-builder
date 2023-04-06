@@ -493,7 +493,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="backingColumn">string represents the backing column of the field.</param>
         /// <param name="value">The value associated with a given field.</param>
         /// <param name="op">The predicate operation representing the comparison between field and value.</param>
-        private void PopulateParamsAndPredicates(string field, string backingColumn, object value, PredicateOperation op = PredicateOperation.Equal)
+        private void PopulateParamsAndPredicates(string field, string backingColumn, object? value, PredicateOperation op = PredicateOperation.Equal)
         {
             try
             {

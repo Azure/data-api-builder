@@ -8,6 +8,7 @@
         <EmbedUntrackedSources>true</EmbedUntrackedSources>
         <IncludeSymbols>true</IncludeSymbols>
         <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+        <NoWarn>NU1603</NoWarn>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(TF_BUILD)' == 'true'">

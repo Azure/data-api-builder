@@ -1099,22 +1099,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
-        /// Validates that Find API requests ignore predicates present in the request body
+        /// Validates that Find API request ignores predicates present in the request body
         /// </summary>
         [TestMethod]
         public async Task FindApiTestWithPredicatesInRequestBody()
         {
             string requestBody = @"
             {
-                ""$select"": ""id,title""
+                ""$filter"": ""id le 4""
             }";
 
             await SetupAndRunRestApiTest(
-                primaryKeyRoute: "id/2",
+                primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
                 requestBody: requestBody,
                 entityNameOrPath: _integrationEntityName,
-                sqlQuery: GetQuery(nameof(FindByIdTest))
+                sqlQuery: GetQuery("FindTestWithQueryStringAllFields")
             );
         }
 

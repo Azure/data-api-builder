@@ -12,16 +12,17 @@
 
   <PropertyGroup Condition="'$(TF_BUILD)' == 'true'">
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+    <WarningsNotAsErrors>NU1603</WarningsNotAsErrors>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
-    <NoWarn>NU1603</NoWarn>
+    <WarningsNotAsErrors>NU1603</WarningsNotAsErrors>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
-    <NoWarn>NU1603</NoWarn>
+    <WarningsNotAsErrors>NU1603</WarningsNotAsErrors>
   </PropertyGroup>
 
   <ItemGroup>

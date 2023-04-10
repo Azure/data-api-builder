@@ -1165,6 +1165,32 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
+        /// Validates that parameters of a SP sent through the request body are ignored and
+        /// results in a 400 Bad Request due to missing required parameters. 
+        /// </summary>
+        [TestMethod]
+        public virtual async Task FindApiTestForSPWithRequiredParamsInRequestBody()
+        {
+            string requestBody = @"
+            {
+                ""id"": 1
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                requestBody: requestBody,
+                entityNameOrPath: _integrationProcedureFindOne_EntityName,
+                sqlQuery: string.Empty,
+                operationType: Config.Operation.Execute,
+                restHttpVerb: Config.RestMethod.Get,
+                exceptionExpected: true,
+                expectedErrorMessage: $"Invalid request. Missing required procedure parameters: id for entity: {_integrationProcedureFindOne_EntityName}",
+                expectedStatusCode: HttpStatusCode.BadRequest
+                );
+        }
+
+        /// <summary>
         /// Tests the REST Api for Find operations on a stored procedure missing a required parameter
         /// Expect a 400 Bad Request to be returned
         /// </summary>

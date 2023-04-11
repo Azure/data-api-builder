@@ -315,7 +315,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <inheritdoc />
         /// <Note>This function is a DbDataReader handler of type
         /// Func<DbDataReader, List<string>?, Task<TResult?>></Note>
-        public async Task<DbResultSet> GetMultipleResultSetsIfAnyAsync(
+        public virtual async Task<DbResultSet> GetMultipleResultSetsIfAnyAsync(
             DbDataReader dbDataReader, List<string>? args = null)
         {
             DbResultSet dbResultSet
@@ -327,7 +327,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             /// result set #2: result of the INSERT operation.
             if (dbResultSet.Rows.Count > 0 && dbResultSet.Rows.FirstOrDefault()!.Columns.Count > 0)
             {
-                dbResultSet.ResultProperties.Add(SqlMutationEngine.IS_FIRST_RESULT_SET, true);
+                dbResultSet.ResultProperties.Add(SqlMutationEngine.IS_UPDATE_RESULT_SET, true);
                 return dbResultSet;
             }
             else if (await dbDataReader.NextResultAsync())

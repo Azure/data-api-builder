@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <returns>Single row read from DbDataReader.
         /// If the first result set is being returned, DbResultSet.ResultProperties dictionary has
         /// the property "IsFirstResultSet" set to true.</returns>
-        public Task<DbResultSet> GetMultipleResultSetsIfAnyAsync(
+        public abstract Task<DbResultSet> GetMultipleResultSetsIfAnyAsync(
                 DbDataReader dbDataReader,
                 List<string>? args = null);
 

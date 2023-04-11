@@ -609,9 +609,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     operationType: Config.Operation.UpsertIncremental,
                     requestBody: requestBody,
                     exceptionExpected: true,
-                    expectedErrorMessage: $"Cannot perform INSERT and could not find {_foreignKeyEntityName} with primary key <id: 1234> to perform UPDATE on.",
-                    expectedStatusCode: HttpStatusCode.NotFound,
-                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString(),
+                    expectedErrorMessage: $"Authorization Failure: Access Not Allowed.",
+                    expectedStatusCode: HttpStatusCode.Forbidden,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed.ToString(),
                     clientRoleHeader: "database_policy_tester"
                     );
 

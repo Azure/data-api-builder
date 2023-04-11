@@ -3,6 +3,8 @@
 
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Linq;
+using System.Net;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,6 +12,7 @@ using Azure.Core;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.Identity;
 using Microsoft.AspNetCore.Http;
@@ -193,6 +196,60 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             return sessionMapQuery.ToString();
+        }
+
+        /// <inheritdoc/>
+        public override async Task<DbResultSet> GetMultipleResultSetsIfAnyAsync(
+            DbDataReader dbDataReader, List<string>? args = null)
+        {
+            // From the first result set, we get the count(0/1) of records with given PK.
+            DbResultSet resultSetWithCountOfRowsWithGivenPk = await ExtractResultSetFromDbDataReader(dbDataReader);
+            int numOfRecordsWithGivenPK = (int)resultSetWithCountOfRowsWithGivenPk.Rows.FirstOrDefault()!.Columns["cnt_rows_to_update"]!;
+
+            // The result set which holds the records returned as a result of the executed update/insert operation.
+            DbResultSet? dbResultSet = await dbDataReader.NextResultAsync() ? await ExtractResultSetFromDbDataReader(dbDataReader) : null;
+
+            if (dbResultSet is null)
+            {
+                // This can only happen in the case where we are dealing with table/view with auto-gen PK.
+                // In this case, insert cannot happen.
+                // Also since dbResultSet is null, update couldn't execute as well because there was no record corresponding to given PK.
+                string prettyPrintPk = args![0];
+                string entityName = args[1];
+
+                throw new DataApiBuilderException(
+                        message: $"Cannot perform INSERT and could not find {entityName} " +
+                        $"with primary key {prettyPrintPk} to perform UPDATE on.",
+                        statusCode: HttpStatusCode.NotFound,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+
+            }
+
+            if (numOfRecordsWithGivenPK == 1) // This indicates that we attempted an update operation.
+            {
+                if (dbResultSet.Rows.Count == 0)
+                {
+                    // Record exists in the table/view but no record updated - indicates database policy failure.
+                    throw new DataApiBuilderException(
+                        message: "Authorization Failure: Access Not Allowed.",
+                        statusCode: HttpStatusCode.Forbidden,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
+                }
+
+                // This is used as an identifier to distinguish between update/insert operations.
+                // Later helps to add location header in case of insert operation.
+                dbResultSet.ResultProperties.Add(SqlMutationEngine.IS_UPDATE_RESULT_SET, true);
+            }
+            else if (dbResultSet.Rows.Count == 0)
+            {
+                // No record exists in the table/view but inserted no records - indicates database policy failure.
+                throw new DataApiBuilderException(
+                        message: "Authorization Failure: Access Not Allowed.",
+                        statusCode: HttpStatusCode.Forbidden,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
+            }
+
+            return dbResultSet;
         }
     }
 }

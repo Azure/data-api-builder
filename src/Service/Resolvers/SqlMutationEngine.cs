@@ -39,7 +39,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly GQLFilterParser _gQLFilterParser;
-        public const string IS_FIRST_RESULT_SET = "IsFirstResultSet";
+        public const string IS_UPDATE_RESULT_SET = "IsUpdateResultSet";
 
         /// <summary>
         /// Constructor
@@ -301,7 +301,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     Dictionary<string, object?> resultRow = dbResultSetRow.Columns;
 
                     bool isFirstResultSet = false;
-                    if (upsertOperationResult.ResultProperties.TryGetValue(IS_FIRST_RESULT_SET, out object? isFirstResultSetValue))
+                    if (upsertOperationResult.ResultProperties.TryGetValue(IS_UPDATE_RESULT_SET, out object? isFirstResultSetValue))
                     {
                         isFirstResultSet = Convert.ToBoolean(isFirstResultSetValue);
                     }

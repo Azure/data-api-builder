@@ -190,13 +190,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public JsonElement ResolveInnerObject(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
+        public JsonElement ResolveObject(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
         {
             return element;
         }
 
         /// <inheritdoc />
-        public IReadOnlyList<JsonElement> ResolveListType(JsonElement array, IObjectField fieldSchema, ref IMetadata metadata)
+        public IReadOnlyList<JsonElement> ResolveList(JsonElement array, IObjectField fieldSchema, ref IMetadata metadata)
         {
             List<JsonElement> list = new();
             foreach (JsonElement element in array.EnumerateArray())

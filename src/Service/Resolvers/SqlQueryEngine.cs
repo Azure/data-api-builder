@@ -265,7 +265,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public JsonElement ResolveInnerObject(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
+        public JsonElement ResolveObject(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
         {
             PaginationMetadata parentMetadata = (PaginationMetadata)metadata;
             PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name.Value];
@@ -280,7 +280,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public IReadOnlyList<JsonElement> ResolveListType(JsonElement array, IObjectField fieldSchema, ref IMetadata metadata)
+        public IReadOnlyList<JsonElement> ResolveList(JsonElement array, IObjectField fieldSchema, ref IMetadata metadata)
         {
             PaginationMetadata parentMetadata = (PaginationMetadata)metadata;
             PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name.Value];

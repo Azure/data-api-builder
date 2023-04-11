@@ -142,7 +142,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 // strings and than force the conversion to parse them.
                 return namedType switch
                 {
-                    StringType => fieldValue.GetSingle(), // spec
+                    StringType => fieldValue.GetString(), // spec
                     ByteType => fieldValue.GetByte(),
                     ShortType => fieldValue.GetInt16(),
                     IntType => fieldValue.GetInt32(), // spec
@@ -180,7 +180,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 objectValue.ValueKind is not JsonValueKind.Null and not JsonValueKind.Undefined)
             {
                 IMetadata metadata = GetMetadata(context);
-                objectValue = _queryEngine.ResolveInnerObject(objectValue, context.Selection.Field, ref metadata);
+                objectValue = _queryEngine.ResolveObject(objectValue, context.Selection.Field, ref metadata);
                 
                 // Since the query engine could null the object out we need to check again
                 // if its null.
@@ -202,7 +202,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 listValue.ValueKind is not JsonValueKind.Null and not JsonValueKind.Undefined)
             {
                 IMetadata metadata = GetMetadata(context);
-                IReadOnlyList<JsonElement> result = _queryEngine.ResolveListType(listValue, context.Selection.Field, ref metadata);
+                IReadOnlyList<JsonElement> result = _queryEngine.ResolveList(listValue, context.Selection.Field, ref metadata);
                 SetNewMetadata(context, metadata);
                 return result;
             }

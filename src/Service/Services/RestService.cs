@@ -201,7 +201,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     return await DispatchMutation(context);
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
-            };
+            }
         }
 
         /// <summary>

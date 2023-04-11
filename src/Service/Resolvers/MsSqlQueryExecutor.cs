@@ -204,7 +204,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             // From the first result set, we get the count(0/1) of records with given PK.
             DbResultSet resultSetWithCountOfRowsWithGivenPk = await ExtractResultSetFromDbDataReader(dbDataReader);
-            int numOfRecordsWithGivenPK = (int)resultSetWithCountOfRowsWithGivenPk.Rows.FirstOrDefault()!.Columns["cnt_rows_to_update"]!;
+            int numOfRecordsWithGivenPK = (int)resultSetWithCountOfRowsWithGivenPk.Rows.FirstOrDefault()!.Columns[MsSqlQueryBuilder.COUNT_ROWS_WITH_GIVEN_PK]!;
 
             // The result set which holds the records returned as a result of the executed update/insert operation.
             DbResultSet? dbResultSet = await dbDataReader.NextResultAsync() ? await ExtractResultSetFromDbDataReader(dbDataReader) : null;
@@ -225,7 +225,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             }
 
-            if (numOfRecordsWithGivenPK == 1) // This indicates that we attempted an update operation.
+            if (numOfRecordsWithGivenPK == 1) // This indicates that a record existed with given PK and we attempted an update operation.
             {
                 if (dbResultSet.Rows.Count == 0)
                 {

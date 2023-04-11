@@ -18,6 +18,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private const string FOR_JSON_SUFFIX = " FOR JSON PATH, INCLUDE_NULL_VALUES";
         private const string WITHOUT_ARRAY_WRAPPER_SUFFIX = "WITHOUT_ARRAY_WRAPPER";
 
+        // Name of the column which stores the number of records with given PK. Used in Upsert queries.
+        public const string COUNT_ROWS_WITH_GIVEN_PK = "cnt_rows_to_update";
+
         private static DbCommandBuilder _builder = new SqlCommandBuilder();
 
         /// <inheritdoc />
@@ -111,61 +114,51 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public string Build(SqlUpsertQueryStructure structure)
         {
             string tableName = $"{QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)}";
+
+            // Predicates by vritue of PK.
             string pkPredicates = JoinPredicateStrings(Build(structure.Predicates));
+
+            // Predicates by virtue of PK + database policy.
             string updatePredicates = JoinPredicateStrings(pkPredicates, structure.DbPolicyPredicatesForOperations[Config.Operation.Update]);
+
             string updateOperations = Build(structure.UpdateOperations, ", ");
             string outputColumns = MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted);
-            string queryToGetCountOfRecordWithPK = $"SELECT COUNT(*) as cnt_rows_to_update FROM {tableName} WHERE {pkPredicates}";
-            if (structure.IsFallbackToUpdate)
+            string queryToGetCountOfRecordWithPK = $"SELECT COUNT(*) as {COUNT_ROWS_WITH_GIVEN_PK} FROM {tableName} WHERE {pkPredicates}";
+
+            // Query to initiate transaction and get number of records with given PK.
+            string prefixQuery = $"SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;" +
+                $"BEGIN TRANSACTION;" +
+                $"DECLARE @ROWS_TO_UPDATE int;" +
+                $"SET @ROWS_TO_UPDATE = ({queryToGetCountOfRecordWithPK}); " +
+                $"{queryToGetCountOfRecordWithPK};";
+
+            // Final query to be executed for the given PUT/PATCH operation.
+            StringBuilder upsertQuery = new(prefixQuery);
+
+            // Query to update record (if there exists one for given PK).
+            StringBuilder updateQuery = new(
+                $"IF @ROWS_TO_UPDATE = 1" +
+                $"UPDATE {tableName} WITH(UPDLOCK) " +
+                $"SET {updateOperations} " +
+                $"OUTPUT {outputColumns} " +
+                $"WHERE {updatePredicates};");
+
+            // Append the update query to upsert query.
+            upsertQuery.Append(updateQuery);
+
+            if (!structure.IsFallbackToUpdate)
             {
-                return $"SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;" +
-                    $"BEGIN TRANSACTION;" +
-                    $"DECLARE @ROWS_TO_UPDATE int;" +
-                    $"SET @ROWS_TO_UPDATE = ({queryToGetCountOfRecordWithPK}); " +
-                    $"{queryToGetCountOfRecordWithPK};" +
-                    $"IF @ROWS_TO_UPDATE = 1 " +
-                    $"UPDATE {tableName} " +
-                    $"SET {updateOperations} " +
-                    $"OUTPUT {outputColumns} " +
-                    $"WHERE {updatePredicates};" +
-                    $"COMMIT TRANSACTION";
-                /*return $"UPDATE {tableName} " +
-                   $"SET {updateOperations} " +
-                   $"OUTPUT {outputColumns} " +
-                   $"WHERE {updatePredicates};";*/
-            }
-            else
-            {
+                // Append the conditional to check if the insert query is to be executed or not.
+                // Insert is only attempted when no record exists corresponding to given PK.
+                upsertQuery.Append("ELSE ");
+
                 // Columns which are assigned some value in the PUT/PATCH request.
                 string insertColumns = Build(structure.InsertColumns);
 
                 // Predicates added by virtue of database policy for create operation.
                 string createPredicates = JoinPredicateStrings(structure.DbPolicyPredicatesForOperations[Config.Operation.Create]);
 
-                // Final query to be executed for the given PUT/PATCH operation.
-                StringBuilder upsertQuery = new(
-                    $"SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;" +
-                    $"BEGIN TRANSACTION;" +
-                    $"DECLARE @ROWS_TO_UPDATE int;" +
-                    $"SET @ROWS_TO_UPDATE = ({queryToGetCountOfRecordWithPK}); " +
-                    $"{queryToGetCountOfRecordWithPK};");
-
-                // Query to update record (if there exists one corresponding to given PK).
-                StringBuilder updateQuery = new(
-                    $"IF @ROWS_TO_UPDATE = 1" +
-                    $"UPDATE {tableName} WITH(UPDLOCK) " +
-                    $"SET {updateOperations} " +
-                    $"OUTPUT {outputColumns} " +
-                    $"WHERE {updatePredicates};");
-
-                // Append the update query to upsert query.
-                upsertQuery.Append( updateQuery );
-
-                // Append the conditional to check if the insert query is to be executed or not.
-                // Insert is only attempted when no record exists corresponding to given PK.
-                upsertQuery.Append("ELSE ");
-
-                // Query to insert record (if there exists none corresponding to given PK).
+                // Query to insert record (if there exists none for given PK).
                 StringBuilder insertQuery = new($"INSERT INTO {tableName} ({insertColumns}) OUTPUT {outputColumns}");
                 
                 string fetchColumnValuesQuery = BASE_PREDICATE.Equals(createPredicates) ?
@@ -177,12 +170,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 // Append the insert query to the upsert query.
                 upsertQuery.Append(insertQuery.ToString());
-
-                // Commit the transaction.
-                upsertQuery.Append("COMMIT TRANSACTION");
-
-                return upsertQuery.ToString();
             }
+
+            // Commit the transaction.
+            upsertQuery.Append("COMMIT TRANSACTION");
+
+            return upsertQuery.ToString();
         }
 
         /// <summary>

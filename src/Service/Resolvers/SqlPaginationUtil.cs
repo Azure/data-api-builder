@@ -84,7 +84,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return JsonDocument.Parse(buffer.GetWrittenMemory());
         }
         
-        public static JsonObject CreatePaginationConnection(JsonElement root, PaginationMetadata paginationMetadata)
+        private static JsonObject CreatePaginationConnection(JsonElement root, PaginationMetadata paginationMetadata)
         {
             // Maintains the connection JSON object *Connection
             JsonObject connection = new();

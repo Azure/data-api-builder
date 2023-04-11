@@ -139,7 +139,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 // If that is not the case a value will go through the type converter to try to
                 // transform it into the runtime type.
                 // We also want to ensure here that we do not unnecessarily convert values to
-                // strings and than force the conversion to parse them.
+                // strings and then force the conversion to parse them.
                 return namedType switch
                 {
                     StringType => fieldValue.GetString(), // spec

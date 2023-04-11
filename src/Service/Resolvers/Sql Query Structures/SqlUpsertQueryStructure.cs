@@ -88,6 +88,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // Populates the UpsertQueryStructure with UPDATE and INSERT column:value metadata
             PopulateColumns(mutationParams, sourceDefinition, isIncrementalUpdate: incrementalUpdate);
 
+            if (FieldsReferencedInDbPolicyForCreateAction.Count > 0)
+            {
+                // This indicates that one or more fields referenced in the database policy are not a part of the insert statement.
+                throw new DataApiBuilderException(
+                    message: "One or more fields referenced by the database policy are not present in the request body.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
             if (UpdateOperations.Count == 0)
             {
                 throw new DataApiBuilderException(
@@ -195,6 +204,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private void PopulateColumnsAndParams(string columnName)
         {
             InsertColumns.Add(columnName);
+            FieldsReferencedInDbPolicyForCreateAction.Remove(columnName);
             string paramName;
             paramName = ColumnToParam[columnName];
             Values.Add($"{paramName}");

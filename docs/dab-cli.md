@@ -47,6 +47,9 @@ Initializes the runtime configuration for the Data API builder runtime engine. I
 | **--cors-origin** | false   | ""   | Specify the list of allowed origins.   |
 | **--auth.provider** | false   | StaticWebApps   | Specify the Identity Provider.   |
 | **--rest.path** | false   | /api   | Specify the REST endpoint's default prefix.   |
+| **--rest.disabled** | false   | false   | Disables REST endpoint for all entities.   |
+| **--graphql.path** | false   | /graphql   | Specify the GraphQL endpoint's default prefix.   |
+| **--graphql.disabled** | false   | false   | Disables GraphQL endpoint for all entities.   |
 | **--auth.audience** | false   | -   | Identifies the recipients that the JWT is intended for.   |
 | **--auth.issuer** | false   | -   | Specify the party that issued the JWT token.   |
 | **-c, --config** | false   | dab-config.json   | Path to config file.   |

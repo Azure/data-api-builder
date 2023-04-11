@@ -69,9 +69,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 List<string>? args = null);
 
         /// <summary>
-        /// Extracts first result set and returns it immediately if it has > 0 rows.
-        /// If no rows, tries to get the subsequent result set if any.
-        /// Throws an exception if the second result is null as well.
+        /// Extracts the result set corresponding to the operation (update/insert) being executed.
+        /// For PgSql,MySql, returns the first result set (among the two for update/insert) having non-zero affected rows.
+        /// For MsSql, returns the only result set having non-zero affected rows which corresponds to either update/insert operation.
         /// </summary>
         /// <param name="dbDataReader">A DbDataReader.</param>
         /// <param name="args">The arguments to this handler - args[0] = primary key in pretty format, args[1] = entity name.</param>

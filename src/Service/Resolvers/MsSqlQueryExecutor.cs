@@ -206,7 +206,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             DbResultSet resultSetWithCountOfRowsWithGivenPk = await ExtractResultSetFromDbDataReader(dbDataReader);
             int numOfRecordsWithGivenPK = (int)resultSetWithCountOfRowsWithGivenPk.Rows.FirstOrDefault()!.Columns[MsSqlQueryBuilder.COUNT_ROWS_WITH_GIVEN_PK]!;
 
-            // The result set which holds the records returned as a result of the executed update/insert operation.
+            // The second result set holds the records returned as a result of the executed update/insert operation.
             DbResultSet? dbResultSet = await dbDataReader.NextResultAsync() ? await ExtractResultSetFromDbDataReader(dbDataReader) : null;
 
             if (dbResultSet is null)

@@ -68,7 +68,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string insertColumns = Build(structure.InsertColumns);
             string insertIntoStatementPrefix = $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} ({insertColumns}) " +
                 $"OUTPUT {MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted)} ";
-            string values = predicates.Equals(BASE_PREDICATE)?
+            string values = predicates.Equals(BASE_PREDICATE) ?
                 $"VALUES ({string.Join(", ", structure.Values)});" : $"SELECT {insertColumns} FROM (VALUES({string.Join(", ", structure.Values)})) T({insertColumns}) WHERE {predicates};";
             StringBuilder insertQuery = new(insertIntoStatementPrefix);
             return insertQuery.Append(values).ToString();
@@ -160,7 +160,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 // Query to insert record (if there exists none for given PK).
                 StringBuilder insertQuery = new($"INSERT INTO {tableName} ({insertColumns}) OUTPUT {outputColumns}");
-                
+
                 string fetchColumnValuesQuery = BASE_PREDICATE.Equals(createPredicates) ?
                     $"VALUES({string.Join(", ", structure.Values)});" :
                     $"SELECT {insertColumns} FROM (VALUES({string.Join(", ", structure.Values)})) T({insertColumns}) WHERE {createPredicates};";

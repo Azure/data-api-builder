@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -312,6 +313,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await InitializeTestFixture(context);
         }
 
+        #endregion
+
+        #region overridden tests
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOneUpdateAccessibleRowWithDatabasePolicy()
+        {
+            throw new NotImplementedException();
+        }
         #endregion
 
         [TestCleanup]

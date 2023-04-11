@@ -22,4 +22,4 @@
 ## PostgreSQL
 
 - Entities backed by Stored Procedures are not yet supported. [Issue #1023](https://github.com/Azure/data-api-builder/issues/1023)
-- Database policies for insert via PUT/PATCH/POST operations in REST are not yet supported. [Issue #1372](https://github.com/Azure/data-api-builder/issues/1372), [Issue #1334](https://github.com/Azure/data-api-builder/issues/1334)
+- Database policies for PUT/PATCH/POST operations in REST are not yet supported. [Issue #1372](https://github.com/Azure/data-api-builder/issues/1372), [Issue #1334](https://github.com/Azure/data-api-builder/issues/1334)

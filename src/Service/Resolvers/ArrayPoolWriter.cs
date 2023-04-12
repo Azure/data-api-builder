@@ -15,6 +15,9 @@ internal sealed class ArrayPoolWriter : IBufferWriter<byte>, IDisposable
     private int _start;
     private bool _disposed;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ArrayPoolWriter"/> class.
+    /// </summary>
     public ArrayPoolWriter()
     {
         _buffer = ArrayPool<byte>.Shared.Rent(_initialBufferSize);
@@ -22,27 +25,94 @@ internal sealed class ArrayPoolWriter : IBufferWriter<byte>, IDisposable
         _start = 0;
     }
     
+    /// <summary>
+    /// Gets the part of the buffer that has been written to.
+    /// </summary>
+    /// <returns>
+    /// A <see cref="ReadOnlyMemory{T}"/> of the written portion of the buffer.
+    /// </returns>
     public ReadOnlyMemory<byte> GetWrittenMemory() 
-        => _buffer.AsMemory().Slice(0, _start);
+        => _buffer.AsMemory()[.._start];
 
+    /// <summary>
+    /// Gets the part of the buffer that has been written to.
+    /// </summary>
+    /// <returns>
+    /// A <see cref="ReadOnlySpan{T}"/> of the written portion of the buffer.
+    /// </returns>
     public ReadOnlySpan<byte> GetWrittenSpan() 
-        => _buffer.AsSpan().Slice(0, _start);
+        => _buffer.AsSpan()[.._start];
 
+    /// <summary>
+    /// Advances the writer by the specified number of bytes.
+    /// </summary>
+    /// <param name="count">
+    /// The number of bytes to advance the writer by.
+    /// </param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown if <paramref name="count"/> is negative or
+    /// if <paramref name="count"/> is greater than the
+    /// available capacity on the internal buffer.
+    /// </exception>
     public void Advance(int count)
     {
+        if(count < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(count));
+        }
+        
+        if(count > _capacity)
+        {
+            throw new ArgumentOutOfRangeException(nameof(count), count, "Cannot advance past the end of the buffer.");
+        }
+        
         _start += count;
         _capacity -= count;
     }
 
+    /// <summary>
+    /// Gets a <see cref="Memory{T}"/> to write to.
+    /// </summary>
+    /// <param name="sizeHint">
+    /// The minimum size of the returned <see cref="Memory{T}"/>.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Memory{T}"/> to write to.
+    /// </returns>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown if <paramref name="sizeHint"/> is negative.
+    /// </exception>
     public Memory<byte> GetMemory(int sizeHint = 0)
     {
+        if(sizeHint < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(sizeHint));
+        }
+        
         int size = sizeHint < 1 ? _initialBufferSize : sizeHint;
         EnsureBufferCapacity(size);
         return _buffer.AsMemory().Slice(_start, size);
     }
 
+    /// <summary>
+    /// Gets a <see cref="Span{T}"/> to write to.
+    /// </summary>
+    /// <param name="sizeHint">
+    /// The minimum size of the returned <see cref="Span{T}"/>.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Span{T}"/> to write to.
+    /// </returns>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown if <paramref name="sizeHint"/> is negative.
+    /// </exception>
     public Span<byte> GetSpan(int sizeHint = 0)
     {
+        if(sizeHint < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(sizeHint));
+        }
+        
         int size = sizeHint < 1 ? _initialBufferSize : sizeHint;
         EnsureBufferCapacity(size);
         return _buffer.AsSpan().Slice(_start, size);
@@ -68,6 +138,7 @@ internal sealed class ArrayPoolWriter : IBufferWriter<byte>, IDisposable
         }
     }
 
+    /// <inheritdoc/>
     public void Dispose()
     {
         if (!_disposed)

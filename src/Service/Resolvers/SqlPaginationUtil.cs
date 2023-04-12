@@ -33,24 +33,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </list>
         /// </summary>
         public static JsonElement CreatePaginationConnectionFromJsonElement(JsonElement root, PaginationMetadata paginationMetadata)
-        {
-            // create the connection object.
-            JsonObject connection = CreatePaginationConnection(root, paginationMetadata);
-
-            // we first write the mutable JsonObject to the pooled buffer and avoid serializing
-            // to a full JSON string.
-            using ArrayPoolWriter buffer = new();
-            using Utf8JsonWriter writer = new(buffer);
-            connection.WriteTo(writer);
-            writer.Flush();
-            
-            // next we take the reader here and parse the JSON element from the buffer.
-            Utf8JsonReader reader = new(buffer.GetWrittenSpan());
-            
-            // the underlying JsonDocument will not use pooled arrays to store metadata on it ...
-            // this JSON element can be safely returned.
-            return JsonElement.ParseValue(ref reader);
-        }
+            => CreatePaginationConnection(root, paginationMetadata).ToJsonElement();
 
         /// <summary>
         /// Wrapper for CreatePaginationConnectionFromJsonElement
@@ -67,21 +50,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             JsonElement root = jsonDocument.RootElement;
             
             // create the connection object.
-            JsonObject connection = CreatePaginationConnection(root, paginationMetadata);
-
-            // no longer needed, so it is disposed
-            jsonDocument.Dispose();
-            
-            // we first write the mutable JsonObject to the pooled buffer and avoid serializing
-            // to a full JSON string.
-            using ArrayPoolWriter buffer = new();
-            using Utf8JsonWriter writer = new(buffer);
-            connection.WriteTo(writer);
-            writer.Flush();
-            
-            // next we parse the JSON document from the buffer.
-            // this JSON document will be disposed by the GraphQL execution engine.
-            return JsonDocument.Parse(buffer.GetWrittenMemory());
+            return CreatePaginationConnection(root, paginationMetadata).ToJsonDocument();
         }
         
         private static JsonObject CreatePaginationConnection(JsonElement root, PaginationMetadata paginationMetadata)

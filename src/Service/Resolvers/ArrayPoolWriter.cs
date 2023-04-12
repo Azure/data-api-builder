@@ -56,6 +56,11 @@ internal sealed class ArrayPoolWriter : IBufferWriter<byte>, IDisposable
     /// </exception>
     public void Advance(int count)
     {
+        if(_disposed)
+        {
+            throw new ObjectDisposedException(nameof(ArrayPoolWriter));
+        }
+        
         if(count < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(count));
@@ -84,6 +89,11 @@ internal sealed class ArrayPoolWriter : IBufferWriter<byte>, IDisposable
     /// </exception>
     public Memory<byte> GetMemory(int sizeHint = 0)
     {
+        if(_disposed)
+        {
+            throw new ObjectDisposedException(nameof(ArrayPoolWriter));
+        }
+        
         if(sizeHint < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(sizeHint));
@@ -108,6 +118,11 @@ internal sealed class ArrayPoolWriter : IBufferWriter<byte>, IDisposable
     /// </exception>
     public Span<byte> GetSpan(int sizeHint = 0)
     {
+        if(_disposed)
+        {
+            throw new ObjectDisposedException(nameof(ArrayPoolWriter));
+        }
+        
         if(sizeHint < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(sizeHint));
@@ -145,6 +160,8 @@ internal sealed class ArrayPoolWriter : IBufferWriter<byte>, IDisposable
         {
             ArrayPool<byte>.Shared.Return(_buffer);
             _buffer = Array.Empty<byte>();
+            _capacity = 0;
+            _start = 0;
             _disposed = true;
         }
     }

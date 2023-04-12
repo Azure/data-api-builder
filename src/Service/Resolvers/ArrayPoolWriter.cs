@@ -133,22 +133,43 @@ internal sealed class ArrayPoolWriter : IBufferWriter<byte>, IDisposable
         return _buffer.AsSpan().Slice(_start, size);
     }
 
+    /// <summary>
+    /// Ensures that the internal buffer has the needed capacity.
+    /// </summary>
+    /// <param name="neededCapacity">
+    /// The needed capacity on the internal buffer.
+    /// </param>
     private void EnsureBufferCapacity(int neededCapacity)
     {
+        // check if we have enough capacity available on the buffer.
         if (_capacity < neededCapacity)
         {
+            // if we need to expand the buffer we first capture the original buffer.
             byte[] buffer = _buffer;
-
+            
+            // next we determine the new size of the buffer, we at least double the size to avoid
+            // expanding the buffer too often.
             int newSize = buffer.Length * 2;
+            
+            // if that new buffer size is not enough to satisfy the needed capacity
+            // we add the needed capacity to the doubled buffer capacity.
             if (neededCapacity > buffer.Length)
             {
                 newSize += neededCapacity;
             }
 
+            // next we will rent a new array from the array pool that supports
+            // the new capacity requirements.
             _buffer = ArrayPool<byte>.Shared.Rent(newSize);
+            
+            // the rented array might have a larger size than the needed capacity,
+            // so we will take the buffer length and calculate from that the free capacity. 
             _capacity += _buffer.Length - buffer.Length;
 
+            // finally we copy the data from the original buffer to the new buffer.
             buffer.AsSpan().CopyTo(_buffer);
+            
+            // last but not least we return the original buffer to the array pool.
             ArrayPool<byte>.Shared.Return(buffer);
         }
     }

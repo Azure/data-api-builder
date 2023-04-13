@@ -284,10 +284,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     ProcessPaginationFields(queryField.SelectionSet.Selections);
 
                     // override schemaField and queryField with the schemaField and queryField of *Connection.items
-                    queryField = ExtractItemsQueryField(queryField);
+                    queryField = FindFieldNodeByName(queryField, QueryBuilder.PAGINATION_FIELD_NAME);
                 }
 
-                schemaField = ExtractItemsSchemaField(schemaField);
+                schemaField = GetFieldFromUnderlyingEntityType(schemaField, QueryBuilder.PAGINATION_FIELD_NAME);
 
                 outputType = schemaField.Type;
                 _underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
@@ -303,6 +303,20 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 //      items do not have a matching subquery so the line of code below is
                 //      required to build a pagination metadata chain matching the json result
                 PaginationMetadata.Subqueries.Add(QueryBuilder.PAGINATION_FIELD_NAME, PaginationMetadata.MakeEmptyPaginationMetadata());
+            }
+
+            if(QueryBuilder.IsExecuteResultType(_underlyingFieldType))
+            {
+                if (queryField != null && queryField.SelectionSet != null)
+                {
+                    // override schemaField and queryField with the schemaField and queryField of ExecuteResult.ResultSet
+                    queryField = FindFieldNodeByName(queryField, QueryBuilder.EXECUTE_RESULT_FIELD_NAME);
+                }
+
+                schemaField = GetFieldFromUnderlyingEntityType(schemaField, QueryBuilder.EXECUTE_RESULT_FIELD_NAME);
+
+                outputType = schemaField.Type;
+                _underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
             }
 
             EntityName = _underlyingFieldType.Name;

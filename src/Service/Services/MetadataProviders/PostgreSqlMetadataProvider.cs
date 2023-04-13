@@ -2,7 +2,9 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Data;
 using System.Net;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Resolvers;
@@ -70,6 +72,15 @@ namespace Azure.DataApiBuilder.Service.Services
         /// TODO: For PostgreSql stored procedure support, this needs to be implemented.
         /// </summary>
         public override Type SqlToCLRType(string sqlType)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Takes a string version of a PostgreSql parameter mode and returns its .NET common language runtime (CLR) counterpart
+        /// TODO: For PostgreSql stored procedure support, this needs to be implemented.
+        /// </summary>
+        public override ParameterDirection ToParameterDirectionEnum(string parameterDirection)
         {
             throw new NotImplementedException();
         }

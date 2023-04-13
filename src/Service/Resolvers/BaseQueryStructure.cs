@@ -2,10 +2,10 @@
 // Licensed under the MIT License.
 
 using System.Collections.Generic;
+using System.Linq;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
-using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
@@ -112,8 +112,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public string MakeParamWithValue(object? value)
         {
             string paramName = $"{PARAM_NAME_PREFIX}param{Counter.Next()}";
+            // Don't add the OUTPUT keyword to the name.
             Parameters.Add(paramName, value);
-            return paramName;
+            return value is SqlExecuteParameter sqlExecuteParameter && sqlExecuteParameter.IsOutput
+                ? paramName + " OUTPUT"
+                : paramName;
         }
 
         /// <summary>
@@ -133,33 +136,27 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
-        /// Extracts the *Connection.items query field from the *Connection query field
+        /// Finds a FieldNode with a specified name in the SelectionSet of the given rootNode.
         /// </summary>
-        /// <returns> The query field or null if **Conneciton.items is not requested in the query</returns>
-        internal static FieldNode? ExtractItemsQueryField(FieldNode connectionQueryField)
+        /// <param name="rootNode">The FieldNode containing the SelectionSet to search within.</param>
+        /// <param name="fieldName">The name of the FieldNode to search for.</param>
+        /// <returns>The FieldNode with the specified name if found, otherwise null.</returns>
+        internal static FieldNode? FindFieldNodeByName(FieldNode rootNode, string fieldName)
         {
-            FieldNode? itemsField = null;
-            foreach (ISelectionNode node in connectionQueryField.SelectionSet!.Selections)
-            {
-                FieldNode field = (FieldNode)node;
-                string fieldName = field.Name.Value;
-
-                if (fieldName == QueryBuilder.PAGINATION_FIELD_NAME)
-                {
-                    itemsField = field;
-                    break;
-                }
-            }
-
-            return itemsField;
+            return rootNode.SelectionSet!.Selections
+                .OfType<FieldNode>()
+                .FirstOrDefault(field => field.Name.Value == fieldName);
         }
 
         /// <summary>
-        /// Extracts the *Connection.items schema field from the *Connection schema field
+        /// Retrieves a specified field from the underlying GraphQL entity type of the given connectionSchemaField.
         /// </summary>
-        internal static IObjectField ExtractItemsSchemaField(IObjectField connectionSchemaField)
+        /// <param name="connectionSchemaField">The IObjectField representing the *Connection schema field.</param>
+        /// <param name="fieldName">The name of the field to be retrieved from the underlying GraphQL entity type.</param>
+        /// <returns>The specified IObjectField from the underlying GraphQL entity type of the connectionSchemaField.</returns>
+        internal static IObjectField GetFieldFromUnderlyingEntityType(IObjectField connectionSchemaField, string fieldName)
         {
-            return GraphQLUtils.UnderlyingGraphQLEntityType(connectionSchemaField.Type).Fields[QueryBuilder.PAGINATION_FIELD_NAME];
+            return GraphQLUtils.UnderlyingGraphQLEntityType(connectionSchemaField.Type).Fields[fieldName];
         }
     }
 }

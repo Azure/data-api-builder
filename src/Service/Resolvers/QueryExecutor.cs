@@ -157,27 +157,47 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             //"EXEC sp_set_session_context 'roles', 'Anonymous', @read_only =1 ;";
 
             cmd.CommandText = sessionParamsQuery + sqltext;
+
             if (parameters is not null)
             {
-                foreach (KeyValuePair<string, object?> parameterEntry in parameters)
+                foreach (var parameterEntry in parameters)
                 {
-                    DbParameter parameter = cmd.CreateParameter();
-                    parameter.ParameterName = parameterEntry.Key;
-                    parameter.Value = parameterEntry.Value ?? DBNull.Value;
-                    cmd.Parameters.Add(parameter);
+                    var dbParameter = cmd.CreateParameter();
+                    dbParameter.ParameterName = parameterEntry.Key;
+
+                    if (parameterEntry.Value is SqlExecuteParameter sqlExecuteParameter)
+                    {
+                        dbParameter.Value = sqlExecuteParameter.Value ?? DBNull.Value;
+                        dbParameter.Direction = sqlExecuteParameter.Direction;
+                    }
+                    else
+                    {
+                        dbParameter.Value = parameterEntry.Value ?? DBNull.Value;
+                    }
+
+                    cmd.Parameters.Add(dbParameter);
                 }
             }
 
             try
             {
+                // await cmd.ExecuteNonQueryAsync();
+                // return null;
                 using DbDataReader dbDataReader = await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
                 if (dataReaderHandler is not null && dbDataReader is not null)
                 {
                     return await dataReaderHandler(dbDataReader, args);
                 }
-                else
+
+                if (parameters is not null)
                 {
-                    return default(TResult);
+                    foreach (var (key, value) in parameters)
+                    {
+                        if (value is SqlExecuteParameter sqlExecuteParameter && sqlExecuteParameter.IsOutput)
+                        {
+                            sqlExecuteParameter.Value = cmd.Parameters[key].Value;
+                        }
+                    }
                 }
             }
             catch (DbException e)

@@ -120,5 +120,14 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             throw new NotImplementedException();
         }
+
+        /// <summary>
+        /// Takes a string version of a MySql parameter mode and returns its .NET common language runtime (CLR) counterpart
+        /// TODO: For MySql stored procedure support, this needs to be implemented.
+        /// </summary>
+        public override ParameterDirection ToParameterDirectionEnum(string parameterDirection)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

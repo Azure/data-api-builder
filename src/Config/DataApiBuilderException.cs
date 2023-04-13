@@ -79,7 +79,11 @@ namespace Azure.DataApiBuilder.Service.Exceptions
             /// <summary>
             /// Error encountered while doing data type conversions.
             /// </summary>
-            ErrorProcessingData
+            ErrorProcessingData,
+            /// <summary>
+            /// Attempting to generate OpenAPI document when one already exists.
+            /// </summary>
+            OpenApiDocumentAlreadyExists
         }
 
         public HttpStatusCode StatusCode { get; }

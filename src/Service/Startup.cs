@@ -249,6 +249,7 @@ namespace Azure.DataApiBuilder.Service
             });
             services.AddSingleton<IAuthorizationHandler, RestAuthorizationHandler>();
             services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
+            services.AddSingleton<IOpenApiDocumentor, OpenApiDocumentor>();
 
             AddGraphQL(services);
 
@@ -354,6 +355,14 @@ namespace Azure.DataApiBuilder.Service
             {
                 app.UseHttpsRedirection();
             }
+
+            app.UseStaticFiles();
+            //app.UseSwagger();
+            app.UseSwaggerUI(c =>
+            {
+                c.SwaggerEndpoint("/api/openapi", "DataAPIbuilder-OpenAPI-Alpha");
+            }
+            );
 
             // URL Rewrite middleware MUST be called prior to UseRouting().
             // https://andrewlock.net/understanding-pathbase-in-aspnetcore/#placing-usepathbase-in-the-correct-location

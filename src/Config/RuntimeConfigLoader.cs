@@ -80,7 +80,7 @@ public class RuntimeConfigLoader
     /// <returns>True if the config was loaded, otherwise false.</returns>
     public bool TryLoadDefaultConfig(out RuntimeConfig? config)
     {
-        string filename = GetFileName(Environment.GetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME), false);
+        string filename = GetFileName(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), false);
 
         return TryLoadConfig(filename, out config);
     }
@@ -95,10 +95,10 @@ public class RuntimeConfigLoader
     /// The fall back options are dab-config.overrides.json/dab-config.json
     /// If no file exists, this will return an empty string.
     /// </summary>
-    /// <param name="hostingEnvironmentName">Value of ASPNETCORE_ENVIRONMENT variable</param>
+    /// <param name="aspnetEnvironment">Value of ASPNETCORE_ENVIRONMENT variable</param>
     /// <param name="considerOverrides">whether to look for overrides file or not.</param>
     /// <returns></returns>
-    public string GetFileNameForEnvironment(string? hostingEnvironmentName, bool considerOverrides)
+    public string GetFileNameForEnvironment(string? aspnetEnvironment, bool considerOverrides)
     {
         // if precedence check is done in cli, no need to do it again after starting the engine.
         if (!CheckPrecedenceForConfigInEngine)
@@ -110,7 +110,7 @@ public class RuntimeConfigLoader
         string?[] environmentPrecedence = new[]
         {
             Environment.GetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME),
-            hostingEnvironmentName,
+            aspnetEnvironment,
             string.Empty
         };
 

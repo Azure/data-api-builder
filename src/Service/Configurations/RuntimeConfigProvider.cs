@@ -69,6 +69,14 @@ public class RuntimeConfigProvider
     /// <returns>True when runtime config is provided, otherwise false.</returns>
     public bool TryGetConfig([NotNullWhen(true)] out RuntimeConfig? runtimeConfig)
     {
+        if (_runtimeConfig is null)
+        {
+            if (_runtimeConfigLoader.TryLoadDefaultConfig(out RuntimeConfig? config))
+            {
+                _runtimeConfig = config;
+            }
+        }
+
         runtimeConfig = _runtimeConfig;
         return _runtimeConfig is not null;
     }

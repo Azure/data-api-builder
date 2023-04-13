@@ -2,11 +2,9 @@
 // Licensed under the MIT License.
 
 using System;
-using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -41,11 +39,6 @@ namespace Azure.DataApiBuilder.Service
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
-                .ConfigureAppConfiguration((hostingContext, configurationBuilder) =>
-                {
-                    IHostEnvironment env = hostingContext.HostingEnvironment;
-                    AddConfigurationProviders(configurationBuilder, args);
-                })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     Startup.MinimumLogLevel = GetLogLevelFromCommandLineArgs(args, out Startup.IsLogLevelOverriddenByCli);
@@ -145,32 +138,13 @@ namespace Azure.DataApiBuilder.Service
         // IWebHostBuilder, instead of a IHostBuilder.
         public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
-            .ConfigureAppConfiguration((hostingContext, builder) =>
-            {
-                IHostEnvironment env = hostingContext.HostingEnvironment;
-                AddConfigurationProviders(builder, args);
-                DisableHttpsRedirectionIfNeeded(args);
-            }).UseStartup<Startup>();
+            .ConfigureAppConfiguration((hostingContext, builder) => DisableHttpsRedirectionIfNeeded(args))
+            .UseStartup<Startup>();
 
         // This is used for testing purposes only. The test web server takes in a
         // IWebHostBuilder, instead of a IHostBuilder.
         public static IWebHostBuilder CreateWebHostFromInMemoryUpdateableConfBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
             .UseStartup<Startup>();
-
-        /// <summary>
-        /// Adds the various configuration providers.
-        /// </summary>
-        /// <param name="env">The hosting environment.</param>
-        /// <param name="configurationBuilder">The configuration builder.</param>
-        /// <param name="args">The command line arguments.</param>
-        private static void AddConfigurationProviders(
-            IConfigurationBuilder configurationBuilder,
-            string[] args)
-        {
-            configurationBuilder
-                .AddEnvironmentVariables(prefix: RuntimeConfigLoader.ENVIRONMENT_PREFIX)
-                .AddCommandLine(args);
-        }
     }
 }

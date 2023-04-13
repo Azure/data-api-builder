@@ -146,7 +146,7 @@ namespace Azure.DataApiBuilder.Service.Models
                     // Due to the recursive behavior of SqlExistsQueryStructure compilation, the column authorization
                     // check only occurs when access to the column's owner entity is confirmed.
                     if (!relationshipField && _metadataProvider.GetDatabaseType() is not DatabaseType.cosmosdb_nosql)
-                        {
+                    {
                         string targetEntity = queryStructure.EntityName;
 
                         bool columnAccessPermitted = queryStructure.AuthorizationResolver.AreColumnsAllowedForOperation(

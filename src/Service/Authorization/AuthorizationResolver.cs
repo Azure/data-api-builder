@@ -380,7 +380,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         }
 
         /// <summary>
-        /// Returns a list of all possible operations depending on the provided SourceType.
+        /// Returns a list of all possible operations depending on the provided EntityType.
         /// Stored procedures only support Operation.Execute.
         /// In case the operation is Operation.All (wildcard), it gets resolved to a set of CRUD operations.
         /// </summary>

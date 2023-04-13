@@ -128,15 +128,14 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     runtimeConfig.DataSource.GetTypedOptions<CosmosDbDataSourceOptions>() ??
                     throw new NotSupportedException("CosmosDB_NoSql is specified but no CosmosDB_NoSql configuration information has been provided.");
 
-                if (string.IsNullOrEmpty(cosmosDbNoSql.Schema))
+                if (string.IsNullOrEmpty(cosmosDbNoSql.GraphQLSchemaPath))
                 {
                     throw new NotSupportedException("No GraphQL schema file has been provided for CosmosDB_NoSql. Ensure you provide a GraphQL schema containing the GraphQL object types to expose.");
-
                 }
 
-                if (!fileSystem.File.Exists(cosmosDbNoSql.Schema))
+                if (!fileSystem.File.Exists(cosmosDbNoSql.GraphQLSchemaPath))
                 {
-                    throw new FileNotFoundException($"The GraphQL schema file at '{cosmosDbNoSql.Schema}' could not be found. Ensure that it is a path relative to the runtime.");
+                    throw new FileNotFoundException($"The GraphQL schema file at '{cosmosDbNoSql.GraphQLSchemaPath}' could not be found. Ensure that it is a path relative to the runtime.");
                 }
             }
         }

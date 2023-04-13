@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.Converters;
 
@@ -12,7 +13,7 @@ public record RuntimeEntities(IDictionary<string, Entity> Entities) : IEnumerabl
         return Entities.GetEnumerator();
     }
 
-    public bool TryGetValue(string key, out Entity? entity)
+    public bool TryGetValue(string key, [NotNullWhen(true)] out Entity? entity)
     {
         return Entities.TryGetValue(key, out entity);
     }

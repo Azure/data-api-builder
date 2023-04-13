@@ -378,7 +378,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 endpoints.MapControllers();
 
-                endpoints.MapGraphQL(GraphQLRuntimeOptions.DEFAULT_GRAPHQL_PATH).WithOptions(new GraphQLServerOptions
+                endpoints.MapGraphQL(GraphQLRuntimeOptions.DEFAULT_PATH).WithOptions(new GraphQLServerOptions
                 {
                     Tool = {
                         // Determines if accessing the endpoint from a browser
@@ -547,9 +547,6 @@ namespace Azure.DataApiBuilder.Service
                     // Running only in developer mode to ensure fast and smooth startup in production.
                     runtimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
                 }
-
-                // Pre-process the permissions section in the runtime config.
-                runtimeConfigValidator.ProcessPermissionsInConfig(runtimeConfig);
 
                 ISqlMetadataProvider sqlMetadataProvider =
                     app.ApplicationServices.GetRequiredService<ISqlMetadataProvider>();

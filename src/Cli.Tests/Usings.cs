@@ -8,7 +8,6 @@ global using Microsoft.Extensions.Logging;
 global using Microsoft.VisualStudio.TestTools.UnitTesting;
 global using Moq;
 global using Newtonsoft.Json.Linq;
-global using static Azure.DataApiBuilder.Config.RuntimeConfigPath;
 global using static Cli.ConfigGenerator;
 global using static Cli.Tests.TestHelper;
 global using static Cli.Utils;

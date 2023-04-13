@@ -2,7 +2,8 @@
 // Licensed under the MIT License.
 
 using System.Collections.Generic;
-using System.Text.Json;
+using System.IO.Abstractions;
+using System.IO.Abstractions.TestingHelpers;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Microsoft.AspNetCore.Builder;
@@ -14,7 +15,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration
 {
@@ -40,12 +40,18 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestMethod]
         public void TestCorsConfigReadCorrectly()
         {
-            Mock<ILogger> logger = new();
-            RuntimeConfig.TryGetDeserializedRuntimeConfig(TestHelper.INITIAL_CONFIG, out RuntimeConfig runtimeConfig, logger.Object);
-            HostGlobalSettings hostGlobalSettings =
-                JsonSerializer.Deserialize<HostGlobalSettings>(
-                    (JsonElement)runtimeConfig.RuntimeSettings[GlobalSettingsType.Host],
-                    RuntimeConfig.SerializerOptions);
+            IFileSystem fileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
+            {
+                { RuntimeConfigLoader.DefaultName, new MockFileData(TestHelper.INITIAL_CONFIG) }
+            });
+
+            RuntimeConfigLoader loader = new(fileSystem);
+            if (!loader.TryLoadConfig(".", out RuntimeConfig runtimeConfig))
+            {
+                Assert.Fail("Failed to load the runtime config");
+            }
+
+            Config.HostOptions hostGlobalSettings = runtimeConfig.Runtime.Host;
 
             Assert.IsInstanceOfType(hostGlobalSettings.Cors.Origins, typeof(string[]));
             Assert.IsInstanceOfType(hostGlobalSettings.Cors.AllowCredentials, typeof(bool));

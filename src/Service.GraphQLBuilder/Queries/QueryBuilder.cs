@@ -37,7 +37,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         public static DocumentNode Build(
             DocumentNode root,
             DatabaseType databaseType,
-            IDictionary<string, Entity> entities,
+            RuntimeEntities entities,
             Dictionary<string, InputObjectTypeDefinitionNode> inputTypes,
             Dictionary<string, EntityMetadata>? entityPermissionsMap = null)
         {

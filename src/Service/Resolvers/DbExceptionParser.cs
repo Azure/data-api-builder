@@ -29,11 +29,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
         public DbExceptionParser(RuntimeConfigProvider configProvider)
         {
-            _developerMode = configProvider.IsDeveloperMode();
+            _developerMode = configProvider.GetConfig().Runtime.Host.Mode is Config.HostMode.Development;
             BadRequestExceptionCodes = new();
             TransientExceptionCodes = new();
             ConflictExceptionCodes = new();
-            ;
         }
 
         /// <summary>

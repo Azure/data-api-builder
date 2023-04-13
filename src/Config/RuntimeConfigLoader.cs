@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.Converters;
@@ -10,7 +11,6 @@ namespace Azure.DataApiBuilder.Config;
 
 public class RuntimeConfigLoader
 {
-    private RuntimeConfig? _runtimeConfig;
     private readonly IFileSystem _fileSystem;
 
     public const string CONFIGFILE_NAME = "dab-config";
@@ -34,12 +34,24 @@ public class RuntimeConfigLoader
     /// <returns>True if the config was loaded, otherwise false.</returns>
     public bool TryLoadConfig(string path, out RuntimeConfig? config)
     {
-        if (_runtimeConfig != null)
+        if (_fileSystem.File.Exists(path))
         {
-            config = _runtimeConfig;
-            return true;
+            string json = _fileSystem.File.ReadAllText(path);
+            return TryParseConfig(json, out config);
         }
 
+        config = null;
+        return false;
+    }
+
+    /// <summary>
+    /// Parses a JSON string into a <c>RuntimeConfig</c> object
+    /// </summary>
+    /// <param name="json">JSON that represents the config file.</param>
+    /// <param name="config">The parsed config, or null if it parsed unsuccessfully.</param>
+    /// <returns>True if the config was parsed, otherwise false.</returns>
+    public static bool TryParseConfig(string json, [NotNullWhen(true)] out RuntimeConfig? config)
+    {
         JsonSerializerOptions options = new()
         {
             PropertyNameCaseInsensitive = false,
@@ -51,16 +63,14 @@ public class RuntimeConfigLoader
         options.Converters.Add(new EntitySourceConverterFactory());
         options.Converters.Add(new EntityActionConverterFactory());
 
-        if (_fileSystem.File.Exists(path))
+        config = JsonSerializer.Deserialize<RuntimeConfig>(json, options);
+
+        if (config is null)
         {
-            string json = _fileSystem.File.ReadAllText(path);
-            _runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(json, options);
-            config = _runtimeConfig;
-            return true;
+            return false;
         }
 
-        config = null;
-        return false;
+        return true;
     }
 
     /// <summary>

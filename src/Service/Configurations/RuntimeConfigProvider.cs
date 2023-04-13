@@ -1,9 +1,12 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -22,6 +25,11 @@ public class RuntimeConfigProvider
     /// <remarks>This is most commonly used when DAB's config is provided via the <c>ConfigurationController</c>, such as when it's a hosted service.</remarks>
     public bool IsLateConfigured { get; set; }
 
+    /// <summary>
+    /// The access token representing a Managed Identity to connect to the database.
+    /// </summary>
+    public string? ManagedIdentityAccessToken { get; private set; }
+
     private readonly RuntimeConfigLoader _runtimeConfigLoader;
     private RuntimeConfig? _runtimeConfig;
     public string? ConfigFilePath;
@@ -29,22 +37,6 @@ public class RuntimeConfigProvider
     public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader)
     {
         _runtimeConfigLoader = runtimeConfigLoader;
-    }
-
-    public RuntimeConfig? GetConfig(string path)
-    {
-        if (_runtimeConfig is not null)
-        {
-            return _runtimeConfig;
-        }
-
-        if (_runtimeConfigLoader.TryLoadConfig(path, out RuntimeConfig? config))
-        {
-            ConfigFilePath = path;
-            _runtimeConfig = config;
-        }
-
-        return config;
     }
 
     public RuntimeConfig GetConfig()
@@ -79,5 +71,55 @@ public class RuntimeConfigProvider
     {
         runtimeConfig = _runtimeConfig;
         return _runtimeConfig is not null;
+    }
+
+    internal bool Initialize(string jsonConfig, string? graphQLSchema, string connectionString, string? accessToken)
+    {
+        if (string.IsNullOrEmpty(connectionString))
+        {
+            throw new ArgumentException($"'{nameof(connectionString)}' cannot be null or empty.", nameof(connectionString));
+        }
+
+        if (string.IsNullOrEmpty(jsonConfig))
+        {
+            throw new ArgumentException($"'{nameof(jsonConfig)}' cannot be null or empty.", nameof(jsonConfig));
+        }
+
+        DbConnectionStringBuilder dbConnectionStringBuilder = new()
+        {
+            ConnectionString = connectionString
+        };
+
+        ManagedIdentityAccessToken = accessToken;
+
+        if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig))
+        {
+            if (runtimeConfig.DataSource.DatabaseType is DatabaseType.CosmosDB_NoSQL)
+            {
+                if (graphQLSchema is null)
+                {
+                    throw new ArgumentNullException(nameof(graphQLSchema));
+                }
+
+                // push the "raw" GraphQL schema into the options to pull out later when requested
+                runtimeConfig.DataSource.Options[CosmosDbDataSourceOptions.GRAPHQL_RAW_KEY] = JsonSerializer.SerializeToElement(graphQLSchema);
+
+                // SWA may provide CosmosDB database name in connectionString
+                string? database = dbConnectionStringBuilder.ContainsKey("Database") ? (string)dbConnectionStringBuilder["Database"] : null;
+
+                if (database is not null)
+                {
+                    // Add or update the options to contain the parsed database
+                    runtimeConfig.DataSource.Options["database"] = JsonSerializer.SerializeToElement(database);
+                }
+            }
+
+            // Update the connection string in the parsed config with the one that was provided to the controller
+            _runtimeConfig = runtimeConfig with { DataSource = runtimeConfig.DataSource with { ConnectionString = connectionString } };
+
+            return true;
+        }
+
+        return false;
     }
 }

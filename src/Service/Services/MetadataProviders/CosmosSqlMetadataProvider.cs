@@ -126,7 +126,12 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
 
         public string GraphQLSchema()
         {
-            return _fileSystem.File.ReadAllText(_cosmosDb.Schema);
+            if (_cosmosDb.GraphQLSchema is not null)
+            {
+                return _cosmosDb.GraphQLSchema;
+            }
+
+            return _fileSystem.File.ReadAllText(_cosmosDb.GraphQLSchemaPath);
         }
 
         public ODataParser GetODataParser()

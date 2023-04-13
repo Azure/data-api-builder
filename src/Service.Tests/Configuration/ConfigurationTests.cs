@@ -32,7 +32,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using MySqlConnector;
 using Npgsql;
-using static Azure.DataApiBuilder.Config.RuntimeConfigPath;
+using static Azure.DataApiBuilder.Config.RuntimeConfigLoader;
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration
 {
@@ -90,7 +90,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, (string)TestContext.Properties[ASP_NET_CORE_ENVIRONMENT_VAR_NAME]);
             Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, (string)TestContext.Properties[RUNTIME_ENVIRONMENT_VAR_NAME]);
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, "");
-            Environment.SetEnvironmentVariable($"{ENVIRONMENT_PREFIX}{nameof(RuntimeConfigPath.CONNSTRING)}", "");
         }
 
         /// <summary>
@@ -130,7 +129,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Assert.IsFalse(isUpdateableRuntimeConfig);
                 Assert.AreEqual(typeof(ApplicationException), e.GetType());
                 Assert.AreEqual(
-                    $"Could not initialize the engine with the runtime config file: {RuntimeConfigPath.DefaultName}",
+                    $"Could not initialize the engine with the runtime config file: {RuntimeConfigLoader.DefaultName}",
                     e.Message);
             }
         }
@@ -157,21 +156,21 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// Consider both cases for source as an object and as a string
         /// </summary>
         [DataTestMethod]
-        [DataRow(true, SourceType.StoredProcedure, "stored-procedure", DisplayName = "source is a stored-procedure")]
-        [DataRow(true, SourceType.Table, "table", DisplayName = "source is a table")]
-        [DataRow(true, SourceType.View, "view", DisplayName = "source is a view")]
+        [DataRow(true, EntitySourceType.StoredProcedure, "stored-procedure", DisplayName = "source is a stored-procedure")]
+        [DataRow(true, EntitySourceType.Table, "table", DisplayName = "source is a table")]
+        [DataRow(true, EntitySourceType.View, "view", DisplayName = "source is a view")]
         [DataRow(false, null, null, DisplayName = "source is just string")]
         public void TestCorrectSerializationOfSourceObject(
             bool isDatabaseObjectSource,
-            SourceType sourceObjectType,
+            EntitySourceType sourceObjectType,
             string sourceTypeName)
         {
             object entitySource;
             if (isDatabaseObjectSource)
             {
-                entitySource = new DatabaseObjectSource(
+                entitySource = new EntitySource(
                     Type: sourceObjectType,
-                    Name: "sourceName",
+                    Object: "sourceName",
                     Parameters: null,
                     KeyFields: null
                 );
@@ -504,10 +503,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsNotNull(configuration, "TryGetRuntimeConfiguration should set the config in the out parameter.");
             Assert.IsTrue(isConfigSet, "TryGetRuntimeConfiguration should return true when the config is set.");
 
-            Assert.AreEqual(DatabaseType.cosmosdb_nosql, configuration.DatabaseType, "Expected cosmosdb_nosql database type after configuring the runtime with cosmosdb_nosql settings.");
-            Assert.AreEqual(config.Schema, configuration.DataSource.CosmosDbNoSql.GraphQLSchema, "Expected the schema in the configuration to match the one sent to the configuration endpoint.");
-            Assert.AreEqual(config.ConnectionString, configuration.ConnectionString, "Expected the connection string in the configuration to match the one sent to the configuration endpoint.");
-            string db = configProvider.GetRuntimeConfiguration().DataSource.CosmosDbNoSql.Database;
+            Assert.AreEqual(DatabaseType.CosmosDB_NoSQL, configuration.DataSource.DatabaseType, "Expected cosmosdb_nosql database type after configuring the runtime with cosmosdb_nosql settings.");
+            Assert.AreEqual(config.Schema, configuration.DataSource.GetTypedOptions<CosmosDbDataSourceOptions>().Schema, "Expected the schema in the configuration to match the one sent to the configuration endpoint.");
+            Assert.AreEqual(config.ConnectionString, configuration.DataSource.ConnectionString, "Expected the connection string in the configuration to match the one sent to the configuration endpoint.");
+            string db = configProvider.GetRuntimeConfiguration().DataSource.GetTypedOptions<CosmosDbDataSourceOptions>().Database;
             Assert.AreEqual(COSMOS_DATABASE_NAME, db, "Expected the database name in the runtime config to match the one sent to the configuration endpoint.");
         }
 

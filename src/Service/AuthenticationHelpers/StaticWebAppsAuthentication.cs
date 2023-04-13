@@ -49,7 +49,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
             StaticWebAppsClientPrincipal principal = new();
             try
             {
-                if (context.Request.Headers.TryGetValue(AuthenticationConfig.CLIENT_PRINCIPAL_HEADER, out StringValues headerPayload))
+                if (context.Request.Headers.TryGetValue(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, out StringValues headerPayload))
                 {
                     string data = headerPayload[0];
                     byte[] decoded = Convert.FromBase64String(data);
@@ -64,7 +64,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
                     return identity;
                 }
 
-                identity = new(authenticationType: principal.IdentityProvider, nameType: USER_ID_CLAIM, roleType: AuthenticationConfig.ROLE_CLAIM_TYPE);
+                identity = new(authenticationType: principal.IdentityProvider, nameType: USER_ID_CLAIM, roleType: AuthenticationOptions.ROLE_CLAIM_TYPE);
 
                 if (!string.IsNullOrWhiteSpace(principal.UserId))
                 {
@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
 
                 // output identity.Claims
                 // [0] { Type = "roles", Value = "roleName" }
-                identity.AddClaims(principal.UserRoles.Select(roleName => new Claim(AuthenticationConfig.ROLE_CLAIM_TYPE, roleName)));
+                identity.AddClaims(principal.UserRoles.Select(roleName => new Claim(AuthenticationOptions.ROLE_CLAIM_TYPE, roleName)));
 
                 return identity;
             }

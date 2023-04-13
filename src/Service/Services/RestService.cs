@@ -66,7 +66,7 @@ namespace Azure.DataApiBuilder.Service.Services
             RequestValidator.ValidateEntity(entityName, _sqlMetadataProvider.EntityToDatabaseObject.Keys);
             DatabaseObject dbObject = _sqlMetadataProvider.EntityToDatabaseObject[entityName];
 
-            if (dbObject.SourceType is not SourceType.StoredProcedure)
+            if (dbObject.SourceType is not EntityType.StoredProcedure)
             {
                 await AuthorizationCheckForRequirementAsync(resource: entityName, requirement: new EntityRoleOperationPermissionsRequirement());
             }
@@ -87,7 +87,7 @@ namespace Azure.DataApiBuilder.Service.Services
             RestRequestContext context;
 
             // If request has resolved to a stored procedure entity, initialize and validate appropriate request context
-            if (dbObject.SourceType is SourceType.StoredProcedure)
+            if (dbObject.SourceType is EntityType.StoredProcedure)
             {
                 if (!IsHttpMethodAllowedForStoredProcedure(entityName))
                 {
@@ -124,7 +124,7 @@ namespace Azure.DataApiBuilder.Service.Services
                             dbo: dbObject,
                             insertPayloadRoot,
                             operationType);
-                        if (context.DatabaseObject.SourceType is SourceType.Table)
+                        if (context.DatabaseObject.SourceType is EntityType.Table)
                         {
                             RequestValidator.ValidateInsertRequestContext(
                             (InsertRequestContext)context,
@@ -149,7 +149,7 @@ namespace Azure.DataApiBuilder.Service.Services
                             dbo: dbObject,
                             upsertPayloadRoot,
                             operationType);
-                        if (context.DatabaseObject.SourceType is SourceType.Table)
+                        if (context.DatabaseObject.SourceType is EntityType.Table)
                         {
                             RequestValidator.
                                 ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
@@ -183,7 +183,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
             // The final authorization check on columns occurs after the request is fully parsed and validated.
             // Stored procedures do not yet have semantics defined for column-level permissions
-            if (dbObject.SourceType is not SourceType.StoredProcedure)
+            if (dbObject.SourceType is not EntityType.StoredProcedure)
             {
                 await AuthorizationCheckForRequirementAsync(resource: context, requirement: new ColumnsPermissionsRequirement());
             }
@@ -328,17 +328,17 @@ namespace Azure.DataApiBuilder.Service.Services
         /// the default method "POST" is populated in httpVerbs.
         /// </summary>
         /// <param name="entityName">Name of the entity.</param>
-        /// <param name="httpVerbs">Out Param: List of httpverbs configured for stored procedure backed entity.</param>
+        /// <param name="httpVerbs">Out Param: List of http verbs configured for stored procedure backed entity.</param>
         /// <returns>True, with a list of HTTP verbs. False, when entity is not found in config
         /// or entity is not a stored procedure, and httpVerbs will be null.</returns>
         private bool TryGetStoredProcedureRESTVerbs(string entityName, [NotNullWhen(true)] out List<SupportedHttpVerb>? httpVerbs)
         {
-            if (_runtimeConfigProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
+            if (_runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
-                if (runtimeConfig.Entities.TryGetValue(key: entityName, out Entity? entity) && entity is not null)
+                if (runtimeConfig.Entities.TryGetValue(entityName, out Entity? entity))
                 {
-                    SupportedHttpVerb[]? methods = entity.GetRestMethodsConfiguredForStoredProcedure();
-                    httpVerbs = methods is not null ? new List<SupportedHttpVerb>(methods) : new();
+                    SupportedHttpVerb[] methods = entity.Rest.Methods;
+                    httpVerbs = new(methods);
                     return true;
                 }
             }
@@ -355,7 +355,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// return the entity name via a lookup using the string
         /// up until the next '/' if one exists, and the primary
         /// key as the substring following the '/'. For example
-        /// a request route shoud be of the form
+        /// a request route should be of the form
         /// {RESTPath}/{EntityPath}/{PKColumn}/{PkValue}/{PKColumn}/{PKValue}...
         /// </summary>
         /// <param name="route">The request route, containing REST path + entity path
@@ -367,7 +367,7 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             // route will ignore leading '/' so we trim here to allow for restPath
             // that start with '/'. We can be assured here that _runtimeConfigProvider.RestPath[0]='/'.
-            string restPath = _runtimeConfigProvider.RestPath.Substring(1);
+            string restPath = _runtimeConfigProvider.GetConfig().Runtime.Rest.Path.Substring(1);
             if (!route.StartsWith(restPath))
             {
                 throw new DataApiBuilderException(

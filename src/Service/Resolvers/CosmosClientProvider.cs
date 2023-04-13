@@ -29,7 +29,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // On engine first start-up, access token will be null since ConfigurationController hasn't been called at that time.
             _accessToken = runtimeConfigProvider.ManagedIdentityAccessToken;
 
-            if (runtimeConfigProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
+            if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
                 InitializeClient(runtimeConfig);
             }
@@ -51,14 +51,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     "Cannot initialize a CosmosClientProvider without the runtime config.");
             }
 
-            if (configuration.DatabaseType is not DatabaseType.cosmosdb_nosql)
+            if (configuration.DataSource.DatabaseType is not DatabaseType.CosmosDB_NoSQL)
             {
                 throw new InvalidOperationException("We shouldn't need a CosmosClientProvider if we're not accessing a CosmosDb");
             }
 
-            if (string.IsNullOrEmpty(_connectionString) || configuration.ConnectionString != _connectionString)
+            if (string.IsNullOrEmpty(_connectionString) || configuration.DataSource.ConnectionString != _connectionString)
             {
-                _connectionString = configuration.ConnectionString;
+                _connectionString = configuration.DataSource.ConnectionString;
                 ParseCosmosConnectionString();
 
                 if (!string.IsNullOrEmpty(_accountKey))

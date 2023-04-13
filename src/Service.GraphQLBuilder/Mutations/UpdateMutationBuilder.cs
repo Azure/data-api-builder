@@ -49,7 +49,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             ObjectTypeDefinitionNode objectTypeDefinitionNode,
             NameNode name,
             IEnumerable<HotChocolate.Language.IHasName> definitions,
-            IDictionary<string, Entity> entities,
+            RuntimeEntities entities,
             DatabaseType databaseType)
         {
             NameNode inputName = GenerateInputTypeName(name.Value);
@@ -111,7 +111,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             FieldDefinitionNode f,
             string typeName,
             ObjectTypeDefinitionNode otdn,
-            IDictionary<string, Entity> entities,
+            RuntimeEntities entities,
             DatabaseType databaseType)
         {
             InputObjectTypeDefinitionNode node;
@@ -191,7 +191,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs,
             ObjectTypeDefinitionNode objectTypeDefinitionNode,
             DocumentNode root,
-            IDictionary<string, Entity> entities,
+            RuntimeEntities entities,
             string dbEntityName,
             DatabaseType databaseType,
             IEnumerable<string>? rolesAllowedForMutation = null)

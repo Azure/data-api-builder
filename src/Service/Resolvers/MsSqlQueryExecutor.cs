@@ -60,12 +60,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             IHttpContextAccessor httpContextAccessor)
             : base(dbExceptionParser,
                   logger,
-                  new SqlConnectionStringBuilder(
-                      runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString),
+                  new SqlConnectionStringBuilder(runtimeConfigProvider.GetConfig().DataSource.ConnectionString),
                   runtimeConfigProvider,
                   httpContextAccessor)
         {
-            RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
+            RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
 
             if (runtimeConfigProvider.IsLateConfigured)
             {
@@ -73,7 +72,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 ConnectionStringBuilder.TrustServerCertificate = false;
             }
 
-            MsSqlOptions? msSqlOptions = runtimeConfig.DataSource.MsSql;
+            MsSqlOptions? msSqlOptions = runtimeConfig.DataSource.GetTypedOptions<MsSqlOptions>();
             _isSessionContextEnabled = msSqlOptions is null ? false : msSqlOptions.SetSessionContext;
             _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
             _attemptToSetAccessToken = ShouldManagedIdentityAccessBeAttempted();

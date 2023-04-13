@@ -345,7 +345,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 // keys of afterDeserialized do not correspond to the primary key
                 // values given for the primary keys are of incorrect format
                 // duplicate column names in the after token and / or the orderby columns
-                string errorMessage = runtimeConfigProvider.IsDeveloperMode() ? $"{e.Message}\n{e.StackTrace}" :
+                string errorMessage = runtimeConfigProvider.GetConfig().Runtime.Host.Mode is Config.HostMode.Development ? $"{e.Message}\n{e.StackTrace}" :
                     $"{afterJsonString} is not a valid pagination token.";
                 throw new DataApiBuilderException(
                     message: errorMessage,

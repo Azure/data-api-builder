@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             string entityName,
             DatabaseObject databaseObject,
             [NotNull] Entity configEntity,
-            Dictionary<string, Entity> entities,
+            RuntimeEntities entities,
             IEnumerable<string> rolesAllowedForEntity,
             IDictionary<string, IEnumerable<string>> rolesAllowedForFields)
         {

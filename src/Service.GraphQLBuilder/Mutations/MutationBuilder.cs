@@ -29,7 +29,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         public static DocumentNode Build(
             DocumentNode root,
             DatabaseType databaseType,
-            IDictionary<string, Entity> entities,
+            RuntimeEntities entities,
             Dictionary<string, EntityMetadata>? entityPermissionsMap = null)
         {
             List<FieldDefinitionNode> mutationFields = new();
@@ -102,7 +102,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             ObjectTypeDefinitionNode objectTypeDefinitionNode,
             DocumentNode root,
             DatabaseType databaseType,
-            IDictionary<string, Entity> entities,
+            RuntimeEntities entities,
             List<FieldDefinitionNode> mutationFields
             )
         {
@@ -134,7 +134,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             string dbEntityName,
             Dictionary<string, EntityMetadata>? entityPermissionsMap,
             NameNode name,
-            IDictionary<string, Entity> entities,
+            RuntimeEntities entities,
             List<FieldDefinitionNode> mutationFields
             )
         {

@@ -316,6 +316,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     {
                         // row["DATA_TYPE"] has value type string so a direct cast to System.Type is not supported.
                         SystemType = SqlToCLRType((string)row["DATA_TYPE"]),
+                        Direction = ToParameterDirectionEnum((string)row["PARAMETER_MODE"]),
                     }
                 );
             }
@@ -351,6 +352,11 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Takes a string version of a sql data type and returns its .NET common language runtime (CLR) counterpart
         /// </summary>
         public abstract Type SqlToCLRType(string sqlType);
+
+        /// <summary>
+        /// Takes a string version of a sql parameter mode and returns its .NET common language runtime (CLR) counterpart.
+        /// </summary>
+        public abstract ParameterDirection ToParameterDirectionEnum(string parameterDirection);
 
         /// <summary>
         /// Generates the map used to find a given entity based

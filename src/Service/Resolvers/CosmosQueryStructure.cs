@@ -97,7 +97,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             if (IsPaginated)
             {
-                FieldNode? fieldNode = ExtractItemsQueryField(selection.SyntaxNode);
+                FieldNode? fieldNode = FindFieldNodeByName(selection.SyntaxNode, QueryBuilder.PAGINATION_FIELD_NAME);
 
                 if (fieldNode is not null)
                 {

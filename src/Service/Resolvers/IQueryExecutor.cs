@@ -47,6 +47,18 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             List<string>? args = null);
 
         /// <summary>
+        /// Extracts the rows from the given DbDataReader to populate
+        /// the JsonObject to be returned.
+        /// </summary>
+        /// <param name="dbDataReader">A DbDataReader.</param>
+        /// <param name="args">List of string arguments if any.</param>
+        /// <returns>A JsonObject with a ResultSet property containing each element corresponding to the row (ColumnName : columnValue)
+        /// in the dbDataReader and Key Value properties pertaining to OUTPUT parameters.</returns>
+        public Task<JsonObject> GetJsonObjectAsync(
+            DbDataReader dbDataReader,
+            List<string>? args = null);
+
+        /// <summary>
         /// Extracts the rows from the given DbDataReader to deserialize into
         /// a Json object of type TResult to be returned.
         /// </summary>

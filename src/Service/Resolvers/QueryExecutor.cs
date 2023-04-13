@@ -157,27 +157,47 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             //"EXEC sp_set_session_context 'roles', 'Anonymous', @read_only =1 ;";
 
             cmd.CommandText = sessionParamsQuery + sqltext;
+
             if (parameters is not null)
             {
-                foreach (KeyValuePair<string, object?> parameterEntry in parameters)
+                foreach (var parameterEntry in parameters)
                 {
-                    DbParameter parameter = cmd.CreateParameter();
-                    parameter.ParameterName = parameterEntry.Key;
-                    parameter.Value = parameterEntry.Value ?? DBNull.Value;
-                    cmd.Parameters.Add(parameter);
+                    var dbParameter = cmd.CreateParameter();
+                    dbParameter.ParameterName = parameterEntry.Key;
+
+                    if (parameterEntry.Value is SqlExecuteParameter sqlExecuteParameter)
+                    {
+                        dbParameter.Value = sqlExecuteParameter.Value ?? DBNull.Value;
+                        dbParameter.Direction = sqlExecuteParameter.Direction;
+                    }
+                    else
+                    {
+                        dbParameter.Value = parameterEntry.Value ?? DBNull.Value;
+                    }
+
+                    cmd.Parameters.Add(dbParameter);
                 }
             }
 
             try
             {
+                // await cmd.ExecuteNonQueryAsync();
+                // return null;
                 using DbDataReader dbDataReader = await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
                 if (dataReaderHandler is not null && dbDataReader is not null)
                 {
                     return await dataReaderHandler(dbDataReader, args);
                 }
-                else
+
+                if (parameters is not null && result is JsonObject jsonObjectResult)
                 {
-                    return default(TResult);
+                    foreach (var (key, value) in parameters)
+                    {
+                        if (value is SqlExecuteParameter sqlExecuteParameter && sqlExecuteParameter.IsOutput)
+                        {
+                            jsonObjectResult[sqlExecuteParameter.Name] = JsonValue.Create(cmd.Parameters[key].Value);
+                        }
+                    }
                 }
             }
             catch (DbException e)
@@ -284,6 +304,33 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             return resultArray;
+        }
+
+        /// <inheritdoc />
+        /// <Note>This function is a DbDataReader handler of type Func<DbDataReader, List<string>?, Task<TResult>>
+        /// The parameter args is not used but is added to conform to the signature of the DbDataReader handler
+        /// function argument of ExecuteQueryAsync.</Note>
+        public async Task<JsonObject> GetJsonObjectAsync(
+            DbDataReader dbDataReader,
+            List<string>? args = null)
+        {
+            DbResultSet dbResultSet = await ExtractResultSetFromDbDataReader(dbDataReader);
+
+            JsonArray resultArray = new();
+            foreach (DbResultSetRow dbResultSetRow in dbResultSet.Rows)
+            {
+                if (dbResultSetRow.Columns.Count > 0)
+                {
+                    JsonElement result =
+                        JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(dbResultSetRow.Columns));
+                    resultArray.Add(result);
+                }
+            }
+
+            return new()
+            {
+                { "resultSet", JsonSerializer.Serialize(resultArray) }
+            };
         }
 
         /// <inheritdoc />

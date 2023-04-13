@@ -52,7 +52,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                         new(
                             location: null,
                             name: new(param),
-                            description: new StringValueNode($"parameters for {name.Value} stored-procedure"),
+                            description: null,
                             type: new NamedTypeNode(defaultGraphQLValue.Item1),
                             defaultValue: defaultGraphQLValue.Item2,
                             directives: new List<DirectiveNode>())
@@ -69,11 +69,76 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
 
             return new(
                 location: null,
-                new NameNode(GenerateStoredProcedureGraphQLFieldName(name.Value, entity)),
-                new StringValueNode($"Execute Stored-Procedure {name.Value} and get results from the database"),
-                inputValues,
-                new NonNullTypeNode(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(name)))),
-                fieldDefinitionNodeDirectives
+                name: new NameNode(GenerateStoredProcedureGraphQLFieldName(name.Value, entity)),
+                description: new StringValueNode($"Execute Stored-Procedure {name.Value} and get results from the database"),
+                arguments: inputValues,
+                type: type,
+                directives: fieldDefinitionNodeDirectives
+            );
+        }
+
+        /// <summary>
+        /// Generates a GraphQL object type definition node for stored procedure results.
+        /// </summary>
+        /// <param name="name">Name of the stored procedure.</param>
+        /// <param name="entity">Entity's runtime config metadata.</param>
+        /// <param name="outputParameters">Stored procedure output parameter metadata.</param>
+        /// <param name="rolesAllowed">Role authorization metadata (optional).</param>
+        /// <returns>GraphQL object type definition node for stored procedure results.</returns>
+        public static ObjectTypeDefinitionNode CreateStoredProcedureResultObjectType(
+            NameNode name,
+            Entity entity,
+            IEnumerable<KeyValuePair<string, ParameterDefinition>> outputParameters,
+            IEnumerable<string>? rolesAllowed = null
+        )
+        {
+            var fieldDirectives = new List<DirectiveNode>();
+            if (CreateAuthorizationDirectiveIfNecessary(
+                    rolesAllowed,
+                    out DirectiveNode? authorizeDirective
+                )
+            )
+            {
+                fieldDirectives.Add(authorizeDirective!);
+            }
+
+            var executeResultTypeFields = new List<FieldDefinitionNode>() {
+                new(location: null,
+                    name: new("resultSet"),
+                    description: new($"The {name} result set from the stored procedure."),
+                    arguments: new List<InputValueDefinitionNode>(),
+                    type: new NonNullTypeNode(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(name)))),
+                    directives: fieldDirectives
+                )
+            };
+
+            // If the entity is a Stored Procedure, we need to add any OUTPUT parameter nodes.
+            // These are the parameters that are not part of the result set, but are used to return scalar values from the stored procedure.
+            foreach ((string parameterName, ParameterDefinition parameter) in outputParameters)
+            {
+                if (entity.Parameters != null)
+                {
+                    string defaultValueFromConfig = ((JsonElement)entity.Parameters[parameterName]).ToString();
+                    executeResultTypeFields.Add(
+                        new(location: null,
+                            name: new(parameterName),
+                            description: new($"The {parameterName} {parameter.Direction.ToString()} parameter from the stored procedure."),
+                            arguments: new List<InputValueDefinitionNode>(),
+                            type: new NamedTypeNode(ConvertValueToGraphQLType(defaultValueFromConfig, parameter).Item1),
+                            directives: fieldDirectives
+                        )
+                    );
+                }
+            }
+
+            var storedProcedureName = GenerateStoredProcedureGraphQLFieldName(name.Value, entity);
+            return new ObjectTypeDefinitionNode(
+                location: null,
+                name: new(GenerateStoredProcedureGraphQLResultObjectName(name.Value, entity)),
+                description: new($"Represents the results of the {storedProcedureName} stored procedure execution."),
+                directives: new List<DirectiveNode>(),
+                interfaces: new List<NamedTypeNode>(),
+                fields: executeResultTypeFields
             );
         }
 
@@ -85,6 +150,30 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// or stored-procedure is trying to read from DB without READ permission.
         /// </summary>
         public static List<JsonDocument> FormatStoredProcedureResultAsJsonList(JsonDocument? jsonDocument)
+        {
+            if (jsonDocument is null)
+            {
+                return new List<JsonDocument>();
+            }
+
+            List<JsonDocument> resultJson = new();
+            List<Dictionary<string, object>> resultList = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(jsonDocument.RootElement.ToString())!;
+            foreach (Dictionary<string, object> result in resultList)
+            {
+                resultJson.Add(JsonDocument.Parse(JsonSerializer.Serialize(result)));
+            }
+
+            return resultJson;
+        }
+
+        /// <summary>
+        /// Takes the result from DB as JsonDocument and formats it in a way that can be filtered by column
+        /// name. It parses the Json document into a list of Dictionary with key as result_column_name
+        /// with it's corresponding value.
+        /// returns an empty list in case of no result 
+        /// or stored-procedure is trying to read from DB without READ permission.
+        /// </summary>
+        public static List<JsonDocument> FormatStoredProcedureObjectResultAsJsonList(JsonDocument? jsonDocument)
         {
             if (jsonDocument is null)
             {

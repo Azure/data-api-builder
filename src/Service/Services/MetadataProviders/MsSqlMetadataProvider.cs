@@ -2,7 +2,9 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Data;
 using System.Net;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Resolvers;
@@ -84,6 +86,26 @@ namespace Azure.DataApiBuilder.Service.Services
                     return typeof(Guid);
                 default:
                     throw new DataApiBuilderException(message: $"Tried to convert unsupported data type: {sqlType}",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+        }
+
+        /// <summary>
+        /// Takes a string version of an MS SQL parameter mode and returns its .NET common language runtime (CLR) counterpart.
+        /// </summary>
+        public override ParameterDirection ToParameterDirectionEnum(string parameterDirection)
+        {
+            switch (parameterDirection)
+            {
+                case "IN":
+                    return ParameterDirection.Input;
+                case "OUT":
+                    return ParameterDirection.Output;
+                case "INOUT":
+                    return ParameterDirection.InputOutput;
+                default:
+                    throw new DataApiBuilderException(message: $"Tried to convert unsupported parameter mode: {parameterDirection}",
                         statusCode: HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }

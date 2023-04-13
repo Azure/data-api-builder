@@ -23,6 +23,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         public const string ORDER_BY_FIELD_NAME = "orderBy";
         public const string PARTITION_KEY_FIELD_NAME = "_partitionKeyValue";
         public const string ID_FIELD_NAME = "id";
+        public const string EXECUTE_RESULT_OBJECT_TYPE_PREFIX = "Execute";
+        public const string EXECUTE_RESULT_OBJECT_TYPE_SUFFIX = "Result";
+        public const string EXECUTE_RESULT_FIELD_NAME = "resultSet";
 
         /// <summary>
         /// Creates a DocumentNode containing FieldDefinitionNodes representing the FindByPK and FindAll queries
@@ -231,6 +234,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         public static bool IsPaginationType(ObjectType objectType)
         {
             return objectType.Name.Value.EndsWith(PAGINATION_OBJECT_TYPE_SUFFIX);
+        }
+
+        public static bool IsExecuteResultType(ObjectType objectType)
+        {
+            var value = objectType.Name.Value;
+            return value.StartsWith(EXECUTE_RESULT_OBJECT_TYPE_PREFIX) && value.EndsWith(EXECUTE_RESULT_OBJECT_TYPE_SUFFIX);
         }
 
         public static bool IsPaginationType(NamedTypeNode objectType)

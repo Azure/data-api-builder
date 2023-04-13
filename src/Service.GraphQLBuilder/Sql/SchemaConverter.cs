@@ -20,6 +20,62 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
     public static class SchemaConverter
     {
         /// <summary>
+        /// Adds a field with roles and directives to the fields dictionary if the field is allowed to be part of the schema.
+        /// </summary>
+        /// <param name="rolesAllowedForFields">The dictionary that stores field names and their corresponding roles.</param>
+        /// <param name="fieldDefinitionName">The name of the field being processed.</param>
+        /// <param name="databaseObject">The database object representing the entity associated with the field.</param>
+        /// <param name="directives">A list of directives associated with the field.</param>
+        /// <param name="configEntity">The configuration entity for the field.</param>
+        /// <param name="fieldDefinition">The field definition object representing the field.</param>
+        /// <param name="fields">The dictionary that stores field names and their corresponding FieldDefinitionNode objects.</param>
+        private static void AddFieldWithRolesAndDirectives(
+            IDictionary<string, IEnumerable<string>> rolesAllowedForFields,
+            string fieldDefinitionName,
+            DatabaseObject databaseObject,
+            IList<DirectiveNode> directives,
+            [NotNull] Entity configEntity,
+            IFieldDefinition fieldDefinition,
+            IDictionary<string, FieldDefinitionNode> fields
+        ) {
+            // If no roles are allowed for the field, we should not include it in the schema.
+            // Consequently, the field is only added to schema if this conditional evaluates to TRUE.
+            if (rolesAllowedForFields.TryGetValue(key: fieldDefinitionName, out IEnumerable<string>? roles))
+            {
+                // Roles will not be null here if TryGetValue evaluates to true, so here we check if there are any roles to process.
+                // Since Stored-procedures only support 1 CRUD action, it's possible that stored-procedures might return some values
+                // during mutation operation (i.e, containing one of create/update/delete permission).
+                // Hence, this check is bypassed for stored-procedures.
+                if (roles.Count() > 0 || databaseObject.SourceType is SourceType.StoredProcedure)
+                {
+                    if (GraphQLUtils.CreateAuthorizationDirectiveIfNecessary(
+                            roles,
+                            out DirectiveNode? authZDirective))
+                    {
+                        directives.Add(authZDirective!);
+                    }
+
+                    string exposedFieldName = fieldDefinitionName;
+                    if (configEntity.Mappings is not null && configEntity.Mappings.TryGetValue(key: fieldDefinitionName, out string? fieldAlias))
+                    {
+                        exposedFieldName = fieldAlias;
+                    }
+
+                    NamedTypeNode fieldType = new(GetGraphQLTypeFromSystemType(fieldDefinition.SystemType));
+                    FieldDefinitionNode field = new(
+                        location: null,
+                        name: new(exposedFieldName),
+                        description: null,
+                        arguments: new List<InputValueDefinitionNode>(),
+                        type: new NonNullTypeNode(fieldType),
+                        directives: (IReadOnlyList<DirectiveNode>)directives);
+
+                    fields.Add(fieldDefinitionName, field);
+                }
+            }
+        }
+
+        /// <summary>
         /// Generate a GraphQL object type from a SQL table/view/stored-procedure definition, combined with the runtime config entity information
         /// </summary>
         /// <param name="entityName">Name of the entity in the runtime config to generate the GraphQL object type for.</param>

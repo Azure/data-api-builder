@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Data;
+
 namespace Azure.DataApiBuilder.Config
 {
     /// <summary>
@@ -98,6 +100,39 @@ namespace Azure.DataApiBuilder.Config
         public StoredProcedureDefinition StoredProcedureDefinition { get; set; } = null!;
     }
 
+    public interface IFieldDefinition {
+        public Type SystemType { get; set; }
+    }
+
+    /// <summary>
+    /// Represents a Database Parameter Definition
+    /// </summary>
+    public class ParameterDefinition
+    {
+        public Type SystemType { get; set; } = null!;
+        
+        public bool HasConfigDefault { get; set; }
+        
+        public object? ConfigDefaultValue { get; set; }
+        
+        /// <summary>
+        /// The direction of the parameter. If null, it is assumed to be Input.
+        /// </summary>
+        public ParameterDirection? Direction { get; set; }
+        
+        /// <summary>
+        /// Whether the parameter is an output parameter.
+        /// </summary>
+        public bool IsOutput
+        {
+            get
+            {
+                return this.Direction == System.Data.ParameterDirection.Output
+                    || this.Direction == System.Data.ParameterDirection.InputOutput;
+            }
+        }
+    }
+
     public class StoredProcedureDefinition : SourceDefinition
     {
         /// <summary>
@@ -105,13 +140,6 @@ namespace Azure.DataApiBuilder.Config
         /// Key: parameter name, Value: ParameterDefinition object
         /// </summary>
         public Dictionary<string, ParameterDefinition> Parameters { get; set; } = new();
-    }
-
-    public class ParameterDefinition
-    {
-        public Type SystemType { get; set; } = null!;
-        public bool HasConfigDefault { get; set; }
-        public object? ConfigDefaultValue { get; set; }
     }
 
     /// <summary>

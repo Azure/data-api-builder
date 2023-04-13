@@ -779,11 +779,10 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     entity.GraphQL is not null && !(entity.GraphQL is bool graphQLEnabled && !graphQLEnabled))
                 {
                     DatabaseObject dbObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
-                    StoredProcedureRequestContext sqRequestContext = new(
-                                                                            entityName,
-                                                                            dbObject,
-                                                                            JsonSerializer.SerializeToElement(entity.Parameters),
-                                                                            Config.Operation.All);
+                    StoredProcedureRequestContext sqRequestContext = new(entityName,
+                                                                         dbObject,
+                                                                         JsonSerializer.SerializeToElement(entity.Parameters),
+                                                                         Config.Operation.All);
                     try
                     {
                         RequestValidator.ValidateStoredProcedureRequestContext(sqRequestContext, sqlMetadataProvider);

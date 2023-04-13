@@ -65,27 +65,49 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         /// <param name="context">HotChocolate Request Pipeline context containing request metadata</param>
         /// <param name="parameters">GraphQL Query Parameters from schema retrieved from ResolverMiddleware.GetParametersFromSchemaAndQueryFields()</param>
-        public async Task<Tuple<JsonDocument?, IMetadata?>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> parameters)
+        public async Task<Tuple<JsonDocument?, IMetadata?>> ExecuteAsync(
+            IMiddlewareContext context,
+            IDictionary<string, object?> parameters)
         {
-            SqlQueryStructure structure = new(
-                context,
-                parameters,
-                _sqlMetadataProvider,
-                _authorizationResolver,
-                _runtimeConfigProvider,
-                _gQLFilterParser);
-
-            if (structure.PaginationMetadata.IsPaginated)
+            if (_sqlMetadataProvider.GraphQLStoredProcedureExposedNameToEntityNameMap.TryGetValue(context.Selection.Field.Name.Value, out string? entityName))
             {
+                SqlExecuteStructure sqlExecuteStructure = new(
+                    entityName,
+                    _sqlMetadataProvider,
+                    _authorizationResolver,
+                    _gQLFilterParser,
+                    parameters);
+
+                var result = await ExecuteAsync(sqlExecuteStructure);
                 return new Tuple<JsonDocument?, IMetadata?>(
-                    SqlPaginationUtil.CreatePaginationConnectionFromJsonDocument(await ExecuteAsync(structure), structure.PaginationMetadata),
-                    structure.PaginationMetadata);
+                    result,
+                    PaginationMetadata.MakeEmptyPaginationMetadata()
+                );
             }
             else
             {
+                SqlQueryStructure structure = new(
+                    context,
+                    parameters,
+                    _sqlMetadataProvider,
+                    _authorizationResolver,
+                    _runtimeConfigProvider,
+                    _gQLFilterParser);
+
+                if (structure.PaginationMetadata.IsPaginated)
+                {
+                    var result = await ExecuteAsync(structure);
+                    var paginatedResult = SqlPaginationUtil.CreatePaginationConnectionFromJsonDocument(result, structure.PaginationMetadata);
+                    return new Tuple<JsonDocument?, IMetadata?>(
+                        paginatedResult,
+                        structure.PaginationMetadata
+                    );
+                }
+
                 return new Tuple<JsonDocument?, IMetadata?>(
                     await ExecuteAsync(structure),
-                    structure.PaginationMetadata);
+                    structure.PaginationMetadata
+                );
             }
         }
 
@@ -93,7 +115,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Executes the given IMiddlewareContext of the GraphQL and expecting result of stored-procedure execution as
         /// list of Jsons and the relevant pagination metadata back.
         /// </summary>
-        public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata?>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object?> parameters)
+        public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata?>> ExecuteListAsync(
+            IMiddlewareContext context,
+            IDictionary<string, object?> parameters)
         {
             if (_sqlMetadataProvider.GraphQLStoredProcedureExposedNameToEntityNameMap.TryGetValue(context.Selection.Field.Name.Value, out string? entityName))
             {
@@ -267,27 +291,32 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <inheritdoc />
         public JsonDocument? ResolveInnerObject(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
         {
-            PaginationMetadata parentMetadata = (PaginationMetadata)metadata;
-            PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name.Value];
-            metadata = currentMetadata;
+            if (metadata is PaginationMetadata parentMetadata)
+            {
+                if (parentMetadata.Subqueries.TryGetValue(fieldSchema.Name.Value, out PaginationMetadata? currentMetadata))
+                {
+                    metadata = currentMetadata;
+                    if (currentMetadata.IsPaginated)
+                    {
+                        return SqlPaginationUtil.CreatePaginationConnectionFromJsonElement(element, currentMetadata);
+                    }
+                }
+            }
 
-            if (currentMetadata.IsPaginated)
-            {
-                return SqlPaginationUtil.CreatePaginationConnectionFromJsonElement(element, currentMetadata);
-            }
-            else
-            {
-                //TODO: Try to avoid additional deserialization/serialization here.
-                return ResolverMiddleware.RepresentsNullValue(element) ? null : JsonDocument.Parse(element.ToString());
-            }
+            //TODO: Try to avoid additional deserialization/serialization here.
+            return ResolverMiddleware.RepresentsNullValue(element) ? null : JsonDocument.Parse(element.ToString());
         }
 
         /// <inheritdoc />
         public object? ResolveListType(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
         {
-            PaginationMetadata parentMetadata = (PaginationMetadata)metadata;
-            PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name.Value];
-            metadata = currentMetadata;
+            if (metadata is PaginationMetadata parentMetadata)
+            {
+                if (parentMetadata.Subqueries.TryGetValue(fieldSchema.Name.Value, out PaginationMetadata? currentMetadata))
+                {
+                    metadata = currentMetadata;
+                }
+            }
 
             //TODO: Try to avoid additional deserialization/serialization here.
             return JsonSerializer.Deserialize<List<JsonElement>>(element.ToString());
@@ -300,8 +329,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             // Open connection and execute query using _queryExecutor
             string queryString = _queryBuilder.Build(structure);
-            JsonDocument? jsonDocument =
-                await _queryExecutor.ExecuteQueryAsync(
+            JsonDocument? jsonDocument = await _queryExecutor.ExecuteQueryAsync(
                     queryString,
                     structure.Parameters,
                     _queryExecutor.GetJsonResultAsync<JsonDocument>,
@@ -318,24 +346,60 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             string queryString = _queryBuilder.Build(structure);
 
-            JsonArray? resultArray =
-                await _queryExecutor.ExecuteQueryAsync(
+            JsonNode? result = null;
+            if (structure.HasOutputParameters)
+            {
+                // If there are output parameters, we need to execute the query
+                // and parse the output parameters into a JSON object.
+                result = await _queryExecutor.ExecuteQueryAsync(
                     queryString,
                     structure.Parameters,
-                    _queryExecutor.GetJsonArrayAsync,
-                    _httpContextAccessor.HttpContext!);
-
-            JsonDocument? jsonDocument = null;
-
-            // If result set is non-empty, parse rows from json array into JsonDocument
-            if (resultArray is not null && resultArray.Count > 0)
-            {
-                jsonDocument = JsonDocument.Parse(resultArray.ToJsonString());
+                    _queryExecutor.GetJsonObjectAsync,
+                    _httpContextAccessor.HttpContext!
+                );
             }
             else
             {
-                _logger.LogInformation($"{HttpContextExtensions.GetLoggerCorrelationId(_httpContextAccessor.HttpContext)}" +
-                    "Did not return enough rows.");
+                result = await _queryExecutor.ExecuteQueryAsync(
+                    queryString,
+                    structure.Parameters,
+                    _queryExecutor.GetJsonArrayAsync,
+                    _httpContextAccessor.HttpContext!
+                );
+            }
+
+            JsonDocument? jsonDocument = null;
+
+            if (result is not null)
+            {
+                bool hasRows = false;
+                if (result is JsonArray jsonArray)
+                {
+                    hasRows = jsonArray.Any();
+                }
+                else
+                {
+                    if (result is JsonObject jsonObject)
+                    {
+                        JsonNode? resultSet = jsonObject["resultSet"];
+                        if (resultSet != null)
+                        {
+                            // Deserialize from the string representation of the JsonArray
+                            JsonArray? resultArray = JsonSerializer.Deserialize<JsonArray>(resultSet.ToString());
+                            hasRows = resultArray != null && resultArray.Count > 0;
+                        }
+                    }
+                }
+
+                if (hasRows)
+                {
+                    jsonDocument = JsonDocument.Parse(result.ToJsonString());
+                }
+                else
+                {
+                    _logger.LogInformation($"{HttpContextExtensions.GetLoggerCorrelationId(_httpContextAccessor.HttpContext)}" +
+                        "Did not return enough rows.");
+                }
             }
 
             return jsonDocument;

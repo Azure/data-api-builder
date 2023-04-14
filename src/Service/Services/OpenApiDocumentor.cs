@@ -6,6 +6,8 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.OpenApi.Models;
 using Microsoft.OpenApi.Writers;
@@ -17,12 +19,14 @@ namespace Azure.DataApiBuilder.Service.Services
         private ISqlMetadataProvider _metadataProvider;
         private IAuthorizationResolver _authorizationResolver;
         private OpenApiDocument? _openApiDocument;
+        private RuntimeConfig _runtimeConfig;
 
-        public OpenApiDocumentor(ISqlMetadataProvider sqlMetadataProvider, IAuthorizationResolver authorizationResolver)
+        public OpenApiDocumentor(ISqlMetadataProvider sqlMetadataProvider, IAuthorizationResolver authorizationResolver, RuntimeConfigProvider runtimeConfigProvider)
         {
             _metadataProvider = sqlMetadataProvider;
             _authorizationResolver = authorizationResolver;
             _openApiDocument = null;
+            _runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
         }
 
         /// <summary>
@@ -177,6 +181,43 @@ namespace Azure.DataApiBuilder.Service.Services
                 }
             };
             _openApiDocument = doc;
+        }
+
+        public Dictionary<string, OpenApiSchema> BuildComponents()
+        {
+            Dictionary<string, OpenApiSchema> components = new();
+            Dictionary<string, DatabaseObject> entityMetadata = _metadataProvider.EntityToDatabaseObject;
+            return components;
+        }
+
+        /// <summary>
+        /// Returns schema object representing an Entity's non-primary key fields. 
+        /// </summary>
+        /// <returns></returns>
+        public OpenApiSchema EntityToSchemaObject()
+        {
+            return new OpenApiSchema();
+        }
+
+        /// <summary>
+        /// Returns schema object representing Entity including primary key and non-primary key fields.
+        /// </summary>
+        /// <returns></returns>
+        public OpenApiSchema FullEntityToSchemaObject()
+        {
+            return new OpenApiSchema();
+        }
+
+        /// <summary>
+        /// Returns collection representing an entity's field metadata
+        /// Key: field name
+        /// Value: OpenApiSchema describing the (value) Type and (value) Format of the field.
+        /// </summary>
+        /// <returns></returns>
+        public Dictionary<string, OpenApiSchema> BuildComponentProperties()
+        {
+            Dictionary<string, OpenApiSchema> fieldMetadata = new();
+            return fieldMetadata;
         }
     }
 }

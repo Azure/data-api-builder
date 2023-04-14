@@ -953,7 +953,11 @@ namespace Cli
         /// <returns>Constructed GraphQL Type</returns>
         public static EntityGraphQLOptions ConstructGraphQLTypeDetails(string? graphQL, GraphQLOperation? graphQLOperationsForStoredProcedures)
         {
-            EntityGraphQLOptions graphQLType = new("", "", false, graphQLOperationsForStoredProcedures);
+            EntityGraphQLOptions graphQLType = new(
+                Singular: "",
+                Plural: "",
+                Operation: graphQLOperationsForStoredProcedures);
+
             if (graphQL is null)
             {
                 return graphQLType;

@@ -228,7 +228,7 @@ namespace Cli
             EntityActionPolicy? policy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
             EntityActionFields? field = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
 
-            EntityPermission[]? permissionSettings = ParsePermission(options.Permissions, policy, field, options.SourceType);
+            EntityPermission[]? permissionSettings = ParsePermission(options.Permissions, policy, field, source.Type);
             if (permissionSettings is null)
             {
                 _logger.LogError("Please add permission in the following format. --permissions \"<<role>>:<<actions>>\"");
@@ -282,7 +282,6 @@ namespace Cli
             EntityGraphQLOptions graphqlOptions = ConstructGraphQLTypeDetails(options.GraphQLType, graphQLOperationsForStoredProcedures);
 
             // Create new entity.
-            //
             Entity entity = new(
                 Source: source,
                 Rest: restOptions,
@@ -313,11 +312,19 @@ namespace Cli
         {
             sourceObject = null;
 
-            // Try to Parse the SourceType
-            if (!Enum.TryParse(options.SourceType, out EntityType objectType))
+            // default entity type will be table
+            EntityType objectType = EntityType.Table;
+
+            if (options.SourceType is not null)
             {
-                _logger.LogError("The source type of {sourceType} is not valid.", options.SourceType);
-                return false;
+                // Try to Parse the SourceType
+                if (!EnumExtensions.TryDeserialize(options.SourceType, out EntityType? et))
+                {
+                    _logger.LogError(EnumExtensions.GenerateMessageForInvalidInput<EntityType>(options.SourceType));
+                    return false;
+                }
+
+                objectType = (EntityType)et;
             }
 
             // Verify that parameter is provided with stored-procedure only
@@ -371,7 +378,7 @@ namespace Cli
             IEnumerable<string> permissions,
             EntityActionPolicy? policy,
             EntityActionFields? fields,
-            string? sourceType)
+            EntityType sourceType)
         {
             // Getting Role and Operations from permission string
             string? role, operations;
@@ -383,9 +390,8 @@ namespace Cli
 
             // Parse the SourceType.
             // Parsing won't fail as this check is already done during source object creation.
-            EntityType sourceObjectType = Enum.Parse<EntityType>(sourceType!);
             // Check if provided operations are valid
-            if (!VerifyOperations(operations!.Split(","), sourceObjectType))
+            if (!VerifyOperations(operations!.Split(","), sourceType))
             {
                 return null;
             }

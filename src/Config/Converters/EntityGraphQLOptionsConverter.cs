@@ -93,6 +93,18 @@ internal class EntityGraphQLOptionsConverter : JsonConverter<EntityGraphQLOption
     /// <inheritdoc/>
     public override void Write(Utf8JsonWriter writer, EntityGraphQLOptions value, JsonSerializerOptions options)
     {
-        JsonSerializer.Serialize(writer, value, options);
+        writer.WriteStartObject();
+        writer.WriteBoolean("enabled", value.Enabled);
+        writer.WriteString("singular", value.Singular);
+        writer.WriteString("plural", value.Plural);
+        if (value.Operation is null)
+        {
+            writer.WriteNull("operation");
+        }
+        else
+        {
+            writer.WriteString("operation", JsonSerializer.Serialize(value.Operation, options));
+        }
+        writer.WriteEndObject();
     }
 }

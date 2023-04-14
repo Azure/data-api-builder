@@ -170,7 +170,8 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
 
         public bool TryGetExposedColumnName(string entityName, string field, out string? name)
         {
-            throw new NotImplementedException();
+            name = field;
+            return true;
         }
 
         /// <summary>

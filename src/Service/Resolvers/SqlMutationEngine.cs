@@ -300,15 +300,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 {
                     Dictionary<string, object?> resultRow = dbResultSetRow.Columns;
 
-                    bool isFirstResultSet = false;
-                    if (upsertOperationResult.ResultProperties.TryGetValue(IS_UPDATE_RESULT_SET, out object? isFirstResultSetValue))
+                    bool isUpdateResultSet = false;
+                    if (upsertOperationResult.ResultProperties.TryGetValue(IS_UPDATE_RESULT_SET, out object? isUpdateResultSetValue))
                     {
-                        isFirstResultSet = Convert.ToBoolean(isFirstResultSetValue);
+                        isUpdateResultSet = Convert.ToBoolean(isUpdateResultSetValue);
                     }
 
                     // For MsSql, MySql, if it's not the first result, the upsert resulted in an INSERT operation.
                     // Even if its first result, postgresql may still be an insert op here, if so, return CreatedResult
-                    if (!isFirstResultSet ||
+                    if (!isUpdateResultSet ||
                         (_sqlMetadataProvider.GetDatabaseType() is DatabaseType.postgresql &&
                         PostgresQueryBuilder.IsInsert(resultRow)))
                     {

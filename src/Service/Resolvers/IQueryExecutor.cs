@@ -77,7 +77,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="args">The arguments to this handler - args[0] = primary key in pretty format, args[1] = entity name.</param>
         /// <returns>Single row read from DbDataReader.
         /// If the first result set is being returned, DbResultSet.ResultProperties dictionary has
-        /// the property "IsFirstResultSet" set to true.</returns>
+        /// the property "IsUpdateResultSet" set to true.</returns>
         public abstract Task<DbResultSet> GetMultipleResultSetsIfAnyAsync(
                 DbDataReader dbDataReader,
                 List<string>? args = null);

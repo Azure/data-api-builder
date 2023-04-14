@@ -92,7 +92,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 // This indicates that one or more fields referenced in the database policy are not a part of the insert statement.
                 throw new DataApiBuilderException(
-                    message: "One or more fields referenced by the database policy are not present in the request body.",
+                    message: "One or more fields referenced by the database policy are not present in the request.",
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }

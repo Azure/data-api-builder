@@ -330,6 +330,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         {
             throw new NotImplementedException();
         }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOneInsertInTableWithFieldsInDbPolicyNotPresentInBody()
+        {
+            throw new NotImplementedException();
+        }
         #endregion
 
         [TestCleanup]

@@ -885,6 +885,32 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     clientRoleHeader: "database_policy_tester"
                     );
         }
+
+        /// <summary>
+        /// Test to validate failure of a request when one or more fields referenced in the database policy for create operation are not provided in the request body.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PutOneInsertInTableWithFieldsInDbPolicyNotPresentInBody()
+        {
+            string requestBody = @"
+            {
+                ""categoryName"":""SciFi""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/100/pieceid/99",
+                queryString: string.Empty,
+                entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                sqlQuery: string.Empty,
+                operationType: Config.Operation.Upsert,
+                exceptionExpected: true,
+                requestBody: requestBody,
+                clientRoleHeader: "database_policy_tester",
+                expectedErrorMessage: "One or more fields referenced by the database policy are not present in the request.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                );
+        }
         #endregion
     }
 }

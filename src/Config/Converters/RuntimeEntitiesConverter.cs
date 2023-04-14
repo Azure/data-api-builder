@@ -60,8 +60,7 @@ class RuntimeEntitiesConverter : JsonConverter<RuntimeEntities>
 
     public override void Write(Utf8JsonWriter writer, RuntimeEntities value, JsonSerializerOptions options)
     {
-        writer.WriteStartObject();
-        writer.WriteStartArray("entities");
+        writer.WriteStartArray();
 
         foreach ((string key, Entity entity) in value.Entities)
         {
@@ -73,6 +72,5 @@ class RuntimeEntitiesConverter : JsonConverter<RuntimeEntities>
         }
 
         writer.WriteEndArray();
-        writer.WriteEndObject();
     }
 }

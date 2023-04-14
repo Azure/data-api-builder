@@ -829,6 +829,62 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 isExpectedErrorMsgSubstr: isExpectedErrorMsgSubstr
             );
         }
+
+        /// <summary>
+        /// Test to validate failure of PUT operation failing to satisfy the database policy for the operation to be executed
+        /// (insert/update based on whether a record exists for given PK).
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public virtual async Task PutOneWithUnsatisfiedDatabasePolicy()
+        {
+            // PUT operation resolves to update because we have a record present for given PK.
+            // However, the update fails to execute successfully because the database policy ("@item.pieceid ne 1") for update operation is not satisfied.
+            string requestBody = @"
+            {
+                ""categoryName"": ""SciFi"",
+                ""piecesRequired"": 5,
+                ""piecesAvailable"": 2
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/0/pieceid/1",
+                    queryString: null,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    operationType: Config.Operation.Upsert,
+                    requestBody: requestBody,
+                    sqlQuery: string.Empty,
+                    exceptionExpected: true,
+                    expectedErrorMessage: "Authorization Failure: Access Not Allowed.",
+                    expectedStatusCode: HttpStatusCode.Forbidden,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed.ToString(),
+                    clientRoleHeader: "database_policy_tester"
+                    );
+
+            // PUT operation resolves to insert because we don't have a record present for given PK.
+            // However, the insert fails to execute successfully because the database policy ("@item.pieceid ne 6 and @item.piecesAvailable gt 6")
+            // for insert operation is not satisfied.
+            requestBody = @"
+            {
+                ""categoryName"": ""SciFi"",
+                ""piecesRequired"": 5,
+                ""piecesAvailable"": 2
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/0/pieceid/6",
+                    queryString: null,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    operationType: Config.Operation.Upsert,
+                    requestBody: requestBody,
+                    sqlQuery: string.Empty,
+                    exceptionExpected: true,
+                    expectedErrorMessage: "Authorization Failure: Access Not Allowed.",
+                    expectedStatusCode: HttpStatusCode.Forbidden,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed.ToString(),
+                    clientRoleHeader: "database_policy_tester"
+                    );
+        }
         #endregion
     }
 }

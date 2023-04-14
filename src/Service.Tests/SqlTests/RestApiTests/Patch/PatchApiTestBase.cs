@@ -361,6 +361,51 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 );
         }
 
+        /// <summary>
+        /// Test to validate successful execution of PATCH operation which satisfies the database policy for the operation (insert/update) it resolves into.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOneWithDatabasePolicy()
+        {
+            // PATCH operation resolves to update because we have a record present for given PK.
+            // Since the database policy for update operation ("@item.pieceid ne 1") is satisfied by the operation, it executes successfully.
+            string requestBody = @"
+            {
+                ""piecesAvailable"": 4
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/100/pieceid/99",
+                    queryString: null,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    sqlQuery: GetQuery("PatchOneUpdateWithDatabasePolicy"),
+                    operationType: Config.Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK,
+                    clientRoleHeader: "database_policy_tester"
+                );
+
+            // PATCH operation resolves to insert because we don't have a record present for given PK.
+            // Since the database policy for insert operation ("@item.pieceid ne 6 and @item.piecesAvailable gt 0") is satisfied by the operation, it executes successfully.
+            requestBody = @"
+            {
+                ""piecesAvailable"": 4,
+                ""categoryName"": ""SciFi""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/0/pieceid/7",
+                    queryString: null,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    sqlQuery: GetQuery("PatchOneInsertWithDatabasePolicy"),
+                    operationType: Config.Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    clientRoleHeader: "database_policy_tester",
+                    expectedLocationHeader: "categoryid/0/pieceid/7"
+                );
+        }
+
         #endregion
 
         #region Negative Tests
@@ -614,28 +659,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed.ToString(),
                     clientRoleHeader: "database_policy_tester"
                     );
-
-            // Perform PATCH update with update semantics.
-            Dictionary<string, StringValues> headerDictionary = new()
-            {
-                { "If-Match", "*" }
-            };
-
-            await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "id/1234",
-                    queryString: null,
-                    entityNameOrPath: _foreignKeyEntityName,
-                    sqlQuery: string.Empty,
-                    operationType: Config.Operation.UpsertIncremental,
-                    requestBody: requestBody,
-                    headers: new HeaderDictionary(headerDictionary),
-                    exceptionExpected: true,
-                    expectedErrorMessage: $"No Update could be performed, record not found",
-                    expectedStatusCode: HttpStatusCode.PreconditionFailed,
-                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString(),
-                    clientRoleHeader: "database_policy_tester"
-                    );
-
         }
 
         /// <summary>

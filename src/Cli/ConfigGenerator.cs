@@ -31,7 +31,7 @@ namespace Cli
         /// <summary>
         /// This method will generate the initial config with databaseType and connection-string.
         /// </summary>
-        public static bool TryGenerateConfig(InitOptions options, RuntimeConfigLoader loader)
+        public static bool TryGenerateConfig(InitOptions options, RuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
             {
@@ -40,21 +40,20 @@ namespace Cli
             }
 
             // File existence checked to avoid overwriting the existing configuration.
-            if (File.Exists(runtimeConfigFile))
+            if (fileSystem.File.Exists(runtimeConfigFile))
             {
-                _logger.LogError($"Config file: {runtimeConfigFile} already exists. " +
-                    "Please provide a different name or remove the existing config file.");
+                _logger.LogError("Config file: {runtimeConfigFile} already exists. Please provide a different name or remove the existing config file.", runtimeConfigFile);
                 return false;
             }
 
             // Creating a new json file with runtime configuration
-            if (!TryCreateRuntimeConfig(options, out string runtimeConfigJson))
+            if (!TryCreateRuntimeConfig(options, loader, out string runtimeConfigJson))
             {
                 _logger.LogError($"Failed to create the runtime config file.");
                 return false;
             }
 
-            return WriteJsonContentToFile(runtimeConfigFile, runtimeConfigJson);
+            return WriteJsonContentToFile(runtimeConfigFile, runtimeConfigJson, fileSystem);
         }
 
         /// <summary>
@@ -63,7 +62,7 @@ namespace Cli
         /// <param name="options">Init options</param>
         /// <param name="runtimeConfigJson">Output runtime config json.</param>
         /// <returns>True on success. False otherwise.</returns>
-        public static bool TryCreateRuntimeConfig(InitOptions options, out string runtimeConfigJson)
+        public static bool TryCreateRuntimeConfig(InitOptions options, RuntimeConfigLoader loader, out string runtimeConfigJson)
         {
             runtimeConfigJson = string.Empty;
 
@@ -138,7 +137,7 @@ namespace Cli
                 return false;
             }
 
-            string dabSchemaLink = new RuntimeConfigLoader(new FileSystem()).GetPublishedDraftSchemaLink();
+            string dabSchemaLink = loader.GetPublishedDraftSchemaLink();
 
             RuntimeConfig runtimeConfig = new(
                 Schema: dabSchemaLink,
@@ -161,7 +160,7 @@ namespace Cli
         /// This method will add a new Entity with the given REST and GraphQL endpoints, source, and permissions.
         /// It also supports fields that needs to be included or excluded for a given role and operation.
         /// </summary>
-        public static bool TryAddEntityToConfigWithOptions(AddOptions options, RuntimeConfigLoader loader)
+        public static bool TryAddEntityToConfigWithOptions(AddOptions options, RuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
             {
@@ -180,7 +179,7 @@ namespace Cli
                 return false;
             }
 
-            return WriteJsonContentToFile(runtimeConfigFile, runtimeConfigJson);
+            return WriteJsonContentToFile(runtimeConfigFile, runtimeConfigJson, fileSystem);
         }
 
         /// <summary>
@@ -403,7 +402,7 @@ namespace Cli
         /// This method will update an existing Entity with the given REST and GraphQL endpoints, source, and permissions.
         /// It also supports updating fields that need to be included or excluded for a given role and operation.
         /// </summary>
-        public static bool TryUpdateEntityWithOptions(UpdateOptions options, RuntimeConfigLoader loader)
+        public static bool TryUpdateEntityWithOptions(UpdateOptions options, RuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
             {
@@ -422,7 +421,7 @@ namespace Cli
                 return false;
             }
 
-            return WriteJsonContentToFile(runtimeConfigFile, runtimeConfigJson);
+            return WriteJsonContentToFile(runtimeConfigFile, runtimeConfigJson, fileSystem);
         }
 
         /// <summary>

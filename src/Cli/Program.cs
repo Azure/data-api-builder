@@ -45,11 +45,11 @@ namespace Cli
 
             // Parsing user arguments and executing required methods.
             ParserResult<object>? result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions, ExportOptions>(args)
-                .WithParsed((Action<InitOptions>)(options => options.Handler(cliLogger, loader)))
-                .WithParsed((Action<AddOptions>)(options => options.Handler(cliLogger, loader)))
-                .WithParsed((Action<UpdateOptions>)(options => options.Handler(cliLogger, loader)))
+                .WithParsed((Action<InitOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))
+                .WithParsed((Action<AddOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))
+                .WithParsed((Action<UpdateOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))
                 .WithParsed((Action<StartOptions>)(options => options.Handler(cliLogger, loader)))
-                .WithParsed((Action<ExportOptions>)(options => Exporter.Export(options, cliLogger, loader)))
+                .WithParsed((Action<ExportOptions>)(options => Exporter.Export(options, cliLogger, loader, fileSystem)))
                 .WithNotParsed(err =>
                 {
                     /// System.CommandLine considers --help and --version as NonParsed Errors

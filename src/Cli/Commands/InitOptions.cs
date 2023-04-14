@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
 using CommandLine;
 using Microsoft.Extensions.Logging;
@@ -95,10 +96,10 @@ namespace Cli.Commands
         [Option("graphql.disabled", Default = false, Required = false, HelpText = "Disables GraphQL endpoint for all entities.")]
         public bool GraphQLDisabled { get; }
 
-        public void Handler(ILogger logger, RuntimeConfigLoader loader)
+        public void Handler(ILogger logger, RuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             logger.LogInformation($"{PRODUCT_NAME} {GetProductVersion()}");
-            bool isSuccess = ConfigGenerator.TryGenerateConfig(this, loader);
+            bool isSuccess = ConfigGenerator.TryGenerateConfig(this, loader, fileSystem);
             if (isSuccess)
             {
                 logger.LogInformation($"Config file generated.");

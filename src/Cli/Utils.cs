@@ -744,11 +744,11 @@ namespace Cli
         /// <summary>
         /// This method will write all the json string in the given file.
         /// </summary>
-        public static bool WriteJsonContentToFile(string file, string jsonContent)
+        public static bool WriteJsonContentToFile(string file, string jsonContent, System.IO.Abstractions.IFileSystem fileSystem)
         {
             try
             {
-                File.WriteAllText(file, jsonContent);
+                fileSystem.File.WriteAllText(file, jsonContent);
             }
             catch (Exception e)
             {

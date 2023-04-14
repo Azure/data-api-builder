@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
 using CommandLine;
 using Microsoft.Extensions.Logging;
@@ -54,25 +55,23 @@ namespace Cli.Commands
         [Option("permissions", Required = true, Separator = ':', HelpText = "Permissions required to access the source table or container.")]
         public IEnumerable<string> Permissions { get; }
 
-        public void Handler(ILogger logger, RuntimeConfigLoader loader)
+        public void Handler(ILogger logger, RuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             logger.LogInformation($"{PRODUCT_NAME} {GetProductVersion()}");
-            if (!IsEntityProvided(this.Entity, logger, command: "add"))
+            if (!IsEntityProvided(Entity, logger, command: "add"))
             {
                 return;
             }
 
-            bool isSuccess = ConfigGenerator.TryAddEntityToConfigWithOptions(this, loader);
+            bool isSuccess = ConfigGenerator.TryAddEntityToConfigWithOptions(this, loader, fileSystem);
             if (isSuccess)
             {
-                logger.LogInformation($"Added new entity: {this.Entity} with source: {this.Source}" +
-                    $" and permissions: {string.Join(SEPARATOR, this.Permissions.ToArray())}.");
+                logger.LogInformation($"Added new entity: {Entity} with source: {Source} and permissions: {string.Join(SEPARATOR, Permissions.ToArray())}.");
                 logger.LogInformation($"SUGGESTION: Use 'dab update [entity-name] [options]' to update any entities in your config.");
             }
             else
             {
-                logger.LogError($"Could not add entity: {this.Entity} with source: {this.Source}" +
-                    $" and permissions: {string.Join(SEPARATOR, this.Permissions.ToArray())}.");
+                logger.LogError($"Could not add entity: {Entity} with source: {Source} and permissions: {string.Join(SEPARATOR, Permissions.ToArray())}.");
             }
         }
     }

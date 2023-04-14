@@ -11,7 +11,7 @@ namespace Cli
 {
     internal static class Exporter
     {
-        public static void Export(ExportOptions options, ILogger logger, RuntimeConfigLoader loader)
+        public static void Export(ExportOptions options, ILogger logger, RuntimeConfigLoader loader, System.IO.Abstractions.IFileSystem fileSystem)
         {
             StartOptions startOptions = new(false, LogLevel.None, false, options.Config!);
 
@@ -50,7 +50,7 @@ namespace Cli
                 {
                     try
                     {
-                        ExportGraphQL(options, runtimeConfig);
+                        ExportGraphQL(options, runtimeConfig, fileSystem);
                         break;
                     }
                     catch
@@ -68,7 +68,7 @@ namespace Cli
             cancellationTokenSource.Cancel();
         }
 
-        private static void ExportGraphQL(ExportOptions options, RuntimeConfig runtimeConfig)
+        private static void ExportGraphQL(ExportOptions options, RuntimeConfig runtimeConfig, System.IO.Abstractions.IFileSystem fileSystem)
         {
             HttpClient client = new( // CodeQL[SM02185] Loading internal server connection
                                         new HttpClientHandler { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator }
@@ -81,13 +81,13 @@ namespace Cli
 
             HotChocolate.Language.DocumentNode node = response.Result;
 
-            if (!Directory.Exists(options.OutputDirectory))
+            if (!fileSystem.Directory.Exists(options.OutputDirectory))
             {
-                Directory.CreateDirectory(options.OutputDirectory);
+                fileSystem.Directory.CreateDirectory(options.OutputDirectory);
             }
 
-            string outputPath = Path.Combine(options.OutputDirectory, options.GraphQLSchemaFile);
-            File.WriteAllText(outputPath, node.ToString());
+            string outputPath = fileSystem.Path.Combine(options.OutputDirectory, options.GraphQLSchemaFile);
+            fileSystem.File.WriteAllText(outputPath, node.ToString());
         }
     }
 }

@@ -86,6 +86,16 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
     /// <inheritdoc/>
     public override void Write(Utf8JsonWriter writer, EntityRestOptions value, JsonSerializerOptions options)
     {
-        throw new NotImplementedException();
+        writer.WriteStartObject();
+        writer.WriteBoolean("enabled", value.Enabled);
+        writer.WriteString("path", value.Path);
+        writer.WriteStartArray("methods");
+        foreach (SupportedHttpVerb method in value.Methods)
+        {
+            writer.WriteStringValue(JsonSerializer.SerializeToElement(method, options).GetString());
+        }
+
+        writer.WriteEndArray();
+        writer.WriteEndObject();
     }
 }

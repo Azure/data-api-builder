@@ -45,7 +45,9 @@ internal class EntityActionConverterFactory : JsonConverterFactory
 
         public override void Write(Utf8JsonWriter writer, EntityAction value, JsonSerializerOptions options)
         {
-            throw new NotImplementedException();
+            JsonSerializerOptions innerOptions = new(options);
+            innerOptions.Converters.Remove(innerOptions.Converters.First(c => c is EntityActionConverterFactory));
+            JsonSerializer.Serialize(writer, value, innerOptions);
         }
 
         /// <summary>

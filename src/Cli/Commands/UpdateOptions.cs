@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
 using CommandLine;
 using Microsoft.Extensions.Logging;
@@ -94,7 +95,7 @@ namespace Cli.Commands
         [Option('m', "map", Separator = ',', Required = false, HelpText = "Specify mappings between database fields and GraphQL and REST fields. format: --map \"backendName1:exposedName1,backendName2:exposedName2,...\".")]
         public IEnumerable<string>? Map { get; }
 
-        public void Handler(ILogger logger, RuntimeConfigLoader loader)
+        public void Handler(ILogger logger, RuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             logger.LogInformation($"{PRODUCT_NAME} {GetProductVersion()}");
             if (!IsEntityProvided(Entity, logger, command: "update"))
@@ -102,7 +103,7 @@ namespace Cli.Commands
                 return;
             }
 
-            bool isSuccess = ConfigGenerator.TryUpdateEntityWithOptions(this, loader);
+            bool isSuccess = ConfigGenerator.TryUpdateEntityWithOptions(this, loader, fileSystem);
 
             if (isSuccess)
             {

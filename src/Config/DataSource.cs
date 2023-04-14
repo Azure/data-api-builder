@@ -10,17 +10,23 @@ public record DataSource(DatabaseType DatabaseType, string ConnectionString, Dic
         if (typeof(TOptionType).IsAssignableFrom(typeof(CosmosDbDataSourceOptions)))
         {
             return (TOptionType)(object)new CosmosDbDataSourceOptions(
-                    Database: ReadOption("database"),
-                    Container: ReadOption("container"),
-                    GraphQLSchemaPath: ReadOption("schema"),
+                    Database: ReadStringOption("database"),
+                    Container: ReadStringOption("container"),
+                    GraphQLSchemaPath: ReadStringOption("schema"),
                     // The "raw" schema will be provided via the controller to setup config, rather than parsed from the JSON file.
-                    GraphQLSchema: ReadOption(CosmosDbDataSourceOptions.GRAPHQL_RAW_KEY));
+                    GraphQLSchema: ReadStringOption(CosmosDbDataSourceOptions.GRAPHQL_RAW_KEY));
+        }
+
+        if (typeof(TOptionType).IsAssignableFrom(typeof(MsSqlOptions)))
+        {
+            return (TOptionType)(object)new MsSqlOptions(SetSessionContext: ReadBoolOption("set-session-context"));
         }
 
         throw new NotImplementedException();
     }
 
-    private string? ReadOption(string option) => Options.ContainsKey(option) ? Options[option].GetString() : null;
+    private string? ReadStringOption(string option) => Options.ContainsKey(option) ? Options[option].GetString() : null;
+    private bool ReadBoolOption(string option) => Options.ContainsKey(option) ? Options[option].GetBoolean() : false;
 
     [JsonIgnore]
     public string DatabaseTypeNotSupportedMessage => $"The provided database-type value: {DatabaseType} is currently not supported. Please check the configuration file.";

@@ -1,14 +1,15 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Collections;
 using System.Diagnostics.CodeAnalysis;
+using System.IO.Abstractions;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Service;
+using Cli.Commands;
 using Microsoft.Extensions.Logging;
 using static Cli.Utils;
-using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
 namespace Cli
 {
@@ -30,11 +31,11 @@ namespace Cli
         /// <summary>
         /// This method will generate the initial config with databaseType and connection-string.
         /// </summary>
-        public static bool TryGenerateConfig(InitOptions options)
+        public static bool TryGenerateConfig(InitOptions options, RuntimeConfigLoader loader)
         {
-            if (!TryGetConfigFileBasedOnCliPrecedence(options.Config, out string runtimeConfigFile))
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
             {
-                runtimeConfigFile = RuntimeConfigPath.DefaultName;
+                runtimeConfigFile = RuntimeConfigLoader.DefaultName;
                 _logger.LogInformation($"Creating a new config file: {runtimeConfigFile}");
             }
 
@@ -68,11 +69,11 @@ namespace Cli
 
             DatabaseType dbType = options.DatabaseType;
             string? restPath = options.RestPath;
-            object? dbOptions = null;
+            Dictionary<string, JsonElement> dbOptions = new();
 
             switch (dbType)
             {
-                case DatabaseType.cosmosdb_nosql:
+                case DatabaseType.CosmosDB_NoSQL:
                     string? cosmosDatabase = options.CosmosNoSqlDatabase;
                     string? cosmosContainer = options.CosmosNoSqlContainer;
                     string? graphQLSchemaPath = options.GraphQLSchemaPath;
@@ -90,44 +91,43 @@ namespace Cli
 
                     // If the option --rest.path is specified for cosmosdb_nosql, log a warning because
                     // rest is not supported for cosmosdb_nosql yet.
-                    if (!GlobalSettings.REST_DEFAULT_PATH.Equals(restPath))
+                    if (!RestRuntimeOptions.DEFAULT_PATH.Equals(restPath))
                     {
-                        _logger.LogWarning("Configuration option --rest.path is not honored for cosmosdb_nosql since " +
-                            "it does not support REST yet.");
+                        _logger.LogWarning("Configuration option --rest.path is not honored for cosmosdb_nosql since it does not support REST yet.");
                     }
 
                     restPath = null;
-                    dbOptions = new CosmosDbNoSqlOptions(cosmosDatabase, cosmosContainer, graphQLSchemaPath, GraphQLSchema: null);
+                    dbOptions.Add("database", JsonSerializer.SerializeToElement(cosmosDatabase));
+                    dbOptions.Add("container", JsonSerializer.SerializeToElement(cosmosContainer));
+                    dbOptions.Add("schema", JsonSerializer.SerializeToElement(graphQLSchemaPath));
                     break;
 
-                case DatabaseType.mssql:
-                    dbOptions = new MsSqlOptions(SetSessionContext: options.SetSessionContext);
+                case DatabaseType.MSSQL:
+                    dbOptions.Add("set-session-context", JsonSerializer.SerializeToElement(options.SetSessionContext));
                     break;
-                case DatabaseType.mysql:
-                case DatabaseType.postgresql:
-                case DatabaseType.cosmosdb_postgresql:
+                case DatabaseType.MySQL:
+                case DatabaseType.PostgreSQL:
+                case DatabaseType.CosmosDB_PostgreSQL:
                     break;
                 default:
                     throw new Exception($"DatabaseType: ${dbType} not supported.Please provide a valid database-type.");
             }
 
-            DataSource dataSource = new(dbType, DbOptions: dbOptions);
+            DataSource dataSource = new(dbType, string.Empty, dbOptions);
 
             // default value of connection-string should be used, i.e Empty-string
             // if not explicitly provided by the user
             if (options.ConnectionString is not null)
             {
-                dataSource.ConnectionString = options.ConnectionString;
+                dataSource = dataSource with { ConnectionString = options.ConnectionString };
             }
-
-            string dabSchemaLink = RuntimeConfig.GetPublishedDraftSchemaLink();
 
             if (!ValidateAudienceAndIssuerForJwtProvider(options.AuthenticationProvider, options.Audience, options.Issuer))
             {
                 return false;
             }
 
-            if (!IsApiPathValid(restPath, ApiType.REST) || !IsApiPathValid(options.GraphQLPath, ApiType.GraphQL))
+            if (!IsApiPathValid(restPath, "rest") || !IsApiPathValid(options.GraphQLPath, "graphql"))
             {
                 return false;
             }
@@ -138,22 +138,22 @@ namespace Cli
                 return false;
             }
 
+            string dabSchemaLink = new RuntimeConfigLoader(new FileSystem()).GetPublishedDraftSchemaLink();
+
             RuntimeConfig runtimeConfig = new(
                 Schema: dabSchemaLink,
                 DataSource: dataSource,
-                RuntimeSettings: GetDefaultGlobalSettings(
-                    options.HostMode,
-                    options.CorsOrigin,
-                    options.AuthenticationProvider,
-                    options.Audience,
-                    options.Issuer,
-                    restPath,
-                    !options.RestDisabled,
-                    options.GraphQLPath,
-                    !options.GraphQLDisabled),
-                Entities: new Dictionary<string, Entity>());
+                Runtime: new(
+                    Rest: new(!options.RestDisabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH),
+                    GraphQL: new(!options.GraphQLDisabled, options.GraphQLPath),
+                    Host: new(
+                        Cors: new(options.CorsOrigin?.ToArray() ?? Array.Empty<string>()),
+                        Authentication: new(options.AuthenticationProvider, new(options.Audience, options.Issuer)),
+                        Mode: options.HostMode)
+                ),
+                Entities: new RuntimeEntities(new Dictionary<string, Entity>()));
 
-            runtimeConfigJson = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());
+            runtimeConfigJson = JsonSerializer.Serialize(runtimeConfig, RuntimeConfigLoader.GetSerializationOption());
             return true;
         }
 
@@ -161,9 +161,9 @@ namespace Cli
         /// This method will add a new Entity with the given REST and GraphQL endpoints, source, and permissions.
         /// It also supports fields that needs to be included or excluded for a given role and operation.
         /// </summary>
-        public static bool TryAddEntityToConfigWithOptions(AddOptions options)
+        public static bool TryAddEntityToConfigWithOptions(AddOptions options, RuntimeConfigLoader loader)
         {
-            if (!TryGetConfigFileBasedOnCliPrecedence(options.Config, out string runtimeConfigFile))
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
             {
                 return false;
             }
@@ -220,16 +220,16 @@ namespace Cli
             // Try to get the source object as string or DatabaseObjectSource for new Entity
             if (!TryCreateSourceObjectForNewEntity(
                 options,
-                out object? source))
+                out EntitySource? source))
             {
                 _logger.LogError("Unable to create the source object.");
                 return false;
             }
 
-            Policy? policy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
-            Field? field = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
+            EntityActionPolicy? policy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
+            EntityActionFields? field = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
 
-            PermissionSetting[]? permissionSettings = ParsePermission(options.Permissions, policy, field, options.SourceType);
+            EntityPermission[]? permissionSettings = ParsePermission(options.Permissions, policy, field, options.SourceType);
             if (permissionSettings is null)
             {
                 _logger.LogError("Please add permission in the following format. --permissions \"<<role>>:<<actions>>\"");
@@ -253,7 +253,7 @@ namespace Cli
             }
 
             GraphQLOperation? graphQLOperationsForStoredProcedures = null;
-            RestMethod[]? restMethods = null;
+            SupportedHttpVerb[] SupportedRestMethods = Array.Empty<SupportedHttpVerb>();
             if (isStoredProcedure)
             {
                 if (CheckConflictingGraphQLConfigurationForStoredProcedures(options))
@@ -273,38 +273,29 @@ namespace Cli
                     return false;
                 }
 
-                if (!TryAddRestMethodsForStoredProcedure(options, out restMethods))
+                if (!TryAddSupportedRestMethodsForStoredProcedure(options, out SupportedRestMethods))
                 {
                     return false;
                 }
             }
 
-            object? restPathDetails = ConstructRestPathDetails(options.RestRoute);
-            object? graphQLNamingConfig = ConstructGraphQLTypeDetails(options.GraphQLType);
-
-            if (restPathDetails is not null && restPathDetails is false)
-            {
-                restMethods = null;
-            }
-
-            if (graphQLNamingConfig is not null && graphQLNamingConfig is false)
-            {
-                graphQLOperationsForStoredProcedures = null;
-            }
+            EntityRestOptions restOptions = ConstructRestOptions(options.RestRoute, SupportedRestMethods);
+            EntityGraphQLOptions graphqlOptions = ConstructGraphQLTypeDetails(options.GraphQLType, graphQLOperationsForStoredProcedures);
 
             // Create new entity.
             //
             Entity entity = new(
-                source!,
-                GetRestDetails(restPathDetails, restMethods),
-                GetGraphQLDetails(graphQLNamingConfig, graphQLOperationsForStoredProcedures),
-                permissionSettings,
+                Source: source,
+                Rest: restOptions,
+                GraphQL: graphqlOptions,
+                Permissions: permissionSettings,
                 Relationships: null,
                 Mappings: null);
 
             // Add entity to existing runtime config.
-            //
-            runtimeConfig.Entities.Add(options.Entity, entity);
+            IDictionary<string, Entity> entities = runtimeConfig.Entities.Entities;
+            entities.Add(options.Entity, entity);
+            runtimeConfig = runtimeConfig with { Entities = new(entities) };
 
             // Serialize runtime config to json string
             //
@@ -319,23 +310,19 @@ namespace Cli
         /// </summary>
         public static bool TryCreateSourceObjectForNewEntity(
             AddOptions options,
-            [NotNullWhen(true)] out object? sourceObject)
+            [NotNullWhen(true)] out EntitySource? sourceObject)
         {
             sourceObject = null;
 
             // Try to Parse the SourceType
-            if (!SourceTypeEnumConverter.TryGetSourceType(
-                    options.SourceType,
-                    out SourceType objectType))
+            if (!Enum.TryParse(options.SourceType, out EntityType objectType))
             {
-                _logger.LogError(
-                    SourceTypeEnumConverter.GenerateMessageForInvalidSourceType(options.SourceType!)
-                );
+                _logger.LogError("The source type of {sourceType} is not valid.", options.SourceType);
                 return false;
             }
 
             // Verify that parameter is provided with stored-procedure only
-            // and keyfields with table/views.
+            // and key fields with table/views.
             if (!VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
                     objectType,
                     options.SourceParameters,
@@ -381,10 +368,10 @@ namespace Cli
         /// <param name="fields">fields to include and exclude for this permission.</param>
         /// <param name="sourceType">type of source object.</param>
         /// <returns></returns>
-        public static PermissionSetting[]? ParsePermission(
+        public static EntityPermission[]? ParsePermission(
             IEnumerable<string> permissions,
-            Policy? policy,
-            Field? fields,
+            EntityActionPolicy? policy,
+            EntityActionFields? fields,
             string? sourceType)
         {
             // Getting Role and Operations from permission string
@@ -397,14 +384,14 @@ namespace Cli
 
             // Parse the SourceType.
             // Parsing won't fail as this check is already done during source object creation.
-            SourceTypeEnumConverter.TryGetSourceType(sourceType, out SourceType sourceObjectType);
+            EntityType sourceObjectType = Enum.Parse<EntityType>(sourceType!);
             // Check if provided operations are valid
             if (!VerifyOperations(operations!.Split(","), sourceObjectType))
             {
                 return null;
             }
 
-            PermissionSetting[] permissionSettings = new PermissionSetting[]
+            EntityPermission[] permissionSettings = new[]
             {
                 CreatePermissions(role!, operations!, policy, fields)
             };
@@ -416,9 +403,9 @@ namespace Cli
         /// This method will update an existing Entity with the given REST and GraphQL endpoints, source, and permissions.
         /// It also supports updating fields that need to be included or excluded for a given role and operation.
         /// </summary>
-        public static bool TryUpdateEntityWithOptions(UpdateOptions options)
+        public static bool TryUpdateEntityWithOptions(UpdateOptions options, RuntimeConfigLoader loader)
         {
-            if (!TryGetConfigFileBasedOnCliPrecedence(options.Config, out string runtimeConfigFile))
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
             {
                 return false;
             }
@@ -471,7 +458,7 @@ namespace Cli
                 return false;
             }
 
-            if (!TryGetUpdatedSourceObjectWithOptions(options, entity, out object? updatedSource))
+            if (!TryGetUpdatedSourceObjectWithOptions(options, entity, out EntitySource? updatedSource))
             {
                 _logger.LogError("Failed to update the source object.");
                 return false;
@@ -511,20 +498,20 @@ namespace Cli
                 }
             }
 
-            object? updatedRestDetails = ConstructUpdatedRestDetails(entity, options);
-            object? updatedGraphQLDetails = ConstructUpdatedGraphQLDetails(entity, options);
-            PermissionSetting[]? updatedPermissions = entity!.Permissions;
-            Dictionary<string, Relationship>? updatedRelationships = entity.Relationships;
+            EntityRestOptions updatedRestDetails = ConstructUpdatedRestDetails(entity, options);
+            EntityGraphQLOptions updatedGraphQLDetails = ConstructUpdatedGraphQLDetails(entity, options);
+            EntityPermission[]? updatedPermissions = entity!.Permissions;
+            Dictionary<string, EntityRelationship>? updatedRelationships = entity.Relationships;
             Dictionary<string, string>? updatedMappings = entity.Mappings;
-            Policy? updatedPolicy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
-            Field? updatedFields = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
+            EntityActionPolicy updatedPolicy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
+            EntityActionFields? updatedFields = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
 
             if (false.Equals(updatedGraphQLDetails))
             {
                 _logger.LogWarning("Disabling GraphQL for this entity will restrict it's usage in relationships");
             }
 
-            SourceType updatedSourceType = SourceTypeEnumConverter.GetSourceTypeFromSource(updatedSource);
+            EntityType updatedSourceType = updatedSource.Type;
 
             if (options.Permissions is not null && options.Permissions.Any())
             {
@@ -553,7 +540,7 @@ namespace Cli
                     return false;
                 }
 
-                if (updatedSourceType is SourceType.StoredProcedure &&
+                if (updatedSourceType is EntityType.StoredProcedure &&
                     !VerifyPermissionOperationsForStoredProcedures(entity.Permissions))
                 {
                     return false;
@@ -572,7 +559,7 @@ namespace Cli
                     updatedRelationships = new();
                 }
 
-                Relationship? new_relationship = CreateNewRelationshipWithUpdateOptions(options);
+                EntityRelationship? new_relationship = CreateNewRelationshipWithUpdateOptions(options);
                 if (new_relationship is null)
                 {
                     return false;
@@ -590,12 +577,16 @@ namespace Cli
                 }
             }
 
-            runtimeConfig.Entities[options.Entity] = new Entity(updatedSource,
-                                                                updatedRestDetails,
-                                                                updatedGraphQLDetails,
-                                                                updatedPermissions,
-                                                                updatedRelationships,
-                                                                updatedMappings);
+            Entity updatedEntity = new(
+                Source: updatedSource,
+                Rest: updatedRestDetails,
+                GraphQL: updatedGraphQLDetails,
+                Permissions: updatedPermissions,
+                Relationships: updatedRelationships,
+                Mappings: updatedMappings);
+            IDictionary<string, Entity> entities = runtimeConfig.Entities.Entities;
+            entities[options.Entity] = updatedEntity;
+            runtimeConfig = runtimeConfig with { Entities = new(entities) };
             runtimeConfigJson = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());
             return true;
         }
@@ -611,11 +602,11 @@ namespace Cli
         /// <param name="fields">fields to be included and excluded from the operation permission.</param>
         /// <param name="sourceType">Type of Source object.</param>
         /// <returns> On failure, returns null. Else updated PermissionSettings array will be returned.</returns>
-        private static PermissionSetting[]? GetUpdatedPermissionSettings(Entity entityToUpdate,
+        private static EntityPermission[]? GetUpdatedPermissionSettings(Entity entityToUpdate,
                                                                         IEnumerable<string> permissions,
-                                                                        Policy? policy,
-                                                                        Field? fields,
-                                                                        SourceType sourceType)
+                                                                        EntityActionPolicy policy,
+                                                                        EntityActionFields? fields,
+                                                                        EntityType sourceType)
         {
             string? newRole, newOperations;
 
@@ -627,7 +618,7 @@ namespace Cli
                 return null;
             }
 
-            List<PermissionSetting> updatedPermissionsList = new();
+            List<EntityPermission> updatedPermissionsList = new();
             string[] newOperationArray = newOperations!.Split(",");
 
             // Verifies that the list of operations declared are valid for the specified sourceType.
@@ -639,13 +630,13 @@ namespace Cli
 
             bool role_found = false;
             // Loop through the current permissions
-            foreach (PermissionSetting permission in entityToUpdate.Permissions)
+            foreach (EntityPermission permission in entityToUpdate.Permissions)
             {
                 // Find the role that needs to be updated
                 if (permission.Role.Equals(newRole))
                 {
                     role_found = true;
-                    if (sourceType is SourceType.StoredProcedure)
+                    if (sourceType is EntityType.StoredProcedure)
                     {
                         // Since, Stored-Procedures can have only 1 CRUD action. So, when update is requested with new action, we simply replace it.
                         updatedPermissionsList.Add(CreatePermissions(newRole, newOperationArray.First(), policy: null, fields: null));
@@ -658,12 +649,12 @@ namespace Cli
                     else
                     {
                         // User didn't use WILDCARD, and wants to update some of the operations.
-                        IDictionary<Operation, PermissionOperation> existingOperations = ConvertOperationArrayToIEnumerable(permission.Operations, entityToUpdate.ObjectType);
+                        IDictionary<EntityActionOperation, EntityAction> existingOperations = ConvertOperationArrayToIEnumerable(permission.Actions, entityToUpdate.Source.Type);
 
                         // Merge existing operations with new operations
-                        object[] updatedOperationArray = GetUpdatedOperationArray(newOperationArray, policy, fields, existingOperations);
+                        EntityAction[] updatedOperationArray = GetUpdatedOperationArray(newOperationArray, policy, fields, existingOperations);
 
-                        updatedPermissionsList.Add(new PermissionSetting(newRole, updatedOperationArray));
+                        updatedPermissionsList.Add(new EntityPermission(newRole, updatedOperationArray));
                     }
                 }
                 else
@@ -691,21 +682,21 @@ namespace Cli
         /// <param name="fieldsToExclude">fields that are excluded from the operation permission.</param>
         /// <param name="existingOperations">operation items present in the config.</param>
         /// <returns>Array of updated operation objects</returns>
-        private static object[] GetUpdatedOperationArray(string[] newOperations,
-                                                        Policy? newPolicy,
-                                                        Field? newFields,
-                                                        IDictionary<Operation, PermissionOperation> existingOperations)
+        private static EntityAction[] GetUpdatedOperationArray(string[] newOperations,
+                                                        EntityActionPolicy newPolicy,
+                                                        EntityActionFields? newFields,
+                                                        IDictionary<EntityActionOperation, EntityAction> existingOperations)
         {
-            Dictionary<Operation, PermissionOperation> updatedOperations = new();
+            Dictionary<EntityActionOperation, EntityAction> updatedOperations = new();
 
-            Policy? existingPolicy = null;
-            Field? existingFields = null;
+            EntityActionPolicy existingPolicy = new(null, null);
+            EntityActionFields? existingFields = null;
 
             // Adding the new operations in the updatedOperationList
             foreach (string operation in newOperations)
             {
                 // Getting existing Policy and Fields
-                if (TryConvertOperationNameToOperation(operation, out Operation op))
+                if (TryConvertOperationNameToOperation(operation, out EntityActionOperation op))
                 {
                     if (existingOperations.ContainsKey(op))
                     {
@@ -714,41 +705,24 @@ namespace Cli
                     }
 
                     // Checking if Policy and Field update is required
-                    Policy? updatedPolicy = newPolicy is null ? existingPolicy : newPolicy;
-                    Field? updatedFields = newFields is null ? existingFields : newFields;
+                    EntityActionPolicy updatedPolicy = newPolicy is null ? existingPolicy : newPolicy;
+                    EntityActionFields? updatedFields = newFields is null ? existingFields : newFields;
 
-                    updatedOperations.Add(op, new PermissionOperation(op, updatedPolicy, updatedFields));
+                    updatedOperations.Add(op, new EntityAction(op, updatedFields, updatedPolicy));
                 }
             }
 
             // Looping through existing operations
-            foreach (KeyValuePair<Operation, PermissionOperation> operation in existingOperations)
+            foreach ((EntityActionOperation op, EntityAction act) in existingOperations)
             {
                 // If any existing operation doesn't require update, it is added as it is.
-                if (!updatedOperations.ContainsKey(operation.Key))
+                if (!updatedOperations.ContainsKey(op))
                 {
-                    updatedOperations.Add(operation.Key, operation.Value);
+                    updatedOperations.Add(op, act);
                 }
             }
 
-            // Convert operation object to an array.
-            // If there is no policy or field for this operation, it will be converted to a string.
-            // Otherwise, it is added as operation object.
-            //
-            ArrayList updatedOperationArray = new();
-            foreach (PermissionOperation updatedOperation in updatedOperations.Values)
-            {
-                if (updatedOperation.Policy is null && updatedOperation.Fields is null)
-                {
-                    updatedOperationArray.Add(updatedOperation.Name.ToString());
-                }
-                else
-                {
-                    updatedOperationArray.Add(updatedOperation);
-                }
-            }
-
-            return updatedOperationArray.ToArray()!;
+            return updatedOperations.Values.ToArray();
         }
 
         /// <summary>
@@ -760,30 +734,29 @@ namespace Cli
         private static bool TryGetUpdatedSourceObjectWithOptions(
             UpdateOptions options,
             Entity entity,
-            [NotNullWhen(true)] out object? updatedSourceObject)
+            [NotNullWhen(true)] out EntitySource? updatedSourceObject)
         {
-            entity.TryPopulateSourceFields();
             updatedSourceObject = null;
-            string updatedSourceName = options.Source ?? entity.SourceName;
-            string[]? updatedKeyFields = entity.KeyFields;
-            SourceType updatedSourceType = entity.ObjectType;
-            Dictionary<string, object>? updatedSourceParameters = entity.Parameters;
+            string updatedSourceName = options.Source ?? entity.Source.Object;
+            string[]? updatedKeyFields = entity.Source.KeyFields;
+            EntityType updatedSourceType = entity.Source.Type;
+            Dictionary<string, object>? updatedSourceParameters = entity.Source.Parameters;
 
             // If SourceType provided by user is null,
             // no update is required.
             if (options.SourceType is not null)
             {
-                if (!SourceTypeEnumConverter.TryGetSourceType(options.SourceType, out updatedSourceType))
+                if (!EnumExtensions.TryDeserialize(options.SourceType, out EntityType? deserializedEntityType))
                 {
-                    _logger.LogError(
-                        SourceTypeEnumConverter.GenerateMessageForInvalidSourceType(options.SourceType)
-                    );
+                    _logger.LogError(EnumExtensions.GenerateMessageForInvalidInput<EntityType>(options.SourceType));
                     return false;
                 }
 
+                updatedSourceType = (EntityType)deserializedEntityType;
+
                 if (IsStoredProcedureConvertedToOtherTypes(entity, options) || IsEntityBeingConvertedToStoredProcedure(entity, options))
                 {
-                    _logger.LogWarning($"Stored procedures can be configured only with {Operation.Execute.ToString()} action whereas tables/views are configured with CRUD actions. Update the actions configured for all the roles for this entity.");
+                    _logger.LogWarning($"Stored procedures can be configured only with {EntityActionOperation.Execute} action whereas tables/views are configured with CRUD actions. Update the actions configured for all the roles for this entity.");
                 }
 
             }
@@ -800,7 +773,7 @@ namespace Cli
             // should automatically update the parameters to be null.
             // Similarly from table/view to stored-procedure, key-fields
             // should be marked null.
-            if (SourceType.StoredProcedure.Equals(updatedSourceType))
+            if (EntityType.StoredProcedure.Equals(updatedSourceType))
             {
                 updatedKeyFields = null;
             }
@@ -846,7 +819,7 @@ namespace Cli
         public static bool VerifyCanUpdateRelationship(RuntimeConfig runtimeConfig, string? cardinality, string? targetEntity)
         {
             // CosmosDB doesn't support Relationship
-            if (runtimeConfig.DataSource.DatabaseType.Equals(DatabaseType.cosmosdb_nosql))
+            if (runtimeConfig.DataSource.DatabaseType.Equals(DatabaseType.CosmosDB_NoSQL))
             {
                 _logger.LogError("Adding/updating Relationships is currently not supported in CosmosDB.");
                 return false;
@@ -860,18 +833,10 @@ namespace Cli
             }
 
             // Add/Update of relationship is not allowed when GraphQL is disabled in Global Runtime Settings
-            if (runtimeConfig.RuntimeSettings!.TryGetValue(GlobalSettingsType.GraphQL, out object? graphQLRuntimeSetting))
+            if (!runtimeConfig.Runtime.GraphQL.Enabled)
             {
-                GraphQLGlobalSettings? graphQLGlobalSettings = JsonSerializer.Deserialize<GraphQLGlobalSettings>(
-                    (JsonElement)graphQLRuntimeSetting
-                );
-
-                if (graphQLGlobalSettings is not null && !graphQLGlobalSettings.Enabled)
-                {
-                    _logger.LogError("Cannot add/update relationship as GraphQL is disabled in the" +
-                    " global runtime settings of the config.");
-                    return false;
-                }
+                _logger.LogError("Cannot add/update relationship as GraphQL is disabled in the global runtime settings of the config.");
+                return false;
             }
 
             // Both the source entity and target entity needs to present in config to establish relationship.
@@ -904,7 +869,7 @@ namespace Cli
         /// </summary>
         /// <param name="options">update options </param>
         /// <returns>Returns a Relationship Object</returns>
-        public static Relationship? CreateNewRelationshipWithUpdateOptions(UpdateOptions options)
+        public static EntityRelationship? CreateNewRelationshipWithUpdateOptions(UpdateOptions options)
         {
             string[]? updatedSourceFields = null;
             string[]? updatedTargetFields = null;
@@ -927,13 +892,14 @@ namespace Cli
                 updatedTargetFields = options.RelationshipFields.ElementAt(1).Split(",");
             }
 
-            return new Relationship(updatedCardinality,
-                                    options.TargetEntity!,
-                                    updatedSourceFields,
-                                    updatedTargetFields,
-                                    options.LinkingObject,
-                                    updatedLinkingSourceFields,
-                                    updatedLinkingTargetFields);
+            return new EntityRelationship(
+                Cardinality: updatedCardinality,
+                TargetEntity: options.TargetEntity!,
+                SourceFields: updatedSourceFields ?? Array.Empty<string>(),
+                TargetFields: updatedTargetFields ?? Array.Empty<string>(),
+                LinkingObject: options.LinkingObject,
+                LinkingSourceFields: updatedLinkingSourceFields ?? Array.Empty<string>(),
+                LinkingTargetFields: updatedLinkingTargetFields ?? Array.Empty<string>());
         }
 
         /// <summary>
@@ -941,9 +907,9 @@ namespace Cli
         /// It will use the config provided by the user, else will look for the default config.
         /// Does validation to check connection string is not null or empty.
         /// </summary>
-        public static bool TryStartEngineWithOptions(StartOptions options)
+        public static bool TryStartEngineWithOptions(StartOptions options, RuntimeConfigLoader loader)
         {
-            if (!TryGetConfigFileBasedOnCliPrecedence(options.Config, out string runtimeConfigFile))
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
             {
                 _logger.LogError("Config not provided and default config file doesn't exist.");
                 return false;
@@ -957,7 +923,7 @@ namespace Cli
 
             /// This will add arguments to start the runtime engine with the config file.
             List<string> args = new()
-            { "--" + nameof(RuntimeConfigPath.ConfigFileName), runtimeConfigFile };
+            { "--" + nameof(RuntimeConfigLoader.CONFIGFILE_NAME), runtimeConfigFile };
 
             /// Add arguments for LogLevel. Checks if LogLevel is overridden with option `--LogLevel`.
             /// If not provided, Default minimum LogLevel is Debug for Development mode and Error for Production mode.
@@ -977,7 +943,7 @@ namespace Cli
             else
             {
                 minimumLogLevel = Startup.GetLogLevelBasedOnMode(deserializedRuntimeConfig);
-                HostModeType hostModeType = deserializedRuntimeConfig.HostGlobalSettings.Mode;
+                HostMode hostModeType = deserializedRuntimeConfig.Runtime.Host.Mode;
 
                 _logger.LogInformation($"Setting default minimum LogLevel: {minimumLogLevel} for {hostModeType} mode.");
             }
@@ -995,25 +961,25 @@ namespace Cli
         }
 
         /// <summary>
-        /// Returns an array of RestMethods resolved from command line input (EntityOptions).
+        /// Returns an array of SupportedRestMethods resolved from command line input (EntityOptions).
         /// When no methods are specified, the default "POST" is returned.
         /// </summary>
         /// <param name="options">Entity configuration options received from command line input.</param>
-        /// <param name="restMethods">Rest methods to enable for stored procedure.</param>
+        /// <param name="SupportedRestMethods">Rest methods to enable for stored procedure.</param>
         /// <returns>True when the default (POST) or user provided stored procedure REST methods are supplied.
         /// Returns false and an empty array when an invalid REST method is provided.</returns>
-        private static bool TryAddRestMethodsForStoredProcedure(EntityOptions options, [NotNullWhen(true)] out RestMethod[]? restMethods)
+        private static bool TryAddSupportedRestMethodsForStoredProcedure(EntityOptions options, [NotNullWhen(true)] out SupportedHttpVerb[] SupportedRestMethods)
         {
             if (options.RestMethodsForStoredProcedure is null || !options.RestMethodsForStoredProcedure.Any())
             {
-                restMethods = new RestMethod[] { RestMethod.Post };
+                SupportedRestMethods = new[] { SupportedHttpVerb.Post };
             }
             else
             {
-                restMethods = CreateRestMethods(options.RestMethodsForStoredProcedure);
+                SupportedRestMethods = CreateRestMethods(options.RestMethodsForStoredProcedure);
             }
 
-            return restMethods.Length > 0;
+            return SupportedRestMethods.Length > 0;
         }
 
         /// <summary>
@@ -1052,55 +1018,55 @@ namespace Cli
         /// <param name="options">Input from update command</param>
         /// <returns>Boolean -> when the entity's REST configuration is true/false.
         /// RestEntitySettings -> when a non stored procedure entity is configured with granular REST settings (Path).
-        /// RestStoredProcedureEntitySettings -> when a stored procedure entity is configured with explicit RestMethods.
-        /// RestStoredProcedureEntityVerboseSettings-> when a stored procedure entity is configured with explicit RestMethods and Path settings.</returns>
-        private static object? ConstructUpdatedRestDetails(Entity entity, EntityOptions options)
+        /// RestStoredProcedureEntitySettings -> when a stored procedure entity is configured with explicit SupportedRestMethods.
+        /// RestStoredProcedureEntityVerboseSettings-> when a stored procedure entity is configured with explicit SupportedRestMethods and Path settings.</returns>
+        private static EntityRestOptions ConstructUpdatedRestDetails(Entity entity, EntityOptions options)
         {
             // Updated REST Route details
-            object? restPath = (options.RestRoute is not null) ? ConstructRestPathDetails(options.RestRoute) : entity.GetRestEnabledOrPathSettings();
+            EntityRestOptions restPath = (options.RestRoute is not null) ? ConstructRestOptions(options.RestRoute, Array.Empty<SupportedHttpVerb>()) : entity.Rest;
 
             // Updated REST Methods info for stored procedures
-            RestMethod[]? restMethods;
+            SupportedHttpVerb[]? SupportedRestMethods;
             if (!IsStoredProcedureConvertedToOtherTypes(entity, options)
                 && (IsStoredProcedure(entity) || IsStoredProcedure(options)))
             {
                 if (options.RestMethodsForStoredProcedure is null || !options.RestMethodsForStoredProcedure.Any())
                 {
-                    restMethods = entity.GetRestMethodsConfiguredForStoredProcedure();
+                    SupportedRestMethods = entity.Rest.Methods;
                 }
                 else
                 {
-                    restMethods = CreateRestMethods(options.RestMethodsForStoredProcedure);
+                    SupportedRestMethods = CreateRestMethods(options.RestMethodsForStoredProcedure);
                 }
             }
             else
             {
-                restMethods = null;
+                SupportedRestMethods = null;
             }
 
-            if (restPath is false)
+            if (!restPath.Enabled)
             {
                 // Non-stored procedure scenario when the REST endpoint is disabled for the entity.
                 if (options.RestRoute is not null)
                 {
-                    restMethods = null;
+                    SupportedRestMethods = null;
                 }
                 else
                 {
                     if (options.RestMethodsForStoredProcedure is not null && options.RestMethodsForStoredProcedure.Any())
                     {
-                        restPath = null;
+                        restPath = restPath with { Enabled = false };
                     }
                 }
             }
 
             if (IsEntityBeingConvertedToStoredProcedure(entity, options)
-               && (restMethods is null || restMethods.Length == 0))
+               && (SupportedRestMethods is null || SupportedRestMethods.Length == 0))
             {
-                restMethods = new RestMethod[] { RestMethod.Post };
+                SupportedRestMethods = new SupportedHttpVerb[] { SupportedHttpVerb.Post };
             }
 
-            return GetRestDetails(restPath, restMethods);
+            return restPath with { Methods = SupportedRestMethods ?? Array.Empty<SupportedHttpVerb>() };
         }
 
         /// <summary>
@@ -1113,20 +1079,16 @@ namespace Cli
         /// GraphQLEntitySettings -> when a non stored procedure entity is configured with granular GraphQL settings (Type/Singular/Plural).
         /// GraphQLStoredProcedureEntitySettings -> when a stored procedure entity is configured with an explicit operation.
         /// GraphQLStoredProcedureEntityVerboseSettings-> when a stored procedure entity is configured with explicit operation and type settings.</returns>
-        private static object? ConstructUpdatedGraphQLDetails(Entity entity, EntityOptions options)
+        private static EntityGraphQLOptions ConstructUpdatedGraphQLDetails(Entity entity, EntityOptions options)
         {
             //Updated GraphQL Type
-            object? graphQLType = (options.GraphQLType is not null) ? ConstructGraphQLTypeDetails(options.GraphQLType) : entity.GetGraphQLEnabledOrPath();
-            GraphQLOperation? graphQLOperation;
+            EntityGraphQLOptions graphQLType = (options.GraphQLType is not null) ? ConstructGraphQLTypeDetails(options.GraphQLType, null) : entity.GraphQL;
+            GraphQLOperation? graphQLOperation = null;
 
             if (!IsStoredProcedureConvertedToOtherTypes(entity, options)
                 && (IsStoredProcedure(entity) || IsStoredProcedure(options)))
             {
-                if (options.GraphQLOperationForStoredProcedure is null)
-                {
-                    graphQLOperation = entity.FetchGraphQLOperation();
-                }
-                else
+                if (options.GraphQLOperationForStoredProcedure is not null)
                 {
                     GraphQLOperation operation;
                     if (TryConvertGraphQLOperationNameToGraphQLOperation(options.GraphQLOperationForStoredProcedure, out operation))
@@ -1144,7 +1106,7 @@ namespace Cli
                 graphQLOperation = null;
             }
 
-            if (graphQLType is false)
+            if (!graphQLType.Enabled)
             {
                 if (options.GraphQLType is not null)
                 {
@@ -1158,18 +1120,17 @@ namespace Cli
                     }
                     else
                     {
-                        graphQLType = null;
+                        graphQLType = graphQLType with { Enabled = false };
                     }
                 }
             }
 
-            if (IsEntityBeingConvertedToStoredProcedure(entity, options)
-              && graphQLOperation is null)
+            if (IsEntityBeingConvertedToStoredProcedure(entity, options) && graphQLOperation is null)
             {
                 graphQLOperation = GraphQLOperation.Mutation;
             }
 
-            return GetGraphQLDetails(graphQLType, graphQLOperation);
+            return graphQLType with { Operation = graphQLOperation };
         }
     }
 }

@@ -1,12 +1,45 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.Serialization;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Azure.DataApiBuilder.Config.Converters;
+
+public static class EnumExtensions
+{
+    public static T Deserialize<T>(string value) where T : struct, Enum
+    {
+        HyphenatedJsonEnumConverterFactory.JsonStringEnumConverterEx<T> converter = new();
+        ReadOnlySpan<byte> bytes = new(Encoding.UTF8.GetBytes(value));
+        Utf8JsonReader reader = new(bytes);
+        return converter.Read(ref reader, typeof(T), new JsonSerializerOptions());
+    }
+
+    public static bool TryDeserialize<T>(string value, [NotNullWhen(true)] out T? @enum) where T : struct, Enum
+    {
+        try
+        {
+            @enum = Deserialize<T>(value);
+            return true;
+        }
+        catch
+        {
+            // We're not doing anything specific with the exception, so we can just ignore it.
+        }
+
+        @enum = null;
+        return false;
+    }
+
+    public static string GenerateMessageForInvalidInput<T>(string invalidType)
+        where T : struct, Enum
+        => $"Invalid Source Type: {invalidType}. Valid values are: {string.Join(",", Enum.GetNames<T>())}";
+}
 
 internal class HyphenatedJsonEnumConverterFactory : JsonConverterFactory
 {
@@ -22,9 +55,8 @@ internal class HyphenatedJsonEnumConverterFactory : JsonConverterFactory
         );
     }
 
-    private class JsonStringEnumConverterEx<TEnum> : JsonConverter<TEnum> where TEnum : struct, System.Enum
+    internal class JsonStringEnumConverterEx<TEnum> : JsonConverter<TEnum> where TEnum : struct, Enum
     {
-
         private readonly Dictionary<TEnum, string> _enumToString = new();
         private readonly Dictionary<string, TEnum> _stringToEnum = new();
 

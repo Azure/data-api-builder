@@ -5,5 +5,6 @@ public enum DatabaseType
     CosmosDB_NoSQL,
     MySQL,
     MSSQL,
-    PostgreSQL
+    PostgreSQL,
+    CosmosDB_PostgreSQL
 }

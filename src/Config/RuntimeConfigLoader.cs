@@ -3,9 +3,12 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
+using System.Net;
+using System.Reflection;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
+using Azure.DataApiBuilder.Service.Exceptions;
 
 namespace Azure.DataApiBuilder.Config;
 
@@ -52,6 +55,20 @@ public class RuntimeConfigLoader
     /// <returns>True if the config was parsed, otherwise false.</returns>
     public static bool TryParseConfig(string json, [NotNullWhen(true)] out RuntimeConfig? config)
     {
+        JsonSerializerOptions options = GetSerializationOption();
+
+        config = JsonSerializer.Deserialize<RuntimeConfig>(json, options);
+
+        if (config is null)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    public static JsonSerializerOptions GetSerializationOption()
+    {
         JsonSerializerOptions options = new()
         {
             PropertyNameCaseInsensitive = false,
@@ -62,15 +79,7 @@ public class RuntimeConfigLoader
         options.Converters.Add(new GraphQLRuntimeOptionsConverterFactory());
         options.Converters.Add(new EntitySourceConverterFactory());
         options.Converters.Add(new EntityActionConverterFactory());
-
-        config = JsonSerializer.Deserialize<RuntimeConfig>(json, options);
-
-        if (config is null)
-        {
-            return false;
-        }
-
-        return true;
+        return options;
     }
 
     /// <summary>
@@ -133,8 +142,7 @@ public class RuntimeConfigLoader
         return configFileNameWithExtension;
     }
 
-    // Used for testing
-    internal static string DefaultName
+    public static string DefaultName
     {
         get
         {
@@ -196,6 +204,56 @@ public class RuntimeConfigLoader
             Console.WriteLine($"Unable to find config file: {fileName} does not exist.");
             return false;
         }
+    }
+
+    /// <summary>
+    /// This method reads the dab.draft.schema.json which contains the link for online published
+    /// schema for dab, based on the version of dab being used to generate the runtime config.
+    /// </summary>
+    public string GetPublishedDraftSchemaLink()
+    {
+        string? assemblyDirectory = _fileSystem.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+
+        if (assemblyDirectory is null)
+        {
+            throw new DataApiBuilderException(
+                message: "Could not get the link for DAB draft schema.",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+        }
+
+        string? schemaPath = _fileSystem.Path.Combine(assemblyDirectory, "dab.draft.schema.json");
+        string schemaFileContent = _fileSystem.File.ReadAllText(schemaPath);
+        Dictionary<string, object>? jsonDictionary = JsonSerializer.Deserialize<Dictionary<string, object>>(schemaFileContent, GetSerializationOption());
+
+        if (jsonDictionary is null)
+        {
+            throw new DataApiBuilderException(
+                message: "The schema file is misconfigured. Please check the file formatting.",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+        }
+
+        object? additionalProperties;
+        if (!jsonDictionary.TryGetValue("additionalProperties", out additionalProperties))
+        {
+            throw new DataApiBuilderException(
+                message: "The schema file doesn't have the required field : additionalProperties",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+        }
+
+        // properties cannot be null since the property additionalProperties exist in the schema file.
+        Dictionary<string, string> properties = JsonSerializer.Deserialize<Dictionary<string, string>>(additionalProperties.ToString()!)!;
+
+        if (!properties.TryGetValue("version", out string? versionNum))
+        {
+            throw new DataApiBuilderException(message: "Missing required property 'version' in additionalProperties section.",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+        }
+
+        return versionNum;
     }
 }
 

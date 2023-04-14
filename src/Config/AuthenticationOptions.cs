@@ -8,7 +8,7 @@ public enum EasyAuthType
 
 public record AuthenticationOptions(string Provider, JwtOptions? Jwt)
 {
-    private const string SIMULATOR_AUTHENTICATION = "Simulator";
+    public const string SIMULATOR_AUTHENTICATION = "Simulator";
     public const string CLIENT_PRINCIPAL_HEADER = "X-MS-CLIENT-PRINCIPAL";
     public const string NAME_CLAIM_TYPE = "name";
     public const string ROLE_CLAIM_TYPE = "roles";

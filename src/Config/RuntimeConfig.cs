@@ -32,7 +32,7 @@ public record RuntimeEntities(IDictionary<string, Entity> Entities) : IEnumerabl
 }
 
 public record RuntimeConfig(
+    string Schema,
     DataSource DataSource,
     RuntimeOptions Runtime,
-    RuntimeEntities Entities
-    );
+    RuntimeEntities Entities);

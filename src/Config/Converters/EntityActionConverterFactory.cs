@@ -27,7 +27,7 @@ internal class EntityActionConverterFactory : JsonConverterFactory
             {
                 string? actionOperation = reader.GetString();
 
-                return new EntityAction(Enum.Parse<EntityActionOperation>(actionOperation!, true), new EntityActionFields(Exclude: new()), new EntityActionPolicy(""));
+                return new EntityAction(Enum.Parse<EntityActionOperation>(actionOperation!, true), new EntityActionFields(Exclude: new()), new EntityActionPolicy(null, null));
             }
 
             JsonSerializerOptions innerOptions = new(options);
@@ -54,8 +54,13 @@ internal class EntityActionConverterFactory : JsonConverterFactory
         /// </summary>
         /// <param name="policy">Raw database policy</param>
         /// <returns>Processed policy without @item. directives before field names.</returns>
-        private static string ProcessFieldsInPolicy(string policy)
+        private static string ProcessFieldsInPolicy(string? policy)
         {
+            if (policy is null)
+            {
+                return string.Empty;
+            }
+
             string fieldCharsRgx = @"@item\.([a-zA-Z0-9_]*)";
 
             // processedPolicy would be devoid of @item. directives.

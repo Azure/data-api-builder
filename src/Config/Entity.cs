@@ -61,16 +61,16 @@ public enum Cardinality
     Many
 }
 
-public record EntitySource(string Object, EntityType Type, Dictionary<string, object> Parameters, string[] KeyFields);
+public record EntitySource(string Object, EntityType Type, Dictionary<string, object>? Parameters, string[]? KeyFields);
 
 [JsonConverter(typeof(EntityGraphQLOptionsConverter))]
-public record EntityGraphQLOptions(string Singular, string Plural, bool Enabled = true, GraphQLOperation Operation = GraphQLOperation.Query);
+public record EntityGraphQLOptions(string Singular, string Plural, bool Enabled = true, GraphQLOperation? Operation = null);
 
 [JsonConverter(typeof(EntityRestOptionsConverter))]
-public record EntityRestOptions(string? Path, SupportedHttpVerb[] Methods, bool Enabled = true);
+public record EntityRestOptions(SupportedHttpVerb[] Methods, string? Path = null, bool Enabled = true);
 public record EntityActionFields(HashSet<string> Exclude, HashSet<string>? Include = null);
-public record EntityActionPolicy(string Database);
-public record EntityAction(EntityActionOperation Action, EntityActionFields Fields, EntityActionPolicy Policy)
+public record EntityActionPolicy(string? Request, string? Database);
+public record EntityAction(EntityActionOperation Action, EntityActionFields? Fields, EntityActionPolicy Policy)
 {
     public static readonly HashSet<EntityActionOperation> ValidPermissionOperations = new() { EntityActionOperation.Create, EntityActionOperation.Read, EntityActionOperation.Update, EntityActionOperation.Delete };
     public static readonly HashSet<EntityActionOperation> ValidStoredProcedurePermissionOperations = new() { EntityActionOperation.Execute };
@@ -91,5 +91,5 @@ public record Entity(
     EntityGraphQLOptions GraphQL,
     EntityRestOptions Rest,
     EntityPermission[] Permissions,
-    Dictionary<string, string> Mappings,
-    Dictionary<string, EntityRelationship> Relationships);
+    Dictionary<string, string>? Mappings,
+    Dictionary<string, EntityRelationship>? Relationships);

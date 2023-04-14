@@ -13,7 +13,7 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
     {
         if (reader.TokenType == JsonTokenType.StartObject)
         {
-            EntityRestOptions restOptions = new(Path: null, Methods: Array.Empty<SupportedHttpVerb>(), Enabled: true);
+            EntityRestOptions restOptions = new(Methods: Array.Empty<SupportedHttpVerb>(), Path: null, Enabled: true);
             while (reader.Read())
             {
                 if (reader.TokenType == JsonTokenType.EndObject)
@@ -72,12 +72,12 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
 
         if (reader.TokenType == JsonTokenType.String)
         {
-            return new EntityRestOptions(reader.GetString(), Array.Empty<SupportedHttpVerb>(), true);
+            return new EntityRestOptions(Array.Empty<SupportedHttpVerb>(), reader.GetString(), true);
         }
 
         if (reader.TokenType == JsonTokenType.True || reader.TokenType == JsonTokenType.False)
         {
-            return new EntityRestOptions(null, Array.Empty<SupportedHttpVerb>(), reader.GetBoolean());
+            return new EntityRestOptions(Array.Empty<SupportedHttpVerb>(), null, reader.GetBoolean());
         }
 
         throw new JsonException();

@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using Azure.DataApiBuilder.Config;
+using Cli.Commands;
 using HotChocolate.Utilities.Introspection;
 using Microsoft.Extensions.Logging;
 using static Cli.Utils;
@@ -10,14 +11,14 @@ namespace Cli
 {
     internal static class Exporter
     {
-        public static void Export(ExportOptions options, ILogger logger)
+        public static void Export(ExportOptions options, ILogger logger, RuntimeConfigLoader loader)
         {
             StartOptions startOptions = new(false, LogLevel.None, false, options.Config!);
 
             CancellationTokenSource cancellationTokenSource = new();
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
-            if (!TryGetConfigFileBasedOnCliPrecedence(options.Config, out string runtimeConfigFile))
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
             {
                 logger.LogError("Failed to find the config file provided, check your options and try again.");
                 return;
@@ -29,7 +30,7 @@ namespace Cli
                 return;
             }
 
-            if (!RuntimeConfig.TryGetDeserializedRuntimeConfig(runtimeConfigJson, out RuntimeConfig? runtimeConfig, logger))
+            if (!RuntimeConfigLoader.TryParseConfig(runtimeConfigJson, out RuntimeConfig? runtimeConfig))
             {
                 logger.LogError("Failed to parse runtime config file: {runtimeConfigFile}", runtimeConfigFile);
                 return;
@@ -37,7 +38,7 @@ namespace Cli
 
             Task server = Task.Run(() =>
             {
-                _ = ConfigGenerator.TryStartEngineWithOptions(startOptions);
+                _ = ConfigGenerator.TryStartEngineWithOptions(startOptions, loader);
             }, cancellationToken);
 
             if (options.GraphQL)
@@ -72,7 +73,7 @@ namespace Cli
             HttpClient client = new( // CodeQL[SM02185] Loading internal server connection
                                         new HttpClientHandler { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator }
                                     )
-            { BaseAddress = new Uri($"https://localhost:5001{runtimeConfig.GraphQLGlobalSettings.Path}") };
+            { BaseAddress = new Uri($"https://localhost:5001{runtimeConfig.Runtime.GraphQL.Path}") };
 
             IntrospectionClient introspectionClient = new();
             Task<HotChocolate.Language.DocumentNode> response = introspectionClient.DownloadSchemaAsync(client);

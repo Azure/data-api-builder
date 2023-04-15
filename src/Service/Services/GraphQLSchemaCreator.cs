@@ -127,6 +127,32 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
+        /// Adds roles for the specified field or parameter to the rolesAllowedForFields dictionary.
+        /// </summary>
+        /// <param name="entityName">The name of the entity being processed.</param>
+        /// <param name="rolesAllowedForFields">The dictionary that stores field/parameter names and their corresponding roles.</param>
+        /// <param name="isStoredProcedure">Indicates whether the current entity is a stored procedure.</param>
+        /// <param name="fieldName">The name of the field or parameter being processed.</param>
+        /// <param name="operation">The operation associated with the field or parameter (Read, Execute).</param>
+        private void AddRolesForFields(
+            string entityName,
+            Dictionary<string, IEnumerable<string>> rolesAllowedForFields,
+            bool isStoredProcedure,
+            string fieldName,
+            Config.Operation operation)
+        {
+            IEnumerable<string> roles = _authorizationResolver.GetRolesForField(entityName, field: fieldName, operation: operation);
+            if (!rolesAllowedForFields.TryAdd(key: fieldName, value: roles))
+            {
+                throw new DataApiBuilderException(
+                    message: "Field already processed for building ObjectTypeDefinition authorization definition.",
+                    statusCode: System.Net.HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization
+                );
+            }
+        }
+
+        /// <summary>
         /// Generates the ObjectTypeDefinitionNodes and InputObjectTypeDefinitionNodes as part of GraphQL Schema generation
         /// with the provided entities listed in the runtime configuration.
         /// </summary>
@@ -156,18 +182,10 @@ namespace Azure.DataApiBuilder.Service.Services
                     Dictionary<string, IEnumerable<string>> rolesAllowedForFields = new();
                     SourceDefinition sourceDefinition = _sqlMetadataProvider.GetSourceDefinition(entityName);
                     bool isStoredProcedure = entity.ObjectType is SourceType.StoredProcedure;
+                    Config.Operation operation = isStoredProcedure ? Config.Operation.Execute : Config.Operation.Read;
                     foreach (string column in sourceDefinition.Columns.Keys)
                     {
-                        Config.Operation operation = isStoredProcedure ? Config.Operation.Execute : Config.Operation.Read;
-                        IEnumerable<string> roles = _authorizationResolver.GetRolesForField(entityName, field: column, operation: operation);
-                        if (!rolesAllowedForFields.TryAdd(key: column, value: roles))
-                        {
-                            throw new DataApiBuilderException(
-                                message: "Column already processed for building ObjectTypeDefinition authorization definition.",
-                                statusCode: System.Net.HttpStatusCode.InternalServerError,
-                                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization
-                                );
-                        }
+                        AddRolesForFields(entityName, rolesAllowedForFields, isStoredProcedure, column, operation);
                     }
 
                     // The roles allowed for Fields are the roles allowed to READ the fields, so any role that has a read definition for the field.
@@ -183,7 +201,7 @@ namespace Azure.DataApiBuilder.Service.Services
                             rolesAllowedForFields
                         );
 
-                        if (databaseObject.SourceType is not SourceType.StoredProcedure)
+                        if (!isStoredProcedure)
                         {
                             InputTypeBuilder.GenerateInputTypesForObjectType(node, inputObjects);
                         }

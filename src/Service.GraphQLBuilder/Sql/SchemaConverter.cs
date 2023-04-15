@@ -99,15 +99,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             SourceDefinition sourceDefinition = databaseObject.SourceDefinition;
             NameNode nameNode = new(value: GetDefinedSingularName(entityName, configEntity));
 
-            // When the result set is not defined, it could be a mutation operation with no returning columns
-            // Here we create a field called result which will be an empty array.
-            if (databaseObject.SourceType is SourceType.StoredProcedure && ((StoredProcedureDefinition)sourceDefinition).Columns.Count == 0)
-            {
-                FieldDefinitionNode field = GetDefaultResultFieldForStoredProcedure();
-
-                fields.TryAdd("result", field);
-            }
-
             foreach ((string columnName, ColumnDefinition column) in sourceDefinition.Columns)
             {
                 List<DirectiveNode> directives = new();
@@ -129,40 +120,19 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                     directives.Add(new DirectiveNode(DefaultValueDirectiveType.DirectiveName, new ArgumentNode("value", arg)));
                 }
 
-                // If no roles are allowed for the field, we should not include it in the schema.
-                // Consequently, the field is only added to schema if this conditional evaluates to TRUE.
-                if (rolesAllowedForFields.TryGetValue(key: columnName, out IEnumerable<string>? roles))
-                {
-                    // Roles will not be null here if TryGetValue evaluates to true, so here we check if there are any roles to process.
-                    // Since Stored-procedures only support 1 CRUD action, it's possible that stored-procedures might return some values
-                    // during mutation operation (i.e, containing one of create/update/delete permission).
-                    // Hence, this check is bypassed for stored-procedures.
-                    if (roles.Count() > 0 || databaseObject.SourceType is SourceType.StoredProcedure)
-                    {
-                        if (GraphQLUtils.CreateAuthorizationDirectiveIfNecessary(
-                                roles,
-                                out DirectiveNode? authZDirective))
-                        {
-                            directives.Add(authZDirective!);
-                        }
+                AddFieldWithRolesAndDirectives(rolesAllowedForFields, columnName, databaseObject, directives, configEntity, column, fields);
+            }
 
-                        string exposedColumnName = columnName;
-                        if (configEntity.Mappings is not null && configEntity.Mappings.TryGetValue(key: columnName, out string? columnAlias))
-                        {
-                            exposedColumnName = columnAlias;
-                        }
+            // When the result set is not defined, it could be a mutation operation with no returning columns
+            // Here we create a field called result which will be an empty array.
+            if (databaseObject.SourceType is SourceType.StoredProcedure)
+            {
+                var storedProcedureDefinition = ((StoredProcedureDefinition)sourceDefinition);
 
-                        NamedTypeNode fieldType = new(GetGraphQLTypeFromSystemType(column.SystemType));
-                        FieldDefinitionNode field = new(
-                            location: null,
-                            new(exposedColumnName),
-                            description: null,
-                            new List<InputValueDefinitionNode>(),
-                            column.IsNullable ? fieldType : new NonNullTypeNode(fieldType),
-                            directives);
+                if(storedProcedureDefinition.Columns.Count == 0) {
+                    FieldDefinitionNode field = GetDefaultResultFieldForStoredProcedure();
 
-                        fields.Add(columnName, field);
-                    }
+                    fields.TryAdd("result", field);
                 }
             }
 

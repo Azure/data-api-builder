@@ -265,5 +265,15 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             string preformattedField = $"execute{GetDefinedSingularName(entityName, entity)}";
             return FormatNameForField(preformattedField);
         }
+
+        /// <summary>
+        /// Generates the Result type name to be included in the generated GraphQL schema for a stored procedure.
+        /// </summary>
+        /// <param name="entityName">Name of the entity.</param>
+        /// <returns>Name to be used for the stored procedure GraphQL field.</returns>
+        public static string GenerateStoredProcedureGraphQLResultObjectName(string entityName, Entity entity)
+        {
+            return $"Execute{GetDefinedSingularName(entityName, entity)}Result";
+        }
     }
 }

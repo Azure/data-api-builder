@@ -179,14 +179,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 }
             }
 
+            TResult? result = default(TResult);
             try
             {
-                // await cmd.ExecuteNonQueryAsync();
-                // return null;
-                using DbDataReader dbDataReader = await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
-                if (dataReaderHandler is not null && dbDataReader is not null)
+                using (var dbDataReader = await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection))
                 {
-                    return await dataReaderHandler(dbDataReader, args);
+                    if (dataReaderHandler is not null && dbDataReader is not null)
+                    {
+                        result = await dataReaderHandler(dbDataReader, args);
+                    }
                 }
 
                 if (parameters is not null && result is JsonObject jsonObjectResult)
@@ -199,6 +200,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         }
                     }
                 }
+
+                return result;
             }
             catch (DbException e)
             {

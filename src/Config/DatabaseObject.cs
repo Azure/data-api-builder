@@ -102,18 +102,21 @@ namespace Azure.DataApiBuilder.Config
 
     public interface IFieldDefinition {
         public Type SystemType { get; set; }
+        public bool IsNullable { get; set; }
     }
 
     /// <summary>
     /// Represents a Database Parameter Definition
     /// </summary>
-    public class ParameterDefinition
+    public class ParameterDefinition : IFieldDefinition
     {
         public Type SystemType { get; set; } = null!;
         
         public bool HasConfigDefault { get; set; }
         
         public object? ConfigDefaultValue { get; set; }
+
+        public bool IsNullable { get; set; }
         
         /// <summary>
         /// The direction of the parameter. If null, it is assumed to be Input.
@@ -200,7 +203,7 @@ namespace Azure.DataApiBuilder.Config
             = new(StringComparer.InvariantCultureIgnoreCase);
     }
 
-    public class ColumnDefinition
+    public class ColumnDefinition : IFieldDefinition
     {
         /// <summary>
         /// The database type of this column mapped to the SystemType.

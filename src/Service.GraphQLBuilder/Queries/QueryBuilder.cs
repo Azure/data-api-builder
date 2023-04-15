@@ -48,6 +48,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         {
             List<FieldDefinitionNode> queryFields = new();
             List<ObjectTypeDefinitionNode> returnTypes = new();
+            List<IDefinitionNode> definitionNodes = new();
 
             foreach (IDefinitionNode definition in root.Definitions)
             {
@@ -57,7 +58,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     string entityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
                     Entity entity = entities[entityName];
 
-                    if (entity.ObjectType is SourceType.StoredProcedure)
+                    var isStoredProcedure = entity.ObjectType is SourceType.StoredProcedure;
+                    if (isStoredProcedure)
                     {
                         // Check runtime configuration of the stored procedure entity to check that the GraphQL operation type was overridden to 'query' from the default 'mutation.'
                         bool isSPDefinedAsQuery = entity.FetchConfiguredGraphQLOperation() is GraphQLOperation.Query;
@@ -68,7 +70,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                         {
                             if (dbObjects is not null && dbObjects.TryGetValue(entityName, out DatabaseObject? dbObject) && dbObject is not null)
                             {
-                                queryFields.Add(GraphQLStoredProcedureBuilder.GenerateStoredProcedureSchema(name, entity, dbObject, rolesAllowedForExecute));
+                                GraphQLStoredProcedureBuilder.AppendStoredProcedureSchema(name, entity, dbObject, definitionNodes, queryFields, rolesAllowedForExecute);
                             }
                         }
                     }
@@ -91,11 +93,22 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                 }
             }
 
-            List<IDefinitionNode> definitionNodes = new()
+            // The object type `Query` has to at least define one field in order to be valid.
+            if (queryFields.Any())
             {
-                new ObjectTypeDefinitionNode(location: null, new NameNode("Query"), description: null, new List<DirectiveNode>(), new List<NamedTypeNode>(), queryFields),
-            };
-            definitionNodes.AddRange(returnTypes);
+                definitionNodes.Add(
+                    new ObjectTypeDefinitionNode(
+                        location: null,
+                        name: new NameNode("Query"),
+                        description: null,
+                        directives: new List<DirectiveNode>(),
+                        interfaces: new List<NamedTypeNode>(),
+                        fields: queryFields
+                    )
+                );
+                definitionNodes.AddRange(returnTypes);
+            }
+
             return new(definitionNodes);
         }
 

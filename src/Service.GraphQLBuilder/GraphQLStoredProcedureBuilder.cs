@@ -13,21 +13,49 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
     public static class GraphQLStoredProcedureBuilder
     {
         /// <summary>
-        /// Helper function to create StoredProcedure Schema for GraphQL.
-        /// It uses the parameters to build the arguments and returns a list
-        /// of the StoredProcedure GraphQL object.
+        /// Adds the stored procedure schema for Query and Mutation types to the provided lists.
         /// </summary>
-        /// <param name="name">Name used for InputValueDefinition name.</param>
+        /// <param name="name">Name of the stored procedure.</param>
         /// <param name="entity">Entity's runtime config metadata.</param>
         /// <param name="dbObject">Stored procedure database schema metadata.</param>
-        /// <param name="rolesAllowed">Role authorization metadata.</param>
-        /// <returns>Stored procedure mutation field.</returns>
-        public static FieldDefinitionNode GenerateStoredProcedureSchema(
+        /// <param name="definitionNodes">List of definition nodes to be modified.</param>
+        /// <param name="fieldDefinitionNodes">List of field definition nodes to be modified.</param>
+        /// <param name="rolesAllowed">Role authorization metadata (optional).</param>
+        public static void AppendStoredProcedureSchema(
             NameNode name,
             Entity entity,
             DatabaseObject dbObject,
+            IList<IDefinitionNode> definitionNodes,
+            IList<FieldDefinitionNode> fieldDefinitionNodes,
             IEnumerable<string>? rolesAllowed = null
-            )
+        )
+        {
+            var storedProcedureDefinition = (StoredProcedureDefinition)dbObject.SourceDefinition;
+            var outputParameters = storedProcedureDefinition.Parameters.Where(kvp => kvp.Value.IsOutput);
+            var hasOutputParameters = outputParameters.Any();
+            if (hasOutputParameters)
+            {
+                definitionNodes.Add(CreateStoredProcedureResultObjectType(name, entity, outputParameters, rolesAllowed));
+            }
+            fieldDefinitionNodes.Add(CreateStoredProcedureFieldNode(name, entity, dbObject, rolesAllowed, hasOutputParameters));
+        }
+
+        /// <summary>
+        /// Generates a GraphQL field definition node for a stored procedure.
+        /// </summary>
+        /// <param name="name">Name of the stored procedure.</param>
+        /// <param name="entity">Entity's runtime config metadata.</param>
+        /// <param name="dbObject">Stored procedure database schema metadata.</param>
+        /// <param name="rolesAllowed">Role authorization metadata (optional).</param>
+        /// <param name="generateWithOutputParameters">Flag to indicate if output parameters should be included (optional).</param>
+        /// <returns>GraphQL field definition node for the stored procedure.</returns>
+        public static FieldDefinitionNode CreateStoredProcedureFieldNode(
+            NameNode name,
+            Entity entity,
+            DatabaseObject dbObject,
+            IEnumerable<string>? rolesAllowed = null,
+            bool generateWithOutputParameters = false
+        )
         {
             List<InputValueDefinitionNode> inputValues = new();
             List<DirectiveNode> fieldDefinitionNodeDirectives = new();
@@ -55,17 +83,24 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                             description: null,
                             type: new NamedTypeNode(defaultGraphQLValue.Item1),
                             defaultValue: defaultGraphQLValue.Item2,
-                            directives: new List<DirectiveNode>())
-                        );
+                            directives: new List<DirectiveNode>()
+                        )
+                    );
                 }
             }
 
             if (CreateAuthorizationDirectiveIfNecessary(
                     rolesAllowed,
-                    out DirectiveNode? authorizeDirective))
+                    out DirectiveNode? authorizeDirective
+                )
+            )
             {
                 fieldDefinitionNodeDirectives.Add(authorizeDirective!);
             }
+
+            var type = generateWithOutputParameters
+                ? new NonNullTypeNode(new NamedTypeNode(GenerateStoredProcedureGraphQLResultObjectName(name.Value, entity)))
+                : new NonNullTypeNode(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(name))));
 
             return new(
                 location: null,

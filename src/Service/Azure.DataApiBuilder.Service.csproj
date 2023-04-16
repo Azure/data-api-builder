@@ -29,6 +29,13 @@
         <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
     </PropertyGroup>
 
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Docker|AnyCPU'">
       <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
       <WarningsNotAsErrors>NU1603</WarningsNotAsErrors>

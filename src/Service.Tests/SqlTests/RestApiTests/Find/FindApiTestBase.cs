@@ -1098,6 +1098,47 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
            );
         }
 
+        /// <summary>
+        /// Validates that Find API request ignores predicates present in the request body
+        /// </summary>
+        [TestMethod]
+        public async Task FindApiTestWithPredicatesInRequestBody()
+        {
+            string requestBody = @"
+            {
+                ""$filter"": ""id le 4""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                requestBody: requestBody,
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery("FindTestWithQueryStringAllFields")
+            );
+        }
+
+        /// <summary>
+        /// Validates that Find API request ignores the predicates present in the request body
+        /// and considers only the predicates present in the URI for constructing the response.
+        /// </summary>
+        [TestMethod]
+        public async Task FindApiTestWithPredicatesInUriAndRequestBody()
+        {
+            string requestBody = @"
+            {
+                ""$filter"": ""id ge 4""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=id le 4",
+                requestBody: requestBody,
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery("FindTestWithFilterQueryOneLeFilter")
+            );
+        }
+
         #endregion
 
         #region Negative Tests
@@ -1121,6 +1162,32 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 expectedErrorMessage: "Primary key route not supported for this entity.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
+        }
+
+        /// <summary>
+        /// Validates that parameters of a SP sent through the request body are ignored and
+        /// results in a 400 Bad Request due to missing required parameters. 
+        /// </summary>
+        [TestMethod]
+        public virtual async Task FindApiTestForSPWithRequiredParamsInRequestBody()
+        {
+            string requestBody = @"
+            {
+                ""id"": 1
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                requestBody: requestBody,
+                entityNameOrPath: _integrationProcedureFindOne_EntityName,
+                sqlQuery: string.Empty,
+                operationType: Config.Operation.Execute,
+                restHttpVerb: Config.RestMethod.Get,
+                exceptionExpected: true,
+                expectedErrorMessage: $"Invalid request. Missing required procedure parameters: id for entity: {_integrationProcedureFindOne_EntityName}",
+                expectedStatusCode: HttpStatusCode.BadRequest
+                );
         }
 
         /// <summary>

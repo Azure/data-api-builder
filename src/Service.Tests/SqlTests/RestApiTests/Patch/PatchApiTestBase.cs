@@ -634,13 +634,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         /// <summary>
-        /// Test to validate that PATCH operation fails because the database policy("@item.id ne 1234")
+        /// Test to validate that PATCH operation fails because the database policy for update operation
         /// restricts modifying records where id is not 1234.
         /// </summary>
         [TestMethod]
         public virtual async Task PatchOneUpdateInAccessibleRowWithDatabasePolicy()
         {
-            // Perform PATCH update with upsert incrmental semantics.
+            // A record with given PK exists in the table, so only update would be attempted.
+            // However, since the database policy for update operation ("@item.id ne 1234") is not satisfied, the operation fails.
             string requestBody = @"
             {
                 ""name"": ""New Publisher""
@@ -654,7 +655,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     operationType: Config.Operation.UpsertIncremental,
                     requestBody: requestBody,
                     exceptionExpected: true,
-                    expectedErrorMessage: $"Authorization Failure: Access Not Allowed.",
+                    expectedErrorMessage: DataApiBuilderException.AUTHORIZATION_FAILURE,
                     expectedStatusCode: HttpStatusCode.Forbidden,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed.ToString(),
                     clientRoleHeader: "database_policy_tester"

@@ -110,12 +110,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// and protect the first table access with appropriate locking.
         /// </summary>
         /// <param name="structure"></param>
-        /// <returns></returns>
+        /// <returns>Query generated for the PUT(upsert)/PATCH(upsertIncremental) operation.</returns>
         public string Build(SqlUpsertQueryStructure structure)
         {
             string tableName = $"{QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)}";
 
-            // Predicates by vritue of PK.
+            // Predicates by virtue of PK.
             string pkPredicates = JoinPredicateStrings(Build(structure.Predicates));
 
             // Predicates by virtue of PK + database policy.

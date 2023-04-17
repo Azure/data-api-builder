@@ -214,6 +214,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 // This can only happen in the case where we are dealing with table/view with auto-gen PK.
                 // In this case, insert cannot happen.
                 // Also since dbResultSet is null, update couldn't execute as well because there was no record corresponding to given PK.
+                // args hold the entity name and PK in pretty format and is always non-null here.
                 string prettyPrintPk = args![0];
                 string entityName = args[1];
 
@@ -222,7 +223,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         $"with primary key {prettyPrintPk} to perform UPDATE on.",
                         statusCode: HttpStatusCode.NotFound,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
-
             }
 
             if (numOfRecordsWithGivenPK == 1) // This indicates that a record existed with given PK and we attempted an update operation.
@@ -231,7 +231,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 {
                     // Record exists in the table/view but no record updated - indicates database policy failure.
                     throw new DataApiBuilderException(
-                        message: "Authorization Failure: Access Not Allowed.",
+                        message: DataApiBuilderException.AUTHORIZATION_FAILURE,
                         statusCode: HttpStatusCode.Forbidden,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
                 }
@@ -244,7 +244,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 // No record exists in the table/view but inserted no records - indicates database policy failure.
                 throw new DataApiBuilderException(
-                        message: "Authorization Failure: Access Not Allowed.",
+                        message: DataApiBuilderException.AUTHORIZATION_FAILURE,
                         statusCode: HttpStatusCode.Forbidden,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
             }

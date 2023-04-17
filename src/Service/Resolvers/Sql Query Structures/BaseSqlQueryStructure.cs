@@ -50,7 +50,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Collection of all the fields referenced in the database policy for create action.
         /// The fields referenced in the database policy should be a subset of the fields that are being inserted via the insert statement,
         /// as then only we would be able to make them a part of our SELECT FROM clause from the temporary table.
-        /// This will only be populated for POST operation currently.
+        /// This will only be populated for POST/PUT/PATCH operations.
         /// </summary>
         public HashSet<string> FieldsReferencedInDbPolicyForCreateAction { get; set; } = new();
 

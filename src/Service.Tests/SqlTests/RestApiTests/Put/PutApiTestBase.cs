@@ -834,7 +834,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         /// Test to validate failure of PUT operation failing to satisfy the database policy for the operation to be executed
         /// (insert/update based on whether a record exists for given PK).
         /// </summary>
-        /// <returns></returns>
         [TestMethod]
         public virtual async Task PutOneWithUnsatisfiedDatabasePolicy()
         {
@@ -855,7 +854,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     requestBody: requestBody,
                     sqlQuery: string.Empty,
                     exceptionExpected: true,
-                    expectedErrorMessage: "Authorization Failure: Access Not Allowed.",
+                    expectedErrorMessage: DataApiBuilderException.AUTHORIZATION_FAILURE,
                     expectedStatusCode: HttpStatusCode.Forbidden,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed.ToString(),
                     clientRoleHeader: "database_policy_tester"
@@ -879,7 +878,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     requestBody: requestBody,
                     sqlQuery: string.Empty,
                     exceptionExpected: true,
-                    expectedErrorMessage: "Authorization Failure: Access Not Allowed.",
+                    expectedErrorMessage: DataApiBuilderException.AUTHORIZATION_FAILURE,
                     expectedStatusCode: HttpStatusCode.Forbidden,
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed.ToString(),
                     clientRoleHeader: "database_policy_tester"

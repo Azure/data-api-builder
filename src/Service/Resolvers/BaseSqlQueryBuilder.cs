@@ -24,7 +24,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public const string TABLE_NAME_PARAM = "tableName";
 
         /// <summary>
-        /// Predicate added to the query when no valid predicates exist.
+        /// Predicate added to the query when no other predicates exist.
         /// </summary>
         public const string BASE_PREDICATE = "1 = 1";
 

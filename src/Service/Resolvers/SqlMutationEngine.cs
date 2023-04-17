@@ -124,7 +124,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         parameters,
                         context);
 
-                if (mutationResultRow is not null && mutationResultRow.Columns.Count > 0
+                if (mutationResultRow is not null && mutationResultRow.Columns.Any()
                     && !context.Selection.Type.IsScalarType())
                 {
                     // Because the GraphQL mutation result set columns were exposed (mapped) column names,
@@ -211,7 +211,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 case Config.Operation.Insert:
                     // Returns a 201 Created with whatever the first result set is returned from the procedure
                     // A "correctly" configured stored procedure would INSERT INTO ... OUTPUT ... VALUES as the result set
-                    if (resultArray is not null && resultArray.Count > 0)
+                    if (resultArray is not null && resultArray.Any())
                     {
                         using (JsonDocument jsonDocument = JsonDocument.Parse(resultArray.ToJsonString()))
                         {
@@ -234,7 +234,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 case Config.Operation.UpsertIncremental:
                     // Since we cannot check if anything was created, just return a 200 Ok response with first result set output
                     // A "correctly" configured stored procedure would UPDATE ... SET ... OUTPUT as the result set
-                    if (resultArray is not null && resultArray.Count > 0)
+                    if (resultArray is not null && resultArray.Any())
                     {
                         using (JsonDocument jsonDocument = JsonDocument.Parse(resultArray.ToJsonString()))
                         {
@@ -296,7 +296,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     (upsertOperationResult.Rows.FirstOrDefault() ?? new()) : null;
 
                 if (upsertOperationResult is not null &&
-                    dbResultSetRow is not null && dbResultSetRow.Columns.Count > 0)
+                    dbResultSetRow is not null && dbResultSetRow.Columns.Any())
                 {
                     Dictionary<string, object?> resultRow = dbResultSetRow.Columns;
 
@@ -342,7 +342,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
                     }
 
-                    if (mutationResultRow.Columns.Count == 0)
+                    if (!mutationResultRow.Columns.Any())
                     {
                         throw new DataApiBuilderException(
                             message: "Could not insert row with given values.",
@@ -359,7 +359,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 if (context.OperationType is Config.Operation.Update || context.OperationType is Config.Operation.UpdateIncremental)
                 {
                     // Nothing to update means we throw Exception
-                    if (mutationResultRow is null || mutationResultRow.Columns.Count == 0)
+                    if (mutationResultRow is null || !mutationResultRow.Columns.Any())
                     {
                         throw new DataApiBuilderException(message: "No Update could be performed, record not found",
                                                            statusCode: HttpStatusCode.PreconditionFailed,
@@ -535,11 +535,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         queryParameters,
                         _queryExecutor.ExtractResultSetFromDbDataReader,
                         GetHttpContext(),
-                        primaryKeyExposedColumnNames.Count > 0 ? primaryKeyExposedColumnNames : sourceDefinition.PrimaryKey);
+                        primaryKeyExposedColumnNames.Any() ? primaryKeyExposedColumnNames : sourceDefinition.PrimaryKey);
 
                 dbResultSetRow = dbResultSet is not null ?
                     (dbResultSet.Rows.FirstOrDefault() ?? new DbResultSetRow()) : null;
-                if (dbResultSetRow is not null && dbResultSetRow.Columns.Count == 0)
+                if (dbResultSetRow is not null && !dbResultSetRow.Columns.Any())
                 {
                     // For GraphQL, insert operation corresponds to Create action.
                     if (operationType is Config.Operation.Create)
@@ -552,7 +552,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     }
 
                     string searchedPK;
-                    if (primaryKeyExposedColumnNames.Count > 0)
+                    if (primaryKeyExposedColumnNames.Any())
                     {
                         searchedPK = '<' + string.Join(", ", primaryKeyExposedColumnNames.Select(pk => $"{pk}: {parameters[pk]}")) + '>';
                     }

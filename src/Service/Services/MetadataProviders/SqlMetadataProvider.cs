@@ -991,7 +991,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 sourceDefinition.PrimaryKey = new(runtimeConfigKeyFields);
             }
 
-            if (sourceDefinition.PrimaryKey.Count == 0)
+            if (!sourceDefinition.PrimaryKey.Any())
             {
                 throw new DataApiBuilderException(
                        message: $"Primary key not configured on the given database object {tableName}",
@@ -1266,7 +1266,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 FindAllEntitiesWhoseForeignKeyIsToBeRetrieved(schemaNames, tableNames);
 
             // No need to do any further work if there are no FK to be retrieved
-            if (dbEntitiesToBePopulatedWithFK.Count() == 0)
+            if (!dbEntitiesToBePopulatedWithFK.Any())
             {
                 return;
             }
@@ -1356,7 +1356,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     IEnumerable<List<ForeignKeyDefinition>> foreignKeys = relationshipData.TargetEntityToFkDefinitionMap.Values;
                     // If none of the inferred foreign keys have the referencing columns,
                     // it means metadata is still missing fail the bootstrap.
-                    if (!foreignKeys.Any(fkList => fkList.Any(fk => fk.ReferencingColumns.Count() != 0)))
+                    if (!foreignKeys.Any(fkList => fkList.Any(fk => fk.ReferencingColumns.Any())))
                     {
                         throw new NotSupportedException($"Some of the relationship information missing and could not be inferred for {sourceEntityName}.");
                     }
@@ -1449,7 +1449,7 @@ namespace Azure.DataApiBuilder.Service.Services
                         {
                             // if the referencing and referenced columns count > 0,
                             // we have already gathered this information from the runtime config.
-                            if (fk.ReferencingColumns.Count > 0 && fk.ReferencedColumns.Count > 0)
+                            if (fk.ReferencingColumns.Any() && fk.ReferencedColumns.Any())
                             {
                                 continue;
                             }
@@ -1461,14 +1461,14 @@ namespace Azure.DataApiBuilder.Service.Services
                             {
                                 // Only add the referencing columns if they have not been
                                 // specified in the configuration file.
-                                if (fk.ReferencingColumns.Count == 0)
+                                if (!fk.ReferencingColumns.Any())
                                 {
                                     fk.ReferencingColumns.AddRange(inferredDefinition.ReferencingColumns);
                                 }
 
                                 // Only add the referenced columns if they have not been
                                 // specified in the configuration file.
-                                if (fk.ReferencedColumns.Count == 0)
+                                if (!fk.ReferencedColumns.Any())
                                 {
                                     fk.ReferencedColumns.AddRange(inferredDefinition.ReferencedColumns);
                                 }

@@ -122,12 +122,12 @@ namespace Azure.DataApiBuilder.Service.Models
         {
             try
             {
-                if (PrimaryKeyValuePairs.Count > 0)
+                if (PrimaryKeyValuePairs.Any())
                 {
                     CumulativeColumns.UnionWith(PrimaryKeyValuePairs.Keys);
                 }
 
-                if (FieldsToBeReturned.Count > 0)
+                if (FieldsToBeReturned.Any())
                 {
                     CumulativeColumns.UnionWith(FieldsToBeReturned);
                 }
@@ -144,7 +144,7 @@ namespace Azure.DataApiBuilder.Service.Models
                     CumulativeColumns.UnionWith(OrderByClauseInUrl.Select(col => col.ColumnName));
                 }
 
-                if (FieldValuePairsInBody.Count > 0)
+                if (FieldValuePairsInBody.Any())
                 {
                     CumulativeColumns.UnionWith(FieldValuePairsInBody.Keys);
                 }

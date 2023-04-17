@@ -55,7 +55,7 @@ type Foo @model(name: ""Foo""){
             //
             if (rolesDefinedInPermissions.Length == 0)
             {
-                Assert.IsTrue(query.Fields.Count() == 0, message: "GetAll and ByPK FieldDefinitions Generated Unexpectedly.");
+                Assert.IsTrue(!query.Fields.Any(), message: "GetAll and ByPK FieldDefinitions Generated Unexpectedly.");
             }
             else
             {

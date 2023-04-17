@@ -185,8 +185,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     {
                         // Case where fk in parent entity references the nested entity.
                         // Verify this is a valid fk definition before adding the join predicate.
-                        if (foreignKeyDefinition.ReferencingColumns.Count() > 0
-                            && foreignKeyDefinition.ReferencedColumns.Count() > 0)
+                        if (foreignKeyDefinition.ReferencingColumns.Any()
+                            && foreignKeyDefinition.ReferencedColumns.Any())
                         {
                             subQuery.Predicates.AddRange(CreateJoinPredicates(
                                 SourceAlias,
@@ -198,8 +198,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     else if (foreignKeyDefinition.Pair.ReferencingDbTable.Equals(relatedEntityDbObject))
                     {
                         // Case where fk in nested entity references the parent entity.
-                        if (foreignKeyDefinition.ReferencingColumns.Count() > 0
-                            && foreignKeyDefinition.ReferencedColumns.Count() > 0)
+                        if (foreignKeyDefinition.ReferencingColumns.Any()
+                            && foreignKeyDefinition.ReferencedColumns.Any())
                         {
                             subQuery.Predicates.AddRange(CreateJoinPredicates(
                                 relatedSourceAlias,

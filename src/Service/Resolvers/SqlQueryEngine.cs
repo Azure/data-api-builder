@@ -262,7 +262,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             IEnumerable<JsonElement> resultEnumerated = jsonResult.EnumerateArray();
             // More than 0 records, and the last element is of type array, then we have pagination
-            if (resultEnumerated.Count() > 0 && resultEnumerated.Last().ValueKind == JsonValueKind.Array)
+            if (resultEnumerated.Any() && resultEnumerated.Last().ValueKind == JsonValueKind.Array)
             {
                 // Get the nextLink
                 // resultEnumerated will be an array of the form
@@ -390,7 +390,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         {
                             // Deserialize from the string representation of the JsonArray
                             JsonArray? resultArray = JsonSerializer.Deserialize<JsonArray>(resultSet.ToString());
-                            hasRows = resultArray != null && resultArray.Count > 0;
+                            hasRows = resultArray != null && resultArray.Any();
                         }
                     }
                 }

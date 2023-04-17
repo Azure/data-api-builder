@@ -168,7 +168,7 @@ namespace Azure.DataApiBuilder.Service.Models
                     // Example: {entityName}FilterInput
                     if (!StandardQueryInputs.IsStandardInputType(filterInputObjectType.Name))
                     {
-                        if (sourceDefinition.PrimaryKey.Count != 0)
+                        if (sourceDefinition.PrimaryKey.Any())
                         {
                             // For SQL i.e. when there are primary keys on the source, we need to perform a join
                             // between the parent entity being filtered and the related entity representing the
@@ -379,7 +379,7 @@ namespace Azure.DataApiBuilder.Service.Models
             BaseQueryStructure baseQuery,
             PredicateOperation op)
         {
-            if (fields.Count == 0)
+            if (!fields.Any())
             {
                 return Predicate.MakeFalsePredicate();
             }
@@ -438,7 +438,7 @@ namespace Azure.DataApiBuilder.Service.Models
             int pos = 0,
             bool addParenthesis = true)
         {
-            if (operands.Count == 0)
+            if (!operands.Any())
             {
                 return Predicate.MakeFalsePredicate();
             }

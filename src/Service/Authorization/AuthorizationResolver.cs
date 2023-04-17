@@ -136,8 +136,8 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// <inheritdoc />
         public bool AreColumnsAllowedForOperation(string entityName, string roleName, Config.Operation operation, IEnumerable<string> columns)
         {
-            // Columns.Count() will never be zero because this method is called after a check ensures Count() > 0
-            Assert.IsFalse(columns.Count() == 0, message: "columns.Count() should be greater than 0.");
+            // Columns will never be zero because this method is called after a check ensures Any()
+            Assert.IsFalse(!columns.Any(), message: "columns should be greater than 0.");
 
             if (!EntityPermissionsMap[entityName].RoleToOperationMap.TryGetValue(roleName, out RoleMetadata? roleMetadata) && roleMetadata is null)
             {

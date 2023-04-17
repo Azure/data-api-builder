@@ -52,7 +52,7 @@ type Foo @model(name: ""Foo""){
 
             if (rolesDefinedInPermissions.Length > 0)
             {
-                Assert.IsTrue(mutationRoot.Definitions.Count() > 0);
+                Assert.IsTrue(mutationRoot.Definitions.Any());
                 ObjectTypeDefinitionNode mutation = MutationBuilderTests.GetMutationNode(mutationRoot);
                 // Iterate over the mutations created by MutationBuilder.Build()
                 //

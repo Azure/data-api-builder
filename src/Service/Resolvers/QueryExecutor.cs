@@ -298,7 +298,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             foreach (DbResultSetRow dbResultSetRow in dbResultSet.Rows)
             {
-                if (dbResultSetRow.Columns.Count > 0)
+                if (dbResultSetRow.Columns.Any())
                 {
                     JsonElement result =
                         JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(dbResultSetRow.Columns));
@@ -348,7 +348,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             /// In MsSQL upsert:
             /// result set #1: result of the UPDATE operation.
             /// result set #2: result of the INSERT operation.
-            if (dbResultSet.Rows.Count > 0 && dbResultSet.Rows.FirstOrDefault()!.Columns.Count > 0)
+            if (dbResultSet.Rows.Any() && dbResultSet.Rows.FirstOrDefault()!.Columns.Any())
             {
                 dbResultSet.ResultProperties.Add(SqlMutationEngine.IS_FIRST_RESULT_SET, true);
                 return dbResultSet;

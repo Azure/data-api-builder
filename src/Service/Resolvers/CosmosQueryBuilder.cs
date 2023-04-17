@@ -28,7 +28,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 queryStringBuilder.Append($" WHERE {predicateString}");
             }
 
-            if (structure.OrderByColumns.Count > 0)
+            if (structure.OrderByColumns.Any())
             {
                 queryStringBuilder.Append($" ORDER BY {Build(structure.OrderByColumns)}");
             }

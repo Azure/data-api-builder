@@ -97,7 +97,7 @@ public class GraphQLAuthorizationHandler : HotChocolate.AspNetCore.Authorization
     /// <returns>True when the authenticated user's explicitly defined role is present in the authorize directive role list. Otherwise, false.</returns>
     private static bool IsInHeaderDesignatedRole(string clientRoleHeader, IReadOnlyList<string>? roles)
     {
-        if (roles is null || roles.Count == 0)
+        if (roles is null || !roles.Any())
         {
             return false;
         }

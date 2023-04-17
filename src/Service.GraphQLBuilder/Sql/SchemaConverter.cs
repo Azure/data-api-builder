@@ -46,7 +46,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 // Since Stored-procedures only support 1 CRUD action, it's possible that stored-procedures might return some values
                 // during mutation operation (i.e, containing one of create/update/delete permission).
                 // Hence, this check is bypassed for stored-procedures.
-                if (roles.Count() > 0 || databaseObject.SourceType is SourceType.StoredProcedure)
+                if (roles.Any() || databaseObject.SourceType is SourceType.StoredProcedure)
                 {
                     if (GraphQLUtils.CreateAuthorizationDirectiveIfNecessary(
                             roles,
@@ -129,7 +129,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             {
                 StoredProcedureDefinition? storedProcedureDefinition = ((StoredProcedureDefinition)sourceDefinition);
 
-                if(storedProcedureDefinition.Columns.Count == 0) {
+                if(!storedProcedureDefinition.Columns.Any()) {
                     FieldDefinitionNode field = GetDefaultResultFieldForStoredProcedure();
 
                     fields.TryAdd("result", field);

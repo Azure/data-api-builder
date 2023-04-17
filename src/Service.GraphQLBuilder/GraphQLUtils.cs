@@ -93,7 +93,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
 
                 // By convention we look for a `@primaryKey` directive, if that didn't exist
                 // fallback to using an expected field name on the GraphQL object
-                if (fieldDefinitionNodes.Count == 0)
+                if (!fieldDefinitionNodes.Any())
                 {
                     FieldDefinitionNode? fieldDefinitionNode =
                         node.Fields.FirstOrDefault(f => f.Name.Value == DEFAULT_PRIMARY_KEY_NAME);
@@ -146,7 +146,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             // If the 'anonymous' role is present in the role list, no @authorize directive will be added
             // because HotChocolate requires an authenticated user when the authorize directive is evaluated.
             if (roles is not null &&
-                roles.Count() > 0 &&
+                roles.Any() &&
                 !roles.Contains(SYSTEM_ROLE_ANONYMOUS))
             {
                 List<IValueNode> roleList = new();

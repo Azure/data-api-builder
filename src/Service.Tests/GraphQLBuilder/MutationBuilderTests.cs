@@ -1083,7 +1083,7 @@ type Foo @model(name:""Foo"") {{
                 }
                 else
                 {
-                    Assert.IsTrue(mutationRoot.Definitions.Count == 0, message: FIELDNOTFOUND_ERROR);
+                    Assert.IsTrue(!mutationRoot.Definitions.Any(), message: FIELDNOTFOUND_ERROR);
                 }
             }
         }

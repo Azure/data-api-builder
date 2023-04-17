@@ -76,7 +76,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 AddNullifiedUnspecifiedFields(columns, UpdateOperations, sourceDefinition);
             }
 
-            if (UpdateOperations.Count == 0)
+            if (!UpdateOperations.Any())
             {
                 throw new DataApiBuilderException(
                     message: "Update mutation does not update any values",
@@ -145,7 +145,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 }
             }
 
-            if (UpdateOperations.Count == 0)
+            if (!UpdateOperations.Any())
             {
                 throw new DataApiBuilderException(
                     message: "Update mutation does not update any values",

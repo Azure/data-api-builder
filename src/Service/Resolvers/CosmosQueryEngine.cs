@@ -126,7 +126,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(res.ToString()), null);
                     }
 
-                    if (page.Count > 0)
+                    if (page.Any())
                     {
                         return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(page.First().ToString()), null);
                     }

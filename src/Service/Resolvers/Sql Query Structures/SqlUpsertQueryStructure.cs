@@ -88,7 +88,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // Populates the UpsertQueryStructure with UPDATE and INSERT column:value metadata
             PopulateColumns(mutationParams, sourceDefinition, isIncrementalUpdate: incrementalUpdate);
 
-            if (UpdateOperations.Count == 0)
+            if (!UpdateOperations.Any())
             {
                 throw new DataApiBuilderException(
                     message: "Update mutation does not update any values",

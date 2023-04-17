@@ -203,30 +203,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         }
 
         /// <summary>
-        /// Takes the result from DB as JsonDocument and formats it in a way that can be filtered by column
-        /// name. It parses the Json document into a list of Dictionary with key as result_column_name
-        /// with it's corresponding value.
-        /// returns an empty list in case of no result 
-        /// or stored-procedure is trying to read from DB without READ permission.
-        /// </summary>
-        public static List<JsonDocument> FormatStoredProcedureObjectResultAsJsonList(JsonDocument? jsonDocument)
-        {
-            if (jsonDocument is null)
-            {
-                return new List<JsonDocument>();
-            }
-
-            List<JsonDocument> resultJson = new();
-            List<Dictionary<string, object>> resultList = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(jsonDocument.RootElement.ToString())!;
-            foreach (Dictionary<string, object> result in resultList)
-            {
-                resultJson.Add(JsonDocument.Parse(JsonSerializer.Serialize(result)));
-            }
-
-            return resultJson;
-        }
-
-        /// <summary>
         /// Create and return a default GraphQL result field for a stored-procedure which doesn't
         /// define a result set and doesn't return any rows.
         /// </summary>

@@ -267,5 +267,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             "WHERE is_hidden is not NULL AND is_hidden = 0";
             return query;
         }
+
+        public string BuildStoredProcedureDefinitionQuery(string databaseObjectName)
+        {
+            return $"SELECT OBJECT_DEFINITION(OBJECT_ID('{databaseObjectName}')) AS ProcedureDefinition;";
+        }
     }
 }

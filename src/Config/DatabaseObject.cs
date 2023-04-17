@@ -110,21 +110,34 @@ namespace Azure.DataApiBuilder.Config
     /// </summary>
     public class ParameterDefinition : IFieldDefinition
     {
+        /// <summary>
+        /// The CLR type of the parameter. This is used to determine the type of the parameter in the generated code.
+        /// </summary>
         public Type SystemType { get; set; } = null!;
         
+        /// <summary>
+        /// Whether this parameter has a default defined in `dab-config.json`.
+        /// </summary>
         public bool HasConfigDefault { get; set; }
         
+        /// <summary>
+        /// If this parameter has a default defined, this is the value of the default.
+        /// </summary>
         public object? ConfigDefaultValue { get; set; }
 
-        public bool IsNullable { get; set; }
-        
         /// <summary>
-        /// The direction of the parameter. If null, it is assumed to be Input.
+        /// Whether this parameter is optional. If it is optional, it does not need to be defined in the config.
+        /// This only applies to MSSQL Stored Procedure parameters, as MySQL does not currently support optional parameters.
         /// </summary>
-        public ParameterDirection? Direction { get; set; }
+        public bool IsOptional { get; set; }
         
         /// <summary>
-        /// Whether the parameter is an output parameter.
+        /// The direction of the parameter. Assumed to be Input by default.
+        /// </summary>
+        public ParameterDirection Direction { get; set; } = ParameterDirection.Input;
+        
+        /// <summary>
+        /// Whether this parameter is an output parameter or not.
         /// </summary>
         public bool IsOutput
         {

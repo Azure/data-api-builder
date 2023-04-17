@@ -138,13 +138,11 @@ namespace Azure.DataApiBuilder.Service.Services
             HashSet<string> extraFields = new(spRequestCtx.ResolvedParameters.Keys);
             foreach ((string paramKey, ParameterDefinition paramDefinition) in storedProcedureDefinition.Parameters)
             {
-                // If parameter not specified in request OR config
+                // If parameter is not optional and is not specified in request OR config
                 if (!spRequestCtx.ResolvedParameters!.ContainsKey(paramKey)
+                    && !paramDefinition.IsOptional
                     && !paramDefinition.HasConfigDefault)
                 {
-                    // Ideally should check if a default is set in sql, but no easy way to do so - would have to parse procedure's object definition
-                    // See https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-parameters-transact-sql?view=sql-server-ver16#:~:text=cursor%2Dreference%20parameter.-,has_default_value,-bit
-                    // For SQL Server not populating this metadata for us; MySQL doesn't seem to allow parameter defaults so not relevant. 
                     missingFields.Add(paramKey);
                 }
                 else

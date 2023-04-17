@@ -4,6 +4,7 @@
 using System;
 using System.Data;
 using System.Net;
+using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -81,6 +82,16 @@ namespace Azure.DataApiBuilder.Service.Services
         /// TODO: For PostgreSql stored procedure support, this needs to be implemented.
         /// </summary>
         public override ParameterDirection ToParameterDirectionEnum(string parameterDirection)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Populates stored procedure parameter nullability.
+        /// TODO: For PostgreSql stored procedure support, this needs to be implemented.
+        /// </summary>
+
+        protected override Task PopulateParameterOptionalityForStoredProcedureAsync(string schemaName, string storedProcedureName, StoredProcedureDefinition sourceDefinition)
         {
             throw new NotImplementedException();
         }

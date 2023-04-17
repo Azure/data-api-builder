@@ -129,5 +129,14 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             throw new NotImplementedException();
         }
+
+        /// <summary>
+        /// Populates stored procedure parameter nullability.
+        /// TODO: MySQL doesn't seem to allow parameter defaults so not relevant for now.
+        /// </summary>
+        protected override Task PopulateParameterOptionalityForStoredProcedureAsync(string schemaName, string storedProcedureName, StoredProcedureDefinition sourceDefinition)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

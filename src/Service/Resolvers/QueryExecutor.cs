@@ -160,9 +160,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             if (parameters is not null)
             {
-                foreach (var parameterEntry in parameters)
+                foreach (KeyValuePair<string, object?> parameterEntry in parameters)
                 {
-                    var dbParameter = cmd.CreateParameter();
+                    DbParameter? dbParameter = cmd.CreateParameter();
                     dbParameter.ParameterName = parameterEntry.Key;
 
                     if (parameterEntry.Value is SqlExecuteParameter sqlExecuteParameter)
@@ -182,7 +182,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             TResult? result = default(TResult);
             try
             {
-                using (var dbDataReader = await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection))
+                using (DbDataReader? dbDataReader = await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection))
                 {
                     if (dataReaderHandler is not null && dbDataReader is not null)
                     {
@@ -192,7 +192,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 if (parameters is not null)
                 {
-                    foreach (var (key, value) in parameters)
+                    foreach ((string key, object? value) in parameters)
                     {
                         if (value is SqlExecuteParameter sqlExecuteParameter && sqlExecuteParameter.IsOutput)
                         {

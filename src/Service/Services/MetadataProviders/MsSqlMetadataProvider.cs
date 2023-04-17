@@ -52,7 +52,7 @@ namespace Azure.DataApiBuilder.Service.Services
             string dbStoredProcedureName = $"{schemaName}.{storedProcedureName}";
             string queryForParameterNullability = SqlQueryBuilder.BuildStoredProcedureDefinitionQuery(
                 dbStoredProcedureName);
-            var result = await QueryExecutor.ExecuteQueryAsync(
+            JsonArray? result = await QueryExecutor.ExecuteQueryAsync(
                 sqltext: queryForParameterNullability,
                 parameters: null!,
                 dataReaderHandler: QueryExecutor.GetJsonArrayAsync);
@@ -79,17 +79,17 @@ namespace Azure.DataApiBuilder.Service.Services
             }
 
             using JsonDocument resultDocument = JsonDocument.Parse(resultJson.ToJsonString());
-            var rootElement = resultDocument.RootElement;
-            var procedureDefinition = rootElement.GetProperty("ProcedureDefinition").ToString();
+            JsonElement rootElement = resultDocument.RootElement;
+            string? procedureDefinition = rootElement.GetProperty("ProcedureDefinition").ToString();
 
             // See regexr.com/7c7um for this regex and it's associated tests.
-            var regex = new Regex(@"@([\w]+)\s+([^\s]+)\s*=\s*([^, ]*),?", RegexOptions.IgnoreCase);
-            var matches = regex.Matches(procedureDefinition);
+            Regex? regex = new Regex(@"@([\w]+)\s+([^\s]+)\s*=\s*([^, ]*),?", RegexOptions.IgnoreCase);
+            MatchCollection? matches = regex.Matches(procedureDefinition);
             foreach (Match match in matches)
             {
-                var sqlParamName = match.Groups[1]?.Value;
-                var sqlParamType = match.Groups[2]?.Value;
-                var sqlParamDefaultValue = match.Groups[3]?.Value;
+                string? sqlParamName = match.Groups[1]?.Value;
+                string? sqlParamType = match.Groups[2]?.Value;
+                string? sqlParamDefaultValue = match.Groups[3]?.Value;
                 if(sqlParamName != null && sqlParamDefaultValue != null)
                 {
                     storedProcedureDefinition.Parameters[sqlParamName].IsOptional = true;

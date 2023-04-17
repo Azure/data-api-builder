@@ -96,8 +96,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 if (structure.PaginationMetadata.IsPaginated)
                 {
-                    var result = await ExecuteAsync(structure);
-                    var paginatedResult = SqlPaginationUtil.CreatePaginationConnectionFromJsonDocument(result, structure.PaginationMetadata);
+                    JsonDocument? result = await ExecuteAsync(structure);
+                    JsonDocument? paginatedResult = SqlPaginationUtil.CreatePaginationConnectionFromJsonDocument(result, structure.PaginationMetadata);
                     return new Tuple<JsonDocument?, IMetadata?>(
                         paginatedResult,
                         structure.PaginationMetadata

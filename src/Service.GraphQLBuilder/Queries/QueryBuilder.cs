@@ -58,7 +58,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     string entityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
                     Entity entity = entities[entityName];
 
-                    var isStoredProcedure = entity.ObjectType is SourceType.StoredProcedure;
+                    bool isStoredProcedure = entity.ObjectType is SourceType.StoredProcedure;
                     if (isStoredProcedure)
                     {
                         // Check runtime configuration of the stored procedure entity to check that the GraphQL operation type was overridden to 'query' from the default 'mutation.'
@@ -251,7 +251,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
 
         public static bool IsExecuteResultType(ObjectType objectType)
         {
-            var value = objectType.Name.Value;
+            string? value = objectType.Name.Value;
             return value.StartsWith(EXECUTE_RESULT_OBJECT_TYPE_PREFIX) && value.EndsWith(EXECUTE_RESULT_OBJECT_TYPE_SUFFIX);
         }
 

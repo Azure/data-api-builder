@@ -117,7 +117,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ProcedureParameters = new();
             foreach ((string paramKey, ParameterDefinition paramDefinition) in storedProcedureDefinition.Parameters)
             {
-                var parameterDirection = paramDefinition.Direction;
+                ParameterDirection parameterDirection = paramDefinition.Direction;
 
                 // Populate with request param if able
                 if (requestParams.TryGetValue(paramKey, out object? requestParamValue))

@@ -127,7 +127,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             // Here we create a field called result which will be an empty array.
             if (databaseObject.SourceType is SourceType.StoredProcedure)
             {
-                var storedProcedureDefinition = ((StoredProcedureDefinition)sourceDefinition);
+                StoredProcedureDefinition? storedProcedureDefinition = ((StoredProcedureDefinition)sourceDefinition);
 
                 if(storedProcedureDefinition.Columns.Count == 0) {
                     FieldDefinitionNode field = GetDefaultResultFieldForStoredProcedure();

@@ -31,9 +31,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             IEnumerable<string>? rolesAllowed = null
         )
         {
-            var storedProcedureDefinition = (StoredProcedureDefinition)dbObject.SourceDefinition;
-            var outputParameters = storedProcedureDefinition.Parameters.Where(kvp => kvp.Value.IsOutput);
-            var hasOutputParameters = outputParameters.Any();
+            StoredProcedureDefinition storedProcedureDefinition = (StoredProcedureDefinition)dbObject.SourceDefinition;
+            IEnumerable<KeyValuePair<string, ParameterDefinition>> outputParameters = storedProcedureDefinition.Parameters.Where(kvp => kvp.Value.IsOutput);
+            bool hasOutputParameters = outputParameters.Any();
             if (hasOutputParameters)
             {
                 definitionNodes.Add(CreateStoredProcedureResultObjectType(name, entity, outputParameters, rolesAllowed));
@@ -99,7 +99,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                 fieldDefinitionNodeDirectives.Add(authorizeDirective!);
             }
 
-            var type = generateWithOutputParameters
+            NonNullTypeNode type = generateWithOutputParameters
                 ? new NonNullTypeNode(new NamedTypeNode(GenerateStoredProcedureGraphQLResultObjectName(name.Value, entity)))
                 : new NonNullTypeNode(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(name))));
 
@@ -128,7 +128,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             IEnumerable<string>? rolesAllowed = null
         )
         {
-            var fieldDirectives = new List<DirectiveNode>();
+            List<DirectiveNode>? fieldDirectives = new List<DirectiveNode>();
             if (CreateAuthorizationDirectiveIfNecessary(
                     rolesAllowed,
                     out DirectiveNode? authorizeDirective
@@ -138,7 +138,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                 fieldDirectives.Add(authorizeDirective!);
             }
 
-            var executeResultTypeFields = new List<FieldDefinitionNode>() {
+            List<FieldDefinitionNode>? executeResultTypeFields = new List<FieldDefinitionNode>() {
                 new(location: null,
                     name: new(QueryBuilder.EXECUTE_RESULT_FIELD_NAME),
                     description: new($"The {name} result set from the stored procedure."),
@@ -167,7 +167,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                 }
             }
 
-            var storedProcedureName = GenerateStoredProcedureGraphQLFieldName(name.Value, entity);
+            string? storedProcedureName = GenerateStoredProcedureGraphQLFieldName(name.Value, entity);
             return new ObjectTypeDefinitionNode(
                 location: null,
                 name: new(GenerateStoredProcedureGraphQLResultObjectName(name.Value, entity)),

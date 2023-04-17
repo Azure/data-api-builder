@@ -65,6 +65,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName);
 
         /// <summary>
+        /// Builds a query to obtain the definition of the provided stored-procedure.
+        /// </summary>
+        /// <param name="databaseObjectName">Name of stored-procedure</param>
+        /// <returns>A query to get the Definition details for the provided stored procedure.</returns>
+        public string BuildStoredProcedureDefinitionQuery(string databaseObjectName);
+
+        /// <summary>
         /// Adds database specific quotes to string identifier
         /// </summary>
         public string QuoteIdentifier(string identifier);

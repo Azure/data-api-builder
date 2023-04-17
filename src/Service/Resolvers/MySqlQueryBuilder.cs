@@ -330,5 +330,10 @@ WHERE
         {
             throw new NotImplementedException();
         }
+
+        public string BuildStoredProcedureDefinitionQuery(string databaseObjectName)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

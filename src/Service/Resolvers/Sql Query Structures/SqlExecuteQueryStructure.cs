@@ -117,7 +117,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ProcedureParameters = new();
             foreach ((string paramKey, ParameterDefinition paramDefinition) in storedProcedureDefinition.Parameters)
             {
-                var parameterDirection = paramDefinition.Direction ?? ParameterDirection.Input;
+                var parameterDirection = paramDefinition.Direction;
 
                 // Populate with request param if able
                 if (requestParams.TryGetValue(paramKey, out object? requestParamValue))
@@ -147,25 +147,28 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 }
                 else
                 {
-                    // Fill with default value from runtime config
-                    if (paramDefinition.HasConfigDefault)
+                    if (!paramDefinition.IsOptional)
                     {
-                        string parameterizedName = MakeParamWithValue(
-                            new SqlExecuteParameter(
-                                paramKey,
-                                paramDefinition.ConfigDefaultValue,
-                                parameterDirection
-                            )
-                        );
-                        ProcedureParameters.Add(paramKey, $"{parameterizedName}");
-                    }
-                    else
-                    {
-                        // In case required parameters not found in request and no default specified in config
-                        // Should already be handled in the request validation step
-                        throw new DataApiBuilderException(message: $"Did not provide all procedure params, missing: \"{paramKey}\"",
-                            statusCode: HttpStatusCode.BadRequest,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                        // Fill with default value from runtime config
+                        if (paramDefinition.HasConfigDefault)
+                        {
+                            string parameterizedName = MakeParamWithValue(
+                                new SqlExecuteParameter(
+                                    paramKey,
+                                    paramDefinition.ConfigDefaultValue,
+                                    parameterDirection
+                                )
+                            );
+                            ProcedureParameters.Add(paramKey, $"{parameterizedName}");
+                        }
+                        else
+                        {
+                            // In case required parameters not found in request and no default specified in config
+                            // Should already be handled in the request validation step
+                            throw new DataApiBuilderException(message: $"Did not provide all procedure params, missing: \"{paramKey}\"",
+                                statusCode: HttpStatusCode.BadRequest,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                        }
                     }
                 }
             }

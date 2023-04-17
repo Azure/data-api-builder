@@ -4,6 +4,10 @@
 using System;
 using System.Data;
 using System.Net;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -29,6 +33,68 @@ namespace Azure.DataApiBuilder.Service.Services
             ILogger<ISqlMetadataProvider> logger)
             : base(runtimeConfigProvider, queryExecutor, sqlQueryBuilder, logger)
         {
+        }
+
+        /// <summary>
+        /// Ideally should check if a default is set in sql by parsing procedure's object definition.
+        /// See https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-parameters-transact-sql?view=sql-server-ver16#:~:text=cursor%2Dreference%20parameter.-,has_default_value,-bit
+        /// For SQL Server not populating this metadata for us; MySQL doesn't seem to allow parameter defaults so not relevant.
+        /// </summary>
+        /// <param name="schemaName">The name of the schema.</param>
+        /// <param name="storedProcedureName">The name of the stored procedure.</param>
+        /// <param name="storedProcedureDefinition">The definition of the stored procedure whose parameters to populate with optionality.</param>
+        /// <returns></returns>
+        protected override async Task PopulateParameterOptionalityForStoredProcedureAsync(
+            string schemaName,
+            string storedProcedureName,
+            StoredProcedureDefinition storedProcedureDefinition)
+        {
+            string dbStoredProcedureName = $"{schemaName}.{storedProcedureName}";
+            string queryForParameterNullability = SqlQueryBuilder.BuildStoredProcedureDefinitionQuery(
+                dbStoredProcedureName);
+            var result = await QueryExecutor.ExecuteQueryAsync(
+                sqltext: queryForParameterNullability,
+                parameters: null!,
+                dataReaderHandler: QueryExecutor.GetJsonArrayAsync);
+
+            if (result == null || result.Count < 1)
+            {
+                throw new DataApiBuilderException(
+                    message: "There was a problem inspecting parameter nullability"
+                        + $"for Stored Procedure {dbStoredProcedureName}."
+                        + "Received no result set.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            JsonNode? resultJson;
+            if (result.Count > 1 || (resultJson = result[0]) == null)
+            {
+                throw new DataApiBuilderException(
+                    message: "There was a problem inspecting parameter nullability"
+                        + $"for Stored Procedure {dbStoredProcedureName}."
+                        + "Received an invalid result set.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            using JsonDocument resultDocument = JsonDocument.Parse(resultJson.ToJsonString());
+            var rootElement = resultDocument.RootElement;
+            var procedureDefinition = rootElement.GetProperty("ProcedureDefinition").ToString();
+
+            // See regexr.com/7c7um for this regex and it's associated tests.
+            var regex = new Regex(@"@([\w]+)\s+([^\s]+)\s*=\s*([^, ]*),?", RegexOptions.IgnoreCase);
+            var matches = regex.Matches(procedureDefinition);
+            foreach (Match match in matches)
+            {
+                var sqlParamName = match.Groups[1]?.Value;
+                var sqlParamType = match.Groups[2]?.Value;
+                var sqlParamDefaultValue = match.Groups[3]?.Value;
+                if(sqlParamName != null && sqlParamDefaultValue != null)
+                {
+                    storedProcedureDefinition.Parameters[sqlParamName].IsOptional = true;
+                }
+            }
         }
 
         public override string GetDefaultSchemaName()

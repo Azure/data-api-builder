@@ -820,6 +820,11 @@ namespace Azure.DataApiBuilder.Service.Services
                             GetSchemaName(entityName),
                             GetDatabaseObjectName(entityName),
                             GetStoredProcedureDefinition(entityName));
+
+                        await PopulateParameterOptionalityForStoredProcedureAsync(
+                            GetSchemaName(entityName),
+                            GetDatabaseObjectName(entityName),
+                            GetStoredProcedureDefinition(entityName));
                     }
                 }
                 else if (entitySourceType is SourceType.Table)
@@ -881,6 +886,11 @@ namespace Azure.DataApiBuilder.Service.Services
                 storedProcedureDefinition.Columns.TryAdd(resultFieldName, new(resultFieldType) { IsNullable = isResultFieldNullable });
             }
         }
+
+        protected abstract Task PopulateParameterOptionalityForStoredProcedureAsync(
+            string schemaName,
+            string storedProcedureName,
+            StoredProcedureDefinition sourceDefinition);
 
         /// <summary>
         /// Helper method to create params for the query.

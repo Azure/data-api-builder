@@ -2,7 +2,6 @@
   <PropertyGroup>
     <Nullable>enable</Nullable>
     <BaseOutputPath>..\out</BaseOutputPath>
-    <NoWarn>NU1603</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

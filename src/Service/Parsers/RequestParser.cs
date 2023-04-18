@@ -216,8 +216,8 @@ namespace Azure.DataApiBuilder.Service.Parsers
                 // We convert to an Enum of our own that matches the SQL text we want
                 OrderBy direction = GetDirection(node.Direction);
                 // Add OrderByColumn and remove any matching columns from our primary key set
-                orderByListUrl.Add(new OrderByColumn(schemaName, tableName, exposedName, direction: direction));
-                orderByListBackingColumn.Add(new OrderByColumn(schemaName, tableName, backingColumnName!, direction: direction));
+                orderByListUrl.Add(new(schemaName, tableName, exposedName, direction: direction));
+                orderByListBackingColumn.Add(new(schemaName, tableName, backingColumnName!, direction: direction));
                 remainingKeys.Remove(backingColumnName!);
                 node = node.ThenBy;
             }
@@ -230,8 +230,8 @@ namespace Azure.DataApiBuilder.Service.Parsers
                 if (remainingKeys.Contains(column))
                 {
                     sqlMetadataProvider.TryGetExposedColumnName(context.EntityName, column, out string? exposedName);
-                    orderByListUrl.Add(new OrderByColumn(schemaName, tableName, exposedName!));
-                    orderByListBackingColumn.Add(new OrderByColumn(schemaName, tableName, column));
+                    orderByListUrl.Add(new(schemaName, tableName, exposedName!));
+                    orderByListBackingColumn.Add(new(schemaName, tableName, column));
                 }
             }
 

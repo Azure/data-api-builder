@@ -206,15 +206,15 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             if (TryGetConfiguredGraphQLName(configEntity, out string? graphQLName) &&
                 !string.IsNullOrEmpty(graphQLName))
             {
-                return new NameNode(graphQLName.Pluralize());
+                return new(graphQLName.Pluralize());
             }
             else if (TryGetSingularPluralConfiguration(configEntity, out SingularPlural? namingRules) &&
                 !string.IsNullOrEmpty(namingRules.Plural))
             {
-                return new NameNode(namingRules.Plural);
+                return new(namingRules.Plural);
             }
 
-            return new NameNode(name.Pluralize(inputIsKnownToBeSingular: false));
+            return new(name.Pluralize(inputIsKnownToBeSingular: false));
         }
 
         /// <summary>

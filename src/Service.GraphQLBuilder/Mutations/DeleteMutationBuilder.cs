@@ -40,13 +40,13 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             List<InputValueDefinitionNode> inputValues = new();
             foreach (FieldDefinitionNode idField in idFields)
             {
-                inputValues.Add(new InputValueDefinitionNode(
+                inputValues.Add(new(
                     location: null,
-                    idField.Name,
-                    new StringValueNode(description),
-                    new NonNullTypeNode(idField.Type.NamedType()),
+                    name: idField.Name,
+                    description: new(description),
+                    type: new NonNullTypeNode(idField.Type.NamedType()),
                     defaultValue: null,
-                    new List<DirectiveNode>()));
+                    directives: new List<DirectiveNode>()));
             }
 
             // Create authorize directive denoting allowed roles
@@ -61,12 +61,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
             string singularName = GetDefinedSingularName(name.Value, configEntity);
             return new(
-                null,
-                new NameNode($"delete{singularName}"),
-                new StringValueNode($"Delete a {singularName}"),
-                inputValues,
-                new NamedTypeNode(name),
-                fieldDefinitionNodeDirectives
+                location: null,
+                name: new($"delete{singularName}"),
+                description: new($"Delete a {singularName}"),
+                arguments: inputValues,
+                type: new NamedTypeNode(name),
+                directives: fieldDefinitionNodeDirectives
             );
         }
     }

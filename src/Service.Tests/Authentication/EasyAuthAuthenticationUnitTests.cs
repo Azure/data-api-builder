@@ -201,8 +201,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
 
             List<AppServiceClaim> payloadClaims = new()
             {
-                new AppServiceClaim() { Typ = objectIdClaimType, Val = objectId },
-                new AppServiceClaim() { Typ = tenantIdClaimType, Val = tenantId }
+                new () { Typ = objectIdClaimType, Val = objectId },
+                new () { Typ = tenantIdClaimType, Val = tenantId }
             };
 
             string generatedToken = AuthTestHelper.CreateAppServiceEasyAuthToken(additionalClaims: payloadClaims);
@@ -239,7 +239,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         {
             List<AppServiceClaim> payloadClaims = new()
             {
-                new AppServiceClaim() { Typ = claimType, Val = claimValue }
+                new () { Typ = claimType, Val = claimValue }
             };
 
             string generatedToken = AuthTestHelper.CreateAppServiceEasyAuthToken(

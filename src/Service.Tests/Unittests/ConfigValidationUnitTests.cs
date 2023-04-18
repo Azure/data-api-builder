@@ -231,7 +231,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
+                DataSource: new(DatabaseType: DatabaseType.mssql),
                 RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
                 Entities: entityMap
                 );
@@ -286,7 +286,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
+                DataSource: new(DatabaseType: DatabaseType.mssql),
                 RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
                 Entities: entityMap
                 );
@@ -333,7 +333,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
+                DataSource: new(DatabaseType: DatabaseType.mssql),
                 RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
                 Entities: entityMap
                 );
@@ -432,7 +432,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
+                DataSource: new(DatabaseType: DatabaseType.mssql),
                 RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
                 Entities: entityMap
                 );
@@ -515,7 +515,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
+                DataSource: new(DatabaseType: DatabaseType.mssql),
                 RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
                 Entities: entityMap
                 );
@@ -771,7 +771,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
+                DataSource: new(DatabaseType: DatabaseType.mssql),
                 RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
                 Entities: entityMap
                 );

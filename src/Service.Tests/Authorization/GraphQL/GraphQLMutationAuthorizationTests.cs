@@ -59,7 +59,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             List<ObjectFieldNode> mutationInputRaw = new();
             foreach (string column in columnsRequested)
             {
-                mutationInputRaw.Add(new ObjectFieldNode(name: column, value: TEST_COLUMN_VALUE));
+                mutationInputRaw.Add(new(name: column, value: TEST_COLUMN_VALUE));
             }
 
             Dictionary<string, object?> parameters = new()
@@ -122,7 +122,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                 It.IsAny<IEnumerable<string>>()
                 )).Returns(isAuthorized);
 
-            return new SqlMutationEngine(
+            return new(
                 _queryEngine.Object,
                 _queryExecutor.Object,
                 _queryBuilder.Object,

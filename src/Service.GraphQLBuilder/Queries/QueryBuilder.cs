@@ -97,15 +97,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             if (queryFields.Any())
             {
                 definitionNodes.Add(
-                    new ObjectTypeDefinitionNode(
-                        location: null,
-                        name: new NameNode("Query"),
+                    new ObjectTypeDefinitionNode(location: null,
+                        name: new("Query"),
                         description: null,
                         directives: new List<DirectiveNode>(),
                         interfaces: new List<NamedTypeNode>(),
-                        fields: queryFields
-                    )
-                );
+                        fields: queryFields));
                 definitionNodes.AddRange(returnTypes);
             }
 
@@ -133,23 +130,20 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
 
             foreach (FieldDefinitionNode primaryKeyField in primaryKeyFields)
             {
-                inputValues.Add(new InputValueDefinitionNode(
-                    location: null,
-                    primaryKeyField.Name,
+                inputValues.Add(new(location: null,
+                    name: primaryKeyField.Name,
                     description: null,
-                    primaryKeyField.Type,
+                    type: primaryKeyField.Type,
                     defaultValue: null,
-                    new List<DirectiveNode>()));
+                    directives: new List<DirectiveNode>()));
             }
 
-            return new(
-                location: null,
-                new NameNode(GenerateByPKQueryName(name.Value, entity)),
-                new StringValueNode($"Get a {GetDefinedSingularName(name.Value, entity)} from the database by its ID/primary key"),
-                inputValues,
-                new NamedTypeNode(name),
-                fieldDefinitionNodeDirectives
-            );
+            return new(location: null,
+                name: new(GenerateByPKQueryName(name.Value, entity)),
+                description: new($"Get a {GetDefinedSingularName(name.Value, entity)} from the database by its ID/primary key"),
+                arguments: inputValues,
+                type: new NamedTypeNode(name),
+                directives: fieldDefinitionNodeDirectives);
         }
 
         public static FieldDefinitionNode GenerateGetAllQuery(
@@ -186,24 +180,42 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             // Query field for the parent object type
             // Generates a file like:
             //    books(first: Int, after: String, filter: BooksFilterInput, orderBy: BooksOrderByInput): BooksConnection!
-            return new(
-                location: null,
-                new NameNode(GenerateListQueryName(name.Value, entity)),
-                new StringValueNode($"Get a list of all the {GetDefinedSingularName(name.Value, entity)} items from the database"),
-                QueryArgumentsForField(filterInputName, orderByInputName),
-                new NonNullTypeNode(new NamedTypeNode(returnType.Name)),
-                fieldDefinitionNodeDirectives
-            );
+            return new(location: null,
+                name: new(GenerateListQueryName(name.Value, entity)),
+                description: new($"Get a list of all the {GetDefinedSingularName(name.Value, entity)} items from the database"),
+                arguments: QueryArgumentsForField(filterInputName, orderByInputName),
+                type: new NonNullTypeNode(new NamedTypeNode(returnType.Name)),
+                directives: fieldDefinitionNodeDirectives);
         }
 
         public static List<InputValueDefinitionNode> QueryArgumentsForField(string filterInputName, string orderByInputName)
         {
             return new()
             {
-                new(location: null, new NameNode(PAGE_START_ARGUMENT_NAME), description: new StringValueNode("The number of items to return from the page start point"), new IntType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
-                new(location: null, new NameNode(PAGINATION_TOKEN_ARGUMENT_NAME), new StringValueNode("A pagination token from a previous query to continue through a paginated list"), new StringType().ToTypeNode(), defaultValue: null, new List<DirectiveNode>()),
-                new(location: null, new NameNode(FILTER_FIELD_NAME), new StringValueNode("Filter options for query"), new NamedTypeNode(filterInputName), defaultValue: null, new List<DirectiveNode>()),
-                new(location: null, new NameNode(ORDER_BY_FIELD_NAME), new StringValueNode("Ordering options for query"), new NamedTypeNode(orderByInputName), defaultValue: null, new List<DirectiveNode>()),
+                new(location: null,
+                    name: new (PAGE_START_ARGUMENT_NAME),
+                    description: new ("The number of items to return from the page start point"),
+                    type: new IntType().ToTypeNode(),
+                    defaultValue: null,
+                    directives: new List<DirectiveNode>()),
+                new(location: null,
+                    name: new (PAGINATION_TOKEN_ARGUMENT_NAME),
+                    description: new ("A pagination token from a previous query to continue through a paginated list"),
+                    type: new StringType().ToTypeNode(),
+                    defaultValue: null,
+                    directives: new List<DirectiveNode>()),
+                new(location: null,
+                    name: new (FILTER_FIELD_NAME),
+                    description: new ("Filter options for query"),
+                    type: new NamedTypeNode(filterInputName),
+                    defaultValue: null,
+                    directives: new List<DirectiveNode>()),
+                new(location: null,
+                    name: new (ORDER_BY_FIELD_NAME),
+                    description: new ("Ordering options for query"),
+                    type: new NamedTypeNode(orderByInputName),
+                    defaultValue: null,
+                    directives: new List<DirectiveNode>()),
             };
         }
 
@@ -264,32 +276,29 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         {
             return new(
                 location: null,
-                new NameNode(GeneratePaginationTypeName(name.Value)),
-                new StringValueNode("The return object from a filter query that supports a pagination token for paging through results"),
-                new List<DirectiveNode>(),
-                new List<NamedTypeNode>(),
-                new List<FieldDefinitionNode> {
-                    new FieldDefinitionNode(
-                        location: null,
-                        new NameNode(PAGINATION_FIELD_NAME),
-                        new StringValueNode("The list of items that matched the filter"),
-                        new List<InputValueDefinitionNode>(),
-                        new NonNullTypeNode(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(name)))),
-                        new List<DirectiveNode>()),
-                    new FieldDefinitionNode(
-                        location : null,
-                        new NameNode(PAGINATION_TOKEN_FIELD_NAME),
-                        new StringValueNode("A pagination token to provide to subsequent pages of a query"),
-                        new List<InputValueDefinitionNode>(),
-                        new StringType().ToTypeNode(),
-                        new List<DirectiveNode>()),
-                    new FieldDefinitionNode(
-                        location: null,
-                        new NameNode(HAS_NEXT_PAGE_FIELD_NAME),
-                        new StringValueNode("Indicates if there are more pages of items to return"),
-                        new List<InputValueDefinitionNode>(),
-                        new NonNullType(new BooleanType()).ToTypeNode(),
-                        new List<DirectiveNode>())
+                name: new(GeneratePaginationTypeName(name.Value)),
+                description: new("The return object from a filter query that supports a pagination token for paging through results"),
+                directives: new List<DirectiveNode>(),
+                interfaces: new List<NamedTypeNode>(),
+                fields: new List<FieldDefinitionNode> {
+                    new (location: null,
+                        name: new (PAGINATION_FIELD_NAME),
+                        description: new ("The list of items that matched the filter"),
+                        arguments: new List<InputValueDefinitionNode>(),
+                        type: new NonNullTypeNode(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(name)))),
+                        directives: new List<DirectiveNode>()),
+                    new (location : null,
+                        name: new (PAGINATION_TOKEN_FIELD_NAME),
+                        description: new ("A pagination token to provide to subsequent pages of a query"),
+                        arguments: new List<InputValueDefinitionNode>(),
+                        type: new StringType().ToTypeNode(),
+                        directives: new List<DirectiveNode>()),
+                    new (location: null,
+                        name: new (HAS_NEXT_PAGE_FIELD_NAME),
+                        description: new ("Indicates if there are more pages of items to return"),
+                        arguments: new List<InputValueDefinitionNode>(),
+                        type: new NonNullType(new BooleanType()).ToTypeNode(),
+                        directives: new List<DirectiveNode>())
                 }
             );
         }

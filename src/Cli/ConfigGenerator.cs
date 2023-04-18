@@ -151,7 +151,7 @@ namespace Cli
                     !options.RestDisabled,
                     options.GraphQLPath,
                     !options.GraphQLDisabled),
-                Entities: new Dictionary<string, Entity>());
+                Entities: new());
 
             runtimeConfigJson = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());
             return true;
@@ -590,12 +590,13 @@ namespace Cli
                 }
             }
 
-            runtimeConfig.Entities[options.Entity] = new Entity(updatedSource,
-                                                                updatedRestDetails,
-                                                                updatedGraphQLDetails,
-                                                                updatedPermissions,
-                                                                updatedRelationships,
-                                                                updatedMappings);
+            runtimeConfig.Entities[options.Entity] = new(
+                updatedSource,
+                updatedRestDetails,
+                updatedGraphQLDetails,
+                updatedPermissions,
+                updatedRelationships,
+                updatedMappings);
             runtimeConfigJson = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());
             return true;
         }
@@ -932,13 +933,14 @@ namespace Cli
                 updatedTargetFields = options.RelationshipFields.ElementAt(1).Split(",");
             }
 
-            return new Relationship(updatedCardinality,
-                                    options.TargetEntity!,
-                                    updatedSourceFields,
-                                    updatedTargetFields,
-                                    options.LinkingObject,
-                                    updatedLinkingSourceFields,
-                                    updatedLinkingTargetFields);
+            return new(
+                updatedCardinality,
+                options.TargetEntity!,
+                updatedSourceFields,
+                updatedTargetFields,
+                options.LinkingObject,
+                updatedLinkingSourceFields,
+                updatedLinkingTargetFields);
         }
 
         /// <summary>

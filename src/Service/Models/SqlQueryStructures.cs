@@ -314,10 +314,10 @@ namespace Azure.DataApiBuilder.Service.Models
         /// </summary>
         public static Predicate MakeFalsePredicate()
         {
-            return new Predicate(
-                new PredicateOperand("1"),
+            return new(
+                new("1"),
                 PredicateOperation.NotEqual,
-                new PredicateOperand("1")
+                new("1")
             );
         }
     }

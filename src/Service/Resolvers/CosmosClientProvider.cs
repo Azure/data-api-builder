@@ -67,12 +67,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 }
                 else if (string.IsNullOrEmpty(_accessToken))
                 {
-                    Client = new CosmosClient(_accountEndpoint, new DefaultAzureCredential());
+                    Client = new(_accountEndpoint, new DefaultAzureCredential());
                 }
                 else
                 {
                     TokenCredential servicePrincipal = new AADTokenCredential(_accessToken);
-                    Client = new CosmosClient(_accountEndpoint, servicePrincipal);
+                    Client = new(_accountEndpoint, servicePrincipal);
                 }
             }
         }
@@ -93,7 +93,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 {
                     JwtSecurityTokenHandler handler = new();
                     JwtSecurityToken token = handler.ReadJwtToken(_aadToken);
-                    return new AccessToken(_aadToken, new DateTimeOffset(token.ValidTo));
+                    return new(_aadToken, new(token.ValidTo));
                 }
                 catch (Exception ex)
                 {

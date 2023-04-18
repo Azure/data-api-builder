@@ -101,7 +101,7 @@ namespace Azure.DataApiBuilder.Service.Models
                             subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                     }
 
-                    predicates.Push(new PredicateOperand(ParseAndOr(
+                    predicates.Push(new(ParseAndOr(
                         ctx,
                         argumentSchema: filterArgumentObject.Fields[name],
                         filterArgumentSchema: filterArgumentSchema,
@@ -184,7 +184,7 @@ namespace Azure.DataApiBuilder.Service.Models
                         {
                             queryStructure.DatabaseObject.Name = sourceName + "." + backingColumnName;
                             queryStructure.SourceAlias = sourceName + "." + backingColumnName;
-                            predicates.Push(new PredicateOperand(Parse(ctx,
+                            predicates.Push(new(Parse(ctx,
                                 filterArgumentObject.Fields[name],
                                 subfields,
                                 queryStructure)));
@@ -195,7 +195,7 @@ namespace Azure.DataApiBuilder.Service.Models
                     else
                     {
                         predicates.Push(
-                            new PredicateOperand(
+                            new(
                                 ParseScalarType(
                                     ctx,
                                     argumentSchema: filterArgumentObject.Fields[name],
@@ -297,7 +297,7 @@ namespace Azure.DataApiBuilder.Service.Models
             Predicate existsPredicate = new(left: null, PredicateOperation.EXISTS, right);
 
             // Add it to the rest of the existing predicates.
-            predicates.Push(new PredicateOperand(existsPredicate));
+            predicates.Push(new(existsPredicate));
 
             // Add all parameters from the exists subquery to the main queryStructure.
             foreach ((string key, object? value) in existsQuery.Parameters)
@@ -415,7 +415,7 @@ namespace Azure.DataApiBuilder.Service.Models
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
 
-                operands.Add(new PredicateOperand(
+                operands.Add(new(
                     Parse(ctx,
                         filterArgumentSchema,
                         subfields,
@@ -448,10 +448,10 @@ namespace Azure.DataApiBuilder.Service.Models
                 return operands[pos].AsPredicate()!;
             }
 
-            return new Predicate(
+            return new(
                 operands[pos],
                 op,
-                new PredicateOperand(MakeChainPredicate(operands, op, pos + 1, false)),
+                new(MakeChainPredicate(operands, op, pos + 1, false)),
                 addParenthesis: addParenthesis && operands.Count > 1
             );
         }
@@ -539,10 +539,10 @@ namespace Azure.DataApiBuilder.Service.Models
                         throw new NotSupportedException($"Operation {name} on int type not supported.");
                 }
 
-                predicates.Push(new PredicateOperand(new Predicate(
-                    new PredicateOperand(column),
+                predicates.Push(new(new Predicate(
+                    new(column),
                     op,
-                    new PredicateOperand(processLiteral ? $"{processLiterals(value)}" : value.ToString()))
+                    new(processLiteral ? $"{processLiterals(value)}" : value.ToString()))
                 ));
             }
 

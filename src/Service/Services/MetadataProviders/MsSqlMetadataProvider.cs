@@ -83,14 +83,14 @@ namespace Azure.DataApiBuilder.Service.Services
             string? procedureDefinition = rootElement.GetProperty("ProcedureDefinition").ToString();
 
             // See regexr.com/7c7um for this regex and it's associated tests.
-            Regex? regex = new Regex(@"@([\w]+)\s+([^\s]+)\s*=\s*([^, ]*),?", RegexOptions.IgnoreCase);
+            Regex? regex = new(@"@([\w]+)\s+([^\s]+)\s*=\s*([^, ]*),?", RegexOptions.IgnoreCase);
             MatchCollection? matches = regex.Matches(procedureDefinition);
             foreach (Match match in matches)
             {
                 string? sqlParamName = match.Groups[1]?.Value;
                 string? sqlParamType = match.Groups[2]?.Value;
                 string? sqlParamDefaultValue = match.Groups[3]?.Value;
-                if(sqlParamName != null && sqlParamDefaultValue != null)
+                if (sqlParamName != null && sqlParamDefaultValue != null)
                 {
                     storedProcedureDefinition.Parameters[sqlParamName].IsOptional = true;
                 }

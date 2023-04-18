@@ -203,7 +203,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
             {
                 actualAuthorizationResult = await IsAuthorizationSuccessfulAsync(
                     requirement: new EntityRoleOperationPermissionsRequirement(),
-                    resource: new object(),
+                    resource: new(),
                     resolver: authorizationResolver.Object,
                     httpContext: httpContext
                 );

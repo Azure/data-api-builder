@@ -538,7 +538,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         primaryKeyExposedColumnNames.Any() ? primaryKeyExposedColumnNames : sourceDefinition.PrimaryKey);
 
                 dbResultSetRow = dbResultSet is not null ?
-                    (dbResultSet.Rows.FirstOrDefault() ?? new DbResultSetRow()) : null;
+                    (dbResultSet.Rows.FirstOrDefault() ?? new()) : null;
                 if (dbResultSetRow is not null && !dbResultSetRow.Columns.Any())
                 {
                     // For GraphQL, insert operation corresponds to Create action.

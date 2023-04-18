@@ -134,8 +134,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             try
             {
                 _defaultAccessToken =
-                    await AzureCredential.GetTokenAsync(
-                        new TokenRequestContext(new[] { DATABASE_SCOPE }));
+                    await AzureCredential.GetTokenAsync(new(new[] { DATABASE_SCOPE }));
             }
             // because there can be scenarios where password is not specified but
             // default managed identity is not the intended method of authentication

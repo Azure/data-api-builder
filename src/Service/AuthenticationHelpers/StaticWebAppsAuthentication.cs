@@ -68,12 +68,12 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
 
                 if (!string.IsNullOrWhiteSpace(principal.UserId))
                 {
-                    identity.AddClaim(new Claim(USER_ID_CLAIM, principal.UserId));
+                    identity.AddClaim(new(USER_ID_CLAIM, principal.UserId));
                 }
 
                 if (!string.IsNullOrWhiteSpace(principal.UserDetails))
                 {
-                    identity.AddClaim(new Claim(USER_DETAILS_CLAIM, principal.UserDetails));
+                    identity.AddClaim(new(USER_DETAILS_CLAIM, principal.UserDetails));
                 }
 
                 // output identity.Claims

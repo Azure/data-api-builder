@@ -93,7 +93,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 throw new InvalidDataException("Partition Key field is mandatory");
             }
 
-            return await container.DeleteItemAsync<JObject>(id, new PartitionKey(partitionKey));
+            return await container.DeleteItemAsync<JObject>(id, new(partitionKey));
         }
 
         private static async Task<ItemResponse<JObject>> HandleCreateAsync(IDictionary<string, object?> queryArgs, Container container)
@@ -165,7 +165,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else
             {
-                return await container.ReplaceItemAsync<JObject>(input, id, new PartitionKey(partitionKey), new ItemRequestOptions());
+                return await container.ReplaceItemAsync<JObject>(input, id, new(partitionKey), new());
             }
         }
 

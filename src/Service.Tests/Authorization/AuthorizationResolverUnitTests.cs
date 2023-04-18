@@ -220,8 +220,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
-                RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
+                DataSource: new(DatabaseType: DatabaseType.mssql),
+                RuntimeSettings: new(),
                 Entities: entityMap
                 );
 
@@ -452,8 +452,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
-                RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
+                DataSource: new(DatabaseType: DatabaseType.mssql),
+                RuntimeSettings: new(),
                 Entities: entityMap
                 );
 
@@ -962,11 +962,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             //Add identity object to the Mock context object.
             ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationConfig.ROLE_CLAIM_TYPE);
-            identity.AddClaim(new Claim("user_email", "xyz@microsoft.com", ClaimValueTypes.String));
-            identity.AddClaim(new Claim("name", "Aaron", ClaimValueTypes.String));
-            identity.AddClaim(new Claim("contact_no", "1234", ClaimValueTypes.Integer64));
-            identity.AddClaim(new Claim("isemployee", "true", ClaimValueTypes.Boolean));
-            identity.AddClaim(new Claim("emprating", "4.2", ClaimValueTypes.Double));
+            identity.AddClaim(new("user_email", "xyz@microsoft.com", ClaimValueTypes.String));
+            identity.AddClaim(new("name", "Aaron", ClaimValueTypes.String));
+            identity.AddClaim(new("contact_no", "1234", ClaimValueTypes.Integer64));
+            identity.AddClaim(new("isemployee", "true", ClaimValueTypes.Boolean));
+            identity.AddClaim(new("emprating", "4.2", ClaimValueTypes.Double));
             ClaimsPrincipal principal = new(identity);
             context.Setup(x => x.User).Returns(principal);
             context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
@@ -1023,7 +1023,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             //Add identity object to the Mock context object.
             ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationConfig.ROLE_CLAIM_TYPE);
-            identity.AddClaim(new Claim("testClaim", claimValue, claimValueType));
+            identity.AddClaim(new("testClaim", claimValue, claimValueType));
 
             ClaimsPrincipal principal = new(identity);
             context.Setup(x => x.User).Returns(principal);
@@ -1071,8 +1071,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             //Add identity object to the Mock context object.
             ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationConfig.ROLE_CLAIM_TYPE);
-            identity.AddClaim(new Claim("user_email", "xyz@microsoft.com", ClaimValueTypes.String));
-            identity.AddClaim(new Claim("isemployee", "true", ClaimValueTypes.Boolean));
+            identity.AddClaim(new("user_email", "xyz@microsoft.com", ClaimValueTypes.String));
+            identity.AddClaim(new("isemployee", "true", ClaimValueTypes.Boolean));
             ClaimsPrincipal principal = new(identity);
             context.Setup(x => x.User).Returns(principal);
             context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
@@ -1119,7 +1119,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationConfig.ROLE_CLAIM_TYPE);
             foreach (string claimType in claimTypes)
             {
-                identity.AddClaim(new Claim(type: claimType, value: defaultClaimValue, ClaimValueTypes.String));
+                identity.AddClaim(new(type: claimType, value: defaultClaimValue, ClaimValueTypes.String));
             }
 
             ClaimsPrincipal principal = new(identity);
@@ -1189,7 +1189,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             // Add identity object to the Mock context object.
             ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationConfig.ROLE_CLAIM_TYPE);
-            identity.AddClaim(new Claim("user_email", "xyz@microsoft.com", ClaimValueTypes.String));
+            identity.AddClaim(new("user_email", "xyz@microsoft.com", ClaimValueTypes.String));
             ClaimsPrincipal principal = new(identity);
             context.Setup(x => x.User).Returns(principal);
             context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(clientRole);
@@ -1302,8 +1302,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
-                RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
+                DataSource: new(DatabaseType: DatabaseType.mssql),
+                RuntimeSettings: new(),
                 Entities: entityMap
                 );
 

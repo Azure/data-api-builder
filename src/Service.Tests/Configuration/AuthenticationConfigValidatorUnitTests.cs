@@ -25,7 +25,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         public void ValidateEasyAuthConfig()
         {
             RuntimeConfig config =
-                CreateRuntimeConfigWithOptionalAuthN(new AuthenticationConfig(EasyAuthType.StaticWebApps.ToString()));
+                CreateRuntimeConfigWithOptionalAuthN(new(EasyAuthType.StaticWebApps.ToString()));
 
             RuntimeConfigValidator configValidator = GetMockConfigValidator(ref config);
 

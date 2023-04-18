@@ -58,7 +58,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimul
 
             if (Context.Request.Headers.TryGetValue(AuthorizationResolver.CLIENT_ROLE_HEADER, out StringValues clientRoleHeader))
             {
-                identity.AddClaim(new Claim(ClaimTypes.Role, clientRoleHeader.ToString()));
+                identity.AddClaim(new(ClaimTypes.Role, clientRoleHeader.ToString()));
             }
 
             ClaimsPrincipal claimsPrincipal = new(identity);

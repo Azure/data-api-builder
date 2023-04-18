@@ -114,7 +114,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         /// <param name="entityName"></param>
         public SourceDefinition GetSourceDefinition(string entityName)
         {
-            return new SourceDefinition();
+            return new();
         }
 
         public StoredProcedureDefinition GetStoredProcedureDefinition(string entityName)

@@ -91,7 +91,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 definitionNodes.Add(
                     new ObjectTypeDefinitionNode(
                         location: null,
-                        name: new NameNode("Mutation"),
+                        name: new("Mutation"),
                         description: null,
                         directives: new List<DirectiveNode>(),
                         interfaces: new List<NamedTypeNode>(),

@@ -347,7 +347,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 _runtimeConfigProvider,
                 new GQLFilterParser(_sqlMetadataProvider),
                 null); // setting httpContext as null for the tests.
-            return new ODataASTVisitor(structure.Object, _sqlMetadataProvider);
+            return new(structure.Object, _sqlMetadataProvider);
         }
 
         /// <summary>
@@ -371,7 +371,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 typeRef = new(primitiveType, isNull);
             }
 
-            return new ConstantNode(constantValue, literalText, typeRef);
+            return new(constantValue, literalText, typeRef);
         }
 
         /// <summary>
@@ -386,7 +386,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             SingleValueNode right,
             BinaryOperatorKind op)
         {
-            return new BinaryOperatorNode(op, left, right);
+            return new(op, left, right);
         }
 
         /// <summary>
@@ -399,7 +399,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             SingleValueNode child,
             UnaryOperatorKind op)
         {
-            return new UnaryOperatorNode(op, child);
+            return new(op, child);
         }
 
         #endregion

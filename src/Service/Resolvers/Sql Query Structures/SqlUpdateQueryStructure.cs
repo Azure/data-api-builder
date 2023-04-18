@@ -170,19 +170,17 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             else if (param.Value is null)
             {
                 predicate = new(
-                    new PredicateOperand(
-                        new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, backingColumn!)),
+                    new(new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, backingColumn!)),
                     PredicateOperation.Equal,
-                    new PredicateOperand($"{MakeParamWithValue(null)}")
+                    new($"{MakeParamWithValue(null)}")
                 );
             }
             else
             {
                 predicate = new(
-                    new PredicateOperand(
-                        new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, param.Key)),
+                    new(new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, param.Key)),
                     PredicateOperation.Equal,
-                    new PredicateOperand($"{MakeParamWithValue(GetParamAsSystemType(param.Value.ToString()!, param.Key, GetColumnSystemType(param.Key)))}"));
+                    new($"{MakeParamWithValue(GetParamAsSystemType(param.Value.ToString()!, param.Key, GetColumnSystemType(param.Key)))}"));
             }
 
             return predicate;

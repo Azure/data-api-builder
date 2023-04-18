@@ -82,7 +82,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             Columns = new();
             Parameters = new();
             Predicates = predicates ?? new();
-            Counter = counter ?? new IncrementingInteger();
+            Counter = counter ?? new();
             MetadataProvider = metadataProvider;
             GraphQLFilterParser = gQLFilterParser;
             AuthorizationResolver = authorizationResolver;

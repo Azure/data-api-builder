@@ -138,8 +138,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             try
             {
                 _defaultAccessToken =
-                    await AzureCredential.GetTokenAsync(
-                        new TokenRequestContext(new[] { DATABASE_SCOPE }));
+                    await AzureCredential.GetTokenAsync(new(new[] { DATABASE_SCOPE }));
             }
             catch (CredentialUnavailableException ex)
             {

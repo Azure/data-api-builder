@@ -134,9 +134,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                     // Create a predicate for UPDATE Operation.
                     Predicate predicate = new(
-                        new PredicateOperand(new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, columnName: backingColumn!)),
+                        new(new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, columnName: backingColumn!)),
                         PredicateOperation.Equal,
-                        new PredicateOperand($"{paramIdentifier}")
+                        new($"{paramIdentifier}")
                     );
 
                     // We are guaranteed by the RequestValidator, that a primary key column is in the URL, not body.

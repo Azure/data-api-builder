@@ -157,7 +157,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 httpContextAccessor.Object);
 
             // Setup REST Service
-            _restService = new RestService(
+            _restService = new(
                 queryEngine,
                 mutationEngine,
                 sqlMetadataProvider.Object,

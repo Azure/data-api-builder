@@ -70,22 +70,22 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             if (databaseType is DatabaseType.cosmosdb_nosql)
             {
                 fieldDefinitionNodes.Add(
-                    new FieldDefinitionNode(
+                    new(
                         location: null,
-                        new NameNode(DEFAULT_PRIMARY_KEY_NAME),
-                        new StringValueNode("Id value to provide to identify a cosmos db record"),
-                        new List<InputValueDefinitionNode>(),
-                        new IdType().ToTypeNode(),
-                        new List<DirectiveNode>()));
+                        name: new(DEFAULT_PRIMARY_KEY_NAME),
+                        description: new("Id value to provide to identify a cosmos db record"),
+                        arguments: new List<InputValueDefinitionNode>(),
+                        type: new IdType().ToTypeNode(),
+                        directives: new List<DirectiveNode>()));
 
                 fieldDefinitionNodes.Add(
-                    new FieldDefinitionNode(
+                    new(
                         location: null,
-                        new NameNode(DEFAULT_PARTITION_KEY_NAME),
-                        new StringValueNode("Partition key value to provide to identify a cosmos db record"),
-                        new List<InputValueDefinitionNode>(),
-                        new StringType().ToTypeNode(),
-                        new List<DirectiveNode>()));
+                        name: new(DEFAULT_PARTITION_KEY_NAME),
+                        description: new("Partition key value to provide to identify a cosmos db record"),
+                        arguments: new List<InputValueDefinitionNode>(),
+                        type: new StringType().ToTypeNode(),
+                        directives: new List<DirectiveNode>()));
             }
             else
             {

@@ -44,28 +44,24 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                 if (IsBuiltInType(field.Type))
                 {
                     inputFields.Add(
-                        new(
-                            location: null,
-                            field.Name,
-                            new StringValueNode($"Order by options for {field.Name}"),
-                            new NamedTypeNode(OrderByType.EnumName),
+                        new(location: null,
+                            name: field.Name,
+                            description: new($"Order by options for {field.Name}"),
+                            type: new NamedTypeNode(OrderByType.EnumName),
                             defaultValue: null,
-                            new List<DirectiveNode>())
-                        );
+                            directives: new List<DirectiveNode>()));
                 }
                 else
                 {
                     string targetEntityName = RelationshipDirectiveType.Target(field);
 
                     inputFields.Add(
-                        new(
-                            location: null,
-                            field.Name,
-                            new StringValueNode($"Order by options for {field.Name}"),
-                            new NamedTypeNode(GenerateObjectInputOrderByName(targetEntityName)),
+                        new(location: null,
+                            name: field.Name,
+                            description: new($"Order by options for {field.Name}"),
+                            type: new NamedTypeNode(GenerateObjectInputOrderByName(targetEntityName)),
                             defaultValue: null,
-                            new List<DirectiveNode>())
-                        );
+                            directives: new List<DirectiveNode>()));
                 }
 
             }
@@ -80,33 +76,28 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             string inputTypeDescription)
         {
             inputFields.Add(
-                new(
-                    location: null,
-                    new("and"),
-                    new("Conditions to be treated as AND operations"),
-                    new ListTypeNode(new NamedTypeNode(inputTypeName)),
+                new(location: null,
+                    name: new("and"),
+                    description: new("Conditions to be treated as AND operations"),
+                    type: new ListTypeNode(new NamedTypeNode(inputTypeName)),
                     defaultValue: null,
-                    new List<DirectiveNode>()));
+                    directives: new List<DirectiveNode>()));
 
             inputFields.Add(
-                new(
-                    location: null,
-                    new("or"),
-                    new("Conditions to be treated as OR operations"),
-                    new ListTypeNode(new NamedTypeNode(inputTypeName)),
+                new(location: null,
+                    name: new("or"),
+                    description: new("Conditions to be treated as OR operations"),
+                    type: new ListTypeNode(new NamedTypeNode(inputTypeName)),
                     defaultValue: null,
-                    new List<DirectiveNode>()));
+                    directives: new List<DirectiveNode>()));
 
             inputTypes.Add(
                 inputTypeName,
-                new(
-                    location: null,
-                    new NameNode(inputTypeName),
-                    new StringValueNode(inputTypeDescription),
-                    new List<DirectiveNode>(),
-                    inputFields
-                )
-            );
+                new(location: null,
+                    name: new(inputTypeName),
+                    description: new(inputTypeDescription),
+                    directives: new List<DirectiveNode>(),
+                    fields: inputFields));
         }
 
         private static List<InputValueDefinitionNode> GenerateFilterInputFieldsForBuiltInFields(
@@ -127,14 +118,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     InputObjectTypeDefinitionNode inputType = inputTypes[fieldTypeName];
 
                     inputFields.Add(
-                        new(
-                            location: null,
-                            field.Name,
-                            new StringValueNode($"Filter options for {field.Name}"),
-                            new NamedTypeNode(inputType.Name.Value),
+                        new(location: null,
+                            name: field.Name,
+                            description: new($"Filter options for {field.Name}"),
+                            type: new NamedTypeNode(inputType.Name.Value),
                             defaultValue: null,
-                            new List<DirectiveNode>())
-                        );
+                            directives: new List<DirectiveNode>()));
                 }
                 else
                 {
@@ -149,11 +138,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     }
 
                     inputFields.Add(
-                        new(
-                            location: null,
-                            field.Name,
-                            new StringValueNode($"Filter options for {field.Name}"),
-                            new NamedTypeNode(GenerateObjectInputFilterName(targetEntityName)),
+                        new(location: null,
+                            name: field.Name,
+                            description: new($"Filter options for {field.Name}"),
+                            type: new NamedTypeNode(GenerateObjectInputFilterName(targetEntityName)),
                             defaultValue: null,
                             directives: directives));
                 }

@@ -80,10 +80,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             InputObjectTypeDefinitionNode input =
                 new(
                     location: null,
-                    inputName,
-                    new StringValueNode($"Input type for updating {name}"),
-                    new List<DirectiveNode>(),
-                    inputFields.ToList()
+                    name: inputName,
+                    description: new($"Input type for updating {name}"),
+                    directives: new List<DirectiveNode>(),
+                    fields: inputFields.ToList()
                 );
 
             inputs.Add(input.Name, input);
@@ -94,14 +94,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         {
             return new(
                 location: null,
-                f.Name,
-                new StringValueNode($"Input for field {f.Name} on type {GenerateInputTypeName(name.Value)}"),
+                name: f.Name,
+                description: new($"Input for field {f.Name} on type {GenerateInputTypeName(name.Value)}"),
                 /// There is a difference between CosmosDb for NoSql and relational databases on generating required simple field types for update mutations.
                 /// Cosmos is calling replace item whereas for sql is doing incremental update.
                 /// That's why sql allows nullable update input fields even for non-nullable simple fields. 
-                (databaseType == DatabaseType.cosmosdb_nosql) ? f.Type : f.Type.NullableType(),
+                type: (databaseType == DatabaseType.cosmosdb_nosql) ? f.Type : f.Type.NullableType(),
                 defaultValue: null,
-                new List<DirectiveNode>()
+                directives: new List<DirectiveNode>()
             );
         }
 
@@ -149,11 +149,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
             return new(
                 location: null,
-                f.Name,
-                new StringValueNode($"Input for field {f.Name} on type {inputTypeName}"),
-                type,
+                name: f.Name,
+                description: new($"Input for field {f.Name} on type {inputTypeName}"),
+                type: type,
                 defaultValue: null,
-                f.Directives
+                directives: f.Directives
             );
         }
 
@@ -218,22 +218,22 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             List<InputValueDefinitionNode> inputValues = new();
             foreach (FieldDefinitionNode idField in idFields)
             {
-                inputValues.Add(new InputValueDefinitionNode(
+                inputValues.Add(new(
                     location: null,
-                    idField.Name,
-                    new StringValueNode(description),
-                    new NonNullTypeNode(idField.Type.NamedType()),
+                    name: idField.Name,
+                    description: new(description),
+                    type: new NonNullTypeNode(idField.Type.NamedType()),
                     defaultValue: null,
-                    new List<DirectiveNode>()));
+                    directives: new List<DirectiveNode>()));
             }
 
-            inputValues.Add(new InputValueDefinitionNode(
+            inputValues.Add(new(
                     location: null,
-                    new NameNode(INPUT_ARGUMENT_NAME),
-                    new StringValueNode($"Input representing all the fields for updating {name}"),
-                    new NonNullTypeNode(new NamedTypeNode(input.Name)),
+                    name: new(INPUT_ARGUMENT_NAME),
+                    description: new($"Input representing all the fields for updating {name}"),
+                    type: new NonNullTypeNode(new NamedTypeNode(input.Name)),
                     defaultValue: null,
-                    new List<DirectiveNode>()));
+                    directives: new List<DirectiveNode>()));
 
             // Create authorize directive denoting allowed roles
             List<DirectiveNode> fieldDefinitionNodeDirectives = new();
@@ -248,11 +248,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             string singularName = GetDefinedSingularName(name.Value, entities[dbEntityName]);
             return new(
                 location: null,
-                new NameNode($"update{singularName}"),
-                new StringValueNode($"Updates a {singularName}"),
-                inputValues,
-                new NamedTypeNode(name),
-                fieldDefinitionNodeDirectives
+                name: new($"update{singularName}"),
+                description: new($"Updates a {singularName}"),
+                arguments: inputValues,
+                type: new NamedTypeNode(name),
+                directives: fieldDefinitionNodeDirectives
             );
         }
     }

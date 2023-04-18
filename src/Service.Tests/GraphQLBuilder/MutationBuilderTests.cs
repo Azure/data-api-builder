@@ -40,7 +40,13 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
 
         private static Entity GenerateEmptyEntity()
         {
-            return new Entity("dbo.entity", Rest: null, GraphQL: null, Array.Empty<PermissionSetting>(), Relationships: new(), Mappings: new());
+            return new(
+                Source: "dbo.entity",
+                Rest: null,
+                GraphQL: null,
+                Permissions: Array.Empty<PermissionSetting>(),
+                Relationships: new(),
+                Mappings: new());
         }
 
         [DataTestMethod]

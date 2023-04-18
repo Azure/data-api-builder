@@ -174,7 +174,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         public static DocumentNode CreateGraphQLDocument(Dictionary<string, ObjectTypeDefinitionNode> objectTypeDefinitions)
         {
             List<IDefinitionNode> nodes = new(objectTypeDefinitions.Values);
-            return new DocumentNode(nodes);
+            return new(nodes);
         }
 
         /// <summary>

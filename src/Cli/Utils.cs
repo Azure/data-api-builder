@@ -438,7 +438,7 @@ namespace Cli
         {
             if (policyRequest is not null || policyDatabase is not null)
             {
-                return new Policy(policyRequest, policyDatabase);
+                return new(policyRequest, policyDatabase);
             }
 
             return null;
@@ -454,7 +454,7 @@ namespace Cli
             {
                 HashSet<string>? fieldsToIncludeSet = fieldsToInclude is not null && fieldsToInclude.Any() ? new HashSet<string>(fieldsToInclude) : null;
                 HashSet<string>? fieldsToExcludeSet = fieldsToExclude is not null && fieldsToExclude.Any() ? new HashSet<string>(fieldsToExclude) : null;
-                return new Field(fieldsToIncludeSet, fieldsToExcludeSet);
+                return new(fieldsToIncludeSet, fieldsToExcludeSet);
             }
 
             return null;

@@ -60,7 +60,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
         /// <returns></returns>
         public static JsonResult ErrorResponse(string code, string message, HttpStatusCode status)
         {
-            return new JsonResult(new
+            return new(new
             {
                 error = new
                 {

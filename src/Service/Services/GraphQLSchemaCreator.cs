@@ -224,7 +224,7 @@ namespace Azure.DataApiBuilder.Service.Services
             }
 
             List<IDefinitionNode> nodes = new(objectTypes.Values);
-            return (new DocumentNode(nodes.Concat(inputObjects.Values).ToImmutableList()), inputObjects);
+            return (new(nodes.Concat(inputObjects.Values).ToImmutableList()), inputObjects);
         }
 
         private (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) GenerateCosmosGraphQLObjects()

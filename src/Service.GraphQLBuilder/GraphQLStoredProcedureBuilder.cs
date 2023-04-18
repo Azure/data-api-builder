@@ -78,8 +78,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                     Tuple<string, IValueNode> defaultGraphQLValue = ConvertValueToGraphQLType(defaultValueFromConfig, parameterDefinition: spdef.Parameters[param]);
 
                     inputValues.Add(
-                        new(
-                            location: null,
+                        new(location: null,
                             name: new(param),
                             description: null,
                             type: new NamedTypeNode(defaultGraphQLValue.Item1),
@@ -100,13 +99,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             }
 
             NonNullTypeNode type = generateWithOutputParameters
-                ? new NonNullTypeNode(new NamedTypeNode(GenerateStoredProcedureGraphQLResultObjectName(name.Value, entity)))
-                : new NonNullTypeNode(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(name))));
+                ? new(new NamedTypeNode(GenerateStoredProcedureGraphQLResultObjectName(name.Value, entity)))
+                : new(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(name))));
 
-            return new(
-                location: null,
-                name: new NameNode(GenerateStoredProcedureGraphQLFieldName(name.Value, entity)),
-                description: new StringValueNode($"Execute Stored-Procedure {name.Value} and get results from the database"),
+            return new(location: null,
+                name: new(GenerateStoredProcedureGraphQLFieldName(name.Value, entity)),
+                description: new($"Execute Stored-Procedure {name.Value} and get results from the database"),
                 arguments: inputValues,
                 type: type,
                 directives: fieldDefinitionNodeDirectives
@@ -168,8 +166,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             }
 
             string? storedProcedureName = GenerateStoredProcedureGraphQLFieldName(name.Value, entity);
-            return new ObjectTypeDefinitionNode(
-                location: null,
+            return new(location: null,
                 name: new(GenerateStoredProcedureGraphQLResultObjectName(name.Value, entity)),
                 description: new($"Represents the results of the {storedProcedureName} stored procedure execution."),
                 directives: new List<DirectiveNode>(),
@@ -208,10 +205,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// </summary>
         public static FieldDefinitionNode GetDefaultResultFieldForStoredProcedure()
         {
-            return new(
-                location: null,
+            return new(location: null,
                 name: new("result"),
-                description: new StringValueNode("Contains output of stored-procedure execution"),
+                description: new("Contains output of stored-procedure execution"),
                 arguments: new List<InputValueDefinitionNode>(),
                 type: new StringType().ToTypeNode(),
                 directives: new List<DirectiveNode>());

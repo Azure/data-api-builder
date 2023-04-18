@@ -1617,7 +1617,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Policy: new(request: null, database: null)
                 );
 
-            return new PermissionSetting(
+            return new(
                 role: roleName,
                 operations: new object[] { JsonSerializer.SerializeToElement(actionForRole) }
                 );

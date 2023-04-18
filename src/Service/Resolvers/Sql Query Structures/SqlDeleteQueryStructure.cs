@@ -50,10 +50,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
                 if (primaryKeys.Contains(backingColumn!))
                 {
-                    Predicates.Add(new Predicate(
-                        new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, backingColumn!)),
+                    Predicates.Add(new(
+                        new(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, backingColumn!)),
                         PredicateOperation.Equal,
-                        new PredicateOperand($"{MakeParamWithValue(GetParamAsSystemType(param.Value.ToString()!, backingColumn!, GetColumnSystemType(backingColumn!)))}")
+                        new($"{MakeParamWithValue(GetParamAsSystemType(param.Value.ToString()!, backingColumn!, GetColumnSystemType(backingColumn!)))}")
                     ));
                 }
             }

@@ -151,12 +151,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     string? exposedColumnName = GetExposedColumnName(entityName, column.ColumnName, sqlMetadataProvider);
                     if (TryResolveJsonElementToScalarVariable(element.GetProperty(exposedColumnName), out object? value))
                     {
-                        cursorJson.Add(new PaginationColumn(tableSchema: schemaName,
-                                                        tableName: tableName,
-                                                        exposedColumnName,
-                                                        value,
-                                                        tableAlias: null,
-                                                        direction: column.Direction));
+                        cursorJson.Add(new(
+                            tableSchema: schemaName,
+                            tableName: tableName,
+                            exposedColumnName,
+                            value,
+                            tableAlias: null,
+                            direction: column.Direction));
                     }
                     else
                     {
@@ -184,11 +185,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     string? exposedColumnName = GetExposedColumnName(entityName, column, sqlMetadataProvider);
                     if (TryResolveJsonElementToScalarVariable(element.GetProperty(exposedColumnName), out object? value))
                     {
-                        cursorJson.Add(new PaginationColumn(tableSchema: schemaName,
-                                                        tableName: tableName,
-                                                        exposedColumnName,
-                                                        value,
-                                                        direction: OrderBy.ASC));
+                        cursorJson.Add(new(
+                            tableSchema: schemaName,
+                            tableName: tableName,
+                            exposedColumnName,
+                            value,
+                            direction: OrderBy.ASC));
                     }
                     else
                     {

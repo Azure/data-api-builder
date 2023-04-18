@@ -72,7 +72,7 @@ namespace Cli
             HttpClient client = new( // CodeQL[SM02185] Loading internal server connection
                                         new HttpClientHandler { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator }
                                     )
-            { BaseAddress = new Uri($"https://localhost:5001{runtimeConfig.GraphQLGlobalSettings.Path}") };
+            { BaseAddress = new($"https://localhost:5001{runtimeConfig.GraphQLGlobalSettings.Path}") };
 
             IntrospectionClient introspectionClient = new();
             Task<HotChocolate.Language.DocumentNode> response = introspectionClient.DownloadSchemaAsync(client);

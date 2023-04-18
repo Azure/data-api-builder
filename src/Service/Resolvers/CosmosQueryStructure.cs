@@ -75,7 +75,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 }
                 else
                 {
-                    yield return new LabelledColumn(
+                    yield return new(
                         tableSchema: string.Empty,
                         tableName: tableName,
                         columnName: string.Empty,
@@ -176,10 +176,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 foreach (KeyValuePair<string, object?> parameter in queryParams)
                 {
-                    Predicates.Add(new Predicate(
-                        new PredicateOperand(new Column(tableSchema: string.Empty, _containerAlias, parameter.Key)),
+                    Predicates.Add(new(
+                        new(new Column(tableSchema: string.Empty, _containerAlias, parameter.Key)),
                         PredicateOperation.Equal,
-                        new PredicateOperand($"{MakeParamWithValue(parameter.Value)}")
+                        new($"{MakeParamWithValue(parameter.Value)}")
                     ));
                 }
             }
@@ -210,11 +210,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 if (enumValue.Value == $"{OrderBy.DESC}")
                 {
-                    orderByColumnsList.Add(new OrderByColumn(tableSchema: string.Empty, _containerAlias, fieldName, direction: OrderBy.DESC));
+                    orderByColumnsList.Add(new(tableSchema: string.Empty, _containerAlias, fieldName, direction: OrderBy.DESC));
                 }
                 else
                 {
-                    orderByColumnsList.Add(new OrderByColumn(tableSchema: string.Empty, _containerAlias, fieldName));
+                    orderByColumnsList.Add(new(tableSchema: string.Empty, _containerAlias, fieldName));
                 }
             }
 

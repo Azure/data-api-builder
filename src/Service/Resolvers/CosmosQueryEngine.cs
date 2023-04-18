@@ -43,7 +43,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             _clientProvider = clientProvider;
             _metadataStoreProvider = metadataStoreProvider;
-            _queryBuilder = new CosmosQueryBuilder();
+            _queryBuilder = new();
             _gQLFilterParser = gQLFilterParser;
             _authorizationResolver = authorizationResolver;
         }
@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             if (!string.IsNullOrEmpty(partitionKeyValue))
             {
-                queryRequestOptions.PartitionKey = new PartitionKey(partitionKeyValue);
+                queryRequestOptions.PartitionKey = new(partitionKeyValue);
             }
 
             if (structure.IsPaginated)
@@ -235,7 +235,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             try
             {
-                JObject item = await container.ReadItemAsync<JObject>(idValue, new PartitionKey(partitionKeyValue));
+                JObject item = await container.ReadItemAsync<JObject>(idValue, new(partitionKeyValue));
 
                 // If paginated, returning a Connection type document.
                 if (IsPaginated)

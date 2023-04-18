@@ -253,7 +253,7 @@ type Table @model(name: ""table"") {
 
             Dictionary<string, InputObjectTypeDefinitionNode> inputObjects = new()
             {
-                { "FkTable", new InputObjectTypeDefinitionNode(location: null, new("FkTableFilter"), description: null, new List<DirectiveNode>(), new List<InputValueDefinitionNode>()) }
+                { "FkTable", new (location: null, new("FkTableFilter"), description: null, new List<DirectiveNode>(), new List<InputValueDefinitionNode>()) }
             };
             ObjectTypeDefinitionNode updatedNode = QueryBuilder.AddQueryArgumentsForRelationships(node, inputObjects);
 
@@ -284,7 +284,7 @@ type Table @model(name: ""table"") {
 
             Dictionary<string, InputObjectTypeDefinitionNode> inputObjects = new()
             {
-                { "FkTable", new InputObjectTypeDefinitionNode(location: null, new("FkTableFilter"), description: null, new List<DirectiveNode>(), new List<InputValueDefinitionNode>()) }
+                { "FkTable", new (location: null, new("FkTableFilter"), description: null, new List<DirectiveNode>(), new List<InputValueDefinitionNode>()) }
             };
             ObjectTypeDefinitionNode updatedNode = QueryBuilder.AddQueryArgumentsForRelationships(node, inputObjects);
 

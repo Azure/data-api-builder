@@ -70,10 +70,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             InputObjectTypeDefinitionNode input =
                 new(
                     location: null,
-                    inputName,
-                    new StringValueNode($"Input type for creating {name}"),
-                    new List<DirectiveNode>(),
-                    inputFields.ToList()
+                    name: inputName,
+                    description: new($"Input type for creating {name}"),
+                    directives: new List<DirectiveNode>(),
+                    fields: inputFields.ToList()
                 );
 
             inputs.Add(input.Name, input);
@@ -128,11 +128,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
             return new(
                 location: null,
-                f.Name,
-                new StringValueNode($"Input for field {f.Name} on type {GenerateInputTypeName(name.Value)}"),
-                defaultValue is not null ? f.Type.NullableType() : f.Type,
-                defaultValue,
-                new List<DirectiveNode>()
+                name: f.Name,
+                description: new($"Input for field {f.Name} on type {GenerateInputTypeName(name.Value)}"),
+                type: defaultValue is not null ? f.Type.NullableType() : f.Type,
+                defaultValue: defaultValue,
+                directives: new List<DirectiveNode>()
             );
         }
 
@@ -190,11 +190,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
             return new(
                 location: null,
-                field.Name,
-                new StringValueNode($"Input for field {field.Name} on type {inputTypeName}"),
-                type,
+                name: field.Name,
+                description: new($"Input for field {field.Name} on type {inputTypeName}"),
+                type: type,
                 defaultValue: null,
-                field.Directives
+                directives: field.Directives
             );
         }
 
@@ -261,19 +261,19 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             string singularName = GetDefinedSingularName(name.Value, entity);
             return new(
                 location: null,
-                new NameNode($"create{singularName}"),
-                new StringValueNode($"Creates a new {singularName}"),
-                new List<InputValueDefinitionNode> {
-                new InputValueDefinitionNode(
-                    location : null,
-                    new NameNode(INPUT_ARGUMENT_NAME),
-                    new StringValueNode($"Input representing all the fields for creating {name}"),
-                    new NonNullTypeNode(new NamedTypeNode(input.Name)),
-                    defaultValue: null,
-                    new List<DirectiveNode>())
+                name: new($"create{singularName}"),
+                description: new($"Creates a new {singularName}"),
+                arguments: new List<InputValueDefinitionNode> {
+                    new (
+                        location : null,
+                        name: new (INPUT_ARGUMENT_NAME),
+                        description: new ($"Input representing all the fields for creating {name}"),
+                        type: new NonNullTypeNode(new NamedTypeNode(input.Name)),
+                        defaultValue: null,
+                        directives: new List<DirectiveNode>())
                 },
-                new NamedTypeNode(name),
-                fieldDefinitionNodeDirectives
+                type: new NamedTypeNode(name),
+                directives: fieldDefinitionNodeDirectives
             );
         }
     }

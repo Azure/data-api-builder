@@ -59,7 +59,7 @@ namespace Azure.DataApiBuilder.Service.Models
         /// </summary>
         public static PaginationMetadata MakeEmptyPaginationMetadata()
         {
-            return new PaginationMetadata(null);
+            return new(null);
         }
     }
 }

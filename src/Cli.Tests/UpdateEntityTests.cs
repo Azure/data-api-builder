@@ -1974,9 +1974,9 @@ namespace Cli.Tests
         {
             RuntimeConfig runtimeConfig = new(
                 Schema: "schema",
-                DataSource: new DataSource(Enum.Parse<DatabaseType>(db)),
+                DataSource: new(Enum.Parse<DatabaseType>(db)),
                 RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
-                Entities: new Dictionary<string, Entity>()
+                Entities: new()
             );
 
             Assert.IsFalse(VerifyCanUpdateRelationship(runtimeConfig, cardinality: cardinality, targetEntity: targetEntity));
@@ -2024,8 +2024,8 @@ namespace Cli.Tests
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "schema",
-                DataSource: new DataSource(DatabaseType.mssql),
-                RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
+                DataSource: new(DatabaseType.mssql),
+                RuntimeSettings: new(),
                 Entities: entityMap
             );
 

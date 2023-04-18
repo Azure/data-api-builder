@@ -79,12 +79,17 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         /// <param name="sourceType">type of source object. Default is Table.</param>
         public static Entity GenerateEmptyEntity(SourceType sourceType = SourceType.Table)
         {
-            return new Entity(Source: new DatabaseObjectSource(sourceType, Name: "foo", Parameters: null, KeyFields: null),
-                              Rest: null,
-                              GraphQL: null,
-                              Array.Empty<PermissionSetting>(),
-                              Relationships: new(),
-                              Mappings: new());
+            return new(
+                Source: new DatabaseObjectSource(
+                    sourceType,
+                    Name: "foo",
+                    Parameters: null,
+                    KeyFields: null),
+                Rest: null,
+                GraphQL: null,
+                Permissions: Array.Empty<PermissionSetting>(),
+                Relationships: new(),
+                Mappings: new());
         }
 
         /// <summary>
@@ -144,12 +149,17 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         /// <param name="sourceType">type of source object. Default is Table.</param>
         public static Entity GenerateEntityWithSingularPlural(string singularNameForEntity, string pluralNameForEntity, SourceType sourceType = SourceType.Table)
         {
-            return new Entity(Source: new DatabaseObjectSource(sourceType, Name: "foo", Parameters: null, KeyFields: null),
-                              Rest: null,
-                              GraphQL: new GraphQLEntitySettings(new SingularPlural(singularNameForEntity, pluralNameForEntity)),
-                              Permissions: Array.Empty<PermissionSetting>(),
-                              Relationships: new(),
-                              Mappings: new());
+            return new(
+                Source: new DatabaseObjectSource(
+                    sourceType,
+                    Name: "foo",
+                    Parameters: null,
+                    KeyFields: null),
+                Rest: null,
+                GraphQL: new GraphQLEntitySettings(new SingularPlural(singularNameForEntity, pluralNameForEntity)),
+                Permissions: Array.Empty<PermissionSetting>(),
+                Relationships: new(),
+                Mappings: new());
         }
 
         /// <summary>
@@ -160,12 +170,17 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         /// <returns></returns>
         public static Entity GenerateEntityWithStringType(string type, SourceType sourceType = SourceType.Table)
         {
-            return new Entity(Source: new DatabaseObjectSource(sourceType, Name: "foo", Parameters: null, KeyFields: null),
-                              Rest: null,
-                              GraphQL: new GraphQLEntitySettings(type),
-                              Permissions: Array.Empty<PermissionSetting>(),
-                              Relationships: new(),
-                              Mappings: new());
+            return new(
+                Source: new DatabaseObjectSource(
+                    sourceType,
+                    Name: "foo",
+                    Parameters: null,
+                    KeyFields: null),
+                Rest: null,
+                GraphQL: new GraphQLEntitySettings(type),
+                Permissions: Array.Empty<PermissionSetting>(),
+                Relationships: new(),
+                Mappings: new());
         }
 
         /// <summary>

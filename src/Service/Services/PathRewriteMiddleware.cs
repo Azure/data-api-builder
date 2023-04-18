@@ -79,7 +79,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 // configured the path differently, fail the request.
                 if (httpContext.Request.Path.StartsWithSegments(graphQLRoute, comparisonType: StringComparison.OrdinalIgnoreCase, out PathString remaining))
                 {
-                    httpContext.Request.Path = new PathString(value: DEFAULT_GRAPHQL_PATH + remaining);
+                    httpContext.Request.Path = new(value: DEFAULT_GRAPHQL_PATH + remaining);
                 }
                 else if (httpContext.Request.Path.StartsWithSegments(DEFAULT_GRAPHQL_PATH, comparisonType: StringComparison.OrdinalIgnoreCase))
                 {

@@ -112,7 +112,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 // The outermost query is where we start, so this can define
                 // create the IncrementingInteger that will be shared between
                 // all subqueries in this query.
-                new IncrementingInteger(),
+                new(),
                 runtimeConfigProvider,
                 gQLFilterParser)
         {
@@ -140,7 +140,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 gQLFilterParser,
                 predicates: null,
                 entityName: context.EntityName,
-                counter: new IncrementingInteger(),
+                counter: new(),
                 httpContext: httpContext)
         {
             IsListQuery = context.IsMany;
@@ -232,10 +232,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 foreach (string column in PrimaryKey())
                 {
-                    _primaryKeyAsOrderByColumns.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
-                                                                      tableName: DatabaseObject.Name,
-                                                                      columnName: column,
-                                                                      tableAlias: SourceAlias));
+                    _primaryKeyAsOrderByColumns.Add(new(tableSchema: DatabaseObject.SchemaName,
+                        tableName: DatabaseObject.Name,
+                        columnName: column,
+                        tableAlias: SourceAlias));
                 }
             }
 
@@ -305,7 +305,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 PaginationMetadata.Subqueries.Add(QueryBuilder.PAGINATION_FIELD_NAME, PaginationMetadata.MakeEmptyPaginationMetadata());
             }
 
-            if(QueryBuilder.IsExecuteResultType(_underlyingFieldType))
+            if (QueryBuilder.IsExecuteResultType(_underlyingFieldType))
             {
                 if (queryField != null && queryField.SelectionSet != null)
                 {
@@ -466,13 +466,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     columnName = backingColumnName;
                 }
 
-                Predicates.Add(new Predicate(
-                    new PredicateOperand(new Column(tableSchema: DatabaseObject.SchemaName,
-                                                    tableName: DatabaseObject.Name,
-                                                    columnName: columnName,
-                                                    tableAlias: SourceAlias)),
+                Predicates.Add(new(
+                    new(new Column(tableSchema: DatabaseObject.SchemaName,
+                        tableName: DatabaseObject.Name,
+                        columnName: columnName,
+                        tableAlias: SourceAlias)),
                     PredicateOperation.Equal,
-                    new PredicateOperand($"{MakeParamWithValue(parameter.Value)}")
+                    new($"{MakeParamWithValue(parameter.Value)}")
                 ));
             }
         }
@@ -496,7 +496,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                      MakeParamWithValue(value: null);
             }
 
-            PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(afterJsonValues.ToList());
+            PaginationMetadata.PaginationPredicate = new(afterJsonValues.ToList());
         }
 
         /// <summary>
@@ -516,10 +516,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 {
                     parameterName = MakeParamWithValue(
                         GetParamAsSystemType(value.ToString()!, backingColumn, GetColumnSystemType(backingColumn)));
-                    Predicates.Add(new Predicate(
-                        new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, backingColumn, SourceAlias)),
+                    Predicates.Add(new(
+                        new(new Column(
+                            DatabaseObject.SchemaName,
+                            DatabaseObject.Name,
+                            backingColumn, SourceAlias)),
                         op,
-                        new PredicateOperand($"{parameterName}")));
+                        new($"{parameterName}")));
                 }
                 else
                 {
@@ -691,11 +694,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                     string subqueryAlias = $"{subtableAlias}_subq";
                     JoinQueries.Add(subqueryAlias, subquery);
-                    Columns.Add(new LabelledColumn(tableSchema: subquery.DatabaseObject.SchemaName,
-                              tableName: subquery.DatabaseObject.Name,
-                              columnName: DATA_IDENT,
-                              label: fieldName,
-                              tableAlias: subqueryAlias));
+                    Columns.Add(new(
+                        tableSchema: subquery.DatabaseObject.SchemaName,
+                        tableName: subquery.DatabaseObject.Name,
+                        columnName: DATA_IDENT,
+                        label: fieldName,
+                        tableAlias: subqueryAlias));
                 }
             }
         }
@@ -765,27 +769,30 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 if (fieldValue.ToString() == $"{OrderBy.DESC}")
                 {
-                    orderByColumnsList.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
-                                                             tableName: DatabaseObject.Name,
-                                                             columnName: backingColumnName,
-                                                             tableAlias: SourceAlias,
-                                                             direction: OrderBy.DESC));
+                    orderByColumnsList.Add(new(
+                        tableSchema: DatabaseObject.SchemaName,
+                        tableName: DatabaseObject.Name,
+                        columnName: backingColumnName,
+                        tableAlias: SourceAlias,
+                        direction: OrderBy.DESC));
                 }
                 else
                 {
-                    orderByColumnsList.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
-                                                             tableName: DatabaseObject.Name,
-                                                             columnName: backingColumnName,
-                                                             tableAlias: SourceAlias));
+                    orderByColumnsList.Add(new(
+                        tableSchema: DatabaseObject.SchemaName,
+                        tableName: DatabaseObject.Name,
+                        columnName: backingColumnName,
+                        tableAlias: SourceAlias));
                 }
             }
 
             foreach (string colName in remainingPkCols)
             {
-                orderByColumnsList.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
-                                                         tableName: DatabaseObject.Name,
-                                                         columnName: colName,
-                                                         tableAlias: SourceAlias));
+                orderByColumnsList.Add(new(
+                    tableSchema: DatabaseObject.SchemaName,
+                    tableName: DatabaseObject.Name,
+                    columnName: colName,
+                    tableAlias: SourceAlias));
             }
 
             return orderByColumnsList;

@@ -738,7 +738,13 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
 
         public static Entity GenerateEmptyEntity()
         {
-            return new Entity($"{SCHEMA_NAME}.{TABLE_NAME}", Rest: null, GraphQL: null, Array.Empty<PermissionSetting>(), Relationships: new(), Mappings: new());
+            return new(
+                Source: $"{SCHEMA_NAME}.{TABLE_NAME}",
+                Rest: null,
+                GraphQL: null,
+                Permissions: Array.Empty<PermissionSetting>(),
+                Relationships: new(),
+                Mappings: new());
         }
 
         private static ObjectTypeDefinitionNode GenerateObjectWithRelationship(Cardinality cardinality, bool isNullableRelationship = false)
@@ -750,9 +756,9 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 {
                     {
                         FIELD_NAME_FOR_TARGET,
-                        new Relationship(
+                        new (
                           cardinality,
-                          TARGET_ENTITY,
+                          TargetEntity: TARGET_ENTITY,
                           SourceFields: null,
                           TargetFields: null,
                           LinkingObject: null,
@@ -794,19 +800,19 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
 
             table.SourceEntityRelationshipMap.Add(SOURCE_ENTITY, relationshipMetadata);
             List<ForeignKeyDefinition> fkDefinitions = new();
-            fkDefinitions.Add(new ForeignKeyDefinition()
+            fkDefinitions.Add(new()
             {
                 Pair = new()
                 {
-                    ReferencingDbTable = new DatabaseTable(SCHEMA_NAME, TABLE_NAME),
-                    ReferencedDbTable = new DatabaseTable(SCHEMA_NAME, REFERENCED_TABLE)
+                    ReferencingDbTable = new(SCHEMA_NAME, TABLE_NAME),
+                    ReferencedDbTable = new(SCHEMA_NAME, REFERENCED_TABLE)
                 },
-                ReferencingColumns = new List<string> { REF_COLNAME },
-                ReferencedColumns = new List<string> { REFD_COLNAME }
+                ReferencingColumns = new() { REF_COLNAME },
+                ReferencedColumns = new() { REFD_COLNAME }
             });
             relationshipMetadata.TargetEntityToFkDefinitionMap.Add(TARGET_ENTITY, fkDefinitions);
 
-            table.Columns.Add(REF_COLNAME, new ColumnDefinition
+            table.Columns.Add(REF_COLNAME, new()
             {
                 SystemType = typeof(int),
                 IsNullable = isNullable

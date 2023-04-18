@@ -31,7 +31,6 @@
 
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Docker|AnyCPU'">
       <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
-      <WarningsNotAsErrors>NU1603</WarningsNotAsErrors>
     </PropertyGroup>
 
     <ItemGroup>

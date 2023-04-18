@@ -37,6 +37,17 @@ namespace Azure.DataApiBuilder.Service.Parsers
             // In order traversal but add parens to maintain order of logical operations
             string left = nodeIn.Left.Accept(this);
             string right = nodeIn.Right.Accept(this);
+
+            if (nodeIn.Left.GetType() == typeof(SingleValuePropertyAccessNode) && nodeIn.Right.GetType() == typeof(ConstantNode) ||
+                nodeIn.Left.GetType() == typeof(ConstantNode) && nodeIn.Right.GetType() == typeof(SingleValuePropertyAccessNode))
+            {
+                SingleValuePropertyAccessNode propertyNode = nodeIn.Left.GetType() == typeof(SingleValuePropertyAccessNode) ?
+                    (SingleValuePropertyAccessNode)nodeIn.Left : (SingleValuePropertyAccessNode)nodeIn.Right;
+                string? paramName = $"{BaseQueryStructure.PARAM_NAME_PREFIX}param{_struct.Counter.Current() - 1}";
+                _metadataProvider.TryGetBackingColumn(_struct.EntityName, propertyNode.Property.Name, out string? backingColumnName);
+                _struct.ParamToDbTypeMap.Add(paramName, _struct.GetUnderlyingSourceDefinition().Columns[backingColumnName!].DbType);
+            }
+
             return CreateResult(nodeIn.OperatorKind, left, right);
         }
 
@@ -79,13 +90,16 @@ namespace Azure.DataApiBuilder.Service.Parsers
         /// <returns>String representing param that holds given value.</returns>
         public override string Visit(ConstantNode nodeIn)
         {
-            if (nodeIn.TypeReference is null)
+            if (nodeIn.TypeReference is not null)
             {
-                // Represents a NULL value, we support NULL in queries so return "NULL" here
-                return "NULL";
+                return $"{_struct.MakeParamWithValue(GetParamWithSystemType(nodeIn.Value.ToString()!, nodeIn.TypeReference))}";
             }
 
-            return $"{_struct.MakeParamWithValue(GetParamWithSystemType(nodeIn.Value.ToString()!, nodeIn.TypeReference))}";
+            // This is necessary because we want to create a mapping between column name and its corresponding param name.
+            _struct.MakeParamWithValue(null);
+
+            // Represents a NULL value, we support NULL in queries so return "NULL" here
+            return "NULL";
         }
 
         /// <summary>

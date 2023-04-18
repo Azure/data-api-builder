@@ -154,7 +154,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // Add query to send user data from DAB to the underlying database to enable additional security the user might have configured
             // at the database level.
             string sessionParamsQuery = GetSessionParamsQuery(httpContext, parameters);
-            //"EXEC sp_set_session_context 'roles', 'Anonymous', @read_only =1 ;";
 
             cmd.CommandText = sessionParamsQuery + sqltext;
             if (parameters is not null)

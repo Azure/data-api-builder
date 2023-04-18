@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -27,6 +28,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     /// </summary>
     public abstract class BaseSqlQueryStructure : BaseQueryStructure
     {
+
+        public Dictionary<string, DbType> ParamToDbTypeMap { get; set; } = new();
+
         /// <summary>
         /// All tables/views that should be in the FROM clause of the query.
         /// All these objects are linked via an INNER JOIN.
@@ -83,6 +87,18 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
         }
 
+        public override string MakeParamWithValue(object? value, string? columnName = null)
+        {
+            string paramName = $"{PARAM_NAME_PREFIX}param{Counter.Next()}";
+            Parameters.Add(paramName, value);
+            if (!string.IsNullOrEmpty(columnName))
+            {
+                ParamToDbTypeMap.Add(paramName, GetUnderlyingSourceDefinition().Columns[columnName].DbType);
+            }
+
+            return paramName;
+        }
+
         /// <summary>
         /// For UPDATE (OVERWRITE) operation
         /// Adds result of (SourceDefinition.Columns minus MutationFields) to UpdateOperations with null values
@@ -111,7 +127,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     Predicate predicate = new(
                         new PredicateOperand(new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, leftoverColumn)),
                         PredicateOperation.Equal,
-                        new PredicateOperand($"{MakeParamWithValue(value: null)}")
+                        new PredicateOperand($"{MakeParamWithValue(null, leftoverColumn)}")
                     );
 
                     updateOperations.Add(predicate);
@@ -549,6 +565,5 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             }
         }
-
     }
 }

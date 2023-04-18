@@ -47,6 +47,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             Init(parameters);
         }
 
+        public override string MakeParamWithValue(object? value, string? columnName = null)
+        {
+            string paramName = $"{PARAM_NAME_PREFIX}param{Counter.Next()}";
+            Parameters.Add(paramName, value);
+            return paramName;
+        }
+
         private static IEnumerable<LabelledColumn> GenerateQueryColumns(SelectionSetNode selectionSet, DocumentNode document, string tableName)
         {
             foreach (ISelectionNode selectionNode in selectionSet.Selections)

@@ -48,11 +48,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     if (requestParamValue is not null)
                     {
                         Type systemType = GetUnderlyingStoredProcedureDefinition().Parameters[paramKey].SystemType!;
-                        parametrizedName = MakeParamWithValue(GetParamAsSystemType(requestParamValue.ToString()!, paramKey, systemType));
+                        parametrizedName = MakeParamWithValue(GetParamAsSystemType(requestParamValue.ToString()!, paramKey, systemType), paramKey);
                     }
                     else
                     {
-                        parametrizedName = MakeParamWithValue(value: null);
+                        parametrizedName = MakeParamWithValue(null, paramKey);
                     }
 
                     ProcedureParameters.Add(paramKey, $"{parametrizedName}");
@@ -62,7 +62,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     // Fill with default value from runtime config
                     if (paramDefinition.HasConfigDefault)
                     {
-                        string parameterizedName = MakeParamWithValue(paramDefinition.ConfigDefaultValue);
+                        string parameterizedName = MakeParamWithValue(paramDefinition.ConfigDefaultValue, paramKey);
                         ProcedureParameters.Add(paramKey, $"{parameterizedName}");
                     }
                     else

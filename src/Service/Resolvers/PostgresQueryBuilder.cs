@@ -36,7 +36,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             fromSql += string.Join("", structure.JoinQueries.Select(x => $" LEFT OUTER JOIN LATERAL ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)} ON TRUE"));
 
             string predicates = JoinPredicateStrings(
-                                    structure.DbPolicyPredicatesForOperations[Config.Operation.Read],
+                                    structure.GetDbPolicyForOperation(Config.Operation.Read),
                                     structure.FilterPredicates,
                                     Build(structure.Predicates),
                                     Build(structure.PaginationMetadata.PaginationPredicate));
@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public string Build(SqlUpdateStructure structure)
         {
             string predicates = JoinPredicateStrings(
-                                   structure.DbPolicyPredicatesForOperations[Config.Operation.Update],
+                                   structure.GetDbPolicyForOperation(Config.Operation.Update),
                                    Build(structure.Predicates));
 
             return $"UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
@@ -91,7 +91,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public string Build(SqlDeleteStructure structure)
         {
             string predicates = JoinPredicateStrings(
-                       structure.DbPolicyPredicatesForOperations[Config.Operation.Delete],
+                       structure.GetDbPolicyForOperation(Config.Operation.Delete),
                        Build(structure.Predicates));
 
             return $"DELETE FROM {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +

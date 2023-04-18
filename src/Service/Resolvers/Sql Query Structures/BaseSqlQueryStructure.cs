@@ -501,6 +501,21 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
+        /// Helper method to get the database policy for the given operation.
+        /// </summary>
+        /// <param name="operation">Operation for which the database policy is to be determined.</param>
+        /// <returns>Database policy for the operation.</returns>
+        public string? GetDbPolicyForOperation(Config.Operation operation)
+        {
+            if(!DbPolicyPredicatesForOperations.TryGetValue(operation, out string? policy))
+            {
+                policy = null;
+            }
+
+            return policy;
+        }
+
+        /// <summary>
         /// Gets the value of the parameter cast as the system type
         /// </summary>
         /// <param name="fieldValue">Field value as a string</param>

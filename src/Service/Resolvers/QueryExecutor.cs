@@ -11,6 +11,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Models;
@@ -163,7 +164,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     DbParameter parameter = cmd.CreateParameter();
                     parameter.ParameterName = parameterEntry.Key;
                     parameter.Value = parameterEntry.Value.Item1 ?? DBNull.Value;
-                    if (parameterEntry.Value.Item2 is not null)
+                    if (parameterEntry.Value.Item2 is not null && ConfigProvider.GetRuntimeConfiguration().DatabaseType is DatabaseType.mssql)
                     {
                         parameter.DbType = (DbType)parameterEntry.Value.Item2;
                     }

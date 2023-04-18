@@ -1,7 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.Common;
 using System.Security.Claims;
 using System.Text;
@@ -168,7 +170,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="parameters">Dictionary of parameters/value required to execute the query.</param>
         /// <returns>empty string / query to set session parameters for the connection.</returns>
         /// <seealso cref="https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-set-session-context-transact-sql?view=sql-server-ver16"/>
-        public override string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, object?> parameters)
+        public override string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, Tuple<object?,DbType?>> parameters)
         {
             if (httpContext is null || !_isSessionContextEnabled)
             {
@@ -186,7 +188,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             foreach ((string claimType, Claim claim) in sessionParams)
             {
                 string paramName = $"{SESSION_PARAM_NAME}{counter.Next()}";
-                parameters.Add(paramName, claim.Value);
+                parameters.Add(paramName, new(claim.Value, null));
                 // Append statement to set read only param value - can be set only once for a connection.
                 string statementToSetReadOnlyParam = "EXEC sp_set_session_context " + $"'{claimType}', " + paramName + ", @read_only = 1;";
                 sessionMapQuery = sessionMapQuery.Append(statementToSetReadOnlyParam);

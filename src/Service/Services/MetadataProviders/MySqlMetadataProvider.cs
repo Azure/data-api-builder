@@ -70,13 +70,13 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <remarks>For MySql, the table name is only a 2 part name.
         /// The database name from the connection string needs to be used instead of schemaName.
         /// </remarks>
-        protected override Dictionary<string, object?>
+        protected override Dictionary<string, Tuple<object?, DbType?>>
             GetForeignKeyQueryParams(
                 string[] schemaNames,
                 string[] tableNames)
         {
             MySqlConnectionStringBuilder connBuilder = new(ConnectionString);
-            Dictionary<string, object?> parameters = new();
+            Dictionary<string, Tuple<object?, DbType?>> parameters = new();
 
             string[] databaseNameParams =
                 BaseSqlQueryBuilder.CreateParams(
@@ -89,12 +89,12 @@ namespace Azure.DataApiBuilder.Service.Services
 
             for (int i = 0; i < schemaNames.Count(); ++i)
             {
-                parameters.Add(databaseNameParams[i], connBuilder.Database);
+                parameters.Add(databaseNameParams[i], new(connBuilder.Database, DbType.String));
             }
 
             for (int i = 0; i < tableNames.Count(); ++i)
             {
-                parameters.Add(tableNameParams[i], tableNames[i]);
+                parameters.Add(tableNameParams[i], new(tableNames[i], DbType.String));
             }
 
             return parameters;

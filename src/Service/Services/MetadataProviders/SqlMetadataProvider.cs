@@ -18,7 +18,6 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Resolvers;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 
@@ -534,12 +533,12 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <param name="schemaNames"></param>
         /// <param name="tableNames"></param>
         /// <returns>The dictionary populated with parameters.</returns>
-        protected virtual Dictionary<string, object?>
+        protected virtual Dictionary<string, Tuple<object?, DbType?>>
             GetForeignKeyQueryParams(
                 string[] schemaNames,
                 string[] tableNames)
         {
-            Dictionary<string, object?> parameters = new();
+            Dictionary<string, Tuple<object?, DbType?>> parameters = new();
             string[] schemaNameParams =
                 BaseSqlQueryBuilder.CreateParams(
                     kindOfParam: BaseSqlQueryBuilder.SCHEMA_NAME_PARAM,
@@ -551,12 +550,12 @@ namespace Azure.DataApiBuilder.Service.Services
 
             for (int i = 0; i < schemaNames.Count(); ++i)
             {
-                parameters.Add(schemaNameParams[i], schemaNames[i]);
+                parameters.Add(schemaNameParams[i], new(schemaNames[i], DbType.String));
             }
 
             for (int i = 0; i < tableNames.Count(); ++i)
             {
-                parameters.Add(tableNameParams[i], tableNames[i]);
+                parameters.Add(tableNameParams[i], new(tableNames[i], DbType.String));
             }
 
             return parameters;
@@ -1319,7 +1318,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
             // Build the parameters dictionary for the foreign key info query
             // consisting of all schema names and table names.
-            Dictionary<string, object?> parameters =
+            Dictionary<string, Tuple<object?, DbType?>> parameters =
                 GetForeignKeyQueryParams(
                     schemaNames.ToArray(),
                     tableNames.ToArray());

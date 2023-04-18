@@ -66,7 +66,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <inheritdoc/>
         public virtual async Task<TResult?> ExecuteQueryAsync<TResult>(
             string sqltext,
-            IDictionary<string, object?> parameters,
+            IDictionary<string, Tuple<object?, DbType?>> parameters,
             Func<DbDataReader, List<string>?, Task<TResult>>? dataReaderHandler,
             HttpContext? httpContext = null,
             List<string>? args = null)
@@ -142,7 +142,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public virtual async Task<TResult?> ExecuteQueryAgainstDbAsync<TResult>(
             TConnection conn,
             string sqltext,
-            IDictionary<string, object?> parameters,
+            IDictionary<string, Tuple<object?, DbType?>> parameters,
             Func<DbDataReader, List<string>?, Task<TResult>>? dataReaderHandler,
             HttpContext? httpContext,
             List<string>? args = null)
@@ -158,11 +158,16 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             cmd.CommandText = sessionParamsQuery + sqltext;
             if (parameters is not null)
             {
-                foreach (KeyValuePair<string, object?> parameterEntry in parameters)
+                foreach (KeyValuePair<string, Tuple<object?, DbType?>> parameterEntry in parameters)
                 {
                     DbParameter parameter = cmd.CreateParameter();
                     parameter.ParameterName = parameterEntry.Key;
-                    parameter.Value = parameterEntry.Value ?? DBNull.Value;
+                    parameter.Value = parameterEntry.Value.Item1 ?? DBNull.Value;
+                    if (parameterEntry.Value.Item2 is not null)
+                    {
+                        parameter.DbType = (DbType)parameterEntry.Value.Item2;
+                    }
+
                     cmd.Parameters.Add(parameter);
                 }
             }
@@ -190,7 +195,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public virtual string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, object?> parameters)
+        public virtual string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, Tuple<object?, DbType?>> parameters)
         {
             return string.Empty;
         }

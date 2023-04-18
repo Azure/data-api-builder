@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Net;
 using Azure.DataApiBuilder.Config;
@@ -300,7 +301,7 @@ namespace Azure.DataApiBuilder.Service.Models
             predicates.Push(new PredicateOperand(existsPredicate));
 
             // Add all parameters from the exists subquery to the main queryStructure.
-            foreach ((string key, object? value) in existsQuery.Parameters)
+            foreach ((string key, Tuple<object?, DbType?> value) in existsQuery.Parameters)
             {
                 queryStructure.Parameters.Add(key, value);
             }

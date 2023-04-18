@@ -87,18 +87,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
         }
 
-        public override string MakeParamWithValue(object? value, string? columnName = null)
-        {
-            string paramName = $"{PARAM_NAME_PREFIX}param{Counter.Next()}";
-            Parameters.Add(paramName, value);
-            if (!string.IsNullOrEmpty(columnName))
-            {
-                ParamToDbTypeMap.Add(paramName, GetUnderlyingSourceDefinition().Columns[columnName].DbType);
-            }
-
-            return paramName;
-        }
-
         /// <summary>
         /// For UPDATE (OVERWRITE) operation
         /// Adds result of (SourceDefinition.Columns minus MutationFields) to UpdateOperations with null values

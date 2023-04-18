@@ -1,7 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
+using System.Data;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
@@ -51,7 +53,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// Parameters values required to execute the query.
         /// </summary>
-        public Dictionary<string, object?> Parameters { get; set; }
+        public Dictionary<string, Tuple<object?, DbType?>> Parameters { get; set; }
 
         /// <summary>
         /// Predicates that should filter the result set of the query.
@@ -109,10 +111,18 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         ///  Add parameter to Parameters and return the name associated with it
         /// </summary>
         /// <param name="value">Value to be assigned to parameter, which can be null for nullable columns.</param>
-        public virtual string MakeParamWithValue(object? value, string? columnName = null)
+        public string MakeParamWithValue(object? value, string? columnName = null)
         {
             string paramName = $"{PARAM_NAME_PREFIX}param{Counter.Next()}";
-            Parameters.Add(paramName, value);
+            if (!string.IsNullOrEmpty(columnName))
+            {
+                Parameters.Add(paramName, new(value, GetUnderlyingSourceDefinition().Columns[columnName].DbType));
+            }
+            else
+            {
+                Parameters.Add(paramName, new(value, null));
+            }
+
             return paramName;
         }
 

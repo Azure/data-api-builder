@@ -883,6 +883,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             throw new NotImplementedException();
         }
 
+        [TestMethod]
+        [Ignore]
+        public override Task FindApiTestForSPWithRequiredParamsInRequestBody()
+        {
+            throw new NotImplementedException();
+        }
+
         public override string GetDefaultSchema()
         {
             return DEFAULT_SCHEMA;

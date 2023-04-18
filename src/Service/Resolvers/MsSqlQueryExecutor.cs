@@ -170,7 +170,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="parameters">Dictionary of parameters/value required to execute the query.</param>
         /// <returns>empty string / query to set session parameters for the connection.</returns>
         /// <seealso cref="https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-set-session-context-transact-sql?view=sql-server-ver16"/>
-        public override string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, Tuple<object?,DbType?>> parameters)
+        public override string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, Tuple<object?, DbType?>> parameters)
         {
             if (httpContext is null || !_isSessionContextEnabled)
             {

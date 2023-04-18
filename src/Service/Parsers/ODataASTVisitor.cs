@@ -45,7 +45,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
                     (SingleValuePropertyAccessNode)nodeIn.Left : (SingleValuePropertyAccessNode)nodeIn.Right;
                 string? paramName = $"{BaseQueryStructure.PARAM_NAME_PREFIX}param{_struct.Counter.Current() - 1}";
                 _metadataProvider.TryGetBackingColumn(_struct.EntityName, propertyNode.Property.Name, out string? backingColumnName);
-                _struct.ParamToDbTypeMap.Add(paramName, _struct.GetUnderlyingSourceDefinition().Columns[backingColumnName!].DbType);
+                _struct.Parameters[paramName] = new(_struct.Parameters[paramName].Item1, _struct.GetUnderlyingSourceDefinition().Columns[backingColumnName!].DbType);
             }
 
             return CreateResult(nodeIn.OperatorKind, left, right);

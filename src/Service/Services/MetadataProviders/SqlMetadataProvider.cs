@@ -62,9 +62,6 @@ namespace Azure.DataApiBuilder.Service.Services
             [typeof(string)] = DbType.String,
             [typeof(char)] = DbType.StringFixedLength,
             [typeof(Guid)] = DbType.Guid,
-            [typeof(DateTime)] = DbType.DateTimeOffset,
-            [typeof(DateTimeOffset)] = DbType.DateTimeOffset,
-            [typeof(TimeSpan)] = DbType.Time,
             [typeof(byte[])] = DbType.Binary,
             [typeof(byte?)] = DbType.Byte,
             [typeof(sbyte?)] = DbType.SByte,
@@ -80,9 +77,6 @@ namespace Azure.DataApiBuilder.Service.Services
             [typeof(bool?)] = DbType.Boolean,
             [typeof(char?)] = DbType.StringFixedLength,
             [typeof(Guid?)] = DbType.Guid,
-            [typeof(DateTime?)] = DbType.DateTimeOffset,
-            [typeof(DateTimeOffset?)] = DbType.DateTimeOffset,
-            [typeof(TimeSpan?)] = DbType.Time,
             [typeof(object)] = DbType.Object
         };
 
@@ -1064,15 +1058,11 @@ namespace Azure.DataApiBuilder.Service.Services
                 columnsInTable);
         }
 
-        private DbType GetDbTypeFromSystemType(Type systemType, string columnName)
+        private DbType? GetDbTypeFromSystemType(Type systemType, string columnName)
         {
             if (!typeMap.TryGetValue(systemType, out DbType dbType))
             {
-                throw new DataApiBuilderException(
-                    message: $"Unsupported data type encountered for column {columnName}.",
-                    statusCode: HttpStatusCode.InternalServerError,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported
-                    );
+                return null;
             }
 
             return dbType;

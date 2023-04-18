@@ -48,11 +48,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     if (requestParamValue is not null)
                     {
                         Type systemType = GetUnderlyingStoredProcedureDefinition().Parameters[paramKey].SystemType!;
-                        parametrizedName = MakeParamWithValue(GetParamAsSystemType(requestParamValue.ToString()!, paramKey, systemType), paramKey);
+                        parametrizedName = MakeParamWithValue(GetParamAsSystemType(requestParamValue.ToString()!, paramKey, systemType));
                     }
                     else
                     {
-                        parametrizedName = MakeParamWithValue(null, paramKey);
+                        parametrizedName = MakeParamWithValue(null);
                     }
 
                     ProcedureParameters.Add(paramKey, $"{parametrizedName}");

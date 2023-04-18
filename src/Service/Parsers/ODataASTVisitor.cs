@@ -95,9 +95,6 @@ namespace Azure.DataApiBuilder.Service.Parsers
                 return $"{_struct.MakeParamWithValue(GetParamWithSystemType(nodeIn.Value.ToString()!, nodeIn.TypeReference))}";
             }
 
-            // This is necessary because we want to create a mapping between column name and its corresponding param name.
-            _struct.MakeParamWithValue(null);
-
             // Represents a NULL value, we support NULL in queries so return "NULL" here
             return "NULL";
         }

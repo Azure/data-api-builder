@@ -62,7 +62,7 @@ namespace Azure.DataApiBuilder.Service.Services
             [typeof(string)] = DbType.String,
             [typeof(char)] = DbType.StringFixedLength,
             [typeof(Guid)] = DbType.Guid,
-            [typeof(DateTime)] = DbType.DateTime,
+            [typeof(DateTime)] = DbType.DateTimeOffset,
             [typeof(DateTimeOffset)] = DbType.DateTimeOffset,
             [typeof(TimeSpan)] = DbType.Time,
             [typeof(byte[])] = DbType.Binary,
@@ -80,7 +80,7 @@ namespace Azure.DataApiBuilder.Service.Services
             [typeof(bool?)] = DbType.Boolean,
             [typeof(char?)] = DbType.StringFixedLength,
             [typeof(Guid?)] = DbType.Guid,
-            [typeof(DateTime?)] = DbType.DateTime,
+            [typeof(DateTime?)] = DbType.DateTimeOffset,
             [typeof(DateTimeOffset?)] = DbType.DateTimeOffset,
             [typeof(TimeSpan?)] = DbType.Time,
             [typeof(object)] = DbType.Object

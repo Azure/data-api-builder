@@ -156,7 +156,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 await queryExecutor.Object.ExecuteQueryAsync<object>(
                     sqltext: string.Empty,
-                    parameters: new Dictionary<string, Tuple<object,DbType?>>(),
+                    parameters: new Dictionary<string, Tuple<object, DbType?>>(),
                     dataReaderHandler: null,
                     httpContext: null,
                     args: null);
@@ -210,7 +210,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             await queryExecutor.Object.ExecuteQueryAsync<object>(
                     sqltext: sqltext,
-                    parameters: new Dictionary<string, Tuple<object,DbType?>>(),
+                    parameters: new Dictionary<string, Tuple<object, DbType?>>(),
                     dataReaderHandler: null,
                     args: null);
 

@@ -51,7 +51,7 @@ internal static class JsonObjectExtensions
     /// The mutable JSON object to convert.
     /// </param>
     /// <returns>
-    /// A immutable JSON document.
+    /// An immutable JSON document.
     /// </returns>
     /// <exception cref="ArgumentNullException">
     /// Thrown if <paramref name="obj"/> is <see langword="null"/>.

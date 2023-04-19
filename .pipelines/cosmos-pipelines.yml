@@ -64,6 +64,10 @@ steps:
     fileType: 'json'
     targetFiles: 'src/out/tests/net6.0/dab-config.CosmosDb_NoSql.json'
 
+- bash: |
+    cat src/out/tests/net6.0/dab-config.CosmosDb_NoSql.json
+  displayName: Check config generated
+
 - task: DotNetCoreCLI@2
   displayName: 'Run CosmosDb_NoSql Integration Tests'
   inputs:

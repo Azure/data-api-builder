@@ -52,7 +52,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     }
                     else
                     {
-                        parametrizedName = MakeParamWithValue(null);
+                        parametrizedName = MakeParamWithValue(value: null);
                     }
 
                     ProcedureParameters.Add(paramKey, $"{parametrizedName}");
@@ -62,7 +62,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     // Fill with default value from runtime config
                     if (paramDefinition.HasConfigDefault)
                     {
-                        string parameterizedName = MakeParamWithValue(paramDefinition.ConfigDefaultValue, paramKey);
+                        string parameterizedName = MakeParamWithValue(paramDefinition.ConfigDefaultValue);
                         ProcedureParameters.Add(paramKey, $"{parameterizedName}");
                     }
                     else

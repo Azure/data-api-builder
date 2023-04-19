@@ -111,19 +111,19 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         ///  Add parameter to Parameters and return the name associated with it
         /// </summary>
         /// <param name="value">Value to be assigned to parameter, which can be null for nullable columns.</param>
-        public virtual string MakeParamWithValue(object? value, string? columnName = null)
+        public virtual string MakeParamWithValue(object? value, string? paramName = null)
         {
-            string paramName = $"{PARAM_NAME_PREFIX}param{Counter.Next()}";
-            if (!string.IsNullOrEmpty(columnName))
+            string encodedParamName = $"{PARAM_NAME_PREFIX}param{Counter.Next()}";
+            if (!string.IsNullOrEmpty(paramName))
             {
-                Parameters.Add(paramName, new(value, GetUnderlyingSourceDefinition().Columns[columnName].DbType));
+                Parameters.Add(encodedParamName, new(value, GetUnderlyingSourceDefinition().GetDbTypeForParam(paramName)));
             }
             else
             {
-                Parameters.Add(paramName, new(value, null));
+                Parameters.Add(encodedParamName, new(value, null));
             }
 
-            return paramName;
+            return encodedParamName;
         }
 
         /// <summary>

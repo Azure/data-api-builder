@@ -310,12 +310,14 @@ namespace Azure.DataApiBuilder.Service.Services
             // For each row/parameter, add an entry to StoredProcedureDefinition.Parameters dictionary
             foreach (DataRow row in parameterMetadata.Rows)
             {
+                // row["DATA_TYPE"] has value type string so a direct cast to System.Type is not supported.
+                Type systemType = SqlToCLRType((string)row["DATA_TYPE"]);
                 // Add to parameters dictionary without the leading @ sign
                 storedProcedureDefinition.Parameters.TryAdd(((string)row["PARAMETER_NAME"])[1..],
                     new()
                     {
-                        // row["DATA_TYPE"] has value type string so a direct cast to System.Type is not supported.
-                        SystemType = SqlToCLRType((string)row["DATA_TYPE"]),
+                        SystemType = systemType,
+                        DbType = DbTypeHelper.GetDbTypeFromSystemType(systemType)
                     }
                 );
             }

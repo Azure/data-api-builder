@@ -107,11 +107,23 @@ namespace Azure.DataApiBuilder.Config
         /// Key: parameter name, Value: ParameterDefinition object
         /// </summary>
         public Dictionary<string, ParameterDefinition> Parameters { get; set; } = new();
+
+        /// <inheritdoc/>
+        public override DbType? GetDbTypeForParam(string paramName)
+        {
+            if (Parameters.TryGetValue(paramName, out ParameterDefinition? paramDefinition))
+            {
+                return paramDefinition.DbType;
+            }
+
+            return null;
+        }
     }
 
     public class ParameterDefinition
     {
         public Type SystemType { get; set; } = null!;
+        public DbType? DbType { get; set; }
         public bool HasConfigDefault { get; set; }
         public object? ConfigDefaultValue { get; set; }
     }
@@ -154,6 +166,23 @@ namespace Azure.DataApiBuilder.Config
                                          Columns.TryGetValue(column, out ColumnDefinition? definition) && definition.IsNullable)
                                  .Where(isNullable => isNullable == true)
                                  .Any();
+        }
+
+        /// <summary>
+        /// Method to get the DbType for:
+        /// 1. column for table/view,
+        /// 2. parameter for stored procedure.
+        /// </summary>
+        /// <param name="paramName">The parameter whose DbType is to be determined.</param>
+        /// <returns></returns>
+        public virtual DbType? GetDbTypeForParam(string paramName)
+        {
+            if (Columns.TryGetValue(paramName, out ColumnDefinition? columnDefinition))
+            {
+                return columnDefinition.DbType;
+            }
+
+            return null;
         }
     }
 

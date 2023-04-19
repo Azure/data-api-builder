@@ -213,7 +213,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
 
         [TestMethod]
         [Ignore]
-        public override Task PatchOneUpdateInAccessibleRowWithDatabasePolicy()
+        public override Task PatchOneWithUnsatisfiedDatabasePolicy()
         {
             throw new NotImplementedException();
         }

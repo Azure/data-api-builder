@@ -634,30 +634,56 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         /// <summary>
-        /// Test to validate that PATCH operation fails because the database policy for update operation
-        /// restricts modifying records where id is not 1234.
+        /// Test to validate failure of PUT operation failing to satisfy the database policy for the operation to be executed
+        /// (insert/update based on whether a record exists for given PK).
         /// </summary>
         [TestMethod]
-        public virtual async Task PatchOneUpdateInAccessibleRowWithDatabasePolicy()
+        public virtual async Task PatchOneWithUnsatisfiedDatabasePolicy()
         {
-            // A record with given PK exists in the table, so only update would be attempted.
-            // However, since the database policy for update operation ("@item.id ne 1234") is not satisfied, the operation fails.
+            // PATCH operation resolves to update because we have a record present for given PK.
+            // However, the update fails to execute successfully because the database policy ("@item.pieceid ne 1") for update operation is not satisfied.
             string requestBody = @"
             {
-                ""name"": ""New Publisher""
+                ""categoryName"": ""SciFi"",
+                ""piecesRequired"": 5,
+                ""piecesAvailable"": 2
             }";
 
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "id/1234",
+                    primaryKeyRoute: "categoryid/0/pieceid/1",
                     queryString: null,
-                    entityNameOrPath: _foreignKeyEntityName,
-                    sqlQuery: string.Empty,
-                    operationType: Config.Operation.UpsertIncremental,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    operationType: Config.Operation.Upsert,
                     requestBody: requestBody,
+                    sqlQuery: string.Empty,
                     exceptionExpected: true,
                     expectedErrorMessage: DataApiBuilderException.AUTHORIZATION_FAILURE,
                     expectedStatusCode: HttpStatusCode.Forbidden,
-                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed.ToString(),
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure.ToString(),
+                    clientRoleHeader: "database_policy_tester"
+                    );
+
+            // PATCH operation resolves to insert because we don't have a record present for given PK.
+            // However, the insert fails to execute successfully because the database policy ("@item.pieceid ne 6 and @item.piecesAvailable gt 6")
+            // for insert operation is not satisfied.
+            requestBody = @"
+            {
+                ""categoryName"": ""SciFi"",
+                ""piecesRequired"": 5,
+                ""piecesAvailable"": 2
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/0/pieceid/6",
+                    queryString: null,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    operationType: Config.Operation.Upsert,
+                    requestBody: requestBody,
+                    sqlQuery: string.Empty,
+                    exceptionExpected: true,
+                    expectedErrorMessage: DataApiBuilderException.AUTHORIZATION_FAILURE,
+                    expectedStatusCode: HttpStatusCode.Forbidden,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure.ToString(),
                     clientRoleHeader: "database_policy_tester"
                     );
         }

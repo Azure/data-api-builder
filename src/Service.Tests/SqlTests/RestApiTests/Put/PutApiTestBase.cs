@@ -156,27 +156,50 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         }
 
         /// <summary>
-        /// Test to validate that PUT update on a row accessible to the user after applying database policy
-        /// filters executes successfully.
+        /// Test to validate successful execution of PUT operation which satisfies the database policy for the operation (insert/update) it resolves into.
         /// </summary>
-        /// <returns></returns>
         [TestMethod]
-        public virtual async Task PutOneUpdateAccessibleRowWithDatabasePolicy()
+        public virtual async Task PutOneWithDatabasePolicy()
         {
+            // PUT operation resolves to update because we have a record present for given PK.
+            // Since the database policy for update operation ("@item.pieceid ne 1") is satisfied by the operation, it executes successfully.
             string requestBody = @"
             {
-                ""name"": ""New Publisher""
+                ""piecesAvailable"": 4,
+                ""piecesRequired"": 5,
+                ""categoryName"": ""SciFi""
             }";
 
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "id/2345",
+                    primaryKeyRoute: "categoryid/100/pieceid/99",
                     queryString: null,
-                    entityNameOrPath: _foreignKeyEntityName,
-                    sqlQuery: GetQuery("PutOneUpdateAccessibleRowWithDatabasePolicy"),
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    sqlQuery: GetQuery("PutOneUpdateWithDatabasePolicy"),
                     operationType: Config.Operation.Upsert,
                     requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK,
                     clientRoleHeader: "database_policy_tester"
-                    );
+                );
+
+            // PUT operation resolves to insert because we don't have a record present for given PK.
+            // Since the database policy for insert operation ("@item.pieceid ne 6 and @item.piecesAvailable gt 0") is satisfied by the operation, it executes successfully.
+            requestBody = @"
+            {
+                ""piecesAvailable"": 4,
+                ""categoryName"": ""SciFi""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/0/pieceid/7",
+                    queryString: null,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    sqlQuery: GetQuery("PutOneInsertWithDatabasePolicy"),
+                    operationType: Config.Operation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    clientRoleHeader: "database_policy_tester",
+                    expectedLocationHeader: "categoryid/0/pieceid/7"
+                );
         }
 
         /// <summary>
@@ -856,7 +879,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     exceptionExpected: true,
                     expectedErrorMessage: DataApiBuilderException.AUTHORIZATION_FAILURE,
                     expectedStatusCode: HttpStatusCode.Forbidden,
-                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed.ToString(),
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure.ToString(),
                     clientRoleHeader: "database_policy_tester"
                     );
 
@@ -880,7 +903,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     exceptionExpected: true,
                     expectedErrorMessage: DataApiBuilderException.AUTHORIZATION_FAILURE,
                     expectedStatusCode: HttpStatusCode.Forbidden,
-                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed.ToString(),
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure.ToString(),
                     clientRoleHeader: "database_policy_tester"
                     );
         }

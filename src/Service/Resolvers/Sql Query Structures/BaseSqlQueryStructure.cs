@@ -507,7 +507,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <returns>Database policy for the operation.</returns>
         public string? GetDbPolicyForOperation(Config.Operation operation)
         {
-            if(!DbPolicyPredicatesForOperations.TryGetValue(operation, out string? policy))
+            if (!DbPolicyPredicatesForOperations.TryGetValue(operation, out string? policy))
             {
                 policy = null;
             }

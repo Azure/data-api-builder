@@ -208,7 +208,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             int numOfRecordsWithGivenPK = 0;
 
             if (resultSetRowWithCountOfRowsWithGivenPk is not null &&
-                resultSetRowWithCountOfRowsWithGivenPk.Columns.TryGetValue(MsSqlQueryBuilder.COUNT_ROWS_WITH_GIVEN_PK, out object? rowsWithGivenPK)){
+                resultSetRowWithCountOfRowsWithGivenPk.Columns.TryGetValue(MsSqlQueryBuilder.COUNT_ROWS_WITH_GIVEN_PK, out object? rowsWithGivenPK))
+            {
                 numOfRecordsWithGivenPK = (int)rowsWithGivenPK!;
             }
 

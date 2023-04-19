@@ -204,7 +204,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             // From the first result set, we get the count(0/1) of records with given PK.
             DbResultSet resultSetWithCountOfRowsWithGivenPk = await ExtractResultSetFromDbDataReader(dbDataReader);
-            int numOfRecordsWithGivenPK = (int)resultSetWithCountOfRowsWithGivenPk.Rows.FirstOrDefault()!.Columns[MsSqlQueryBuilder.COUNT_ROWS_WITH_GIVEN_PK]!;
+            DbResultSetRow? resultSetRowWithCountOfRowsWithGivenPk = resultSetWithCountOfRowsWithGivenPk.Rows.FirstOrDefault();
+            int numOfRecordsWithGivenPK = 0;
+
+            if (resultSetRowWithCountOfRowsWithGivenPk is not null &&
+                resultSetRowWithCountOfRowsWithGivenPk.Columns.TryGetValue(MsSqlQueryBuilder.COUNT_ROWS_WITH_GIVEN_PK, out object? rowsWithGivenPK)){
+                numOfRecordsWithGivenPK = (int)rowsWithGivenPK!;
+            }
 
             // The second result set holds the records returned as a result of the executed update/insert operation.
             DbResultSet? dbResultSet = await dbDataReader.NextResultAsync() ? await ExtractResultSetFromDbDataReader(dbDataReader) : null;
@@ -212,17 +218,25 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             if (dbResultSet is null)
             {
                 // This can only happen in the case where we are dealing with table/view with auto-gen PK.
-                // In this case, insert cannot happen.
-                // Also since dbResultSet is null, update couldn't execute as well because there was no record corresponding to given PK.
-                // args hold the entity name and PK in pretty format and is always non-null here.
-                string prettyPrintPk = args![0];
-                string entityName = args[1];
+                // dbResultSet being null implies that neither update nor insert was attempted.
+                // In this case, count of rows with given PK = 0, hence update is not executed.
+                // Also, since PK is auto-generated, insert cannot happen.
+                if (args is not null && args.Count > 1)
+                {
+                    string prettyPrintPk = args![0];
+                    string entityName = args[1];
+
+                    throw new DataApiBuilderException(
+                            message: $"Cannot perform INSERT and could not find {entityName} " +
+                            $"with primary key {prettyPrintPk} to perform UPDATE on.",
+                            statusCode: HttpStatusCode.NotFound,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+                }
 
                 throw new DataApiBuilderException(
-                        message: $"Cannot perform INSERT and could not find {entityName} " +
-                        $"with primary key {prettyPrintPk} to perform UPDATE on.",
-                        statusCode: HttpStatusCode.NotFound,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+                    message: $"Neither insert nor update could be performed.",
+                    statusCode: HttpStatusCode.NotFound,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
 
             if (numOfRecordsWithGivenPK == 1) // This indicates that a record existed with given PK and we attempted an update operation.
@@ -233,7 +247,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     throw new DataApiBuilderException(
                         message: DataApiBuilderException.AUTHORIZATION_FAILURE,
                         statusCode: HttpStatusCode.Forbidden,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure);
                 }
 
                 // This is used as an identifier to distinguish between update/insert operations.
@@ -246,7 +260,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 throw new DataApiBuilderException(
                         message: DataApiBuilderException.AUTHORIZATION_FAILURE,
                         statusCode: HttpStatusCode.Forbidden,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure);
             }
 
             return dbResultSet;

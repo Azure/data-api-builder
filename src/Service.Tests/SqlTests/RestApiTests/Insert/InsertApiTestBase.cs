@@ -638,7 +638,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedStatusCode: HttpStatusCode.Forbidden,
-                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed.ToString(),
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure.ToString(),
                 expectedErrorMessage: "Could not insert row with given values.",
                 clientRoleHeader: "database_policy_tester"
             );

@@ -38,6 +38,10 @@ namespace Azure.DataApiBuilder.Service.Exceptions
             /// </summary>
             AuthorizationCheckFailed,
             /// <summary>
+            /// Request did not satisfy database policy for the operation.
+            /// </summary>
+            DatabasePolicyFailure,
+            /// <summary>
             /// The requested operation failed on the database.
             /// </summary>
             DatabaseOperationFailed,

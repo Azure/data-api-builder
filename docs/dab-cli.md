@@ -100,7 +100,7 @@ Update the properties of any database entity in the configuration file.
 | **-m, --map** | false   | -   | Specify mappings between database fields and GraphQL and REST fields. format: --map "backendName1:exposedName1,backendName2:exposedName2,...".   |
 
 ### **`export`**
-Export the GraphQL schema as a file and save to disk.
+Export the required schema as a file and save to disk based on the options.
 
 **Syntax**: `dab export [options]`
 

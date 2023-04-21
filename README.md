@@ -80,7 +80,7 @@ If you want to propose a completely new feature, please create an RFC item. Good
 
 ## Third-Party Component Notice
 
-If you use the third-party software Banana Cake Pop by ChilliCream, Inc., as part of your Data API builder, you may have the option to save your work on ChilliCream's cloud service, via your separate ChilliCream account.  Microsoft is not affiliated with and does not endorse ChilliCream's service, and you use those services at your own option.
+If you use the third-party software Banana Cake Pop by ChilliCream, Inc., as part of your Data API builder solution, you may have the option to save your work on ChilliCream's cloud service, via your separate ChilliCream account.  Microsoft is not affiliated with and does not endorse ChilliCream's service, and you use those services at your own option.
 
 ## Trademarks
 

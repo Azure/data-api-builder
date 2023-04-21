@@ -35,7 +35,7 @@ public class RuntimeConfigLoader
     /// <param name="path">The path to the dab-config.json file.</param>
     /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
-    public bool TryLoadConfig(string path, out RuntimeConfig? config)
+    public bool TryLoadConfig(string path, [NotNullWhen(true)] out RuntimeConfig? config)
     {
         if (_fileSystem.File.Exists(path))
         {

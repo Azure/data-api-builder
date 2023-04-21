@@ -47,24 +47,24 @@ namespace Cli
             }
 
             // Creating a new json file with runtime configuration
-            if (!TryCreateRuntimeConfig(options, loader, out string runtimeConfigJson))
+            if (!TryCreateRuntimeConfig(options, loader, fileSystem, out RuntimeConfig? runtimeConfigJson))
             {
                 _logger.LogError($"Failed to create the runtime config file.");
                 return false;
             }
 
-            return WriteJsonContentToFile(runtimeConfigFile, runtimeConfigJson, fileSystem);
+            return WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfigJson, fileSystem);
         }
 
         /// <summary>
         /// Create a runtime config json string.
         /// </summary>
         /// <param name="options">Init options</param>
-        /// <param name="runtimeConfigJson">Output runtime config json.</param>
+        /// <param name="runtimeConfig">Output runtime config json.</param>
         /// <returns>True on success. False otherwise.</returns>
-        public static bool TryCreateRuntimeConfig(InitOptions options, RuntimeConfigLoader loader, out string runtimeConfigJson)
+        public static bool TryCreateRuntimeConfig(InitOptions options, RuntimeConfigLoader loader, IFileSystem fileSystem, [NotNullWhen(true)] out RuntimeConfig? runtimeConfig)
         {
-            runtimeConfigJson = string.Empty;
+            runtimeConfig = null;
 
             DatabaseType dbType = options.DatabaseType;
             string? restPath = options.RestPath;
@@ -82,7 +82,7 @@ namespace Cli
                         return false;
                     }
 
-                    if (!File.Exists(graphQLSchemaPath))
+                    if (!fileSystem.File.Exists(graphQLSchemaPath))
                     {
                         _logger.LogError($"GraphQL Schema File: {graphQLSchemaPath} not found.");
                         return false;
@@ -139,7 +139,7 @@ namespace Cli
 
             string dabSchemaLink = loader.GetPublishedDraftSchemaLink();
 
-            RuntimeConfig runtimeConfig = new(
+            runtimeConfig = new(
                 Schema: dabSchemaLink,
                 DataSource: dataSource,
                 Runtime: new(
@@ -152,7 +152,6 @@ namespace Cli
                 ),
                 Entities: new RuntimeEntities(new Dictionary<string, Entity>()));
 
-            runtimeConfigJson = JsonSerializer.Serialize(runtimeConfig, RuntimeConfigLoader.GetSerializationOption());
             return true;
         }
 
@@ -167,19 +166,19 @@ namespace Cli
                 return false;
             }
 
-            if (!TryReadRuntimeConfig(runtimeConfigFile, out string runtimeConfigJson))
+            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
             {
                 _logger.LogError($"Failed to read the config file: {runtimeConfigFile}.");
                 return false;
             }
 
-            if (!TryAddNewEntity(options, ref runtimeConfigJson))
+            if (!TryAddNewEntity(options, runtimeConfig))
             {
                 _logger.LogError("Failed to add a new entity.");
                 return false;
             }
 
-            return WriteJsonContentToFile(runtimeConfigFile, runtimeConfigJson, fileSystem);
+            return WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfig, fileSystem);
         }
 
         /// <summary>
@@ -189,25 +188,8 @@ namespace Cli
         /// <param name="options">AddOptions.</param>
         /// <param name="runtimeConfigJson">Json string of existing runtime config. This will be modified on successful return.</param>
         /// <returns>True on success. False otherwise.</returns>
-        public static bool TryAddNewEntity(AddOptions options, ref string runtimeConfigJson)
+        public static bool TryAddNewEntity(AddOptions options, RuntimeConfig runtimeConfig)
         {
-            // Deserialize the json string to RuntimeConfig object.
-            //
-            RuntimeConfig? runtimeConfig;
-            try
-            {
-                runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(runtimeConfigJson, GetSerializationOptions());
-                if (runtimeConfig is null)
-                {
-                    throw new Exception("Failed to parse the runtime config file.");
-                }
-            }
-            catch (Exception e)
-            {
-                _logger.LogError($"Failed with exception: {e}.");
-                return false;
-            }
-
             // If entity exists, we cannot add. Display warning
             //
             if (runtimeConfig.Entities.ContainsKey(options.Entity))
@@ -293,12 +275,6 @@ namespace Cli
             // Add entity to existing runtime config.
             IDictionary<string, Entity> entities = runtimeConfig.Entities.Entities;
             entities.Add(options.Entity, entity);
-            runtimeConfig = runtimeConfig with { Entities = new(entities) };
-
-            // Serialize runtime config to json string
-            //
-            runtimeConfigJson = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());
-
             return true;
         }
 
@@ -415,19 +391,19 @@ namespace Cli
                 return false;
             }
 
-            if (!TryReadRuntimeConfig(runtimeConfigFile, out string runtimeConfigJson))
+            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
             {
-                _logger.LogError($"Failed to read the config file: {runtimeConfigFile}.");
+                _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
                 return false;
             }
 
-            if (!TryUpdateExistingEntity(options, ref runtimeConfigJson))
+            if (!TryUpdateExistingEntity(options, runtimeConfig))
             {
                 _logger.LogError($"Failed to update the Entity: {options.Entity}.");
                 return false;
             }
 
-            return WriteJsonContentToFile(runtimeConfigFile, runtimeConfigJson, fileSystem);
+            return WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfig, fileSystem);
         }
 
         /// <summary>
@@ -437,25 +413,8 @@ namespace Cli
         /// <param name="options">UpdateOptions.</param>
         /// <param name="runtimeConfigJson">Json string of existing runtime config. This will be modified on successful return.</param>
         /// <returns>True on success. False otherwise.</returns>
-        public static bool TryUpdateExistingEntity(UpdateOptions options, ref string runtimeConfigJson)
+        public static bool TryUpdateExistingEntity(UpdateOptions options, RuntimeConfig runtimeConfig)
         {
-            // Deserialize the json string to RuntimeConfig object.
-            //
-            RuntimeConfig? runtimeConfig;
-            try
-            {
-                runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(runtimeConfigJson, GetSerializationOptions());
-                if (runtimeConfig is null)
-                {
-                    throw new Exception("Failed to parse the runtime config file.");
-                }
-            }
-            catch (Exception e)
-            {
-                _logger.LogError($"Failed with exception: {e}.");
-                return false;
-            }
-
             // Check if Entity is present
             if (!runtimeConfig.Entities.TryGetValue(options.Entity!, out Entity? entity))
             {
@@ -589,10 +548,7 @@ namespace Cli
                 Permissions: updatedPermissions,
                 Relationships: updatedRelationships,
                 Mappings: updatedMappings);
-            IDictionary<string, Entity> entities = runtimeConfig.Entities.Entities;
-            entities[options.Entity] = updatedEntity;
-            runtimeConfig = runtimeConfig with { Entities = new(entities) };
-            runtimeConfigJson = JsonSerializer.Serialize(runtimeConfig, GetSerializationOptions());
+            runtimeConfig.Entities.Entities[options.Entity] = updatedEntity;
             return true;
         }
 
@@ -921,7 +877,7 @@ namespace Cli
             }
 
             // Validates that config file has data and follows the correct json schema
-            if (!CanParseConfigCorrectly(runtimeConfigFile, out RuntimeConfig? deserializedRuntimeConfig))
+            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? deserializedRuntimeConfig) )
             {
                 return false;
             }

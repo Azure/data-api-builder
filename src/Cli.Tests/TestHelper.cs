@@ -899,38 +899,23 @@ namespace Cli.Tests
         /// Helper method to create json string for runtime settings
         /// for json comparison in tests.
         /// </summary>
-        public static string GetDefaultTestRuntimeSettingString(
-            HostModeType hostModeType = HostModeType.Production,
+        public static RuntimeOptions GetDefaultTestRuntimeSettingString(
+            HostMode hostModeType = HostMode.Production,
             IEnumerable<string>? corsOrigins = null,
             string authenticationProvider = "StaticWebApps",
             string? audience = null,
             string? issuer = null,
-            string? restPath = GlobalSettings.REST_DEFAULT_PATH)
+            string restPath = RestRuntimeOptions.DEFAULT_PATH)
         {
-            Dictionary<string, object> runtimeSettingDict = new();
-            Dictionary<GlobalSettingsType, object> defaultGlobalSetting = GetDefaultGlobalSettings(
-                hostMode: hostModeType,
-                corsOrigin: corsOrigins,
-                authenticationProvider: authenticationProvider,
-                audience: audience,
-                issuer: issuer,
-                restPath: restPath);
-
-            runtimeSettingDict.Add("runtime", defaultGlobalSetting);
-
-            return JsonSerializer.Serialize(runtimeSettingDict, GetSerializationOptions());
-        }
-
-        /// <summary>
-        /// Helper method to setup Logger factory
-        /// for CLI related classes.
-        /// </summary>
-        public static void SetupTestLoggerForCLI()
-        {
-            Mock<ILogger<ConfigGenerator>> configGeneratorLogger = new();
-            Mock<ILogger<Utils>> utilsLogger = new();
-            ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger.Object);
-            Utils.SetCliUtilsLogger(utilsLogger.Object);
+            return new RuntimeOptions(
+                Rest: new(Path: restPath),
+                GraphQL: new(),
+                Host: new(
+                    Cors: new((corsOrigins is null ? new List<string>() : corsOrigins).ToArray()),
+                    Authentication: new(authenticationProvider, new(audience, issuer)),
+                    Mode: hostModeType
+                )
+            );
         }
     }
 }

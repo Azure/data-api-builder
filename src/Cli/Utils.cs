@@ -3,6 +3,7 @@
 
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.IO.Abstractions;
 using System.Reflection;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -350,29 +351,6 @@ namespace Cli
         }
 
         /// <summary>
-        /// Try to read and deserialize runtime config from a file.
-        /// </summary>
-        /// <param name="file">File path.</param>
-        /// <param name="runtimeConfigJson">Runtime config output. On failure, this will be null.</param>
-        /// <returns>True on success. On failure, return false and runtimeConfig will be set to null.</returns>
-        public static bool TryReadRuntimeConfig(string file, out string runtimeConfigJson)
-        {
-            runtimeConfigJson = string.Empty;
-
-            if (!File.Exists(file))
-            {
-                _logger.LogError($"Couldn't find config  file: {file}. " +
-                    "Please run: dab init <options> to create a new config file.");
-                return false;
-            }
-
-            // Read existing config file content.
-            //
-            runtimeConfigJson = File.ReadAllText(file);
-            return true;
-        }
-
-        /// <summary>
         /// Verifies whether the operation provided by the user is valid or not
         /// Example:
         /// *, create -> Invalid
@@ -496,41 +474,6 @@ namespace Cli
             }
 
             return !string.IsNullOrEmpty(runtimeConfigFile);
-        }
-
-        /// <summary>
-        /// Checks if config can be correctly parsed by deserializing the
-        /// json config into runtime config object.
-        /// Also checks that connection-string is not null or empty whitespace.
-        /// If parsing is successful and the config has valid connection-string, it
-        /// returns true with out as deserializedConfig, else returns false.
-        /// </summary>
-        public static bool CanParseConfigCorrectly(
-            string configFile,
-            [NotNullWhen(true)] out RuntimeConfig? deserializedRuntimeConfig)
-        {
-            deserializedRuntimeConfig = null;
-            if (!TryReadRuntimeConfig(configFile, out string runtimeConfigJson))
-            {
-                _logger.LogError($"Failed to read the config file: {configFile}.");
-                return false;
-            }
-
-            if (!RuntimeConfigLoader.TryParseConfig(
-                    runtimeConfigJson,
-                    out deserializedRuntimeConfig))
-            {
-                _logger.LogError($"Failed to parse the config file: {configFile}.");
-                return false;
-            }
-
-            if (string.IsNullOrWhiteSpace(deserializedRuntimeConfig.DataSource.ConnectionString))
-            {
-                _logger.LogError($"Invalid connection-string provided in the config.");
-                return false;
-            }
-
-            return true;
         }
 
         /// <summary>
@@ -744,7 +687,21 @@ namespace Cli
         /// <summary>
         /// This method will write all the json string in the given file.
         /// </summary>
-        public static bool WriteJsonContentToFile(string file, string jsonContent, System.IO.Abstractions.IFileSystem fileSystem)
+        public static bool WriteRuntimeConfigToFile(string file, RuntimeConfig runtimeConfig, IFileSystem fileSystem)
+        {
+            try
+            {
+                string jsonContent = JsonSerializer.Serialize(runtimeConfig, RuntimeConfigLoader.GetSerializationOption());
+                return WriteJsonToFile(file, jsonContent, fileSystem);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Failed to generate the config file, operation failed with exception:{e}.");
+                return false;
+            }
+        }
+
+        public static bool WriteJsonToFile(string file, string jsonContent, IFileSystem fileSystem)
         {
             try
             {

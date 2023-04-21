@@ -27,6 +27,8 @@
         <PackageReference Include="MSTest.TestAdapter" />
         <PackageReference Include="MSTest.TestFramework" />
         <PackageReference Include="Newtonsoft.Json" />
+        <PackageReference Include="Snapshooter.MSTest" />
+        <PackageReference Include="System.IO.Abstractions.TestingHelpers" />
     </ItemGroup>
 
     <ItemGroup>

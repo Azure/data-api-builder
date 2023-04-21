@@ -1,6 +1,12 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.IO.Abstractions;
+using System.IO.Abstractions.TestingHelpers;
+using System.Reflection;
+using Cli.Commands;
+using Snapshooter.MSTest;
+
 namespace Cli.Tests
 {
     /// <summary>
@@ -9,20 +15,38 @@ namespace Cli.Tests
     [TestClass]
     public class InitTests
     {
-        private string _basicRuntimeConfig = string.Empty;
+        private IFileSystem? _fileSystem;
+        private RuntimeConfigLoader? _runtimeConfigLoader;
 
-        /// <summary>
-        /// Setup the logger and test file for CLI
-        /// </summary>
-        [ClassInitialize]
-        public static void Setup()
+        [TestInitialize]
+        public void TestInitialize()
         {
-            if (!File.Exists(TEST_SCHEMA_FILE))
-            {
-                File.Create(TEST_SCHEMA_FILE);
-            }
+            MockFileSystem fileSystem = new();
 
-            TestHelper.SetupTestLoggerForCLI();
+            fileSystem.AddFile(
+                fileSystem.Path.Combine(
+                    fileSystem.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
+                    "dab.draft.schema.json"),
+                new MockFileData("{ \"additionalProperties\": {\"version\": \"https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json\"} }"));
+
+            _fileSystem = fileSystem;
+
+            _runtimeConfigLoader = new RuntimeConfigLoader(_fileSystem);
+
+            ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
+            {
+                builder.AddConsole();
+            });
+
+            SetLoggerForCliConfigGenerator(loggerFactory.CreateLogger<ConfigGenerator>());
+            SetCliUtilsLogger(loggerFactory.CreateLogger<Utils>());
+        }
+
+        [TestCleanup]
+        public void TestCleanup()
+        {
+            _fileSystem = null;
+            _runtimeConfigLoader = null;
         }
 
         /// <summary>
@@ -33,41 +57,21 @@ namespace Cli.Tests
         public void MssqlDatabase()
         {
             InitOptions options = new(
-                databaseType: DatabaseType.mssql,
+                databaseType: DatabaseType.MSSQL,
                 connectionString: "testconnectionstring",
                 cosmosNoSqlDatabase: null,
                 cosmosNoSqlContainer: null,
                 graphQLSchemaPath: null,
                 setSessionContext: true,
-                hostMode: HostModeType.Development,
+                hostMode: HostMode.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
                 restPath: "rest-api",
                 config: TEST_RUNTIME_CONFIG_FILE);
 
-            _basicRuntimeConfig =
-            @"{" +
-                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
-                @"""data-source"": {
-                    ""database-type"": ""mssql"",
-                    ""connection-string"": ""testconnectionstring"",
-                    ""options"":{
-                        ""set-session-context"": true
-                    }
-                },
-                ""entities"": {}
-            }";
+            Assert.IsTrue(TryCreateRuntimeConfig(options, _runtimeConfigLoader!, _fileSystem!, out RuntimeConfig? runtimeConfig));
 
-            // Adding runtime settings to the above basic config
-            string expectedRuntimeConfig = AddPropertiesToJson(
-                _basicRuntimeConfig,
-                GetDefaultTestRuntimeSettingString(
-                    HostModeType.Development,
-                    new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                    restPath: options.RestPath)
-            );
-
-            RunTest(options, expectedRuntimeConfig);
+            Snapshot.Match(runtimeConfig);
         }
 
         /// <summary>
@@ -77,37 +81,21 @@ namespace Cli.Tests
         public void CosmosDbPostgreSqlDatabase()
         {
             InitOptions options = new(
-                databaseType: DatabaseType.cosmosdb_postgresql,
+                databaseType: DatabaseType.CosmosDB_PostgreSQL,
                 connectionString: "testconnectionstring",
                 cosmosNoSqlDatabase: null,
                 cosmosNoSqlContainer: null,
                 graphQLSchemaPath: null,
                 setSessionContext: false,
-                hostMode: HostModeType.Development,
+                hostMode: HostMode.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
                 restPath: "/rest-endpoint",
                 config: TEST_RUNTIME_CONFIG_FILE);
 
-            _basicRuntimeConfig =
-            @"{" +
-                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
-                @"""data-source"": {
-                    ""database-type"": ""cosmosdb_postgresql"",
-                    ""connection-string"": ""testconnectionstring""
-                },
-                ""entities"": {}
-            }";
+            Assert.IsTrue(TryCreateRuntimeConfig(options, _runtimeConfigLoader!, _fileSystem!, out RuntimeConfig? runtimeConfig));
 
-            // Adding runtime settings to the above basic config
-            string expectedRuntimeConfig = AddPropertiesToJson(
-                _basicRuntimeConfig,
-                GetDefaultTestRuntimeSettingString(
-                    HostModeType.Development,
-                    new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
-                    restPath: options.RestPath)
-            );
-            RunTest(options, expectedRuntimeConfig);
+            Snapshot.Match(runtimeConfig);
         }
 
         /// <summary>
@@ -118,38 +106,20 @@ namespace Cli.Tests
         public void TestInitializingConfigWithoutConnectionString()
         {
             InitOptions options = new(
-                databaseType: DatabaseType.mssql,
+                databaseType: DatabaseType.MSSQL,
                 connectionString: null,
                 cosmosNoSqlDatabase: null,
                 cosmosNoSqlContainer: null,
                 graphQLSchemaPath: null,
                 setSessionContext: false,
-                hostMode: HostModeType.Development,
+                hostMode: HostMode.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
                 config: TEST_RUNTIME_CONFIG_FILE);
 
-            _basicRuntimeConfig =
-            @"{" +
-                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
-                @"""data-source"": {
-                    ""database-type"": ""mssql"",
-                    ""connection-string"": """",
-                    ""options"":{
-                        ""set-session-context"": false
-                    }
-                },
-                ""entities"": {}
-            }";
+            Assert.IsTrue(TryCreateRuntimeConfig(options, _runtimeConfigLoader!, _fileSystem!, out RuntimeConfig? runtimeConfig));
 
-            // Adding runtime settings to the above basic config
-            string expectedRuntimeConfig = AddPropertiesToJson(
-                _basicRuntimeConfig,
-                GetDefaultTestRuntimeSettingString(
-                    HostModeType.Development,
-                    new List<string>() { "http://localhost:3000", "http://nolocalhost:80" })
-            );
-            RunTest(options, expectedRuntimeConfig);
+            Snapshot.Match(runtimeConfig);
         }
 
         /// <summary>
@@ -158,38 +128,24 @@ namespace Cli.Tests
         [TestMethod]
         public void CosmosDbNoSqlDatabase()
         {
+            // Mock the schema file. It can be empty as we are not testing the schema file contents in this test.
+            ((MockFileSystem)_fileSystem!).AddFile(TEST_SCHEMA_FILE, new MockFileData(""));
+
             InitOptions options = new(
-                databaseType: DatabaseType.cosmosdb_nosql,
+                databaseType: DatabaseType.CosmosDB_NoSQL,
                 connectionString: "testconnectionstring",
                 cosmosNoSqlDatabase: "testdb",
                 cosmosNoSqlContainer: "testcontainer",
                 graphQLSchemaPath: TEST_SCHEMA_FILE,
                 setSessionContext: false,
-                hostMode: HostModeType.Production,
+                hostMode: HostMode.Production,
                 corsOrigin: null,
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
                 config: TEST_RUNTIME_CONFIG_FILE);
 
-            _basicRuntimeConfig =
-            @"{" +
-                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
-                @"""data-source"": {
-                    ""database-type"": ""cosmosdb_nosql"",
-                    ""connection-string"": ""testconnectionstring"",
-                    ""options"": {
-                        ""database"": ""testdb"",
-                        ""container"": ""testcontainer"",
-                        ""schema"": ""test-schema.gql""
-                    }
-                },
-                ""entities"": {}
-            }";
+            Assert.IsTrue(TryCreateRuntimeConfig(options, _runtimeConfigLoader!, _fileSystem!, out RuntimeConfig? runtimeConfig));
 
-            // Adding runtime settings to the above basic config
-            string expectedRuntimeConfig = AddPropertiesToJson(
-                _basicRuntimeConfig,
-                GetDefaultTestRuntimeSettingString(restPath: null));
-            RunTest(options, expectedRuntimeConfig);
+            Snapshot.Match(runtimeConfig);
         }
 
         /// <summary>
@@ -204,19 +160,25 @@ namespace Cli.Tests
             bool expectSuccess
         )
         {
+            if (expectSuccess is true)
+            {
+                // If we expect the file, then add it to the mock file system.
+                ((MockFileSystem)_fileSystem!).AddFile(schemaFileName, new MockFileData(""));
+            }
+
             InitOptions options = new(
-                databaseType: DatabaseType.cosmosdb_nosql,
+                databaseType: DatabaseType.CosmosDB_NoSQL,
                 connectionString: "testconnectionstring",
                 cosmosNoSqlDatabase: "somedb",
                 cosmosNoSqlContainer: "somecontainer",
                 graphQLSchemaPath: schemaFileName,
                 setSessionContext: false,
-                hostMode: HostModeType.Production,
+                hostMode: HostMode.Production,
                 corsOrigin: null,
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
                 config: TEST_RUNTIME_CONFIG_FILE);
 
-            Assert.AreEqual(expectSuccess, ConfigGenerator.TryCreateRuntimeConfig(options, out _));
+            Assert.AreEqual(expectSuccess, TryCreateRuntimeConfig(options, _runtimeConfigLoader!, _fileSystem!, out RuntimeConfig? _));
         }
 
         /// <summary>
@@ -234,19 +196,25 @@ namespace Cli.Tests
             string? graphQLSchema,
             bool expectedResult)
         {
+            if (! string.IsNullOrEmpty(graphQLSchema))
+            {
+                // Mock the schema file. It can be empty as we are not testing the schema file contents in this test.
+                ((MockFileSystem)_fileSystem!).AddFile(graphQLSchema, new MockFileData(""));
+            }
+
             InitOptions options = new(
-                databaseType: DatabaseType.cosmosdb_nosql,
+                databaseType: DatabaseType.CosmosDB_NoSQL,
                 connectionString: "testconnectionstring",
                 cosmosNoSqlDatabase: cosmosDatabase,
                 cosmosNoSqlContainer: cosmosContainer,
                 graphQLSchemaPath: graphQLSchema,
                 setSessionContext: false,
-                hostMode: HostModeType.Production,
+                hostMode: HostMode.Production,
                 corsOrigin: null,
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
                 config: TEST_RUNTIME_CONFIG_FILE);
 
-            Assert.AreEqual(expectedResult, ConfigGenerator.TryCreateRuntimeConfig(options, out _));
+            Assert.AreEqual(expectedResult, TryCreateRuntimeConfig(options, _runtimeConfigLoader!, _fileSystem!, out RuntimeConfig? _));
         }
 
         /// <summary>
@@ -263,20 +231,20 @@ namespace Cli.Tests
             bool expectedResult)
         {
             InitOptions options = new(
-                databaseType: DatabaseType.mssql,
+                databaseType: DatabaseType.MSSQL,
                 connectionString: "testconnectionstring",
                 cosmosNoSqlDatabase: null,
                 cosmosNoSqlContainer: null,
                 graphQLSchemaPath: null,
                 setSessionContext: false,
-                hostMode: HostModeType.Production,
+                hostMode: HostMode.Production,
                 corsOrigin: null,
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
                 restDisabled: RestDisabled,
                 graphqlDisabled: GraphQLDisabled,
                 config: TEST_RUNTIME_CONFIG_FILE);
 
-            Assert.AreEqual(expectedResult, ConfigGenerator.TryCreateRuntimeConfig(options, out _));
+            Assert.AreEqual(expectedResult, TryCreateRuntimeConfig(options, _runtimeConfigLoader!, _fileSystem!, out RuntimeConfig? _));
         }
 
         /// <summary>
@@ -287,36 +255,20 @@ namespace Cli.Tests
         public void TestSpecialCharactersInConnectionString()
         {
             InitOptions options = new(
-                databaseType: DatabaseType.mssql,
+                databaseType: DatabaseType.MSSQL,
                 connectionString: "A!string@with#some$special%characters^to&check*proper(serialization)including space.",
                 cosmosNoSqlDatabase: null,
                 cosmosNoSqlContainer: null,
                 graphQLSchemaPath: null,
                 setSessionContext: false,
-                hostMode: HostModeType.Production,
+                hostMode: HostMode.Production,
                 corsOrigin: null,
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
                 config: TEST_RUNTIME_CONFIG_FILE);
 
-            _basicRuntimeConfig =
-            @"{" +
-                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
-                @"""data-source"": {
-                    ""database-type"": ""mssql"",
-                    ""connection-string"": ""A!string@with#some$special%characters^to&check*proper(serialization)including space."",
-                    ""options"":{
-                        ""set-session-context"": false
-                    }
-                },
-                ""entities"": {}
-            }";
+            Assert.IsTrue(TryCreateRuntimeConfig(options, _runtimeConfigLoader!, _fileSystem!, out RuntimeConfig? runtimeConfig));
 
-            // Adding runtime settings to the above basic config
-            string expectedRuntimeConfig = AddPropertiesToJson(
-                _basicRuntimeConfig,
-                GetDefaultTestRuntimeSettingString()
-            );
-            RunTest(options, expectedRuntimeConfig);
+            Snapshot.Match(runtimeConfig);
         }
 
         /// <summary>
@@ -327,23 +279,23 @@ namespace Cli.Tests
         public void EnsureFailureOnReInitializingExistingConfig()
         {
             InitOptions options = new(
-                databaseType: DatabaseType.mssql,
+                databaseType: DatabaseType.MSSQL,
                 connectionString: "testconnectionstring",
                 cosmosNoSqlDatabase: null,
                 cosmosNoSqlContainer: null,
                 graphQLSchemaPath: null,
                 setSessionContext: false,
-                hostMode: HostModeType.Development,
+                hostMode: HostMode.Development,
                 corsOrigin: new List<string>() { },
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
                 config: TEST_RUNTIME_CONFIG_FILE);
 
             // Config generated successfully for the first time.
-            Assert.AreEqual(true, ConfigGenerator.TryGenerateConfig(options));
+            Assert.AreEqual(true, TryGenerateConfig(options, _runtimeConfigLoader!, _fileSystem!));
 
             // Error is thrown because the config file with the same name
             // already exists.
-            Assert.AreEqual(false, ConfigGenerator.TryGenerateConfig(options));
+            Assert.AreEqual(false, TryGenerateConfig(options, _runtimeConfigLoader!, _fileSystem!));
         }
 
         /// <summary>
@@ -366,50 +318,45 @@ namespace Cli.Tests
         /// }
         /// </summary>
         [DataTestMethod]
-        [DataRow("StaticWebApps", null, null, DisplayName = "StaticWebApps with no audience and no issuer specified.")]
-        [DataRow("AppService", null, null, DisplayName = "AppService with no audience and no issuer specified.")]
-        [DataRow("Simulator", null, null, DisplayName = "Simulator with no audience and no issuer specified.")]
+        [DataRow("StaticWebApps", "null", "null", DisplayName = "StaticWebApps with no audience and no issuer specified.")]
+        [DataRow("AppService", "null", "null", DisplayName = "AppService with no audience and no issuer specified.")]
+        [DataRow("Simulator", "null", "null", DisplayName = "Simulator with no audience and no issuer specified.")]
         [DataRow("AzureAD", "aud-xxx", "issuer-xxx", DisplayName = "AzureAD with both audience and issuer specified.")]
         public void EnsureCorrectConfigGenerationWithDifferentAuthenticationProviders(
             string authenticationProvider,
             string? audience,
             string? issuer)
         {
+            // these two bits are a hack to work around these two bugs:
+            // - https://github.com/SwissLife-OSS/snapshooter/issues/178
+            // - https://github.com/SwissLife-OSS/snapshooter/issues/180
+            if (audience == "null")
+            {
+                audience = null;
+            }
+
+            if (issuer == "null")
+            {
+                issuer = null;
+            }
+
             InitOptions options = new(
-                databaseType: DatabaseType.mssql,
+                databaseType: DatabaseType.MSSQL,
                 connectionString: "testconnectionstring",
                 cosmosNoSqlDatabase: null,
                 cosmosNoSqlContainer: null,
                 graphQLSchemaPath: null,
                 setSessionContext: false,
-                hostMode: HostModeType.Production,
+                hostMode: HostMode.Production,
                 corsOrigin: null,
                 authenticationProvider: authenticationProvider,
                 audience: audience,
                 issuer: issuer,
                 config: TEST_RUNTIME_CONFIG_FILE);
 
-            _basicRuntimeConfig =
-            @"{" +
-                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
-                @"""data-source"": {
-                    ""database-type"": ""mssql"",
-                    ""connection-string"": ""testconnectionstring"",
-                    ""options"":{
-                        ""set-session-context"": false
-                    }
-                },
-                ""entities"": {}
-            }";
+            Assert.IsTrue(TryCreateRuntimeConfig(options, _runtimeConfigLoader!, _fileSystem!, out RuntimeConfig? runtimeConfig));
 
-            // Adding runtime settings to the above basic config
-            string expectedRuntimeConfig = AddPropertiesToJson(
-                _basicRuntimeConfig,
-                GetDefaultTestRuntimeSettingString(
-                    authenticationProvider: authenticationProvider,
-                    audience: audience,
-                    issuer: issuer));
-            RunTest(options, expectedRuntimeConfig);
+            Snapshot.Match(runtimeConfig);
         }
 
         /// <summary>
@@ -421,69 +368,39 @@ namespace Cli.Tests
         public void EnsureFailureReInitializingExistingConfigWithDifferentCase()
         {
             // Should PASS, new file is being created
-            InitOptions initOptionsWithAllLowerCaseFileName = GetSampleInitOptionsWithFileName(TEST_RUNTIME_CONFIG_FILE);
-            Assert.AreEqual(true, ConfigGenerator.TryGenerateConfig(initOptionsWithAllLowerCaseFileName));
+            InitOptions initOptionsWithAllLowerCaseFileName = new(
+                databaseType: DatabaseType.MSSQL,
+                connectionString: "testconnectionstring",
+                cosmosNoSqlDatabase: null,
+                cosmosNoSqlContainer: null,
+                graphQLSchemaPath: null,
+                setSessionContext: true,
+                hostMode: HostMode.Development,
+                corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                restPath: "rest-api",
+                config: TEST_RUNTIME_CONFIG_FILE);
+            Assert.AreEqual(true, TryGenerateConfig(initOptionsWithAllLowerCaseFileName, _runtimeConfigLoader!, _fileSystem!));
 
             // same file with all uppercase letters
-            InitOptions initOptionsWithAllUpperCaseFileName = GetSampleInitOptionsWithFileName(TEST_RUNTIME_CONFIG_FILE.ToUpper());
+            InitOptions initOptionsWithAllUpperCaseFileName = new(
+                databaseType: DatabaseType.MSSQL,
+                connectionString: "testconnectionstring",
+                cosmosNoSqlDatabase: null,
+                cosmosNoSqlContainer: null,
+                graphQLSchemaPath: null,
+                setSessionContext: true,
+                hostMode: HostMode.Development,
+                corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                restPath: "rest-api",
+                config: TEST_RUNTIME_CONFIG_FILE.ToUpper());
             // Platform Dependent
             // Windows,MacOs: Should FAIL - File Exists is Case insensitive
             // Unix: Should PASS - File Exists is Case sensitive
             Assert.AreEqual(
                 expected: PlatformID.Unix.Equals(Environment.OSVersion.Platform) ? true : false,
-                actual: ConfigGenerator.TryGenerateConfig(initOptionsWithAllUpperCaseFileName));
-        }
-
-        /// <summary>
-        /// Call ConfigGenerator.TryCreateRuntimeConfig and verify json result.
-        /// </summary>
-        /// <param name="options">InitOptions.</param>
-        /// <param name="expectedRuntimeConfig">Expected json string output.</param>
-        private static void RunTest(InitOptions options, string expectedRuntimeConfig)
-        {
-            string runtimeConfigJson;
-            Assert.IsTrue(ConfigGenerator.TryCreateRuntimeConfig(options, out runtimeConfigJson));
-
-            JObject expectedJson = JObject.Parse(expectedRuntimeConfig);
-            JObject actualJson = JObject.Parse(runtimeConfigJson);
-
-            Assert.IsTrue(JToken.DeepEquals(expectedJson, actualJson));
-        }
-
-        /// <summary>
-        /// Returns an InitOptions object with sample database and connection-string
-        /// for a specified fileName.
-        /// </summary>
-        /// <param name="fileName">Name of the config file.</param>
-        private static InitOptions GetSampleInitOptionsWithFileName(string fileName)
-        {
-            InitOptions options = new(
-                databaseType: DatabaseType.mssql,
-                connectionString: "testconnectionstring",
-                cosmosNoSqlDatabase: null,
-                cosmosNoSqlContainer: null,
-                graphQLSchemaPath: null,
-                setSessionContext: false,
-                hostMode: HostModeType.Production,
-                corsOrigin: new List<string>() { },
-                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                config: fileName);
-
-            return options;
-        }
-
-        /// <summary>
-        /// Removes the generated configuration file after each test
-        /// to avoid file name conflicts on subsequent test runs because the
-        /// file is statically named.
-        /// </summary>
-        [TestCleanup]
-        public void CleanUp()
-        {
-            if (File.Exists(TEST_RUNTIME_CONFIG_FILE))
-            {
-                File.Delete(TEST_RUNTIME_CONFIG_FILE);
-            }
+                actual: TryGenerateConfig(initOptionsWithAllUpperCaseFileName, _runtimeConfigLoader!, _fileSystem!));
         }
     }
 }

@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
 using Cli.Commands;
 using HotChocolate.Utilities.Introspection;
@@ -11,7 +12,7 @@ namespace Cli
 {
     internal static class Exporter
     {
-        public static void Export(ExportOptions options, ILogger logger, RuntimeConfigLoader loader, System.IO.Abstractions.IFileSystem fileSystem)
+        public static void Export(ExportOptions options, ILogger logger, RuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             StartOptions startOptions = new(false, LogLevel.None, false, options.Config!);
 
@@ -24,15 +25,9 @@ namespace Cli
                 return;
             }
 
-            if (!TryReadRuntimeConfig(runtimeConfigFile, out string runtimeConfigJson))
+            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig) || runtimeConfig is null)
             {
                 logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
-                return;
-            }
-
-            if (!RuntimeConfigLoader.TryParseConfig(runtimeConfigJson, out RuntimeConfig? runtimeConfig))
-            {
-                logger.LogError("Failed to parse runtime config file: {runtimeConfigFile}", runtimeConfigFile);
                 return;
             }
 

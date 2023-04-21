@@ -120,16 +120,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else
             {
-                return $"SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;BEGIN TRANSACTION; UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
-                    $"WITH(UPDLOCK) SET {Build(structure.UpdateOperations, ", ")} " +
+                return $"UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
+                    $"SET {Build(structure.UpdateOperations, ", ")} " +
                     $"OUTPUT {MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted)} " +
                     $"WHERE {predicates} " +
                     $"IF @@ROWCOUNT = 0 " +
-                    $"BEGIN; " +
                     $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} ({Build(structure.InsertColumns)}) " +
                     $"OUTPUT {MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted)} " +
-                    $"VALUES ({string.Join(", ", structure.Values)}) " +
-                    $"END; COMMIT TRANSACTION";
+                    $"VALUES ({string.Join(", ", structure.Values)});";
             }
 
         }

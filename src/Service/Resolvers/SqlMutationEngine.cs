@@ -11,6 +11,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
+using System.Transactions;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
@@ -91,50 +92,55 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // If authorization fails, an exception will be thrown and request execution halts.
             AuthorizeMutationFields(context, parameters, entityName, mutationOperation);
 
-            if (mutationOperation is Config.Operation.Delete)
+            using (TransactionScope transactionScope = new(TransactionScopeAsyncFlowOption.Enabled))
             {
-                // compute the mutation result before removing the element,
-                // since typical GraphQL delete mutations return the metadata of the deleted item.
-                result = await _queryEngine.ExecuteAsync(context, GetBackingColumnsFromCollection(entityName, parameters));
-
-                Dictionary<string, object>? resultProperties =
-                    await PerformDeleteOperation(
-                        entityName,
-                        parameters);
-
-                // If the number of records affected by DELETE were zero,
-                // and yet the result was not null previously, it indicates this DELETE lost
-                // a concurrent request race. Hence, empty the non-null result.
-                if (resultProperties is not null
-                    && resultProperties.TryGetValue(nameof(DbDataReader.RecordsAffected), out object? value)
-                    && Convert.ToInt32(value) == 0
-                    && result is not null && result.Item1 is not null)
+                if (mutationOperation is Config.Operation.Delete)
                 {
-                    result = new Tuple<JsonDocument?, IMetadata?>(
-                        default(JsonDocument),
-                        PaginationMetadata.MakeEmptyPaginationMetadata());
-                }
-            }
-            else
-            {
-                DbResultSetRow? mutationResultRow =
-                    await PerformMutationOperation(
-                        entityName,
-                        mutationOperation,
-                        parameters,
-                        context);
+                    // compute the mutation result before removing the element,
+                    // since typical GraphQL delete mutations return the metadata of the deleted item.
+                    result = await _queryEngine.ExecuteAsync(context, GetBackingColumnsFromCollection(entityName, parameters));
 
-                if (mutationResultRow is not null && mutationResultRow.Columns.Count > 0
-                    && !context.Selection.Type.IsScalarType())
-                {
-                    // Because the GraphQL mutation result set columns were exposed (mapped) column names,
-                    // the column names must be converted to backing (source) column names so the
-                    // PrimaryKeyPredicates created in the SqlQueryStructure created by the query engine
-                    // represent database column names.
-                    result = await _queryEngine.ExecuteAsync(
-                                context,
-                                GetBackingColumnsFromCollection(entityName, mutationResultRow.Columns));
+                    Dictionary<string, object>? resultProperties =
+                        await PerformDeleteOperation(
+                            entityName,
+                            parameters);
+
+                    // If the number of records affected by DELETE were zero,
+                    // and yet the result was not null previously, it indicates this DELETE lost
+                    // a concurrent request race. Hence, empty the non-null result.
+                    if (resultProperties is not null
+                        && resultProperties.TryGetValue(nameof(DbDataReader.RecordsAffected), out object? value)
+                        && Convert.ToInt32(value) == 0
+                        && result is not null && result.Item1 is not null)
+                    {
+                        result = new Tuple<JsonDocument?, IMetadata?>(
+                            default(JsonDocument),
+                            PaginationMetadata.MakeEmptyPaginationMetadata());
+                    }
                 }
+                else
+                {
+                    DbResultSetRow? mutationResultRow =
+                        await PerformMutationOperation(
+                            entityName,
+                            mutationOperation,
+                            parameters,
+                            context);
+
+                    if (mutationResultRow is not null && mutationResultRow.Columns.Count > 0
+                        && !context.Selection.Type.IsScalarType())
+                    {
+                        // Because the GraphQL mutation result set columns were exposed (mapped) column names,
+                        // the column names must be converted to backing (source) column names so the
+                        // PrimaryKeyPredicates created in the SqlQueryStructure created by the query engine
+                        // represent database column names.
+                        result = await _queryEngine.ExecuteAsync(
+                                    context,
+                                    GetBackingColumnsFromCollection(entityName, mutationResultRow.Columns));
+                    }
+                }
+
+                transactionScope.Complete();
             }
 
             if (result is null)
@@ -191,12 +197,19 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 context.ResolvedParameters);
             string queryText = _queryBuilder.Build(executeQueryStructure);
 
-            JsonArray? resultArray =
-                await _queryExecutor.ExecuteQueryAsync(
-                    queryText,
-                    executeQueryStructure.Parameters,
-                    _queryExecutor.GetJsonArrayAsync,
-                    GetHttpContext());
+            JsonArray? resultArray = null;
+
+            using (TransactionScope transactionScope = new(TransactionScopeAsyncFlowOption.Enabled))
+            {
+                resultArray =
+                    await _queryExecutor.ExecuteQueryAsync(
+                        queryText,
+                        executeQueryStructure.Parameters,
+                        _queryExecutor.GetJsonArrayAsync,
+                        GetHttpContext());
+
+                transactionScope.Complete();
+            }
 
             // A note on returning stored procedure results:
             // We can't infer what the stored procedure actually did beyond the HasRows and RecordsAffected attributes
@@ -271,10 +284,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             if (context.OperationType is Config.Operation.Delete)
             {
-                Dictionary<string, object>? resultProperties =
-                    await PerformDeleteOperation(
-                        context.EntityName,
-                        parameters);
+                Dictionary<string, object>? resultProperties = null;
+                using (TransactionScope transactionScope = new(TransactionScopeAsyncFlowOption.Enabled))
+                {
+                    resultProperties = await PerformDeleteOperation(
+                            context.EntityName,
+                            parameters);
+                    transactionScope.Complete();
+                }
 
                 // Records affected tells us that item was successfully deleted.
                 // No records affected happens for a DELETE request on nonexistent object
@@ -287,10 +304,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else if (context.OperationType is Config.Operation.Upsert || context.OperationType is Config.Operation.UpsertIncremental)
             {
-                DbResultSet? upsertOperationResult =
-                    await PerformUpsertOperation(
-                        parameters,
-                        context);
+                DbResultSet? upsertOperationResult = null;
+                using (TransactionScope transactionScope = new(TransactionScopeAsyncFlowOption.Enabled))
+                {
+                    upsertOperationResult = await PerformUpsertOperation(
+                                                        parameters,
+                                                        context);
+                    transactionScope.Complete();
+                }
 
                 DbResultSetRow? dbResultSetRow = upsertOperationResult is not null ?
                     (upsertOperationResult.Rows.FirstOrDefault() ?? new()) : null;
@@ -323,11 +344,16 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else
             {
-                DbResultSetRow? mutationResultRow =
-                    await PerformMutationOperation(
-                        context.EntityName,
-                        context.OperationType,
-                        parameters);
+                DbResultSetRow? mutationResultRow = null;
+                using (TransactionScope transactionScope = new(TransactionScopeAsyncFlowOption.Enabled))
+                {
+                    mutationResultRow =
+                            await PerformMutationOperation(
+                                context.EntityName,
+                                context.OperationType,
+                                parameters);
+                    transactionScope.Complete();
+                }
 
                 if (context.OperationType is Config.Operation.Insert)
                 {

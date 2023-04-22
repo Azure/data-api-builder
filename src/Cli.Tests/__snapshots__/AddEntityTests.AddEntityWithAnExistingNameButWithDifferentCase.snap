@@ -1,0 +1,125 @@
+﻿{
+  "Schema": null,
+  "DataSource": {
+    "DatabaseType": "MSSQL",
+    "ConnectionString": "testconnectionstring",
+    "Options": {
+      "set-session-context": {
+        "ValueKind": "True"
+      }
+    },
+    "DatabaseTypeNotSupportedMessage": "The provided database-type value: MSSQL is currently not supported. Please check the configuration file."
+  },
+  "Runtime": {
+    "Rest": {
+      "Enabled": true,
+      "Path": "/api"
+    },
+    "GraphQL": {
+      "Enabled": true,
+      "Path": "/graphql",
+      "AllowIntrospection": true
+    },
+    "Host": {
+      "Cors": {
+        "Origins": [],
+        "AllowCredentials": false
+      },
+      "Authentication": {
+        "Provider": "StaticWebApps",
+        "Jwt": null
+      },
+      "Mode": "Development"
+    }
+  },
+  "Entities": [
+    {
+      "Key": "FirstEntity",
+      "Value": {
+        "Source": {
+          "Object": "MyTable",
+          "Type": "Table",
+          "Parameters": {},
+          "KeyFields": []
+        },
+        "GraphQL": {
+          "Singular": "FirstEntity",
+          "Plural": "FirstEntities",
+          "Enabled": true,
+          "Operation": null
+        },
+        "Rest": null,
+        "Permissions": [
+          {
+            "Role": "anonymous",
+            "Actions": [
+              {
+                "Action": "Read",
+                "Fields": {
+                  "Exclude": [],
+                  "Include": null
+                },
+                "Policy": {
+                  "Request": null,
+                  "Database": null
+                }
+              },
+              {
+                "Action": "Update",
+                "Fields": {
+                  "Exclude": [],
+                  "Include": null
+                },
+                "Policy": {
+                  "Request": null,
+                  "Database": null
+                }
+              }
+            ]
+          }
+        ],
+        "Mappings": null,
+        "Relationships": null
+      }
+    },
+    {
+      "Key": "FIRSTEntity",
+      "Value": {
+        "Source": {
+          "Object": "MyTable",
+          "Type": "Table",
+          "Parameters": null,
+          "KeyFields": null
+        },
+        "GraphQL": {
+          "Singular": "",
+          "Plural": "",
+          "Enabled": true,
+          "Operation": null
+        },
+        "Rest": {
+          "Methods": [],
+          "Path": null,
+          "Enabled": true
+        },
+        "Permissions": [
+          {
+            "Role": "anonymous",
+            "Actions": [
+              {
+                "Action": "*",
+                "Fields": null,
+                "Policy": {
+                  "Request": null,
+                  "Database": null
+                }
+              }
+            ]
+          }
+        ],
+        "Mappings": null,
+        "Relationships": null
+      }
+    }
+  ]
+}

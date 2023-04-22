@@ -327,7 +327,7 @@ namespace Cli.Tests
             string? audience,
             string? issuer)
         {
-            // these two bits are a hack to work around these two bugs:
+            // these bits are to work around these two bugs:
             // - https://github.com/SwissLife-OSS/snapshooter/issues/178
             // - https://github.com/SwissLife-OSS/snapshooter/issues/180
             if (audience == "null")

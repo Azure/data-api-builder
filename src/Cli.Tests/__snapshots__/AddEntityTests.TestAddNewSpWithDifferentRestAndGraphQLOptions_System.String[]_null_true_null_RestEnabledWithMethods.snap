@@ -1,0 +1,80 @@
+﻿{
+  "Schema": null,
+  "DataSource": {
+    "DatabaseType": "MSSQL",
+    "ConnectionString": "testconnectionstring",
+    "Options": {
+      "set-session-context": {
+        "ValueKind": "True"
+      }
+    },
+    "DatabaseTypeNotSupportedMessage": "The provided database-type value: MSSQL is currently not supported. Please check the configuration file."
+  },
+  "Runtime": {
+    "Rest": {
+      "Enabled": true,
+      "Path": "/api"
+    },
+    "GraphQL": {
+      "Enabled": true,
+      "Path": "/graphql",
+      "AllowIntrospection": true
+    },
+    "Host": {
+      "Cors": {
+        "Origins": [],
+        "AllowCredentials": false
+      },
+      "Authentication": {
+        "Provider": "StaticWebApps",
+        "Jwt": null
+      },
+      "Mode": "Development"
+    }
+  },
+  "Entities": [
+    {
+      "Key": "MyEntity",
+      "Value": {
+        "Source": {
+          "Object": "s001.book",
+          "Type": "stored-procedure",
+          "Parameters": null,
+          "KeyFields": null
+        },
+        "GraphQL": {
+          "Singular": "",
+          "Plural": "",
+          "Enabled": true,
+          "Operation": "Mutation"
+        },
+        "Rest": {
+          "Methods": [
+            "Get",
+            "Post",
+            "Patch"
+          ],
+          "Path": "/book",
+          "Enabled": true
+        },
+        "Permissions": [
+          {
+            "Role": "anonymous",
+            "Actions": [
+              {
+                "Action": "Execute",
+                "Fields": null,
+                "Policy": {
+                  "Request": null,
+                  "Database": null
+                }
+              }
+            ]
+          }
+        ],
+        "Mappings": null,
+        "Relationships": null
+      }
+    }
+  ]
+}

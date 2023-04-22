@@ -894,28 +894,5 @@ namespace Cli.Tests
           }
         }
       }";
-
-        /// <summary>
-        /// Helper method to create json string for runtime settings
-        /// for json comparison in tests.
-        /// </summary>
-        public static RuntimeOptions GetDefaultTestRuntimeSettingString(
-            HostMode hostModeType = HostMode.Production,
-            IEnumerable<string>? corsOrigins = null,
-            string authenticationProvider = "StaticWebApps",
-            string? audience = null,
-            string? issuer = null,
-            string restPath = RestRuntimeOptions.DEFAULT_PATH)
-        {
-            return new RuntimeOptions(
-                Rest: new(Path: restPath),
-                GraphQL: new(),
-                Host: new(
-                    Cors: new((corsOrigins is null ? new List<string>() : corsOrigins).ToArray()),
-                    Authentication: new(authenticationProvider, new(audience, issuer)),
-                    Mode: hostModeType
-                )
-            );
-        }
     }
 }

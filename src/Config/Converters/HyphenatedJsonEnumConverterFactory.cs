@@ -15,8 +15,12 @@ public static class EnumExtensions
     public static T Deserialize<T>(string value) where T : struct, Enum
     {
         HyphenatedJsonEnumConverterFactory.JsonStringEnumConverterEx<T> converter = new();
-        ReadOnlySpan<byte> bytes = new(Encoding.UTF8.GetBytes(value));
+
+        ReadOnlySpan<byte> bytes = new(Encoding.UTF8.GetBytes($"\"{value}\""));
+
         Utf8JsonReader reader = new(bytes);
+        // We need to read the first token to get the reader into a state where it can read the value as a string.
+        reader.Read();
         return converter.Read(ref reader, typeof(T), new JsonSerializerOptions());
     }
 
@@ -90,7 +94,7 @@ internal class HyphenatedJsonEnumConverterFactory : JsonConverterFactory
         {
             string? stringValue = reader.GetString();
 
-            if (_stringToEnum.TryGetValue(stringValue!, out TEnum enumValue))
+            if (_stringToEnum.TryGetValue(stringValue!.ToLower(), out TEnum enumValue))
             {
                 return enumValue;
             }

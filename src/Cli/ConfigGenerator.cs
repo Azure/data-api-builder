@@ -172,13 +172,13 @@ namespace Cli
                 return false;
             }
 
-            if (!TryAddNewEntity(options, runtimeConfig))
+            if (!TryAddNewEntity(options, runtimeConfig, out RuntimeConfig updatedRuntimeConfig))
             {
                 _logger.LogError("Failed to add a new entity.");
                 return false;
             }
 
-            return WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfig, fileSystem);
+            return WriteRuntimeConfigToFile(runtimeConfigFile, updatedRuntimeConfig, fileSystem);
         }
 
         /// <summary>
@@ -188,11 +188,12 @@ namespace Cli
         /// <param name="options">AddOptions.</param>
         /// <param name="runtimeConfigJson">Json string of existing runtime config. This will be modified on successful return.</param>
         /// <returns>True on success. False otherwise.</returns>
-        public static bool TryAddNewEntity(AddOptions options, RuntimeConfig runtimeConfig)
+        public static bool TryAddNewEntity(AddOptions options, RuntimeConfig initialRuntimeConfig, out RuntimeConfig updatedRuntimeConfig)
         {
+            updatedRuntimeConfig = initialRuntimeConfig;
             // If entity exists, we cannot add. Display warning
             //
-            if (runtimeConfig.Entities.ContainsKey(options.Entity))
+            if (initialRuntimeConfig.Entities.ContainsKey(options.Entity))
             {
                 _logger.LogWarning($"Entity-{options.Entity} is already present. No new changes are added to Config.");
                 return false;
@@ -273,8 +274,9 @@ namespace Cli
                 Mappings: null);
 
             // Add entity to existing runtime config.
-            IDictionary<string, Entity> entities = runtimeConfig.Entities.Entities;
+            IDictionary<string, Entity> entities = initialRuntimeConfig.Entities.Entities;
             entities.Add(options.Entity, entity);
+            updatedRuntimeConfig = initialRuntimeConfig with { Entities = new(entities) };
             return true;
         }
 
@@ -877,7 +879,7 @@ namespace Cli
             }
 
             // Validates that config file has data and follows the correct json schema
-            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? deserializedRuntimeConfig) )
+            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? deserializedRuntimeConfig))
             {
                 return false;
             }

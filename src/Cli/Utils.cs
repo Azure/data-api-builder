@@ -9,6 +9,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Cli.Commands;
 using Humanizer;
@@ -504,6 +505,12 @@ namespace Cli
                     _logger.LogError("Tables/Views don't support parameters.");
                     return false;
                 }
+
+                if (sourceType is EntityType.View && (keyFields is null || !keyFields.Any()))
+                {
+                    _logger.LogError("Key-fields are mandatory for views, but not provided.");
+                    return false;
+                }
             }
 
             return true;
@@ -622,8 +629,9 @@ namespace Cli
         /// </summary>
         private static bool VerifyExecuteOperationForStoredProcedure(string[] operations)
         {
-            if (operations.Length > 1 ||
-                !(Enum.Parse<EntityActionOperation>(operations.First(), true) is not EntityActionOperation.Execute && Enum.Parse<EntityActionOperation>(operations.First(), true) is not EntityActionOperation.All))
+            if (operations.Length > 1
+                || !EnumExtensions.TryDeserialize(operations.First(), out EntityActionOperation? operation)
+                || (operation is not EntityActionOperation.Execute && operation is not EntityActionOperation.All))
             {
                 _logger.LogError("Stored Procedure supports only execute operation.");
                 return false;
@@ -789,7 +797,7 @@ namespace Cli
         /// <returns></returns>
         public static bool IsStoredProcedure(EntityOptions options)
         {
-            if (Enum.TryParse(options.SourceType, out EntityType sourceObjectType))
+            if (options.SourceType is not null && EnumExtensions.TryDeserialize(options.SourceType, out EntityType? sourceObjectType))
             {
                 return sourceObjectType is EntityType.StoredProcedure;
             }

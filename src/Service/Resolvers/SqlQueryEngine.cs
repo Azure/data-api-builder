@@ -4,12 +4,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using System.Transactions;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Resolvers;
@@ -35,6 +37,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private readonly ILogger<IQueryEngine> _logger;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private readonly GQLFilterParser _gQLFilterParser;
+        private const string TRANSACTION_EXCEPTION_ERROR_MSG = "An unexpected error occured";
 
         // <summary>
         // Constructor.
@@ -122,14 +125,25 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 string queryString = _queryBuilder.Build(structure);
                 List<JsonDocument>? jsonListResult = null;
 
-                using (TransactionScope transactionScope = new(TransactionScopeAsyncFlowOption.Enabled))
+                try
                 {
-                    jsonListResult = await _queryExecutor.ExecuteQueryAsync(
-                        queryString,
-                        structure.Parameters,
-                        _queryExecutor.GetJsonResultAsync<List<JsonDocument>>,
-                        _httpContextAccessor.HttpContext!);
-                    transactionScope.Complete();
+                    using (TransactionScope transactionScope = new(TransactionScopeAsyncFlowOption.Enabled))
+                    {
+                        jsonListResult = await _queryExecutor.ExecuteQueryAsync(
+                            queryString,
+                            structure.Parameters,
+                            _queryExecutor.GetJsonResultAsync<List<JsonDocument>>,
+                            _httpContextAccessor.HttpContext!);
+                        transactionScope.Complete();
+                    }
+                }
+                catch (TransactionException)
+                {
+                    throw new DataApiBuilderException(
+                            message: TRANSACTION_EXCEPTION_ERROR_MSG,
+                            statusCode: HttpStatusCode.InternalServerError,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError
+                        );
                 }
 
                 if (jsonListResult is null)
@@ -308,14 +322,25 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string queryString = _queryBuilder.Build(structure);
             JsonDocument? jsonDocument = null;
 
-            using (TransactionScope transactionScope = new(TransactionScopeAsyncFlowOption.Enabled))
+            try
             {
-                jsonDocument = await _queryExecutor.ExecuteQueryAsync(
-                    queryString,
-                    structure.Parameters,
-                    _queryExecutor.GetJsonResultAsync<JsonDocument>,
-                    _httpContextAccessor.HttpContext!);
-                transactionScope.Complete();
+                using (TransactionScope transactionScope = new(TransactionScopeAsyncFlowOption.Enabled))
+                {
+                    jsonDocument = await _queryExecutor.ExecuteQueryAsync(
+                        queryString,
+                        structure.Parameters,
+                        _queryExecutor.GetJsonResultAsync<JsonDocument>,
+                        _httpContextAccessor.HttpContext!);
+                    transactionScope.Complete();
+                }
+            }
+            catch (TransactionException)
+            {
+                throw new DataApiBuilderException(
+                        message: TRANSACTION_EXCEPTION_ERROR_MSG,
+                        statusCode: HttpStatusCode.InternalServerError,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError
+                    );
             }
 
             return jsonDocument;
@@ -332,14 +357,24 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             JsonArray? resultArray = null;
 
-            using (TransactionScope transactionScope = new(TransactionScopeAsyncFlowOption.Enabled))
+            try
             {
-                resultArray = await _queryExecutor.ExecuteQueryAsync(
-                      queryString,
-                      structure.Parameters,
-                      _queryExecutor.GetJsonArrayAsync,
-                      _httpContextAccessor.HttpContext!);
-                transactionScope.Complete();
+                using (TransactionScope transactionScope = new(TransactionScopeAsyncFlowOption.Enabled))
+                {
+                    resultArray = await _queryExecutor.ExecuteQueryAsync(
+                          queryString,
+                          structure.Parameters,
+                          _queryExecutor.GetJsonArrayAsync,
+                          _httpContextAccessor.HttpContext!);
+                    transactionScope.Complete();
+                }
+            }
+            catch (TransactionException)
+            {
+                throw new DataApiBuilderException(
+                        message: TRANSACTION_EXCEPTION_ERROR_MSG,
+                        statusCode: HttpStatusCode.InternalServerError,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
             }
 
             JsonDocument? jsonDocument = null;

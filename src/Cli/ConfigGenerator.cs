@@ -399,13 +399,13 @@ namespace Cli
                 return false;
             }
 
-            if (!TryUpdateExistingEntity(options, runtimeConfig))
+            if (!TryUpdateExistingEntity(options, runtimeConfig, out RuntimeConfig updatedConfig))
             {
                 _logger.LogError($"Failed to update the Entity: {options.Entity}.");
                 return false;
             }
 
-            return WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfig, fileSystem);
+            return WriteRuntimeConfigToFile(runtimeConfigFile, updatedConfig, fileSystem);
         }
 
         /// <summary>
@@ -415,10 +415,11 @@ namespace Cli
         /// <param name="options">UpdateOptions.</param>
         /// <param name="runtimeConfigJson">Json string of existing runtime config. This will be modified on successful return.</param>
         /// <returns>True on success. False otherwise.</returns>
-        public static bool TryUpdateExistingEntity(UpdateOptions options, RuntimeConfig runtimeConfig)
+        public static bool TryUpdateExistingEntity(UpdateOptions options, RuntimeConfig initialConfig, out RuntimeConfig updatedConfig)
         {
+            updatedConfig = initialConfig;
             // Check if Entity is present
-            if (!runtimeConfig.Entities.TryGetValue(options.Entity!, out Entity? entity))
+            if (!initialConfig.Entities.TryGetValue(options.Entity!, out Entity? entity))
             {
                 _logger.LogError($"Entity:{options.Entity} not found. Please add the entity first.");
                 return false;
@@ -472,7 +473,7 @@ namespace Cli
             EntityActionPolicy updatedPolicy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
             EntityActionFields? updatedFields = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
 
-            if (false.Equals(updatedGraphQLDetails))
+            if (!updatedGraphQLDetails.Enabled)
             {
                 _logger.LogWarning("Disabling GraphQL for this entity will restrict it's usage in relationships");
             }
@@ -515,7 +516,7 @@ namespace Cli
 
             if (options.Relationship is not null)
             {
-                if (!VerifyCanUpdateRelationship(runtimeConfig, options.Cardinality, options.TargetEntity))
+                if (!VerifyCanUpdateRelationship(initialConfig, options.Cardinality, options.TargetEntity))
                 {
                     return false;
                 }
@@ -550,7 +551,9 @@ namespace Cli
                 Permissions: updatedPermissions,
                 Relationships: updatedRelationships,
                 Mappings: updatedMappings);
-            runtimeConfig.Entities.Entities[options.Entity] = updatedEntity;
+            IDictionary<string, Entity> entities = initialConfig.Entities.Entities;
+            entities[options.Entity] = updatedEntity;
+            updatedConfig = initialConfig with { Entities = new(entities) };
             return true;
         }
 
@@ -659,19 +662,19 @@ namespace Cli
             foreach (string operation in newOperations)
             {
                 // Getting existing Policy and Fields
-                if (TryConvertOperationNameToOperation(operation, out EntityActionOperation op))
+                if (EnumExtensions.TryDeserialize(operation, out EntityActionOperation? op))
                 {
-                    if (existingOperations.ContainsKey(op))
+                    if (existingOperations.ContainsKey((EntityActionOperation)op))
                     {
-                        existingPolicy = existingOperations[op].Policy;
-                        existingFields = existingOperations[op].Fields;
+                        existingPolicy = existingOperations[(EntityActionOperation)op].Policy;
+                        existingFields = existingOperations[(EntityActionOperation)op].Fields;
                     }
 
                     // Checking if Policy and Field update is required
                     EntityActionPolicy updatedPolicy = newPolicy is null ? existingPolicy : newPolicy;
                     EntityActionFields? updatedFields = newFields is null ? existingFields : newFields;
 
-                    updatedOperations.Add(op, new EntityAction(op, updatedFields, updatedPolicy));
+                    updatedOperations.Add((EntityActionOperation)op, new EntityAction((EntityActionOperation)op, updatedFields, updatedPolicy));
                 }
             }
 
@@ -818,7 +821,7 @@ namespace Cli
             }
 
             // If GraphQL is disabled, entity cannot be used in relationship
-            if (false.Equals(runtimeConfig.Entities[targetEntity].GraphQL))
+            if (!runtimeConfig.Entities[targetEntity].GraphQL.Enabled)
             {
                 _logger.LogError($"Entity: {targetEntity} cannot be used in relationship as it is disabled for GraphQL.");
                 return false;

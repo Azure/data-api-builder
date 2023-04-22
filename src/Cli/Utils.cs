@@ -52,30 +52,6 @@ namespace Cli
         }
 
         /// <summary>
-        /// Try convert operation string to Operation Enum.
-        /// </summary>
-        /// <param name="operationName">operation string.</param>
-        /// <param name="operation">Operation Enum output.</param>
-        /// <returns>True if convert is successful. False otherwise.</returns>
-        public static bool TryConvertOperationNameToOperation(string? operationName, out EntityActionOperation operation)
-        {
-            if (!Enum.TryParse(operationName, ignoreCase: true, out operation))
-            {
-                if (operationName is not null && operationName.Equals(WILDCARD, StringComparison.OrdinalIgnoreCase))
-                {
-                    operation = EntityActionOperation.All;
-                }
-                else
-                {
-                    _logger.LogError($"Invalid operation Name: {operationName}.");
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        /// <summary>
         /// Creates an array of Operation element which contains one of the CRUD operation and
         /// fields to which this operation is allowed as permission setting based on the given input.
         /// </summary>
@@ -85,7 +61,7 @@ namespace Cli
             if (policy is null && fields is null)
             {
                 return operations.Split(",")
-                    .Select(op => Enum.Parse<EntityActionOperation>(op, true))
+                    .Select(op => EnumExtensions.Deserialize<EntityActionOperation>(op))
                     .Select(op => new EntityAction(op, null, new EntityActionPolicy(null, null)))
                     .ToArray();
             }
@@ -102,9 +78,9 @@ namespace Cli
                     List<EntityAction>? operation_list = new();
                     foreach (string? operation_element in operation_elements)
                     {
-                        if (TryConvertOperationNameToOperation(operation_element, out EntityActionOperation op))
+                        if (EnumExtensions.TryDeserialize(operation_element, out EntityActionOperation? op))
                         {
-                            EntityAction operation_item = new(op, fields, policy ?? new(null, null));
+                            EntityAction operation_item = new((EntityActionOperation)op, fields, policy ?? new(null, null));
                             operation_list.Add(operation_item);
                         }
                     }
@@ -114,7 +90,7 @@ namespace Cli
                 else
                 {
                     return operation_elements
-                        .Select(op => Enum.Parse<EntityActionOperation>(op, true))
+                        .Select(op => EnumExtensions.Deserialize<EntityActionOperation>(op))
                         .Select(op => new EntityAction(op, null, new EntityActionPolicy(null, null)))
                         .ToArray();
                 }
@@ -130,52 +106,26 @@ namespace Cli
         /// </summary>
         /// <param name="operations">Array of operations which is of type JsonElement.</param>
         /// <returns>Dictionary of operations</returns>
-        public static IDictionary<EntityActionOperation, EntityAction> ConvertOperationArrayToIEnumerable(object[] operations, EntityType sourceType)
+        public static IDictionary<EntityActionOperation, EntityAction> ConvertOperationArrayToIEnumerable(EntityAction[] operations, EntityType sourceType)
         {
             Dictionary<EntityActionOperation, EntityAction> result = new();
-            foreach (object operation in operations)
+            foreach (EntityAction operation in operations)
             {
-                JsonElement operationJson = (JsonElement)operation;
-                if (operationJson.ValueKind is JsonValueKind.String)
+                EntityActionOperation op = operation.Action;
+                if (op is EntityActionOperation.All)
                 {
-                    if (TryConvertOperationNameToOperation(operationJson.GetString(), out EntityActionOperation op))
+                    HashSet<EntityActionOperation> resolvedOperations = sourceType is EntityType.StoredProcedure ?
+                        EntityAction.ValidStoredProcedurePermissionOperations :
+                        EntityAction.ValidPermissionOperations;
+                    // Expand wildcard to all valid operations (except execute)
+                    foreach (EntityActionOperation validOp in resolvedOperations)
                     {
-                        if (op is EntityActionOperation.All)
-                        {
-                            HashSet<EntityActionOperation> resolvedOperations = sourceType is EntityType.StoredProcedure ?
-                                EntityAction.ValidStoredProcedurePermissionOperations :
-                                EntityAction.ValidPermissionOperations;
-                            // Expand wildcard to all valid operations (except execute)
-                            foreach (EntityActionOperation validOp in resolvedOperations)
-                            {
-                                result.Add(validOp, new EntityAction(validOp, null, new EntityActionPolicy(null, null)));
-                            }
-                        }
-                        else
-                        {
-                            result.Add(op, new EntityAction(op, null, new EntityActionPolicy(null, null)));
-                        }
+                        result.Add(validOp, new EntityAction(validOp, null, new EntityActionPolicy(null, null)));
                     }
                 }
                 else
                 {
-                    EntityAction ac = operationJson.Deserialize<EntityAction>(GetSerializationOptions())!;
-
-                    if (ac.Action is EntityActionOperation.All)
-                    {
-                        // Expand wildcard to all valid operations except execute.
-                        HashSet<EntityActionOperation> resolvedOperations = sourceType is EntityType.StoredProcedure ?
-                            EntityAction.ValidStoredProcedurePermissionOperations :
-                            EntityAction.ValidPermissionOperations;
-                        foreach (EntityActionOperation validOp in resolvedOperations)
-                        {
-                            result.Add(validOp, new EntityAction(validOp, Policy: ac.Policy, Fields: ac.Fields));
-                        }
-                    }
-                    else
-                    {
-                        result.Add(ac.Action, ac);
-                    }
+                    result.Add(op, new EntityAction(op, null, new EntityActionPolicy(null, null)));
                 }
             }
 
@@ -384,18 +334,18 @@ namespace Cli
             bool containsWildcardOperation = false;
             foreach (string operation in uniqueOperations)
             {
-                if (TryConvertOperationNameToOperation(operation, out EntityActionOperation op))
+                if (EnumExtensions.TryDeserialize(operation, out EntityActionOperation? op))
                 {
                     if (op is EntityActionOperation.All)
                     {
                         containsWildcardOperation = true;
                     }
-                    else if (!isStoredProcedure && !EntityAction.ValidPermissionOperations.Contains(op))
+                    else if (!isStoredProcedure && !EntityAction.ValidPermissionOperations.Contains((EntityActionOperation)op))
                     {
                         _logger.LogError("Invalid actions found in --permissions");
                         return false;
                     }
-                    else if (isStoredProcedure && !EntityAction.ValidStoredProcedurePermissionOperations.Contains(op))
+                    else if (isStoredProcedure && !EntityAction.ValidStoredProcedurePermissionOperations.Contains((EntityActionOperation)op))
                     {
                         _logger.LogError("Invalid stored procedure action(s) found in --permissions");
                         return false;
@@ -410,7 +360,7 @@ namespace Cli
             }
 
             // Check for WILDCARD operation with CRUD operations.
-            if (containsWildcardOperation && uniqueOperations.Count() > 1)
+            if (containsWildcardOperation && uniqueOperations.Count > 1)
             {
                 _logger.LogError("WILDCARD(*) along with other CRUD operations in a single operation is not allowed.");
                 return false;
@@ -613,8 +563,7 @@ namespace Cli
         private static bool VerifyExecuteOperationForStoredProcedure(EntityAction[] operations)
         {
             if (operations.Length > 1
-                || operations.First().Action is not EntityActionOperation.Execute
-                || operations.First().Action is not EntityActionOperation.All)
+                || (operations.First().Action is not EntityActionOperation.Execute && operations.First().Action is not EntityActionOperation.All))
             {
                 _logger.LogError("Stored Procedure supports only execute operation.");
                 return false;

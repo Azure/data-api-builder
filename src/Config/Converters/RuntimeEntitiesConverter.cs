@@ -55,6 +55,17 @@ class RuntimeEntitiesConverter : JsonConverter<RuntimeEntities>
             nameCorrectedEntity = nameCorrectedEntity with { GraphQL = nameCorrectedEntity.GraphQL with { Plural = nameCorrectedEntity.GraphQL.Singular.Pluralize() } };
         }
 
+        // If no Rest node was provided in the config, set it with the default state of enabled for all verbs
+        if (nameCorrectedEntity.Rest is null)
+        {
+            nameCorrectedEntity = nameCorrectedEntity with { Rest = new EntityRestOptions(new[] {
+                SupportedHttpVerb.Put,
+                SupportedHttpVerb.Get,
+                SupportedHttpVerb.Patch,
+                SupportedHttpVerb.Delete,
+                SupportedHttpVerb.Post }) };
+        }
+
         return nameCorrectedEntity;
     }
 

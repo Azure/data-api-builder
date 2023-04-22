@@ -1,0 +1,168 @@
+﻿{
+  "Schema": null,
+  "DataSource": {
+    "DatabaseType": "MSSQL",
+    "ConnectionString": "testconnectionstring",
+    "Options": null,
+    "DatabaseTypeNotSupportedMessage": "The provided database-type value: MSSQL is currently not supported. Please check the configuration file."
+  },
+  "Runtime": {
+    "Rest": {
+      "Enabled": true,
+      "Path": "/"
+    },
+    "GraphQL": {
+      "Enabled": true,
+      "Path": "/graphql",
+      "AllowIntrospection": true
+    },
+    "Host": {
+      "Cors": {
+        "Origins": [],
+        "AllowCredentials": false
+      },
+      "Authentication": {
+        "Provider": "StaticWebApps",
+        "Jwt": {
+          "Audience": "",
+          "Issuer": ""
+        }
+      },
+      "Mode": "Development"
+    }
+  },
+  "Entities": [
+    {
+      "Key": "FirstEntity",
+      "Value": {
+        "Source": {
+          "Object": "Table1",
+          "Type": "Table",
+          "Parameters": {},
+          "KeyFields": []
+        },
+        "GraphQL": {
+          "Singular": "FirstEntity",
+          "Plural": "FirstEntities",
+          "Enabled": true,
+          "Operation": null
+        },
+        "Rest": {
+          "Methods": [
+            "Put",
+            "Get",
+            "Patch",
+            "Delete",
+            "Post"
+          ],
+          "Path": null,
+          "Enabled": true
+        },
+        "Permissions": [
+          {
+            "Role": "anonymous",
+            "Actions": [
+              {
+                "Action": "Create",
+                "Fields": {
+                  "Exclude": [],
+                  "Include": null
+                },
+                "Policy": {
+                  "Request": null,
+                  "Database": null
+                }
+              },
+              {
+                "Action": "Read",
+                "Fields": {
+                  "Exclude": [],
+                  "Include": null
+                },
+                "Policy": {
+                  "Request": null,
+                  "Database": null
+                }
+              }
+            ]
+          }
+        ],
+        "Mappings": null,
+        "Relationships": {
+          "r1": {
+            "Cardinality": "One",
+            "TargetEntity": "SecondEntity",
+            "SourceFields": null,
+            "TargetFields": null,
+            "LinkingObject": null,
+            "LinkingSourceFields": null,
+            "LinkingTargetFields": null
+          }
+        }
+      }
+    },
+    {
+      "Key": "SecondEntity",
+      "Value": {
+        "Source": {
+          "Object": "Table2",
+          "Type": "Table",
+          "Parameters": null,
+          "KeyFields": []
+        },
+        "GraphQL": {
+          "Singular": "SecondEntity",
+          "Plural": "SecondEntities",
+          "Enabled": true,
+          "Operation": null
+        },
+        "Rest": {
+          "Methods": [],
+          "Path": null,
+          "Enabled": true
+        },
+        "Permissions": [
+          {
+            "Role": "anonymous",
+            "Actions": [
+              {
+                "Action": "Create",
+                "Fields": {
+                  "Exclude": [],
+                  "Include": null
+                },
+                "Policy": {
+                  "Request": null,
+                  "Database": null
+                }
+              },
+              {
+                "Action": "Read",
+                "Fields": {
+                  "Exclude": [],
+                  "Include": null
+                },
+                "Policy": {
+                  "Request": null,
+                  "Database": null
+                }
+              }
+            ]
+          }
+        ],
+        "Mappings": null,
+        "Relationships": {
+          "r2": {
+            "Cardinality": "Many",
+            "TargetEntity": "FirstEntity",
+            "SourceFields": [],
+            "TargetFields": [],
+            "LinkingObject": null,
+            "LinkingSourceFields": [],
+            "LinkingTargetFields": []
+          }
+        }
+      }
+    }
+  ]
+}

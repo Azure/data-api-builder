@@ -1,9 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.IO.Abstractions.TestingHelpers;
-using System.IO.Abstractions;
-using System.Reflection;
 using Cli.Commands;
 using Snapshooter.MSTest;
 

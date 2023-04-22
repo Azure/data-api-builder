@@ -25,9 +25,9 @@ internal class EntityActionConverterFactory : JsonConverterFactory
         {
             if (reader.TokenType == JsonTokenType.String)
             {
-                string? actionOperation = reader.GetString();
+                EntityActionOperation op = JsonSerializer.Deserialize<EntityActionOperation>(ref reader, options);
 
-                return new EntityAction(Enum.Parse<EntityActionOperation>(actionOperation!, true), new EntityActionFields(Exclude: new()), new EntityActionPolicy(null, null));
+                return new EntityAction(op, new EntityActionFields(Exclude: new()), new EntityActionPolicy(null, null));
             }
 
             JsonSerializerOptions innerOptions = new(options);
@@ -38,6 +38,11 @@ internal class EntityActionConverterFactory : JsonConverterFactory
             if (action is null)
             {
                 return null;
+            }
+
+            if (action.Policy is null)
+            {
+                return action with { Policy = new EntityActionPolicy(null, null) };
             }
 
             return action with { Policy = action.Policy with { Database = ProcessFieldsInPolicy(action.Policy.Database) } };

@@ -529,7 +529,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             {
                 // Skipping relationship validation if entity has no relationship
                 // or if graphQL is disabled.
-                if (entity.Relationships is null || false.Equals(entity.GraphQL))
+                if (entity.Relationships is null || !entity.GraphQL.Enabled)
                 {
                     continue;
                 }
@@ -555,8 +555,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     }
 
                     // Validation to ensure that an entity with graphQL disabled cannot be referenced in a relationship by other entities
-                    object? targetEntityGraphQLDetails = runtimeConfig.Entities[relationship.TargetEntity].GraphQL;
-                    if (false.Equals(targetEntityGraphQLDetails))
+                    EntityGraphQLOptions targetEntityGraphQLDetails = runtimeConfig.Entities[relationship.TargetEntity].GraphQL;
+                    if (!targetEntityGraphQLDetails.Enabled)
                     {
                         throw new DataApiBuilderException(
                             message: $"entity: {relationship.TargetEntity} is disabled for GraphQL.",

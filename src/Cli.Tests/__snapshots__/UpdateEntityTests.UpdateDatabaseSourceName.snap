@@ -1,0 +1,88 @@
+﻿{
+  "Schema": null,
+  "DataSource": {
+    "DatabaseType": "MSSQL",
+    "ConnectionString": "testconnectionstring",
+    "Options": {
+      "set-session-context": {
+        "ValueKind": "True"
+      }
+    },
+    "DatabaseTypeNotSupportedMessage": "The provided database-type value: MSSQL is currently not supported. Please check the configuration file."
+  },
+  "Runtime": {
+    "Rest": {
+      "Enabled": true,
+      "Path": "/api"
+    },
+    "GraphQL": {
+      "Enabled": true,
+      "Path": "/graphql",
+      "AllowIntrospection": true
+    },
+    "Host": {
+      "Cors": {
+        "Origins": [],
+        "AllowCredentials": false
+      },
+      "Authentication": {
+        "Provider": "StaticWebApps",
+        "Jwt": null
+      },
+      "Mode": "Development"
+    }
+  },
+  "Entities": [
+    {
+      "Key": "MyEntity",
+      "Value": {
+        "Source": {
+          "Object": "newSourceName",
+          "Type": "stored-procedure",
+          "Parameters": {
+            "param1": {
+              "ValueKind": "Number"
+            },
+            "param2": {
+              "ValueKind": "String"
+            },
+            "param3": {
+              "ValueKind": "True"
+            }
+          },
+          "KeyFields": null
+        },
+        "GraphQL": {
+          "Singular": "MyEntity",
+          "Plural": "MyEntities",
+          "Enabled": true,
+          "Operation": null
+        },
+        "Rest": {
+          "Methods": [
+            "Post"
+          ],
+          "Path": null,
+          "Enabled": true
+        },
+        "Permissions": [
+          {
+            "Role": "anonymous",
+            "Actions": [
+              {
+                "Action": "Execute",
+                "Fields": null,
+                "Policy": {
+                  "Request": null,
+                  "Database": null
+                }
+              }
+            ]
+          }
+        ],
+        "Mappings": null,
+        "Relationships": null
+      }
+    }
+  ]
+}

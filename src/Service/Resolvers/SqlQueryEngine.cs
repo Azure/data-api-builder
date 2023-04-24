@@ -127,7 +127,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 try
                 {
-                    using (TransactionScope transactionScope = new(TransactionScopeAsyncFlowOption.Enabled))
+                    using (TransactionScope transactionScope = new(
+                                                            TransactionScopeOption.Required,
+                                                            new TransactionOptions
+                                                            {
+                                                                IsolationLevel = IsolationLevel.ReadCommitted
+                                                            },
+                                                            TransactionScopeAsyncFlowOption.Enabled))
                     {
                         jsonListResult = await _queryExecutor.ExecuteQueryAsync(
                             queryString,
@@ -324,7 +330,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             try
             {
-                using (TransactionScope transactionScope = new(TransactionScopeAsyncFlowOption.Enabled))
+                using (TransactionScope transactionScope = new(
+                                                            TransactionScopeOption.Required,
+                                                            new TransactionOptions
+                                                            {
+                                                                IsolationLevel = IsolationLevel.ReadCommitted
+                                                            },
+                                                            TransactionScopeAsyncFlowOption.Enabled))
                 {
                     jsonDocument = await _queryExecutor.ExecuteQueryAsync(
                         queryString,
@@ -359,7 +371,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             try
             {
-                using (TransactionScope transactionScope = new(TransactionScopeAsyncFlowOption.Enabled))
+                using (TransactionScope transactionScope = new(
+                                                            TransactionScopeOption.Required,
+                                                            new TransactionOptions
+                                                            {
+                                                                IsolationLevel = IsolationLevel.ReadCommitted
+                                                            },
+                                                            TransactionScopeAsyncFlowOption.Enabled))
                 {
                     resultArray = await _queryExecutor.ExecuteQueryAsync(
                           queryString,

@@ -677,6 +677,43 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             Assert.AreEqual(result.RootElement.GetProperty("count").GetInt64(), 0);
         }
 
+        /// <summary>
+        /// Performs concurrent mutation requests on the same item and validates that consistent response
+        /// is returned to each of the mutations
+        /// gQLMutationCyan : Updates the color column of Notebook table to cyan
+        /// gQLMutationMagenta : Updates the color column of Notebook table to magenta
+        /// The color field in the responses returned for each of the mutations should be
+        /// the same value it had written to the table.
+        /// </summary>
+        [TestMethod]
+        public async Task TestParallelUpdateMutations()
+        {
+            string graphQLMutationName = "updateNotebook";
+            string gQLMutationCyan = @"
+                mutation {
+                    updateNotebook(id: 3, item: { color: ""cyan""} ) {
+                        color
+                    }
+                }
+            ";
+
+            string gQLMutationMagenta = @"
+                mutation {
+                    updateNotebook(id: 3, item: { color: ""magenta""} ) {
+                        color
+                    }
+                }
+            ";
+
+            Task<JsonElement> cyanResponseTask = ExecuteGraphQLRequestAsync(gQLMutationCyan, graphQLMutationName, isAuthenticated: true);
+            Task<JsonElement> magentaResponseTask = ExecuteGraphQLRequestAsync(gQLMutationMagenta, graphQLMutationName, isAuthenticated: true);
+
+            JsonElement cyanResponse = await cyanResponseTask;
+            Assert.AreEqual("{\"color\":\"cyan\"}", cyanResponse.ToString());
+            JsonElement magentaResponse = await magentaResponseTask;
+            Assert.AreEqual("{\"color\":\"magenta\"}", magentaResponse.ToString());
+        }
+
         #endregion
 
         #region Negative Tests

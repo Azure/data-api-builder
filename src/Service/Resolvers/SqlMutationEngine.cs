@@ -95,7 +95,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             try
             {
-                using (TransactionScope transactionScope = new(TransactionScopeAsyncFlowOption.Enabled))
+                using (TransactionScope transactionScope = new(
+                                                            TransactionScopeOption.Required,
+                                                            new TransactionOptions
+                                                            {
+                                                                IsolationLevel = System.Transactions.IsolationLevel.ReadCommitted
+                                                            },
+                                                            TransactionScopeAsyncFlowOption.Enabled))
                 {
                     if (mutationOperation is Config.Operation.Delete)
                     {
@@ -212,7 +218,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             try
             {
-                using (TransactionScope transactionScope = new(TransactionScopeAsyncFlowOption.Enabled))
+                using (TransactionScope transactionScope = new(
+                                                            TransactionScopeOption.Required,
+                                                            new TransactionOptions
+                                                            {
+                                                                IsolationLevel = System.Transactions.IsolationLevel.ReadCommitted
+                                                            },
+                                                            TransactionScopeAsyncFlowOption.Enabled))
                 {
                     resultArray =
                         await _queryExecutor.ExecuteQueryAsync(
@@ -309,7 +321,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 try
                 {
-                    using (TransactionScope transactionScope = new(TransactionScopeAsyncFlowOption.Enabled))
+                    using (TransactionScope transactionScope = new(
+                                                            TransactionScopeOption.Required,
+                                                            new TransactionOptions
+                                                            {
+                                                                IsolationLevel = System.Transactions.IsolationLevel.ReadCommitted
+                                                            },
+                                                            TransactionScopeAsyncFlowOption.Enabled))
                     {
                         resultProperties = await PerformDeleteOperation(
                                 context.EntityName,
@@ -341,7 +359,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 try
                 {
-                    using (TransactionScope transactionScope = new(TransactionScopeAsyncFlowOption.Enabled))
+                    using (TransactionScope transactionScope = new(
+                                                            TransactionScopeOption.Required,
+                                                            new TransactionOptions
+                                                            {
+                                                                IsolationLevel = System.Transactions.IsolationLevel.ReadCommitted
+                                                            },
+                                                            TransactionScopeAsyncFlowOption.Enabled))
                     {
                         upsertOperationResult = await PerformUpsertOperation(
                                                             parameters,
@@ -393,7 +417,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 try
                 {
-                    using (TransactionScope transactionScope = new(TransactionScopeAsyncFlowOption.Enabled))
+                    using (TransactionScope transactionScope = new(
+                                                            TransactionScopeOption.Required,
+                                                            new TransactionOptions
+                                                            {
+                                                                IsolationLevel = System.Transactions.IsolationLevel.ReadCommitted
+                                                            },
+                                                            TransactionScopeAsyncFlowOption.Enabled))
                     {
                         mutationResultRow =
                                 await PerformMutationOperation(

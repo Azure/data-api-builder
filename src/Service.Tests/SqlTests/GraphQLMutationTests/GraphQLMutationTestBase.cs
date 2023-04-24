@@ -678,40 +678,40 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// Performs concurrent mutation requests on the same item and validates that consistent response
-        /// is returned to each of the mutations
-        /// gQLMutationCyan : Updates the color column of Notebook table to cyan
-        /// gQLMutationMagenta : Updates the color column of Notebook table to magenta
-        /// The color field in the responses returned for each of the mutations should be
+        /// Performs concurrent mutation requests on the same item and validates that the responses
+        /// returned are consistent
+        /// gQLMutation1 : Updates the title column of Book table to New Title
+        /// gQLMutation2 : Updates the title column of Book table to Updated Title
+        /// The title field in the responses returned for each of the mutations should be
         /// the same value it had written to the table.
         /// </summary>
         [TestMethod]
         public async Task TestParallelUpdateMutations()
         {
-            string graphQLMutationName = "updateNotebook";
-            string gQLMutationCyan = @"
+            string graphQLMutationName = "updatebook";
+            string gQLMutation1 = @"
                 mutation {
-                    updateNotebook(id: 3, item: { color: ""cyan""} ) {
-                        color
+                    updatebook(id : 1, item: { title: ""New Title"" })
+                    {
+                        title
                     }
-                }
-            ";
+                }";
 
-            string gQLMutationMagenta = @"
+            string gQLMutation2 = @"
                 mutation {
-                    updateNotebook(id: 3, item: { color: ""magenta""} ) {
-                        color
+                    updatebook(id : 1, item: { title: ""Updated Title"" })
+                    {
+                        title
                     }
-                }
-            ";
+                }";
 
-            Task<JsonElement> cyanResponseTask = ExecuteGraphQLRequestAsync(gQLMutationCyan, graphQLMutationName, isAuthenticated: true);
-            Task<JsonElement> magentaResponseTask = ExecuteGraphQLRequestAsync(gQLMutationMagenta, graphQLMutationName, isAuthenticated: true);
+            Task<JsonElement> responeTask1 = ExecuteGraphQLRequestAsync(gQLMutation1, graphQLMutationName, isAuthenticated: true);
+            Task<JsonElement> responseTask2 = ExecuteGraphQLRequestAsync(gQLMutation2, graphQLMutationName, isAuthenticated: true);
 
-            JsonElement cyanResponse = await cyanResponseTask;
-            Assert.AreEqual("{\"color\":\"cyan\"}", cyanResponse.ToString());
-            JsonElement magentaResponse = await magentaResponseTask;
-            Assert.AreEqual("{\"color\":\"magenta\"}", magentaResponse.ToString());
+            JsonElement response1 = await responeTask1;
+            Assert.AreEqual("{\"title\":\"New Title\"}", response1.ToString());
+            JsonElement response2 = await responseTask2;
+            Assert.AreEqual("{\"title\":\"Updated Title\"}", response2.ToString());
         }
 
         #endregion

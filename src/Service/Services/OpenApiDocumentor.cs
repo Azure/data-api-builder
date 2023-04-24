@@ -8,6 +8,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
@@ -15,6 +16,7 @@ using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.OpenApi.Models;
 using Microsoft.OpenApi.Writers;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Services
 {
@@ -78,21 +80,93 @@ namespace Azure.DataApiBuilder.Service.Services
                 {
                     new OpenApiServer { Url = "https://localhost:5000/api/openapi" }
                 },
-                Paths = new OpenApiPaths
+                Paths = BuildPaths(),
+                Components = BuildComponents()
+            };
+            _openApiDocument = doc;
+        }
+
+        public OpenApiPaths BuildPaths()
+        {
+            // iterate through entities
+            // BuildPath on entity (which includes Generating Parameters)
+            // Generate Operations (which include Generating Responses)
+            OpenApiPaths pathsCollection = new();
+            foreach (string entityName in _metadataProvider.EntityToDatabaseObject.Keys.ToList())
+            {
+                Tuple<string, OpenApiPathItem> path = BuildPath(entityName);
+                pathsCollection.Add(path.Item1, path.Item2);
+            }
+
+            return pathsCollection;
+        }
+
+        /// <summary>
+        /// Includes Path with Operations(+responses) and Parameters
+        /// </summary>
+        /// <returns></returns>
+        public Tuple<string, OpenApiPathItem> BuildPath(string entityName)
+        {
+            // Create entity component
+            object? entityRestSettings = _runtimeConfig.Entities[entityName].GetRestEnabledOrPathSettings();
+            string entityPathValue = entityName;
+            if (entityRestSettings is not null && entityRestSettings is string)
+            {
+                entityPathValue = (string)entityRestSettings;
+                if (entityPathValue.StartsWith('/'))
                 {
-                    ["/Book/id/{id}"] = new OpenApiPathItem
+                    entityPathValue = entityPathValue.Substring(1);
+                }
+
+                Assert.IsFalse(string.IsNullOrEmpty(entityPathValue));
+            }
+
+            string entityComponent = $"/{entityPathValue}";
+            Assert.IsFalse(entityComponent == "/");
+
+            SourceDefinition sourceDefinition = _metadataProvider.GetSourceDefinition(entityName);
+            StringBuilder pkComponents = new();
+            List<OpenApiParameter> parameters = new();
+            foreach (string column in sourceDefinition.PrimaryKey)
+            {
+                string columnNameForComponent = column;
+                if (_metadataProvider.TryGetExposedColumnName(entityName, column, out string? mappedColumnAlias) && !string.IsNullOrEmpty(mappedColumnAlias))
+                {
+                    columnNameForComponent = mappedColumnAlias;
+                }
+
+                parameters.Add(new OpenApiParameter()
+                {
+                    Required = true,
+                    In = ParameterLocation.Path,
+                    Name = $"{columnNameForComponent}",
+                    Schema = new OpenApiSchema()
                     {
-                        Operations = new Dictionary<OperationType, OpenApiOperation>
+                        Type = $"JSON DATA TYPE for {column}",
+                        Format = $"OAS DATA TYPE for {column}"
+                    }
+                });
+                string pkComponent = $"/{columnNameForComponent}/{{{columnNameForComponent}}}";
+                pkComponents.Append(pkComponent);
+            }
+            Assert.IsFalse(string.IsNullOrEmpty(entityComponent));
+            // /{entityName/RestPathName} + {/pk/{pkValue}} * N
+            // CreateFullPathComponentAndParameters()
+            return new Tuple<string, OpenApiPathItem>(
+                entityComponent + pkComponents.ToString(),
+                new OpenApiPathItem()
+                {
+                    Operations = new Dictionary<OperationType, OpenApiOperation>
+                    {
+                        [OperationType.Get] = new OpenApiOperation
                         {
-                            [OperationType.Get] = new OpenApiOperation
+                            Description = "Returns all pets from the system that the user has access to",
+                            Responses = new OpenApiResponses
                             {
-                                Description = "Returns all pets from the system that the user has access to",
-                                Responses = new OpenApiResponses
+                                ["200"] = new OpenApiResponse
                                 {
-                                    ["200"] = new OpenApiResponse
-                                    {
-                                        Description = "OK",
-                                        Content = new Dictionary<string, OpenApiMediaType>()
+                                    Description = "OK",
+                                    Content = new Dictionary<string, OpenApiMediaType>()
                                         {
                                             {
                                                 "application/json",
@@ -112,7 +186,7 @@ namespace Azure.DataApiBuilder.Service.Services
                                                                         Reference = new OpenApiReference()
                                                                         {
                                                                             Type = ReferenceType.Schema,
-                                                                            Id = "BookResponse"
+                                                                            Id = $"{entityName}"
                                                                         }
                                                                     }
                                                                 }
@@ -123,29 +197,13 @@ namespace Azure.DataApiBuilder.Service.Services
                                             }
                                         }
 
-                                    }
-                                }
-                            }
-                        },
-                        Parameters = new List<OpenApiParameter>()
-                        {
-                            new OpenApiParameter()
-                            {
-                                Required = true,
-                                In = ParameterLocation.Path,
-                                Name = "id",
-                                Schema = new OpenApiSchema()
-                                {
-                                    Type = "integer",
-                                    Format = "int32"
                                 }
                             }
                         }
-                    }
-                },
-                Components = BuildComponents()
-            };
-            _openApiDocument = doc;
+                    },
+                    Parameters = parameters
+                }
+            );
         }
 
         public OpenApiComponents BuildComponents()
@@ -162,14 +220,26 @@ namespace Azure.DataApiBuilder.Service.Services
 
             foreach (string entityName in _metadataProvider.EntityToDatabaseObject.Keys.ToList())
             {
-                SourceDefinition? sourceDefinition = _metadataProvider.GetSourceDefinition(entityName);
-                List<string> columns = sourceDefinition is null ? new List<string>() : sourceDefinition.Columns.Keys.ToList();
+                SourceDefinition sourceDefinition = _metadataProvider.GetSourceDefinition(entityName);
+                List<string> columns = /*sourceDefinition is null ? new List<string>() : */sourceDefinition.Columns.Keys.ToList();
 
                 // create component for FULL entity with PK.
                 schemas.Add(entityName, CreateComponentSchema(entityName, fields: columns));
 
                 // create component for entity with no PK
-                //schea
+                // get list of columns - primary key columns then optimize
+
+                foreach (string primaryKeyColumn in sourceDefinition.PrimaryKey)
+                {
+                    columns.Remove(primaryKeyColumn);
+                }
+
+                // create component for TABLE (view?) NOT STOREDPROC entity with no PK.
+                DatabaseObject dbo =  _metadataProvider.EntityToDatabaseObject[entityName];
+                if (dbo.SourceType is not SourceType.StoredProcedure or SourceType.View)
+                {
+                    schemas.Add($"{entityName}_NoPK", CreateComponentSchema(entityName, fields: columns));
+                }
             }
 
             return schemas;

@@ -200,6 +200,16 @@ namespace Cli.Tests
             );
         }
 
+        [TestMethod]
+        public void TestMergeConfig()
+        {
+            File.WriteAllText("dab-config.json", CONFIG_TO_MERGE);
+            File.WriteAllText("dab-config.Test.json", CONFIG_TO_MERGE_WITH);
+            Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, "Test");
+            string mergedConfig = MergeConfigsIfAvailable();
+            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(MERGED_CONFIG), JObject.Parse(File.ReadAllText(mergedConfig))));
+        }
+
         [ClassCleanup]
         public static void Cleanup()
         {
@@ -216,6 +226,11 @@ namespace Cli.Tests
             if (File.Exists("my-config.json"))
             {
                 File.Delete("my-config.json");
+            }
+
+            if (File.Exists("dab-config.json"))
+            {
+                File.Delete("dab-config.json");
             }
         }
     }

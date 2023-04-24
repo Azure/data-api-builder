@@ -895,6 +895,188 @@ namespace Cli.Tests
         }
       }";
 
+        public const string CONFIG_TO_MERGE =
+          @"{" +
+            @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+            @"""data-source"": {
+          ""database-type"": ""mssql"",
+          ""connection-string"": """",
+          ""options"":{
+            ""set-session-context"": true
+          }
+        },
+        ""runtime"": {
+          ""rest"": {
+            ""path"": ""/api"",
+            ""enabled"": true
+          },
+          ""graphql"": {
+            ""path"": ""/graphql"",
+            ""enabled"": true,
+            ""allow-introspection"": true
+          },
+          ""host"": {
+            ""mode"": ""production"",
+            ""cors"": {
+              ""origins"": [],
+              ""allow-credentials"": false
+            },
+            ""authentication"": {
+              ""provider"": ""StaticWebApps""
+            }
+          }
+        },
+        ""entities"": {
+          ""book"": {
+            ""source"": ""s001.book"",
+            ""permissions"": [
+              {
+                ""role"": ""anonymous"",
+                ""actions"": [
+                  ""*""
+                ]
+              }
+            ]
+          },
+          ""author"": {
+            ""source"": ""s001.authors"",
+            ""permissions"": [
+              {
+                ""role"": ""anonymous"",
+                ""actions"": [
+                  ""*""
+                ]
+              }
+            ]
+          }
+        }
+      }";
+
+        public const string CONFIG_TO_MERGE_WITH =
+          @"{" +
+            @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+            @"""data-source"": {
+          ""database-type"": ""mssql"",
+          ""connection-string"": ""localhost:5000;User ID=user;Password=pwd;MultipleActiveResultSets=False;"",
+          ""options"":{
+            ""set-session-context"": true
+          }
+        },
+        ""runtime"": {
+          ""rest"": {
+            ""path"": ""/api"",
+            ""enabled"": false
+          },
+          ""graphql"": {
+            ""path"": ""/graphql"",
+            ""enabled"": true,
+            ""allow-introspection"": true
+          },
+          ""host"": {
+            ""mode"": ""production"",
+            ""cors"": {
+              ""origins"": [ ""http://localhost:5000"" ],
+              ""allow-credentials"": false
+            },
+            ""authentication"": {
+              ""provider"": ""StaticWebApps""
+            }
+          }
+        },
+        ""entities"": {
+          ""book"": {
+            ""source"": ""books"",
+            ""permissions"": [
+              {
+                ""role"": ""authenticated"",
+                ""actions"": [
+                  ""*""
+                ]
+              }
+            ]
+          },
+          ""publisher"": {
+            ""source"": ""publishers"",
+            ""permissions"": [
+              {
+                ""role"": ""anonymous"",
+                ""actions"": [
+                  ""*""
+                ]
+              }
+            ]
+          }
+        }
+      }";
+
+        public const string MERGED_CONFIG =
+          @"{" +
+            @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+            @"""data-source"": {
+          ""database-type"": ""mssql"",
+          ""connection-string"": ""localhost:5000;User ID=user;Password=pwd;MultipleActiveResultSets=False;"",
+          ""options"":{
+            ""set-session-context"": true
+          }
+        },
+        ""runtime"": {
+          ""rest"": {
+            ""path"": ""/api"",
+            ""enabled"": false
+          },
+          ""graphql"": {
+            ""path"": ""/graphql"",
+            ""enabled"": true,
+            ""allow-introspection"": true
+          },
+          ""host"": {
+            ""mode"": ""production"",
+            ""cors"": {
+              ""origins"": [ ""http://localhost:5000"" ],
+              ""allow-credentials"": false
+            },
+            ""authentication"": {
+              ""provider"": ""StaticWebApps""
+            }
+          }
+        },
+        ""entities"": {
+          ""book"": {
+            ""source"": ""books"",
+            ""permissions"": [
+              {
+                ""role"": ""authenticated"",
+                ""actions"": [
+                  ""*""
+                ]
+              }
+            ]
+          },
+          ""author"": {
+            ""source"": ""s001.authors"",
+            ""permissions"": [
+              {
+                ""role"": ""anonymous"",
+                ""actions"": [
+                  ""*""
+                ]
+              }
+            ]
+          },
+          ""publisher"": {
+            ""source"": ""publishers"",
+            ""permissions"": [
+              {
+                ""role"": ""anonymous"",
+                ""actions"": [
+                  ""*""
+                ]
+              }
+            ]
+          }
+        }
+      }";
+
         /// <summary>
         /// Helper method to create json string for runtime settings
         /// for json comparison in tests.

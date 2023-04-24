@@ -948,7 +948,13 @@ namespace Cli
         /// </summary>
         public static bool TryStartEngineWithOptions(StartOptions options)
         {
-            if (!TryGetConfigFileBasedOnCliPrecedence(options.Config, out string runtimeConfigFile))
+            string? configToBeUsed = options.Config;
+            if (string.IsNullOrEmpty(configToBeUsed))
+            {
+                configToBeUsed = MergeConfigsIfAvailable();
+            }
+
+            if (!TryGetConfigFileBasedOnCliPrecedence(configToBeUsed, out string runtimeConfigFile))
             {
                 _logger.LogError("Config not provided and default config file doesn't exist.");
                 return false;

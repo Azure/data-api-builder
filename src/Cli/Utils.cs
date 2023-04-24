@@ -12,6 +12,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Humanizer;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Config.AuthenticationConfig;
+using static Azure.DataApiBuilder.Config.RuntimeConfigPath;
 using static Azure.DataApiBuilder.Service.Configurations.RuntimeConfigValidator;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
@@ -896,6 +897,33 @@ namespace Cli
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// This method will check if DAB_ENVIRONMENT value is set.
+        /// If yes, it will try to merge dab-config.json with dab-config.{DAB_ENVIRONMENT}.json
+        /// </summary>
+        public static string MergeConfigsIfAvailable()
+        {
+            string? environmentValue = Environment.GetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME);
+            if (!string.IsNullOrEmpty(environmentValue))
+            {
+                string FileToBeOverridden = DefaultName;
+                string FileToBeOverriddenWith = $"{CONFIGFILE_NAME}.{environmentValue}{CONFIG_EXTENSION}";
+                string mergedFile = $"{CONFIGFILE_NAME}.{environmentValue}.merged{CONFIG_EXTENSION}";
+
+                if (DoesFileExistInCurrentDirectory(FileToBeOverridden) && DoesFileExistInCurrentDirectory(FileToBeOverriddenWith))
+                {
+                    string originalJson = File.ReadAllText(FileToBeOverridden);
+                    string newJson = File.ReadAllText(FileToBeOverriddenWith);
+                    string mergedJson = MergeConfig.Merge(originalJson, newJson);
+
+                    File.WriteAllText(mergedFile, mergedJson);
+                    return mergedFile;
+                }
+            }
+
+            return string.Empty;
         }
 
         /// <summary>

@@ -233,7 +233,7 @@ namespace Azure.DataApiBuilder.Config
             return $"{fileName}.overrides{CONFIG_EXTENSION}";
         }
 
-        private static bool DoesFileExistInCurrentDirectory(string fileName)
+        public static bool DoesFileExistInCurrentDirectory(string fileName)
         {
             string currentDir = Directory.GetCurrentDirectory();
             // Unable to use ILogger because this code is invoked before LoggerFactory

@@ -200,12 +200,20 @@ namespace Cli.Tests
             );
         }
 
+        /// <summary>
+        /// Test to verify that when DAB_ENVIRONMENT variable is set, and dab-config.json and 
+        /// dab-config.{DAB_ENVIRONMENT}.json file is present, then when DAB engine is started, it will merge
+        /// the two config and use the merged config to startup the engine.
+        /// Here, dab-config.json has no connection_string, while dab-config.Test.json has a defined connection string.
+        /// once the `dab start` is executed the merge happens and the merged file contains the connection string from the
+        /// Test config. 
+        /// </summary>
         [TestMethod]
         public void TestMergeConfig()
         {
+            Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, "Test");
             File.WriteAllText("dab-config.json", CONFIG_TO_MERGE);
             File.WriteAllText("dab-config.Test.json", CONFIG_TO_MERGE_WITH);
-            Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, "Test");
             string mergedConfig = MergeConfigsIfAvailable();
             Assert.IsTrue(JToken.DeepEquals(JObject.Parse(MERGED_CONFIG), JObject.Parse(File.ReadAllText(mergedConfig))));
         }

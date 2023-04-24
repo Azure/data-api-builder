@@ -40,6 +40,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ProcedureParameters = new();
             foreach ((string paramKey, ParameterDefinition paramDefinition) in storedProcedureDefinition.Parameters)
             {
+                Type systemType = GetUnderlyingStoredProcedureDefinition().Parameters[paramKey].SystemType!;
                 // Populate with request param if able
                 if (requestParams.TryGetValue(paramKey, out object? requestParamValue))
                 {
@@ -47,12 +48,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     string? parametrizedName = null;
                     if (requestParamValue is not null)
                     {
-                        Type systemType = GetUnderlyingStoredProcedureDefinition().Parameters[paramKey].SystemType!;
-                        parametrizedName = MakeParamWithValue(GetParamAsSystemType(requestParamValue.ToString()!, paramKey, systemType));
+                        parametrizedName = MakeParamWithValue(GetParamAsSystemType(requestParamValue.ToString()!, paramKey, systemType), paramKey);
                     }
                     else
                     {
-                        parametrizedName = MakeParamWithValue(value: null);
+                        parametrizedName = MakeParamWithValue(null, paramKey);
                     }
 
                     ProcedureParameters.Add(paramKey, $"{parametrizedName}");
@@ -62,7 +62,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     // Fill with default value from runtime config
                     if (paramDefinition.HasConfigDefault)
                     {
-                        string parameterizedName = MakeParamWithValue(paramDefinition.ConfigDefaultValue);
+                        object? value = paramDefinition.ConfigDefaultValue == null ? null : GetParamAsSystemType(paramDefinition.ConfigDefaultValue!.ToString()!, paramKey, systemType);
+                        string parameterizedName = MakeParamWithValue(value, paramKey);
                         ProcedureParameters.Add(paramKey, $"{parameterizedName}");
                     }
                     else

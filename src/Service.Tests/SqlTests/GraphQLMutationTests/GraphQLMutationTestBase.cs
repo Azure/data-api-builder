@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -797,17 +796,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             // one of the mutation's reponse will contain a valid repsonse and the other mutation's
             // response would contain DatabaseOperationFailed sub-status code as it would've failed at
             // the database layer due to primary key violation constraint.
-            if(responseString1.Contains($"\"code\":\"{expectedStatusCode}\""))
+            if (responseString1.Contains($"\"code\":\"{expectedStatusCode}\""))
             {
-               Assert.AreEqual("{\"id\":5001,\"title\":\"Lord of the Rings\"}", responseString2);
+                Assert.AreEqual("{\"id\":5001,\"title\":\"Lord of the Rings\"}", responseString2);
             }
-            else if(responseString2.Contains($"\"code\":\"{expectedStatusCode}\""))
+            else if (responseString2.Contains($"\"code\":\"{expectedStatusCode}\""))
             {
-              Assert.AreEqual("{\"id\":5001,\"title\":\"Harry Potter\"}", responseString1);
+                Assert.AreEqual("{\"id\":5001,\"title\":\"Harry Potter\"}", responseString1);
             }
             else
             {
-              Assert.Fail("Unexpected error. Atleast one of the mutations should've succeeded");
+                Assert.Fail("Unexpected error. Atleast one of the mutations should've succeeded");
             }
         }
 

@@ -79,7 +79,7 @@ type Moon @model(name:""Moon"") @authorize(policy: ""Crater"") {
                 It.IsAny<string>(),
                 It.IsAny<Config.Operation>(),
                 It.IsAny<IEnumerable<string>>()
-                )).Returns(true);
+                )).Returns(false);
 
             _application = new WebApplicationFactory<Startup>()
                 .WithWebHostBuilder(builder =>

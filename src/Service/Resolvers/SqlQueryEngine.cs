@@ -119,13 +119,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     _gQLFilterParser);
 
                 string queryString = _queryBuilder.Build(structure);
-                List<JsonDocument>? jsonListResult = null;
-
-                jsonListResult = await _queryExecutor.ExecuteQueryAsync(
-                    queryString,
-                    structure.Parameters,
-                    _queryExecutor.GetJsonResultAsync<List<JsonDocument>>,
-                    _httpContextAccessor.HttpContext!);
+                List<JsonDocument>? jsonListResult =
+                    await _queryExecutor.ExecuteQueryAsync(
+                        queryString,
+                        structure.Parameters,
+                        _queryExecutor.GetJsonResultAsync<List<JsonDocument>>,
+                        _httpContextAccessor.HttpContext!);
 
                 if (jsonListResult is null)
                 {
@@ -301,14 +300,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             // Open connection and execute query using _queryExecutor
             string queryString = _queryBuilder.Build(structure);
-            JsonDocument? jsonDocument = null;
-
-            jsonDocument = await _queryExecutor.ExecuteQueryAsync(
-                queryString,
-                structure.Parameters,
-                _queryExecutor.GetJsonResultAsync<JsonDocument>,
-                _httpContextAccessor.HttpContext!);
-
+            JsonDocument? jsonDocument =
+                await _queryExecutor.ExecuteQueryAsync(
+                    queryString,
+                    structure.Parameters,
+                    _queryExecutor.GetJsonResultAsync<JsonDocument>,
+                    _httpContextAccessor.HttpContext!);
             return jsonDocument;
         }
 
@@ -321,9 +318,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             string queryString = _queryBuilder.Build(structure);
 
-            JsonArray? resultArray = null;
-
-            resultArray = await _queryExecutor.ExecuteQueryAsync(
+            JsonArray? resultArray =
+                await _queryExecutor.ExecuteQueryAsync(
                     queryString,
                     structure.Parameters,
                     _queryExecutor.GetJsonArrayAsync,

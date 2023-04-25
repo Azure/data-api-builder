@@ -95,6 +95,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             try
             {
+                // Creating an implicit transaction
+                // https://learn.microsoft.com/en-us/dotnet/framework/data/transactions/implementing-an-implicit-transaction-using-transaction-scope
+                // TransactionScopeOption.Required: https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeoption?view=net-7.0#fields
+                // TransactionScopeAsyncFlowOption.Enabled: https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeasyncflowoption?view=net-8.0#fields
+
                 using (TransactionScope transactionScope = new(
                                                             TransactionScopeOption.Required,
                                                             new TransactionOptions
@@ -152,12 +157,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     transactionScope.Complete();
                 }
             }
+            // All the exceptions that can be thrown by .Complete() and .Dispose() methods of transactionScope
+            // derive from TransactionException. Hence, TransactionException acts as a catch-all.
+            // When an exception related to Transactions is encountered, the mutation is simply failed and a DataApiBuilderException is thrown.
             catch (TransactionException)
             {
-                throw new DataApiBuilderException(
-                    message: TRANSACTION_EXCEPTION_ERROR_MSG,
-                    statusCode: HttpStatusCode.InternalServerError,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                ConstructAndThrowDataApiBuilderException();
             }
 
             if (result is null)
@@ -218,6 +223,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             try
             {
+                // Creating an implicit transaction
+                // https://learn.microsoft.com/en-us/dotnet/framework/data/transactions/implementing-an-implicit-transaction-using-transaction-scope
+                // TransactionScopeOption.Required: https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeoption?view=net-7.0#fields
+                // TransactionScopeAsyncFlowOption.Enabled: https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeasyncflowoption?view=net-8.0#fields
                 using (TransactionScope transactionScope = new(
                                                             TransactionScopeOption.Required,
                                                             new TransactionOptions
@@ -236,12 +245,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     transactionScope.Complete();
                 }
             }
+            // All the exceptions that can be thrown by .Complete() and .Dispose() methods of transactionScope
+            // derive from TransactionException. Hence, TransactionException acts as a catch-all.
+            // When an exception related to Transactions is encountered, the mutation is simply failed and a DataApiBuilderException is thrown.
             catch (TransactionException)
             {
-                throw new DataApiBuilderException(
-                        message: TRANSACTION_EXCEPTION_ERROR_MSG,
-                        statusCode: HttpStatusCode.InternalServerError,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                ConstructAndThrowDataApiBuilderException();
             }
 
             // A note on returning stored procedure results:
@@ -321,6 +330,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 try
                 {
+                    // Creating an implicit transaction
+                    // https://learn.microsoft.com/en-us/dotnet/framework/data/transactions/implementing-an-implicit-transaction-using-transaction-scope
+                    // TransactionScopeOption.Required: https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeoption?view=net-7.0#fields
+                    // TransactionScopeAsyncFlowOption.Enabled: https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeasyncflowoption?view=net-8.0#fields
                     using (TransactionScope transactionScope = new(TransactionScopeOption.Required,
                                                                     new TransactionOptions
                                                                     {
@@ -334,13 +347,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         transactionScope.Complete();
                     }
                 }
+                // All the exceptions that can be thrown by .Complete() and .Dispose() methods of transactionScope
+                // derive from TransactionException. Hence, TransactionException acts as a catch-all.
+                // When an exception related to Transactions is encountered, the mutation is simply failed and a DataApiBuilderException is thrown.
                 catch (TransactionException)
                 {
-                    throw new DataApiBuilderException(
-                            message: TRANSACTION_EXCEPTION_ERROR_MSG,
-                            statusCode: HttpStatusCode.InternalServerError,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError
-                        );
+                    ConstructAndThrowDataApiBuilderException();
                 }
 
                 // Records affected tells us that item was successfully deleted.
@@ -358,6 +370,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 try
                 {
+                    // Creating an implicit transaction
+                    // https://learn.microsoft.com/en-us/dotnet/framework/data/transactions/implementing-an-implicit-transaction-using-transaction-scope
+                    // TransactionScopeOption.Required: https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeoption?view=net-7.0#fields
+                    // TransactionScopeAsyncFlowOption.Enabled: https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeasyncflowoption?view=net-8.0#fields
                     using (TransactionScope transactionScope = new(TransactionScopeOption.Required,
                                                                     new TransactionOptions
                                                                     {
@@ -371,13 +387,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         transactionScope.Complete();
                     }
                 }
+                // All the exceptions that can be thrown by .Complete() and .Dispose() methods of transactionScope
+                // derive from TransactionException. Hence, TransactionException acts as a catch-all.
+                // When an exception related to Transactions is encountered, the mutation is simply failed and a DataApiBuilderException is thrown.
                 catch (TransactionException)
                 {
-                    throw new DataApiBuilderException(
-                            message: TRANSACTION_EXCEPTION_ERROR_MSG,
-                            statusCode: HttpStatusCode.InternalServerError,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError
-                        );
+                    ConstructAndThrowDataApiBuilderException();
                 }
 
                 DbResultSetRow? dbResultSetRow = upsertOperationResult is not null ?
@@ -415,6 +430,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 try
                 {
+                    // Creating an implicit transaction
+                    // https://learn.microsoft.com/en-us/dotnet/framework/data/transactions/implementing-an-implicit-transaction-using-transaction-scope
+                    // TransactionScopeOption.Required: https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeoption?view=net-7.0#fields
+                    // TransactionScopeAsyncFlowOption.Enabled: https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeasyncflowoption?view=net-8.0#fields
                     using (TransactionScope transactionScope = new(
                                                             TransactionScopeOption.Required,
                                                             new TransactionOptions
@@ -431,12 +450,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         transactionScope.Complete();
                     }
                 }
+                // All the exceptions that can be thrown by .Complete() and .Dispose() methods of transactionScope
+                // derive from TransactionException. Hence, TransactionException acts as a catch-all.
+                // When an exception related to Transactions is encountered, the mutation is simply failed and a DataApiBuilderException is thrown.
                 catch (TransactionException)
                 {
-                    throw new DataApiBuilderException(
-                        message: TRANSACTION_EXCEPTION_ERROR_MSG,
-                        statusCode: HttpStatusCode.InternalServerError,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                    ConstructAndThrowDataApiBuilderException();
                 }
 
                 if (context.OperationType is Config.Operation.Insert)
@@ -935,5 +954,19 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             return _httpContextAccessor.HttpContext!;
         }
+
+        /// <summary>
+        /// Helper method to throw a DataApiBuidlerException when exceptions related
+        /// to transactions are encountered.
+        /// </summary>
+        /// <exception cref="DataApiBuilderException"></exception>
+        private static void ConstructAndThrowDataApiBuilderException()
+        {
+            throw new DataApiBuilderException(
+                    message: TRANSACTION_EXCEPTION_ERROR_MSG,
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+        }
+
     }
 }

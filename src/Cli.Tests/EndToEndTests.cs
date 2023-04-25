@@ -13,7 +13,7 @@ public class EndToEndTests
     /// Setup the logger and test file for CLI
     /// </summary>
     [ClassInitialize]
-    public static void Setup()
+    public static void Setup(TestContext context)
     {
         if (!File.Exists(TEST_SCHEMA_FILE))
         {

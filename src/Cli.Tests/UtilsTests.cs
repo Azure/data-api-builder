@@ -12,8 +12,8 @@ namespace Cli.Tests
         /// <summary>
         /// Setup the logger for CLI
         /// </summary>
-        [TestInitialize]
-        public void SetupLoggerForCLI()
+        [ClassInitialize]
+        public static void SetupLoggerForCLI(TestContext context)
         {
             Mock<ILogger<Utils>> utilsLogger = new();
             Utils.SetCliUtilsLogger(utilsLogger.Object);

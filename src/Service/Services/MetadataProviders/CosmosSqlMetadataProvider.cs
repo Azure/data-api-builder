@@ -55,7 +55,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
-            foreach(Entity entity in _runtimeConfig.Entities.Values)
+            foreach (Entity entity in _runtimeConfig.Entities.Values)
             {
                 CheckFieldPermissionsForEntity(entity);
             }

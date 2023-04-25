@@ -81,19 +81,12 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
                         // If not a string, the operationObj is expected to be an object that can be deserialized into PermissionOperation
                         // object.
                         if (RuntimeConfig.TryGetDeserializedJsonString(operationElement.ToString(), out PermissionOperation? operationObj, null!)
-                            && operationObj is not null)
+                            && operationObj is not null && operationObj.Fields is not null)
                         {
-                            if (operationObj.Fields is null)
-                            {
-                                continue;
-                            }
-                            else
-                            {
-                                throw new DataApiBuilderException(
-                                  message: "Invalid runtime configuration, CosmosDB_NoSql currently doesn't support field level authorization.",
-                                  statusCode: System.Net.HttpStatusCode.BadRequest,
-                                  subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-                            }
+                            throw new DataApiBuilderException(
+                                message: "Invalid runtime configuration, CosmosDB_NoSql currently doesn't support field level authorization.",
+                                statusCode: System.Net.HttpStatusCode.BadRequest,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                         }
                     }
                 }

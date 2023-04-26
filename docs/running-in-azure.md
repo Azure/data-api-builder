@@ -40,7 +40,7 @@ To run Data API builder in Azure Container Apps, you need to
 - Create a resource group
 - Create a storage account, with File Share enabled
 - Upload the `dab-config.json` file to the storage account
-- Create the Azure Container Apps environment and mount the storage account file share so that it can accessed by the containers running in the environment.
+- Create the Azure Container Apps environment and mount the storage account file share so that it can be accessed by the containers running in the environment.
 - Create the Azure Container Apps application, using the image from the Microsoft Container Registry and mounting the storage account file share so that it can accessed by Data API builder.
 
 A sample shell script that can be run on Linux (using the [Cloud Shell](https://learn.microsoft.com/en-us/azure/cloud-shell/overview) if you don't have a Linux machine or WSL installed) is available in `/samples/azure` folder.

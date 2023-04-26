@@ -8,7 +8,7 @@ When running Data API builder in Azure Static Web Apps, you don't have to worry 
 
 To learn how to use Data API builder with Azure Static Web Apps, refer to the Azure Static Web Apps documentation: [Connecting to a database with Azure Static Web Apps](https://learn.microsoft.com/en-us/azure/static-web-apps/database-overview).
 
-## Use a Azure Container Instance
+## Use Azure Container Instance
 
 If you prefer to manage the infrastructure yourself, you can deploy the Data API builder container in Azure. Data API builder image is available on the Microsoft Container Registry: https://mcr.microsoft.com/en-us/product/azure-databases/data-api-builder/about
 
@@ -31,7 +31,7 @@ On first run, the script will create an `.env` file that you will have to fill o
 
 After the script has finished running, it will return the public container IP address. Use your favorite REST or GraphQL client to access the Data API builder exposed endpoints as configured in the configuration file you provided.
 
-## Use a Azure Container Apps
+## Use Azure Container Apps
 
 If you prefer to manage the infrastructure yourself, you can deploy the Data API builder container in Azure. Data API builder image is available on the Microsoft Container Registry: https://mcr.microsoft.com/en-us/product/azure-databases/data-api-builder/about
 
@@ -40,8 +40,8 @@ To run Data API builder in Azure Container Apps, you need to
 - Create a resource group
 - Create a storage account, with File Share enabled
 - Upload the `dab-config.json` file to the storage account
-- Create the Azure Container Apps environment, using the image from the Microsoft Container Registry and mounting the storage account file share so that it can accessed by Data API builder
-- Deploy the Azure Container App in the environment previosly created
+- Create the Azure Container Apps environment and mount the storage account file share so that it can accessed by the containers running in the environment.
+- Create the Azure Container Apps application, using the image from the Microsoft Container Registry and mounting the storage account file share so that it can accessed by Data API builder.
 
 A sample shell script that can be run on Linux (using the [Cloud Shell](https://learn.microsoft.com/en-us/azure/cloud-shell/overview) if you don't have a Linux machine or WSL installed) is available in `/samples/azure` folder.
 

@@ -188,7 +188,7 @@ namespace Azure.DataApiBuilder.Config
             return configFileNameWithExtension;
         }
 
-        // Used for testing
+        // Default config file name
         public static string DefaultName
         {
             get

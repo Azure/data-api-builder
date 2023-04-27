@@ -83,7 +83,11 @@ namespace Azure.DataApiBuilder.Service.Exceptions
             /// <summary>
             /// Attempting to generate OpenAPI document when one already exists.
             /// </summary>
-            OpenApiDocumentAlreadyExists
+            OpenApiDocumentAlreadyExists,
+            /// <summary>
+            /// Attempting to generate OpenAPI document failed.
+            /// </summary>
+            OpenApiDocumentGenerationFailure
         }
 
         public HttpStatusCode StatusCode { get; }

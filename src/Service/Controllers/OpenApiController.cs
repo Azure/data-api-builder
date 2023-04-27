@@ -3,6 +3,7 @@
 
 using System;
 using System.Net;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,7 +21,6 @@ namespace Azure.DataApiBuilder.Service.Controllers
         public OpenApiController(IOpenApiDocumentor openApiDocumentor)
         {
             _apiDocumentor = openApiDocumentor;
-            Console.WriteLine("api controller constructor");
         }
 
         /// <summary>
@@ -51,9 +51,18 @@ namespace Azure.DataApiBuilder.Service.Controllers
 
                 return NotFound();
             }
-            catch (Exception)
+            catch (DataApiBuilderException dabException)
             {
-                return new StatusCodeResult(statusCode: (int)HttpStatusCode.InternalServerError);
+                Response.StatusCode = (int)dabException.StatusCode;
+                return new JsonResult(new
+                {
+                    error = new
+                    {
+                        code = dabException.SubStatusCode.ToString(),
+                        message = dabException.Message,
+                        status = (int)dabException.StatusCode
+                    }
+                });
             }
         }
     }

@@ -630,6 +630,21 @@ namespace Azure.DataApiBuilder.Service
 
                 runtimeConfigValidator.ValidateStoredProceduresInConfig(runtimeConfig, sqlMetadataProvider!);
 
+                // Attempt to create OpenAPI document.
+                // Any failures should result in a logged error, but must not halt runtime initialization
+                // because OpenAPI document creation is not required for the engine to operate.
+                try
+                {
+                    IOpenApiDocumentor openApiDocumentor =
+                        app.ApplicationServices.GetRequiredService<IOpenApiDocumentor>();
+
+                    openApiDocumentor.CreateDocument();
+                }
+                catch (DataApiBuilderException dabException)
+                {
+                    _logger.LogError($"{dabException.Message}");
+                }
+
                 _logger.LogInformation($"Successfully completed runtime initialization.");
                 return true;
             }

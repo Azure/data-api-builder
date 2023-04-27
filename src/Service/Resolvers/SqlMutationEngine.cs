@@ -96,17 +96,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             try
             {
                 // Creating an implicit transaction
-                // https://learn.microsoft.com/en-us/dotnet/framework/data/transactions/implementing-an-implicit-transaction-using-transaction-scope
-                // TransactionScopeOption.Required: https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeoption?view=net-6.0#fields
-                // TransactionScopeAsyncFlowOption.Enabled: https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeasyncflowoption?view=net-6.0#fields
-
-                using (TransactionScope transactionScope = new(
-                                                            TransactionScopeOption.Required,
-                                                            new TransactionOptions
-                                                            {
-                                                                IsolationLevel = System.Transactions.IsolationLevel.ReadCommitted
-                                                            },
-                                                            TransactionScopeAsyncFlowOption.Enabled))
+                using (TransactionScope transactionScope = ConstructReadCommittedTransactionScope())
                 {
                     if (mutationOperation is Config.Operation.Delete)
                     {
@@ -225,16 +215,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             try
             {
                 // Creating an implicit transaction
-                // https://learn.microsoft.com/en-us/dotnet/framework/data/transactions/implementing-an-implicit-transaction-using-transaction-scope
-                // TransactionScopeOption.Required: https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeoption?view=net-6.0#fields
-                // TransactionScopeAsyncFlowOption.Enabled: https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeasyncflowoption?view=net-6.0#fields
-                using (TransactionScope transactionScope = new(
-                                                            TransactionScopeOption.Required,
-                                                            new TransactionOptions
-                                                            {
-                                                                IsolationLevel = System.Transactions.IsolationLevel.ReadCommitted
-                                                            },
-                                                            TransactionScopeAsyncFlowOption.Enabled))
+                using (TransactionScope transactionScope = ConstructReadCommittedTransactionScope())
                 {
                     resultArray =
                         await _queryExecutor.ExecuteQueryAsync(
@@ -334,15 +315,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 try
                 {
                     // Creating an implicit transaction
-                    // https://learn.microsoft.com/en-us/dotnet/framework/data/transactions/implementing-an-implicit-transaction-using-transaction-scope
-                    // TransactionScopeOption.Required: https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeoption?view=net-6.0#fields
-                    // TransactionScopeAsyncFlowOption.Enabled: https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeasyncflowoption?view=net-6.0#fields
-                    using (TransactionScope transactionScope = new(TransactionScopeOption.Required,
-                                                                    new TransactionOptions
-                                                                    {
-                                                                        IsolationLevel = System.Transactions.IsolationLevel.ReadCommitted
-                                                                    },
-                                                                    TransactionScopeAsyncFlowOption.Enabled))
+                    using (TransactionScope transactionScope = ConstructReadCommittedTransactionScope())
                     {
                         resultProperties = await PerformDeleteOperation(
                                 context.EntityName,
@@ -376,15 +349,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 try
                 {
                     // Creating an implicit transaction
-                    // https://learn.microsoft.com/en-us/dotnet/framework/data/transactions/implementing-an-implicit-transaction-using-transaction-scope
-                    // TransactionScopeOption.Required: https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeoption?view=net-6.0#fields
-                    // TransactionScopeAsyncFlowOption.Enabled: https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeasyncflowoption?view=net-6.0#fields
-                    using (TransactionScope transactionScope = new(TransactionScopeOption.Required,
-                                                                    new TransactionOptions
-                                                                    {
-                                                                        IsolationLevel = System.Transactions.IsolationLevel.ReadCommitted
-                                                                    },
-                                                                    TransactionScopeAsyncFlowOption.Enabled))
+                    using (TransactionScope transactionScope = ConstructReadCommittedTransactionScope())
                     {
                         upsertOperationResult = await PerformUpsertOperation(
                                                             parameters,
@@ -437,17 +402,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 try
                 {
-                    // Creating an implicit transaction
-                    // https://learn.microsoft.com/en-us/dotnet/framework/data/transactions/implementing-an-implicit-transaction-using-transaction-scope
-                    // TransactionScopeOption.Required: https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeoption?view=net-6.0#fields
-                    // TransactionScopeAsyncFlowOption.Enabled: https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeasyncflowoption?view=net-6.0#fields
-                    using (TransactionScope transactionScope = new(
-                                                            TransactionScopeOption.Required,
-                                                            new TransactionOptions
-                                                            {
-                                                                IsolationLevel = System.Transactions.IsolationLevel.ReadCommitted
-                                                            },
-                                                            TransactionScopeAsyncFlowOption.Enabled))
+                    // Creating an implicit transaction                    
+                    using (TransactionScope transactionScope = ConstructReadCommittedTransactionScope())
                     {
                         mutationResultRow =
                                 await PerformMutationOperation(
@@ -962,6 +918,24 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private HttpContext GetHttpContext()
         {
             return _httpContextAccessor.HttpContext!;
+        }
+
+        /// <summary>
+        /// Helper method to construct a transactionscope object at Read Committed isolation level
+        /// with the TransactionScopeAsyncFlowOption option enabled
+        /// </summary>
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/framework/data/transactions/implementing-an-implicit-transaction-using-transaction-scope"/>
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeoption?view=net-6.0#fields" />
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeasyncflowoption?view=net-6.0#fields" />
+        /// <returns>TransactionScope object set at Read Committed isolation level</returns>
+        private static TransactionScope ConstructReadCommittedTransactionScope()
+        {
+            return new(TransactionScopeOption.Required,
+                           new TransactionOptions
+                           {
+                               IsolationLevel = System.Transactions.IsolationLevel.ReadCommitted
+                           },
+                           TransactionScopeAsyncFlowOption.Enabled);
         }
 
         /// <summary>

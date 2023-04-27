@@ -852,6 +852,30 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed}");
         }
 
+        /// <summary>
+        /// Test to validate failure of a request when one or more fields referenced in the database policy for create operation are not provided in the request body.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public virtual async Task TestDbPolicyForCreateOperationReferencingFieldAbsentInRequest()
+        {
+            string graphQLMutationName = "createSupportedType";
+            string graphQLMutation = @"
+                mutation {
+                    createRevenue(item: { id: 18, category: ""SciFi"", accessible_role: ""Anonymous"" })
+                            {
+                                id
+                            }
+                        }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true, clientRoleHeader: "database_policy_tester");
+            SqlTestHelper.TestForErrorInGraphQLResponse(
+                actual.ToString(),
+                message: "One or more fields referenced by the database policy are not present in the request body.",
+                statusCode: $"{DataApiBuilderException.SubStatusCodes.BadRequest}");
+        }
+
         #endregion
     }
 }

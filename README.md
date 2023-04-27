@@ -3,7 +3,7 @@
 [![NuGet Package](https://img.shields.io/nuget/v/microsoft.dataapibuilder.svg?color=success)](https://www.nuget.org/packages/Microsoft.DataApiBuilder)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-Latest version of Data API builder is **0.5.35** [What's new?](./docs/whats-new.md#version-0535)
+Latest version of Data API builder is **0.6.14** [What's new?](./docs/whats-new.md#version-0614)
 
 ## About
 
@@ -45,11 +45,15 @@ Documentation is available in the [`docs`](./docs) folder.
 
 Several samples are available already. To follow the [Getting Started](./docs/getting-started/getting-started.md) tutorial you'll find the associated code in the `./samples` folder.
 
-More samples, including end-to-end samples using the most common frontend frameworks, are available in the [https://github.com/Azure-Samples/data-api-builder] repository.
+More samples, including end-to-end samples using the most common frontend frameworks, are available in the https://github.com/Azure-Samples/data-api-builder repository
 
 ## Known Issues
 
 List of known issues and possible workarounds, where applicable and possible, is available here: [Known Issues](./docs/known-issues.md).
+
+## Development Roadmap
+
+Do you want to know what we're working on and what is the planned development roadmap for Data API builder? Or do you have some wonderful ideas on how to improve Data API builder and want to share them? Go here: https://github.com/Azure/data-api-builder/discussions/1377
 
 ## How to Contribute
 
@@ -73,6 +77,10 @@ If you want to propose a completely new feature, please create an RFC item. Good
 ## License
 
 **Data API builder for Azure Databases** is licensed under the MIT license. See the [LICENSE](./LICENSE.txt) file for more details.
+
+## Third-Party Component Notice
+
+If you use the third-party software Banana Cake Pop by ChilliCream, Inc., as part of your Data API builder solution, you may have the option to save your work on ChilliCream's cloud service, via your separate ChilliCream account.  Microsoft is not affiliated with and does not endorse ChilliCream's service, and you use those services at your own option.
 
 ## Trademarks
 

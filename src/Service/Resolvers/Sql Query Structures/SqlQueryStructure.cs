@@ -153,14 +153,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                                             value: predicate.Value);
             }
 
-            foreach (KeyValuePair<string, object?> predicate in context.FieldValuePairsInBody)
-            {
-                sqlMetadataProvider.TryGetBackingColumn(EntityName, predicate.Key, out string? backingColumn);
-                PopulateParamsAndPredicates(field: predicate.Key,
-                                            backingColumn: backingColumn!,
-                                            value: predicate.Value);
-            }
-
             // context.OrderByClauseOfBackingColumns will lack SourceAlias because it is created in RequestParser
             // which may be called for any type of operation. To avoid coupling the OrderByClauseOfBackingColumns
             // to only Find, we populate the SourceAlias in this constructor where we know we have a Find operation.
@@ -330,7 +322,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 AddGraphQLFields(queryField.SelectionSet.Selections, runtimeConfigProvider);
             }
 
-            HttpContext httpContext = GraphQLFilterParser.TryGetHttpContextFromMiddlewareContext(ctx);
+            HttpContext httpContext = GraphQLFilterParser.GetHttpContextFromMiddlewareContext(ctx);
             // Process Authorization Policy of the entity being processed.
             AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(Config.Operation.Read, queryStructure: this, httpContext, authorizationResolver, sqlMetadataProvider);
 
@@ -492,7 +484,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     PaginationColumn column = enumerator.Current;
                     column.TableAlias = SourceAlias;
                     column.ParamName = column.Value is not null ?
-                        MakeParamWithValue(GetParamAsColumnSystemType(column.Value!.ToString()!, column.ColumnName)) :
+                        MakeParamWithValue(GetParamAsSystemType(column.Value!.ToString()!, column.ColumnName, GetColumnSystemType(column.ColumnName))) :
                         MakeParamWithValue(null);
                     (columns ??= new List<PaginationColumn>()).Add(column);
                 }while(enumerator.MoveNext());
@@ -525,7 +517,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 if (value != null)
                 {
                     string parameterName = MakeParamWithValue(
-                        GetParamAsColumnSystemType(value.ToString()!, backingColumn));
+                        GetParamAsSystemType(value.ToString()!, backingColumn, GetColumnSystemType(backingColumn)));
+
                     Predicates.Add(new Predicate(
                         new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, backingColumn, SourceAlias)),
                         op,
@@ -533,7 +526,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 }
                 else
                 {
-                    // This case should not arise. We have issue for this to handle nullable type columns. Issue #146.
                     throw new DataApiBuilderException(
                         message: $"Unexpected value for column \"{field}\" provided.",
                         statusCode: HttpStatusCode.BadRequest,

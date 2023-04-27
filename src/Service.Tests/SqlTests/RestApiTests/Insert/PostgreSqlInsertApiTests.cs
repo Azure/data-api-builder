@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
@@ -246,6 +247,23 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             );
         }
 
+        #endregion
+
+        #region Tests for features yet to be implemented
+
+        [TestMethod]
+        [Ignore]
+        public override Task InsertOneFailingDatabasePolicy()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task InsertOneInTableWithFieldsInDbPolicyNotPresentInBody()
+        {
+            throw new NotImplementedException();
+        }
         #endregion
 
         #region Test Fixture Setup

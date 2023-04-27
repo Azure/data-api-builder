@@ -293,33 +293,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             );
         }
 
-        /// <summary>
-        /// Test to validate failure of an insert operation which tries to insert a record
-        /// that doesn't satisfy the database policy (@item.name ne 'New publisher')
-        /// </summary>
-        [TestMethod]
-        public virtual async Task InsertOneFailingDatabasePolicy()
-        {
-            string requestBody = @"
-            {
-                ""name"": ""New publisher""
-            }";
-
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: string.Empty,
-                queryString: string.Empty,
-                entityNameOrPath: _foreignKeyEntityName,
-                sqlQuery: string.Empty,
-                operationType: Config.Operation.Insert,
-                requestBody: requestBody,
-                exceptionExpected: true,
-                expectedStatusCode: HttpStatusCode.Forbidden,
-                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed.ToString(),
-                expectedErrorMessage: "Could not insert row with given values.",
-                clientRoleHeader: "database_policy_tester"
-            );
-        }
-
         #region RestApiTestBase Overrides
 
         public override string GetQuery(string key)

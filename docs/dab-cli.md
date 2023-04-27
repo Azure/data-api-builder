@@ -46,7 +46,10 @@ Initializes the runtime configuration for the Data API builder runtime engine. I
 | **--host-mode** | false   | production   | Specify the Host mode - development or production   |
 | **--cors-origin** | false   | ""   | Specify the list of allowed origins.   |
 | **--auth.provider** | false   | StaticWebApps   | Specify the Identity Provider.   |
-| **--rest.path** | false   | /api   | Specify the REST endpoint's default prefix.   |
+| **--rest.path** | false   | /api   | Specify the REST endpoint's prefix.   |
+| **--rest.disabled** | false   | false   | Disables REST endpoint for all entities.   |
+| **--graphql.path** | false   | /graphql   | Specify the GraphQL endpoint's prefix.   |
+| **--graphql.disabled** | false   | false   | Disables GraphQL endpoint for all entities.   |
 | **--auth.audience** | false   | -   | Identifies the recipients that the JWT is intended for.   |
 | **--auth.issuer** | false   | -   | Specify the party that issued the JWT token.   |
 | **-c, --config** | false   | dab-config.json   | Path to config file.   |
@@ -65,7 +68,7 @@ Add new database entity to the configuration file. Make sure you already have a 
 | **--permissions** | true   | -   | Permissions required to access the source table or container. Format "[role]:[actions]"   |
 | **--source.type** | false   | table   | Type of the database object.Must be one of: [table, view, stored-procedure]   |
 | **--source.params** | false   | -   | Dictionary of parameters and their values for Source object."param1:val1,param2:value2,.." for Stored-Procedures.   |
-| **--source.key-fields** | false   | -   | The field(s) to be used as primary keys for tables and views only. Comma separated values. Example `--source.key-fields "id,name,type"`  |
+| **--source.key-fields** | true when `--source.type` is view   | -   | The field(s) to be used as primary keys for tables and views only. Comma separated values. Example `--source.key-fields "id,name,type"`  |
 | **--rest** | false   | case sensitive entity name.  | Route for REST API. Example:<br/> `--rest: false` -> Disables REST API  calls for this entity.<br/> `--rest: true` -> Entity name becomes the rest path.<br/> `--rest: "customPathName"` -> Provided customPathName becomes the REST path.|
 | **--rest.methods** | false   | post   | HTTP actions to be supported for stored procedure. Specify the actions as a comma separated list. Valid HTTP actions are :[get, post, put, patch, delete]   |
 | **--graphql** | false   | case sensitive entity name  | Entity type exposed for GraphQL. Example:<br/> `--graphql: false` -> disales graphql calls for this entity.<br/> `--graphql: true` -> Exposes the entity for GraphQL with default names. The singular form of the entity name will be considered for the query and mutation names.<br/> `--graphql: "customQueryName"` -> Lets the user customize the singular and plural name for queries and mutations. |
@@ -95,6 +98,20 @@ Update the properties of any database entity in the configuration file.
 | **--linking.target.fields** | false   | -   | Database fields in the linking object to connect to the related item in the target entity. Comma separated fields.  |
 | **--relationship.fields** | false   | -   | Specify fields to be used for mapping the entities. Example: `--relationship.fields "id:book_id"`. Here `id` represents column from sourceEntity, while `book_id` from targetEntity. Foreign keys are required between the underlying sources if not specified.  |
 | **-m, --map** | false   | -   | Specify mappings between database fields and GraphQL and REST fields. format: --map "backendName1:exposedName1,backendName2:exposedName2,...".   |
+
+### **`export`**
+Export the required schema as a file and save to disk based on the options.
+
+**Syntax**: `dab export [options]`
+
+**Example**: `dab export --graphql -o ./schemas`
+
+| Options | Required    | Default Value    | Description |
+| :---   | :--- | :--- | :--- |
+| **--graphql** | false   | false   | Export GraphQL schema.   |
+| **-o, --output** | true   | -   | Specify the directory to save the schema file.   |
+| **-g, --graphql-schema-file** | false   | schema.graphql   | Specify the name of the Graphql schema file.   |
+| **-c, --config** | false   | dab-config.json   | Path to config file.   |
 
 ### **`start`**
 Start the runtime engine with the provided configuration file for serving REST and GraphQL requests.

@@ -295,10 +295,10 @@ a more complete option is to specify the full description of the database if tha
 
 where
 
-+ `object` is the name of the database object to be used
-+ `type` describes if the object is a table, a view or a stored procedure
-+ `key-fields` is a list of columns to be used to uniquely identify an item. Needed if type is `view` or if type is `table` and there is no Primary Key defined on it
-+ `parameters` is optional and can be used if type is `stored-procedure`. The key-value pairs specified in this object will be used to supply values to stored procedures parameters, in case those are not specified in the HTTP request
++ `object` is the name of the database object to be used.
++ `type` describes if the object is a table, a view or a stored procedure.
++ `key-fields` is a list of columns to be used to uniquely identify an item. Needed if type is `view` or if type is `table` and there is no Primary Key defined on it.
++ `parameters` is optional and can be used if type is `stored-procedure`. The key-value pairs specified in this object will be used to supply values to stored procedures parameters, in case those are not specified in the HTTP request.
 
 More details on how to use Views and Stored Procedure in the related documentation [Views and Stored Procedures](./views-and-stored-procedures.md)
 

@@ -74,6 +74,12 @@ type Moon @model(name:""Moon"") @authorize(policy: ""Crater"") {
             //create mock authorization resolver where mock entityPermissionsMap is created for Planet and Character.
             Mock<IAuthorizationResolver> authorizationResolverCosmos = new();
             authorizationResolverCosmos.Setup(x => x.EntityPermissionsMap).Returns(GetEntityPermissionsMap(new string[] { "Character", "Planet", "StarAlias", "Moon" }));
+            authorizationResolverCosmos.Setup(x => x.AreColumnsAllowedForOperation(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<Config.Operation>(),
+                It.IsAny<IEnumerable<string>>()
+                )).Returns(false);
 
             _application = new WebApplicationFactory<Startup>()
                 .WithWebHostBuilder(builder =>

@@ -15,7 +15,7 @@ namespace Cli.Tests
         /// Setup the logger and test file for CLI
         /// </summary>
         [ClassInitialize]
-        public static void Setup()
+        public static void Setup(TestContext context)
         {
             if (!File.Exists(TEST_SCHEMA_FILE))
             {
@@ -277,6 +277,46 @@ namespace Cli.Tests
                 config: TEST_RUNTIME_CONFIG_FILE);
 
             Assert.AreEqual(expectedResult, ConfigGenerator.TryCreateRuntimeConfig(options, out _));
+        }
+
+        /// <summary>
+        /// Test to verify creation of initial config with special characters
+        /// such as [!,@,#,$,%,^,&,*, ,(,)] in connection-string.
+        /// </summary>
+        [TestMethod]
+        public void TestSpecialCharactersInConnectionString()
+        {
+            InitOptions options = new(
+                databaseType: DatabaseType.mssql,
+                connectionString: "A!string@with#some$special%characters^to&check*proper(serialization)including space.",
+                cosmosNoSqlDatabase: null,
+                cosmosNoSqlContainer: null,
+                graphQLSchemaPath: null,
+                setSessionContext: false,
+                hostMode: HostModeType.Production,
+                corsOrigin: null,
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                config: TEST_RUNTIME_CONFIG_FILE);
+
+            _basicRuntimeConfig =
+            @"{" +
+                @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+                @"""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""A!string@with#some$special%characters^to&check*proper(serialization)including space."",
+                    ""options"":{
+                        ""set-session-context"": false
+                    }
+                },
+                ""entities"": {}
+            }";
+
+            // Adding runtime settings to the above basic config
+            string expectedRuntimeConfig = AddPropertiesToJson(
+                _basicRuntimeConfig,
+                GetDefaultTestRuntimeSettingString()
+            );
+            RunTest(options, expectedRuntimeConfig);
         }
 
         /// <summary>

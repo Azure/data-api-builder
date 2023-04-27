@@ -110,6 +110,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
                                 type = EdmPrimitiveTypeKind.Boolean;
                                 break;
                             case "DateTime":
+                            case "DateTimeOffset":
                                 type = EdmPrimitiveTypeKind.DateTimeOffset;
                                 break;
                             case "Date":

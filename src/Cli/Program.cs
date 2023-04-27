@@ -42,8 +42,8 @@ namespace Cli
             bool isHelpOrVersionRequested = false;
 
             // Parsing user arguments and executing required methods.
-            ParserResult<object>? result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions>(args)
-                .WithParsed<InitOptions>(options =>
+            ParserResult<object>? result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions, ExportOptions>(args)
+                .WithParsed((Action<InitOptions>)(options =>
                 {
                     cliLogger.LogInformation($"{PRODUCT_NAME} {GetProductVersion()}");
                     bool isSuccess = ConfigGenerator.TryGenerateConfig(options);
@@ -56,8 +56,8 @@ namespace Cli
                     {
                         cliLogger.LogError($"Could not generate config file.");
                     }
-                })
-                .WithParsed<AddOptions>(options =>
+                }))
+                .WithParsed((Action<AddOptions>)(options =>
                 {
                     cliLogger.LogInformation($"{PRODUCT_NAME} {GetProductVersion()}");
                     if (!IsEntityProvided(options.Entity, cliLogger, command: "add"))
@@ -77,8 +77,8 @@ namespace Cli
                         cliLogger.LogError($"Could not add entity: {options.Entity} with source: {options.Source}" +
                             $" and permissions: {string.Join(SEPARATOR, options.Permissions.ToArray())}.");
                     }
-                })
-                .WithParsed<UpdateOptions>(options =>
+                }))
+                .WithParsed((Action<UpdateOptions>)(options =>
                 {
                     cliLogger.LogInformation($"{PRODUCT_NAME} {GetProductVersion()}");
                     if (!IsEntityProvided(options.Entity, cliLogger, command: "update"))
@@ -96,8 +96,8 @@ namespace Cli
                     {
                         cliLogger.LogError($"Could not update the entity: {options.Entity}.");
                     }
-                })
-                .WithParsed<StartOptions>(options =>
+                }))
+                .WithParsed((Action<StartOptions>)(options =>
                 {
                     cliLogger.LogInformation($"{PRODUCT_NAME} {GetProductVersion()}");
                     bool isSuccess = ConfigGenerator.TryStartEngineWithOptions(options);
@@ -106,7 +106,11 @@ namespace Cli
                     {
                         cliLogger.LogError("Failed to start the engine.");
                     }
-                })
+                }))
+                .WithParsed((Action<ExportOptions>)(options =>
+                {
+                    Exporter.Export(options, cliLogger);
+                }))
                 .WithNotParsed(err =>
                 {
                     /// System.CommandLine considers --help and --version as NonParsed Errors

@@ -361,7 +361,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// Join predicate strings while ignoring empty or null predicates
         /// </summary>
-        /// <returns>returns "1 = 1" if no valid predicates</returns>
+        /// <param name="predicateStrings">Array of predicate strings coming from filters in query string,
+        /// primary key predicates or database policies.</param>
+        /// <returns>predicate strings joined with AND operator. "1=1" if there are no predicate strings.</returns>
         public string JoinPredicateStrings(params string?[] predicateStrings)
         {
             IEnumerable<string> validPredicates = predicateStrings.Where(s => !string.IsNullOrEmpty(s)).Select(s => s!);

@@ -3,7 +3,7 @@
 [![NuGet Package](https://img.shields.io/nuget/v/microsoft.dataapibuilder.svg?color=success)](https://www.nuget.org/packages/Microsoft.DataApiBuilder)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-Latest version of Data API builder is **0.6.13** [What's new?](./docs/whats-new.md#version-0613)
+Latest version of Data API builder is **0.6.14** [What's new?](./docs/whats-new.md#version-0614)
 
 ## About
 
@@ -77,6 +77,10 @@ If you want to propose a completely new feature, please create an RFC item. Good
 ## License
 
 **Data API builder for Azure Databases** is licensed under the MIT license. See the [LICENSE](./LICENSE.txt) file for more details.
+
+## Third-Party Component Notice
+
+If you use the third-party software Banana Cake Pop by ChilliCream, Inc., as part of your Data API builder solution, you may have the option to save your work on ChilliCream's cloud service, via your separate ChilliCream account.  Microsoft is not affiliated with and does not endorse ChilliCream's service, and you use those services at your own option.
 
 ## Trademarks
 

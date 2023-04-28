@@ -16,16 +16,16 @@ namespace Azure.DataApiBuilder.Config
         /// <summary>
         /// Parse the string and call the helper methods to merge based on their value kind, i.e. Objects or Array.
         /// </summary>
-        public static string Merge(string originalJson, string newContent)
+        public static string Merge(string originalJson, string overridingJson)
         {
             ArrayBufferWriter<byte> outputBuffer = new();
 
-            using (JsonDocument jDoc1 = JsonDocument.Parse(originalJson))
-            using (JsonDocument jDoc2 = JsonDocument.Parse(newContent))
+            using (JsonDocument originalJsonDoc = JsonDocument.Parse(originalJson))
+            using (JsonDocument overridingJsonDoc = JsonDocument.Parse(overridingJson))
             using (Utf8JsonWriter jsonWriter = new(outputBuffer, new JsonWriterOptions { Indented = true }))
             {
-                JsonElement root1 = jDoc1.RootElement;
-                JsonElement root2 = jDoc2.RootElement;
+                JsonElement root1 = originalJsonDoc.RootElement;
+                JsonElement root2 = overridingJsonDoc.RootElement;
 
                 if (root1.ValueKind != JsonValueKind.Array && root1.ValueKind != JsonValueKind.Object)
                 {

@@ -87,7 +87,11 @@ namespace Azure.DataApiBuilder.Service.Exceptions
             /// <summary>
             /// Attempting to generate OpenAPI document failed.
             /// </summary>
-            OpenApiDocumentGenerationFailure
+            OpenApiDocumentGenerationFailure,
+            /// <summary>
+            /// Global REST endpoint disabled in runtime configuration.
+            /// </summary>
+            GlobalRestEndpointDisabled
         }
 
         public HttpStatusCode StatusCode { get; }

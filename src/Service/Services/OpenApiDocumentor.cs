@@ -30,6 +30,10 @@ namespace Azure.DataApiBuilder.Service.Services
         private OpenApiResponses _defaultOpenApiResponses;
         private OpenApiDocument? _openApiDocument;
 
+        private const string DOCUMENTOR_VERSION = "PREVIEW";
+        private const string DOCUMENTOR_UI_TITLE = "Data API builder - REST Endpoint";
+        private const string DOCUMENT_ALREADY_GENERATED_ERROR = "OpenAPI description document already generated.";
+        private const string DOCUMENT_CREATION_UNSUPPORTED_ERROR = "OpenAPI description document can't be created when the REST endpoint is disabled globally.";
         private const string JSON_MEDIA_TYPE = "application/json";
         private const string GETALL_DESCRIPTION = "Returns entities.";
         private const string GETONE_DESCRIPTION = "Returns an entity.";
@@ -88,9 +92,17 @@ namespace Azure.DataApiBuilder.Service.Services
             if (_openApiDocument is not null)
             {
                 throw new DataApiBuilderException(
-                    message: "OpenAPI description document already generated.",
+                    message: DOCUMENT_ALREADY_GENERATED_ERROR,
                     statusCode: HttpStatusCode.Conflict,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.OpenApiDocumentAlreadyExists);
+            }
+
+            if (!_runtimeConfig.RestGlobalSettings.Enabled)
+            {
+                throw new DataApiBuilderException(
+                    message: DOCUMENT_CREATION_UNSUPPORTED_ERROR,
+                    statusCode: HttpStatusCode.NotFound,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.GlobalRestEndpointDisabled);
             }
 
             try
@@ -104,8 +116,8 @@ namespace Azure.DataApiBuilder.Service.Services
                 {
                     Info = new OpenApiInfo
                     {
-                        Version = "PREVIEW",
-                        Title = "Data API builder - REST Endpoint",
+                        Version = DOCUMENTOR_VERSION,
+                        Title = DOCUMENTOR_UI_TITLE,
                     },
                     Servers = new List<OpenApiServer>
                     {

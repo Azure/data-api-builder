@@ -211,11 +211,18 @@ namespace Cli.Tests
         [TestMethod]
         public void TestMergeConfig()
         {
-            Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, "Test");
-            File.WriteAllText("dab-config.json", CONFIG_TO_MERGE);
-            File.WriteAllText("dab-config.Test.json", CONFIG_TO_MERGE_WITH);
-            string mergedConfig = MergeConfigsIfAvailable();
-            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(MERGED_CONFIG), JObject.Parse(File.ReadAllText(mergedConfig))));
+            try
+            {
+                Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, "Test");
+                File.WriteAllText("dab-config.json", CONFIG_TO_MERGE);
+                File.WriteAllText("dab-config.Test.json", CONFIG_TO_MERGE_WITH);
+                string mergedConfig = MergeConfigsIfAvailable();
+                Assert.IsTrue(JToken.DeepEquals(JObject.Parse(MERGED_CONFIG), JObject.Parse(File.ReadAllText(mergedConfig))));
+            }
+            catch (Exception e)
+            {
+                Assert.Fail(message: $"Failed to merge the config file with error message: {e.Message}");
+            }
         }
 
         [ClassCleanup]

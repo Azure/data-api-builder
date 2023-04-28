@@ -204,7 +204,7 @@ namespace Azure.DataApiBuilder.Service.Models
                                     schemaName,
                                     sourceName,
                                     sourceAlias,
-                                    queryStructure.MakeParamWithValue)));
+                                    queryStructure.MakeDbConnectionParam)));
                     }
                 }
             }

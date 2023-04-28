@@ -459,7 +459,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                                                     columnName: columnName,
                                                     tableAlias: SourceAlias)),
                     PredicateOperation.Equal,
-                    new PredicateOperand($"{MakeParamWithValue(parameter.Value, columnName)}")
+                    new PredicateOperand($"{MakeDbConnectionParam(parameter.Value, columnName)}")
                 ));
             }
         }
@@ -479,8 +479,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 column.TableAlias = SourceAlias;
                 column.ParamName = column.Value is not null ?
-                     MakeParamWithValue(GetParamAsSystemType(column.Value!.ToString()!, column.ColumnName, GetColumnSystemType(column.ColumnName))) :
-                     MakeParamWithValue(null, column.ColumnName);
+                     MakeDbConnectionParam(GetParamAsSystemType(column.Value!.ToString()!, column.ColumnName, GetColumnSystemType(column.ColumnName))) :
+                     MakeDbConnectionParam(null, column.ColumnName);
             }
 
             PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(afterJsonValues.ToList());
@@ -501,7 +501,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 string parameterName;
                 if (value != null)
                 {
-                    parameterName = MakeParamWithValue(
+                    parameterName = MakeDbConnectionParam(
                         GetParamAsSystemType(value.ToString()!, backingColumn, GetColumnSystemType(backingColumn)), backingColumn);
                     Predicates.Add(new Predicate(
                         new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, backingColumn, SourceAlias)),
@@ -847,7 +847,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             foreach (LabelledColumn column in Columns)
             {
-                ColumnLabelToParam.Add(column.Label, $"{MakeParamWithValue(column.Label)}");
+                ColumnLabelToParam.Add(column.Label, $"{MakeDbConnectionParam(column.Label)}");
             }
         }
     }

@@ -48,11 +48,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     string? parametrizedName = null;
                     if (requestParamValue is not null)
                     {
-                        parametrizedName = MakeParamWithValue(GetParamAsSystemType(requestParamValue.ToString()!, paramKey, systemType), paramKey);
+                        parametrizedName = MakeDbConnectionParam(GetParamAsSystemType(requestParamValue.ToString()!, paramKey, systemType), paramKey);
                     }
                     else
                     {
-                        parametrizedName = MakeParamWithValue(null, paramKey);
+                        parametrizedName = MakeDbConnectionParam(null, paramKey);
                     }
 
                     ProcedureParameters.Add(paramKey, $"{parametrizedName}");
@@ -63,7 +63,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     if (paramDefinition.HasConfigDefault)
                     {
                         object? value = paramDefinition.ConfigDefaultValue == null ? null : GetParamAsSystemType(paramDefinition.ConfigDefaultValue!.ToString()!, paramKey, systemType);
-                        string parameterizedName = MakeParamWithValue(value, paramKey);
+                        string parameterizedName = MakeDbConnectionParam(value, paramKey);
                         ProcedureParameters.Add(paramKey, $"{parameterizedName}");
                     }
                     else

@@ -87,7 +87,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
         {
             if (nodeIn.TypeReference is not null)
             {
-                return $"{_struct.MakeParamWithValue(GetParamWithSystemType(nodeIn.Value.ToString()!, nodeIn.TypeReference))}";
+                return $"{_struct.MakeDbConnectionParam(GetParamWithSystemType(nodeIn.Value.ToString()!, nodeIn.TypeReference))}";
             }
 
             // Represents a NULL value, we support NULL in queries so return "NULL" here
@@ -260,7 +260,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
 
         /// <summary>
         /// Helper method to populate the DbType for the property referenced in the OData filter.
-        /// Since this nodes are processed in a postorder fashion, the current BinaryOperatorNode has already been processed,
+        /// Since the nodes are processed in a postorder fashion, the current BinaryOperatorNode has already been processed,
         /// and the parameter is already created for the property.
         /// We just need to populate the DbType.
         /// </summary>

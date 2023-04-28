@@ -48,11 +48,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc/>
-        public override string MakeParamWithValue(object? value, string? columnName = null)
+        public override string MakeDbConnectionParam(object? value, string? columnName = null)
         {
-            string paramName = $"{PARAM_NAME_PREFIX}param{Counter.Next()}";
-            Parameters.Add(paramName, new(value));
-            return paramName;
+            string encodedParamName = $"{PARAM_NAME_PREFIX}param{Counter.Next()}";
+            Parameters.Add(encodedParamName, new(value));
+            return encodedParamName;
         }
 
         private static IEnumerable<LabelledColumn> GenerateQueryColumns(SelectionSetNode selectionSet, DocumentNode document, string tableName)
@@ -187,7 +187,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     Predicates.Add(new Predicate(
                         new PredicateOperand(new Column(tableSchema: string.Empty, _containerAlias, parameter.Key)),
                         PredicateOperation.Equal,
-                        new PredicateOperand($"{MakeParamWithValue(parameter.Value)}")
+                        new PredicateOperand($"{MakeDbConnectionParam(parameter.Value)}")
                     ));
                 }
             }

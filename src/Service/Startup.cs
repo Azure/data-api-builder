@@ -357,10 +357,9 @@ namespace Azure.DataApiBuilder.Service
             }
 
             app.UseStaticFiles();
-            //app.UseSwagger();
             app.UseSwaggerUI(c =>
             {
-                c.SwaggerEndpoint("/api/openapi", "DataAPIbuilder-OpenAPI-Alpha");
+                c.SwaggerEndpoint("/openapi", "DataAPIbuilder-OpenAPI-Alpha");
             }
             );
 

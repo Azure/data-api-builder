@@ -8,6 +8,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Mime;
 using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
@@ -34,7 +35,6 @@ namespace Azure.DataApiBuilder.Service.Services
         private const string DOCUMENTOR_UI_TITLE = "Data API builder - REST Endpoint";
         private const string DOCUMENT_ALREADY_GENERATED_ERROR = "OpenAPI description document already generated.";
         private const string DOCUMENT_CREATION_UNSUPPORTED_ERROR = "OpenAPI description document can't be created when the REST endpoint is disabled globally.";
-        private const string JSON_MEDIA_TYPE = "application/json";
         private const string GETALL_DESCRIPTION = "Returns entities.";
         private const string GETONE_DESCRIPTION = "Returns an entity.";
         private const string POST_DESCRIPTION = "Create entity.";
@@ -101,12 +101,13 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 throw new DataApiBuilderException(
                     message: DOCUMENT_CREATION_UNSUPPORTED_ERROR,
-                    statusCode: HttpStatusCode.NotFound,
+                    statusCode: HttpStatusCode.MethodNotAllowed,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.GlobalRestEndpointDisabled);
             }
 
             try
             {
+                string restEndpointPath = _runtimeConfig.RestGlobalSettings.Path;
                 OpenApiComponents components = new()
                 {
                     Schemas = CreateComponentSchemas()
@@ -121,14 +122,14 @@ namespace Azure.DataApiBuilder.Service.Services
                     },
                     Servers = new List<OpenApiServer>
                     {
-                        new OpenApiServer { Url = "https://localhost:5000/api/openapi" }
+                        new OpenApiServer { Url = $"{restEndpointPath}" }
                     },
                     Paths = BuildPaths(),
                     Components = components
                 };
                 _openApiDocument = doc;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 throw new DataApiBuilderException(
                     message: "OpenAPI description document generation failed.",
@@ -197,14 +198,14 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 openApiTag
             };
-            
+
             if (includePrimaryKeyPathComponent)
             {
                 Tuple<string, List<OpenApiParameter>> pkComponents = CreatePrimaryKeyPathComponentAndParameters(entityName);
                 string pkPathComponents = pkComponents.Item1;
                 string fullPathComponent = entityBasePathComponent + pkPathComponents;
 
-                OpenApiOperation getOperation =  new()
+                OpenApiOperation getOperation = new()
                 {
                     Description = GETONE_DESCRIPTION,
                     Tags = tags,
@@ -263,7 +264,6 @@ namespace Azure.DataApiBuilder.Service.Services
                     Description = GETALL_DESCRIPTION,
                     Tags = tags,
                     Responses = new(_defaultOpenApiResponses),
-                    RequestBody = CreateOpenApiRequestBodyPayload(schemaReferenceId, requestBodyRequired)
                 };
                 getAllOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
 
@@ -306,7 +306,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 Content = new Dictionary<string, OpenApiMediaType>()
                 {
                     {
-                        JSON_MEDIA_TYPE,
+                        MediaTypeNames.Application.Json,
                         new()
                         {
                             Schema = new OpenApiSchema()
@@ -467,11 +467,11 @@ namespace Azure.DataApiBuilder.Service.Services
                 Dictionary<string, OpenApiMediaType> contentDictionary = new()
                 {
                     {
-                        JSON_MEDIA_TYPE,
+                        MediaTypeNames.Application.Json,
                         CreateResponseContainer(responseObjectSchemaName)
                     }
                 };
-                response.Content = contentDictionary;                
+                response.Content = contentDictionary;
             }
 
             return response;
@@ -577,12 +577,12 @@ namespace Azure.DataApiBuilder.Service.Services
             if (!_metadataProvider.EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? dbObject) || dbObject is null)
             {
                 throw new DataApiBuilderException(
-                    message: "Entity's database object metadata not found.", 
-                    statusCode: HttpStatusCode.InternalServerError, 
+                    message: "Entity's database object metadata not found.",
+                    statusCode: HttpStatusCode.InternalServerError,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.OpenApiDocumentAlreadyExists);
             }
 
-            Dictionary<string, OpenApiSchema> properties = new();            
+            Dictionary<string, OpenApiSchema> properties = new();
             foreach (string field in fields)
             {
                 if (_metadataProvider.TryGetBackingColumn(entityName, field, out string? backingColumnValue) && !string.IsNullOrEmpty(backingColumnValue))

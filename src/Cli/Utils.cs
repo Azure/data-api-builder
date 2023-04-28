@@ -843,7 +843,7 @@ namespace Cli
             EntityRestOptions restOptions = new(supportedHttpVerbs);
             if (restRoute is null)
             {
-                return restOptions;
+                return restOptions with { Enabled = false };
             }
             else
             {
@@ -874,7 +874,7 @@ namespace Cli
 
             if (graphQL is null)
             {
-                return graphQLType;
+                return graphQLType with { Enabled = false };
             }
             else
             {

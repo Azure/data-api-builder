@@ -32,7 +32,26 @@ internal class EntitySourceConverterFactory : JsonConverterFactory
             JsonSerializerOptions innerOptions = new(options);
             innerOptions.Converters.Remove(innerOptions.Converters.First(c => c is EntitySourceConverterFactory));
 
-            return JsonSerializer.Deserialize<EntitySource>(ref reader, innerOptions);
+            EntitySource? source = JsonSerializer.Deserialize<EntitySource>(ref reader, innerOptions);
+
+            if (source?.Parameters is not null)
+            {
+                return source with { Parameters = source.Parameters.ToDictionary(p => p.Key, p => GetClrValue((JsonElement)p.Value)) };
+            }
+
+            return source;
+        }
+
+        private static object GetClrValue(JsonElement element)
+        {
+            return element.ValueKind switch
+            {
+                JsonValueKind.String => element.GetString() ?? "",
+                JsonValueKind.Number => element.GetInt32(),
+                JsonValueKind.True => true,
+                JsonValueKind.False => false,
+                _ => element.ToString()
+            };
         }
 
         public override void Write(Utf8JsonWriter writer, EntitySource value, JsonSerializerOptions options)

@@ -46,6 +46,7 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
                     }
 
                     case "methods":
+                    {
                         List<SupportedHttpVerb> methods = new();
                         while (reader.Read())
                         {
@@ -64,6 +65,17 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
 
                         restOptions = restOptions with { Methods = methods.ToArray() };
                         break;
+                    }
+
+                    case "enabled":
+                    {
+                        reader.Read();
+                        restOptions = restOptions with { Enabled = reader.GetBoolean() };
+                        break;
+                    }
+
+                    default:
+                        throw new JsonException($"Unexpected property {propertyName}");
                 }
             }
 

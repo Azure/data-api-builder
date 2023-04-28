@@ -124,8 +124,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
             // when using cosmosdb_nosql database.
             if (runtimeConfig.DataSource.DatabaseType is DatabaseType.CosmosDB_NoSQL)
             {
-                CosmosDbDataSourceOptions? cosmosDbNoSql =
-                    runtimeConfig.DataSource.GetTypedOptions<CosmosDbDataSourceOptions>() ??
+                CosmosDbNoSQLDataSourceOptions? cosmosDbNoSql =
+                    runtimeConfig.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>() ??
                     throw new NotSupportedException("CosmosDB_NoSql is specified but no CosmosDB_NoSql configuration information has been provided.");
 
                 if (string.IsNullOrEmpty(cosmosDbNoSql.GraphQLSchemaPath))

@@ -19,7 +19,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         private readonly IFileSystem _fileSystem;
         private readonly DatabaseType _databaseType;
         private readonly RuntimeEntities _entities;
-        private CosmosDbDataSourceOptions _cosmosDb;
+        private CosmosDbNoSQLDataSourceOptions _cosmosDb;
         private readonly RuntimeConfig _runtimeConfig;
         private Dictionary<string, string> _partitionKeyPaths = new();
 
@@ -39,7 +39,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             _entities = _runtimeConfig.Entities;
             _databaseType = _runtimeConfig.DataSource.DatabaseType;
 
-            CosmosDbDataSourceOptions? cosmosDb = _runtimeConfig.DataSource.GetTypedOptions<CosmosDbDataSourceOptions>();
+            CosmosDbNoSQLDataSourceOptions? cosmosDb = _runtimeConfig.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>();
 
             if (cosmosDb is null)
             {

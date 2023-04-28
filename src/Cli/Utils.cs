@@ -918,8 +918,7 @@ namespace Cli
         {
             if (string.IsNullOrWhiteSpace(entity))
             {
-                cliLogger.LogError($"Entity name is missing. " +
-                            $"Usage: dab {command} [entity-name] [{command}-options]");
+                cliLogger.LogError($"Entity name is missing. Usage: dab {command} [entity-name] [{command}-options]");
                 return false;
             }
 

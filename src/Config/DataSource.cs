@@ -7,14 +7,14 @@ public record DataSource(DatabaseType DatabaseType, string ConnectionString, Dic
 {
     public TOptionType? GetTypedOptions<TOptionType>() where TOptionType : IDataSourceOptions
     {
-        if (typeof(TOptionType).IsAssignableFrom(typeof(CosmosDbDataSourceOptions)))
+        if (typeof(TOptionType).IsAssignableFrom(typeof(CosmosDbNoSQLDataSourceOptions)))
         {
-            return (TOptionType)(object)new CosmosDbDataSourceOptions(
+            return (TOptionType)(object)new CosmosDbNoSQLDataSourceOptions(
                     Database: ReadStringOption("database"),
                     Container: ReadStringOption("container"),
                     GraphQLSchemaPath: ReadStringOption("schema"),
                     // The "raw" schema will be provided via the controller to setup config, rather than parsed from the JSON file.
-                    GraphQLSchema: ReadStringOption(CosmosDbDataSourceOptions.GRAPHQL_RAW_KEY));
+                    GraphQLSchema: ReadStringOption(CosmosDbNoSQLDataSourceOptions.GRAPHQL_RAW_KEY));
         }
 
         if (typeof(TOptionType).IsAssignableFrom(typeof(MsSqlOptions)))
@@ -33,7 +33,7 @@ public record DataSource(DatabaseType DatabaseType, string ConnectionString, Dic
 }
 
 public interface IDataSourceOptions { }
-public record CosmosDbDataSourceOptions(string? Database, string? Container, string? GraphQLSchemaPath, string? GraphQLSchema) : IDataSourceOptions
+public record CosmosDbNoSQLDataSourceOptions(string? Database, string? Container, string? GraphQLSchemaPath, string? GraphQLSchema) : IDataSourceOptions
 {
     public static string GRAPHQL_RAW_KEY = "graphql-raw";
 }

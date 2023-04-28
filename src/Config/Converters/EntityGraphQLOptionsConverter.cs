@@ -16,7 +16,7 @@ internal class EntityGraphQLOptionsConverter : JsonConverter<EntityGraphQLOption
             string singular = string.Empty;
             string plural = string.Empty;
             bool enabled = true;
-            GraphQLOperation operation = GraphQLOperation.Query;
+            GraphQLOperation? operation = null;
 
             while (reader.Read())
             {
@@ -70,7 +70,12 @@ internal class EntityGraphQLOptionsConverter : JsonConverter<EntityGraphQLOption
 
                         case "operation":
                             string? op = reader.GetString();
-                            operation = Enum.Parse<GraphQLOperation>(op!, ignoreCase: true);
+
+                            if (op is not null)
+                            {
+                                operation = Enum.Parse<GraphQLOperation>(op, ignoreCase: true);
+                            }
+
                             break;
                     }
                 }
@@ -103,8 +108,10 @@ internal class EntityGraphQLOptionsConverter : JsonConverter<EntityGraphQLOption
         }
         else
         {
-            writer.WriteString("operation", JsonSerializer.Serialize(value.Operation, options));
+            writer.WritePropertyName("operation");
+            JsonSerializer.Serialize(writer, value.Operation, options);
         }
+
         writer.WriteEndObject();
     }
 }

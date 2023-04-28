@@ -110,7 +110,7 @@ public class RuntimeConfigProvider
                 }
 
                 // push the "raw" GraphQL schema into the options to pull out later when requested
-                runtimeConfig.DataSource.Options[CosmosDbDataSourceOptions.GRAPHQL_RAW_KEY] = JsonSerializer.SerializeToElement(graphQLSchema);
+                runtimeConfig.DataSource.Options[CosmosDbNoSQLDataSourceOptions.GRAPHQL_RAW_KEY] = JsonSerializer.SerializeToElement(graphQLSchema);
 
                 // SWA may provide CosmosDB database name in connectionString
                 string? database = dbConnectionStringBuilder.ContainsKey("Database") ? (string)dbConnectionStringBuilder["Database"] : null;

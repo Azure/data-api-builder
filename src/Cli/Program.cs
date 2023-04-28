@@ -14,6 +14,8 @@ namespace Cli
     /// </summary>
     public class Program
     {
+        public const string PRODUCT_NAME = "Microsoft.DataApiBuilder";
+
         /// <summary>
         /// Main CLI entry point
         /// </summary>
@@ -21,13 +23,6 @@ namespace Cli
         /// <returns>0 on success, -1 on failure.</returns>
         public static int Main(string[] args)
         {
-            Parser parser = new(settings =>
-                {
-                    settings.CaseInsensitiveEnumValues = true;
-                    settings.HelpWriter = Console.Out;
-                }
-            );
-
             // Setting up Logger for CLI.
             ILoggerFactory loggerFactory = new LoggerFactory();
             loggerFactory.AddProvider(new CustomLoggerProvider());
@@ -40,8 +35,19 @@ namespace Cli
             IFileSystem fileSystem = new FileSystem();
             RuntimeConfigLoader loader = new(fileSystem);
 
+            return Execute(args, cliLogger, fileSystem, loader);
+        }
+
+        public static int Execute(string[] args, ILogger cliLogger, IFileSystem fileSystem, RuntimeConfigLoader loader)
+        {
             // To know if `--help` or `--version` was requested.
             bool isHelpOrVersionRequested = false;
+
+            Parser parser = new(settings =>
+            {
+                settings.CaseInsensitiveEnumValues = true;
+                settings.HelpWriter = Console.Out;
+            });
 
             // Parsing user arguments and executing required methods.
             ParserResult<object>? result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions, ExportOptions>(args)

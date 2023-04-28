@@ -51,7 +51,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public override string MakeParamWithValue(object? value, string? columnName = null)
         {
             string paramName = $"{PARAM_NAME_PREFIX}param{Counter.Next()}";
-            Parameters.Add(paramName, new(value, null));
+            Parameters.Add(paramName, new(value));
             return paramName;
         }
 

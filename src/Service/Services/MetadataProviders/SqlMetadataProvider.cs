@@ -494,12 +494,12 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <param name="schemaNames"></param>
         /// <param name="tableNames"></param>
         /// <returns>The dictionary populated with parameters.</returns>
-        protected virtual Dictionary<string, Tuple<object?, DbType?>>
+        protected virtual Dictionary<string, DbConnectionParam>
             GetForeignKeyQueryParams(
                 string[] schemaNames,
                 string[] tableNames)
         {
-            Dictionary<string, Tuple<object?, DbType?>> parameters = new();
+            Dictionary<string, DbConnectionParam> parameters = new();
             string[] schemaNameParams =
                 BaseSqlQueryBuilder.CreateParams(
                     kindOfParam: BaseSqlQueryBuilder.SCHEMA_NAME_PARAM,
@@ -1265,7 +1265,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
             // Build the parameters dictionary for the foreign key info query
             // consisting of all schema names and table names.
-            Dictionary<string, Tuple<object?, DbType?>> parameters =
+            Dictionary<string, DbConnectionParam> parameters =
                 GetForeignKeyQueryParams(
                     schemaNames.ToArray(),
                     tableNames.ToArray());

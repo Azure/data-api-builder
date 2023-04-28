@@ -38,14 +38,9 @@ namespace Azure.DataApiBuilder.Service.Parsers
             string left = nodeIn.Left.Accept(this);
             string right = nodeIn.Right.Accept(this);
 
-            if (nodeIn.Left.GetType() == typeof(SingleValuePropertyAccessNode) && nodeIn.Right.GetType() == typeof(ConstantNode) ||
-                nodeIn.Left.GetType() == typeof(ConstantNode) && nodeIn.Right.GetType() == typeof(SingleValuePropertyAccessNode))
+            if (IsSimpleBinaryExpression(nodeIn))
             {
-                SingleValuePropertyAccessNode propertyNode = nodeIn.Left.GetType() == typeof(SingleValuePropertyAccessNode) ?
-                    (SingleValuePropertyAccessNode)nodeIn.Left : (SingleValuePropertyAccessNode)nodeIn.Right;
-                string? paramName = $"{BaseQueryStructure.PARAM_NAME_PREFIX}param{_struct.Counter.Current() - 1}";
-                _metadataProvider.TryGetBackingColumn(_struct.EntityName, propertyNode.Property.Name, out string? backingColumnName);
-                _struct.Parameters[paramName] = new(_struct.Parameters[paramName].Item1, _struct.GetUnderlyingSourceDefinition().Columns[backingColumnName!].DbType);
+                PopulateDbTypeForPropery(nodeIn);
             }
 
             return CreateResult(nodeIn.OperatorKind, left, right);
@@ -261,6 +256,35 @@ namespace Azure.DataApiBuilder.Service.Parsers
                 default:
                     throw new ArgumentException($"Uknown Predicate Operation of {op}");
             }
+        }
+
+        /// <summary>
+        /// Helper method to populate the DbType for the property referenced in the OData filter.
+        /// Since this nodes are processed in a postorder fashion, the current BinaryOperatorNode has already been processed,
+        /// and the parameter is already created for the property.
+        /// We just need to populate the DbType.
+        /// </summary>
+        /// <param name="nodeIn">Binary operator node<</param>
+        private void PopulateDbTypeForPropery(BinaryOperatorNode nodeIn)
+        {
+            SingleValuePropertyAccessNode propertyNode = nodeIn.Left.GetType() == typeof(SingleValuePropertyAccessNode) ?
+                    (SingleValuePropertyAccessNode)nodeIn.Left : (SingleValuePropertyAccessNode)nodeIn.Right;
+            string? paramName = $"{BaseQueryStructure.PARAM_NAME_PREFIX}param{_struct.Counter.Current() - 1}";
+            _metadataProvider.TryGetBackingColumn(_struct.EntityName, propertyNode.Property.Name, out string? backingColumnName);
+            _struct.Parameters[paramName].DbType = _struct.GetUnderlyingSourceDefinition().Columns[backingColumnName!].DbType;
+        }
+
+        /// <summary>
+        /// Helper method to determine if the BinaryOperatorNode represents a simple binary expression -
+        /// SingleValuePropertyAccessNode followed by ConstantNode or vice versa.
+        /// Eg. id gt 5, 'DAB' ne name, etc.
+        /// </summary>
+        /// <param name="nodeIn">Binary operator node</param>
+        /// <returns>Whether BinaryOperatorNode represents a simple binary expression.</returns>
+        private static bool IsSimpleBinaryExpression(BinaryOperatorNode nodeIn)
+        {
+            return nodeIn.Left.GetType() == typeof(SingleValuePropertyAccessNode) && nodeIn.Right.GetType() == typeof(ConstantNode) ||
+                nodeIn.Left.GetType() == typeof(ConstantNode) && nodeIn.Right.GetType() == typeof(SingleValuePropertyAccessNode);
         }
     }
 }

@@ -4,7 +4,6 @@
 # nullable disable
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -72,9 +71,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             Container container = _clientProvider.Client.GetDatabase(structure.Database).GetContainer(structure.Container);
             (string idValue, string partitionKeyValue) = await GetIdAndPartitionKey(parameters, container, structure);
 
-            foreach (KeyValuePair<string, Tuple<object, DbType?>> parameterEntry in structure.Parameters)
+            foreach (KeyValuePair<string, DbConnectionParam> parameterEntry in structure.Parameters)
             {
-                querySpec = querySpec.WithParameter(parameterEntry.Key, parameterEntry.Value.Item1);
+                querySpec = querySpec.WithParameter(parameterEntry.Key, parameterEntry.Value.Value);
             }
 
             if (!string.IsNullOrEmpty(partitionKeyValue))
@@ -155,9 +154,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             Container container = _clientProvider.Client.GetDatabase(structure.Database).GetContainer(structure.Container);
             QueryDefinition querySpec = new(_queryBuilder.Build(structure));
 
-            foreach (KeyValuePair<string, Tuple<object, DbType?>> parameterEntry in structure.Parameters)
+            foreach (KeyValuePair<string, DbConnectionParam> parameterEntry in structure.Parameters)
             {
-                querySpec = querySpec.WithParameter(parameterEntry.Key, parameterEntry.Value.Item1);
+                querySpec = querySpec.WithParameter(parameterEntry.Key, parameterEntry.Value.Value);
             }
 
             FeedIterator<JObject> resultSetIterator = container.GetItemQueryIterator<JObject>(querySpec);

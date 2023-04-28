@@ -1,9 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
 using System.Collections.Generic;
-using System.Data;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
@@ -53,7 +51,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// Parameters values required to execute the query.
         /// </summary>
-        public Dictionary<string, Tuple<object?, DbType?>> Parameters { get; set; }
+        public Dictionary<string, DbConnectionParam> Parameters { get; set; }
 
         /// <summary>
         /// Predicates that should filter the result set of the query.
@@ -120,7 +118,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else
             {
-                Parameters.Add(encodedParamName, new(value, null));
+                Parameters.Add(encodedParamName, new(value));
             }
 
             return encodedParamName;

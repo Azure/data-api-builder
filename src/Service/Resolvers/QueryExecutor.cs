@@ -67,7 +67,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <inheritdoc/>
         public virtual async Task<TResult?> ExecuteQueryAsync<TResult>(
             string sqltext,
-            IDictionary<string, Tuple<object?, DbType?>> parameters,
+            IDictionary<string, DbConnectionParam> parameters,
             Func<DbDataReader, List<string>?, Task<TResult>>? dataReaderHandler,
             HttpContext? httpContext = null,
             List<string>? args = null)
@@ -143,7 +143,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public virtual async Task<TResult?> ExecuteQueryAgainstDbAsync<TResult>(
             TConnection conn,
             string sqltext,
-            IDictionary<string, Tuple<object?, DbType?>> parameters,
+            IDictionary<string, DbConnectionParam> parameters,
             Func<DbDataReader, List<string>?, Task<TResult>>? dataReaderHandler,
             HttpContext? httpContext,
             List<string>? args = null)
@@ -159,16 +159,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             cmd.CommandText = sessionParamsQuery + sqltext;
             if (parameters is not null)
             {
-                foreach (KeyValuePair<string, Tuple<object?, DbType?>> parameterEntry in parameters)
+                foreach (KeyValuePair<string, DbConnectionParam> parameterEntry in parameters)
                 {
                     DbParameter parameter = cmd.CreateParameter();
                     parameter.ParameterName = parameterEntry.Key;
-                    parameter.Value = parameterEntry.Value.Item1 ?? DBNull.Value;
-                    if (parameterEntry.Value.Item2 is not null && ConfigProvider.GetRuntimeConfiguration().DatabaseType is DatabaseType.mssql)
-                    {
-                        parameter.DbType = (DbType)parameterEntry.Value.Item2;
-                    }
-
+                    parameter.Value = parameterEntry.Value.Value ?? DBNull.Value;
+                    PopulateDbTypeForParameter(parameterEntry, parameter);
                     cmd.Parameters.Add(parameter);
                 }
             }
@@ -196,9 +192,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <inheritdoc />
-        public virtual string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, Tuple<object?, DbType?>> parameters)
+        public virtual string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, DbConnectionParam> parameters)
         {
             return string.Empty;
+        }
+
+        /// <inheritdoc/>
+        public virtual void PopulateDbTypeForParameter(KeyValuePair<string, DbConnectionParam> parameterEntry, DbParameter parameter)
+        {
+            return;
         }
 
         /// <inheritdoc />

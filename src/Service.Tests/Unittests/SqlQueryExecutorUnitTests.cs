@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Azure.Core;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using Azure.Identity;
@@ -138,7 +139,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             queryExecutor.Setup(x => x.ExecuteQueryAgainstDbAsync(
                 It.IsAny<SqlConnection>(),
                 It.IsAny<string>(),
-                It.IsAny<IDictionary<string, Tuple<object, DbType?>>>(),
+                It.IsAny<IDictionary<string, DbConnectionParam>>(),
                 It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
                 It.IsAny<HttpContext>(),
                 It.IsAny<List<string>>()))
@@ -147,7 +148,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Call the actual ExecuteQueryAsync method.
             queryExecutor.Setup(x => x.ExecuteQueryAsync(
                 It.IsAny<string>(),
-                It.IsAny<IDictionary<string, Tuple<object, DbType?>>>(),
+                It.IsAny<IDictionary<string, DbConnectionParam>>(),
                 It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
                 It.IsAny<HttpContext>(),
                 It.IsAny<List<string>>())).CallBase();
@@ -156,7 +157,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 await queryExecutor.Object.ExecuteQueryAsync<object>(
                     sqltext: string.Empty,
-                    parameters: new Dictionary<string, Tuple<object, DbType?>>(),
+                    parameters: new Dictionary<string, DbConnectionParam>(),
                     dataReaderHandler: null,
                     httpContext: null,
                     args: null);
@@ -190,7 +191,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             queryExecutor.SetupSequence(x => x.ExecuteQueryAgainstDbAsync(
                 It.IsAny<SqlConnection>(),
                 It.IsAny<string>(),
-                It.IsAny<IDictionary<string, Tuple<object, DbType?>>>(),
+                It.IsAny<IDictionary<string, DbConnectionParam>>(),
                 It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
                 It.IsAny<HttpContext>(),
                 It.IsAny<List<string>>()))
@@ -201,7 +202,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Call the actual ExecuteQueryAsync method.
             queryExecutor.Setup(x => x.ExecuteQueryAsync(
                 It.IsAny<string>(),
-                It.IsAny<IDictionary<string, Tuple<object, DbType?>>>(),
+                It.IsAny<IDictionary<string, DbConnectionParam>>(),
                 It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
                 It.IsAny<HttpContext>(),
                 It.IsAny<List<string>>())).CallBase();
@@ -210,7 +211,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             await queryExecutor.Object.ExecuteQueryAsync<object>(
                     sqltext: sqltext,
-                    parameters: new Dictionary<string, Tuple<object, DbType?>>(),
+                    parameters: new Dictionary<string, DbConnectionParam>(),
                     dataReaderHandler: null,
                     args: null);
 

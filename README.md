@@ -3,7 +3,7 @@
 [![NuGet Package](https://img.shields.io/nuget/v/microsoft.dataapibuilder.svg?color=success)](https://www.nuget.org/packages/Microsoft.DataApiBuilder)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-Latest version of Data API builder is **0.6.14** [What's new?](./docs/whats-new.md#version-0614)
+Latest version of Data API builder is **0.6.14** [What's new?](https://learn.microsoft.com/azure/data-api-builder/whats-new)
 
 ## About
 
@@ -35,25 +35,25 @@ Data API builder is Open Source and works on any platform. It can be executed on
 
 ## Getting Started
 
-To get started quickly with Data API builder for Azure Databases, you can use the [Getting Started](./docs/getting-started/getting-started.md) tutorial, that will help to get familiar with some basic tools and concepts while giving you a good experience on how much Data API builder for Azure Databases can make you more efficient, but removing the need to write a lot of plumbing code.
+To get started quickly with Data API builder for Azure Databases, you can use the [Getting Started](https://learn.microsoft.com/azure/data-api-builder/get-started/get-started-with-data-api-builder) tutorial, that will help to get familiar with some basic tools and concepts while giving you a good experience on how much Data API builder for Azure Databases can make you more efficient, but removing the need to write a lot of plumbing code.
 
 ## Documentation
 
-Documentation is available in the [`docs`](./docs) folder.
+Documentation is available [here](https://learn.microsoft.com/azure/data-api-builder/).
 
 ## Samples
 
-Several samples are available already. To follow the [Getting Started](./docs/getting-started/getting-started.md) tutorial you'll find the associated code in the `./samples` folder.
+Several samples are available already. To follow the [Getting Started](https://learn.microsoft.com/azure/data-api-builder/get-started/get-started-with-data-api-builder) tutorial you'll find the associated code in the [`samples`](https://github.com/Azure/data-api-builder/tree/main/samples) folder.
 
-More samples, including end-to-end samples using the most common frontend frameworks, are available in the https://github.com/Azure-Samples/data-api-builder repository
+More samples, including end-to-end samples using the most common frontend frameworks, are available in the [https://github.com/Azure-Samples/data-api-builder](https://github.com/Azure-Samples/data-api-builder) repository
 
 ## Known Issues
 
-List of known issues and possible workarounds, where applicable and possible, is available here: [Known Issues](./docs/known-issues.md).
+List of known issues and possible workarounds, where applicable and possible, is available here: [Known Issues](https://learn.microsoft.com/azure/data-api-builder/known-issues).
 
 ## Development Roadmap
 
-Do you want to know what we're working on and what is the planned development roadmap for Data API builder? Or do you have some wonderful ideas on how to improve Data API builder and want to share them? Go here: https://github.com/Azure/data-api-builder/discussions/1377
+Do you want to know what we're working on and what is the planned development roadmap for Data API builder? Or do you have some wonderful ideas on how to improve Data API builder and want to share them? Go here: [https://github.com/Azure/data-api-builder/discussions/1377](https://github.com/Azure/data-api-builder/discussions/1377.)
 
 ## How to Contribute
 

@@ -18,6 +18,7 @@ using Azure.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
@@ -205,12 +206,19 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // From the first result set, we get the count(0/1) of records with given PK.
             DbResultSet resultSetWithCountOfRowsWithGivenPk = await ExtractResultSetFromDbDataReader(dbDataReader);
             DbResultSetRow? resultSetRowWithCountOfRowsWithGivenPk = resultSetWithCountOfRowsWithGivenPk.Rows.FirstOrDefault();
-            int numOfRecordsWithGivenPK = 0;
+            int numOfRecordsWithGivenPK;
 
             if (resultSetRowWithCountOfRowsWithGivenPk is not null &&
                 resultSetRowWithCountOfRowsWithGivenPk.Columns.TryGetValue(MsSqlQueryBuilder.COUNT_ROWS_WITH_GIVEN_PK, out object? rowsWithGivenPK))
             {
                 numOfRecordsWithGivenPK = (int)rowsWithGivenPK!;
+            }
+            else
+            {
+                throw new DataApiBuilderException(
+                    message: $"Neither insert nor update could be performed.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
             }
 
             // The second result set holds the records returned as a result of the executed update/insert operation.
@@ -218,10 +226,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             if (dbResultSet is null)
             {
-                // This can only happen in the case where we are dealing with table/view with auto-gen PK.
-                // dbResultSet being null implies that neither update nor insert was attempted.
                 // In this case, count of rows with given PK = 0, hence update is not executed.
-                // Also, since PK is auto-generated, insert cannot happen.
+                // Assert the same.
+                Assert.AreEqual(0, numOfRecordsWithGivenPK);
+
+                // This case can only arise when we are dealing with table/view with auto-gen PK.
+                // dbResultSet being null implies that neither update nor insert was attempted.
+                // Since PK is auto-generated, insert cannot happen.
                 if (args is not null && args.Count > 1)
                 {
                     string prettyPrintPk = args![0];
@@ -236,8 +247,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 throw new DataApiBuilderException(
                     message: $"Neither insert nor update could be performed.",
-                    statusCode: HttpStatusCode.NotFound,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
             }
 
             if (numOfRecordsWithGivenPK == 1) // This indicates that a record existed with given PK and we attempted an update operation.

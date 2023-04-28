@@ -334,7 +334,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 );
         }
         /// <summary>
-        /// Tests the PatchOne functionality with a REST PUT request using
+        /// Tests the PatchOne functionality with a REST PATCH request using
         /// headers that include as a key "If-Match" with an item that does exist,
         /// resulting in an update occuring. Verify update with Find.
         /// </summary>
@@ -469,7 +469,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         /// <summary>
-        /// Tests the PatchOne functionality with a REST PUT request using
+        /// Tests the PatchOne functionality with a REST PATCH request using
         /// headers that include as a key "If-Match" with an item that does not exist,
         /// resulting in a DataApiBuilderException with status code of Precondition Failed.
         /// </summary>
@@ -634,7 +634,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         /// <summary>
-        /// Test to validate failure of PUT operation failing to satisfy the database policy for the operation to be executed
+        /// Test to validate failure of PATCH operation failing to satisfy the database policy for the operation to be executed
         /// (insert/update based on whether a record exists for given PK).
         /// </summary>
         [TestMethod]

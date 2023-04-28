@@ -154,6 +154,19 @@ namespace Azure.DataApiBuilder.Service.Services
 
             foreach (string entityName in _metadataProvider.EntityToDatabaseObject.Keys.ToList())
             {
+                // Entities which disable their REST endpoint must not be included in
+                // the OpenAPI description document.
+                if (_runtimeConfig.Entities.TryGetValue(entityName, out Entity? entity) && entity is not null)
+                {
+                    if (entity.GetRestEnabledOrPathSettings() is bool restEnabled)
+                    {
+                        if (!restEnabled)
+                        {
+                            continue;
+                        }
+                    }
+                }
+
                 // Routes including primary key
                 Tuple<string, OpenApiPathItem> path = BuildPath(entityName, includePrimaryKeyPathComponent: false);
                 pathsCollection.Add(path.Item1, path.Item2);

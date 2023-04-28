@@ -198,7 +198,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     Tags = tags,
                     Responses = new(_defaultOpenApiResponses),
                 };
-                getOperation.Responses.Add(HttpStatusCode.OK.ToString(), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
+                getOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
 
                 OpenApiOperation putOperation = new()
                 {
@@ -207,8 +207,8 @@ namespace Azure.DataApiBuilder.Service.Services
                     Responses = new(_defaultOpenApiResponses),
                     RequestBody = CreateOpenApiRequestBodyPayload(schemaReferenceId, requestBodyRequired)
                 };
-                putOperation.Responses.Add(HttpStatusCode.OK.ToString(), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
-                putOperation.Responses.Add(HttpStatusCode.Created.ToString(), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
+                putOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
+                putOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
 
                 OpenApiOperation patchOperation = new()
                 {
@@ -217,8 +217,8 @@ namespace Azure.DataApiBuilder.Service.Services
                     Responses = new(_defaultOpenApiResponses),
                     RequestBody = CreateOpenApiRequestBodyPayload(schemaReferenceId, requestBodyRequired)
                 };
-                patchOperation.Responses.Add(HttpStatusCode.OK.ToString(), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
-                patchOperation.Responses.Add(HttpStatusCode.Created.ToString(), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
+                patchOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
+                patchOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
 
                 OpenApiOperation deleteOperation = new()
                 {
@@ -227,8 +227,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     Responses = new(_defaultOpenApiResponses),
                     RequestBody = CreateOpenApiRequestBodyPayload(schemaReferenceId, requestBodyRequired)
                 };
-                deleteOperation.Responses.Add(HttpStatusCode.OK.ToString(), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
-                deleteOperation.Responses.Add(HttpStatusCode.Created.ToString(), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
+                deleteOperation.Responses.Add(HttpStatusCode.NoContent.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.NoContent)));
 
                 OpenApiPathItem openApiPathItem = new()
                 {
@@ -254,7 +253,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     Responses = new(_defaultOpenApiResponses),
                     RequestBody = CreateOpenApiRequestBodyPayload(schemaReferenceId, requestBodyRequired)
                 };
-                getAllOperation.Responses.Add(HttpStatusCode.OK.ToString(), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
+                getAllOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
 
                 OpenApiOperation postOperation = new()
                 {
@@ -263,8 +262,8 @@ namespace Azure.DataApiBuilder.Service.Services
                     Responses = new(_defaultOpenApiResponses),
                     RequestBody = CreateOpenApiRequestBodyPayload(schemaReferenceId, requestBodyRequired)
                 };
-                postOperation.Responses.Add(HttpStatusCode.Created.ToString(), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
-                postOperation.Responses.Add(HttpStatusCode.Conflict.ToString(), CreateOpenApiResponse(description: nameof(HttpStatusCode.Conflict), responseObjectSchemaName: entityName));
+                postOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
+                postOperation.Responses.Add(HttpStatusCode.Conflict.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Conflict)));
 
                 OpenApiPathItem openApiPathItem = new()
                 {
@@ -603,16 +602,20 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <summary>
         /// Creates the default collection of responses for all requests in the OpenAPI
         /// description document.
+        /// The OpenApiResponses dictionary key represents the integer value of the HttpStatusCode,
+        /// which is returned when using Enum.ToString("D").
+        /// The "D" format specified "displays the enumeration entry as an integer value in the shortest representation possible."
         /// </summary>
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/standard/base-types/enumeration-format-strings#d-or-d"/>
         /// <returns>Collection of default responses (400, 401, 403, 404).</returns>
         private static OpenApiResponses CreateDefaultOpenApiResponses()
         {
             OpenApiResponses defaultResponses = new()
             {
-                { HttpStatusCode.BadRequest.ToString(), CreateOpenApiResponse(description: nameof(HttpStatusCode.BadRequest)) },
-                { HttpStatusCode.Unauthorized.ToString(), CreateOpenApiResponse(description: nameof(HttpStatusCode.Unauthorized)) },
-                { HttpStatusCode.Forbidden.ToString(), CreateOpenApiResponse(description: nameof(HttpStatusCode.Forbidden)) },
-                { HttpStatusCode.NotFound.ToString(), CreateOpenApiResponse(description: nameof(HttpStatusCode.NotFound)) }
+                { HttpStatusCode.BadRequest.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.BadRequest)) },
+                { HttpStatusCode.Unauthorized.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Unauthorized)) },
+                { HttpStatusCode.Forbidden.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Forbidden)) },
+                { HttpStatusCode.NotFound.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.NotFound)) }
             };
 
             return defaultResponses;

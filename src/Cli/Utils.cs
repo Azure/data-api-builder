@@ -12,6 +12,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Humanizer;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Config.AuthenticationConfig;
+using static Azure.DataApiBuilder.Config.MergeConfig;
 using static Azure.DataApiBuilder.Config.RuntimeConfigPath;
 using static Azure.DataApiBuilder.Service.Configurations.RuntimeConfigValidator;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
@@ -916,7 +917,7 @@ namespace Cli
                 {
                     string originalJson = File.ReadAllText(FileToBeOverridden);
                     string newJson = File.ReadAllText(FileToBeOverriddenWith);
-                    string mergedJson = MergeConfig.Merge(originalJson, newJson);
+                    string mergedJson = Merge(originalJson, newJson);
 
                     File.WriteAllText(mergedFile, mergedJson);
                     return mergedFile;

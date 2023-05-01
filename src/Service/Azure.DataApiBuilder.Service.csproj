@@ -13,6 +13,10 @@
     <PropertyGroup Condition="'$(TF_BUILD)' == 'true'">
       <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
     </PropertyGroup>
+    
+    <ItemGroup>
+        <InternalsVisibleTo Include="Azure.DataApiBuilder.Service.Tests" />
+    </ItemGroup>
 
     <ItemGroup>
         <None Remove="schema.gql" />

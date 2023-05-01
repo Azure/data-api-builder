@@ -65,6 +65,14 @@ class RuntimeEntitiesConverter : JsonConverter<RuntimeEntities>
             };
         }
 
+        // If this is a Stored Procedure with no provided GraphQL operation, set it to Mutation as the default
+        if (nameCorrectedEntity.GraphQL.Operation is null && nameCorrectedEntity.Source.Type is EntityType.StoredProcedure)
+        {
+            nameCorrectedEntity = nameCorrectedEntity
+                with
+            { GraphQL = nameCorrectedEntity.GraphQL with { Operation = GraphQLOperation.Mutation } };
+        }
+
         // If no Rest node was provided in the config, set it with the default state of enabled for all verbs
         if (nameCorrectedEntity.Rest is null)
         {

@@ -11,6 +11,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
 using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers;
 using HotChocolate.Language;
+using Humanizer;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
@@ -42,7 +43,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
             return new Entity(
                 Source: new("dbo.entity", EntityType.Table, null, null),
                 Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS, Enabled: false),
-                GraphQL: new("", "", Enabled: false),
+                GraphQL: new("Foo", "Foos", Enabled: true),
                 Permissions: Array.Empty<EntityPermission>(),
                 Relationships: new(),
                 Mappings: new());
@@ -283,7 +284,10 @@ type Bar @model(name:""Bar""){
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
                 DatabaseType.CosmosDB_NoSQL,
-                new(new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() }, { "Bar", GenerateEmptyEntity() } }),
+                new(new Dictionary<string, Entity> {
+                    { "Foo", GenerateEmptyEntity() with { GraphQL = new("Foo", "Foos") } },
+                    { "Bar", GenerateEmptyEntity() with { GraphQL = new("Bar", "Bars") } }
+                }),
                 entityPermissionsMap: _entityPermissions
                 );
 
@@ -973,7 +977,7 @@ type Foo @model(name:""Foo"") {{
 
             Entity entity = (singularName is not null)
                                 ? GraphQLTestHelpers.GenerateEntityWithSingularPlural(singularName, pluralName)
-                                : GraphQLTestHelpers.GenerateEmptyEntity();
+                                : GraphQLTestHelpers.GenerateEntityWithSingularPlural(entityName, entityName.Pluralize());
 
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,

@@ -94,8 +94,13 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// Attempts to deserialize and get the SingularPlural GraphQL naming config
         /// of an Entity from the Runtime Configuration.
         /// </summary>
-        public static string GetDefinedSingularName(string name, Entity configEntity)
+        public static string GetDefinedSingularName(string entityName, Entity configEntity)
         {
+            if (string.IsNullOrEmpty(configEntity.GraphQL.Singular))
+            {
+                throw new ArgumentException($"The entity '{entityName}' does not have a singular name defined in config, nor has one been extrapolated from the entity name.");
+            }
+
             return configEntity.GraphQL.Singular;
         }
 

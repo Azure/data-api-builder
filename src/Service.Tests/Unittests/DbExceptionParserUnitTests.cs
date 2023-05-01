@@ -67,7 +67,18 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(false, 209, DisplayName = "Non-transient exception error code #2")]
         public void TestIsTransientExceptionMethod(bool expected, int number)
         {
+            RuntimeConfig mockConfig = new(
+                Schema: "",
+                DataSource: new(DatabaseType.MSSQL, "", new()),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(null, null, HostMode.Development)
+                ),
+                Entities: new(new Dictionary<string, Entity>())
+            );
             MockFileSystem fileSystem = new();
+            fileSystem.AddFile(RuntimeConfigLoader.DefaultName, new MockFileData(mockConfig.ToJson()));
             RuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider provider = new(loader);
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);

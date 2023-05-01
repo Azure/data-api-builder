@@ -152,8 +152,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             MockFileSystem fileSystem = new();
             fileSystem.AddFile(RuntimeConfigLoader.DefaultName, new MockFileData(mockConfig.ToJson()));
             RuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            
+            RuntimeConfigProvider provider = new(loader)
+            {
+                IsLateConfigured = true
+            };
+
             Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
@@ -207,14 +210,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             RuntimeConfig mockConfig = new(
                Schema: "",
-               DataSource: new(DatabaseType.MSSQL, "", new()),
+               DataSource: new(DatabaseType.MSSQL, "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=sa;Password=REPLACEME;MultipleActiveResultSets=False;Connection Timeout=5;", new()),
                Runtime: new(
                    Rest: new(),
                    GraphQL: new(),
                    Host: new(null, null)
                ),
                Entities: new(new Dictionary<string, Entity>())
-           );
+            );
 
             MockFileSystem fileSystem = new();
             fileSystem.AddFile(RuntimeConfigLoader.DefaultName, new MockFileData(mockConfig.ToJson()));

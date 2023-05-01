@@ -873,7 +873,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             SqlTestHelper.TestForErrorInGraphQLResponse(
                 actual.ToString(),
                 message: "One or more fields referenced by the database policy are not present in the request body.",
-                statusCode: $"{DataApiBuilderException.SubStatusCodes.BadRequest}");
+                statusCode: $"{DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed}");
         }
 
         #endregion

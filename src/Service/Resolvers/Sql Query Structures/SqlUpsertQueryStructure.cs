@@ -95,8 +95,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 // However, if the size is non-zero, we throw a bad request exception.
                 throw new DataApiBuilderException(
                     message: "One or more fields referenced by the database policy are not present in the request.",
-                    statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    statusCode: HttpStatusCode.Forbidden,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
             }
 
             if (UpdateOperations.Count == 0)

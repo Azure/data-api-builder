@@ -667,8 +667,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 requestBody: requestBody,
                 clientRoleHeader: "database_policy_tester",
                 expectedErrorMessage: "One or more fields referenced by the database policy are not present in the request body.",
-                expectedStatusCode: HttpStatusCode.BadRequest,
-                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                expectedStatusCode: HttpStatusCode.Forbidden,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed.ToString()
                 );
         }
 

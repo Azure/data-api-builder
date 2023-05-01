@@ -51,7 +51,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Returns the DbType for given system type.
         /// </summary>
         /// <param name="systemType">The system type for which the DbType is to be determined.</param>
-        /// <returns>DbType for the given system tyep.</returns>
+        /// <returns>DbType for the given system type.</returns>
         public static DbType? GetDbTypeFromSystemType(Type systemType)
         {
             if (!_systemTypeToDbTypeMap.TryGetValue(systemType, out DbType dbType))

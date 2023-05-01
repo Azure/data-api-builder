@@ -199,7 +199,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <inheritdoc/>
         public override void PopulateDbTypeForParameter(KeyValuePair<string, DbConnectionParam> parameterEntry, DbParameter parameter)
         {
-            if (parameterEntry.Value.DbType is not null)
+            if (parameterEntry.Value is not null && parameterEntry.Value.DbType is not null)
             {
                 parameter.DbType = (DbType)parameterEntry.Value.DbType;
             }

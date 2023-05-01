@@ -40,7 +40,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
 
             if (IsSimpleBinaryExpression(nodeIn))
             {
-                PopulateDbTypeForPropery(nodeIn);
+                PopulateDbTypeForProperty(nodeIn);
             }
 
             return CreateResult(nodeIn.OperatorKind, left, right);
@@ -265,7 +265,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
         /// We just need to populate the DbType.
         /// </summary>
         /// <param name="nodeIn">Binary operator node<</param>
-        private void PopulateDbTypeForPropery(BinaryOperatorNode nodeIn)
+        private void PopulateDbTypeForProperty(BinaryOperatorNode nodeIn)
         {
             SingleValuePropertyAccessNode propertyNode = nodeIn.Left.GetType() == typeof(SingleValuePropertyAccessNode) ?
                     (SingleValuePropertyAccessNode)nodeIn.Left : (SingleValuePropertyAccessNode)nodeIn.Right;

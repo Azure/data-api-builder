@@ -22,6 +22,9 @@ namespace Azure.DataApiBuilder.Service.Models
         public object? Value { get; set; }
 
         // DbType of the parameter.
+        // This is being made nullable because GraphQL treats Sql Server types like datetime, datetimeoffset
+        // identically and then implicit conversion cannot happen.
+        // For more details refer: https://github.com/Azure/data-api-builder/pull/1442.
         public DbType? DbType { get; set; }
     }
 }

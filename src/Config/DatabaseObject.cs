@@ -173,8 +173,9 @@ namespace Azure.DataApiBuilder.Config
         /// 1. column for table/view,
         /// 2. parameter for stored procedure.
         /// </summary>
-        /// <param name="paramName">The parameter whose DbType is to be determined.</param>
-        /// <returns></returns>
+        /// <param name="paramName">The parameter whose DbType is to be determined.
+        /// For table/view paramName refers to the backingColumnName if aliases are used.</param>
+        /// <returns>DbType for the parameter.</returns>
         public virtual DbType? GetDbTypeForParam(string paramName)
         {
             if (Columns.TryGetValue(paramName, out ColumnDefinition? columnDefinition))

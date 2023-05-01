@@ -40,6 +40,9 @@ namespace Azure.DataApiBuilder.Service.Parsers
 
             if (IsSimpleBinaryExpression(nodeIn))
             {
+                // Whenever we encounter a simple binary expression like "@item.name ne 'DAB'", we know that we would have just added a parameter for 'name',
+                // and are coming back to the root node after traversing the left and right child.
+                // Thats when we need to populate the DbType for the parameter.
                 PopulateDbTypeForProperty(nodeIn);
             }
 

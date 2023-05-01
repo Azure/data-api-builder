@@ -65,7 +65,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         /// between varchar to varbinary is not possible for MsSql (but it is possible for MySql & PgSql),
         /// but since we are passing the DbType for the parameter, the database can explicitly convert it into varbinary.
         /// </summary>
-        /// <returns></returns>
         [TestMethod]
         public virtual async Task InsertOneWithByteArrayTypeAsNull()
         {

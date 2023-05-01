@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 else
                 {
                     provider.Initialize(
-                        JsonSerializer.Serialize(provider.GetConfig()),
+                        provider.GetConfig().ToJson(),
                         graphQLSchema: null,
                         connectionString: connectionString,
                         accessToken: CONFIG_TOKEN);

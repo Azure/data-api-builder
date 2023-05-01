@@ -81,7 +81,7 @@ public class RuntimeConfigProvider
         return _runtimeConfig is not null;
     }
 
-    internal bool Initialize(string jsonConfig, string? graphQLSchema, string connectionString, string? accessToken)
+    public bool Initialize(string jsonConfig, string? graphQLSchema, string connectionString, string? accessToken)
     {
         if (string.IsNullOrEmpty(connectionString))
         {

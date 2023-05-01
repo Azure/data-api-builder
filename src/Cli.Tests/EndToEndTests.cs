@@ -55,14 +55,14 @@ public class EndToEndTests
         _cliLogger = null;
     }
     /// <summary>
-    /// Initializing config for cosmosdb_nosql.
+    /// Initializing config for CosmosDB_NoSQL.
     /// </summary>
     [TestMethod]
     public void TestInitForCosmosDBNoSql()
     {
-        string[] args = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "cosmosdb_nosql",
-                          "--connection-string", "localhost:5000", "--cosmosdb_nosql-database",
-                          "graphqldb", "--cosmosdb_nosql-container", "planet", "--graphql-schema", TEST_SCHEMA_FILE, "--cors-origin", "localhost:3000,www.nolocalhost.com:80" };
+        string[] args = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "CosmosDB_NoSQL",
+                          "--connection-string", "localhost:5000", "--CosmosDB_NoSQL-database",
+                          "graphqldb", "--CosmosDB_NoSQL-container", "planet", "--graphql-schema", TEST_SCHEMA_FILE, "--cors-origin", "localhost:3000,www.nolocalhost.com:80" };
         Program.Execute(args, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));

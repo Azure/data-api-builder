@@ -256,15 +256,15 @@ namespace Cli
         {
             string[]? corsOriginArray = corsOrigin is null ? new string[] { } : corsOrigin.ToArray();
             CorsOptions cors = new(Origins: corsOriginArray);
-            AuthenticationOptions authenticationConfig;
+            AuthenticationOptions AuthenticationOptions;
             if (Enum.TryParse<EasyAuthType>(authenticationProvider, ignoreCase: true, out _)
                 || AuthenticationOptions.SIMULATOR_AUTHENTICATION.Equals(authenticationProvider))
             {
-                authenticationConfig = new(Provider: authenticationProvider, null);
+                AuthenticationOptions = new(Provider: authenticationProvider, null);
             }
             else
             {
-                authenticationConfig = new(
+                AuthenticationOptions = new(
                     Provider: authenticationProvider,
                     Jwt: new(audience, issuer)
                 );
@@ -273,7 +273,7 @@ namespace Cli
             return new(
                 Mode: hostMode,
                 Cors: cors,
-                Authentication: authenticationConfig);
+                Authentication: AuthenticationOptions);
         }
 
         /// <summary>
@@ -648,7 +648,7 @@ namespace Cli
         {
             try
             {
-                string jsonContent = JsonSerializer.Serialize(runtimeConfig, RuntimeConfigLoader.GetSerializationOption());
+                string jsonContent = runtimeConfig.ToJson();
                 return WriteJsonToFile(file, jsonContent, fileSystem);
             }
             catch (Exception e)

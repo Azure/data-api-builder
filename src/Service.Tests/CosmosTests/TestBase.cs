@@ -81,7 +81,7 @@ type Moon @model(name:""Moon"") @authorize(policy: ""Crater"") {
                     _ = builder.ConfigureTestServices(services =>
                     {
                         services.AddSingleton<IFileSystem>(fileSystem);
-                        services.AddSingleton(TestHelper.GetRuntimeConfigProvider(CosmosTestHelper.ConfigPath));
+                        services.AddSingleton(TestHelper.GetRuntimeConfigProvider(CosmosTestHelper.ConfigLoader));
                         services.AddSingleton(authorizationResolverCosmos.Object);
                     });
                 });
@@ -121,7 +121,7 @@ type Moon @model(name:""Moon"") @authorize(policy: ""Crater"") {
         internal static void OverrideEntityContainer(string entityName, string containerName)
         {
             RuntimeConfigProvider configProvider = _application.Services.GetService<RuntimeConfigProvider>();
-            RuntimeConfig config = configProvider.GetRuntimeConfiguration();
+            RuntimeConfig config = configProvider.GetConfig();
             Entity entity = config.Entities[entityName];
 
             System.Reflection.PropertyInfo prop = entity.GetType().GetProperty("Source");
@@ -169,7 +169,7 @@ type Moon @model(name:""Moon"") @authorize(policy: ""Crater"") {
         {
             return GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     entityNames: entities,
-                    operations: new Config.Operation[] { Config.Operation.Create, Config.Operation.Read, Config.Operation.Update, Config.Operation.Delete },
+                    operations: new EntityActionOperation[] { EntityActionOperation.Create, EntityActionOperation.Read, EntityActionOperation.Update, EntityActionOperation.Delete },
                     roles: new string[] { "anonymous", "authenticated" }
                 );
         }

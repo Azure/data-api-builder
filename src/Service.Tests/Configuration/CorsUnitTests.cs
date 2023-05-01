@@ -158,7 +158,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                                 options.AddPolicy(name: MyAllowSpecificOrigins,
                                     CORSPolicyBuilder =>
                                     {
-                                        Startup.ConfigureCors(CORSPolicyBuilder, new Cors(testOrigins, allowCredentials));
+                                        Startup.ConfigureCors(CORSPolicyBuilder, new CorsOptions(testOrigins, allowCredentials));
                                     });
                             });
                         })

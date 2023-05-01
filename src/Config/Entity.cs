@@ -67,9 +67,12 @@ public record EntitySource(string Object, EntityType Type, Dictionary<string, ob
 public record EntityGraphQLOptions(string Singular, string Plural, bool Enabled = true, GraphQLOperation? Operation = null);
 
 [JsonConverter(typeof(EntityRestOptionsConverter))]
-public record EntityRestOptions(SupportedHttpVerb[] Methods, string? Path = null, bool Enabled = true);
+public record EntityRestOptions(SupportedHttpVerb[] Methods, string? Path = null, bool Enabled = true)
+{
+    public static readonly SupportedHttpVerb[] DEFAULT_SUPPORTED_VERBS = new[] { SupportedHttpVerb.Get, SupportedHttpVerb.Post, SupportedHttpVerb.Put, SupportedHttpVerb.Patch, SupportedHttpVerb.Delete };
+}
 public record EntityActionFields(HashSet<string> Exclude, HashSet<string>? Include = null);
-public record EntityActionPolicy(string? Request, string? Database);
+public record EntityActionPolicy(string? Request = null, string? Database = null);
 public record EntityAction(EntityActionOperation Action, EntityActionFields? Fields, EntityActionPolicy Policy)
 {
     public static readonly HashSet<EntityActionOperation> ValidPermissionOperations = new() { EntityActionOperation.Create, EntityActionOperation.Read, EntityActionOperation.Update, EntityActionOperation.Delete };

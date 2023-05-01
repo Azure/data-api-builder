@@ -40,30 +40,37 @@ class RuntimeEntitiesConverter : JsonConverter<RuntimeEntities>
         // If no GraphQL node was provided in the config, set it with the default state
         if (nameCorrectedEntity.GraphQL is null)
         {
-            nameCorrectedEntity = nameCorrectedEntity with { GraphQL = new(Singular: string.Empty, Plural: string.Empty) };
+            nameCorrectedEntity = nameCorrectedEntity
+                with
+            { GraphQL = new(Singular: string.Empty, Plural: string.Empty) };
         }
 
         // If no Singular version of the entity name was provided, use the Entity Name from the config
         if (string.IsNullOrEmpty(nameCorrectedEntity.GraphQL.Singular))
         {
-            nameCorrectedEntity = nameCorrectedEntity with { GraphQL = nameCorrectedEntity.GraphQL with { Singular = entityName } };
+            nameCorrectedEntity = nameCorrectedEntity
+                with
+            { GraphQL = nameCorrectedEntity.GraphQL with { Singular = entityName } };
         }
 
         // If no Plural version for the entity name was provided, pluralise the singular version.
         if (string.IsNullOrEmpty(nameCorrectedEntity.GraphQL.Plural))
         {
-            nameCorrectedEntity = nameCorrectedEntity with { GraphQL = nameCorrectedEntity.GraphQL with { Plural = nameCorrectedEntity.GraphQL.Singular.Pluralize() } };
+            nameCorrectedEntity = nameCorrectedEntity
+                with
+            {
+                GraphQL = nameCorrectedEntity.GraphQL
+                with
+                { Plural = nameCorrectedEntity.GraphQL.Singular.Pluralize() }
+            };
         }
 
         // If no Rest node was provided in the config, set it with the default state of enabled for all verbs
         if (nameCorrectedEntity.Rest is null)
         {
-            nameCorrectedEntity = nameCorrectedEntity with { Rest = new EntityRestOptions(new[] {
-                SupportedHttpVerb.Put,
-                SupportedHttpVerb.Get,
-                SupportedHttpVerb.Patch,
-                SupportedHttpVerb.Delete,
-                SupportedHttpVerb.Post }) };
+            nameCorrectedEntity = nameCorrectedEntity
+                with
+            { Rest = new EntityRestOptions(EntityRestOptions.DEFAULT_SUPPORTED_VERBS) };
         }
 
         return nameCorrectedEntity;

@@ -409,7 +409,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                 if (token is not null)
                 {
                     StringValues headerValue = new(new string[] { $"{token}" });
-                    KeyValuePair<string, StringValues> easyAuthHeader = new(AuthenticationConfig.CLIENT_PRINCIPAL_HEADER, headerValue);
+                    KeyValuePair<string, StringValues> easyAuthHeader = new(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, headerValue);
                     context.Request.Headers.Add(easyAuthHeader);
                 }
 

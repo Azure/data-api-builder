@@ -4,13 +4,12 @@
 using System;
 using System.Data;
 using System.IO;
+using System.IO.Abstractions.TestingHelpers;
+using System.Text.Json;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
-using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
@@ -67,11 +66,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void CheckConfigEnvParsingTest(string[] repKeys, string[] repValues)
         {
             SetEnvVariables();
-            string expectedJson = RuntimeConfigPath.ParseConfigJsonAndReplaceEnvVariables(GetModifiedJsonString(repValues));
-            string actualJson = RuntimeConfigPath.ParseConfigJsonAndReplaceEnvVariables(GetModifiedJsonString(repKeys));
-            JObject expected = JObject.Parse(expectedJson);
-            JObject actual = JObject.Parse(actualJson);
-            Assert.IsTrue(JToken.DeepEquals(expected, actual));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(GetModifiedJsonString(repValues), out RuntimeConfig expectedConfig), "Should read the expected config");
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(GetModifiedJsonString(repKeys), out RuntimeConfig actualConfig), "Should read actual config");
+
+            // record types are the same if they contain the same values, even if they were created in different ways
+            // see: https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/record#value-equality
+            Assert.AreEqual(expectedConfig, actualConfig);
         }
 
         /// <summary>
@@ -92,19 +92,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                                     ""connection-string"": ""Server=tcp:127.0.0.1,1433;Persist Security Info=False;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=False;Connection Timeout=5;""
                                     }
                                 }";
-            string expectedJson = @"{
-                                    ""$schema"":""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
-                                    ""data-source"": {
-                                    ""database-type"": ""mssql"",
-                                        ""options"": {
-                                            ""set-session-context"": true
-                                        },
-                                    ""connection-string"": ""Server=tcp:127.0.0.1,1433;Persist Security Info=False;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=False;Connection Timeout=5;""
-                                    }
-                                }";
-            string expected = RuntimeConfigPath.ParseConfigJsonAndReplaceEnvVariables(expectedJson);
-            string actual = RuntimeConfigPath.ParseConfigJsonAndReplaceEnvVariables(actualJson);
-            Assert.AreEqual(expected, actual);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(actualJson, out RuntimeConfig _), "Should not fail to parse with comments");
         }
 
         #endregion Positive Tests
@@ -130,7 +118,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             string json = @"{ ""foo"" : ""@env('envVarName'), @env('" + invalidEnvVarName + @"')"" }";
             SetEnvVariables();
-            Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigPath.ParseConfigJsonAndReplaceEnvVariables(json));
+            StringConverterFactory stringConverterFactory = new();
+            JsonSerializerOptions options = new();
+            options.Converters.Add(stringConverterFactory);
+            Assert.ThrowsException<DataApiBuilderException>(() => JsonSerializer.Deserialize<object>(json, options));
         }
 
         [TestMethod("Validates that JSON deserialization failures are gracefully caught.")]
@@ -142,11 +133,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         ""database-type"": ""notsupporteddb""
      }
 }";
-            Mock<ILogger<RuntimeConfigProvider>> logger = new();
-            Assert.IsFalse(RuntimeConfig.TryGetDeserializedRuntimeConfig
-                             (configJson,
-                             out RuntimeConfig deserializedConfig,
-                             logger.Object));
+            Assert.IsFalse(RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig));
             Assert.IsNull(deserializedConfig);
         }
 
@@ -162,33 +149,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Type exceptionType,
             string exceptionMessage)
         {
-            RuntimeConfigPath configPath = new()
-            {
-                ConfigFileName = configFileName
-            };
+            MockFileSystem fileSystem = new();
+            RuntimeConfigLoader loader = new(fileSystem);
 
-            Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
-            try
-            {
-                RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
-                // This tests the logger from the constructor.
-                RuntimeConfigProvider configProvider =
-                    new(configPath, configProviderLogger.Object);
-                RuntimeConfigProvider.LoadRuntimeConfigValue(
-                    configPath,
-                    out RuntimeConfig runtimeConfig);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-                Assert.AreEqual(exceptionType, ex.GetType());
-                Assert.AreEqual(exceptionMessage, ex.Message);
-                Assert.AreEqual(2, configProviderLogger.Invocations.Count);
-                // This is the error logged by TryLoadRuntimeConfigValue()
-                Assert.AreEqual(LogLevel.Error, configProviderLogger.Invocations[0].Arguments[0]);
-                // This is the information logged by the RuntimeConfigProvider constructor.
-                Assert.AreEqual(LogLevel.Information, configProviderLogger.Invocations[1].Arguments[0]);
-            }
+            Assert.IsFalse(loader.TryLoadConfig(configFileName, out RuntimeConfig _));
         }
 
         #endregion Negative Tests
@@ -209,7 +173,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <summary>
         /// Modify the json string with the replacements provided.
         /// This function cycles through the string array in a circular
-        /// fasion.
+        /// fashion.
         /// </summary>
         /// <param name="reps">Replacement strings.</param>
         /// <returns>Json string with replacements.</returns>

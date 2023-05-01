@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.Converters;
 
@@ -35,4 +36,14 @@ public record RuntimeConfig(
     string Schema,
     DataSource DataSource,
     RuntimeOptions Runtime,
-    RuntimeEntities Entities);
+    RuntimeEntities Entities)
+{
+    /// <summary>
+    /// Serializes the RuntimeConfig object to JSON for writing to file.
+    /// </summary>
+    /// <returns></returns>
+    public string ToJson()
+    {
+        return JsonSerializer.Serialize(this, RuntimeConfigLoader.GetSerializationOption());
+    }
+}

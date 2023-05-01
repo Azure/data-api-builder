@@ -2,9 +2,12 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Collections.Generic;
+using System.IO.Abstractions.TestingHelpers;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.Core;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.Identity;
@@ -38,12 +41,25 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             bool expectManagedIdentityAccessToken,
             bool isDefaultAzureCredential)
         {
-            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestCategory.POSTGRESQL);
-            runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString = connectionString;
-            Mock<DbExceptionParser> dbExceptionParser = new(runtimeConfigProvider);
+            RuntimeConfig mockConfig = new(
+               Schema: "",
+               DataSource: new(DatabaseType.PostgreSQL, connectionString, new()),
+               Runtime: new(
+                   Rest: new(),
+                   GraphQL: new(),
+                   Host: new(null, null)
+               ),
+               Entities: new(new Dictionary<string, Entity>())
+           );
+
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(RuntimeConfigLoader.DefaultName, new MockFileData(mockConfig.ToJson()));
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            Mock<DbExceptionParser> dbExceptionParser = new(provider);
             Mock<ILogger<PostgreSqlQueryExecutor>> queryExecutorLogger = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
-            PostgreSqlQueryExecutor postgreSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
+            PostgreSqlQueryExecutor postgreSqlQueryExecutor = new(provider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
 
             const string DEFAULT_TOKEN = "Default access token";
             const string CONFIG_TOKEN = "Configuration controller access token";
@@ -61,12 +77,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 }
                 else
                 {
-                    await runtimeConfigProvider.Initialize(
-                        JsonSerializer.Serialize(runtimeConfigProvider.GetRuntimeConfiguration()),
-                        schema: null,
+                    provider.Initialize(
+                        JsonSerializer.Serialize(provider.GetConfig()),
+                        graphQLSchema: null,
                         connectionString: connectionString,
                         accessToken: CONFIG_TOKEN);
-                    postgreSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
+                    postgreSqlQueryExecutor = new(provider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
                 }
             }
 

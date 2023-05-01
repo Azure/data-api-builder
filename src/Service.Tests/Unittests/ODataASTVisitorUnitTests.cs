@@ -10,7 +10,6 @@ using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
-using Microsoft.Extensions.Logging;
 using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
@@ -329,8 +328,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             FindRequestContext context = new(entityName, dbo, isList);
             AuthorizationResolver authorizationResolver = new(
                 _runtimeConfigProvider,
-                _sqlMetadataProvider,
-                new Mock<ILogger<AuthorizationResolver>>().Object);
+                _sqlMetadataProvider);
             Mock<SqlQueryStructure> structure = new(
                 context,
                 _sqlMetadataProvider,

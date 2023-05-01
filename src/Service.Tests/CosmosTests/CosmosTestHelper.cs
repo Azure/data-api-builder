@@ -2,16 +2,17 @@
 // Licensed under the MIT License.
 
 using System;
+using Azure.DataApiBuilder.Config;
 
 namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 {
     public static class CosmosTestHelper
     {
         public static readonly string DB_NAME = "graphqlTestDb";
-        private static Lazy<RuntimeConfigPath>
-            _runtimeConfigPath = new(() => TestHelper.GetRuntimeConfigPath(TestCategory.COSMOSDBNOSQL));
+        private static Lazy<RuntimeConfigLoader>
+            _runtimeConfigPath = new(() => TestHelper.GetRuntimeConfigLoader());
 
-        public static RuntimeConfigPath ConfigPath
+        public static RuntimeConfigLoader ConfigLoader
         {
             get
             {

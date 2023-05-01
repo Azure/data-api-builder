@@ -77,7 +77,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 _fileSystem,
                 _logger);
 
-            ValidateAuthenticationConfig(runtimeConfig);
+            ValidateAuthenticationOptions(runtimeConfig);
             ValidateGlobalEndpointRouteConfig(runtimeConfig);
 
             // Running these graphQL validations only in development mode to ensure
@@ -121,7 +121,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             ILogger logger)
         {
             // Schema file should be present in the directory if not specified in the config
-            // when using cosmosdb_nosql database.
+            // when using CosmosDB_NoSQL database.
             if (runtimeConfig.DataSource.DatabaseType is DatabaseType.CosmosDB_NoSQL)
             {
                 CosmosDbNoSQLDataSourceOptions? cosmosDbNoSql =
@@ -299,7 +299,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <param name="runtimeConfig"></param>
         public static void ValidateRestPathForRelationalDbs(RuntimeConfig runtimeConfig)
         {
-            // cosmosdb_nosql does not support rest. No need to do any validations.
+            // CosmosDB_NoSQL does not support rest. No need to do any validations.
             if (runtimeConfig.DataSource.DatabaseType is DatabaseType.CosmosDB_NoSQL)
             {
                 return;
@@ -377,7 +377,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             }
         }
 
-        private static void ValidateAuthenticationConfig(RuntimeConfig runtimeConfig)
+        private static void ValidateAuthenticationOptions(RuntimeConfig runtimeConfig)
         {
             // Bypass validation of auth if there is no auth provided
             if (runtimeConfig.Runtime.Host.Authentication is null)

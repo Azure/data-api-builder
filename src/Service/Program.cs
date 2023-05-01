@@ -12,6 +12,8 @@ namespace Azure.DataApiBuilder.Service
 {
     public class Program
     {
+        public static bool IsHttpsRedirectionDisabled { get; private set; }
+
         public static void Main(string[] args)
         {
             if (!StartEngine(args))
@@ -126,12 +128,12 @@ namespace Azure.DataApiBuilder.Service
                 if (args[i].Equals(Startup.NO_HTTPS_REDIRECT_FLAG))
                 {
                     Console.WriteLine("Redirecting to https is disabled.");
-                    //RuntimeConfigProvider.IsHttpsRedirectionDisabled = true;
+                    IsHttpsRedirectionDisabled = true;
                     return;
                 }
             }
 
-            //RuntimeConfigProvider.IsHttpsRedirectionDisabled = false;
+            IsHttpsRedirectionDisabled = false;
         }
 
         // This is used for testing purposes only. The test web server takes in a

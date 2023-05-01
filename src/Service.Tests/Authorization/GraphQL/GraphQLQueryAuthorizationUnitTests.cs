@@ -38,12 +38,12 @@ type Foo @model(name: ""Foo""){
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
-                DatabaseType.mssql,
-                entities: new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
+                DatabaseType.MSSQL,
+                entities: new(new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } }),
                 inputTypes: new(),
                 GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     entityNames: new string[] { "Foo" },
-                    operations: new Config.Operation[] { Config.Operation.Read },
+                    operations: new EntityActionOperation[] { EntityActionOperation.Read },
                     roles: rolesDefinedInPermissions)
                 );
 

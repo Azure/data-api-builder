@@ -73,19 +73,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="customQueries">Test specific queries to be executed on database.</param>
         /// <param name="customEntities">Test specific entities to be added to database.</param>
         /// <returns></returns>
-        protected static async Task InitializeTestFixture(TestContext context, List<string> customQueries = null,
-            List<string[]> customEntities = null)
+        protected async static Task InitializeTestFixture(TestContext context, List<string> customQueries = null, List<string[]> customEntities = null)
         {
             _queryEngineLogger = new Mock<ILogger<IQueryEngine>>().Object;
             _mutationEngineLogger = new Mock<ILogger<SqlMutationEngine>>().Object;
             _restControllerLogger = new Mock<ILogger<RestController>>().Object;
 
-            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath($"{DatabaseEngine}");
+            RuntimeConfigLoader loader = TestHelper.GetRuntimeConfigLoader();
             Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
             Mock<ILogger<AuthorizationResolver>> authLogger = new();
-            RuntimeConfigProvider.ConfigProviderLogger = configProviderLogger.Object;
-            RuntimeConfigProvider.LoadRuntimeConfigValue(configPath, out _runtimeConfig);
-            _runtimeConfigProvider = TestHelper.GetMockRuntimeConfigProvider(configPath, string.Empty);
+            RuntimeConfigProvider provider = new(loader);
 
             // Add magazines entity to the config
             if (TestCategory.MYSQL.Equals(DatabaseEngine))
@@ -99,8 +96,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
             // Add custom entities for the test, if any.
             AddCustomEntities(customEntities);
-
-            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
 
             SetUpSQLMetadataProvider();
 
@@ -116,13 +111,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             await _sqlMetadataProvider.InitializeAsync();
 
             // sets the database name using the connection string
-            SetDatabaseNameFromConnectionString(_runtimeConfig.ConnectionString);
+            SetDatabaseNameFromConnectionString(_runtimeConfig.DataSource.ConnectionString);
 
             //Initialize the authorization resolver object
             _authorizationResolver = new AuthorizationResolver(
                 _runtimeConfigProvider,
-                _sqlMetadataProvider,
-                authLogger.Object);
+                _sqlMetadataProvider);
 
             _application = new WebApplicationFactory<Program>()
                 .WithWebHostBuilder(builder =>
@@ -356,14 +350,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             string queryString,
             string entityNameOrPath,
             string sqlQuery,
-            Config.Operation operationType = Config.Operation.Read,
+            EntityActionOperation operationType = EntityActionOperation.Read,
             string restPath = "api",
             IHeaderDictionary headers = null,
             string requestBody = null,
             bool exceptionExpected = false,
             string expectedErrorMessage = "",
             HttpStatusCode expectedStatusCode = HttpStatusCode.OK,
-            RestMethod? restHttpVerb = null,
+            SupportedHttpVerb? restHttpVerb = null,
             string expectedSubStatusCode = "BadRequest",
             string expectedLocationHeader = null,
             string expectedAfterQueryString = "",
@@ -429,7 +423,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             if (clientRoleHeader is not null)
             {
                 request.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, clientRoleHeader.ToString());
-                request.Headers.Add(AuthenticationConfig.CLIENT_PRINCIPAL_HEADER,
+                request.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER,
                     AuthTestHelper.CreateStaticWebAppsEasyAuthToken(addAuthenticated: true, specificRole: clientRoleHeader));
             }
 
@@ -442,11 +436,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             // Initial DELETE request results in 204 no content, no exception thrown.
             // Subsequent DELETE requests result in 404, which result in an exception.
             string expected;
-            if ((operationType is Config.Operation.Delete ||
-                 operationType is Config.Operation.Upsert ||
-                 operationType is Config.Operation.UpsertIncremental ||
-                 operationType is Config.Operation.Update ||
-                 operationType is Config.Operation.UpdateIncremental)
+            if ((operationType is EntityActionOperation.Delete ||
+                 operationType is EntityActionOperation.Upsert ||
+                 operationType is EntityActionOperation.UpsertIncremental ||
+                 operationType is EntityActionOperation.Update ||
+                 operationType is EntityActionOperation.UpdateIncremental)
                  && response.StatusCode == HttpStatusCode.NoContent
                 )
             {
@@ -473,7 +467,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
                     string dbResult = await GetDatabaseResultAsync(sqlQuery, expectJson);
                     // For FIND requests, null result signifies an empty result set
-                    dbResult = (operationType is Config.Operation.Read && dbResult is null) ? "[]" : dbResult;
+                    dbResult = (operationType is EntityActionOperation.Read && dbResult is null) ? "[]" : dbResult;
                     expected = $"{{\"{SqlTestHelper.jsonResultTopLevelKey}\":" +
                         $"{FormatExpectedValue(dbResult)}{ExpectedNextLinkIfAny(paginated, baseUrl, $"{expectedAfterQueryString}")}}}";
                 }

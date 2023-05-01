@@ -47,13 +47,13 @@ namespace Cli
             }
 
             // Creating a new json file with runtime configuration
-            if (!TryCreateRuntimeConfig(options, loader, fileSystem, out RuntimeConfig? runtimeConfigJson))
+            if (!TryCreateRuntimeConfig(options, loader, fileSystem, out RuntimeConfig? runtimeConfig))
             {
                 _logger.LogError($"Failed to create the runtime config file.");
                 return false;
             }
 
-            return WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfigJson, fileSystem);
+            return WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfig, fileSystem);
         }
 
         /// <summary>

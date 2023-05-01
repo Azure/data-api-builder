@@ -40,9 +40,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication.Helpers
         {
             // Setup RuntimeConfigProvider object for the pipeline.
             Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
-            Mock<RuntimeConfigPath> runtimeConfigPath = new();
-            Mock<RuntimeConfigProvider> runtimeConfigProvider = new(runtimeConfigPath.Object,
-                configProviderLogger.Object);
+            Mock<RuntimeConfigLoader> loader = new();
+            Mock<RuntimeConfigProvider> runtimeConfigProvider = new(loader.Object, configProviderLogger.Object);
 
             return await new HostBuilder()
                 .ConfigureWebHost(webBuilder =>

@@ -11,6 +11,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Data.SqlClient;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -18,7 +19,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 {
-    public class SqlTestHelper : TestHelper
+    public static class SqlTestHelper
     {
         // This is is the key which holds all the rows in the response
         // for REST requests.
@@ -29,16 +30,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         private const string PROPERTY_STATUS = "status";
         private const string PROPERTY_CODE = "code";
 
-        public static void RemoveAllRelationshipBetweenEntities(RuntimeConfig runtimeConfig)
+        public static RuntimeConfig RemoveAllRelationshipBetweenEntities(RuntimeConfig runtimeConfig)
         {
-            foreach ((string entityName, Entity entity) in runtimeConfig.Entities.ToList())
-            {
-                Entity updatedEntity = new(entity.Source, entity.Rest,
-                                           entity.GraphQL, entity.Permissions,
-                                           Relationships: null, Mappings: entity.Mappings);
-                runtimeConfig.Entities.Remove(entityName);
-                runtimeConfig.Entities.Add(entityName, updatedEntity);
-            }
+            return runtimeConfig with {
+                Entities = new(runtimeConfig.Entities.ToDictionary(item => item.Key, item => item.Value with { Relationships = null }))
+            };
         }
 
         /// <summary>
@@ -47,8 +43,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <remarks>
         /// This method of comparing JSON-s provides:
         /// <list type="number">
-        /// <item> Insesitivity to spaces in the JSON formatting </item>
-        /// <item> Insesitivity to order for elements in dictionaries. E.g. {"a": 1, "b": 2} = {"b": 2, "a": 1} </item>
+        /// <item> Insensitivity to spaces in the JSON formatting </item>
+        /// <item> Insensitivity to order for elements in dictionaries. E.g. {"a": 1, "b": 2} = {"b": 2, "a": 1} </item>
         /// <item> Sensitivity to order for elements in lists. E.g. [{"a": 1}, {"b": 2}] ~= [{"b": 2}, {"a": 1}] </item>
         /// </list>
         /// In contrast, string comparing does not provide 1 and 2.
@@ -197,21 +193,21 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="operationType">The operation to be executed on the entity.</param>
         /// <returns>HttpMethod representing the passed in operationType.</returns>
         /// <exception cref="DataApiBuilderException"></exception>
-        public static HttpMethod GetHttpMethodFromOperation(Config.Operation operationType, Config.RestMethod? restMethod = null)
+        public static HttpMethod GetHttpMethodFromOperation(EntityActionOperation operationType, SupportedHttpVerb? restMethod = null)
         {
             switch (operationType)
             {
-                case Config.Operation.Read:
+                case EntityActionOperation.Read:
                     return HttpMethod.Get;
-                case Config.Operation.Insert:
+                case EntityActionOperation.Insert:
                     return HttpMethod.Post;
-                case Config.Operation.Delete:
+                case EntityActionOperation.Delete:
                     return HttpMethod.Delete;
-                case Config.Operation.Upsert:
+                case EntityActionOperation.Upsert:
                     return HttpMethod.Put;
-                case Config.Operation.UpsertIncremental:
+                case EntityActionOperation.UpsertIncremental:
                     return HttpMethod.Patch;
-                case Config.Operation.Execute:
+                case EntityActionOperation.Execute:
                     return ConvertRestMethodToHttpMethod(restMethod);
                 default:
                     throw new DataApiBuilderException(
@@ -226,19 +222,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// </summary>
         /// <param name="restMethod"></param>
         /// <returns>HttpMethod corresponding the RestMethod provided as input.</returns>
-        private static HttpMethod ConvertRestMethodToHttpMethod(RestMethod? restMethod)
+        private static HttpMethod ConvertRestMethodToHttpMethod(SupportedHttpVerb? restMethod)
         {
             switch (restMethod)
             {
-                case RestMethod.Get:
+                case SupportedHttpVerb.Get:
                     return HttpMethod.Get;
-                case RestMethod.Put:
+                case SupportedHttpVerb.Put:
                     return HttpMethod.Put;
-                case RestMethod.Patch:
+                case SupportedHttpVerb.Patch:
                     return HttpMethod.Patch;
-                case RestMethod.Delete:
+                case SupportedHttpVerb.Delete:
                     return HttpMethod.Delete;
-                case RestMethod.Post:
+                case SupportedHttpVerb.Post:
                 default:
                     return HttpMethod.Post;
             }
@@ -247,10 +243,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <summary>
         /// Helper function handles the loading of the runtime config.
         /// </summary>
-        public static RuntimeConfig SetupRuntimeConfig(string databaseEngine)
+        public static RuntimeConfig SetupRuntimeConfig()
         {
-            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath(databaseEngine);
-            return TestHelper.GetRuntimeConfig(TestHelper.GetRuntimeConfigProvider(configPath));
+            RuntimeConfigLoader configPath = TestHelper.GetRuntimeConfigLoader();
+            RuntimeConfigProvider provider = new(configPath);
+
+            return provider.GetConfig();
         }
 
         /// <summary>

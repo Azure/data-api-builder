@@ -24,6 +24,8 @@ public class RuntimeConfigLoader
 
     public static bool CheckPrecedenceForConfigInEngine = true;
 
+    public const string SCHEMA = "dab.draft.schema.json";
+
     public RuntimeConfigLoader(IFileSystem fileSystem)
     {
         _fileSystem = fileSystem;
@@ -79,6 +81,7 @@ public class RuntimeConfigLoader
         options.Converters.Add(new GraphQLRuntimeOptionsConverterFactory());
         options.Converters.Add(new EntitySourceConverterFactory());
         options.Converters.Add(new EntityActionConverterFactory());
+        options.Converters.Add(new StringConverterFactory());
         return options;
     }
 
@@ -142,6 +145,9 @@ public class RuntimeConfigLoader
         return configFileNameWithExtension;
     }
 
+    /// <summary>
+    /// Returns the default config file name.
+    /// </summary>
     public static string DefaultName
     {
         get
@@ -159,7 +165,7 @@ public class RuntimeConfigLoader
     /// generate the config file name for.</param>
     /// <param name="considerOverrides">whether to look for overrides file or not.</param>
     /// <returns></returns>
-    private string GetFileName(string? environmentValue, bool considerOverrides)
+    public string GetFileName(string? environmentValue, bool considerOverrides)
     {
         string configFileName =
             !string.IsNullOrEmpty(environmentValue)

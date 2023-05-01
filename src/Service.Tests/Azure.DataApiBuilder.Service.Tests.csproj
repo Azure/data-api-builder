@@ -40,6 +40,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="System.IO.Abstractions.TestingHelpers" />
+    <PackageReference Include="Snapshooter.MSTest" />
   </ItemGroup>
 
   <ItemGroup>

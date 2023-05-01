@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
@@ -258,7 +259,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     queryString: null,
                     entityNameOrPath: _entityWithSecurityPolicy,
                     sqlQuery: GetQuery("PutOneUpdateAccessibleRowWithSecPolicy"),
-                    operationType: Config.Operation.Upsert,
+                    operationType: EntityActionOperation.Upsert,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
                 );

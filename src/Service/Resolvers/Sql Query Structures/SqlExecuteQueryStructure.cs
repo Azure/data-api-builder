@@ -52,7 +52,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     }
                     else
                     {
-                        parametrizedName = MakeDbConnectionParam(null, paramKey);
+                        parametrizedName = MakeDbConnectionParam(value: null, paramKey);
                     }
 
                     ProcedureParameters.Add(paramKey, $"{parametrizedName}");

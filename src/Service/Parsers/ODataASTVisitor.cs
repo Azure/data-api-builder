@@ -88,13 +88,13 @@ namespace Azure.DataApiBuilder.Service.Parsers
         /// <returns>String representing param that holds given value.</returns>
         public override string Visit(ConstantNode nodeIn)
         {
-            if (nodeIn.TypeReference is not null)
+            if (nodeIn.TypeReference is null)
             {
-                return $"{_struct.MakeDbConnectionParam(GetParamWithSystemType(nodeIn.Value.ToString()!, nodeIn.TypeReference))}";
+                // Represents a NULL value, we support NULL in queries so return "NULL" here
+                return "NULL";
             }
 
-            // Represents a NULL value, we support NULL in queries so return "NULL" here
-            return "NULL";
+            return $"{_struct.MakeDbConnectionParam(GetParamWithSystemType(nodeIn.Value.ToString()!, nodeIn.TypeReference))}";
         }
 
         /// <summary>

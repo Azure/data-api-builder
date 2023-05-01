@@ -909,20 +909,20 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Dictionary<string, Entity> entityCollection = new();
 
             // Sets only the top level name and enables GraphQL for entity
-            Entity entity = SchemaConverterTests.GenerateEmptyEntity();
+            Entity entity = SchemaConverterTests.GenerateEmptyEntity("");
             entity = entity with { GraphQL = entity.GraphQL with { Enabled = true } };
             entityCollection.Add(entityNameFromConfig, entity);
 
             // Sets the top level name to an arbitrary value since it is not used in this check
             // and enables GraphQL for entity by setting the GraphQLSettings.Type to a string.
-            entity = SchemaConverterTests.GenerateEmptyEntity();
+            entity = SchemaConverterTests.GenerateEmptyEntity("");
             entity = entity with { GraphQL = new(Singular: entityNameFromConfig, Plural: "") };
             entityCollection.Add("EntityA", entity);
 
             // Sets the top level name to an arbitrary value since it is not used in this check
             // and enables GraphQL for entity by setting the GraphQLSettings.Type to
             // a SingularPlural object where both Singular and Plural are defined.
-            entity = SchemaConverterTests.GenerateEmptyEntity();
+            entity = SchemaConverterTests.GenerateEmptyEntity("");
             entity = entity with { GraphQL = new(entityNameFromConfig, entityNameFromConfig) };
             entityCollection.Add("EntityC", entity);
 

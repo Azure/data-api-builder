@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO.Abstractions.TestingHelpers;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.Core;
 using Azure.DataApiBuilder.Config;

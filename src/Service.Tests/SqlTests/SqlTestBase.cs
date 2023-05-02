@@ -49,10 +49,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         protected static ISqlMetadataProvider _sqlMetadataProvider;
         protected static string _defaultSchemaName;
         protected static string _defaultSchemaVersion;
-        protected static RuntimeConfigProvider _runtimeConfigProvider;
         protected static IAuthorizationResolver _authorizationResolver;
         private static WebApplicationFactory<Program> _application;
-        protected static RuntimeConfig _runtimeConfig;
         protected static ILogger<ISqlMetadataProvider> _sqlMetadataLogger;
         protected static ILogger<SqlMutationEngine> _mutationEngineLogger;
         protected static ILogger<IQueryEngine> _queryEngineLogger;
@@ -73,31 +71,32 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="customQueries">Test specific queries to be executed on database.</param>
         /// <param name="customEntities">Test specific entities to be added to database.</param>
         /// <returns></returns>
-        protected async static Task InitializeTestFixture(TestContext context, List<string> customQueries = null, List<string[]> customEntities = null)
+        protected async static Task InitializeTestFixture(
+            TestContext context,
+            List<string> customQueries = null,
+            List<string[]> customEntities = null)
         {
+            // Get the base config file from disk
+            RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
+
+            // Add magazines entity to the config
+            runtimeConfig = DatabaseEngine switch
+            {
+                TestCategory.MYSQL => TestHelper.AddMissingEntitiesToConfig(runtimeConfig, "magazine", "magazines"),
+                _ => TestHelper.AddMissingEntitiesToConfig(runtimeConfig, "magazine", "foo.magazines"),
+            };
+
+            // Add custom entities for the test, if any.
+            runtimeConfig = AddCustomEntities(customEntities, runtimeConfig);
+
+            // Generate in memory runtime config provider that uses the config that we have modified
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
+
             _queryEngineLogger = new Mock<ILogger<IQueryEngine>>().Object;
             _mutationEngineLogger = new Mock<ILogger<SqlMutationEngine>>().Object;
             _restControllerLogger = new Mock<ILogger<RestController>>().Object;
 
-            RuntimeConfigLoader loader = TestHelper.GetRuntimeConfigLoader();
-            Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
-            Mock<ILogger<AuthorizationResolver>> authLogger = new();
-            RuntimeConfigProvider provider = new(loader);
-
-            // Add magazines entity to the config
-            if (TestCategory.MYSQL.Equals(DatabaseEngine))
-            {
-                TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, "magazine", "magazines");
-            }
-            else
-            {
-                TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, "magazine", "foo.magazines");
-            }
-
-            // Add custom entities for the test, if any.
-            AddCustomEntities(customEntities);
-
-            SetUpSQLMetadataProvider();
+            SetUpSQLMetadataProvider(runtimeConfigProvider);
 
             // Setup Mock HttpContextAccess to return user as required when calling AuthorizationService.AuthorizeAsync
             _httpContextAccessor = new Mock<IHttpContextAccessor>();
@@ -111,11 +110,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             await _sqlMetadataProvider.InitializeAsync();
 
             // sets the database name using the connection string
-            SetDatabaseNameFromConnectionString(_runtimeConfig.DataSource.ConnectionString);
+            SetDatabaseNameFromConnectionString(runtimeConfig.DataSource.ConnectionString);
 
             //Initialize the authorization resolver object
             _authorizationResolver = new AuthorizationResolver(
-                _runtimeConfigProvider,
+                runtimeConfigProvider,
                 _sqlMetadataProvider);
 
             _application = new WebApplicationFactory<Program>()
@@ -124,7 +123,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     builder.ConfigureTestServices(services =>
                     {
                         services.AddHttpContextAccessor();
-                        services.AddSingleton(_runtimeConfigProvider);
+                        services.AddSingleton(runtimeConfigProvider);
                         services.AddSingleton(_gQLFilterParser);
                         services.AddSingleton<IQueryEngine>(implementationFactory: (serviceProvider) =>
                         {
@@ -136,7 +135,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                                 _authorizationResolver,
                                 _gQLFilterParser,
                                 _queryEngineLogger,
-                                _runtimeConfigProvider
+                                runtimeConfigProvider
                                 );
                         });
                         services.AddSingleton<IMutationEngine>(implementationFactory: (serviceProvider) =>
@@ -162,7 +161,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// Helper method to add test specific entities to the entity mapping.
         /// </summary>
         /// <param name="customEntities">List of test specific entities.</param>
-        private static void AddCustomEntities(List<string[]> customEntities)
+        private static RuntimeConfig AddCustomEntities(List<string[]> customEntities, RuntimeConfig runtimeConfig)
         {
             if (customEntities is not null)
             {
@@ -170,9 +169,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 {
                     string objectKey = customEntity[0];
                     string objectName = customEntity[1];
-                    TestHelper.AddMissingEntitiesToConfig(_runtimeConfig, objectKey, objectName);
+                    runtimeConfig = TestHelper.AddMissingEntitiesToConfig(runtimeConfig, objectKey, objectName);
                 }
             }
+
+            return runtimeConfig;
         }
 
         /// <summary>
@@ -219,7 +220,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             }
         }
 
-        protected static void SetUpSQLMetadataProvider()
+        protected static void SetUpSQLMetadataProvider(RuntimeConfigProvider runtimeConfigProvider)
         {
             _sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
             Mock<IHttpContextAccessor> httpContextAccessor = new();
@@ -230,15 +231,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     Mock<ILogger<PostgreSqlQueryExecutor>> pgQueryExecutorLogger = new();
                     _queryBuilder = new PostgresQueryBuilder();
                     _defaultSchemaName = "public";
-                    _dbExceptionParser = new PostgreSqlDbExceptionParser(_runtimeConfigProvider);
+                    _dbExceptionParser = new PostgreSqlDbExceptionParser(runtimeConfigProvider);
                     _queryExecutor = new PostgreSqlQueryExecutor(
-                        _runtimeConfigProvider,
+                        runtimeConfigProvider,
                         _dbExceptionParser,
                         pgQueryExecutorLogger.Object,
                         httpContextAccessor.Object);
                     _sqlMetadataProvider =
                         new PostgreSqlMetadataProvider(
-                            _runtimeConfigProvider,
+                            runtimeConfigProvider,
                             _queryExecutor,
                             _queryBuilder,
                             _sqlMetadataLogger);
@@ -247,15 +248,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     Mock<ILogger<QueryExecutor<SqlConnection>>> msSqlQueryExecutorLogger = new();
                     _queryBuilder = new MsSqlQueryBuilder();
                     _defaultSchemaName = "dbo";
-                    _dbExceptionParser = new MsSqlDbExceptionParser(_runtimeConfigProvider);
+                    _dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
                     _queryExecutor = new MsSqlQueryExecutor(
-                        _runtimeConfigProvider,
+                        runtimeConfigProvider,
                         _dbExceptionParser,
                         msSqlQueryExecutorLogger.Object,
                         httpContextAccessor.Object);
                     _sqlMetadataProvider =
                         new MsSqlMetadataProvider(
-                            _runtimeConfigProvider,
+                            runtimeConfigProvider,
                             _queryExecutor, _queryBuilder,
                             _sqlMetadataLogger);
                     break;
@@ -263,15 +264,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     Mock<ILogger<MySqlQueryExecutor>> mySqlQueryExecutorLogger = new();
                     _queryBuilder = new MySqlQueryBuilder();
                     _defaultSchemaName = "mysql";
-                    _dbExceptionParser = new MySqlDbExceptionParser(_runtimeConfigProvider);
+                    _dbExceptionParser = new MySqlDbExceptionParser(runtimeConfigProvider);
                     _queryExecutor = new MySqlQueryExecutor(
-                        _runtimeConfigProvider,
+                        runtimeConfigProvider,
                         _dbExceptionParser,
                         mySqlQueryExecutorLogger.Object,
                         httpContextAccessor.Object);
                     _sqlMetadataProvider =
                          new MySqlMetadataProvider(
-                             _runtimeConfigProvider,
+                             runtimeConfigProvider,
                              _queryExecutor,
                              _queryBuilder,
                              _sqlMetadataLogger);

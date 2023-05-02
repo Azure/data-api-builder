@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO.Abstractions.TestingHelpers;
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
@@ -58,9 +57,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             DatabaseEngine = TestCategory.POSTGRESQL;
             TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
-            _runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
-            SqlTestHelper.RemoveAllRelationshipBetweenEntities(_runtimeConfig);
-            SetUpSQLMetadataProvider();
+            RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
+            SqlTestHelper.RemoveAllRelationshipBetweenEntities(runtimeConfig);
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
+            SetUpSQLMetadataProvider(runtimeConfigProvider);
             await ResetDbStateAsync();
             await _sqlMetadataProvider.InitializeAsync();
         }
@@ -132,10 +132,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfig baseConfigFromDisk = SqlTestHelper.SetupRuntimeConfig();
 
             RuntimeConfig runtimeConfig = baseConfigFromDisk with { DataSource = baseConfigFromDisk.DataSource with { ConnectionString = connectionString } };
-            MockFileSystem fileSystem = new();
-            fileSystem.AddFile(RuntimeConfigLoader.DefaultName, runtimeConfig.ToJson());
-            RuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider runtimeConfigProvider = new(loader);
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
 
             ILogger<ISqlMetadataProvider> sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
 
@@ -171,14 +168,17 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             DatabaseEngine = TestCategory.MSSQL;
             TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
-            _runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
-            SetUpSQLMetadataProvider();
+            RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
+            SetUpSQLMetadataProvider(runtimeConfigProvider);
 
             await _sqlMetadataProvider.InitializeAsync();
 
-            Entity entity = _runtimeConfig.Entities["GetBooks"];
+            Entity entity = runtimeConfig.Entities["GetBooks"];
             Assert.AreEqual("get_books", entity.Source.Object);
             Assert.AreEqual(EntityType.StoredProcedure, entity.Source.Type);
+
+            TestHelper.UnsetDatabaseEnvironment();
         }
 
         [DataTestMethod, TestCategory(TestCategory.MSSQL)]

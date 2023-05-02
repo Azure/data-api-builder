@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO.Abstractions;
+using System.IO.Abstractions.TestingHelpers;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Humanizer;
@@ -142,5 +143,14 @@ namespace Azure.DataApiBuilder.Service.Tests
             },
             ""entities"": {}" +
           "}";
+
+        public static RuntimeConfigProvider GenerateInMemoryRuntimeConfigProvider(RuntimeConfig runtimeConfig)
+        {
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(RuntimeConfigLoader.DefaultName, runtimeConfig.ToJson());
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider runtimeConfigProvider = new(loader);
+            return runtimeConfigProvider;
+        }
     }
 }

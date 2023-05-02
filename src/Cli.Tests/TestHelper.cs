@@ -895,7 +895,7 @@ namespace Cli.Tests
         }
       }";
 
-        public const string CONFIG_TO_MERGE =
+        public const string BASE_CONFIG =
           @"{" +
             @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
             @"""data-source"": {
@@ -952,15 +952,12 @@ namespace Cli.Tests
         }
       }";
 
-        public const string CONFIG_TO_MERGE_WITH =
+        public const string BASE_OVERRIDE_CONFIG =
           @"{" +
             @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
             @"""data-source"": {
           ""database-type"": ""mssql"",
-          ""connection-string"": ""localhost:5000;User ID=user;Password=pwd;MultipleActiveResultSets=False;"",
-          ""options"":{
-            ""set-session-context"": true
-          }
+          ""connection-string"": ""localhost:5000;User ID={USER_NAME};Password={USER_PASSWORD};MultipleActiveResultSets=False;""
         },
         ""runtime"": {
           ""rest"": {
@@ -1014,7 +1011,7 @@ namespace Cli.Tests
             @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
             @"""data-source"": {
           ""database-type"": ""mssql"",
-          ""connection-string"": ""localhost:5000;User ID=user;Password=pwd;MultipleActiveResultSets=False;"",
+          ""connection-string"": ""localhost:5000;User ID={USER_NAME};Password={USER_PASSWORD};MultipleActiveResultSets=False;"",
           ""options"":{
             ""set-session-context"": true
           }

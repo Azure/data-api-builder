@@ -949,9 +949,9 @@ namespace Cli
         public static bool TryStartEngineWithOptions(StartOptions options)
         {
             string? configToBeUsed = options.Config;
-            if (string.IsNullOrEmpty(configToBeUsed))
+            if (string.IsNullOrEmpty(configToBeUsed) && TryMergeConfigsIfAvailable(out configToBeUsed))
             {
-                configToBeUsed = MergeConfigsIfAvailable();
+                _logger.LogError($"Using Merged Config File based on environment:{configToBeUsed}.");
             }
 
             if (!TryGetConfigFileBasedOnCliPrecedence(configToBeUsed, out string runtimeConfigFile))

@@ -12,7 +12,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Humanizer;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Config.AuthenticationConfig;
-using static Azure.DataApiBuilder.Config.MergeConfig;
+using static Azure.DataApiBuilder.Config.MergeConfigProvider;
 using static Azure.DataApiBuilder.Config.RuntimeConfigPath;
 using static Azure.DataApiBuilder.Service.Configurations.RuntimeConfigValidator;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
@@ -904,27 +904,37 @@ namespace Cli
         /// This method will check if DAB_ENVIRONMENT value is set.
         /// If yes, it will try to merge dab-config.json with dab-config.{DAB_ENVIRONMENT}.json
         /// </summary>
-        public static string MergeConfigsIfAvailable()
+        /// <returns>Returns the name of the merged Config if successful.</returns>
+        public static bool TryMergeConfigsIfAvailable(out string mergedFile)
         {
             string? environmentValue = Environment.GetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME);
+            mergedFile = string.Empty;
             if (!string.IsNullOrEmpty(environmentValue))
             {
-                string FileToBeOverridden = DefaultName;
-                string FileToBeOverriddenWith = $"{CONFIGFILE_NAME}.{environmentValue}{CONFIG_EXTENSION}";
-                string mergedFile = $"{CONFIGFILE_NAME}.{environmentValue}.merged{CONFIG_EXTENSION}";
+                string baseConfigFile = DefaultName;
+                string overrideConfigFile = RuntimeConfigPath.GetFileName(environmentValue, considerOverrides: false);
+                mergedFile = $"{CONFIGFILE_NAME}.{environmentValue}.merged{CONFIG_EXTENSION}";
 
-                if (DoesFileExistInCurrentDirectory(FileToBeOverridden) && DoesFileExistInCurrentDirectory(FileToBeOverriddenWith))
+                if (DoesFileExistInCurrentDirectory(baseConfigFile) && !string.IsNullOrEmpty(overrideConfigFile))
                 {
-                    string originalJson = File.ReadAllText(FileToBeOverridden);
-                    string newJson = File.ReadAllText(FileToBeOverriddenWith);
-                    string mergedJson = Merge(originalJson, newJson);
+                    try
+                    {
+                        string baseConfigJson = File.ReadAllText(baseConfigFile);
+                        string overrideConfigJson = File.ReadAllText(overrideConfigFile);
+                        string mergedConfigJson = Merge(baseConfigJson, overrideConfigJson);
 
-                    File.WriteAllText(mergedFile, mergedJson);
-                    return mergedFile;
+                        File.WriteAllText(mergedFile, mergedConfigJson);
+                        return true;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"Failed to merge the config files.");
+                        return false;
+                    }
                 }
             }
 
-            return string.Empty;
+            return false;
         }
 
         /// <summary>

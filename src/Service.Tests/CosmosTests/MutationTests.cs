@@ -4,7 +4,6 @@
 using System;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
@@ -43,6 +42,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             cosmosClient.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
             CreateItems(DATABASE_NAME, _containerName, 10);
             OverrideEntityContainer("Planet", _containerName);
+            OverrideEntityContainer("Earth", _containerName);
         }
 
         [TestMethod]
@@ -283,7 +283,7 @@ mutation {{
 
             // Validate the result contains the GraphQL authorization error code.
             string errorMessage = response.ToString();
-            Assert.IsTrue(errorMessage.Contains(DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE));
+            Assert.IsTrue(errorMessage.Contains("Unauthorized due to one or more fields in this mutation."));
         }
 
         /// <summary>

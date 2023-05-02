@@ -9,13 +9,13 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Config;
 
 public class RuntimeConfigLoader
 {
     private readonly IFileSystem _fileSystem;
-
     public const string CONFIGFILE_NAME = "dab-config";
     public const string CONFIG_EXTENSION = ".json";
 
@@ -55,14 +55,36 @@ public class RuntimeConfigLoader
     /// <param name="json">JSON that represents the config file.</param>
     /// <param name="config">The parsed config, or null if it parsed unsuccessfully.</param>
     /// <returns>True if the config was parsed, otherwise false.</returns>
-    public static bool TryParseConfig(string json, [NotNullWhen(true)] out RuntimeConfig? config)
+    public static bool TryParseConfig(string json, [NotNullWhen(true)] out RuntimeConfig? config, ILogger? logger = null)
     {
         JsonSerializerOptions options = GetSerializationOption();
 
-        config = JsonSerializer.Deserialize<RuntimeConfig>(json, options);
-
-        if (config is null)
+        try
         {
+            config = JsonSerializer.Deserialize<RuntimeConfig>(json, options);
+
+            if (config is null)
+            {
+                return false;
+            }
+        }
+        catch (JsonException ex)
+        {
+            string errorMessage = $"Deserialization of the configuration file failed.\n" +
+                        $"Message:\n {ex.Message}\n" +
+                        $"Stack Trace:\n {ex.StackTrace}";
+
+            if (logger is null)
+            {
+                // logger can be null when called from CLI
+                Console.Error.WriteLine(errorMessage);
+            }
+            else
+            {
+                logger.LogError(ex, errorMessage);
+            }
+
+            config = null;
             return false;
         }
 
@@ -74,7 +96,8 @@ public class RuntimeConfigLoader
         JsonSerializerOptions options = new()
         {
             PropertyNameCaseInsensitive = false,
-            PropertyNamingPolicy = new HyphenatedNamingPolicy()
+            PropertyNamingPolicy = new HyphenatedNamingPolicy(),
+            ReadCommentHandling = JsonCommentHandling.Skip
         };
         options.Converters.Add(new HyphenatedJsonEnumConverterFactory());
         options.Converters.Add(new RestRuntimeOptionsConverterFactory());

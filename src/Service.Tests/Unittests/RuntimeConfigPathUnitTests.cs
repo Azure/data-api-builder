@@ -119,9 +119,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             string json = @"{ ""foo"" : ""@env('envVarName'), @env('" + invalidEnvVarName + @"')"" }";
             SetEnvVariables();
             StringConverterFactory stringConverterFactory = new();
-            JsonSerializerOptions options = new();
+            JsonSerializerOptions options = new() { PropertyNameCaseInsensitive = true };
             options.Converters.Add(stringConverterFactory);
-            Assert.ThrowsException<DataApiBuilderException>(() => JsonSerializer.Deserialize<object>(json, options));
+            Assert.ThrowsException<DataApiBuilderException>(() => JsonSerializer.Deserialize<StubJsonType>(json, options));
         }
 
         [TestMethod("Validates that JSON deserialization failures are gracefully caught.")]
@@ -506,5 +506,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         #endregion Helper Functions
+
+        record StubJsonType(string Foo);
     }
 }

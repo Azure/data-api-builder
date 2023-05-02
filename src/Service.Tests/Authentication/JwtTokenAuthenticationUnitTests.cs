@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
+using System.IO.Abstractions.TestingHelpers;
 using System.Net;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -24,7 +25,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.Authentication
 {
@@ -282,9 +282,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         private static async Task<IHost> CreateWebHostCustomIssuer(SecurityKey key)
         {
             // Setup RuntimeConfigProvider object for the pipeline.
-            Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
-            Mock<RuntimeConfigLoader> loader = new();
-            Mock<RuntimeConfigProvider> runtimeConfigProvider = new(loader.Object, configProviderLogger.Object);
+            MockFileSystem fileSystem = new();
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider runtimeConfigProvider = new(loader);
 
             return await new HostBuilder()
                 .ConfigureWebHost(webBuilder =>
@@ -316,7 +316,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
                                     };
                                 });
                             services.AddAuthorization();
-                            services.AddSingleton(runtimeConfigProvider.Object);
+                            services.AddSingleton(runtimeConfigProvider);
                         })
                         .ConfigureLogging(o =>
                         {

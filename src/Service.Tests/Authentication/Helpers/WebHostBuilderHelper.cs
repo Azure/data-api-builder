@@ -4,6 +4,7 @@
 #nullable enable
 using System;
 using System.IO;
+using System.IO.Abstractions.TestingHelpers;
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
@@ -18,7 +19,6 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.Authentication.Helpers
 {
@@ -39,9 +39,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication.Helpers
             bool useAuthorizationMiddleware)
         {
             // Setup RuntimeConfigProvider object for the pipeline.
-            Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
-            Mock<RuntimeConfigLoader> loader = new();
-            Mock<RuntimeConfigProvider> runtimeConfigProvider = new(loader.Object, configProviderLogger.Object);
+            MockFileSystem fileSystem = new();
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider runtimeConfigProvider = new(loader);
 
             return await new HostBuilder()
                 .ConfigureWebHost(webBuilder =>
@@ -62,7 +62,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication.Helpers
                                     .AddEasyAuthAuthentication(easyAuthProvider);
                             }
 
-                            services.AddSingleton(runtimeConfigProvider.Object);
+                            services.AddSingleton(runtimeConfigProvider);
 
                             if (useAuthorizationMiddleware)
                             {

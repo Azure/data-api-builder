@@ -41,7 +41,6 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
                             break;
                         }
 
-                        Console.WriteLine($"Unable to handle $.rest.path with token {reader.TokenType}");
                         break;
                     }
 
@@ -84,12 +83,12 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
 
         if (reader.TokenType == JsonTokenType.String)
         {
-            return new EntityRestOptions(Array.Empty<SupportedHttpVerb>(), reader.GetString(), true);
+            return new EntityRestOptions(EntityRestOptions.DEFAULT_SUPPORTED_VERBS, reader.GetString(), true);
         }
 
         if (reader.TokenType == JsonTokenType.True || reader.TokenType == JsonTokenType.False)
         {
-            return new EntityRestOptions(Array.Empty<SupportedHttpVerb>(), null, reader.GetBoolean());
+            return new EntityRestOptions(EntityRestOptions.DEFAULT_SUPPORTED_VERBS, null, reader.GetBoolean());
         }
 
         throw new JsonException();

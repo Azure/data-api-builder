@@ -231,7 +231,7 @@ namespace Cli.Tests
             }
         }
 
-        [ClassCleanup]
+        [TestCleanup]
         public static void Cleanup()
         {
             if (File.Exists($"{CONFIGFILE_NAME}{CONFIG_EXTENSION}"))

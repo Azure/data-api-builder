@@ -788,6 +788,10 @@ namespace Azure.DataApiBuilder.Service.Services
             return (schemaName, dbTableName);
         }
 
+        /// <inheritdoc />
+        public List<string> GetSchemaGraphQLFieldsForEntityName(string entityName)
+            => throw new NotImplementedException();
+
         /// <summary>
         /// Enrich the entities in the runtime config with the
         /// object definition information needed by the runtime to serve requests.

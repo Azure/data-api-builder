@@ -39,6 +39,11 @@ namespace Azure.DataApiBuilder.Service.Services
         (string, string) ParseSchemaAndDbTableName(string source);
 
         /// <summary>
+        /// Obtains the underlying all column names for each entity name.
+        /// </summary>
+        List<string> GetSchemaGraphQLFieldsForEntityName(string entityName);
+
+        /// <summary>
         /// Obtains the underlying SourceDefinition for the given entity name.
         /// </summary>
         SourceDefinition GetSourceDefinition(string entityName);

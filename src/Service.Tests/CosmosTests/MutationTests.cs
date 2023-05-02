@@ -4,6 +4,7 @@
 using System;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
@@ -240,6 +241,49 @@ mutation {{
 }}";
             JsonElement response = await ExecuteGraphQLRequestAsync("deletePlanet", mutation, variables: new());
             Assert.AreEqual("The argument `_partitionKeyValue` is required.", response[0].GetProperty("message").ToString());
+        }
+
+        /// <summary>
+        /// Mutation can be performed on the authorized fields
+        /// </summary>
+        [TestMethod]
+        public async Task CanCreateItemWithAuthorizedFields()
+        {
+            // Run mutation Add planet;
+            string id = Guid.NewGuid().ToString();
+            string mutation = $@"
+mutation {{
+    createEarth (item: {{ id: ""{id}"" }}) {{
+        id
+    }}
+}}";
+            JsonElement response = await ExecuteGraphQLRequestAsync("createEarth", mutation, variables: new());
+
+            // Validate results
+            Assert.AreEqual(id, response.GetProperty("id").GetString());
+        }
+
+        /// <summary>
+        /// Mutation performed on the unauthorized fields throws permission denied error
+        /// </summary>
+        [TestMethod]
+        public async Task CreateItemWithUnauthorizedFieldsReturnsError()
+        {
+            // Run mutation Add planet;
+            string id = Guid.NewGuid().ToString();
+            const string name = "test_name";
+            string mutation = $@"
+mutation {{
+    createEarth (item: {{ id: ""{id}"", name: ""{name}"" }}) {{
+        id
+        name
+    }}
+}}";
+            JsonElement response = await ExecuteGraphQLRequestAsync("createEarth", mutation, variables: new());
+
+            // Validate the result contains the GraphQL authorization error code.
+            string errorMessage = response.ToString();
+            Assert.IsTrue(errorMessage.Contains(DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE));
         }
 
         /// <summary>

@@ -141,11 +141,10 @@ namespace Azure.DataApiBuilder.Service.Models
                         relationshipField = false;
                     }
 
-                    // Only perform field (column) authorization when the field is not a relationship field and when the database type is not Cosmos DB.
-                    // Currently Cosmos DB doesn't support field level authorization.
+                    // Only perform field (column) authorization when the field is not a relationship field.
                     // Due to the recursive behavior of SqlExistsQueryStructure compilation, the column authorization
                     // check only occurs when access to the column's owner entity is confirmed.
-                    if (!relationshipField && _metadataProvider.GetDatabaseType() is not DatabaseType.cosmosdb_nosql)
+                    if (!relationshipField)
                     {
                         string targetEntity = queryStructure.EntityName;
 

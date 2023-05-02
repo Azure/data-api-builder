@@ -2,8 +2,11 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,6 +23,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         private static readonly string _containerName = Guid.NewGuid().ToString();
         private static int _pageSize = 10;
         private static readonly string _graphQLQueryName = "planets";
+        private static List<string> _idList;
 
         [ClassInitialize]
         public static void TestFixtureSetup(TestContext context)
@@ -28,8 +32,9 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
             cosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
             cosmosClient.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
-            CreateItems(DATABASE_NAME, _containerName, 10);
+            _idList = CreateItems(DATABASE_NAME, _containerName, 10);
             OverrideEntityContainer("Planet", _containerName);
+            OverrideEntityContainer("Earth", _containerName);
         }
 
         /// <summary>
@@ -641,6 +646,135 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             string dbQuery = "SELECT top 1 c.id, c.name, c.character FROM c where c.character.star.name = \"Endor_star\"";
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
         }
+
+        #region Field Level Auth
+        /// <summary>
+        /// Tests that the field level query filter succeeds requests when filter fileds are authorized
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryFilterFieldAuth_AuthorizedField()
+        {
+            string gqlQuery = @"{
+                earths(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {id : {eq : """ + _idList[0] + @"""}})
+                { 
+                    items {
+                        id
+                    }
+                }
+            }";
+
+            string dbQuery = $"SELECT top 1 c.id FROM c where c.id = \"{ _idList[0] }\"";
+            await ExecuteAndValidateResult("earths", gqlQuery, dbQuery);
+        }
+
+        /// <summary>
+        /// Tests that the field level query filter fails requests when filter fileds are unauthorized
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryFilterFieldAuth_UnauthorizedField()
+        {
+            // Run query
+            string gqlQuery = @"{
+                earths(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {name : {eq : ""test name""}})
+                { 
+                    items {
+                        name
+                    }
+                }
+            }";
+            string clientRoleHeader = AuthorizationType.Anonymous.ToString();
+            JsonElement response = await ExecuteGraphQLRequestAsync(
+                queryName: "earths",
+                query: gqlQuery,
+                variables: new() { { "name", "test name" } },
+                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
+                clientRoleHeader: clientRoleHeader);
+
+            // Validate the result contains the GraphQL authorization error code.
+            string errorMessage = response.ToString();
+            Assert.IsTrue(errorMessage.Contains(DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE));
+        }
+
+        /// <summary>
+        /// Tests that the field level query filter succeeds requests when filter fileds are authorized
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryFilterFieldAuth_AuthorizedWildCard()
+        {
+            // Run query
+            string gqlQuery = @"{
+                earths(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {name : {eq : ""Earth""}})
+                { 
+                    items {
+                        name
+                    }
+                }
+            }";
+            string clientRoleHeader = AuthorizationType.Authenticated.ToString();
+            JsonElement response = await ExecuteGraphQLRequestAsync(
+                queryName: "earths",
+                query: gqlQuery,
+                variables: new() { { "name", "Earth" } },
+                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
+                clientRoleHeader: clientRoleHeader);
+
+            Assert.AreEqual(response.GetProperty("items")[0].GetProperty("name").ToString(), "Earth");
+        }
+
+        /// <summary>
+        /// Tests that the nested field level query filter succeeds requests when nested filter fileds are authorized
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryFilterNestedFieldAuth_AuthorizedNestedField()
+        {
+            string gqlQuery = @"{
+                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {earth : {id : {eq : """ + _idList[0] + @"""}}})
+                { 
+                    items {
+                        earth {
+                                id
+                              }
+                    }
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(_graphQLQueryName, query: gqlQuery);
+            Assert.AreEqual(actual.GetProperty("items")[0].GetProperty("earth").GetProperty("id").ToString(), _idList[0]);
+        }
+
+        /// <summary>
+        /// Tests that the nested field level query filter fails requests when nested filter fileds are unauthorized
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryFilterNestedFieldAuth_UnauthorizedNestedField()
+        {
+            // Run query
+            string gqlQuery = @"{
+                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {earth : {name : {eq : ""test name""}}})
+                { 
+                    items {
+                        id
+                        name
+                        earth {
+                                name
+                              }
+                    }
+                }
+            }";
+
+            string clientRoleHeader = AuthorizationType.Anonymous.ToString();
+            JsonElement response = await ExecuteGraphQLRequestAsync(
+                queryName: _graphQLQueryName,
+                query: gqlQuery,
+                variables: new() { { "name", "test name" } },
+                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
+                clientRoleHeader: clientRoleHeader);
+
+            // Validate the result contains the GraphQL authorization error code.
+            string errorMessage = response.ToString();
+            Assert.IsTrue(errorMessage.Contains(DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE));
+        }
+        #endregion
 
         [ClassCleanup]
         public static void TestFixtureTearDown()

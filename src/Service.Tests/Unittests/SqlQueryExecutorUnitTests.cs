@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
 using System.Net;
 using System.Text.Json;
@@ -208,19 +209,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [TestMethod, TestCategory(TestCategory.MSSQL)]
         public async Task TestRetryPolicySuccessfullyExecutingQueryAfterNAttempts()
         {
-            RuntimeConfig mockConfig = new(
-               Schema: "",
-               DataSource: new(DatabaseType.MSSQL, "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=sa;Password=REPLACEME;MultipleActiveResultSets=False;Connection Timeout=5;", new()),
-               Runtime: new(
-                   Rest: new(),
-                   GraphQL: new(),
-                   Host: new(null, null)
-               ),
-               Entities: new(new Dictionary<string, Entity>())
-            );
-
-            MockFileSystem fileSystem = new();
-            fileSystem.AddFile(RuntimeConfigLoader.DefaultName, new MockFileData(mockConfig.ToJson()));
+            FileSystem fileSystem = new();
             RuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider provider = new(loader);
             Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();

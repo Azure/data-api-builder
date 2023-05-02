@@ -112,7 +112,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="paramName"> The name of the parameter - column name for table/views or parameter name for stored procedures.</param>
         public virtual string MakeDbConnectionParam(object? value, string? paramName = null)
         {
-            string encodedParamName = $"{PARAM_NAME_PREFIX}param{Counter.Next()}";
+            string encodedParamName = GetEncodedParamName(Counter.Next());
             if (!string.IsNullOrEmpty(paramName))
             {
                 Parameters.Add(encodedParamName, new(value, GetUnderlyingSourceDefinition().GetDbTypeForParam(paramName)));
@@ -123,6 +123,16 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             return encodedParamName;
+        }
+
+        /// <summary>
+        /// Helper method to create encoded parameter name.
+        /// </summary>
+        /// <param name="counterValue">The counter value used as a suffix in the encoded parameter name.</param>
+        /// <returns>Encoded parameter name.</returns>
+        public static string GetEncodedParamName(ulong counterValue)
+        {
+            return $"{PARAM_NAME_PREFIX}param{counterValue}";
         }
 
         /// <summary>

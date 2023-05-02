@@ -272,7 +272,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
         {
             SingleValuePropertyAccessNode propertyNode = nodeIn.Left.GetType() == typeof(SingleValuePropertyAccessNode) ?
                     (SingleValuePropertyAccessNode)nodeIn.Left : (SingleValuePropertyAccessNode)nodeIn.Right;
-            string? paramName = $"{BaseQueryStructure.PARAM_NAME_PREFIX}param{_struct.Counter.Current() - 1}";
+            string? paramName = BaseQueryStructure.GetEncodedParamName(_struct.Counter.Current() - 1);
             _metadataProvider.TryGetBackingColumn(_struct.EntityName, propertyNode.Property.Name, out string? backingColumnName);
             _struct.Parameters[paramName].DbType = _struct.GetUnderlyingSourceDefinition().Columns[backingColumnName!].DbType;
         }

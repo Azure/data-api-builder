@@ -68,7 +68,7 @@ namespace Azure.DataApiBuilder.Service.Tests
         {
             Entity entity = new(
                 Source: new(entityName, EntityType.Table, null, null),
-                GraphQL: new(entityName, entityName.Pluralize()),
+                GraphQL: new(entityKey, entityKey.Pluralize()),
                 Rest: new(Array.Empty<SupportedHttpVerb>()),
                 Permissions: new[]
                 {

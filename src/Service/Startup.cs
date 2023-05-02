@@ -43,6 +43,7 @@ namespace Azure.DataApiBuilder.Service
         public static bool IsLogLevelOverriddenByCli;
 
         public const string NO_HTTPS_REDIRECT_FLAG = "--no-https-redirect";
+        public const string BANANA_CAKE_POP_DISABLED_ERROR_CODE = "HC0013";
 
         public Startup(IConfiguration configuration,
             ILogger<Startup> logger,
@@ -289,6 +290,12 @@ namespace Azure.DataApiBuilder.Service
                         {
                             _logger.LogError(error.Code);
                             _logger.LogError(error.Message);
+                            if (error.Code is BANANA_CAKE_POP_DISABLED_ERROR_CODE)
+                            {
+                                // Display an updated user friendly error message when BCP UI is disabled.
+                                return error.WithMessage("Banana Cake Pop UI is disabled in Production mode.");
+                            }
+
                             return error.WithMessage(error.Message);
                         }
 

@@ -208,9 +208,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [TestMethod, TestCategory(TestCategory.MSSQL)]
         public async Task TestRetryPolicySuccessfullyExecutingQueryAfterNAttempts()
         {
+            TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
             FileSystem fileSystem = new();
             RuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
+            RuntimeConfigProvider provider = new(loader) { IsLateConfigured = true };
             Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
@@ -251,6 +252,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // For each attempt logger is invoked twice. The query executes successfully in in 1st retry .i.e. 2nd attempt of execution.
             // An additional information log is added when the query executes successfully in a retry attempt.
             Assert.AreEqual(2 * 2 + 1, queryExecutorLogger.Invocations.Count);
+
+            TestHelper.UnsetDatabaseEnvironment();
         }
     }
 }

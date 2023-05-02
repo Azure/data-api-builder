@@ -680,7 +680,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, hostingEnvironmentValue);
             Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
-            string actualRuntimeConfigFile = runtimeConfigLoader.GetFileName(hostingEnvironmentValue, considerOverrides);
+            string actualRuntimeConfigFile = runtimeConfigLoader.GetFileNameForEnvironment(hostingEnvironmentValue, considerOverrides);
             Assert.AreEqual(expectedRuntimeConfigFile, actualRuntimeConfigFile);
         }
 

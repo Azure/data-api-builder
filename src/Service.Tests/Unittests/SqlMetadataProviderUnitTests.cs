@@ -3,10 +3,12 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO.Abstractions.TestingHelpers;
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
+using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Services;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
@@ -127,38 +129,27 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         private static async Task CheckExceptionForBadConnectionStringHelperAsync(string databaseType, string connectionString)
         {
             TestHelper.SetupDatabaseEnvironment(databaseType);
-            _runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
-            _runtimeConfig = _runtimeConfig with { DataSource = _runtimeConfig.DataSource with { ConnectionString = connectionString } };
-            _sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
+            RuntimeConfig baseConfigFromDisk = SqlTestHelper.SetupRuntimeConfig();
 
-            switch (databaseType)
+            RuntimeConfig runtimeConfig = baseConfigFromDisk with { DataSource = baseConfigFromDisk.DataSource with { ConnectionString = connectionString } };
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(RuntimeConfigLoader.DefaultName, runtimeConfig.ToJson());
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider runtimeConfigProvider = new(loader);
+
+            ILogger<ISqlMetadataProvider> sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
+
+            ISqlMetadataProvider sqlMetadataProvider = databaseType switch
             {
-                case TestCategory.MSSQL:
-                    _sqlMetadataProvider =
-                       new MsSqlMetadataProvider(_runtimeConfigProvider,
-                           _queryExecutor,
-                           _queryBuilder,
-                           _sqlMetadataLogger);
-                    break;
-                case TestCategory.MYSQL:
-                    _sqlMetadataProvider =
-                       new MySqlMetadataProvider(_runtimeConfigProvider,
-                           _queryExecutor,
-                           _queryBuilder,
-                           _sqlMetadataLogger);
-                    break;
-                case TestCategory.POSTGRESQL:
-                    _sqlMetadataProvider =
-                       new PostgreSqlMetadataProvider(_runtimeConfigProvider,
-                           _queryExecutor,
-                           _queryBuilder,
-                           _sqlMetadataLogger);
-                    break;
-            }
+                TestCategory.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
+                TestCategory.MYSQL => new MySqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
+                TestCategory.POSTGRESQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
+                _ => throw new ArgumentException($"Invalid database type: {databaseType}")
+            };
 
             try
             {
-                await _sqlMetadataProvider.InitializeAsync();
+                await sqlMetadataProvider.InitializeAsync();
             }
             catch (DataApiBuilderException ex)
             {
@@ -167,6 +158,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
             }
+
+            TestHelper.UnsetDatabaseEnvironment();
         }
 
         /// <summary>

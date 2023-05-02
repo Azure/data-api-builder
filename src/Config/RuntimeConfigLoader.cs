@@ -92,7 +92,7 @@ public class RuntimeConfigLoader
     /// <returns>True if the config was loaded, otherwise false.</returns>
     public bool TryLoadDefaultConfig(out RuntimeConfig? config)
     {
-        string filename = GetFileName(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), false);
+        string filename = GetFileNameForEnvironment(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), false);
 
         return TryLoadConfig(filename, out config);
     }
@@ -165,7 +165,7 @@ public class RuntimeConfigLoader
     /// generate the config file name for.</param>
     /// <param name="considerOverrides">whether to look for overrides file or not.</param>
     /// <returns></returns>
-    public string GetFileName(string? environmentValue, bool considerOverrides)
+    private string GetFileName(string? environmentValue, bool considerOverrides)
     {
         string configFileName =
             !string.IsNullOrEmpty(environmentValue)

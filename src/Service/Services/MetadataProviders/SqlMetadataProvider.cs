@@ -789,7 +789,11 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <inheritdoc />
-        public List<string> GetSchemaGraphQLFieldsForEntityName(string entityName)
+        public List<string> GetSchemaGraphQLFieldNamesForEntityName(string entityName)
+            => throw new NotImplementedException();
+
+        /// <inheritdoc />
+        public string? GetSchemaGraphQLFieldTypeByFieldName(string graphQLType, string fieldName)
             => throw new NotImplementedException();
 
         /// <summary>

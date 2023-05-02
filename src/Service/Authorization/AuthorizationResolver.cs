@@ -687,7 +687,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         {
             if (_metadataProvider.GetDatabaseType() is DatabaseType.cosmosdb_nosql)
             {
-                return _metadataProvider.GetSchemaGraphQLFieldsForEntityName(entityName);
+                return _metadataProvider.GetSchemaGraphQLFieldNamesForEntityName(entityName);
             }
 
             // Table definition is null on stored procedure entities

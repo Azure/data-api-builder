@@ -181,8 +181,21 @@ namespace Azure.DataApiBuilder.Service.Models
                         }
                         else
                         {
+                            // This path will never get called for sql since the primary key will always required
+                            // This path will only be exercised for Cosmos
                             queryStructure.DatabaseObject.Name = sourceName + "." + backingColumnName;
                             queryStructure.SourceAlias = sourceName + "." + backingColumnName;
+                            string? nestedFieldType = _metadataProvider.GetSchemaGraphQLFieldTypeByFieldName(queryStructure.EntityName, name);
+
+                            if (nestedFieldType is null)
+                            {
+                                throw new DataApiBuilderException(
+                                    message: "Invalid filter object nested field input value type.",
+                                    statusCode: HttpStatusCode.BadRequest,
+                                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                            }
+
+                            queryStructure.EntityName = _metadataProvider.GetEntityName(nestedFieldType);
                             predicates.Push(new PredicateOperand(Parse(ctx,
                                 filterArgumentObject.Fields[name],
                                 subfields,

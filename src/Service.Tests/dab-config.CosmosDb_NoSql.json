@@ -66,6 +66,15 @@
       "source": "graphqldb.character",
       "permissions": [
         {
+          "role": "anonymous",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        },
+        {
           "role": "authenticated",
           "actions": [
             "create",
@@ -133,6 +142,63 @@
           ]
         }
       ]
+    },
+    "Earth": {
+      "source": "graphqldb.earth",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "create",
+              "fields": {
+                "include": [
+                  "id"
+                ],
+                "exclude": [
+                  "name"
+                ]
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "include": [
+                  "id"
+                ],
+                "exclude": [
+                  "name"
+      ]
+              }
+            },
+            "update",
+            "delete"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "create",
+            {
+              "action": "read",
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
+            "update",
+            "delete"
+          ]
+    }
+      ],
+      "graphql": {
+        "type": {
+          "singular": "Earth",
+          "plural": "Earths"
+        }
+      }
     }
   }
 }

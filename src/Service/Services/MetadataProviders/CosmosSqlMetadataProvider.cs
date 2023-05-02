@@ -25,7 +25,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         private readonly RuntimeConfig _runtimeConfig;
         private Dictionary<string, string> _partitionKeyPaths = new();
         private Dictionary<string, string> _graphQLSingularTypeToEntityNameMap = new();
-        private Dictionary<string, List<string>> _graphQLTypeToFieldsMap = new();
+        private Dictionary<string, List<FieldDefinitionNode>> _graphQLTypeToFieldsMap = new();
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
 
         /// <inheritdoc />
@@ -159,30 +159,40 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             foreach (ObjectTypeDefinitionNode node in objectNodes)
             {
                 string typeName = node.Name.Value;
-                _graphQLTypeToFieldsMap.TryAdd(typeName, new List<string>());
+                _graphQLTypeToFieldsMap.TryAdd(typeName, new List<FieldDefinitionNode>());
                 foreach (FieldDefinitionNode field in node.Fields)
                 {
-                    string fieldName = field.Name.Value;
-                    _graphQLTypeToFieldsMap[typeName].Add(fieldName);
+                    _graphQLTypeToFieldsMap[typeName].Add(field);
                 }
             }
         }
 
-        public List<string> GetSchemaGraphQLFieldsForEntityName(string entityName)
+        public List<string> GetSchemaGraphQLFieldNamesForEntityName(string entityName)
         {
-            List<string>? fields;
+            List<FieldDefinitionNode>? fields;
             // Check if entity name is using alias name, if so, fetch graph type name with the alias name
             foreach (string typeName in _graphQLSingularTypeToEntityNameMap.Keys) {
                 if (_graphQLSingularTypeToEntityNameMap[typeName] == entityName
                     && _graphQLTypeToFieldsMap.TryGetValue(typeName, out fields))
                 {
-                    return fields is null ? new List<string>() : fields;
+                    return fields is null ? new List<string>() : fields.Select(x => x.Name.Value).ToList();
                 }
             }
 
             // Get all the fields for a graph type
             _graphQLTypeToFieldsMap.TryGetValue(entityName, out fields);
-            return fields is null ? new List<string>() : fields;
+            return fields is null ? new List<string>() : fields.Select(x => x.Name.Value).ToList();
+        }
+
+        public string? GetSchemaGraphQLFieldTypeByFieldName(string graphQLType, string fieldName)
+        {
+            List<FieldDefinitionNode>? fields;
+            if (_graphQLTypeToFieldsMap.TryGetValue(graphQLType, out fields))
+            {
+                return fields is null ? null : fields.Where(x => x.Name.Value == fieldName).FirstOrDefault()?.Type.ToString();
+            }
+
+            return null;
         }
 
         public ODataParser GetODataParser()

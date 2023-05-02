@@ -41,7 +41,12 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <summary>
         /// Obtains the underlying all column names for each entity name.
         /// </summary>
-        List<string> GetSchemaGraphQLFieldsForEntityName(string entityName);
+        List<string> GetSchemaGraphQLFieldNamesForEntityName(string entityName);
+
+        /// <summary>
+        /// Obtains the underlying column type for an entity field.
+        /// </summary>
+        string? GetSchemaGraphQLFieldTypeByFieldName(string graphQLType, string fieldName);
 
         /// <summary>
         /// Obtains the underlying SourceDefinition for the given entity name.

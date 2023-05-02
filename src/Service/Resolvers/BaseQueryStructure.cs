@@ -18,7 +18,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// The Entity name associated with this query as appears in the config file.
         /// </summary>
-        public string EntityName { get; protected set; }
+        public string EntityName { get; set; }
 
         /// <summary>
         /// The alias of the entity as used in the generated query.

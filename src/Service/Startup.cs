@@ -55,8 +55,9 @@ namespace Azure.DataApiBuilder.Service
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            string configFileName = Configuration.GetValue<string>("ConfigFileName", RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME);
             IFileSystem fileSystem = new FileSystem();
-            RuntimeConfigLoader configLoader = new(fileSystem);
+            RuntimeConfigLoader configLoader = new(fileSystem, configFileName);
             RuntimeConfigProvider configProvider = new(configLoader);
 
             services.AddSingleton(fileSystem);

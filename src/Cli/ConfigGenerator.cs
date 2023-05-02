@@ -35,7 +35,7 @@ namespace Cli
         {
             if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
             {
-                runtimeConfigFile = RuntimeConfigLoader.DefaultName;
+                runtimeConfigFile = RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME;
                 _logger.LogInformation($"Creating a new config file: {runtimeConfigFile}");
             }
 

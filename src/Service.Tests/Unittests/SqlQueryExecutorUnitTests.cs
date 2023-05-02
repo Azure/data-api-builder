@@ -76,7 +76,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
            );
 
             MockFileSystem fileSystem = new();
-            fileSystem.AddFile(RuntimeConfigLoader.DefaultName, new MockFileData(mockConfig.ToJson()));
+            fileSystem.AddFile(RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
             RuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider provider = new(loader);
             Mock<DbExceptionParser> dbExceptionParser = new(provider);
@@ -150,7 +150,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
            );
 
             MockFileSystem fileSystem = new();
-            fileSystem.AddFile(RuntimeConfigLoader.DefaultName, new MockFileData(mockConfig.ToJson()));
+            fileSystem.AddFile(RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
             RuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider provider = new(loader)
             {

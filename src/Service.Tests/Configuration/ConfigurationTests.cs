@@ -131,7 +131,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Assert.IsFalse(isUpdateableRuntimeConfig);
                 Assert.AreEqual(typeof(ApplicationException), e.GetType());
                 Assert.AreEqual(
-                    $"Could not initialize the engine with the runtime config file: {DefaultName}",
+                    $"Could not initialize the engine with the runtime config file: {DEFAULT_CONFIG_FILE_NAME}",
                     e.Message);
             }
         }

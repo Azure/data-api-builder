@@ -136,9 +136,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 operation: EntityActionOperation.All);
 
             // Override the permission operations to be a list of operations for wildcard
-            // sinstead of a list ofs created by readAction, updateActionig()
+            // instead of a list ofs created by readAction, updateAction()
             Entity entity = runtimeConfig.Entities[AuthorizationHelpers.TEST_ENTITY];
-            entity = entity with { Permissions = new[] { new EntityPermission("admin", new EntityAction[] { new(EntityActionOperation.All, null, new(null, null)) }) } };
+            entity = entity with { Permissions = new[] { new EntityPermission(AuthorizationHelpers.TEST_ROLE, new EntityAction[] { new(EntityActionOperation.All, null, new(null, null)) }) } };
             runtimeConfig = runtimeConfig with { Entities = new(new Dictionary<string, Entity> { { AuthorizationHelpers.TEST_ENTITY, entity } }) };
 
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);

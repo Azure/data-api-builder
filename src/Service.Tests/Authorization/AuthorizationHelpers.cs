@@ -33,7 +33,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         public static AuthorizationResolver InitAuthorizationResolver(RuntimeConfig runtimeConfig)
         {
             MockFileSystem fileSystem = new();
-            fileSystem.AddFile(RuntimeConfigLoader.DefaultName, new(runtimeConfig.ToJson()));
+            fileSystem.AddFile(RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new(runtimeConfig.ToJson()));
             RuntimeConfigLoader loader = new(fileSystem);
 
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(loader);

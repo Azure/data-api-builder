@@ -19,7 +19,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
     [TestClass]
     public class SimulatorIntegrationTests
     {
-        private const string SIMULATOR_CONFIG = "simulator-config.json";
+        private const string SIMULATOR_CONFIG = $"simulator-config.{TestCategory.MSSQL}.json";
         private static TestServer _server;
         private static HttpClient _client;
 
@@ -104,6 +104,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
         private static void SetupCustomRuntimeConfiguration()
         {
+            TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
             RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(TestHelper.GetRuntimeConfigLoader());
             RuntimeConfig config = configProvider.GetConfig();
 

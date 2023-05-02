@@ -16,6 +16,7 @@ namespace Azure.DataApiBuilder.Config;
 public class RuntimeConfigLoader
 {
     private readonly IFileSystem _fileSystem;
+    private readonly string _baseConfigFileName;
     public const string CONFIGFILE_NAME = "dab-config";
     public const string CONFIG_EXTENSION = ".json";
 
@@ -26,9 +27,10 @@ public class RuntimeConfigLoader
 
     public const string SCHEMA = "dab.draft.schema.json";
 
-    public RuntimeConfigLoader(IFileSystem fileSystem)
+    public RuntimeConfigLoader(IFileSystem fileSystem, string baseConfigFileName = DEFAULT_CONFIG_FILE_NAME)
     {
         _fileSystem = fileSystem;
+        _baseConfigFileName = baseConfigFileName;
     }
 
     /// <summary>
@@ -171,13 +173,7 @@ public class RuntimeConfigLoader
     /// <summary>
     /// Returns the default config file name.
     /// </summary>
-    public static string DefaultName
-    {
-        get
-        {
-            return $"{CONFIGFILE_NAME}{CONFIG_EXTENSION}";
-        }
-    }
+    public const string DEFAULT_CONFIG_FILE_NAME = $"{CONFIGFILE_NAME}{CONFIG_EXTENSION}";
 
     /// <summary>
     /// Generates the config file name and a corresponding overridden file name,
@@ -190,11 +186,13 @@ public class RuntimeConfigLoader
     /// <returns></returns>
     private string GetFileName(string? environmentValue, bool considerOverrides)
     {
+        string fileNameWithoutExtension = _fileSystem.Path.GetFileNameWithoutExtension(_baseConfigFileName);
+        string fileExtension = _fileSystem.Path.GetExtension(_baseConfigFileName);
         string configFileName =
             !string.IsNullOrEmpty(environmentValue)
-            ? $"{CONFIGFILE_NAME}.{environmentValue}"
-            : $"{CONFIGFILE_NAME}";
-        string configFileNameWithExtension = $"{configFileName}{CONFIG_EXTENSION}";
+            ? $"{fileNameWithoutExtension}.{environmentValue}"
+            : $"{fileNameWithoutExtension}";
+        string configFileNameWithExtension = $"{configFileName}{fileExtension}";
         string overriddenConfigFileNameWithExtension = GetOverriddenName(configFileName);
 
         if (considerOverrides && DoesFileExistInCurrentDirectory(overriddenConfigFileNameWithExtension))

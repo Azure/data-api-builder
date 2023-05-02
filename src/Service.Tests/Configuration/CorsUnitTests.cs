@@ -42,7 +42,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             IFileSystem fileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
             {
-                { RuntimeConfigLoader.DefaultName, new MockFileData(TestHelper.INITIAL_CONFIG) }
+                { RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(TestHelper.INITIAL_CONFIG) }
             });
 
             RuntimeConfigLoader loader = new(fileSystem);

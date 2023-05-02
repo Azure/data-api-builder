@@ -40,7 +40,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 CreateRuntimeConfigWithOptionalAuthN(new AuthenticationOptions(EasyAuthType.StaticWebApps.ToString(), null));
 
             _mockFileSystem.AddFile(
-                RuntimeConfigLoader.DefaultName,
+                RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME,
                 new MockFileData(config.ToJson())
             );
 
@@ -66,7 +66,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             RuntimeConfig config = CreateRuntimeConfigWithOptionalAuthN(authNConfig);
 
             _mockFileSystem.AddFile(
-                RuntimeConfigLoader.DefaultName,
+                RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME,
                 new MockFileData(config.ToJson())
             );
 
@@ -85,7 +85,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             RuntimeConfig config = CreateRuntimeConfigWithOptionalAuthN();
             _mockFileSystem.AddFile(
-                RuntimeConfigLoader.DefaultName,
+                RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME,
                 new MockFileData(config.ToJson())
             );
 
@@ -112,7 +112,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             RuntimeConfig config = CreateRuntimeConfigWithOptionalAuthN(authNConfig);
 
             _mockFileSystem.AddFile(
-                RuntimeConfigLoader.DefaultName,
+                RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME,
                 new MockFileData(config.ToJson())
             );
 
@@ -145,7 +145,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             RuntimeConfig config = CreateRuntimeConfigWithOptionalAuthN(authNConfig);
 
             _mockFileSystem.AddFile(
-                RuntimeConfigLoader.DefaultName,
+                RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME,
                 new MockFileData(config.ToJson())
             );
 

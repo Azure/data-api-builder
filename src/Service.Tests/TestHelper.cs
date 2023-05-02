@@ -147,7 +147,7 @@ namespace Azure.DataApiBuilder.Service.Tests
         public static RuntimeConfigProvider GenerateInMemoryRuntimeConfigProvider(RuntimeConfig runtimeConfig)
         {
             MockFileSystem fileSystem = new();
-            fileSystem.AddFile(RuntimeConfigLoader.DefaultName, runtimeConfig.ToJson());
+            fileSystem.AddFile(RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, runtimeConfig.ToJson());
             RuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider runtimeConfigProvider = new(loader);
             return runtimeConfigProvider;

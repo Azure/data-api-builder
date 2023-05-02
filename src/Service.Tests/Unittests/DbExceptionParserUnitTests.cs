@@ -44,7 +44,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             int connectionEstablishmentError = 53;
 
             MockFileSystem fileSystem = new();
-            fileSystem.AddFile(RuntimeConfigLoader.DefaultName, new MockFileData(mockConfig.ToJson()));
+            fileSystem.AddFile(RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
             RuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider provider = new(loader);
 
@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Entities: new(new Dictionary<string, Entity>())
             );
             MockFileSystem fileSystem = new();
-            fileSystem.AddFile(RuntimeConfigLoader.DefaultName, new MockFileData(mockConfig.ToJson()));
+            fileSystem.AddFile(RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
             RuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider provider = new(loader);
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);

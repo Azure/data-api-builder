@@ -856,7 +856,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [DataRow("/graphql/", HostModeType.Development, HttpStatusCode.OK, "Banana Cake Pop",
             DisplayName = "GraphQL endpoint with no query in development mode.")]
         [DataRow("/graphql", HostModeType.Production, HttpStatusCode.BadRequest,
-            "Either the parameter query or the parameter id has to be set",
+            "Banana Cake Pop UI is disabled in Production mode.",
             DisplayName = "GraphQL endpoint with no query in production mode.")]
         [DataRow("/graphql/ui", HostModeType.Development, HttpStatusCode.NotFound,
             DisplayName = "Default BananaCakePop in development mode.")]

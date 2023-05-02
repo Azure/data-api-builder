@@ -1,5 +1,6 @@
 using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config.Converters;
 
 namespace Azure.DataApiBuilder.Config;
@@ -72,7 +73,40 @@ public record EntityRestOptions(SupportedHttpVerb[] Methods, string? Path = null
     public static readonly SupportedHttpVerb[] DEFAULT_SUPPORTED_VERBS = new[] { SupportedHttpVerb.Get, SupportedHttpVerb.Post, SupportedHttpVerb.Put, SupportedHttpVerb.Patch, SupportedHttpVerb.Delete };
 }
 public record EntityActionFields(HashSet<string> Exclude, HashSet<string>? Include = null);
-public record EntityActionPolicy(string? Request = null, string? Database = null);
+public record EntityActionPolicy(string? Request = null, string? Database = null)
+{
+    public string ProcessedDatabaseFields()
+    {
+        if (Database is null)
+        {
+            throw new NullReferenceException("Unable to process the fields in the database policy because the policy is null.");
+        }
+
+        return ProcessFieldsInPolicy(Database);
+    }
+
+    /// <summary>
+    /// Helper method which takes in the database policy and returns the processed policy
+    /// without @item. directives before field names.
+    /// </summary>
+    /// <param name="policy">Raw database policy</param>
+    /// <returns>Processed policy without @item. directives before field names.</returns>
+    private static string ProcessFieldsInPolicy(string? policy)
+    {
+        if (policy is null)
+        {
+            return string.Empty;
+        }
+
+        string fieldCharsRgx = @"@item\.([a-zA-Z0-9_]*)";
+
+        // processedPolicy would be devoid of @item. directives.
+        string processedPolicy = Regex.Replace(policy, fieldCharsRgx, (columnNameMatch) =>
+            columnNameMatch.Groups[1].Value
+        );
+        return processedPolicy;
+    }
+}
 public record EntityAction(EntityActionOperation Action, EntityActionFields? Fields, EntityActionPolicy Policy)
 {
     public static readonly HashSet<EntityActionOperation> ValidPermissionOperations = new() { EntityActionOperation.Create, EntityActionOperation.Read, EntityActionOperation.Update, EntityActionOperation.Delete };

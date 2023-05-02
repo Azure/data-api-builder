@@ -504,7 +504,12 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <returns>True/False</returns>
         public bool IsValidDatabasePolicyForAction(EntityAction permission)
         {
-            return !(!string.IsNullOrEmpty(permission.Policy?.Database) && permission.Action == EntityActionOperation.Create);
+            if (permission.Action is EntityActionOperation.Create)
+            {
+                return string.IsNullOrEmpty(permission.Policy?.Database);
+            }
+
+            return true;
         }
 
         /// <summary>

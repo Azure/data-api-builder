@@ -45,7 +45,14 @@ internal class EntityActionConverterFactory : JsonConverterFactory
                 return action with { Policy = new EntityActionPolicy(null, null) };
             }
 
-            return action with { Policy = action.Policy with { Database = ProcessFieldsInPolicy(action.Policy.Database) } };
+            // While Fields.Exclude is non-nullable, if the property was not in the JSON
+            // it will be set to `null` by the deserializer, so we'll do a cleanup here.
+            if (action.Fields is not null && action.Fields.Exclude is null)
+            {
+                action = action with { Fields = action.Fields with { Exclude = new() } };
+            }
+
+            return action;
         }
 
         public override void Write(Utf8JsonWriter writer, EntityAction value, JsonSerializerOptions options)
@@ -53,28 +60,6 @@ internal class EntityActionConverterFactory : JsonConverterFactory
             JsonSerializerOptions innerOptions = new(options);
             innerOptions.Converters.Remove(innerOptions.Converters.First(c => c is EntityActionConverterFactory));
             JsonSerializer.Serialize(writer, value, innerOptions);
-        }
-
-        /// <summary>
-        /// Helper method which takes in the database policy and returns the processed policy
-        /// without @item. directives before field names.
-        /// </summary>
-        /// <param name="policy">Raw database policy</param>
-        /// <returns>Processed policy without @item. directives before field names.</returns>
-        private static string ProcessFieldsInPolicy(string? policy)
-        {
-            if (policy is null)
-            {
-                return string.Empty;
-            }
-
-            string fieldCharsRgx = @"@item\.([a-zA-Z0-9_]*)";
-
-            // processedPolicy would be devoid of @item. directives.
-            string processedPolicy = Regex.Replace(policy, fieldCharsRgx, (columnNameMatch) =>
-                columnNameMatch.Groups[1].Value
-            );
-            return processedPolicy;
         }
     }
 }

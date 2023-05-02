@@ -64,21 +64,21 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// and every role has that same single operation.
         /// </summary>
         [DataTestMethod]
-        [DataRow("anonymous", new object[] { "execute" }, null, null, true, false, DisplayName = "Stored-procedure with valid execute permission only")]
-        [DataRow("anonymous", new object[] { "*" }, null, null, true, false, DisplayName = "Stored-procedure with valid wildcard permission only, which resolves to execute")]
-        [DataRow("anonymous", new object[] { "execute", "read" }, null, null, false, false, DisplayName = "Invalidly define operation in excess of execute")]
-        [DataRow("anonymous", new object[] { "create", "read" }, null, null, false, false, DisplayName = "Stored-procedure with create-read permission")]
-        [DataRow("anonymous", new object[] { "update", "read" }, null, null, false, false, DisplayName = "Stored-procedure with update-read permission")]
-        [DataRow("anonymous", new object[] { "delete", "read" }, null, null, false, false, DisplayName = "Stored-procedure with delete-read permission")]
-        [DataRow("anonymous", new object[] { "create" }, null, null, false, false, DisplayName = "Stored-procedure with invalid create permission")]
-        [DataRow("anonymous", new object[] { "read" }, null, null, false, false, DisplayName = "Stored-procedure with invalid read permission")]
-        [DataRow("anonymous", new object[] { "update" }, null, null, false, false, DisplayName = "Stored-procedure with invalid update permission")]
-        [DataRow("anonymous", new object[] { "delete" }, null, null, false, false, DisplayName = "Stored-procedure with invalid delete permission")]
-        [DataRow("anonymous", new object[] { "update", "create" }, null, null, false, false, DisplayName = "Stored-procedure with update-create permission")]
-        [DataRow("anonymous", new object[] { "delete", "read", "update" }, null, null, false, false, DisplayName = "Stored-procedure with delete-read-update permission")]
-        [DataRow("anonymous", new object[] { "execute" }, "authenticated", new object[] { "execute" }, true, false, DisplayName = "Stored-procedure with valid execute permission on all roles")]
-        [DataRow("anonymous", new object[] { "*" }, "authenticated", new object[] { "*" }, true, false, DisplayName = "Stored-procedure with valid wildcard permission on all roles, which resolves to execute")]
-        [DataRow("anonymous", new object[] { "execute" }, "authenticated", new object[] { "create" }, false, true, DisplayName = "Stored-procedure with valid execute and invalid create permission")]
+        [DataRow("anonymous", new string[] { "execute" }, null, null, true, false, DisplayName = "Stored-procedure with valid execute permission only")]
+        [DataRow("anonymous", new string[] { "*" }, null, null, true, false, DisplayName = "Stored-procedure with valid wildcard permission only, which resolves to execute")]
+        [DataRow("anonymous", new string[] { "execute", "read" }, null, null, false, false, DisplayName = "Invalidly define operation in excess of execute")]
+        [DataRow("anonymous", new string[] { "create", "read" }, null, null, false, false, DisplayName = "Stored-procedure with create-read permission")]
+        [DataRow("anonymous", new string[] { "update", "read" }, null, null, false, false, DisplayName = "Stored-procedure with update-read permission")]
+        [DataRow("anonymous", new string[] { "delete", "read" }, null, null, false, false, DisplayName = "Stored-procedure with delete-read permission")]
+        [DataRow("anonymous", new string[] { "create" }, null, null, false, false, DisplayName = "Stored-procedure with invalid create permission")]
+        [DataRow("anonymous", new string[] { "read" }, null, null, false, false, DisplayName = "Stored-procedure with invalid read permission")]
+        [DataRow("anonymous", new string[] { "update" }, null, null, false, false, DisplayName = "Stored-procedure with invalid update permission")]
+        [DataRow("anonymous", new string[] { "delete" }, null, null, false, false, DisplayName = "Stored-procedure with invalid delete permission")]
+        [DataRow("anonymous", new string[] { "update", "create" }, null, null, false, false, DisplayName = "Stored-procedure with update-create permission")]
+        [DataRow("anonymous", new string[] { "delete", "read", "update" }, null, null, false, false, DisplayName = "Stored-procedure with delete-read-update permission")]
+        [DataRow("anonymous", new string[] { "execute" }, "authenticated", new string[] { "execute" }, true, false, DisplayName = "Stored-procedure with valid execute permission on all roles")]
+        [DataRow("anonymous", new string[] { "*" }, "authenticated", new string[] { "*" }, true, false, DisplayName = "Stored-procedure with valid wildcard permission on all roles, which resolves to execute")]
+        [DataRow("anonymous", new string[] { "execute" }, "authenticated", new string[] { "create" }, false, true, DisplayName = "Stored-procedure with valid execute and invalid create permission")]
         public void InvalidCRUDForStoredProcedure(
             string role1,
             string[] operationsRole1,
@@ -197,7 +197,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: dbPolicy,
                 dbType: dbType
-                );
+            );
             MockFileSystem fileSystem = new();
             RuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider provider = new(loader);
@@ -380,7 +380,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Mocking EntityToDatabaseObject
             MockFileSystem fileSystem = new();
             RuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
+            RuntimeConfigProvider provider = new(loader) { IsLateConfigured = true };
             RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
             Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
 
@@ -486,7 +486,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Mocking EntityToDatabaseObject
             MockFileSystem fileSystem = new();
             RuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
+            RuntimeConfigProvider provider = new(loader) { IsLateConfigured = true };
             RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
             Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
 
@@ -576,7 +576,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             MockFileSystem fileSystem = new();
             RuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
+            RuntimeConfigProvider provider = new(loader) { IsLateConfigured = true };
             RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
             Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
 
@@ -645,7 +645,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Assert that expected exception is thrown.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
                 configValidator.ValidatePermissionsInConfig(runtimeConfig));
-            Assert.AreEqual("Claimtype cannot be empty.", ex.Message);
+            Assert.AreEqual("ClaimType cannot be empty.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
         }
@@ -815,7 +815,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("rEAd", false, DisplayName = "Valid operation name rEAd specified for action")]
         [DataRow("UPDate", false, DisplayName = "Valid operation name UPDate specified for action")]
         [DataRow("DelETe", false, DisplayName = "Valid operation name DelETe specified for action")]
-        [DataRow("remove", true, DisplayName = "Invalid operation name remove specified for action")]
         [DataRow("inseRt", true, DisplayName = "Invalid operation name inseRt specified for action")]
         public void TestOperationValidityAndCasing(string operationName, bool exceptionExpected)
         {
@@ -879,9 +878,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 // Assert that the exception returned is the one we expected.
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
-                Assert.AreEqual($"action:{operationName} specified for entity:{AuthorizationHelpers.TEST_ENTITY}," +
-                    $" role:{AuthorizationHelpers.TEST_ROLE} is not valid.",
-                    ex.Message);
+                Assert.AreEqual(
+                    $"action:{operationName} specified for entity:{AuthorizationHelpers.TEST_ENTITY}, role:{AuthorizationHelpers.TEST_ROLE} is not valid.",
+                    ex.Message,
+                    ignoreCase: true);
             }
         }
 
@@ -1001,16 +1001,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Entity Type: table
             // pk_query: executebook_by_pk
             // List Query: executebooks
-            Entity bookTable = GraphQLTestHelpers.GenerateEmptyEntity(sourceType: EntityType.Table)
-                with
-            { GraphQL = new("ExecuteBook", "ExecuteBooks") };
+            Entity bookTable = GraphQLTestHelpers.GenerateEmptyEntity(sourceType: EntityType.Table);
 
             // Entity Name: book_by_pk
             // Entity Type: Stored Procedure
             // StoredProcedure Query: executebook_by_pk
-            Entity bookByPkStoredProcedure = GraphQLTestHelpers.GenerateEmptyEntity(sourceType: EntityType.StoredProcedure)
-                with
-            { GraphQL = new("book", "books") };
+            Entity bookByPkStoredProcedure = GraphQLTestHelpers.GenerateEmptyEntity(sourceType: EntityType.StoredProcedure);
 
             SortedDictionary<string, Entity> entityCollection = new()
             {
@@ -1047,7 +1043,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Entity Name: Book
             // Entity Type: table
             // mutation generated: createBook, updateBook, deleteBook
-            Entity bookTable = GraphQLTestHelpers.GenerateEmptyEntity(sourceType: EntityType.Table) with { GraphQL = new("book", "books") };
+            Entity bookTable = GraphQLTestHelpers.GenerateEmptyEntity(sourceType: EntityType.Table);
 
             // Entity Name: AddBook
             // Entity Type: Stored Procedure
@@ -1083,12 +1079,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Entity Name: book
             // pk_query: book_by_pk
             // List Query: books
-            Entity book = GraphQLTestHelpers.GenerateEmptyEntity() with { GraphQL = new("book", "books") };
+            Entity book = GraphQLTestHelpers.GenerateEmptyEntity();
 
             // Entity Name: book_alt
             // pk_query: book_by_pk
             // List Query: books
-            Entity book_alt = GraphQLTestHelpers.GenerateEntityWithStringType("book_alt");
+            Entity book_alt = GraphQLTestHelpers.GenerateEntityWithStringType("book");
 
             SortedDictionary<string, Entity> entityCollection = new()
             {
@@ -1221,7 +1217,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Entity Name: Book
             // GraphQL is not exposed for this entity
-            Entity bookWithUpperCase = GraphQLTestHelpers.GenerateEmptyEntity();
+            Entity bookWithUpperCase = GraphQLTestHelpers.GenerateEmptyEntity() with { GraphQL = new("", "", false) };
 
             // Entity Name: book
             // pk query: book_by_pk

@@ -21,6 +21,18 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     [TestClass, TestCategory(TestCategory.POSTGRESQL)]
     public class PostgreSqlQueryExecutorUnitTests
     {
+        [TestInitialize]
+        public void TestInitialize()
+        {
+            TestHelper.SetupDatabaseEnvironment(TestCategory.POSTGRESQL);
+        }
+
+        [TestCleanup]
+        public void TestCleanup()
+        {
+            TestHelper.UnsetDatabaseEnvironment();
+        }
+
         /// <summary>
         /// Validates managed identity token issued ONLY when connection string does not specify password
         /// </summary>
@@ -49,12 +61,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                    Host: new(null, null)
                ),
                Entities: new(new Dictionary<string, Entity>())
-           );
+            );
 
-            MockFileSystem fileSystem = new();
-            fileSystem.AddFile(RuntimeConfigLoader.DefaultName, new MockFileData(mockConfig.ToJson()));
-            RuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
+            RuntimeConfigProvider provider = TestHelper.GenerateInMemoryRuntimeConfigProvider(mockConfig);
             Mock<DbExceptionParser> dbExceptionParser = new(provider);
             Mock<ILogger<PostgreSqlQueryExecutor>> queryExecutorLogger = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();

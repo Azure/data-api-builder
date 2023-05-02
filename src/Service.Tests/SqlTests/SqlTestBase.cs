@@ -76,6 +76,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             List<string> customQueries = null,
             List<string[]> customEntities = null)
         {
+            TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
             // Get the base config file from disk
             RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
 

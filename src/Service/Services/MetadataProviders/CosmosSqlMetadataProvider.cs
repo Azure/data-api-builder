@@ -45,7 +45,6 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             _entities = _runtimeConfig.Entities;
             _databaseType = _runtimeConfig.DatabaseType;
             _graphQLSingularTypeToEntityNameMap = _runtimeConfig.GraphQLSingularTypeToEntityNameMap;
-            
             CosmosDbNoSqlOptions? cosmosDb = _runtimeConfig.DataSource.CosmosDbNoSql;
 
             if (cosmosDb is null)
@@ -171,9 +170,9 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         {
             List<FieldDefinitionNode>? fields;
             // Check if entity name is using alias name, if so, fetch graph type name with the alias name
-            foreach (string typeName in _graphQLSingularTypeToEntityNameMap.Keys) {
-                if (_graphQLSingularTypeToEntityNameMap[typeName] == entityName
-                    && _graphQLTypeToFieldsMap.TryGetValue(typeName, out fields))
+            foreach (string typeName in _graphQLSingularTypeToEntityNameMap.Keys)
+            {
+                if (_graphQLSingularTypeToEntityNameMap[typeName] == entityName && _graphQLTypeToFieldsMap.TryGetValue(typeName, out fields))
                 {
                     return fields is null ? new List<string>() : fields.Select(x => x.Name.Value).ToList();
                 }

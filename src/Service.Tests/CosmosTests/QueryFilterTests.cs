@@ -663,7 +663,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 }
             }";
 
-            string dbQuery = $"SELECT top 1 c.id FROM c where c.id = \"{ _idList[0] }\"";
+            string dbQuery = $"SELECT top 1 c.id FROM c where c.id = \"{_idList[0]}\"";
             await ExecuteAndValidateResult("earths", gqlQuery, dbQuery);
         }
 

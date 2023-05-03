@@ -43,16 +43,18 @@
           "KeyFields": null
         },
         "GraphQL": {
-          "Singular": "",
-          "Plural": "",
+          "Singular": "MyEntity",
+          "Plural": "MyEntities",
           "Enabled": true,
-          "Operation": null
+          "Operation": "Mutation"
         },
         "Rest": {
           "Methods": [
-            "Post"
+            "Get",
+            "Post",
+            "Patch"
           ],
-          "Path": null,
+          "Path": "/book",
           "Enabled": true
         },
         "Permissions": [

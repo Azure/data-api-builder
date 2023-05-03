@@ -46,7 +46,7 @@
           "Singular": "book",
           "Plural": "books",
           "Enabled": true,
-          "Operation": null
+          "Operation": "Mutation"
         },
         "Rest": {
           "Methods": [

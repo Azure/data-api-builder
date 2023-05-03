@@ -46,7 +46,7 @@
           "Singular": "MyEntity",
           "Plural": "MyEntities",
           "Enabled": true,
-          "Operation": null
+          "Operation": "Mutation"
         },
         "Rest": {
           "Methods": [

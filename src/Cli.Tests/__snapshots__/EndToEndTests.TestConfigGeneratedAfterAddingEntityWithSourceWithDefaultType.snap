@@ -51,13 +51,13 @@
         "GraphQL": {
           "Singular": "MyEntity",
           "Plural": "MyEntities",
-          "Enabled": true,
+          "Enabled": false,
           "Operation": null
         },
         "Rest": {
           "Methods": [],
           "Path": null,
-          "Enabled": true
+          "Enabled": false
         },
         "Permissions": [
           {
@@ -68,7 +68,7 @@
                 "Fields": null,
                 "Policy": {
                   "Request": null,
-                  "Database": ""
+                  "Database": null
                 }
               }
             ]

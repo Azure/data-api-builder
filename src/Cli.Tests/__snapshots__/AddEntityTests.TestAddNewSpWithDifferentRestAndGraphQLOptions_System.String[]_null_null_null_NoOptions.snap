@@ -43,9 +43,9 @@
           "KeyFields": null
         },
         "GraphQL": {
-          "Singular": "",
-          "Plural": "",
-          "Enabled": true,
+          "Singular": "MyEntity",
+          "Plural": "MyEntities",
+          "Enabled": false,
           "Operation": "Mutation"
         },
         "Rest": {
@@ -53,7 +53,7 @@
             "Post"
           ],
           "Path": null,
-          "Enabled": true
+          "Enabled": false
         },
         "Permissions": [
           {

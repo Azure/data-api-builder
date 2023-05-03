@@ -48,7 +48,17 @@
           "Enabled": true,
           "Operation": null
         },
-        "Rest": null,
+        "Rest": {
+          "Methods": [
+            "Get",
+            "Post",
+            "Put",
+            "Patch",
+            "Delete"
+          ],
+          "Path": null,
+          "Enabled": true
+        },
         "Permissions": [
           {
             "Role": "anonymous",
@@ -92,15 +102,15 @@
           "KeyFields": null
         },
         "GraphQL": {
-          "Singular": "",
-          "Plural": "",
-          "Enabled": true,
+          "Singular": "FIRSTEntity",
+          "Plural": "FIRSTEntities",
+          "Enabled": false,
           "Operation": null
         },
         "Rest": {
           "Methods": [],
           "Path": null,
-          "Enabled": true
+          "Enabled": false
         },
         "Permissions": [
           {

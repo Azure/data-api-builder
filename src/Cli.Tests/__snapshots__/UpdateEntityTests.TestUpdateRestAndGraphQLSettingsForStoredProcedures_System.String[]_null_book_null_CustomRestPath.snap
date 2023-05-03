@@ -46,15 +46,13 @@
           "Singular": "MyEntity",
           "Plural": "MyEntities",
           "Enabled": true,
-          "Operation": null
+          "Operation": "Mutation"
         },
         "Rest": {
           "Methods": [
-            "Get",
-            "Post",
-            "Patch"
+            "Post"
           ],
-          "Path": null,
+          "Path": "/book",
           "Enabled": true
         },
         "Permissions": [

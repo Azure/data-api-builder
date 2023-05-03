@@ -43,15 +43,15 @@
           "KeyFields": null
         },
         "GraphQL": {
-          "Singular": "",
-          "Plural": "",
-          "Enabled": true,
+          "Singular": "FirstEntity",
+          "Plural": "FirstEntities",
+          "Enabled": false,
           "Operation": null
         },
         "Rest": {
           "Methods": [],
           "Path": null,
-          "Enabled": true
+          "Enabled": false
         },
         "Permissions": [
           {

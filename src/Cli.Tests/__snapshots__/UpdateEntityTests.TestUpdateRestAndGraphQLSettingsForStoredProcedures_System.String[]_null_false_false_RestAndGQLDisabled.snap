@@ -43,17 +43,15 @@
           "KeyFields": null
         },
         "GraphQL": {
-          "Singular": "",
-          "Plural": "",
-          "Enabled": true,
-          "Operation": "Query"
+          "Singular": "MyEntity",
+          "Plural": "MyEntities",
+          "Enabled": false,
+          "Operation": "Mutation"
         },
         "Rest": {
-          "Methods": [
-            "Get"
-          ],
+          "Methods": [],
           "Path": null,
-          "Enabled": true
+          "Enabled": false
         },
         "Permissions": [
           {

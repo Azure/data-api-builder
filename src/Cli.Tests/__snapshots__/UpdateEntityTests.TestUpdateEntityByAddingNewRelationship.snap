@@ -49,11 +49,11 @@
         },
         "Rest": {
           "Methods": [
-            "Put",
             "Get",
+            "Post",
+            "Put",
             "Patch",
-            "Delete",
-            "Post"
+            "Delete"
           ],
           "Path": null,
           "Enabled": true

@@ -53,14 +53,14 @@
           "Singular": "MyEntity",
           "Plural": "MyEntities",
           "Enabled": false,
-          "Operation": null
+          "Operation": "Mutation"
         },
         "Rest": {
           "Methods": [
             "Get"
           ],
           "Path": null,
-          "Enabled": true
+          "Enabled": false
         },
         "Permissions": [
           {
@@ -71,7 +71,7 @@
                 "Fields": null,
                 "Policy": {
                   "Request": null,
-                  "Database": ""
+                  "Database": null
                 }
               }
             ]

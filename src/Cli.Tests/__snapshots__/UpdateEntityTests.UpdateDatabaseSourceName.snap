@@ -40,15 +40,9 @@
           "Object": "newSourceName",
           "Type": "stored-procedure",
           "Parameters": {
-            "param1": {
-              "ValueKind": "Number"
-            },
-            "param2": {
-              "ValueKind": "String"
-            },
-            "param3": {
-              "ValueKind": "True"
-            }
+            "param1": 123,
+            "param2": "hello",
+            "param3": true
           },
           "KeyFields": null
         },
@@ -56,7 +50,7 @@
           "Singular": "MyEntity",
           "Plural": "MyEntities",
           "Enabled": true,
-          "Operation": null
+          "Operation": "Mutation"
         },
         "Rest": {
           "Methods": [

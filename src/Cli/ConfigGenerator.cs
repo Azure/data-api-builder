@@ -235,7 +235,7 @@ namespace Cli
             }
 
             GraphQLOperation? graphQLOperationsForStoredProcedures = null;
-            SupportedHttpVerb[] SupportedRestMethods = Array.Empty<SupportedHttpVerb>();
+            SupportedHttpVerb[] SupportedRestMethods = EntityRestOptions.DEFAULT_SUPPORTED_VERBS;
             if (isStoredProcedure)
             {
                 if (CheckConflictingGraphQLConfigurationForStoredProcedures(options))

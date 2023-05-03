@@ -841,9 +841,11 @@ namespace Cli
         public static EntityRestOptions ConstructRestOptions(string? restRoute, SupportedHttpVerb[] supportedHttpVerbs)
         {
             EntityRestOptions restOptions = new(supportedHttpVerbs);
+
+            // Default state for REST is enabled, so if no value is provided, we enable it
             if (restRoute is null)
             {
-                return restOptions with { Enabled = false };
+                return restOptions with { Enabled = true, Methods = supportedHttpVerbs };
             }
             else
             {
@@ -872,9 +874,10 @@ namespace Cli
                 Plural: "",
                 Operation: graphQLOperationsForStoredProcedures);
 
+            // Default state for GraphQL is enabled, so if no value is provided, we enable it
             if (graphQL is null)
             {
-                return graphQLType with { Enabled = false };
+                return graphQLType with { Enabled = true };
             }
             else
             {

@@ -60,9 +60,9 @@ public class EndToEndTests
     [TestMethod]
     public void TestInitForCosmosDBNoSql()
     {
-        string[] args = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "CosmosDB_NoSQL",
-                          "--connection-string", "localhost:5000", "--CosmosDB_NoSQL-database",
-                          "graphqldb", "--CosmosDB_NoSQL-container", "planet", "--graphql-schema", TEST_SCHEMA_FILE, "--cors-origin", "localhost:3000,www.nolocalhost.com:80" };
+        string[] args = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "cosmosdb_nosql",
+                          "--connection-string", "localhost:5000", "--cosmosdb_nosql-database",
+                          "graphqldb", "--cosmosdb_nosql-container", "planet", "--graphql-schema", TEST_SCHEMA_FILE, "--cors-origin", "localhost:3000,www.nolocalhost.com:80" };
         Program.Execute(args, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
@@ -221,7 +221,7 @@ public class EndToEndTests
         string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql", "--connection-string", "localhost:5000" };
         Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
-        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig), "Expected to parse the config file.");
 
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
@@ -235,8 +235,8 @@ public class EndToEndTests
         Assert.AreEqual(1, addRuntimeConfig.Entities.Count()); // 1 new entity added
         Assert.IsTrue(addRuntimeConfig.Entities.ContainsKey("book"));
         Entity entity = addRuntimeConfig.Entities["book"];
-        Assert.IsTrue(entity.Rest.Enabled);
-        Assert.IsTrue(entity.GraphQL.Enabled);
+        Assert.IsTrue(entity.Rest.Enabled, "REST expected be to enabled");
+        Assert.IsTrue(entity.GraphQL.Enabled, "GraphQL expected to be enabled");
         Assert.AreEqual(1, entity.Permissions.Length);
         Assert.AreEqual("anonymous", entity.Permissions[0].Role);
         Assert.AreEqual(1, entity.Permissions[0].Actions.Length);

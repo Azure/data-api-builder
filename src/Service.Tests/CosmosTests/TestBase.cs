@@ -130,7 +130,6 @@ type Earth @model(name:""Earth"") {
         {
             RuntimeConfigProvider configProvider = _application.Services.GetService<RuntimeConfigProvider>();
             RuntimeConfig config = configProvider.GetRuntimeConfiguration();
-            Console.WriteLine("Print all entities:" + JsonSerializer.Serialize(config));
             Entity entity = config.Entities[entityName];
 
             System.Reflection.PropertyInfo prop = entity.GetType().GetProperty("Source");

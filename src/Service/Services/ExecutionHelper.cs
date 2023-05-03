@@ -51,7 +51,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 Tuple<IEnumerable<JsonDocument>, IMetadata?> result =
                     await _queryEngine.ExecuteListAsync(context, parameters);
 
-                // this will be run after the query / mutation has completed. 
+                // this will be run after the query / mutation has completed.
                 context.RegisterForCleanup(
                     () =>
                     {
@@ -90,7 +90,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 Tuple<IEnumerable<JsonDocument>, IMetadata?> result =
                     await _queryEngine.ExecuteListAsync(context, parameters);
 
-                // this will be run after the query / mutation has completed. 
+                // this will be run after the query / mutation has completed.
                 context.RegisterForCleanup(
                     () =>
                     {
@@ -126,13 +126,13 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             // This means this field is a scalar, so we don't need to do
             // anything for it.
-            if (TryGetPropertyFromParent(context, out JsonElement fieldValue) && 
+            if (TryGetPropertyFromParent(context, out JsonElement fieldValue) &&
                 fieldValue.ValueKind is not (JsonValueKind.Undefined or JsonValueKind.Null))
             {
                 // The selection type can be a wrapper type like NonNullType or ListType.
                 // To get the most inner type (aka the named type) we use our named type helper.
                 INamedType namedType = context.Selection.Field.Type.NamedType();
-                
+
                 // Each scalar in HotChocolate has a runtime type representation.
                 // In order to let scalar values flow through the GraphQL type completion
                 // efficiently we want the leaf types to match the runtime type.
@@ -146,7 +146,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     ByteType => fieldValue.GetByte(),
                     ShortType => fieldValue.GetInt16(),
                     IntType => fieldValue.GetInt32(), // spec
-                    LongType => fieldValue.GetUInt64(),
+                    LongType => fieldValue.GetInt64(),
                     FloatType => fieldValue.GetDouble(), // spec
                     SingleType => fieldValue.GetSingle(),
                     DecimalType => fieldValue.GetDecimal(),
@@ -181,14 +181,14 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 IMetadata metadata = GetMetadata(context);
                 objectValue = _queryEngine.ResolveObject(objectValue, context.Selection.Field, ref metadata);
-                
+
                 // Since the query engine could null the object out we need to check again
                 // if its null.
-                if(objectValue.ValueKind is not JsonValueKind.Null and not JsonValueKind.Undefined)
+                if (objectValue.ValueKind is not JsonValueKind.Null and not JsonValueKind.Undefined)
                 {
                     return null;
                 }
-                
+
                 SetNewMetadata(context, metadata);
                 return objectValue;
             }
@@ -198,7 +198,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
         public object? ExecuteListField(IPureResolverContext context)
         {
-            if (TryGetPropertyFromParent(context, out JsonElement listValue) && 
+            if (TryGetPropertyFromParent(context, out JsonElement listValue) &&
                 listValue.ValueKind is not JsonValueKind.Null and not JsonValueKind.Undefined)
             {
                 IMetadata metadata = GetMetadata(context);
@@ -387,9 +387,9 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         private static IMetadata GetMetadata(IPureResolverContext context)
         {
-            // The pure resolver context has not access to the scoped context data,
+            // The pure resolver context has no access to the scoped context data,
             // I will change that for version 14. The following code is a workaround
-            // and store the metadata per root field on the global context.
+            // and stores the metadata per root field on the global context.
             return (IMetadata)context.ContextData[GetMetadataKey(context.Path)]!;
         }
 
@@ -397,7 +397,7 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             Path current = path;
 
-            if (current.Parent is RootPathSegment)
+            if (current.Parent is RootPathSegment or null)
             {
                 return ((NamePathSegment)current).Name;
             }
@@ -406,7 +406,7 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 current = current.Parent;
 
-                if (current.Parent is RootPathSegment)
+                if (current.Parent is RootPathSegment or null)
                 {
                     return ((NamePathSegment)current).Name;
                 }

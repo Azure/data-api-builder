@@ -156,10 +156,37 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         }
 
         /// <summary>
-        /// Test to validate successful execution of PUT operation which satisfies the database policy for the operation (insert/update) it resolves into.
+        /// Test to validate successful execution of PUT operation which satisfies the database policy for the insert operation it resolves into.
         /// </summary>
         [TestMethod]
-        public virtual async Task PutOneWithDatabasePolicy()
+        public virtual async Task PutOneInsertWithDatabasePolicy()
+        {
+            // PUT operation resolves to insert because we don't have a record present for given PK.
+            // Since the database policy for insert operation ("@item.pieceid ne 6 and @item.piecesAvailable gt 0") is satisfied by the operation, it executes successfully.
+            string requestBody = @"
+            {
+                ""piecesAvailable"": 4,
+                ""categoryName"": ""SciFi""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/0/pieceid/7",
+                    queryString: null,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    sqlQuery: GetQuery("PutOneInsertWithDatabasePolicy"),
+                    operationType: Config.Operation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    clientRoleHeader: "database_policy_tester",
+                    expectedLocationHeader: "categoryid/0/pieceid/7"
+                );
+        }
+
+        /// <summary>
+        /// Test to validate successful execution of PUT operation which satisfies the database policy for the update operation it resolves into.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PutOneUpdateWithDatabasePolicy()
         {
             // PUT operation resolves to update because we have a record present for given PK.
             // Since the database policy for update operation ("@item.pieceid ne 1") is satisfied by the operation, it executes successfully.
@@ -179,26 +206,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK,
                     clientRoleHeader: "database_policy_tester"
-                );
-
-            // PUT operation resolves to insert because we don't have a record present for given PK.
-            // Since the database policy for insert operation ("@item.pieceid ne 6 and @item.piecesAvailable gt 0") is satisfied by the operation, it executes successfully.
-            requestBody = @"
-            {
-                ""piecesAvailable"": 4,
-                ""categoryName"": ""SciFi""
-            }";
-
-            await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "categoryid/0/pieceid/7",
-                    queryString: null,
-                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
-                    sqlQuery: GetQuery("PutOneInsertWithDatabasePolicy"),
-                    operationType: Config.Operation.Upsert,
-                    requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.Created,
-                    clientRoleHeader: "database_policy_tester",
-                    expectedLocationHeader: "categoryid/0/pieceid/7"
                 );
         }
 

@@ -167,6 +167,8 @@ update Comic --config "dab-config.MsSql.json" --permissions "TestNestedFilterOne
 update Comic --config "dab-config.MsSql.json" --permissions "TestNestedFilterOneMany_EntityReadForbidden:create,update,delete"
 update Stock --config "dab-config.MsSql.json" --permissions "TestNestedFilterFieldIsNull_ColumnForbidden:read"
 update Stock --config "dab-config.MsSql.json" --permissions "TestNestedFilterFieldIsNull_EntityReadForbidden:read"
+update Stock --config "dab-config.MsSql.json" --permissions "database_policy_tester:update" --policy-database "@item.pieceid ne 1"
+update Stock --config "dab-config.MsSql.json" --permissions "database_policy_tester:create" --policy-database "@item.pieceid ne 6 and @item.piecesAvailable gt 0"
 update series --config "dab-config.MsSql.json" --permissions "TestNestedFilterManyOne_ColumnForbidden:read" --fields.exclude "name"
 update series --config "dab-config.MsSql.json" --permissions "TestNestedFilterManyOne_EntityReadForbidden:create,update,delete"
 update series --config "dab-config.MsSql.json" --permissions "TestNestedFilterOneMany_ColumnForbidden:read"

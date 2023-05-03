@@ -79,11 +79,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             if (FieldsReferencedInDbPolicyForCreateAction.Count > 0)
             {
-                // This indicates that one or more fields referenced in the database policy are not a part of the insert statement.
+                // If the size of this set FieldsReferencedInDbPolicyForCreateAction is 0,
+                // it implies that all the fields referenced in the database policy for create action are being included in the insert statement, and we are good.
+                // However, if the size is non-zero, we throw a Forbidden request exception.
                 throw new DataApiBuilderException(
                     message: "One or more fields referenced by the database policy are not present in the request body.",
-                    statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    statusCode: HttpStatusCode.Forbidden,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
             }
         }
 
@@ -97,7 +99,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             InsertColumns.Add(columnName);
 
-            // If the column is referenced in the database policy, we remove it from the set.
+            // As we add columns to the InsertColumns list for SqlInsertQueryStructure one by one,
+            // we remove the columns (if present) from the FieldsReferencedInDbPolicyForCreateAction.
+            // This is necessary because any field referenced in database policy but not present in insert statement would result in an exception.
             FieldsReferencedInDbPolicyForCreateAction.Remove(columnName);
 
             string paramName;

@@ -664,7 +664,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedStatusCode: HttpStatusCode.Forbidden,
-                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed.ToString(),
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure.ToString(),
                 expectedErrorMessage: "Could not insert row with given values.",
                 clientRoleHeader: "database_policy_tester"
             );
@@ -693,8 +693,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 requestBody: requestBody,
                 clientRoleHeader: "database_policy_tester",
                 expectedErrorMessage: "One or more fields referenced by the database policy are not present in the request body.",
-                expectedStatusCode: HttpStatusCode.BadRequest,
-                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                expectedStatusCode: HttpStatusCode.Forbidden,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed.ToString()
                 );
         }
 

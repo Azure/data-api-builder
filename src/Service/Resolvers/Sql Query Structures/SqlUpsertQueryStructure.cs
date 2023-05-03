@@ -72,7 +72,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
               authorizationResolver: authorizationResolver,
               gQLFilterParser: gQLFilterParser,
               entityName: entityName,
-              operationType: Config.Operation.Update,
+              operationType: Config.Operation.Upsert,
               httpContext: httpContext)
         {
             UpdateOperations = new();
@@ -87,6 +87,17 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             // Populates the UpsertQueryStructure with UPDATE and INSERT column:value metadata
             PopulateColumns(mutationParams, sourceDefinition, isIncrementalUpdate: incrementalUpdate);
+
+            if (FieldsReferencedInDbPolicyForCreateAction.Count > 0)
+            {
+                // If the size of this set FieldsReferencedInDbPolicyForCreateAction is 0,
+                // it implies that all the fields referenced in the database policy for create action are being included in the insert statement, and we are good.
+                // However, if the size is non-zero, we throw a Forbidden request exception.
+                throw new DataApiBuilderException(
+                    message: "One or more fields referenced by the database policy are not present in the request.",
+                    statusCode: HttpStatusCode.Forbidden,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
+            }
 
             if (UpdateOperations.Count == 0)
             {
@@ -195,6 +206,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private void PopulateColumnsAndParams(string columnName)
         {
             InsertColumns.Add(columnName);
+
+            // As we add columns to the InsertColumns list for SqlUpsertQueryStructure one by one,
+            // we remove the columns (if present) from the FieldsReferencedInDbPolicyForCreateAction.
+            // This is necessary because any field referenced in database policy but not present in insert statement would result in an exception.
+            FieldsReferencedInDbPolicyForCreateAction.Remove(columnName);
             string paramName;
             paramName = ColumnToParam[columnName];
             Values.Add($"{paramName}");

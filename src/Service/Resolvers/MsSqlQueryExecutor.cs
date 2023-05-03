@@ -4,6 +4,8 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Linq;
+using System.Net;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,11 +13,13 @@ using Azure.Core;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
@@ -194,6 +198,88 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             return sessionMapQuery.ToString();
+        }
+
+        /// <inheritdoc/>
+        public override async Task<DbResultSet> GetMultipleResultSetsIfAnyAsync(
+            DbDataReader dbDataReader, List<string>? args = null)
+        {
+            // From the first result set, we get the count(0/1) of records with given PK.
+            DbResultSet resultSetWithCountOfRowsWithGivenPk = await ExtractResultSetFromDbDataReader(dbDataReader);
+            DbResultSetRow? resultSetRowWithCountOfRowsWithGivenPk = resultSetWithCountOfRowsWithGivenPk.Rows.FirstOrDefault();
+            int numOfRecordsWithGivenPK;
+
+            if (resultSetRowWithCountOfRowsWithGivenPk is not null &&
+                resultSetRowWithCountOfRowsWithGivenPk.Columns.TryGetValue(MsSqlQueryBuilder.COUNT_ROWS_WITH_GIVEN_PK, out object? rowsWithGivenPK))
+            {
+                numOfRecordsWithGivenPK = (int)rowsWithGivenPK!;
+            }
+            else
+            {
+                throw new DataApiBuilderException(
+                    message: $"Neither insert nor update could be performed.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+            }
+
+            // The second result set holds the records returned as a result of the executed update/insert operation.
+            DbResultSet? dbResultSet = await dbDataReader.NextResultAsync() ? await ExtractResultSetFromDbDataReader(dbDataReader) : null;
+
+            if (dbResultSet is null)
+            {
+                // For a PUT/PATCH operation on a table/view with non-autogen PK, we would either perform an insert or an update for sure,
+                // and correspondingly dbResultSet can not be null.
+                // However, in case of autogen PK, we would not attempt an insert since PK is auto generated.
+                // We would only attempt an update , and that too when a record exists for given PK.
+                // However since the dbResultSet is null here, it indicates we didn't perform an update either.
+                // This happens when count of rows with given PK = 0.
+
+                // Assert that there are no records for the given PK.
+                Assert.AreEqual(0, numOfRecordsWithGivenPK);
+
+                if (args is not null && args.Count > 1)
+                {
+                    string prettyPrintPk = args![0];
+                    string entityName = args[1];
+
+                    throw new DataApiBuilderException(
+                            message: $"Cannot perform INSERT and could not find {entityName} " +
+                            $"with primary key {prettyPrintPk} to perform UPDATE on.",
+                            statusCode: HttpStatusCode.NotFound,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+                }
+
+                throw new DataApiBuilderException(
+                    message: $"Neither insert nor update could be performed.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+            }
+
+            if (numOfRecordsWithGivenPK == 1) // This indicates that a record existed with given PK and we attempted an update operation.
+            {
+                if (dbResultSet.Rows.Count == 0)
+                {
+                    // Record exists in the table/view but no record updated - indicates database policy failure.
+                    throw new DataApiBuilderException(
+                        message: DataApiBuilderException.AUTHORIZATION_FAILURE,
+                        statusCode: HttpStatusCode.Forbidden,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure);
+                }
+
+                // This is used as an identifier to distinguish between update/insert operations.
+                // Later helps to add location header in case of insert operation.
+                dbResultSet.ResultProperties.Add(SqlMutationEngine.IS_UPDATE_RESULT_SET, true);
+            }
+            else if (dbResultSet.Rows.Count == 0)
+            {
+                // No record exists in the table/view but inserted no records - indicates database policy failure.
+                throw new DataApiBuilderException(
+                        message: DataApiBuilderException.AUTHORIZATION_FAILURE,
+                        statusCode: HttpStatusCode.Forbidden,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure);
+            }
+
+            return dbResultSet;
         }
 
         /// <inheritdoc/>

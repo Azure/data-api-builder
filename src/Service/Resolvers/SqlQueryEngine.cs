@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
@@ -275,24 +276,45 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 return SqlPaginationUtil.CreatePaginationConnectionFromJsonElement(element, currentMetadata);
             }
-            
+
             return element;
         }
 
         /// <inheritdoc />
-        public IReadOnlyList<JsonElement> ResolveList(JsonElement array, IObjectField fieldSchema, ref IMetadata metadata)
+        public IReadOnlyList<JsonElement> ResolveList(
+                    JsonElement array,
+                    IObjectField fieldSchema,
+                    ref IMetadata metadata)
         {
             PaginationMetadata parentMetadata = (PaginationMetadata)metadata;
             PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name.Value];
             metadata = currentMetadata;
-            
+
             List<JsonElement> list = new();
 
-            foreach (JsonElement element in array.EnumerateArray())
+            if (array.ValueKind is JsonValueKind.Array)
             {
-                list.Add(element);
+                foreach (JsonElement element in array.EnumerateArray())
+                {
+                    list.Add(element);
+                }
             }
-            
+            else if (array.ValueKind is JsonValueKind.String)
+            {
+                using ArrayPoolWriter buffer = new();
+
+                string text = array.GetString()!;
+                int neededCapacity = Encoding.UTF8.GetMaxByteCount(text.Length);
+                int written = Encoding.UTF8.GetBytes(text, buffer.GetSpan(neededCapacity));
+                buffer.Advance(written);
+
+                Utf8JsonReader reader = new(buffer.GetWrittenSpan());
+                foreach (JsonElement element in JsonElement.ParseValue(ref reader).EnumerateArray())
+                {
+                    list.Add(element);
+                }
+            }
+
             return list;
         }
 
@@ -315,7 +337,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         // <summary>
         // Given the SqlExecuteStructure structure, obtains the query text and executes it against the backend.
         // Unlike a normal query, result from database may not be JSON. Instead we treat output as SqlMutationEngine does (extract by row).
-        // As such, this could feasibly be moved to the mutation engine. 
+        // As such, this could feasibly be moved to the mutation engine.
         // </summary>
         private async Task<JsonDocument?> ExecuteAsync(SqlExecuteStructure structure)
         {

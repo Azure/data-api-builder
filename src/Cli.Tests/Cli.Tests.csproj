@@ -35,4 +35,8 @@
         <ProjectReference Include="..\Cli\Cli.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="__snapshots__\" />
+    </ItemGroup>
+
 </Project>

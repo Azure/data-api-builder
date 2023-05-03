@@ -63,7 +63,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// Demonstrates that using mapped column names for fields within the GraphQL mutatation results in successful engine processing.
+        /// Demonstrates that using mapped column names for fields within the GraphQL mutation results in successful engine processing.
         /// </summary>
         [TestMethod]
         public async Task InsertMutationWithVariablesAndMappings()
@@ -233,7 +233,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// Demonstrates that using mapped column names for fields within the GraphQL mutatation results in successful engine processing
+        /// Demonstrates that using mapped column names for fields within the GraphQL mutation results in successful engine processing
         /// of the column2 value update for the record where column1 = $id.
         /// </summary>
         [TestMethod]
@@ -255,7 +255,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// Demonstrates that using mapped column names for fields within the GraphQL mutatation results in successful engine processing
+        /// Demonstrates that using mapped column names for fields within the GraphQL mutation results in successful engine processing
         /// of removal of the record where column1 = $id and the returned object representing the deleting record utilizes the mapped column values.
         /// </summary>
         [TestMethod]

@@ -92,7 +92,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 // If the size of this set FieldsReferencedInDbPolicyForCreateAction is 0,
                 // it implies that all the fields referenced in the database policy for create action are being included in the insert statement, and we are good.
-                // However, if the size is non-zero, we throw a bad request exception.
+                // However, if the size is non-zero, we throw a Forbidden request exception.
                 throw new DataApiBuilderException(
                     message: "One or more fields referenced by the database policy are not present in the request.",
                     statusCode: HttpStatusCode.Forbidden,

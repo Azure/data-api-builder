@@ -357,6 +357,11 @@ namespace Azure.DataApiBuilder.Service
                 app.UseHttpsRedirection();
             }
 
+            // URL Rewrite middleware MUST be called prior to UseRouting().
+            // https://andrewlock.net/understanding-pathbase-in-aspnetcore/#placing-usepathbase-in-the-correct-location
+            app.UseCorrelationIdMiddleware();
+            app.UsePathRewriteMiddleware();
+
             // SwaggerUI visualization of the OpenAPI description document is only available
             // in developer mode in alignment with the restriction placed on ChilliCream's BananaCakePop IDE.
             if (runtimeConfigProvider.IsDeveloperMode() || env.IsDevelopment())
@@ -367,10 +372,6 @@ namespace Azure.DataApiBuilder.Service
                 });
             }
 
-            // URL Rewrite middleware MUST be called prior to UseRouting().
-            // https://andrewlock.net/understanding-pathbase-in-aspnetcore/#placing-usepathbase-in-the-correct-location
-            app.UseCorrelationIdMiddleware();
-            app.UsePathRewriteMiddleware();
             app.UseRouting();
 
             // Adding CORS Middleware
@@ -634,13 +635,12 @@ namespace Azure.DataApiBuilder.Service
                 runtimeConfigValidator.ValidateStoredProceduresInConfig(runtimeConfig, sqlMetadataProvider!);
 
                 // Attempt to create OpenAPI document.
-                // Any failures should result in a logged error, but must not halt runtime initialization
+                // Errors must not crash nor halt the intialization of the engine
                 // because OpenAPI document creation is not required for the engine to operate.
+                // Errors will be logged.
                 try
                 {
-                    IOpenApiDocumentor openApiDocumentor =
-                        app.ApplicationServices.GetRequiredService<IOpenApiDocumentor>();
-
+                    IOpenApiDocumentor openApiDocumentor = app.ApplicationServices.GetRequiredService<IOpenApiDocumentor>();
                     openApiDocumentor.CreateDocument();
                 }
                 catch (DataApiBuilderException dabException)

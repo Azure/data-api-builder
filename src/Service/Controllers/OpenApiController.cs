@@ -47,47 +47,5 @@ namespace Azure.DataApiBuilder.Service.Controllers
 
             return NotFound();
         }
-
-        /// <summary>
-        /// Trigger the creation of the OpenAPI description document if it wasn't already created
-        /// using this method or created during engine startup.
-        /// </summary>
-        /// <returns>
-        /// HTTP 201 - OpenAPI description document if creation was triggered
-        /// HTTP 405 - Document creation method not allowed, global REST endpoint disabled in runtime config.
-        /// HTTP 409 - Document already created
-        /// HTTP 500 - Document creation failed. </returns>
-        [HttpPost]
-        [ProducesResponseType(StatusCodes.Status201Created)]
-        [ProducesResponseType(StatusCodes.Status405MethodNotAllowed)]
-        [ProducesResponseType(StatusCodes.Status409Conflict)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public IActionResult Post()
-        {
-            try
-            {
-                _apiDocumentor.CreateDocument();
-
-                if (_apiDocumentor.TryGetDocument(out string? document))
-                {
-                    return new CreatedResult(location: "/openapi", value: document);
-                }
-
-                return NotFound();
-            }
-            catch (DataApiBuilderException dabException)
-            {
-                Response.StatusCode = (int)dabException.StatusCode;
-                return new JsonResult(new
-                {
-                    error = new
-                    {
-                        code = dabException.SubStatusCode.ToString(),
-                        message = dabException.Message,
-                        status = (int)dabException.StatusCode
-                    }
-                });
-            }
-        }
     }
 }

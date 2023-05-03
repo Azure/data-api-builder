@@ -311,6 +311,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 storedProcedureDefinition.Parameters.TryAdd(((string)row["PARAMETER_NAME"])[1..],
                     new()
                     {
+                        // row["DATA_TYPE"] has value type string so a direct cast to System.Type is not supported.
                         SystemType = SqlToCLRType((string)row["DATA_TYPE"]),
                     }
                 );
@@ -1445,6 +1446,11 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         public void SetPartitionKeyPath(string database, string container, string partitionKeyPath)
             => throw new NotImplementedException();
+
+        public bool IsDevelopmentMode()
+        {
+            return _runtimeConfigProvider.IsDeveloperMode();
+        }
     }
 }
 

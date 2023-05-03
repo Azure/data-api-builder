@@ -154,14 +154,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                                             value: predicate.Value);
             }
 
-            foreach (KeyValuePair<string, object?> predicate in context.FieldValuePairsInBody)
-            {
-                sqlMetadataProvider.TryGetBackingColumn(EntityName, predicate.Key, out string? backingColumn);
-                PopulateParamsAndPredicates(field: predicate.Key,
-                                            backingColumn: backingColumn!,
-                                            value: predicate.Value);
-            }
-
             // context.OrderByClauseOfBackingColumns will lack SourceAlias because it is created in RequestParser
             // which may be called for any type of operation. To avoid coupling the OrderByClauseOfBackingColumns
             // to only Find, we populate the SourceAlias in this constructor where we know we have a Find operation.
@@ -331,7 +323,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 AddGraphQLFields(queryField.SelectionSet.Selections, runtimeConfigProvider);
             }
 
-            HttpContext httpContext = GraphQLFilterParser.TryGetHttpContextFromMiddlewareContext(ctx);
+            HttpContext httpContext = GraphQLFilterParser.GetHttpContextFromMiddlewareContext(ctx);
             // Process Authorization Policy of the entity being processed.
             AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(Config.EntityActionOperation.Read, queryStructure: this, httpContext, authorizationResolver, sqlMetadataProvider);
 
@@ -482,23 +474,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 return;
             }
 
-            try
+            foreach (PaginationColumn column in afterJsonValues)
             {
-                foreach (PaginationColumn column in afterJsonValues)
-                {
-                    column.TableAlias = SourceAlias;
-                    column.ParamName = column.Value is not null ?
-                        MakeParamWithValue(GetParamAsColumnSystemType(column.Value!.ToString()!, column.ColumnName)) :
-                        MakeParamWithValue(null);
-                }
-            }
-            catch (ArgumentException ex)
-            {
-                throw new DataApiBuilderException(
-                  message: ex.Message,
-                  statusCode: HttpStatusCode.BadRequest,
-                  subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
-                  innerException: ex);
+                column.TableAlias = SourceAlias;
+                column.ParamName = column.Value is not null ?
+                     MakeParamWithValue(GetParamAsSystemType(column.Value!.ToString()!, column.ColumnName, GetColumnSystemType(column.ColumnName))) :
+                     MakeParamWithValue(value: null);
             }
 
             PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(afterJsonValues.ToList());
@@ -520,7 +501,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 if (value != null)
                 {
                     parameterName = MakeParamWithValue(
-                        GetParamAsColumnSystemType(value.ToString()!, backingColumn));
+                        GetParamAsSystemType(value.ToString()!, backingColumn, GetColumnSystemType(backingColumn)));
                     Predicates.Add(new Predicate(
                         new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, backingColumn, SourceAlias)),
                         op,
@@ -528,7 +509,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 }
                 else
                 {
-                    // This case should not arise. We have issue for this to handle nullable type columns. Issue #146.
                     throw new DataApiBuilderException(
                         message: $"Unexpected value for column \"{field}\" provided.",
                         statusCode: HttpStatusCode.BadRequest,

@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
 using Azure.DataApiBuilder.Config;
@@ -106,7 +107,7 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// <summary>
         /// Data source property of the config json. This is used for constructing the required config json strings
         /// for unit tests
-        /// 
+        ///
         /// </summary>
         public const string SAMPLE_SCHEMA_DATA_SOURCE = SCHEMA_PROPERTY + "," + @"
             ""data-source"": {
@@ -151,6 +152,36 @@ namespace Azure.DataApiBuilder.Service.Tests
             RuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider runtimeConfigProvider = new(loader);
             return runtimeConfigProvider;
+
+        }
+
+        /// <summary>
+        /// Utility method that reads the config file for a given database type and constructs a
+        /// new config file with changes just in the host mode section.
+        /// </summary>
+        /// <param name="configFileName">Name of the new config file to be constructed</param>
+        /// <param name="hostModeType">HostMode for the engine</param>
+        /// <param name="databaseType">Database type</param>
+        public static void ConstructNewConfigWithSpecifiedHostMode(string configFileName, HostMode hostModeType, string databaseType)
+        {
+            TestHelper.SetupDatabaseEnvironment(databaseType);
+            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(TestHelper.GetRuntimeConfigLoader());
+            RuntimeConfig config = configProvider.GetConfig();
+
+            RuntimeConfig configWithCustomHostMode =
+                config
+                with
+                {
+                    Runtime = config.Runtime
+                with
+                    {
+                        Host = config.Runtime.Host
+                with
+                        { Mode = hostModeType }
+                    }
+                };
+            File.WriteAllText(configFileName, configWithCustomHostMode.ToJson());
+
         }
     }
 }

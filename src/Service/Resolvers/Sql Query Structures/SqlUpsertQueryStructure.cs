@@ -121,9 +121,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
                     // Create Parameter and map it to column for downstream logic to utilize.
                     string paramIdentifier;
-                    if (param.Value != null)
+                    if (param.Value is not null)
                     {
-                        paramIdentifier = MakeParamWithValue(GetParamAsColumnSystemType(param.Value.ToString()!, backingColumn!));
+                        paramIdentifier = MakeParamWithValue(GetParamAsSystemType(param.Value.ToString()!, backingColumn!, GetColumnSystemType(backingColumn!)));
                     }
                     else
                     {

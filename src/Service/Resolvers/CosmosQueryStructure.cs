@@ -106,7 +106,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 ObjectType realType = GraphQLUtils.UnderlyingGraphQLEntityType(underlyingType.Fields[QueryBuilder.PAGINATION_FIELD_NAME].Type);
                 string entityName = MetadataProvider.GetEntityName(realType.Name);
-
+                EntityName = entityName;
                 Database = MetadataProvider.GetSchemaName(entityName);
                 Container = MetadataProvider.GetDatabaseObjectName(entityName);
             }
@@ -117,7 +117,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     modelName :
                     underlyingType.Name;
                 string entityName = MetadataProvider.GetEntityName(typeName);
-
+                EntityName = entityName;
                 Database = MetadataProvider.GetSchemaName(entityName);
                 Container = MetadataProvider.GetDatabaseObjectName(entityName);
             }
@@ -168,7 +168,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             fields: filterFields,
                             queryStructure: this));
 
-                    // after parsing all the graphql filters,
+                    // after parsing all the GraphQL filters,
                     // reset the source alias and object name to the generic container alias
                     // since these may potentially be updated due to the presence of nested filters.
                     SourceAlias = _containerAlias;

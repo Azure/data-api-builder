@@ -2,6 +2,8 @@
 // Licensed under the MIT License.
 
 using System;
+using System.CommandLine;
+using System.CommandLine.Parsing;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
@@ -54,46 +56,47 @@ namespace Azure.DataApiBuilder.Service
                 });
 
         /// <summary>
-        /// Iterate through args and based on values present
-        /// set the appropriate log level. If --LogLevel is present
-        /// the next value in args must be "0" through "6", or
-        /// --LogLevel must be the last element in args. In any other
-        /// case we throw an exception. If --LogLevel is the last element
-        /// in args then we ignore it to maintain engine's behavior prior
-        /// to this change.
+        /// Using System.CommandLine Parser to parse args and return
+        /// the correct log level. We save if there is a log level in args through
+        /// the out param. For log level out of range we throw an exception.
         /// </summary>
         /// <param name="args">array that may contain log level information.</param>
         /// <param name="isLogLevelOverridenByCli">sets if log level is found in the args.</param>
         /// <returns>Appropriate log level.</returns>
         private static LogLevel GetLogLevelFromCommandLineArgs(string[] args, out bool isLogLevelOverridenByCli)
         {
-            for (int i = 0; i < args.Length; i++)
-            {
-                if (args[i].Equals("--LogLevel"))
-                {
-                    if (args.Length <= i + 1)
-                    {
-                        break;
-                    }
+            Command cmd = new(name: "start");
+            Option<LogLevel> logLevelOption = new(name: "--LogLevel");
+            cmd.AddOption(logLevelOption);
+            ParseResult result = GetParseResult(cmd, args);
+            bool matchedToken = result.Tokens.Count - result.UnmatchedTokens.Count - result.UnparsedTokens.Count > 1;
+            LogLevel logLevel = matchedToken ? result.GetValueForOption<LogLevel>(logLevelOption) : LogLevel.Error;
+            isLogLevelOverridenByCli = matchedToken ? true : false;
 
-                    if (Enum.TryParse(args[i + 1], out LogLevel logLevel))
-                    {
-                        isLogLevelOverridenByCli = true;
-                        return logLevel;
-                    }
-                    else
-                    {
-                        throw new DataApiBuilderException(
-                            message: $"LogLevel's valid range is 0 to 6, your value: {args[i]}, see: " +
-                            $"https://learn.microsoft.com/en-us/dotnet/api/microsoft.extensions.logging.loglevel?view=dotnet-plat-ext-7.0",
-                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-                    }
-                }
+            if (logLevel is > LogLevel.None or < LogLevel.Trace)
+            {
+                throw new DataApiBuilderException(
+                    message: $"LogLevel's valid range is 0 to 6, your value: {logLevel}, see: " +
+                    $"https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.loglevel?view=dotnet-plat-ext-6.0",
+                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
-            isLogLevelOverridenByCli = false;
-            return LogLevel.Error;
+            return logLevel;
+        }
+
+        /// <summary>
+        /// Helper function returns ParseResult for a given command and
+        /// arguments.
+        /// </summary>
+        /// <param name="cmd">The command.</param>
+        /// <param name="args">The arguments.</param>
+        /// <returns>ParsedResult</returns>
+        private static ParseResult GetParseResult(Command cmd, string[] args)
+        {
+            CommandLineConfiguration cmdConfig = new(cmd);
+            System.CommandLine.Parsing.Parser parser = new(cmdConfig);
+            return parser.Parse(args);
         }
 
         /// <summary>
@@ -116,21 +119,22 @@ namespace Azure.DataApiBuilder.Service
         }
 
         /// <summary>
-        /// Iterate through args from cli and check for the flag `--no-https-redirect`.
+        /// Use CommandLine parser to check for the flag `--no-https-redirect`.
         /// If it is present, https redirection is disabled.
         /// By Default it is enabled.
         /// </summary>
         /// <param name="args">array that may contain flag to disable https redirection.</param>
         private static void DisableHttpsRedirectionIfNeeded(string[] args)
         {
-            for (int i = 0; i < args.Length; i++)
+            Command cmd = new(name: "start");
+            Option<string> httpsRedirectFlagOption = new(name: Startup.NO_HTTPS_REDIRECT_FLAG);
+            cmd.AddOption(httpsRedirectFlagOption);
+            ParseResult result = GetParseResult(cmd, args);
+            if (result.Tokens.Count - result.UnmatchedTokens.Count - result.UnparsedTokens.Count > 0)
             {
-                if (args[i].Equals(Startup.NO_HTTPS_REDIRECT_FLAG))
-                {
-                    Console.WriteLine("Redirecting to https is disabled.");
-                    IsHttpsRedirectionDisabled = true;
-                    return;
-                }
+                Console.WriteLine("Redirecting to https is disabled.");
+                IsHttpsRedirectionDisabled = true;
+                return;
             }
 
             IsHttpsRedirectionDisabled = false;

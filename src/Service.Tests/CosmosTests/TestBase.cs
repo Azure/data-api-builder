@@ -92,14 +92,20 @@ type Moon @model(name:""Moon"") @authorize(policy: ""Crater"") {
                 { @"../schema.gql", new MockFileData(GRAPHQL_SCHEMA) },
                 { RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(updatedConfig.ToJson()) }
             });
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
 
             //create mock authorization resolver where mock entityPermissionsMap is created for Planet and Character.
             Mock<IAuthorizationResolver> authorizationResolverCosmos = new();
             authorizationResolverCosmos.Setup(x => x.EntityPermissionsMap)
                 .Returns(GetEntityPermissionsMap(new string[] { "Character", "Planet", "StarAlias", "Moon" }));
 
-            RuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
+            authorizationResolverCosmos.Setup(x => x.AreColumnsAllowedForOperation(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<Config.Operation>(),
+                It.IsAny<IEnumerable<string>>()
+                )).Returns(false);
 
             _application = new WebApplicationFactory<Startup>()
                 .WithWebHostBuilder(builder =>

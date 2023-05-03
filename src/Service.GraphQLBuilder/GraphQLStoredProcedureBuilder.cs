@@ -17,27 +17,43 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// It uses the parameters to build the arguments and returns a list
         /// of the StoredProcedure GraphQL object.
         /// </summary>
+        /// <param name="name">Name used for InputValueDefinition name.</param>
+        /// <param name="entity">Entity's runtime config metadata.</param>
+        /// <param name="dbObject">Stored procedure database schema metadata.</param>
+        /// <param name="rolesAllowed">Role authorization metadata.</param>
+        /// <returns>Stored procedure mutation field.</returns>
         public static FieldDefinitionNode GenerateStoredProcedureSchema(
             NameNode name,
             Entity entity,
-            IEnumerable<string>? rolesAllowed = null)
+            DatabaseObject dbObject,
+            IEnumerable<string>? rolesAllowed = null
+            )
         {
             List<InputValueDefinitionNode> inputValues = new();
             List<DirectiveNode> fieldDefinitionNodeDirectives = new();
+
+            // StoredProcedureDefinition contains both output result set column and input parameter metadata
+            // which are needed because parameter and column names can differ.
+            StoredProcedureDefinition spdef = (StoredProcedureDefinition)dbObject.SourceDefinition;
 
             if (entity.Source.Parameters is not null)
             {
                 foreach (string param in entity.Source.Parameters.Keys)
                 {
-                    Tuple<string, IValueNode> defaultGraphQLValue = GetGraphQLTypeAndNodeTypeFromStringValue(entity.Source.Parameters[param].ToString()!);
+                    // Input parameters defined in the runtime config may denote values that may not cast
+                    // to the exact value type defined in the database schema.
+                    // e.g. Runtime config parameter value set as 1, while database schema denotes value type decimal.
+                    // Without database metadata, there is no way to know to cast 1 to a decimal versus an integer.
+                    string defaultValueFromConfig = ((JsonElement)entity.Source.Parameters[param]).ToString();
+                    Tuple<string, IValueNode> defaultGraphQLValue = ConvertValueToGraphQLType(defaultValueFromConfig, parameterDefinition: spdef.Parameters[param]);
                     inputValues.Add(
                         new(
                             location: null,
-                            new(param),
-                            new StringValueNode($"parameters for {name.Value} stored-procedure"),
-                            new NamedTypeNode(defaultGraphQLValue.Item1),
+                            name: new(param),
+                            description: new StringValueNode($"parameters for {name.Value} stored-procedure"),
+                            type: new NamedTypeNode(defaultGraphQLValue.Item1),
                             defaultValue: defaultGraphQLValue.Item2,
-                            new List<DirectiveNode>())
+                            directives: new List<DirectiveNode>())
                         );
                 }
             }
@@ -63,7 +79,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// Takes the result from DB as JsonDocument and formats it in a way that can be filtered by column
         /// name. It parses the Json document into a list of Dictionary with key as result_column_name
         /// with it's corresponding value.
-        /// returns an empty list in case of no result 
+        /// returns an empty list in case of no result
         /// or stored-procedure is trying to read from DB without READ permission.
         /// </summary>
         public static List<JsonDocument> FormatStoredProcedureResultAsJsonList(JsonDocument? jsonDocument)
@@ -84,18 +100,18 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         }
 
         /// <summary>
-        /// Helper method to create a default result field for stored-procedure which does not
-        /// return any row.
+        /// Create and return a default GraphQL result field for a stored-procedure which doesn't
+        /// define a result set and doesn't return any rows.
         /// </summary>
         public static FieldDefinitionNode GetDefaultResultFieldForStoredProcedure()
         {
             return new(
                 location: null,
-                new("result"),
+                name: new("result"),
                 description: new StringValueNode("Contains output of stored-procedure execution"),
-                new List<InputValueDefinitionNode>(),
-                new StringType().ToTypeNode(),
-                new List<DirectiveNode>());
+                arguments: new List<InputValueDefinitionNode>(),
+                type: new StringType().ToTypeNode(),
+                directives: new List<DirectiveNode>());
         }
     }
 }

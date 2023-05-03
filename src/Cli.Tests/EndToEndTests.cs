@@ -314,7 +314,7 @@ public class EndToEndTests
     }
 
     /// <summary>
-    /// Validates the config json generated when a stored procedure is added with both 
+    /// Validates the config json generated when a stored procedure is added with both
     /// --rest.methods and --graphql.operation options.
     /// </summary>
     [TestMethod]

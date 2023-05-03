@@ -220,7 +220,7 @@ namespace Cli
 
             bool isStoredProcedure = IsStoredProcedure(options);
             // Validations to ensure that REST methods and GraphQL operations can be configured only
-            // for stored procedures 
+            // for stored procedures
             if (options.GraphQLOperationForStoredProcedure is not null && !isStoredProcedure)
             {
                 _logger.LogError("--graphql.operation can be configured only for stored procedures.");
@@ -435,7 +435,7 @@ namespace Cli
             bool doOptionsRepresentStoredProcedure = options.SourceType is not null && IsStoredProcedure(options);
 
             // Validations to ensure that REST methods and GraphQL operations can be configured only
-            // for stored procedures 
+            // for stored procedures
             if (options.GraphQLOperationForStoredProcedure is not null &&
                 !(isCurrentEntityStoredProcedure || doOptionsRepresentStoredProcedure))
             {
@@ -727,7 +727,11 @@ namespace Cli
 
             }
 
-            if (!VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
+            // No need to validate parameter and key field usage when there are no changes to the source object defined in 'options'
+            if ((options.SourceType is not null
+                || (options.SourceParameters is not null && options.SourceParameters.Any())
+                || (options.SourceKeyFields is not null && options.SourceKeyFields.Any()))
+                && !VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
                     updatedSourceType,
                     options.SourceParameters,
                     options.SourceKeyFields))

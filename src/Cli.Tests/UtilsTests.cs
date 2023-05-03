@@ -183,7 +183,7 @@ public class UtilsTests
     }
 
     /// <summary>
-    /// Test to verify that both Audience and Issuer is mandatory when Authentication Provider is 
+    /// Test to verify that both Audience and Issuer is mandatory when Authentication Provider is
     /// neither EasyAuthType or Simulator. If Authentication Provider is either EasyAuth or Simulator
     /// audience and issuer are ignored.
     /// </summary>

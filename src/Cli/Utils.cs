@@ -164,7 +164,7 @@ namespace Cli
                 WriteIndented = true,
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
                 PropertyNamingPolicy = new LowerCaseNamingPolicy(),
-                // As of .NET Core 7, JsonDocument and JsonSerializer only support skipping or disallowing 
+                // As of .NET Core 7, JsonDocument and JsonSerializer only support skipping or disallowing
                 // of comments; they do not support loading them. If we set JsonCommentHandling.Allow for either,
                 // it will throw an exception.
                 ReadCommentHandling = JsonCommentHandling.Skip
@@ -429,7 +429,8 @@ namespace Cli
 
         /// <summary>
         /// This method checks that parameter is only used with Stored Procedure, while
-        /// key-fields only with table/views.
+        /// key-fields only with table/views. Also ensures that key-fields are always
+        /// provided for views.
         /// </summary>
         /// <param name="sourceType">type of the source object.</param>
         /// <param name="parameters">IEnumerable string containing parameters for stored-procedure.</param>
@@ -450,6 +451,7 @@ namespace Cli
             }
             else
             {
+                // For Views and Tables
                 if (parameters is not null && parameters.Any())
                 {
                     _logger.LogError("Tables/Views don't support parameters.");
@@ -740,7 +742,7 @@ namespace Cli
         }
 
         /// <summary>
-        /// Method to check if the options for an entity represent a stored procedure  
+        /// Method to check if the options for an entity represent a stored procedure
         /// </summary>
         /// <param name="options"></param>
         /// <returns></returns>
@@ -767,7 +769,7 @@ namespace Cli
 
         /// <summary>
         /// Method to determine if the type of the entity is being converted from
-        /// stored-procedure to table/view.  
+        /// stored-procedure to table/view.
         /// </summary>
         /// <param name="entity">Entity for which the source type conversion is being determined</param>
         /// <param name="options">Options from the CLI commands</param>
@@ -834,7 +836,7 @@ namespace Cli
         }
 
         /// <summary>
-        /// Constructs the REST Path using the add/update command --rest option  
+        /// Constructs the REST Path using the add/update command --rest option
         /// </summary>
         /// <param name="restRoute">Input entered using --rest option</param>
         /// <returns>Constructed REST Path</returns>

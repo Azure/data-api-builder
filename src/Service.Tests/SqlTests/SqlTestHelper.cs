@@ -16,6 +16,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Data.SqlClient;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json.Linq;
+using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationTests;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 {
@@ -60,7 +61,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Adds a useful failure message around the excpeted == actual operation
+        /// Adds a useful failure message around the excepted == actual operation.
         /// <summary>
         public static void PerformTestEqualJsonStrings(string expected, string actual)
         {
@@ -91,6 +92,30 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 Console.WriteLine(response);
                 Assert.IsTrue(response.Contains(path), $"Path \"{path}\" not found in error");
             }
+        }
+
+        /// <summary>
+        /// Instantiate basic runtime config with no entity.
+        /// </summary>
+        /// <returns></returns>
+        public static RuntimeConfig InitBasicRuntimeConfigWithNoEntity(
+            DatabaseType dbType = DatabaseType.MSSQL,
+            string testCategory = TestCategory.MSSQL)
+        {
+            DataSource dataSource = new(dbType, GetConnectionStringFromEnvironmentConfig(environment: testCategory), new());
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "IntegrationTestMinimalSchema",
+                DataSource: dataSource,
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(null, null)
+                ),
+                Entities: new(new Dictionary<string, Entity>())
+            );
+
+            return runtimeConfig;
         }
 
         /// <summary>
@@ -561,5 +586,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 }";
         }
 
+        internal static HttpMethod ConvertSupportedHttpVerbToHttpMethod(SupportedHttpVerb requestType) => requestType switch
+        {
+            SupportedHttpVerb.Get => HttpMethod.Get,
+            SupportedHttpVerb.Put => HttpMethod.Put,
+            SupportedHttpVerb.Patch => HttpMethod.Patch,
+            SupportedHttpVerb.Delete => HttpMethod.Delete,
+            SupportedHttpVerb.Post => HttpMethod.Post,
+            _ => HttpMethod.Post
+        };
     }
 }

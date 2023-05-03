@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
 using Microsoft.OData.Edm;
@@ -17,16 +18,18 @@ namespace Azure.DataApiBuilder.Service.Parsers
     {
         private BaseSqlQueryStructure _struct;
         private ISqlMetadataProvider _metadataProvider;
+        private EntityActionOperation _operation;
 
-        public ODataASTVisitor(BaseSqlQueryStructure structure, ISqlMetadataProvider metadataProvider)
+        public ODataASTVisitor(BaseSqlQueryStructure structure, ISqlMetadataProvider metadataProvider, EntityActionOperation operation = EntityActionOperation.None)
         {
             _struct = structure;
             _metadataProvider = metadataProvider;
+            _operation = operation;
         }
 
         /// <summary>
         /// Represents visiting a BinaryOperatorNode, which will hold either
-        /// a Predicate operation (eq, gt, lt, etc), or a Logical operaton (And, Or).
+        /// a Predicate operation (eq, gt, lt, etc), or a Logical operation (And, Or).
         /// </summary>
         /// <param name="nodeIn">The node visited.</param>
         /// <returns>String concatenation of (left op right).</returns>
@@ -42,7 +45,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
         /// Represents visiting a UnaryNode, which is what holds unary
         /// operators such as NOT.
         /// </summary>
-        /// <param name="nodeIn">The node visisted.</param>
+        /// <param name="nodeIn">The node visited.</param>
         /// <returns>String concatenation of (op children)</returns>
         public override string Visit(UnaryOperatorNode nodeIn)
         {
@@ -61,6 +64,11 @@ namespace Azure.DataApiBuilder.Service.Parsers
         public override string Visit(SingleValuePropertyAccessNode nodeIn)
         {
             _metadataProvider.TryGetBackingColumn(_struct.EntityName, nodeIn.Property.Name, out string? backingColumnName);
+            if (_operation is EntityActionOperation.Create)
+            {
+                _struct.FieldsReferencedInDbPolicyForCreateAction.Add(backingColumnName!);
+            }
+
             return _metadataProvider.GetQueryBuilder().QuoteIdentifier(backingColumnName!);
         }
 

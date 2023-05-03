@@ -226,7 +226,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             if (dbResultSet is null)
             {
-                // For a PUT/PATCH operation on a table with non-autogen PK, we would either perform an insert or an update for sure,
+                // For a PUT/PATCH operation on a table/view with non-autogen PK, we would either perform an insert or an update for sure,
                 // and correspondingly dbResultSet can not be null.
                 // However, in case of autogen PK, we would not attempt an insert since PK is auto generated.
                 // We would only attempt an update , and that too when a record exists for given PK.

@@ -42,7 +42,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private readonly GQLFilterParser _gQLFilterParser;
         public const string IS_FIRST_RESULT_SET = "IsFirstResultSet";
         private const string TRANSACTION_EXCEPTION_ERROR_MSG = "An unexpected error occurred during the transaction execution";
-        
+
         private static DataApiBuilderException _dabExceptionWithTransactionErrorMessage = new(message: TRANSACTION_EXCEPTION_ERROR_MSG,
                                                                                             statusCode: HttpStatusCode.InternalServerError,
                                                                                             subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
@@ -929,7 +929,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         /// <returns>TransactionScope object with the appropriate isolation level based on the database type</returns>
         private TransactionScope ConstructTransactionScopeBasedOnDbType()
-        { 
+        {
             return _sqlMetadataProvider.GetDatabaseType() is DatabaseType.mysql ? ConstructTransactionScopeWithSpecifiedIsolationLevel(isolationLevel: System.Transactions.IsolationLevel.RepeatableRead)
                                                                                 : ConstructTransactionScopeWithSpecifiedIsolationLevel(isolationLevel: System.Transactions.IsolationLevel.ReadCommitted);
         }
@@ -945,7 +945,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <returns>TransactionScope object set at the specified isolation level</returns>
         private static TransactionScope ConstructTransactionScopeWithSpecifiedIsolationLevel(System.Transactions.IsolationLevel isolationLevel)
         {
-            return new (TransactionScopeOption.Required,
+            return new(TransactionScopeOption.Required,
                         new TransactionOptions
                         {
                             IsolationLevel = isolationLevel

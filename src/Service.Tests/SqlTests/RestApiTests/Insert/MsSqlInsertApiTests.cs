@@ -28,6 +28,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "InsertOneInSupportedTypes",
+                $"SELECT [id] as [typeid], [byte_types], [short_types], [int_types], [long_types],string_types, [single_types], [float_types], " +
+                $"[decimal_types], [boolean_types], [date_types], [datetime_types], [datetime2_types], [datetimeoffset_types], [smalldatetime_types], " +
+                $"[bytearray_types], LOWER([guid_types]) as [guid_types] FROM { _integrationTypeTable } " +
+                $"WHERE [id] = { STARTING_ID_FOR_TEST_INSERTS } AND [bytearray_types] is NULL " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
                 "InsertOneInBooksViewAll",
                 $"SELECT [id], [title], [publisher_id] FROM { _simple_all_books } " +
                 $"WHERE [id] = { STARTING_ID_FOR_TEST_INSERTS } AND [title] = 'My New Book' " +

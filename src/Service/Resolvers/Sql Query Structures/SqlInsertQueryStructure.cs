@@ -104,12 +104,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             if (value is not null)
             {
-                paramName = MakeParamWithValue(
-                    GetParamAsSystemType(value.ToString()!, columnName, GetColumnSystemType(columnName)));
+                paramName = MakeDbConnectionParam(
+                    GetParamAsSystemType(value.ToString()!, columnName, GetColumnSystemType(columnName)), columnName);
             }
             else
             {
-                paramName = MakeParamWithValue(value: null);
+                paramName = MakeDbConnectionParam(null, columnName);
             }
 
             Values.Add($"{paramName}");

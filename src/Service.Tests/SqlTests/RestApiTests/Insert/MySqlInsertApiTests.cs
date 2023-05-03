@@ -27,6 +27,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 "
             },
             {
+                "InsertOneInSupportedTypes",
+                @"
+                    SELECT JSON_OBJECT('typeid', typeid,'bytearray_types', bytearray_types) AS data
+                    FROM (
+                        SELECT id as typeid, bytearray_types 
+                        FROM " + _integrationTypeTable + @"
+                        WHERE id = 5001 AND bytearray_types is NULL 
+                    ) AS subq
+                "
+            },
+            {
                 "InsertOneUniqueCharactersTest",
                 @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('┬─┬ノ( º _ ºノ)', NoteNum,

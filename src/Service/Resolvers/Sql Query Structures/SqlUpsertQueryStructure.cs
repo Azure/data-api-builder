@@ -123,11 +123,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     string paramIdentifier;
                     if (param.Value is not null)
                     {
-                        paramIdentifier = MakeParamWithValue(GetParamAsSystemType(param.Value.ToString()!, backingColumn!, GetColumnSystemType(backingColumn!)));
+                        paramIdentifier = MakeDbConnectionParam(GetParamAsSystemType(param.Value.ToString()!, backingColumn!, GetColumnSystemType(backingColumn!)), backingColumn);
                     }
                     else
                     {
-                        paramIdentifier = MakeParamWithValue(null);
+                        paramIdentifier = MakeDbConnectionParam(null, backingColumn);
                     }
 
                     ColumnToParam.Add(backingColumn!, paramIdentifier);

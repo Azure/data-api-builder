@@ -206,6 +206,14 @@ namespace Azure.DataApiBuilder.Service.Services
                 return graphQLType;
             }
 
+            foreach ((string entityName, Entity entity) in _entities)
+            {
+                if (entity.GraphQL.Singular == graphQLType)
+                {
+                    return entityName;
+                }
+            }
+
             throw new DataApiBuilderException(
                 "GraphQL type doesn't match any entity name or singular type in the runtime config.",
                 HttpStatusCode.BadRequest,

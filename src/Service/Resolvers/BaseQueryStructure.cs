@@ -87,10 +87,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             GraphQLFilterParser = gQLFilterParser;
             AuthorizationResolver = authorizationResolver;
 
-            // Default the alias to the empty string since this base construtor
+            // Default the alias to the empty string since this base constructor
             // is called for requests other than Find operations. We only use
             // SourceAlias for Find, so we leave empty here and then populate
-            // in the Find specific contructor.
+            // in the Find specific contractor.
             SourceAlias = string.Empty;
 
             if (!string.IsNullOrEmpty(entityName))

@@ -362,10 +362,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         /// <summary>
-        /// Test to validate successful execution of PATCH operation which satisfies the database policy for the operation (insert/update) it resolves into.
+        /// Test to validate successful execution of PATCH operation which satisfies the database policy for the update operation it resolves into.
         /// </summary>
         [TestMethod]
-        public virtual async Task PatchOneWithDatabasePolicy()
+        public virtual async Task PatchOneUpdateWithDatabasePolicy()
         {
             // PATCH operation resolves to update because we have a record present for given PK.
             // Since the database policy for update operation ("@item.pieceid ne 1") is satisfied by the operation, it executes successfully.
@@ -384,10 +384,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     expectedStatusCode: HttpStatusCode.OK,
                     clientRoleHeader: "database_policy_tester"
                 );
+        }
 
+        /// <summary>
+        /// Test to validate successful execution of PATCH operation which satisfies the database policy for the insert operation it resolves into.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOneInsertWithDatabasePolicy()
+        {
             // PATCH operation resolves to insert because we don't have a record present for given PK.
             // Since the database policy for insert operation ("@item.pieceid ne 6 and @item.piecesAvailable gt 0") is satisfied by the operation, it executes successfully.
-            requestBody = @"
+            string requestBody = @"
             {
                 ""piecesAvailable"": 4,
                 ""categoryName"": ""SciFi""
@@ -634,11 +641,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         /// <summary>
-        /// Test to validate failure of PATCH operation failing to satisfy the database policy for the operation to be executed
-        /// (insert/update based on whether a record exists for given PK).
+        /// Test to validate failure of PATCH operation failing to satisfy the database policy for the update operation.
+        /// (because a record exists for given PK).
         /// </summary>
         [TestMethod]
-        public virtual async Task PatchOneWithUnsatisfiedDatabasePolicy()
+        public virtual async Task PatchOneUpdateWithUnsatisfiedDatabasePolicy()
         {
             // PATCH operation resolves to update because we have a record present for given PK.
             // However, the update fails to execute successfully because the database policy ("@item.pieceid ne 1") for update operation is not satisfied.
@@ -662,11 +669,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure.ToString(),
                     clientRoleHeader: "database_policy_tester"
                     );
+        }
 
+        /// <summary>
+        /// Test to validate failure of PATCH operation failing to satisfy the database policy for the update operation.
+        /// (because no record exists for given PK).
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOneInsertWithUnsatisfiedDatabasePolicy()
+        {
             // PATCH operation resolves to insert because we don't have a record present for given PK.
             // However, the insert fails to execute successfully because the database policy ("@item.pieceid ne 6 and @item.piecesAvailable gt 6")
             // for insert operation is not satisfied.
-            requestBody = @"
+            string requestBody = @"
             {
                 ""categoryName"": ""SciFi"",
                 ""piecesRequired"": 5,

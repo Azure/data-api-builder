@@ -233,6 +233,18 @@
         {
           "role": "TestNestedFilterFieldIsNull_EntityReadForbidden",
           "actions": [ "read" ]
+        },
+        {
+          "role": "database_policy_tester",
+          "actions": [
+            "create",
+            {
+              "action": "Update",
+              "policy": {
+                "database": "@item.pieceid ne 1"
+              }
+            }
+          ]
         }
       ],
       "relationships": {

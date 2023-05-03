@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
+using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -60,20 +61,45 @@ type Moon @model(name:""Moon"") @authorize(policy: ""Crater"") {
 
         private static string[] _planets = { "Earth", "Mars", "Jupiter", "Tatooine", "Endor", "Dagobah", "Hoth", "Bespin", "Spec%ial" };
 
-        private static HttpClient _client;
-        internal static WebApplicationFactory<Startup> _application;
+        private HttpClient _client;
+        internal WebApplicationFactory<Startup> _application;
+        internal string _containerName = Guid.NewGuid().ToString();
 
-        [ClassInitialize(InheritanceBehavior.BeforeEachDerivedClass)]
-        public static void Init(TestContext context)
+        [TestInitialize]
+        public void Init()
         {
+            // Read the base config from the file system
+            TestHelper.SetupDatabaseEnvironment(TestCategory.COSMOSDBNOSQL);
+            RuntimeConfigLoader baseLoader = TestHelper.GetRuntimeConfigLoader();
+            if (!baseLoader.TryLoadDefaultConfig(out RuntimeConfig baseConfig))
+            {
+                throw new ApplicationException("Failed to load the default CosmosDB_NoSQL config and cannot continue with tests.");
+            }
+
+            Dictionary<string, JsonElement> updatedOptions = baseConfig.DataSource.Options;
+            updatedOptions["container"] = JsonDocument.Parse($"\"{_containerName}\"").RootElement;
+
+            RuntimeConfig updatedConfig = baseConfig
+                with
+            {
+                DataSource = baseConfig.DataSource with { Options = updatedOptions },
+                Entities = new(baseConfig.Entities.ToDictionary(e => e.Key, e => e.Value with { Source = e.Value.Source with { Object = _containerName } }))
+            };
+
+            // Setup a mock file system, and use that one with the loader/provider for the config
             MockFileSystem fileSystem = new(new Dictionary<string, MockFileData>()
             {
-                { @"../schema.gql", new MockFileData(GRAPHQL_SCHEMA) }
+                { @"../schema.gql", new MockFileData(GRAPHQL_SCHEMA) },
+                { RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(updatedConfig.ToJson()) }
             });
 
             //create mock authorization resolver where mock entityPermissionsMap is created for Planet and Character.
             Mock<IAuthorizationResolver> authorizationResolverCosmos = new();
-            authorizationResolverCosmos.Setup(x => x.EntityPermissionsMap).Returns(GetEntityPermissionsMap(new string[] { "Character", "Planet", "StarAlias", "Moon" }));
+            authorizationResolverCosmos.Setup(x => x.EntityPermissionsMap)
+                .Returns(GetEntityPermissionsMap(new string[] { "Character", "Planet", "StarAlias", "Moon" }));
+
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
 
             _application = new WebApplicationFactory<Startup>()
                 .WithWebHostBuilder(builder =>
@@ -81,12 +107,11 @@ type Moon @model(name:""Moon"") @authorize(policy: ""Crater"") {
                     _ = builder.ConfigureTestServices(services =>
                     {
                         services.AddSingleton<IFileSystem>(fileSystem);
-                        services.AddSingleton(TestHelper.GetRuntimeConfigProvider(CosmosTestHelper.ConfigLoader));
+                        services.AddSingleton(loader);
+                        services.AddSingleton(provider);
                         services.AddSingleton(authorizationResolverCosmos.Object);
                     });
                 });
-
-            RuntimeConfigProvider configProvider = _application.Services.GetService<RuntimeConfigProvider>();
 
             _client = _application.CreateClient();
         }
@@ -97,7 +122,7 @@ type Moon @model(name:""Moon"") @authorize(policy: ""Crater"") {
         /// <param name="dbName">the database name</param>
         /// <param name="containerName">the container name</param>
         /// <param name="numItems">number of items to be created</param>
-        internal static List<string> CreateItems(string dbName, string containerName, int numItems)
+        internal List<string> CreateItems(string dbName, string containerName, int numItems)
         {
             List<string> idList = new();
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
@@ -105,29 +130,12 @@ type Moon @model(name:""Moon"") @authorize(policy: ""Crater"") {
             {
                 string uid = Guid.NewGuid().ToString();
                 idList.Add(uid);
-                dynamic sourceItem = CosmosTestHelper.GetItem(uid, _planets[i % (_planets.Length)], i);
+                dynamic sourceItem = CosmosTestHelper.GetItem(uid, _planets[i % _planets.Length], i);
                 cosmosClient.GetContainer(dbName, containerName)
                     .CreateItemAsync(sourceItem, new PartitionKey(uid)).Wait();
             }
 
             return idList;
-        }
-
-        /// <summary>
-        /// Overrides the container than an entity will be saved to
-        /// </summary>
-        /// <param name="entityName">name of the mutation</param>
-        /// <param name="containerName">the container name</param>
-        internal static void OverrideEntityContainer(string entityName, string containerName)
-        {
-            RuntimeConfigProvider configProvider = _application.Services.GetService<RuntimeConfigProvider>();
-            RuntimeConfig config = configProvider.GetConfig();
-            Entity entity = config.Entities[entityName];
-
-            System.Reflection.PropertyInfo prop = entity.GetType().GetProperty("Source");
-            // Use reflection to set the entity Source (since `entity` is a record type and technically immutable)
-            // But it has to be a JsonElement, which we can only make by parsing JSON, so we do that then grab the property
-            prop.SetValue(entity, JsonDocument.Parse(@$"{{ ""value"": ""{containerName}"" }}").RootElement.GetProperty("value"));
         }
 
         /// <summary>
@@ -137,32 +145,32 @@ type Moon @model(name:""Moon"") @authorize(policy: ""Crater"") {
         /// <param name="query"> The GraphQL query/mutation</param>
         /// <param name="variables">Variables to be included in the GraphQL request. If null, no variables property is included in the request, to pass an empty object provide an empty dictionary</param>
         /// <returns></returns>
-        internal static Task<JsonElement> ExecuteGraphQLRequestAsync(string queryName, string query, Dictionary<string, object> variables = null, string authToken = null, string clientRoleHeader = null)
+        internal Task<JsonElement> ExecuteGraphQLRequestAsync(string queryName, string query, Dictionary<string, object> variables = null, string authToken = null, string clientRoleHeader = null)
         {
             RuntimeConfigProvider configProvider = _application.Services.GetService<RuntimeConfigProvider>();
             return GraphQLRequestExecutor.PostGraphQLRequestAsync(_client, configProvider, queryName, query, variables, authToken, clientRoleHeader);
         }
 
-        internal static async Task<JsonDocument> ExecuteCosmosRequestAsync(string query, int pagesize, string continuationToken, string containerName)
+        internal async Task<JsonDocument> ExecuteCosmosRequestAsync(string query, int pageSize, string continuationToken, string containerName)
         {
             QueryRequestOptions options = new()
             {
-                MaxItemCount = pagesize,
+                MaxItemCount = pageSize,
             };
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
             Container c = cosmosClient.GetContainer(DATABASE_NAME, containerName);
             QueryDefinition queryDef = new(query);
             FeedIterator<JObject> resultSetIterator = c.GetItemQueryIterator<JObject>(queryDef, continuationToken, options);
             FeedResponse<JObject> firstPage = await resultSetIterator.ReadNextAsync();
-            JArray jarray = new();
+            JArray jsonArray = new();
             IEnumerator<JObject> enumerator = firstPage.GetEnumerator();
             while (enumerator.MoveNext())
             {
                 JObject item = enumerator.Current;
-                jarray.Add(item);
+                jsonArray.Add(item);
             }
 
-            return JsonDocument.Parse(jarray.ToString().Trim());
+            return JsonDocument.Parse(jsonArray.ToString().Trim());
         }
 
         private static Dictionary<string, EntityMetadata> GetEntityPermissionsMap(string[] entities)

@@ -113,7 +113,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             else
             {
                 Columns.AddRange(GenerateQueryColumns(selection.SyntaxNode.SelectionSet!, _context.Document, SourceAlias));
-                string entityName = MetadataProvider.GetEntityName(underlyingType.Name);
+                string typeName = GraphQLUtils.TryExtractGraphQLFieldModelName(underlyingType.Directives, out string? modelName) ?
+                    modelName :
+                    underlyingType.Name;
+                string entityName = MetadataProvider.GetEntityName(typeName);
 
                 Database = MetadataProvider.GetSchemaName(entityName);
                 Container = MetadataProvider.GetDatabaseObjectName(entityName);

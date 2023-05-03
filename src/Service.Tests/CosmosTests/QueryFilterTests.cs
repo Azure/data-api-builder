@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Resolvers;
@@ -17,19 +16,16 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
     [TestClass, TestCategory(TestCategory.COSMOSDBNOSQL)]
     public class QueryFilterTests : TestBase
     {
-        private static readonly string _containerName = Guid.NewGuid().ToString();
         private static int _pageSize = 10;
         private static readonly string _graphQLQueryName = "planets";
 
-        [ClassInitialize]
-        public static void TestFixtureSetup(TestContext context)
+        [TestInitialize]
+        public void TestFixtureSetup()
         {
-            Init(context);
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
             cosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
             cosmosClient.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
             CreateItems(DATABASE_NAME, _containerName, 10);
-            OverrideEntityContainer("Planet", _containerName);
         }
 
         /// <summary>
@@ -54,7 +50,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
         }
 
-        private static async Task ExecuteAndValidateResult(string graphQLQueryName, string gqlQuery, string dbQuery)
+        private async Task ExecuteAndValidateResult(string graphQLQueryName, string gqlQuery, string dbQuery)
         {
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQueryName, query: gqlQuery);
             JsonDocument expected = await ExecuteCosmosRequestAsync(dbQuery, _pageSize, null, _containerName);
@@ -642,8 +638,8 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
         }
 
-        [ClassCleanup]
-        public static void TestFixtureTearDown()
+        [TestCleanup]
+        public void TestFixtureTearDown()
         {
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
             cosmosClient.GetDatabase(DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();

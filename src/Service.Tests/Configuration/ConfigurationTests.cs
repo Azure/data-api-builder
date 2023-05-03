@@ -1474,12 +1474,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// Validates the OpenAPI documentor behavior when enabling and disabling the global REST endpoint
         /// for the DAB engine.
         /// Global REST enabled:
-        /// - POST to /openapi triggers OpenAPI document creation but should fail with 405 Method Not Allowed.
-        /// - GET to /openapi returns the created OpenAPI document, but should fail with 404 Not Found.
-        /// Global REST disabled:
-        /// - POST to /openapi triggers OpenAPI document creation fails with 409 Conflict because the
-        /// document was already created during engine startup.
         /// - GET to /openapi returns the created OpenAPI document and succeeds with 200 OK.
+        /// Global REST disabled:
+        /// - GET to /openapi fails with 404 Not Found.
         /// </summary>
         [DataTestMethod]
         [DataRow(true, false, DisplayName = "Global REST endpoint enabled - successful OpenAPI doc retrieval")]
@@ -1513,7 +1510,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
             {
-                // Setup and send request
+                // Setup and send GET request
                 HttpRequestMessage readOpenApiDocumentRequest = new(HttpMethod.Get, "/openapi");
                 HttpResponseMessage response = await client.SendAsync(readOpenApiDocumentRequest);
                 string responseBody = await response.Content.ReadAsStringAsync();
@@ -1575,7 +1572,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
             {
-                // Setup and send request
+                // Setup and send GET request
                 HttpRequestMessage readOpenApiDocumentRequest = new(HttpMethod.Get, "/openapi");
                 HttpResponseMessage response = await client.SendAsync(readOpenApiDocumentRequest);
 

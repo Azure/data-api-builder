@@ -226,13 +226,16 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             if (dbResultSet is null)
             {
-                // In this case, count of rows with given PK = 0, hence update is not executed.
-                // Assert the same.
+                // For a PUT/PATCH operation on a table with non-autogen PK, we would either perform an insert or an update for sure,
+                // and correspondingly dbResultSet can not be null.
+                // However, in case of autogen PK, we would not attempt an insert since PK is auto generated.
+                // We would only attempt an update , and that too when a record exists for given PK.
+                // However since the dbResultSet is null here, it indicates we didn't perform an update either.
+                // This happens when count of rows with given PK = 0.
+
+                // Assert that there are no records for the given PK.
                 Assert.AreEqual(0, numOfRecordsWithGivenPK);
 
-                // This case can only arise when we are dealing with table/view with auto-gen PK.
-                // dbResultSet being null implies that neither update nor insert was attempted.
-                // Since PK is auto-generated, insert cannot happen.
                 if (args is not null && args.Count > 1)
                 {
                     string prettyPrintPk = args![0];

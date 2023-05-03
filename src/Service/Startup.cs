@@ -357,6 +357,16 @@ namespace Azure.DataApiBuilder.Service
                 app.UseHttpsRedirection();
             }
 
+            // SwaggerUI visualization of the OpenAPI description document is only available
+            // in developer mode in alignment with the restriction placed on ChilliCream's BananaCakePop IDE.
+            if (runtimeConfigProvider.IsDeveloperMode() || env.IsDevelopment())
+            {
+                app.UseSwaggerUI(c =>
+                {
+                    c.SwaggerEndpoint("/openapi", "DataApibuilder-OpenAPI-PREVIEW");
+                });
+            }
+
             // URL Rewrite middleware MUST be called prior to UseRouting().
             // https://andrewlock.net/understanding-pathbase-in-aspnetcore/#placing-usepathbase-in-the-correct-location
             app.UseCorrelationIdMiddleware();
@@ -370,15 +380,6 @@ namespace Azure.DataApiBuilder.Service
                 {
                     Cors corsConfig = runtimeConfig.HostGlobalSettings.Cors;
                     ConfigureCors(CORSPolicyBuilder, corsConfig);
-                });
-            }
-            // SwaggerUI visualization of the OpenAPI description document is only available
-            // in developer mode in alignment with the restriction placed on ChilliCream's BananaCakePop IDE.
-            if (runtimeConfigProvider.IsDeveloperMode() || env.IsDevelopment())
-            {
-                app.UseSwaggerUI(c =>
-                {
-                    c.SwaggerEndpoint("/openapi", "DataApibuilder-OpenAPI-PREVIEW");
                 });
             }
 

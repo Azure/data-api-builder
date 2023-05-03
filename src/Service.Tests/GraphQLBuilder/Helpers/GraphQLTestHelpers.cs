@@ -104,8 +104,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
             Dictionary<string, object> parameters = null
             )
         {
-            IEnumerable<EntityAction> actions = permissionOperations.Select(a => new EntityAction(EnumExtensions.Deserialize<EntityActionOperation>(a), null, new(null, null)));
-            Entity entity = new(Source: new EntitySource(Type: EntityType.StoredProcedure, Object: "foo", Parameters: null, KeyFields: null),
+            IEnumerable<EntityAction> actions = (permissionOperations ?? new string[] { }).Select(a => new EntityAction(EnumExtensions.Deserialize<EntityActionOperation>(a), null, new(null, null)));
+            Entity entity = new(Source: new EntitySource(Type: EntityType.StoredProcedure, Object: "foo", Parameters: parameters, KeyFields: null),
                               Rest: new(Array.Empty<SupportedHttpVerb>()),
                               GraphQL: new(Singular: graphQLTypeName, Plural: "", Enabled: true, Operation: graphQLOperation),
                               Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: actions.ToArray()) },

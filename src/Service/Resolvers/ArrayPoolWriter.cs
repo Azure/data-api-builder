@@ -24,14 +24,14 @@ internal sealed class ArrayPoolWriter : IBufferWriter<byte>, IDisposable
         _capacity = _buffer.Length;
         _start = 0;
     }
-    
+
     /// <summary>
     /// Gets the part of the buffer that has been written to.
     /// </summary>
     /// <returns>
     /// A <see cref="ReadOnlyMemory{T}"/> of the written portion of the buffer.
     /// </returns>
-    public ReadOnlyMemory<byte> GetWrittenMemory() 
+    public ReadOnlyMemory<byte> GetWrittenMemory()
         => _buffer.AsMemory()[.._start];
 
     /// <summary>
@@ -40,7 +40,7 @@ internal sealed class ArrayPoolWriter : IBufferWriter<byte>, IDisposable
     /// <returns>
     /// A <see cref="ReadOnlySpan{T}"/> of the written portion of the buffer.
     /// </returns>
-    public ReadOnlySpan<byte> GetWrittenSpan() 
+    public ReadOnlySpan<byte> GetWrittenSpan()
         => _buffer.AsSpan()[.._start];
 
     /// <summary>
@@ -56,21 +56,21 @@ internal sealed class ArrayPoolWriter : IBufferWriter<byte>, IDisposable
     /// </exception>
     public void Advance(int count)
     {
-        if(_disposed)
+        if (_disposed)
         {
             throw new ObjectDisposedException(nameof(ArrayPoolWriter));
         }
-        
-        if(count < 0)
+
+        if (count < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(count));
         }
-        
-        if(count > _capacity)
+
+        if (count > _capacity)
         {
             throw new ArgumentOutOfRangeException(nameof(count), count, "Cannot advance past the end of the buffer.");
         }
-        
+
         _start += count;
         _capacity -= count;
     }
@@ -89,16 +89,16 @@ internal sealed class ArrayPoolWriter : IBufferWriter<byte>, IDisposable
     /// </exception>
     public Memory<byte> GetMemory(int sizeHint = 0)
     {
-        if(_disposed)
+        if (_disposed)
         {
             throw new ObjectDisposedException(nameof(ArrayPoolWriter));
         }
-        
-        if(sizeHint < 0)
+
+        if (sizeHint < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(sizeHint));
         }
-        
+
         int size = sizeHint < 1 ? _initialBufferSize : sizeHint;
         EnsureBufferCapacity(size);
         return _buffer.AsMemory().Slice(_start, size);
@@ -118,16 +118,16 @@ internal sealed class ArrayPoolWriter : IBufferWriter<byte>, IDisposable
     /// </exception>
     public Span<byte> GetSpan(int sizeHint = 0)
     {
-        if(_disposed)
+        if (_disposed)
         {
             throw new ObjectDisposedException(nameof(ArrayPoolWriter));
         }
-        
-        if(sizeHint < 0)
+
+        if (sizeHint < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(sizeHint));
         }
-        
+
         int size = sizeHint < 1 ? _initialBufferSize : sizeHint;
         EnsureBufferCapacity(size);
         return _buffer.AsSpan().Slice(_start, size);
@@ -146,11 +146,11 @@ internal sealed class ArrayPoolWriter : IBufferWriter<byte>, IDisposable
         {
             // if we need to expand the buffer we first capture the original buffer.
             byte[] buffer = _buffer;
-            
+
             // next we determine the new size of the buffer, we at least double the size to avoid
             // expanding the buffer too often.
             int newSize = buffer.Length * 2;
-            
+
             // if that new buffer size is not enough to satisfy the needed capacity
             // we add the needed capacity to the doubled buffer capacity.
             if (neededCapacity > newSize)
@@ -161,14 +161,14 @@ internal sealed class ArrayPoolWriter : IBufferWriter<byte>, IDisposable
             // next we will rent a new array from the array pool that supports
             // the new capacity requirements.
             _buffer = ArrayPool<byte>.Shared.Rent(newSize);
-            
+
             // the rented array might have a larger size than the needed capacity,
-            // so we will take the buffer length and calculate from that the free capacity. 
+            // so we will take the buffer length and calculate from that the free capacity.
             _capacity += _buffer.Length - buffer.Length;
 
             // finally we copy the data from the original buffer to the new buffer.
             buffer.AsSpan().CopyTo(_buffer);
-            
+
             // last but not least we return the original buffer to the array pool.
             ArrayPool<byte>.Shared.Return(buffer);
         }

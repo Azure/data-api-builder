@@ -41,7 +41,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly GQLFilterParser _gQLFilterParser;
         public const string IS_FIRST_RESULT_SET = "IsFirstResultSet";
-        private const string TRANSACTION_EXCEPTION_ERROR_MSG = "An unexpected error occured";
+        private const string TRANSACTION_EXCEPTION_ERROR_MSG = "An unexpected error occurred during the transaction execution";
+        
+        private static DataApiBuilderException _dabExceptionWithTransactionErrorMessage = new(message: TRANSACTION_EXCEPTION_ERROR_MSG,
+                                                                                            statusCode: HttpStatusCode.InternalServerError,
+                                                                                            subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
 
         /// <summary>
         /// Constructor
@@ -96,7 +100,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             try
             {
                 // Creating an implicit transaction
-                using (TransactionScope transactionScope = ConstructReadCommittedTransactionScope())
+                using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType())
                 {
                     if (mutationOperation is Config.Operation.Delete)
                     {
@@ -153,15 +157,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // a DataApiBuilderException is thrown
             catch (TransactionException)
             {
-                ConstructAndThrowDataApiBuilderException();
+                throw _dabExceptionWithTransactionErrorMessage;
             }
 
             if (result is null)
             {
-                throw new DataApiBuilderException(
-                    message: "Failed to resolve any query based on the current configuration.",
-                    statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                throw new DataApiBuilderException(message: "Failed to resolve any query based on the current configuration.",
+                                                  statusCode: HttpStatusCode.BadRequest,
+                                                  subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
             }
 
             return result;
@@ -215,7 +218,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             try
             {
                 // Creating an implicit transaction
-                using (TransactionScope transactionScope = ConstructReadCommittedTransactionScope())
+                using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType())
                 {
                     resultArray =
                         await _queryExecutor.ExecuteQueryAsync(
@@ -234,7 +237,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // a DataApiBuilderException is thrown
             catch (TransactionException)
             {
-                ConstructAndThrowDataApiBuilderException();
+                throw _dabExceptionWithTransactionErrorMessage;
             }
 
             // A note on returning stored procedure results:
@@ -315,7 +318,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 try
                 {
                     // Creating an implicit transaction
-                    using (TransactionScope transactionScope = ConstructReadCommittedTransactionScope())
+                    using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType())
                     {
                         resultProperties = await PerformDeleteOperation(
                                 context.EntityName,
@@ -330,7 +333,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 // a DataApiBuilderException is thrown
                 catch (TransactionException)
                 {
-                    ConstructAndThrowDataApiBuilderException();
+                    throw _dabExceptionWithTransactionErrorMessage;
                 }
 
                 // Records affected tells us that item was successfully deleted.
@@ -349,7 +352,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 try
                 {
                     // Creating an implicit transaction
-                    using (TransactionScope transactionScope = ConstructReadCommittedTransactionScope())
+                    using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType())
                     {
                         upsertOperationResult = await PerformUpsertOperation(
                                                             parameters,
@@ -364,7 +367,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 // a DataApiBuilderException is thrown
                 catch (TransactionException)
                 {
-                    ConstructAndThrowDataApiBuilderException();
+                    throw _dabExceptionWithTransactionErrorMessage;
                 }
 
                 DbResultSetRow? dbResultSetRow = upsertOperationResult is not null ?
@@ -403,7 +406,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 try
                 {
                     // Creating an implicit transaction                    
-                    using (TransactionScope transactionScope = ConstructReadCommittedTransactionScope())
+                    using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType())
                     {
                         mutationResultRow =
                                 await PerformMutationOperation(
@@ -420,7 +423,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 // a DataApiBuilderException is thrown
                 catch (TransactionException)
                 {
-                    ConstructAndThrowDataApiBuilderException();
+                    throw _dabExceptionWithTransactionErrorMessage;
                 }
 
                 if (context.OperationType is Config.Operation.Insert)
@@ -921,35 +924,33 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
-        /// Helper method to construct a transactionscope object at Read Committed isolation level
-        /// with the TransactionScopeAsyncFlowOption option enabled
+        /// For MySql database type, the isolation level is set at Repeatable Read as it is the default isolation level. Likeweise, for MsSql and PostgreSql
+        /// database types, the isolation level is set at Read Committed as it is the default.
         /// </summary>
-        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/framework/data/transactions/implementing-an-implicit-transaction-using-transaction-scope"/>
-        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeoption?view=net-6.0#fields" />
-        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeasyncflowoption?view=net-6.0#fields" />
-        /// <returns>TransactionScope object set at Read Committed isolation level</returns>
-        private static TransactionScope ConstructReadCommittedTransactionScope()
-        {
-            return new(TransactionScopeOption.Required,
-                           new TransactionOptions
-                           {
-                               IsolationLevel = System.Transactions.IsolationLevel.ReadCommitted
-                           },
-                           TransactionScopeAsyncFlowOption.Enabled);
+        /// <returns>TransactionScope object with the appropriate isolation level based on the database type</returns>
+        private TransactionScope ConstructTransactionScopeBasedOnDbType()
+        { 
+            return _sqlMetadataProvider.GetDatabaseType() is DatabaseType.mysql ? ConstructTransactionScopeWithSpecifiedIsolationLevel(isolationLevel: System.Transactions.IsolationLevel.RepeatableRead)
+                                                                                : ConstructTransactionScopeWithSpecifiedIsolationLevel(isolationLevel: System.Transactions.IsolationLevel.ReadCommitted);
         }
 
         /// <summary>
-        /// Helper method to throw a DataApiBuidlerException when exceptions related
-        /// to transactions are encountered.
+        /// Helper method to construct a TransactionScope object with the specified isolation level and
+        /// with the TransactionScopeAsyncFlowOption option enabled.
         /// </summary>
-        /// <exception cref="DataApiBuilderException"></exception>
-        private static void ConstructAndThrowDataApiBuilderException()
+        /// <param name="isolationLevel">Transaction isolation level</param>
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/framework/data/transactions/implementing-an-implicit-transaction-using-transaction-scope"/>
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeoption?view=net-6.0#fields" />
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeasyncflowoption?view=net-6.0#fields" />
+        /// <returns>TransactionScope object set at the specified isolation level</returns>
+        private static TransactionScope ConstructTransactionScopeWithSpecifiedIsolationLevel(System.Transactions.IsolationLevel isolationLevel)
         {
-            throw new DataApiBuilderException(
-                    message: TRANSACTION_EXCEPTION_ERROR_MSG,
-                    statusCode: HttpStatusCode.InternalServerError,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+            return new (TransactionScopeOption.Required,
+                        new TransactionOptions
+                        {
+                            IsolationLevel = isolationLevel
+                        },
+                        TransactionScopeAsyncFlowOption.Enabled);
         }
-
     }
 }

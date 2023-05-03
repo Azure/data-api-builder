@@ -10,5 +10,4 @@ add Earth --config "dab-config.CosmosDb_NoSql.json" --source "graphqldb.earth" -
 update Earth --config "dab-config.CosmosDb_NoSql.json" --permissions "anonymous:create" --fields.include "id" --fields.exclude "name"
 update Earth --config "dab-config.CosmosDb_NoSql.json" --permissions "anonymous:read" --fields.include "id" --fields.exclude "name"
 update Earth --config "dab-config.CosmosDb_NoSql.json" --permissions "anonymous:create" --fields.include "id" --fields.exclude "name"
-update Earth --config "dab-config.CosmosDb_NoSql.json" --permissions "authenticated:create,update,delete"
-update Earth --config "dab-config.CosmosDb_NoSql.json" --permissions "authenticated:read" --fields.include "*"
+update Earth --config "dab-config.CosmosDb_NoSql.json" --permissions "authenticated:create,read,update,delete"

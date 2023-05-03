@@ -45,7 +45,7 @@ class RuntimeEntitiesConverter : JsonConverter<RuntimeEntities>
             { GraphQL = new(Singular: string.Empty, Plural: string.Empty) };
         }
 
-        // If no Singular version of the entity name was provided, use the Entity Name from the config in a singularised form.
+        // If no Singular version of the entity name was provided, use the Entity Name from the config.
         if (string.IsNullOrEmpty(nameCorrectedEntity.GraphQL.Singular))
         {
             nameCorrectedEntity = nameCorrectedEntity
@@ -53,7 +53,7 @@ class RuntimeEntitiesConverter : JsonConverter<RuntimeEntities>
             {
                 GraphQL = nameCorrectedEntity.GraphQL
             with
-                { Singular = entityName.Singularize() }
+                { Singular = entityName }
             };
         }
 

@@ -899,7 +899,7 @@ namespace Cli
                     }
                     else
                     {
-                        singular = graphQL.Singularize(inputIsKnownToBePlural: false);
+                        singular = graphQL;
                         plural = graphQL.Pluralize(inputIsKnownToBeSingular: false);
                     }
 

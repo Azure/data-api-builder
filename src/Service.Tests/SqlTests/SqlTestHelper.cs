@@ -32,7 +32,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
         public static RuntimeConfig RemoveAllRelationshipBetweenEntities(RuntimeConfig runtimeConfig)
         {
-            return runtimeConfig with {
+            return runtimeConfig with
+            {
                 Entities = new(runtimeConfig.Entities.ToDictionary(item => item.Key, item => item.Value with { Relationships = null }))
             };
         }

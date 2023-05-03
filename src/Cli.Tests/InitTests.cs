@@ -196,7 +196,7 @@ namespace Cli.Tests
             string? graphQLSchema,
             bool expectedResult)
         {
-            if (! string.IsNullOrEmpty(graphQLSchema))
+            if (!string.IsNullOrEmpty(graphQLSchema))
             {
                 // Mock the schema file. It can be empty as we are not testing the schema file contents in this test.
                 ((MockFileSystem)_fileSystem!).AddFile(graphQLSchema, new MockFileData(""));

@@ -145,14 +145,14 @@ namespace Azure.DataApiBuilder.Service.Models
                     // Currently Cosmos DB doesn't support field level authorization.
                     // Due to the recursive behavior of SqlExistsQueryStructure compilation, the column authorization
                     // check only occurs when access to the column's owner entity is confirmed.
-                    if (!relationshipField && _metadataProvider.GetDatabaseType() is not DatabaseType.cosmosdb_nosql)
+                    if (!relationshipField && _metadataProvider.GetDatabaseType() is not DatabaseType.CosmosDB_NoSQL)
                     {
                         string targetEntity = queryStructure.EntityName;
 
                         bool columnAccessPermitted = queryStructure.AuthorizationResolver.AreColumnsAllowedForOperation(
                             entityName: targetEntity,
                             roleName: GetHttpContextFromMiddlewareContext(ctx).Request.Headers[CLIENT_ROLE_HEADER],
-                            operation: Config.Operation.Read,
+                            operation: EntityActionOperation.Read,
                             columns: new[] { name });
 
                         if (!columnAccessPermitted)
@@ -251,7 +251,7 @@ namespace Azure.DataApiBuilder.Service.Models
             bool entityAccessPermitted = queryStructure.AuthorizationResolver.AreRoleAndOperationDefinedForEntity(
                 entityName: nestedFilterEntityName,
                 roleName: GetHttpContextFromMiddlewareContext(ctx).Request.Headers[CLIENT_ROLE_HEADER],
-                operation: Config.Operation.Read);
+                operation: EntityActionOperation.Read);
 
             if (!entityAccessPermitted)
             {

@@ -487,7 +487,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 targetFields,
                 club_id,
                 club_name,
-                DatabaseType.mysql,
+                DatabaseType.MySQL,
                 TestCategory.MYSQL);
         }
 

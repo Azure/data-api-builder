@@ -1183,8 +1183,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 requestBody: requestBody,
                 entityNameOrPath: _integrationProcedureFindOne_EntityName,
                 sqlQuery: string.Empty,
-                operationType: Config.Operation.Execute,
-                restHttpVerb: Config.RestMethod.Get,
+                operationType: EntityActionOperation.Execute,
+                restHttpVerb: SupportedHttpVerb.Get,
                 exceptionExpected: true,
                 expectedErrorMessage: $"Invalid request. Missing required procedure parameters: id for entity: {_integrationProcedureFindOne_EntityName}",
                 expectedStatusCode: HttpStatusCode.BadRequest

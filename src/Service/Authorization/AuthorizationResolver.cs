@@ -638,7 +638,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         {
             // A field may not exist in FieldToRolesMap when that field is not an included column (implicitly or explicitly) in
             // any role.
-            if (EntityPermissionsMap[entityName].FieldToRolesMap.TryGetValue(field, out Dictionary<Config.Operation, List<string>>? operationToRoles)
+            if (EntityPermissionsMap[entityName].FieldToRolesMap.TryGetValue(field, out Dictionary<EntityActionOperation, List<string>>? operationToRoles)
                 && operationToRoles is not null)
             {
                 if (operationToRoles.TryGetValue(operation, out List<string>? roles) && roles is not null)

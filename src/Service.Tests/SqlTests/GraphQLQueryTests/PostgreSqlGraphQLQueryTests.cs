@@ -365,7 +365,7 @@ FROM
                 targetFields,
                 club_id,
                 club_name,
-                DatabaseType.postgresql,
+                DatabaseType.PostgreSQL,
                 TestCategory.POSTGRESQL);
         }
 

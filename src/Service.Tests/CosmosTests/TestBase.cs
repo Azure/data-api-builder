@@ -103,7 +103,7 @@ type Moon @model(name:""Moon"") @authorize(policy: ""Crater"") {
             authorizationResolverCosmos.Setup(x => x.AreColumnsAllowedForOperation(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<Config.Operation>(),
+                It.IsAny<EntityActionOperation>(),
                 It.IsAny<IEnumerable<string>>()
                 )).Returns(false);
 

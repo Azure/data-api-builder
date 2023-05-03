@@ -1054,7 +1054,7 @@ type Foo @model(name:""Foo"") {{
 
             DatabaseObject spDbObj = new DatabaseStoredProcedure(schemaName: "dbo", tableName: "dbObjectName")
             {
-                SourceType = SourceType.StoredProcedure,
+                SourceType = EntityType.StoredProcedure,
                 StoredProcedureDefinition = new()
                 {
                     Parameters = new() {

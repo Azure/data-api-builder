@@ -1449,7 +1449,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
         public bool IsDevelopmentMode()
         {
-            return _runtimeConfigProvider.IsDeveloperMode();
+            return _runtimeConfigProvider.GetConfig().Runtime.Host.Mode is HostMode.Development;
         }
     }
 }

@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
@@ -51,7 +50,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
-            foreach (Entity entity in _runtimeConfig.Entities.Values)
+            foreach ((string _, Entity entity) in _runtimeConfig.Entities)
             {
                 CheckFieldPermissionsForEntity(entity);
             }
@@ -61,29 +60,19 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
 
         public void CheckFieldPermissionsForEntity(Entity entity)
         {
-            foreach (PermissionSetting permission in entity.Permissions)
+            foreach (EntityPermission permission in entity.Permissions)
             {
                 string role = permission.Role;
                 RoleMetadata roleToOperation = new();
-                object[] Operations = permission.Operations;
-                foreach (JsonElement operationElement in Operations)
+                EntityAction[] Operations = permission.Actions;
+                foreach (EntityAction entityAction in Operations)
                 {
-                    if (operationElement.ValueKind is JsonValueKind.String)
+                    if (entityAction.Fields is not null)
                     {
-                        continue;
-                    }
-                    else
-                    {
-                        // If not a string, the operationObj is expected to be an object that can be deserialized into PermissionOperation
-                        // object.
-                        if (RuntimeConfig.TryGetDeserializedJsonString(operationElement.ToString(), out PermissionOperation? operationObj, null!)
-                            && operationObj is not null && operationObj.Fields is not null)
-                        {
-                            throw new DataApiBuilderException(
-                                message: "Invalid runtime configuration, CosmosDB_NoSql currently doesn't support field level authorization.",
-                                statusCode: System.Net.HttpStatusCode.BadRequest,
-                                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-                        }
+                        throw new DataApiBuilderException(
+                            message: "Invalid runtime configuration, CosmosDB_NoSql currently doesn't support field level authorization.",
+                            statusCode: System.Net.HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                     }
                 }
             }
@@ -269,7 +258,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
 
         public bool IsDevelopmentMode()
         {
-            return _runtimeConfigProvider.IsDeveloperMode();
+            return _runtimeConfig.Runtime.Host.Mode is HostMode.Development;
         }
     }
 }

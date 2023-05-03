@@ -1049,7 +1049,7 @@ type Foo @model(name:""Foo"") {{
                     new string[] { entityName },
                     operations,
                     new string[] { "anonymous", "authenticated" }
-                    );
+                );
             Entity entity = GraphQLTestHelpers.GenerateStoredProcedureEntity(graphQLTypeName: "StoredProcedureType", graphQLOperation, permissionOperations);
 
             DatabaseObject spDbObj = new DatabaseStoredProcedure(schemaName: "dbo", tableName: "dbObjectName")
@@ -1067,7 +1067,8 @@ type Foo @model(name:""Foo"") {{
                 root,
                 DatabaseType.MSSQL,
                 new(new Dictionary<string, Entity> { { entityName, entity } }),
-                entityPermissionsMap: _entityPermissions
+                entityPermissionsMap: _entityPermissions,
+                dbObjects: new Dictionary<string, DatabaseObject> { { entityName, spDbObj } }
             );
 
             const string FIELDNOTFOUND_ERROR = "The expected mutation field schema was not detected.";

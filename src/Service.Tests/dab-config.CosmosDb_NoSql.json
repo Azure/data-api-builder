@@ -40,7 +40,15 @@
           "role": "anonymous",
           "actions": [
             "create",
-            "read",
+            {
+              "action": "read",
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
             "update",
             "delete"
           ]
@@ -179,15 +187,7 @@
           "role": "authenticated",
           "actions": [
             "create",
-            {
-              "action": "read",
-              "fields": {
-                "include": [
-                  "*"
-                ],
-                "exclude": []
-              }
-            },
+            "read",
             "update",
             "delete"
           ]

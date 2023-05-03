@@ -703,18 +703,18 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         {
             // Run query
             string gqlQuery = @"{
-                earths(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {name : {eq : ""Earth""}})
+                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {name : {eq : ""Earth""}})
                 { 
                     items {
                         name
                     }
                 }
             }";
-            string clientRoleHeader = AuthorizationType.Authenticated.ToString();
+            string clientRoleHeader = AuthorizationType.Anonymous.ToString();
             JsonElement response = await ExecuteGraphQLRequestAsync(
                 queryName: "earths",
                 query: gqlQuery,
-                variables: new() { { "name", "Earth" } },
+                variables: new() {},
                 authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
                 clientRoleHeader: clientRoleHeader);
 

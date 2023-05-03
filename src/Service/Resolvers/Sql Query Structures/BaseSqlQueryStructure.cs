@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -27,6 +28,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     /// </summary>
     public abstract class BaseSqlQueryStructure : BaseQueryStructure
     {
+
+        public Dictionary<string, DbType> ParamToDbTypeMap { get; set; } = new();
+
         /// <summary>
         /// All tables/views that should be in the FROM clause of the query.
         /// All these objects are linked via an INNER JOIN.
@@ -111,7 +115,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     Predicate predicate = new(
                         new PredicateOperand(new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, leftoverColumn)),
                         PredicateOperation.Equal,
-                        new PredicateOperand($"{MakeParamWithValue(value: null)}")
+                        new PredicateOperand($"{MakeDbConnectionParam(value: null, leftoverColumn)}")
                     );
 
                     updateOperations.Add(predicate);
@@ -570,6 +574,5 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             }
         }
-
     }
 }

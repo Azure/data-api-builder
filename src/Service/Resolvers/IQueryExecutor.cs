@@ -30,7 +30,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <returns>An object formed using the results of the query as returned by the given handler.</returns>
         public Task<TResult?> ExecuteQueryAsync<TResult>(
             string sqltext,
-            IDictionary<string, object?> parameters,
+            IDictionary<string, DbConnectionParam> parameters,
             Func<DbDataReader, List<string>?, Task<TResult>>? dataReaderHandler,
             HttpContext? httpContext = null,
             List<string>? args = null);
@@ -111,6 +111,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="httpContext">Current user httpContext.</param>
         /// <param name="parameters">Dictionary of parameters/value required to execute the query.</param>
         /// <returns>empty string / query to set session parameters for the connection.</returns>
-        public string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, object?> parameters);
+        public string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, DbConnectionParam> parameters);
+
+        /// <summary>
+        /// Helper method to populate DbType for parameter. Currently DbTypes for parameters are only populated for MsSql.
+        /// </summary>
+        /// <param name="parameterEntry">Entry corresponding to current database parameter to be created.</param>
+        /// <param name="parameter">Parameter sent to database.</param>
+        public void PopulateDbTypeForParameter(KeyValuePair<string, DbConnectionParam> parameterEntry, DbParameter parameter);
     }
 }

@@ -435,7 +435,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 IMiddlewareContext? context = null)
         {
             string queryString;
-            Dictionary<string, object?> queryParameters;
+            Dictionary<string, DbConnectionParam> queryParameters;
             switch (operationType)
             {
                 case Config.Operation.Insert:
@@ -597,7 +597,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 IDictionary<string, object?> parameters)
         {
             string queryString;
-            Dictionary<string, object?> queryParameters;
+            Dictionary<string, DbConnectionParam> queryParameters;
             SqlDeleteStructure deleteStructure = new(
                 entityName,
                 _sqlMetadataProvider,
@@ -632,7 +632,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 RestRequestContext context)
         {
             string queryString;
-            Dictionary<string, object?> queryParameters;
+            Dictionary<string, DbConnectionParam> queryParameters;
             Config.Operation operationType = context.OperationType;
             string entityName = context.EntityName;
 

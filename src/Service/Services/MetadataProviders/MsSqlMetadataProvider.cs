@@ -43,14 +43,13 @@ namespace Azure.DataApiBuilder.Service.Services
             switch (sqlType)
             {
                 case "bigint":
-                case "real":
-                    return typeof(long);
                 case "numeric":
                     return typeof(decimal);
                 case "bit":
                     return typeof(bool);
                 case "smallint":
                     return typeof(short);
+                case "real":
                 case "decimal":
                 case "smallmoney":
                 case "money":

@@ -21,6 +21,7 @@ using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
 using Azure.DataApiBuilder.Service.Services.MetadataProviders;
+using Azure.DataApiBuilder.Service.Services.OpenAPI;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using HotChocolate;
@@ -48,6 +49,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         private const string POST_STARTUP_CONFIG_ENTITY_SOURCE = "books";
         private const string POST_STARTUP_CONFIG_ROLE = "PostStartupConfigRole";
         private const string COSMOS_DATABASE_NAME = "config_db";
+
         private const int RETRY_COUNT = 5;
         private const int RETRY_WAIT_SECONDS = 1;
 
@@ -1388,6 +1390,248 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
         }
 
+
+        /// <summary>
+        /// Test different graphql endpoints in different host modes
+        /// when accessed interactively via browser.
+        /// </summary>
+        /// <param name="endpoint">The endpoint route</param>
+        /// <param name="hostModeType">The mode in which the service is executing.</param>
+        /// <param name="expectedStatusCode">Expected Status Code.</param>
+        /// <param name="expectedContent">The expected phrase in the response body.</param>
+        [DataTestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        [DataRow("/swagger", HostModeType.Development, HttpStatusCode.OK, "", DisplayName = "SwaggerUI enabled in development mode.")]
+        [DataRow("/swagger", HostModeType.Production, HttpStatusCode.BadRequest, "", DisplayName = "SwaggerUI disabled in production mode.")]
+        public async Task OpenApi_InteractiveSwaggerUI(
+            string endpoint,
+            HostModeType hostModeType,
+            HttpStatusCode expectedStatusCode,
+            string expectedContent = "")
+        {
+            Dictionary<GlobalSettingsType, object> settings = new()
+            {
+                { GlobalSettingsType.Host, JsonSerializer.SerializeToElement(new HostGlobalSettings(){ Mode = hostModeType}) },
+                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){ Enabled = true }) },
+                { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings(){ Enabled = true }) }
+            };
+
+            DataSource dataSource = new(DatabaseType.mssql)
+            {
+                ConnectionString = GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)
+            };
+
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(globalSettings: settings, dataSource: dataSource);
+            const string CUSTOM_CONFIG = "custom-config.json";
+            File.WriteAllText(
+                CUSTOM_CONFIG,
+                JsonSerializer.Serialize(configuration, RuntimeConfig.SerializerOptions));
+
+            string[] args = new[]
+            {
+                    $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            TestServer server = new(Program.CreateWebHostBuilder(args));
+
+            HttpClient client = server.CreateClient();
+            HttpRequestMessage request = new(HttpMethod.Get, endpoint);
+
+            // Adding the following headers simulates an interactive browser request.
+            request.Headers.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36");
+            request.Headers.Add("accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9");
+
+            HttpResponseMessage response = await client.SendAsync(request);
+            Assert.AreEqual(expectedStatusCode, response.StatusCode);
+            string actualBody = await response.Content.ReadAsStringAsync();
+            Assert.IsTrue(actualBody.Contains(expectedContent));
+        }
+
+        /// <summary>
+        /// Validates the OpenAPI documentor behavior when enabling and disabling the global REST endpoint
+        /// for the DAB engine.
+        /// Global REST enabled:
+        /// - POST to /openapi triggers OpenAPI document creation but should fail with 405 Method Not Allowed.
+        /// - GET to /openapi returns the created OpenAPI document, but should fail with 404 Not Found.
+        /// Global REST disabled:
+        /// - POST to /openapi triggers OpenAPI document creation fails with 409 Conflict because the
+        /// document was already created during engine startup.
+        /// - GET to /openapi returns the created OpenAPI document and succeeds with 200 OK.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(true, false, DisplayName = "Global REST endpoint enabled - conflict creating OpenAPI doc and successful retrieval")]
+        [DataRow(false, true, DisplayName = "Global REST endpoint disabled - failure to create and retrieve OpenAPI doc")]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task OpenApi_GlobalEntityRestPath(bool globalRestEnabled, bool expectsError)
+        {
+            Dictionary<GlobalSettingsType, object> settings = new()
+            {
+                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){ Enabled = true }) },
+                { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings(){ Enabled = globalRestEnabled }) }
+            };
+
+            DataSource dataSource = new(DatabaseType.mssql)
+            {
+                ConnectionString = GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)
+            };
+
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(globalSettings: settings, dataSource: dataSource);
+            const string CUSTOM_CONFIG = "custom-config.json";
+            File.WriteAllText(
+                CUSTOM_CONFIG,
+                JsonSerializer.Serialize(configuration, RuntimeConfig.SerializerOptions));
+
+            string[] args = new[]
+            {
+                    $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                // Setup and send request
+                HttpRequestMessage createOpenApiDocumentRequest = new(HttpMethod.Post, "/openapi");
+                HttpResponseMessage response = await client.SendAsync(createOpenApiDocumentRequest);
+
+                // Parse response metadata
+                string responseBody = await response.Content.ReadAsStringAsync();
+
+                if (expectsError)
+                {
+                    Dictionary<string, JsonElement> actualAsDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(responseBody);
+                    JsonElement actualErrorObj = actualAsDict["error"];
+                    string responseBodyStatusCode = actualErrorObj.GetProperty("status").ToString();
+                    string responseBodySubStatusCode = actualErrorObj.GetProperty("code").ToString();
+                    string responseBodyMessage = actualErrorObj.GetProperty("message").ToString();
+
+                    // Validate response
+                    Assert.AreEqual(HttpStatusCode.MethodNotAllowed, response.StatusCode);
+                    Assert.AreEqual(OpenApiDocumentor.DOCUMENT_CREATION_UNSUPPORTED_ERROR, responseBodyMessage);
+                    Assert.AreEqual(((int)HttpStatusCode.MethodNotAllowed).ToString(), responseBodyStatusCode);
+                    Assert.AreEqual(DataApiBuilderException.SubStatusCodes.GlobalRestEndpointDisabled.ToString(), responseBodySubStatusCode);
+                }
+                else
+                {
+                    Assert.AreEqual(HttpStatusCode.Conflict, response.StatusCode);
+                }
+
+                // Setup and send request
+                HttpRequestMessage readOpenApiDocumentRequest = new(HttpMethod.Get, "/openapi");
+                response = await client.SendAsync(readOpenApiDocumentRequest);
+                responseBody = await response.Content.ReadAsStringAsync();
+                Dictionary<string, JsonElement> responseProperties = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(responseBody);
+
+                // Validate response
+                if (expectsError)
+                {
+                    Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
+                }
+                else
+                {
+                    Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+                    ValidateOpenApiDocTopLevelPropertiesExist(responseProperties);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Validates the behavior of the OpenApiDocumentor when the runtime config has entities with
+        /// REST endpoint enabled and disabled.
+        /// Enabled -> path should be created
+        /// Disabled -> path not created and is excluded from OpenApi document.
+        /// </summary>
+        [TestCategory(TestCategory.MSSQL)]
+        [TestMethod]
+        public async Task OpenApi_EntityLevelRestEndpoint()
+        {
+            Dictionary<GlobalSettingsType, object> settings = new()
+            {
+                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){ Enabled = true }) },
+                { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings(){ Enabled = true }) }
+            };
+
+            DataSource dataSource = new(DatabaseType.mssql)
+            {
+                ConnectionString = GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)
+            };
+
+            Entity restEnabledEntity = new(
+                Source: JsonSerializer.SerializeToElement("books"),
+                Rest: JsonSerializer.SerializeToElement(true),
+                GraphQL: JsonSerializer.SerializeToElement(false),
+                Permissions: new PermissionSetting[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: null,
+                Mappings: null);
+
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(globalSettings: settings, dataSource: dataSource, entity: restEnabledEntity, entityName: "Book");
+            Entity restDisabledEntity = new(
+                Source: JsonSerializer.SerializeToElement("publishers"),
+                Rest: JsonSerializer.SerializeToElement(false),
+                GraphQL: JsonSerializer.SerializeToElement(true),
+                Permissions: new PermissionSetting[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: null,
+                Mappings: null);
+
+            configuration.Entities.Add("Publisher", restDisabledEntity);
+            const string CUSTOM_CONFIG = "custom-config.json";
+            File.WriteAllText(
+                CUSTOM_CONFIG,
+                JsonSerializer.Serialize(configuration, RuntimeConfig.SerializerOptions));
+
+            string[] args = new[]
+            {
+                    $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                // Setup and send request
+                HttpRequestMessage readOpenApiDocumentRequest = new(HttpMethod.Get, "/openapi");
+                HttpResponseMessage response = await client.SendAsync(readOpenApiDocumentRequest);
+
+                // Parse response metadata
+                string responseBody = await response.Content.ReadAsStringAsync();
+                Dictionary<string, JsonElement> responseProperties = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(responseBody);
+
+                // Validate response metadata
+                ValidateOpenApiDocTopLevelPropertiesExist(responseProperties);
+                JsonElement pathsElement = responseProperties[OpenApiDocumentorConstants.TOPLEVELPROPERTY_PATHS];
+
+                // Validate that paths were created for the entity with REST enabled.
+                Assert.IsTrue(pathsElement.TryGetProperty("/Book", out _));
+                Assert.IsTrue(pathsElement.TryGetProperty("/Book/id/{id}", out _));
+
+                // Validate that paths were not created for the entity with REST disabled.
+                Assert.IsFalse(pathsElement.TryGetProperty("/Publisher", out _));
+                Assert.IsFalse(pathsElement.TryGetProperty("/Publisher/id/{id}", out _));
+
+                JsonElement componentsElement = responseProperties[OpenApiDocumentorConstants.TOPLEVELPROPERTY_COMPONENTS];
+                Assert.IsTrue(componentsElement.TryGetProperty(OpenApiDocumentorConstants.PROPERTY_SCHEMAS, out JsonElement componentSchemasElement));
+                // Validate that components were created for the entity with REST enabled.
+                Assert.IsTrue(componentSchemasElement.TryGetProperty("Book_NoPK", out _));
+                Assert.IsTrue(componentSchemasElement.TryGetProperty("Book", out _));
+
+                // Validate that components were not created for the entity with REST disabled.
+                Assert.IsFalse(componentSchemasElement.TryGetProperty("Publisher_NoPK", out _));
+                Assert.IsFalse(componentSchemasElement.TryGetProperty("Publisher", out _));
+            }
+        }
+
+        /// <summary>
+        /// Validates that all the OpenAPI description document's top level properties exist.
+        /// A failure here indicates that there was an undetected failure creating the OpenAPI document.
+        /// </summary>
+        /// <param name="responseComponents">Represent a deserialized JSON result from retrieving the OpenAPI document</param>
+        private static void ValidateOpenApiDocTopLevelPropertiesExist(Dictionary<string, JsonElement> responseProperties)
+        {
+            Assert.IsTrue(responseProperties.ContainsKey(OpenApiDocumentorConstants.TOPLEVELPROPERTY_OPENAPI));
+            Assert.IsTrue(responseProperties.ContainsKey(OpenApiDocumentorConstants.TOPLEVELPROPERTY_INFO));
+            Assert.IsTrue(responseProperties.ContainsKey(OpenApiDocumentorConstants.TOPLEVELPROPERTY_SERVERS));
+            Assert.IsTrue(responseProperties.ContainsKey(OpenApiDocumentorConstants.TOPLEVELPROPERTY_PATHS));
+            Assert.IsTrue(responseProperties.ContainsKey(OpenApiDocumentorConstants.TOPLEVELPROPERTY_COMPONENTS));
+        }
+
         /// <summary>
         /// Validates that schema introspection requests fail when allow-introspection is false in the runtime configuration.
         /// </summary>
@@ -1591,12 +1835,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             if (entity is null)
             {
                 entity = new(
-                Source: JsonSerializer.SerializeToElement("books"),
-                Rest: null,
-                GraphQL: JsonSerializer.SerializeToElement(new GraphQLEntitySettings(Type: new SingularPlural(Singular: "book", Plural: "books"))),
-                Permissions: new PermissionSetting[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
-                Relationships: null,
-                Mappings: null
+                    Source: JsonSerializer.SerializeToElement("books"),
+                    Rest: null,
+                    GraphQL: JsonSerializer.SerializeToElement(new GraphQLEntitySettings(Type: new SingularPlural(Singular: "book", Plural: "books"))),
+                    Permissions: new PermissionSetting[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                    Relationships: null,
+                    Mappings: null
                 );
             }
 

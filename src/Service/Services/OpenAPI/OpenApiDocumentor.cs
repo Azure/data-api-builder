@@ -10,7 +10,6 @@ using System.Linq;
 using System.Net;
 using System.Net.Mime;
 using System.Text;
-using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -18,7 +17,7 @@ using Microsoft.OpenApi.Models;
 using Microsoft.OpenApi.Writers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Azure.DataApiBuilder.Service.Services
+namespace Azure.DataApiBuilder.Service.Services.OpenAPI
 {
     /// <summary>
     /// Service which generates and provides an OpenAPI description document
@@ -33,8 +32,6 @@ namespace Azure.DataApiBuilder.Service.Services
 
         private const string DOCUMENTOR_VERSION = "PREVIEW";
         private const string DOCUMENTOR_UI_TITLE = "Data API builder - REST Endpoint";
-        private const string DOCUMENT_ALREADY_GENERATED_ERROR = "OpenAPI description document already generated.";
-        private const string DOCUMENT_CREATION_UNSUPPORTED_ERROR = "OpenAPI description document can't be created when the REST endpoint is disabled globally.";
         private const string GETALL_DESCRIPTION = "Returns entities.";
         private const string GETONE_DESCRIPTION = "Returns an entity.";
         private const string POST_DESCRIPTION = "Create entity.";
@@ -43,6 +40,10 @@ namespace Azure.DataApiBuilder.Service.Services
         private const string DELETE_DESCRIPTION = "Delete entity.";
         private const string RESPONSE_VALUE_PROPERTY = "value";
         private const string RESPONSE_ARRAY_PROPERTY = "array";
+
+        // Error messages
+        public const string DOCUMENT_ALREADY_GENERATED_ERROR = "OpenAPI description document already generated.";
+        public const string DOCUMENT_CREATION_UNSUPPORTED_ERROR = "OpenAPI description document can't be created when the REST endpoint is disabled globally.";
 
         /// <summary>
         /// Constructor denotes required services whose metadata is used to generate the OpenAPI description document.
@@ -82,11 +83,12 @@ namespace Azure.DataApiBuilder.Service.Services
 
         /// <summary>
         /// Creates an OpenAPI description document using OpenAPI.NET.
-        /// Document compliant with all patches of OpenAPI V3.0 spec (e.g. 3.0.0, 3.0.1)
+        /// Document compliant with patches of OpenAPI V3.0 spec 3.0.0 and 3.0.1,
+        /// aligned with specification support provided by Microsoft.OpenApi.
         /// </summary>
         /// <exception cref="DataApiBuilderException">Raised when document is already generated
         /// or a failure occurs during generation.</exception>
-        /// <seealso cref="https://github.com/microsoft/OpenAPI.NET/blob/vnext/src/Microsoft.OpenApi/OpenApiSpecVersion.cs"/>
+        /// <seealso cref="https://github.com/microsoft/OpenAPI.NET/blob/1.6.3/src/Microsoft.OpenApi/OpenApiSpecVersion.cs"/>
         public void CreateDocument()
         {
             if (_openApiDocument is not null)
@@ -140,13 +142,19 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Iteratrs through the runtime configuration's entities and generates the path object
+        /// Iterates through the runtime configuration's entities and generates the path object
         /// representing the DAB engine's supported HTTP verbs and relevant route restrictions:
-        /// Routes including primary key:
+        /// Paths including primary key:
         /// - GET (by ID), PUT, PATCH, DELETE
-        /// Routes excluding primary key:
+        /// Paths excluding primary key:
         /// - GET (all), POST
         /// </summary>
+        /// <example>
+        /// A path with primary key where the parameter in curly braces {} represents the preceding primary key's value.
+        /// "/EntityName/primaryKeyName/{primaryKeyValue}"
+        /// A path with no primary key nor parameter representing the primary key value:
+        /// "/EntityName"
+        /// </example>
         /// <returns>All possible paths in the DAB engine's REST API endpoint.</returns>
         private OpenApiPaths BuildPaths()
         {
@@ -183,9 +191,11 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Includes Path with Operations(+responses) and Parameters
         /// Parameters are the placeholders for pk values in curly braces { } in the URL route
         /// localhost:5000/api/Entity/pk1/{pk1}/pk2/{pk2}
-        /// /{entityName/RestPathName} + {/pk/{pkValue}} * N
+        /// more generically:
+        /// /entityName OR /RestPathName followed by (/pk/{pkValue}) * Number of primary keys.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>Tuple of the path value: e.g. "/Entity/pk1/{pk1}"
+        /// and path metadata.</returns>
         private Tuple<string, OpenApiPathItem> BuildPath(string entityName, bool includePrimaryKeyPathComponent)
         {
             SourceDefinition sourceDefinition = _metadataProvider.GetSourceDefinition(entityName);
@@ -342,6 +352,8 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <summary>
         /// Parameters are the placeholders for pk values in curly braces { } in the URL route
         /// https://localhost:5000/api/Entity/pk1/{pk1}/pk2/{pk2}
+        /// This function creates the string value "/Entity/pk1/{pk1}/pk2/{pk2}"
+        /// and creates associated parameters.
         /// </summary>
         /// <param name="entityName">Name of the entity.</param>
         /// <returns>Primary Key path component. Empty string if no primary keys exist on database object source definition.</returns>
@@ -351,6 +363,7 @@ namespace Azure.DataApiBuilder.Service.Services
             List<OpenApiParameter> parameters = new();
             StringBuilder pkComponents = new();
 
+            // Each primary key must be represented in the path component.
             foreach (string column in sourceDefinition.PrimaryKey)
             {
                 string columnNameForComponent = column;
@@ -364,7 +377,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 {
                     OpenApiSchema parameterSchema = new()
                     {
-                        Type = (columnDef is not null) ? SystemTypeToJsonValueKind(columnDef.SystemType) : string.Empty
+                        Type = columnDef is not null ? SystemTypeToJsonDataType(columnDef.SystemType) : string.Empty
                     };
 
                     OpenApiParameter openApiParameter = new()
@@ -454,7 +467,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 }
             }
 
-            Assert.IsFalse(string.Equals('/', entityRestPath));
+            Assert.IsFalse(Equals('/', entityRestPath));
             return entityRestPath;
         }
 
@@ -554,6 +567,19 @@ namespace Azure.DataApiBuilder.Service.Services
 
             foreach (string entityName in _metadataProvider.EntityToDatabaseObject.Keys.ToList())
             {
+                // Entities which disable their REST endpoint must not be included in
+                // the OpenAPI description document.
+                if (_runtimeConfig.Entities.TryGetValue(entityName, out Entity? entity) && entity is not null)
+                {
+                    if (entity.GetRestEnabledOrPathSettings() is bool restEnabled)
+                    {
+                        if (!restEnabled)
+                        {
+                            continue;
+                        }
+                    }
+                }
+
                 SourceDefinition sourceDefinition = _metadataProvider.GetSourceDefinition(entityName);
                 List<string> columns = /*sourceDefinition is null ? new List<string>() : */sourceDefinition.Columns.Keys.ToList();
 
@@ -604,7 +630,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     string formatMetadata = string.Empty;
                     if (dbObject.SourceDefinition.Columns.TryGetValue(backingColumnValue, out ColumnDefinition? columnDef) && columnDef is not null)
                     {
-                        typeMetadata = SystemTypeToJsonValueKind(columnDef.SystemType).ToString().ToLower();
+                        typeMetadata = SystemTypeToJsonDataType(columnDef.SystemType).ToString().ToLower();
                     }
 
                     properties.Add(field, new OpenApiSchema()
@@ -647,32 +673,32 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Converts the CLR type to System.Text.Json's JsonValueKind
+        /// Converts the CLR type to JsonDataType
         /// to meet the data type requirement set by the OpenAPI specification.
         /// The value returned is formatted for the OpenAPI spec "type" property.
         /// </summary>
         /// <param name="type">CLR type</param>
         /// <seealso cref="https://spec.openapis.org/oas/v3.0.1#data-types"/>
         /// <returns>Formatted JSON type name in lower case: e.g. number, string, boolean, etc.</returns>
-        private static string SystemTypeToJsonValueKind(Type type)
+        private static string SystemTypeToJsonDataType(Type type)
         {
-            JsonValueKind openApiTypeName = type.Name switch
+            JsonDataType openApiTypeName = type.Name switch
             {
-                "String" => JsonValueKind.String,
-                "Guid" => JsonValueKind.String,
-                "Byte" => JsonValueKind.String,
-                "Int16" => JsonValueKind.Number,
-                "Int32" => JsonValueKind.Number,
-                "Int64" => JsonValueKind.Number,
-                "Single" => JsonValueKind.Number,
-                "Double" => JsonValueKind.Number,
-                "Decimal" => JsonValueKind.Number,
-                "Float" => JsonValueKind.Number,
-                "Boolean" => JsonValueKind.True,
-                "DateTime" => JsonValueKind.String,
-                "DateTimeOffset" => JsonValueKind.String,
-                "Byte[]" => JsonValueKind.String,
-                _ => JsonValueKind.Undefined
+                "String" => JsonDataType.String,
+                "Guid" => JsonDataType.String,
+                "Byte" => JsonDataType.String,
+                "Int16" => JsonDataType.Number,
+                "Int32" => JsonDataType.Number,
+                "Int64" => JsonDataType.Number,
+                "Single" => JsonDataType.Number,
+                "Double" => JsonDataType.Number,
+                "Decimal" => JsonDataType.Number,
+                "Float" => JsonDataType.Number,
+                "Boolean" => JsonDataType.Boolean,
+                "DateTime" => JsonDataType.String,
+                "DateTimeOffset" => JsonDataType.String,
+                "Byte[]" => JsonDataType.String,
+                _ => JsonDataType.Undefined
             };
 
             string formattedOpenApiTypeName = openApiTypeName.ToString().ToLower();

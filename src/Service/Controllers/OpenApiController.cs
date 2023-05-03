@@ -3,7 +3,7 @@
 
 using System.Net.Mime;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.Services;
+using Azure.DataApiBuilder.Service.Services.OpenAPI;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 

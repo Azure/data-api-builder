@@ -19,6 +19,7 @@ using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
 using Azure.DataApiBuilder.Service.Services.MetadataProviders;
+using Azure.DataApiBuilder.Service.Services.OpenAPI;
 using HotChocolate.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -375,10 +376,9 @@ namespace Azure.DataApiBuilder.Service
             // in developer mode in alignment with the restriction placed on ChilliCream's BananaCakePop IDE.
             if (runtimeConfigProvider.IsDeveloperMode() || env.IsDevelopment())
             {
-                //app.UseStaticFiles();
                 app.UseSwaggerUI(c =>
                 {
-                    c.SwaggerEndpoint("/openapi", "DataAPIbuilder-OpenAPI-Alpha");
+                    c.SwaggerEndpoint("/openapi", "DataApibuilder-OpenAPI-PREVIEW");
                 });
             }
 

@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
-using Azure.DataApiBuilder.Config;
 
 namespace Azure.DataApiBuilder.Service.Models
 {

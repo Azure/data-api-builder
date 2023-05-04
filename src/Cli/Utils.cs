@@ -906,12 +906,13 @@ namespace Cli
         /// and create a merged file called dab-config.{DAB_ENVIRONMENT}.merged.json
         /// </summary>
         /// <returns>Returns the name of the merged Config if successful.</returns>
-        public static bool TryMergeConfigsIfAvailable(string baseConfigFile, out string mergedConfigFile)
+        public static bool TryMergeConfigsIfAvailable(out string mergedConfigFile)
         {
             string? environmentValue = Environment.GetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME);
             mergedConfigFile = string.Empty;
             if (!string.IsNullOrEmpty(environmentValue))
             {
+                string baseConfigFile = RuntimeConfigPath.DefaultName;
                 string environmentBasedConfigFile = RuntimeConfigPath.GetFileName(environmentValue, considerOverrides: false);
                 mergedConfigFile = RuntimeConfigPath.GetMergedFileNameForEnvironment(baseConfigFile, environmentValue);
 

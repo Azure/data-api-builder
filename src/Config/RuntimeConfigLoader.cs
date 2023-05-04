@@ -106,7 +106,7 @@ public class RuntimeConfigLoader
         options.Converters.Add(new GraphQLRuntimeOptionsConverterFactory());
         options.Converters.Add(new EntitySourceConverterFactory());
         options.Converters.Add(new EntityActionConverterFactory());
-        options.Converters.Add(new StringConverterFactory());
+        options.Converters.Add(new StringJsonConverterFactory());
         return options;
     }
 

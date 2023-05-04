@@ -8,7 +8,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 
 namespace Azure.DataApiBuilder.Config.Converters;
 
-public class StringConverterFactory : JsonConverterFactory
+public class StringJsonConverterFactory : JsonConverterFactory
 {
     public override bool CanConvert(Type typeToConvert)
     {

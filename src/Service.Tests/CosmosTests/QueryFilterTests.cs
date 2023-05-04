@@ -712,7 +712,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             }";
             string clientRoleHeader = AuthorizationType.Anonymous.ToString();
             JsonElement response = await ExecuteGraphQLRequestAsync(
-                queryName: "earths",
+                queryName: "planets",
                 query: gqlQuery,
                 variables: new() {},
                 authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),

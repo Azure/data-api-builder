@@ -88,6 +88,32 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         }
 
         /// <summary>
+        /// Perform insert test with bytearray column as NULL. This ensures that even though implicit conversion
+        /// between varchar to varbinary is not possible for MsSql (but it is possible for MySql & PgSql),
+        /// but since we are passing the DbType for the parameter, the database can explicitly convert it into varbinary.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithByteArrayTypeAsNull()
+        {
+            string requestBody = @"
+            {
+                ""bytearray_types"": null
+            }";
+
+            string expectedLocationHeader = $"typeid/{STARTING_ID_FOR_TEST_INSERTS}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _integrationTypeEntity,
+                sqlQuery: GetQuery("InsertOneInSupportedTypes"),
+                operationType: Config.Operation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+            );
+        }
+
+        /// <summary>
         /// Tests insertion on simple/composite views.
         /// </summary>
         /// <returns></returns>

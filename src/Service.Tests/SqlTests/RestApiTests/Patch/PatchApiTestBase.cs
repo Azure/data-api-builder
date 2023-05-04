@@ -696,7 +696,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     sqlQuery: string.Empty,
                     operationType: EntityActionOperation.Upsert,
                     requestBody: requestBody,
-                    sqlQuery: string.Empty,
                     exceptionExpected: true,
                     expectedErrorMessage: DataApiBuilderException.AUTHORIZATION_FAILURE,
                     expectedStatusCode: HttpStatusCode.Forbidden,

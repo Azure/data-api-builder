@@ -200,10 +200,10 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Test to verify that when DAB_ENVIRONMENT variable is set, and dab-config.json and 
+        /// Test to verify that when DAB_ENVIRONMENT variable is set, also base config and 
         /// dab-config.{DAB_ENVIRONMENT}.json file is present, then when DAB engine is started, it will merge
         /// the two config and use the merged config to startup the engine.
-        /// Here, dab-config.json has no connection_string, while dab-config.Test.json has a defined connection string.
+        /// Here, baseConfig(my-config.json) has no connection_string, while dab-config.Test.json has a defined connection string.
         /// once the `dab start` is executed the merge happens and the merged file contains the connection string from the
         /// Test config.
         /// Scenarios Covered:

@@ -69,8 +69,8 @@
                   ]
                 },
                 "Policy": {
-                  "Request": "@claims.name eq 'dab'",
-                  "Database": "@claims.id eq @item.id"
+                  "Request": null,
+                  "Database": null
                 }
               }
             ]

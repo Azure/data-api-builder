@@ -50,9 +50,11 @@
         },
         "Rest": {
           "Methods": [
-            "Post"
+            "Get",
+            "Post",
+            "Patch"
           ],
-          "Path": null,
+          "Path": "/book",
           "Enabled": true
         },
         "Permissions": [

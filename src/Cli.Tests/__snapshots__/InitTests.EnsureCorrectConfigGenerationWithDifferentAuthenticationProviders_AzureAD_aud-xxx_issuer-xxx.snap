@@ -26,10 +26,10 @@
         "AllowCredentials": false
       },
       "Authentication": {
-        "Provider": "AzureAD",
+        "Provider": "AppService",
         "Jwt": {
-          "Audience": "aud-xxx",
-          "Issuer": "issuer-xxx"
+          "Audience": null,
+          "Issuer": null
         }
       },
       "Mode": "Production"

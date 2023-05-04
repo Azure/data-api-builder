@@ -26,10 +26,10 @@
         "AllowCredentials": false
       },
       "Authentication": {
-        "Provider": "Simulator",
+        "Provider": "AzureAD",
         "Jwt": {
-          "Audience": null,
-          "Issuer": null
+          "Audience": "aud-xxx",
+          "Issuer": "issuer-xxx"
         }
       },
       "Mode": "Production"

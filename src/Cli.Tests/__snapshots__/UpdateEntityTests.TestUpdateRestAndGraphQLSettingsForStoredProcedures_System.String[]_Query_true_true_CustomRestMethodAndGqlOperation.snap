@@ -46,13 +46,13 @@
           "Singular": "MyEntity",
           "Plural": "MyEntities",
           "Enabled": true,
-          "Operation": "Query"
+          "Operation": "Mutation"
         },
         "Rest": {
           "Methods": [
-            "Get"
+            "Post"
           ],
-          "Path": null,
+          "Path": "/book",
           "Enabled": true
         },
         "Permissions": [

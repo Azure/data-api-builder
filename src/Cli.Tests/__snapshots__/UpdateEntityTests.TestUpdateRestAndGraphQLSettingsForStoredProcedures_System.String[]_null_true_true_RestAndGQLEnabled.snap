@@ -43,8 +43,8 @@
           "KeyFields": null
         },
         "GraphQL": {
-          "Singular": "MyEntity",
-          "Plural": "MyEntities",
+          "Singular": "book",
+          "Plural": "books",
           "Enabled": true,
           "Operation": "Mutation"
         },

@@ -45,14 +45,14 @@
         "GraphQL": {
           "Singular": "MyEntity",
           "Plural": "MyEntities",
-          "Enabled": false,
+          "Enabled": true,
           "Operation": "Mutation"
         },
         "Rest": {
           "Methods": [
             "Post"
           ],
-          "Path": "/book",
+          "Path": null,
           "Enabled": true
         },
         "Permissions": [

@@ -60,7 +60,7 @@
             "Get"
           ],
           "Path": null,
-          "Enabled": false
+          "Enabled": true
         },
         "Permissions": [
           {

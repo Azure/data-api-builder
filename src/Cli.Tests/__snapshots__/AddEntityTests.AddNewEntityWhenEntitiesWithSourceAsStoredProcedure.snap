@@ -49,7 +49,7 @@
         "GraphQL": {
           "Singular": "MyEntity",
           "Plural": "MyEntities",
-          "Enabled": false,
+          "Enabled": true,
           "Operation": "Mutation"
         },
         "Rest": {
@@ -57,7 +57,7 @@
             "Post"
           ],
           "Path": null,
-          "Enabled": false
+          "Enabled": true
         },
         "Permissions": [
           {

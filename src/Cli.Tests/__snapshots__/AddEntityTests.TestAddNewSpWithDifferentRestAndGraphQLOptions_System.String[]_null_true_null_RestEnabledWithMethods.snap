@@ -45,7 +45,7 @@
         "GraphQL": {
           "Singular": "MyEntity",
           "Plural": "MyEntities",
-          "Enabled": false,
+          "Enabled": true,
           "Operation": "Mutation"
         },
         "Rest": {

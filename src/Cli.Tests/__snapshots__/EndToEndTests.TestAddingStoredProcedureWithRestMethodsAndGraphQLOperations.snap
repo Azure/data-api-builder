@@ -52,7 +52,7 @@
         "GraphQL": {
           "Singular": "MyEntity",
           "Plural": "MyEntities",
-          "Enabled": false,
+          "Enabled": true,
           "Operation": "Query"
         },
         "Rest": {
@@ -62,7 +62,7 @@
             "Patch"
           ],
           "Path": null,
-          "Enabled": false
+          "Enabled": true
         },
         "Permissions": [
           {

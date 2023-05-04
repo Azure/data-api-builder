@@ -45,13 +45,19 @@
         "GraphQL": {
           "Singular": "FirstEntity",
           "Plural": "FirstEntities",
-          "Enabled": false,
+          "Enabled": true,
           "Operation": null
         },
         "Rest": {
-          "Methods": [],
+          "Methods": [
+            "Get",
+            "Post",
+            "Put",
+            "Patch",
+            "Delete"
+          ],
           "Path": null,
-          "Enabled": false
+          "Enabled": true
         },
         "Permissions": [
           {

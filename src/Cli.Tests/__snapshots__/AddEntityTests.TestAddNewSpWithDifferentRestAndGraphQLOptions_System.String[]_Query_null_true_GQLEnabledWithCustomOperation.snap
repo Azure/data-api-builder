@@ -46,14 +46,14 @@
           "Singular": "MyEntity",
           "Plural": "MyEntities",
           "Enabled": true,
-          "Operation": "Query"
+          "Operation": "Mutation"
         },
         "Rest": {
           "Methods": [
             "Post"
           ],
           "Path": null,
-          "Enabled": false
+          "Enabled": true
         },
         "Permissions": [
           {

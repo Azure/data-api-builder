@@ -50,7 +50,9 @@
         },
         "Rest": {
           "Methods": [
-            "Post"
+            "Get",
+            "Post",
+            "Patch"
           ],
           "Path": null,
           "Enabled": true

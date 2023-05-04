@@ -15,6 +15,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Snapshooter.MSTest;
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration
 {
@@ -46,15 +47,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             });
 
             RuntimeConfigLoader loader = new(fileSystem);
-            if (!loader.TryLoadConfig(".", out RuntimeConfig runtimeConfig))
+            if (!loader.TryLoadConfig(RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, out RuntimeConfig runtimeConfig))
             {
                 Assert.Fail("Failed to load the runtime config");
             }
 
             Config.HostOptions hostGlobalSettings = runtimeConfig.Runtime.Host;
-
-            Assert.IsInstanceOfType(hostGlobalSettings.Cors.Origins, typeof(string[]));
-            Assert.IsInstanceOfType(hostGlobalSettings.Cors.AllowCredentials, typeof(bool));
+            Snapshot.Match(hostGlobalSettings);
         }
 
         /// <summary>

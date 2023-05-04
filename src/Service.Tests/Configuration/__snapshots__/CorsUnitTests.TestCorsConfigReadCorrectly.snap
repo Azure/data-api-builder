@@ -1,0 +1,11 @@
+﻿{
+  "Cors": {
+    "Origins": [],
+    "AllowCredentials": false
+  },
+  "Authentication": {
+    "Provider": "StaticWebApps",
+    "Jwt": null
+  },
+  "Mode": "Development"
+}

@@ -253,7 +253,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
 
         [TestMethod]
         [Ignore]
-        public override Task PutOneUpdateAccessibleRowWithDatabasePolicy()
+        public override Task PutOneUpdateWithDatabasePolicy()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOneInsertWithDatabasePolicy()
         {
             throw new NotImplementedException();
         }
@@ -286,6 +293,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             throw new NotImplementedException();
         }
 
+        [TestMethod]
+        [Ignore]
+        public override Task PutOneWithUnsatisfiedDatabasePolicy()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOneInsertInTableWithFieldsInDbPolicyNotPresentInBody()
+        {
+            throw new NotImplementedException();
+        }
         #endregion
 
         #region Test Fixture Setup

@@ -254,6 +254,23 @@
           "actions": [
             "read"
           ]
+        },
+        {
+          "role": "database_policy_tester",
+          "actions": [
+            {
+              "action": "Create",
+              "policy": {
+                "database": "@item.pieceid ne 6 and @item.piecesAvailable gt 0"
+              }
+            },
+            {
+              "action": "Update",
+              "policy": {
+                "database": "@item.pieceid ne 1"
+              }
+            }
+          ]
         }
       ],
       "relationships": {

@@ -20,13 +20,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     public static class AuthorizationPolicyHelpers
     {
         /// <summary>
-        /// Retrieves the Database Authorization Policiy from the AuthorizationResolver
+        /// Retrieves the Database Authorization Policy from the AuthorizationResolver
         /// and converts it into a dbQueryPolicy string.
         /// Then, the OData clause is processed for the passed in SqlQueryStructure
         /// by calling OData visitor helpers.
         /// </summary>
         /// <param name="operation">Action to provide the authorizationResolver during policy lookup.</param>
-        /// <param name="queryStructure">SqlQueryStructure object, could be a subQueryStucture which is of the same type.</param>
+        /// <param name="queryStructure">SqlQueryStructure object, could be a subQueryStructure which is of the same type.</param>
         /// <param name="context">The GraphQL Middleware context with request metadata like HttpContext.</param>
         /// <param name="authorizationResolver">Used to lookup authorization policies.</param>
         /// <param name="sqlMetadataProvider">Provides helper method to process ODataFilterClause.</param>
@@ -102,16 +102,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         /// <param name="operation">Operation to be resolved.</param>
         /// <returns>Constituent operations for the operation.</returns>
-        private static List<Config.Operation> ResolveCompoundOperationToElementalOperations(Config.Operation operation)
+        private static List<Config.EntityActionOperation> ResolveCompoundOperationToElementalOperations(Config.EntityActionOperation operation)
         {
-            switch (operation)
+            return operation switch
             {
-                case Config.Operation.Upsert:
-                case Config.Operation.UpsertIncremental:
-                    return new List<Config.Operation> { Config.Operation.Update, Config.Operation.Create };
-                default:
-                    return new List<Config.Operation> { operation };
-            }
+                Config.EntityActionOperation.Upsert or
+                Config.EntityActionOperation.UpsertIncremental =>
+                    new List<Config.EntityActionOperation> { Config.EntityActionOperation.Update, Config.EntityActionOperation.Create },
+                _ => new List<Config.EntityActionOperation> { operation },
+            };
         }
     }
 }

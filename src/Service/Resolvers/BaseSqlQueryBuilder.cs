@@ -37,7 +37,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public virtual string Build(BaseSqlQueryStructure structure)
         {
             string predicates = new(JoinPredicateStrings(
-                       structure.GetDbPolicyForOperation(Config.Operation.Read),
+                       structure.GetDbPolicyForOperation(Config.EntityActionOperation.Read),
                        Build(structure.Predicates)));
 
             string query = $"SELECT 1 " +

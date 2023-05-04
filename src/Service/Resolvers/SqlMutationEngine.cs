@@ -629,7 +629,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <returns>Single row read from DbDataReader.</returns>
         private async Task<DbResultSet?>
             PerformUpsertOperation(
-                IDictionary<string, DbConnectionParam> parameters,
+                IDictionary<string, object?> parameters,
                 RestRequestContext context)
         {
             string queryString;

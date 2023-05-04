@@ -49,7 +49,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// DbPolicyPredicates is a string that represents the filter portion of our query
         /// in the WHERE Clause added by virtue of the database policy.
         /// </summary>
-        public Dictionary<Config.Operation, string?> DbPolicyPredicatesForOperations { get; set; } = new();
+        public Dictionary<Config.EntityActionOperation, string?> DbPolicyPredicatesForOperations { get; set; } = new();
 
         /// <summary>
         /// Collection of all the fields referenced in the database policy for create action.
@@ -125,7 +125,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
-        /// Get column type from table underlying the query strucutre
+        /// Get column type from table underlying the query structure
         /// </summary>
         public Type GetColumnSystemType(string columnName)
         {
@@ -510,7 +510,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         /// <param name="operation">Operation for which the database policy is to be determined.</param>
         /// <returns>Database policy for the operation.</returns>
-        public string? GetDbPolicyForOperation(Config.Operation operation)
+        public string? GetDbPolicyForOperation(Config.EntityActionOperation operation)
         {
             if (!DbPolicyPredicatesForOperations.TryGetValue(operation, out string? policy))
             {

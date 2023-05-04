@@ -13,10 +13,9 @@ namespace Cli.Tests
         /// Setup the logger for CLI
         /// </summary>
         [ClassInitialize]
-        public static void SetupLoggerForCLI(TestContext context)
+        public static void Setup(TestContext context)
         {
-            Mock<ILogger<Utils>> utilsLogger = new();
-            Utils.SetCliUtilsLogger(utilsLogger.Object);
+            TestHelper.SetupTestLoggerForCLI();
         }
 
         /// <summary>
@@ -208,19 +207,19 @@ namespace Cli.Tests
         /// once the `dab start` is executed the merge happens and the merged file contains the connection string from the
         /// Test config.
         /// Scenarios Covered:
-        /// 1. Merging of Array: Complete override of Book permissions from the second config.
+        /// 1. Merging of Array: Complete override of Book permissions from the second config (environment based config).
         /// 2. Merging Property when present in both config: Connection string in the second config overrides that of the first.
-        /// 3. Non-merging when a property in the override file is null: {data-source.options} is null in the override config
-        /// is added to the merged config as it is with no change.
-        /// 4. Merging when a property is only present in the override file: Publisher entity is present only in override config
-        /// is added to the merged config. 
+        /// 3. Non-merging when a property in the environmentConfig file is null: {data-source.options} is null in the environment config,
+        /// So it is added to the merged config as it is with no change.
+        /// 4. Merging when a property is only present in the environmentConfig file: Publisher entity is present only in environment config,
+        /// So it is directly added to the merged config. 
         /// </summary>
         [TestMethod]
         public void TestMergeConfig()
         {
             Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, "Test");
             File.WriteAllText("dab-config.json", BASE_CONFIG);
-            File.WriteAllText("dab-config.Test.json", BASE_OVERRIDE_CONFIG);
+            File.WriteAllText("dab-config.Test.json", ENV_BASED_CONFIG);
             if (TryMergeConfigsIfAvailable(out string mergedConfig))
             {
                 Assert.IsTrue(JToken.DeepEquals(JObject.Parse(MERGED_CONFIG), JObject.Parse(File.ReadAllText(mergedConfig))));
@@ -231,7 +230,7 @@ namespace Cli.Tests
             }
         }
 
-        [TestCleanup]
+        [ClassCleanup]
         public static void Cleanup()
         {
             if (File.Exists($"{CONFIGFILE_NAME}{CONFIG_EXTENSION}"))

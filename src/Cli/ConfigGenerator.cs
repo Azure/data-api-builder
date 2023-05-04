@@ -951,7 +951,7 @@ namespace Cli
             string? configToBeUsed = options.Config;
             if (string.IsNullOrEmpty(configToBeUsed) && TryMergeConfigsIfAvailable(out configToBeUsed))
             {
-                _logger.LogError($"Using Merged Config File based on environment:{configToBeUsed}.");
+                _logger.LogInformation($"Using merged config file based on environment:{configToBeUsed}.");
             }
 
             if (!TryGetConfigFileBasedOnCliPrecedence(configToBeUsed, out string runtimeConfigFile))

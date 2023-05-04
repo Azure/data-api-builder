@@ -952,7 +952,7 @@ namespace Cli.Tests
         }
       }";
 
-        public const string BASE_OVERRIDE_CONFIG =
+        public const string ENV_BASED_CONFIG =
           @"{" +
             @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
             @"""data-source"": {

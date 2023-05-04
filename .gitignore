@@ -11,8 +11,7 @@ log.txt
 
 # only include appsettings for a few default environments
 appsettings.*.json
-dab-config.*.json
-dab-config.json
+dab-config*.json
 *.dab-config.json
 !dab-config.*reference.json
 !dab-config.*.example.json

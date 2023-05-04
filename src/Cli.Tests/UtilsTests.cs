@@ -218,20 +218,26 @@ namespace Cli.Tests
         public void TestMergeConfig()
         {
             Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, "Test");
-            File.WriteAllText("my-config.json", BASE_CONFIG);
-            File.WriteAllText("dab-config.Test.json", ENV_BASED_CONFIG);
-            if (TryMergeConfigsIfAvailable("my-config.json", out string mergedConfig))
-            {
-                Assert.IsTrue(JToken.DeepEquals(JObject.Parse(MERGED_CONFIG), JObject.Parse(File.ReadAllText(mergedConfig))));
+            try{
+                File.WriteAllText("my-config.json", BASE_CONFIG);
+                File.WriteAllText("dab-config.Test.json", ENV_BASED_CONFIG);
+                if (TryMergeConfigsIfAvailable("my-config.json", out string mergedConfig))
+                {
+                    Assert.IsTrue(JToken.DeepEquals(JObject.Parse(MERGED_CONFIG), JObject.Parse(File.ReadAllText(mergedConfig))));
+                }
+                else
+                {
+                    Assert.Fail("Failed to merge config files.");
+                }
             }
-            else
+            catch (Exception e)
             {
-                Assert.Fail("Failed to merge config files.");
+                Assert.Fail(e.Message);
             }
         }
 
-        [TestCleanup]
-        public void Cleanup()
+        [ClassCleanup]
+        public static void Cleanup()
         {
             if (File.Exists($"{CONFIGFILE_NAME}{CONFIG_EXTENSION}"))
             {

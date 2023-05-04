@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.IO.Abstractions.TestingHelpers;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Services;

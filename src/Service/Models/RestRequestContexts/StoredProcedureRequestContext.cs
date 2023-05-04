@@ -4,7 +4,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 
 namespace Azure.DataApiBuilder.Service.Models
 {

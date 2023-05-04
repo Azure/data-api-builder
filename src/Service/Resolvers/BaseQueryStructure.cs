@@ -3,7 +3,7 @@
 
 using System.Collections.Generic;
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.Models;

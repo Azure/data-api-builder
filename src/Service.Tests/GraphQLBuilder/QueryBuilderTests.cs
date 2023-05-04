@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers;
 using HotChocolate.Language;

@@ -4,6 +4,7 @@
 using System.Net;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Service.Exceptions;
 using HotChocolate.Language;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;

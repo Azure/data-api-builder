@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using HotChocolate.Language;
 using HotChocolate.Types;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;

@@ -218,9 +218,9 @@ namespace Cli.Tests
         public void TestMergeConfig()
         {
             Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, "Test");
-            File.WriteAllText("dab-config.json", BASE_CONFIG);
+            File.WriteAllText("my-config.json", BASE_CONFIG);
             File.WriteAllText("dab-config.Test.json", ENV_BASED_CONFIG);
-            if (TryMergeConfigsIfAvailable(out string mergedConfig))
+            if (TryMergeConfigsIfAvailable("my-config.json", out string mergedConfig))
             {
                 Assert.IsTrue(JToken.DeepEquals(JObject.Parse(MERGED_CONFIG), JObject.Parse(File.ReadAllText(mergedConfig))));
             }

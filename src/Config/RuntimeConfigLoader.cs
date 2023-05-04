@@ -99,7 +99,8 @@ public class RuntimeConfigLoader
         {
             PropertyNameCaseInsensitive = false,
             PropertyNamingPolicy = new HyphenatedNamingPolicy(),
-            ReadCommentHandling = JsonCommentHandling.Skip
+            ReadCommentHandling = JsonCommentHandling.Skip,
+            WriteIndented = true,
         };
         options.Converters.Add(new HyphenatedJsonEnumConverterFactory());
         options.Converters.Add(new RestRuntimeOptionsConverterFactory());

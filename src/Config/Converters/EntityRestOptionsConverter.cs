@@ -21,7 +21,7 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
                     break;
                 }
 
-                string? propertyName = reader.GetString();
+                string? propertyName = reader.DeserializeString();
 
                 switch (propertyName)
                 {
@@ -31,7 +31,7 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
 
                         if (reader.TokenType == JsonTokenType.String)
                         {
-                            restOptions = restOptions with { Path = reader.GetString() };
+                            restOptions = restOptions with { Path = reader.DeserializeString() };
                             break;
                         }
 
@@ -59,7 +59,7 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
                                 break;
                             }
 
-                            methods.Add(Enum.Parse<SupportedHttpVerb>(reader.GetString()!, true));
+                            methods.Add(Enum.Parse<SupportedHttpVerb>(reader.DeserializeString()!, true));
                         }
 
                         restOptions = restOptions with { Methods = methods.ToArray() };
@@ -83,7 +83,7 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
 
         if (reader.TokenType == JsonTokenType.String)
         {
-            return new EntityRestOptions(EntityRestOptions.DEFAULT_SUPPORTED_VERBS, reader.GetString(), true);
+            return new EntityRestOptions(EntityRestOptions.DEFAULT_SUPPORTED_VERBS, reader.DeserializeString(), true);
         }
 
         if (reader.TokenType == JsonTokenType.True || reader.TokenType == JsonTokenType.False)

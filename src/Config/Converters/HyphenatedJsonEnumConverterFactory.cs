@@ -92,7 +92,7 @@ internal class HyphenatedJsonEnumConverterFactory : JsonConverterFactory
 
         public override TEnum Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            string? stringValue = reader.GetString();
+            string? stringValue = reader.DeserializeString();
 
             if (_stringToEnum.TryGetValue(stringValue!.ToLower(), out TEnum enumValue))
             {

@@ -15,6 +15,7 @@ using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
 using Microsoft.AspNetCore.Http;
+using static Azure.DataApiBuilder.Service.Authorization.AuthorizationResolver;
 
 namespace Azure.DataApiBuilder.Service.Models
 {
@@ -113,13 +114,58 @@ namespace Azure.DataApiBuilder.Service.Models
                     List<ObjectFieldNode> subfields = (List<ObjectFieldNode>)fieldValue;
 
                     // Preserve the name value present in the filter.
+                    // In some cases, 'name' represents a relationship field on a source entity,
+                    // and not a field on a relationship target entity.
+                    // Additionally, 'name' may not be the same as the relationship's target entity because
+                    // runtime configuration supports overriding the entity name in the source entity configuration.
+                    // e.g.
+                    // comics (Source entity)  series (Target entity)
+                    // - id                    - id
+                    // - myseries [series]     - name
+                    // e.g. GraphQL request
+                    // {  comics ( filter: { myseries: { name: { eq: 'myName' } } } ) { <field selection> } }
                     string backingColumnName = name;
+
                     _metadataProvider.TryGetBackingColumn(queryStructure.EntityName, field: name, out string? resolvedBackingColumnName);
+
+                    // When runtime configuration defines relationship metadata,
+                    // an additional field on the entity representing GraphQL type
+                    // will exist. That relationship field does not represent a column in
+                    // the representative database table and the relationship field will not have an authorization
+                    // rule entry. Authorization is handled by permissions defined for the relationship's
+                    // target entity.
+                    bool relationshipField = true;
                     if (!string.IsNullOrWhiteSpace(resolvedBackingColumnName))
                     {
                         backingColumnName = resolvedBackingColumnName;
+                        relationshipField = false;
                     }
 
+                    // Only perform field (column) authorization when the field is not a relationship field and when the database type is not Cosmos DB.
+                    // Currently Cosmos DB doesn't support field level authorization.
+                    // Due to the recursive behavior of SqlExistsQueryStructure compilation, the column authorization
+                    // check only occurs when access to the column's owner entity is confirmed.
+                    if (!relationshipField && _metadataProvider.GetDatabaseType() is not DatabaseType.cosmosdb_nosql)
+                    {
+                        string targetEntity = queryStructure.EntityName;
+
+                        bool columnAccessPermitted = queryStructure.AuthorizationResolver.AreColumnsAllowedForOperation(
+                            entityName: targetEntity,
+                            roleName: GetHttpContextFromMiddlewareContext(ctx).Request.Headers[CLIENT_ROLE_HEADER],
+                            operation: Config.Operation.Read,
+                            columns: new[] { name });
+
+                        if (!columnAccessPermitted)
+                        {
+                            throw new DataApiBuilderException(
+                                message: DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE,
+                                statusCode: HttpStatusCode.Forbidden,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
+                        }
+                    }
+
+                    // A non-standard InputType is inferred to be referencing an entity.
+                    // Example: {entityName}FilterInput
                     if (!StandardQueryInputs.IsStandardInputType(filterInputObjectType.Name))
                     {
                         if (sourceDefinition.PrimaryKey.Count != 0)
@@ -158,7 +204,7 @@ namespace Azure.DataApiBuilder.Service.Models
                                     schemaName,
                                     sourceName,
                                     sourceAlias,
-                                    queryStructure.MakeParamWithValue)));
+                                    queryStructure.MakeDbConnectionParam)));
                     }
                 }
             }
@@ -200,6 +246,21 @@ namespace Azure.DataApiBuilder.Service.Models
             }
 
             string nestedFilterEntityName = _metadataProvider.GetEntityName(targetGraphQLTypeNameForFilter);
+
+            // Validate that the field referenced in the nested input filter can be accessed.
+            bool entityAccessPermitted = queryStructure.AuthorizationResolver.AreRoleAndOperationDefinedForEntity(
+                entityName: nestedFilterEntityName,
+                roleName: GetHttpContextFromMiddlewareContext(ctx).Request.Headers[CLIENT_ROLE_HEADER],
+                operation: Config.Operation.Read);
+
+            if (!entityAccessPermitted)
+            {
+                throw new DataApiBuilderException(
+                    message: DataApiBuilderException.GRAPHQL_FILTER_ENTITY_AUTHZ_FAILURE,
+                    statusCode: HttpStatusCode.Forbidden,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
+            }
+
             List<Predicate> predicatesForExistsQuery = new();
 
             // Create an SqlExistsQueryStructure as the predicate operand of Exists predicate
@@ -207,7 +268,7 @@ namespace Azure.DataApiBuilder.Service.Models
             // its predicates are obtained from recursively parsing the nested filter
             // and an additional predicate to reflect the join between main query and this exists subquery.
             SqlExistsQueryStructure existsQuery = new(
-                TryGetHttpContextFromMiddlewareContext(ctx),
+                GetHttpContextFromMiddlewareContext(ctx),
                 _metadataProvider,
                 queryStructure.AuthorizationResolver,
                 this,
@@ -239,7 +300,7 @@ namespace Azure.DataApiBuilder.Service.Models
             predicates.Push(new PredicateOperand(existsPredicate));
 
             // Add all parameters from the exists subquery to the main queryStructure.
-            foreach ((string key, object? value) in existsQuery.Parameters)
+            foreach ((string key, DbConnectionParam value) in existsQuery.Parameters)
             {
                 queryStructure.Parameters.Add(key, value);
             }
@@ -249,9 +310,9 @@ namespace Azure.DataApiBuilder.Service.Models
         /// Helper method to get the HttpContext from the MiddlewareContext.
         /// </summary>
         /// <param name="ctx">Middleware context for the object.</param>
-        /// <returns></returns>
+        /// <returns>HttpContext</returns>
         /// <exception cref="DataApiBuilderException">throws exception when http context could not be found.</exception>
-        public HttpContext TryGetHttpContextFromMiddlewareContext(IMiddlewareContext ctx)
+        public HttpContext GetHttpContextFromMiddlewareContext(IMiddlewareContext ctx)
         {
             // Get HttpContext from IMiddlewareContext and fail if resolved value is null.
             if (!ctx.ContextData.TryGetValue(nameof(HttpContext), out object? httpContextValue))
@@ -285,7 +346,7 @@ namespace Azure.DataApiBuilder.Service.Models
             string schemaName,
             string tableName,
             string tableAlias,
-            Func<object, string> processLiterals)
+            Func<object, string?, string> processLiterals)
         {
             Column column = new(schemaName, tableName, columnName: name, tableAlias);
 
@@ -411,7 +472,7 @@ namespace Azure.DataApiBuilder.Service.Models
             IInputField argumentSchema,
             Column column,
             List<ObjectFieldNode> fields,
-            Func<object, string> processLiterals)
+            Func<object, string?, string> processLiterals)
         {
             List<PredicateOperand> predicates = new();
 
@@ -481,7 +542,7 @@ namespace Azure.DataApiBuilder.Service.Models
                 predicates.Push(new PredicateOperand(new Predicate(
                     new PredicateOperand(column),
                     op,
-                    new PredicateOperand(processLiteral ? $"{processLiterals(value)}" : value.ToString()))
+                    new PredicateOperand(processLiteral ? $"{processLiterals(value, column.ColumnName)}" : value.ToString()))
                 ));
             }
 

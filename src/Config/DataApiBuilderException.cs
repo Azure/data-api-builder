@@ -14,6 +14,9 @@ namespace Azure.DataApiBuilder.Service.Exceptions
     public class DataApiBuilderException : Exception
     {
         public const string CONNECTION_STRING_ERROR_MESSAGE = "A valid Connection String should be provided.";
+        public const string GRAPHQL_FILTER_ENTITY_AUTHZ_FAILURE = "Access forbidden to the target entity described in the filter.";
+        public const string GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE = "Access forbidden to a field referenced in the filter.";
+        public const string AUTHORIZATION_FAILURE = "Authorization Failure: Access Not Allowed.";
 
         public enum SubStatusCodes
         {
@@ -34,6 +37,10 @@ namespace Azure.DataApiBuilder.Service.Exceptions
             /// Request failed authorization.
             /// </summary>
             AuthorizationCheckFailed,
+            /// <summary>
+            /// Request did not satisfy database policy for the operation.
+            /// </summary>
+            DatabasePolicyFailure,
             /// <summary>
             /// The requested operation failed on the database.
             /// </summary>

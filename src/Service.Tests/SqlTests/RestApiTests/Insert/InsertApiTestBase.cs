@@ -61,6 +61,32 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         }
 
         /// <summary>
+        /// Perform insert test with bytearray column as NULL. This ensures that even though implicit conversion
+        /// between varchar to varbinary is not possible for MsSql (but it is possible for MySql & PgSql),
+        /// but since we are passing the DbType for the parameter, the database can explicitly convert it into varbinary.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithByteArrayTypeAsNull()
+        {
+            string requestBody = @"
+            {
+                ""bytearray_types"": null
+            }";
+
+            string expectedLocationHeader = $"typeid/{STARTING_ID_FOR_TEST_INSERTS}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _integrationTypeEntity,
+                sqlQuery: GetQuery("InsertOneInSupportedTypes"),
+                operationType: Config.Operation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+            );
+        }
+
+        /// <summary>
         /// Tests insertion on simple/composite views.
         /// </summary>
         /// <returns></returns>
@@ -614,6 +640,61 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString(),
                 isExpectedErrorMsgSubstr: isExpectedErrorMsgSubstr
+                );
+        }
+
+        /// <summary>
+        /// Test to validate failure of an insert operation which tries to insert a record
+        /// that doesn't satisfy the database policy (@item.name ne 'New publisher')
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneFailingDatabasePolicy()
+        {
+            string requestBody = @"
+            {
+                ""name"": ""New publisher""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entityNameOrPath: _foreignKeyEntityName,
+                sqlQuery: string.Empty,
+                operationType: Config.Operation.Insert,
+                requestBody: requestBody,
+                exceptionExpected: true,
+                expectedStatusCode: HttpStatusCode.Forbidden,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure.ToString(),
+                expectedErrorMessage: "Could not insert row with given values.",
+                clientRoleHeader: "database_policy_tester"
+            );
+        }
+
+        /// <summary>
+        /// Test to validate failure of a request when one or more fields referenced in the database policy for create operation are not provided in the request body.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneInTableWithFieldsInDbPolicyNotPresentInBody()
+        {
+            string requestBody = @"
+            {
+                ""id"": 18,
+                ""category"":""book"",
+                ""accessible_role"": ""Anonymous""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entityNameOrPath: _entityWithSecurityPolicy,
+                sqlQuery: string.Empty,
+                operationType: Config.Operation.Insert,
+                exceptionExpected: true,
+                requestBody: requestBody,
+                clientRoleHeader: "database_policy_tester",
+                expectedErrorMessage: "One or more fields referenced by the database policy are not present in the request body.",
+                expectedStatusCode: HttpStatusCode.Forbidden,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed.ToString()
                 );
         }
 

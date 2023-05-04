@@ -27,6 +27,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 "
             },
             {
+                "InsertOneInSupportedTypes",
+                @"
+                    SELECT JSON_OBJECT('typeid', typeid,'bytearray_types', bytearray_types) AS data
+                    FROM (
+                        SELECT id as typeid, bytearray_types 
+                        FROM " + _integrationTypeTable + @"
+                        WHERE id = 5001 AND bytearray_types is NULL 
+                    ) AS subq
+                "
+            },
+            {
                 "InsertOneUniqueCharactersTest",
                 @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('┬─┬ノ( º _ ºノ)', NoteNum,
@@ -226,6 +237,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
             );
         }
+        #endregion
+
+        #region Tests for features yet to be implemented
 
         [TestMethod]
         [Ignore]
@@ -234,6 +248,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             throw new NotImplementedException();
         }
 
+        [TestMethod]
+        [Ignore]
+        public override Task InsertOneFailingDatabasePolicy()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task InsertOneInTableWithFieldsInDbPolicyNotPresentInBody()
+        {
+            throw new NotImplementedException();
+        }
         #endregion
 
         #region Test Fixture Setup

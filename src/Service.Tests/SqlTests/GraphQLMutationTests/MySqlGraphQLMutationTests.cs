@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -660,6 +661,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             string errorMessage = "Duplicate entry \\u00271\\u0027 for key " +
                                   "\\u0027book_website_placements.book_id\\u0027\"";
             await TestViolatingOneToOneRelashionShip(errorMessage);
+        }
+
+        [TestMethod]
+        [Ignore]
+        /// <inheritdoc/>
+        public override Task TestDbPolicyForCreateOperationReferencingFieldAbsentInRequest()
+        {
+            throw new NotImplementedException();
         }
         #endregion
     }

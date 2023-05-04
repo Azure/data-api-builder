@@ -28,6 +28,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "InsertOneInSupportedTypes",
+                $"SELECT [id] as [typeid], [byte_types], [short_types], [int_types], [long_types],string_types, [single_types], [float_types], " +
+                $"[decimal_types], [boolean_types], [date_types], [datetime_types], [datetime2_types], [datetimeoffset_types], [smalldatetime_types], " +
+                $"[bytearray_types], LOWER([guid_types]) as [guid_types] FROM { _integrationTypeTable } " +
+                $"WHERE [id] = { STARTING_ID_FOR_TEST_INSERTS } AND [bytearray_types] is NULL " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
                 "InsertOneInBooksViewAll",
                 $"SELECT [id], [title], [publisher_id] FROM { _simple_all_books } " +
                 $"WHERE [id] = { STARTING_ID_FOR_TEST_INSERTS } AND [title] = 'My New Book' " +
@@ -290,33 +298,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: _integrationProcedureInsertOneAndDisplay_EntityName,
                 expectJson: expectJson
-            );
-        }
-
-        /// <summary>
-        /// Test to validate failure of an insert operation which tries to insert a record
-        /// that doesn't satisfy the database policy (@item.name ne 'New publisher')
-        /// </summary>
-        [TestMethod]
-        public virtual async Task InsertOneFailingDatabasePolicy()
-        {
-            string requestBody = @"
-            {
-                ""name"": ""New publisher""
-            }";
-
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: string.Empty,
-                queryString: string.Empty,
-                entityNameOrPath: _foreignKeyEntityName,
-                sqlQuery: string.Empty,
-                operationType: Config.Operation.Insert,
-                requestBody: requestBody,
-                exceptionExpected: true,
-                expectedStatusCode: HttpStatusCode.Forbidden,
-                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed.ToString(),
-                expectedErrorMessage: "Could not insert row with given values.",
-                clientRoleHeader: "database_policy_tester"
             );
         }
 

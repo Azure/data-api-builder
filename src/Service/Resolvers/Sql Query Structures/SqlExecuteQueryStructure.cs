@@ -40,33 +40,30 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             ProcedureParameters = new();
             foreach ((string paramKey, ParameterDefinition paramDefinition) in storedProcedureDefinition.Parameters)
             {
+                Type systemType = GetUnderlyingStoredProcedureDefinition().Parameters[paramKey].SystemType!;
                 // Populate with request param if able
                 if (requestParams.TryGetValue(paramKey, out object? requestParamValue))
                 {
                     // Parameterize, then add referencing parameter to ProcedureParameters dictionary
-                    try
+                    string? parametrizedName = null;
+                    if (requestParamValue is not null)
                     {
-                        string parameterizedName = MakeParamWithValue(requestParamValue is null ? null :
-                            GetParamAsProcedureParameterType(requestParamValue.ToString()!, paramKey));
-                        ProcedureParameters.Add(paramKey, $"{parameterizedName}");
+                        parametrizedName = MakeDbConnectionParam(GetParamAsSystemType(requestParamValue.ToString()!, paramKey, systemType), paramKey);
                     }
-                    catch (ArgumentException ex)
+                    else
                     {
-                        // In the case GetParamAsProcedureParameterType fails to parse as SystemType from database metadata
-                        // Keep message being returned to the client more generalized to not expose schema info
-                        throw new DataApiBuilderException(
-                            message: $"Invalid value supplied for field: {paramKey}",
-                            statusCode: HttpStatusCode.BadRequest,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
-                            innerException: ex);
+                        parametrizedName = MakeDbConnectionParam(value: null, paramKey);
                     }
+
+                    ProcedureParameters.Add(paramKey, $"{parametrizedName}");
                 }
                 else
                 {
                     // Fill with default value from runtime config
                     if (paramDefinition.HasConfigDefault)
                     {
-                        string parameterizedName = MakeParamWithValue(paramDefinition.ConfigDefaultValue);
+                        object? value = paramDefinition.ConfigDefaultValue == null ? null : GetParamAsSystemType(paramDefinition.ConfigDefaultValue!.ToString()!, paramKey, systemType);
+                        string parameterizedName = MakeDbConnectionParam(value, paramKey);
                         ProcedureParameters.Add(paramKey, $"{parameterizedName}");
                     }
                     else
@@ -78,31 +75,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                     }
                 }
-            }
-        }
-
-        /// <summary>
-        /// Gets the value of the parameter cast as the system type
-        /// of the stored procedure parameter this parameter is associated with
-        /// </summary>
-        private object GetParamAsProcedureParameterType(string param, string procParamName)
-        {
-            Type systemType = GetUnderlyingStoredProcedureDefinition().Parameters[procParamName].SystemType!;
-            try
-            {
-                return ParseParamAsSystemType(param, systemType);
-            }
-            catch (Exception e)
-            {
-                if (e is FormatException ||
-                    e is ArgumentNullException ||
-                    e is OverflowException)
-                {
-                    throw new ArgumentException($@"Parameter ""{param}"" cannot be resolved as stored procedure parameter ""{procParamName}"" " +
-                        $@"with type ""{systemType.Name}"".", innerException: e);
-                }
-
-                throw;
             }
         }
     }

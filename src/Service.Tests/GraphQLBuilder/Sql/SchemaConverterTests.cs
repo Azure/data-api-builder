@@ -226,7 +226,9 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         [DataRow(typeof(decimal), DECIMAL_TYPE)]
         [DataRow(typeof(bool), BOOLEAN_TYPE)]
         [DataRow(typeof(DateTime), DATETIME_TYPE)]
+        [DataRow(typeof(DateTimeOffset), DATETIME_TYPE)]
         [DataRow(typeof(byte[]), BYTEARRAY_TYPE)]
+        [DataRow(typeof(Guid), STRING_TYPE)]
         [DataRow(typeof(TimeSpan), TIMESPAN_TYPE)]
         public void SystemTypeMapsToCorrectGraphQLType(Type systemType, string graphQLType)
         {
@@ -690,7 +692,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         /// Defaults to authenticated
         /// </summary>
         /// <returns>Collection of roles</returns>
-        private static IEnumerable<string> GetRolesAllowedForEntity()
+        public static IEnumerable<string> GetRolesAllowedForEntity()
         {
             return new List<string>() { "authenticated" };
         }
@@ -706,7 +708,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         /// <param name="additionalColumns">number of columns/fields to generate</param>
         /// <param name="columnName">custom column name</param>
         /// <returns>Key Value Map of Field to Roles</returns>
-        private static IDictionary<string, IEnumerable<string>> GetFieldToRolesMap(int additionalColumns = 0, string columnName = "", IEnumerable<string> rolesForField = null)
+        public static IDictionary<string, IEnumerable<string>> GetFieldToRolesMap(int additionalColumns = 0, string columnName = "", IEnumerable<string> rolesForField = null)
         {
             Dictionary<string, IEnumerable<string>> fieldToRolesMap = new();
 

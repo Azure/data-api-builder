@@ -1,6 +1,6 @@
 init --config "dab-config.PostgreSql.json" --database-type postgresql --connection-string "Host=localhost;Database=datagatewaytest;username=REPLACEME;password=REPLACEME" --host-mode Development --cors-origin "http://localhost:5000"
 add Publisher --config "dab-config.PostgreSql.json" --source publishers --permissions "anonymous:read"
-add Stock --config "dab-config.PostgreSql.json" --source stocks --permissions "anonymous:create,read,update"
+add Stock --config "dab-config.PostgreSql.json" --source stocks --permissions "anonymous:create,read,update,delete"
 add Book --config "dab-config.PostgreSql.json" --source books --permissions "anonymous:create,read,update,delete" --graphql "book:books"
 add BookWebsitePlacement --config "dab-config.PostgreSql.json" --source book_website_placements --permissions "anonymous:read"
 add Author --config "dab-config.PostgreSql.json" --source authors --permissions "anonymous:read"
@@ -9,7 +9,9 @@ add Comic --config "dab-config.PostgreSql.json" --source comics --permissions "a
 add Broker --config "dab-config.PostgreSql.json" --source brokers --permissions "anonymous:read"
 add WebsiteUser --config "dab-config.PostgreSql.json" --source website_users --permissions "anonymous:create,read,delete,update"
 add SupportedType --config "dab-config.PostgreSql.json" --source type_table --permissions "anonymous:create,read,delete,update"
-add stocks_price --config "dab-config.PostgreSql.json" --source stocks_price --permissions "anonymous:read"
+add stocks_price --config "dab-config.PostgreSql.json" --source stocks_price --permissions "authenticated:create,read,update,delete"
+update stocks_price --config "dab-config.PostgreSql.json" --permissions "TestNestedFilterFieldIsNull_ColumnForbidden:read" --fields.exclude "price"
+update stocks_price --config "dab-config.PostgreSql.json" --permissions "TestNestedFilterFieldIsNull_EntityReadForbidden:create"
 add Tree --config "dab-config.PostgreSql.json" --source trees --permissions "anonymous:create,read,update,delete"
 add Shrub --config "dab-config.PostgreSql.json" --source trees --permissions "anonymous:create,read,update,delete" --rest plants
 add Fungus --config "dab-config.PostgreSql.json" --source fungi --permissions "anonymous:create,read,update,delete" --graphql "fungus:fungi"
@@ -48,6 +50,8 @@ update Publisher --config "dab-config.PostgreSql.json" --permissions "database_p
 update Publisher --config "dab-config.PostgreSql.json" --permissions "database_policy_tester:create"
 update Publisher --config "dab-config.PostgreSql.json" --permissions "database_policy_tester:update" --policy-database "@item.id ne 1234"
 update Stock --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete" --rest commodities --graphql true --relationship stocks_price --target.entity stocks_price --cardinality one
+update Stock --config "dab-config.PostgreSql.json" --permissions "database_policy_tester:create"
+update Stock --config "dab-config.PostgreSql.json" --permissions "database_policy_tester:update" --policy-database "@item.pieceid ne 1"
 update Book --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete"
 update Book --config "dab-config.PostgreSql.json" --relationship publishers --target.entity Publisher --cardinality one
 update Book --config "dab-config.PostgreSql.json" --relationship websiteplacement --target.entity BookWebsitePlacement --cardinality one
@@ -87,7 +91,6 @@ update BookWebsitePlacement --config "dab-config.PostgreSql.json" --permissions 
 update BookWebsitePlacement --config "dab-config.PostgreSql.json" --permissions "authenticated:delete" --fields.include "*" --policy-database "@claims.userId eq @item.id"
 update Author --config "dab-config.PostgreSql.json"  --permissions "authenticated:create,read,update,delete" --rest true --graphql true
 update WebsiteUser --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,delete,update" --rest false --graphql "websiteUser:websiteUsers"
-update stocks_price --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,delete,update" --rest false
 update Comic --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship myseries --target.entity series --cardinality one
 update series --config "dab-config.PostgreSql.json" --relationship comics --target.entity Comic --cardinality many
 update Broker --config "dab-config.PostgreSql.json" --permissions "authenticated:create,update,read,delete" --graphql false
@@ -111,3 +114,38 @@ update ArtOfWar --config "dab-config.PostgreSql.json" --permissions "authenticat
 update Sales --config "dab-config.PostgreSql.json" --permissions "authenticated:*"
 update Bookmarks --config "dab-config.PostgreSql.json" --permissions "authenticated:*"
 update MappedBookmarks --config "dab-config.PostgreSql.json" --permissions "authenticated:*" --map "id:bkid,bkname:name"
+add PublisherNF --config "dab-config.PostgreSql.json" --source publishers --permissions "authenticated:create,read,update,delete" --rest true --graphql true
+add BookNF --config "dab-config.PostgreSql.json" --source books --permissions "authenticated:create,read,update,delete" --rest true --graphql "bookNF:booksNF"
+add AuthorNF --config "dab-config.PostgreSql.json" --source authors --permissions "authenticated:read" --rest true --graphql true
+update PublisherNF --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete"  
+update PublisherNF --config "dab-config.PostgreSql.json" --relationship books --target.entity BookNF --cardinality many
+update PublisherNF --config "dab-config.PostgreSql.json" --permissions "TestNestedFilter_EntityReadForbidden:read"
+update PublisherNF --config "dab-config.PostgreSql.json" --permissions "TestNestedFilter_ColumnForbidden:read"
+update PublisherNF --config "dab-config.PostgreSql.json" --permissions "TestNestedFilterChained_EntityReadForbidden:create"
+update PublisherNF --config "dab-config.PostgreSql.json" --permissions "TestNestedFilterChained_ColumnForbidden:read" --fields.exclude "name"
+update AuthorNF --config "dab-config.PostgreSql.json"  --permissions "authenticated:create,read,update,delete" --rest true --graphql true
+update AuthorNF --config "dab-config.PostgreSql.json" --relationship books --target.entity BookNF --cardinality many --linking.object book_author_link
+update AuthorNF --config "dab-config.PostgreSql.json" --permissions "TestNestedFilter_EntityReadForbidden:create" --fields.exclude "name"
+update AuthorNF --config "dab-config.PostgreSql.json" --permissions "TestNestedFilter_ColumnForbidden:read" --fields.exclude "name"
+update AuthorNF --config "dab-config.PostgreSql.json" --permissions "TestNestedFilterChained_EntityReadForbidden:read"
+update AuthorNF --config "dab-config.PostgreSql.json" --permissions "TestNestedFilterChained_ColumnForbidden:read"
+update BookNF --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete"
+update BookNF --config "dab-config.PostgreSql.json" --permissions "TestNestedFilter_EntityReadForbidden:read"
+update BookNF --config "dab-config.PostgreSql.json" --permissions "TestNestedFilter_ColumnForbidden:read"
+update BookNF --config "dab-config.PostgreSql.json" --permissions "TestNestedFilterChained_EntityReadForbidden:read"
+update BookNF --config "dab-config.PostgreSql.json" --permissions "TestNestedFilterChained_ColumnForbidden:read"
+update BookNF --config "dab-config.PostgreSql.json" --relationship publishers --target.entity PublisherNF --cardinality one
+update BookNF --config "dab-config.PostgreSql.json" --relationship websiteplacement --target.entity BookWebsitePlacement --cardinality one
+update BookNF --config "dab-config.PostgreSql.json" --relationship reviews --target.entity Review --cardinality many
+update BookNF --config "dab-config.PostgreSql.json" --relationship authors --target.entity AuthorNF --cardinality many --linking.object book_author_link --linking.source.fields "book_id" --linking.target.fields "author_id"
+update BookNF --config "dab-config.PostgreSql.json" --map "id:id,title:title"
+update Comic --config "dab-config.PostgreSql.json" --permissions "TestNestedFilterManyOne_ColumnForbidden:read"
+update Comic --config "dab-config.PostgreSql.json" --permissions "TestNestedFilterManyOne_EntityReadForbidden:read"
+update Comic --config "dab-config.PostgreSql.json" --permissions "TestNestedFilterOneMany_ColumnForbidden:read" --fields.exclude "categoryName"
+update Comic --config "dab-config.PostgreSql.json" --permissions "TestNestedFilterOneMany_EntityReadForbidden:create,update,delete"
+update Stock --config "dab-config.PostgreSql.json" --permissions "TestNestedFilterFieldIsNull_ColumnForbidden:read"
+update Stock --config "dab-config.PostgreSql.json" --permissions "TestNestedFilterFieldIsNull_EntityReadForbidden:read"
+update series --config "dab-config.PostgreSql.json" --permissions "TestNestedFilterManyOne_ColumnForbidden:read" --fields.exclude "name"
+update series --config "dab-config.PostgreSql.json" --permissions "TestNestedFilterManyOne_EntityReadForbidden:create,update,delete"
+update series --config "dab-config.PostgreSql.json" --permissions "TestNestedFilterOneMany_ColumnForbidden:read"
+update series --config "dab-config.PostgreSql.json" --permissions "TestNestedFilterOneMany_EntityReadForbidden:read"

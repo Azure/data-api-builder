@@ -47,6 +47,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             Init(parameters);
         }
 
+        /// <inheritdoc/>
+        public override string MakeDbConnectionParam(object? value, string? columnName = null)
+        {
+            string encodedParamName = $"{PARAM_NAME_PREFIX}param{Counter.Next()}";
+            Parameters.Add(encodedParamName, new(value));
+            return encodedParamName;
+        }
+
         private static IEnumerable<LabelledColumn> GenerateQueryColumns(SelectionSetNode selectionSet, DocumentNode document, string tableName)
         {
             foreach (ISelectionNode selectionNode in selectionSet.Selections)
@@ -106,7 +114,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                 ObjectType realType = GraphQLUtils.UnderlyingGraphQLEntityType(underlyingType.Fields[QueryBuilder.PAGINATION_FIELD_NAME].Type);
                 string entityName = MetadataProvider.GetEntityName(realType.Name);
-
+                EntityName = entityName;
                 Database = MetadataProvider.GetSchemaName(entityName);
                 Container = MetadataProvider.GetDatabaseObjectName(entityName);
             }
@@ -114,7 +122,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 Columns.AddRange(GenerateQueryColumns(selection.SyntaxNode.SelectionSet!, _context.Document, SourceAlias));
                 string entityName = MetadataProvider.GetEntityName(underlyingType.Name);
-
+                EntityName = entityName;
                 Database = MetadataProvider.GetSchemaName(entityName);
                 Container = MetadataProvider.GetDatabaseObjectName(entityName);
             }
@@ -165,7 +173,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                             fields: filterFields,
                             queryStructure: this));
 
-                    // after parsing all the graphql filters,
+                    // after parsing all the GraphQL filters,
                     // reset the source alias and object name to the generic container alias
                     // since these may potentially be updated due to the presence of nested filters.
                     SourceAlias = _containerAlias;
@@ -179,7 +187,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     Predicates.Add(new Predicate(
                         new PredicateOperand(new Column(tableSchema: string.Empty, _containerAlias, parameter.Key)),
                         PredicateOperation.Equal,
-                        new PredicateOperand($"{MakeParamWithValue(parameter.Value)}")
+                        new PredicateOperand($"{MakeDbConnectionParam(parameter.Value)}")
                     ));
                 }
             }

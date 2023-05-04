@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -27,6 +28,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     /// </summary>
     public abstract class BaseSqlQueryStructure : BaseQueryStructure
     {
+
+        public Dictionary<string, DbType> ParamToDbTypeMap { get; set; } = new();
+
         /// <summary>
         /// All tables/views that should be in the FROM clause of the query.
         /// All these objects are linked via an INNER JOIN.
@@ -44,7 +48,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// DbPolicyPredicates is a string that represents the filter portion of our query
         /// in the WHERE Clause added by virtue of the database policy.
         /// </summary>
-        public string? DbPolicyPredicates { get; set; }
+        public Dictionary<Config.Operation, string?> DbPolicyPredicatesForOperations { get; set; } = new();
+
+        /// <summary>
+        /// Collection of all the fields referenced in the database policy for create action.
+        /// The fields referenced in the database policy should be a subset of the fields that are being inserted via the insert statement,
+        /// as then only we would be able to make them a part of our SELECT FROM clause from the temporary table.
+        /// This will only be populated for POST/PUT/PATCH operations.
+        /// </summary>
+        public HashSet<string> FieldsReferencedInDbPolicyForCreateAction { get; set; } = new();
 
         public BaseSqlQueryStructure(
             ISqlMetadataProvider metadataProvider,
@@ -103,7 +115,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     Predicate predicate = new(
                         new PredicateOperand(new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, leftoverColumn)),
                         PredicateOperation.Equal,
-                        new PredicateOperand($"{MakeParamWithValue(value: null)}")
+                        new PredicateOperand($"{MakeDbConnectionParam(value: null, leftoverColumn)}")
                     );
 
                     updateOperations.Add(predicate);
@@ -330,30 +342,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return outputColumns;
         }
 
-        ///<summary>
-        /// Gets the value of the parameter cast as the system type
-        /// of the column this parameter is associated with
-        ///</summary>
-        /// <exception cref="ArgumentException">columnName is not a valid column of table or param
-        /// does not have a valid value type</exception>
-        protected object GetParamAsColumnSystemType(string param, string columnName)
-        {
-            Type systemType = GetColumnSystemType(columnName);
-            try
-            {
-                return ParseParamAsSystemType(param, systemType);
-            }
-            catch (Exception e) when (e is FormatException || e is ArgumentNullException || e is OverflowException)
-            {
-                throw new DataApiBuilderException(
-                    message: $"Parameter \"{param}\" cannot be resolved as column \"{columnName}\" " +
-                        $"with type \"{systemType.Name}\".",
-                    statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
-                    innerException: e);
-            }
-        }
-
         /// <summary>
         /// Tries to parse the string parameter to the given system type
         /// Useful for inferring parameter types for columns or procedure parameters
@@ -377,6 +365,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 "Decimal" => decimal.Parse(param),
                 "Boolean" => bool.Parse(param),
                 "DateTime" => DateTimeOffset.Parse(param),
+                "DateTimeOffset" => DateTimeOffset.Parse(param),
+                "Date" => DateOnly.Parse(param),
                 "Guid" => Guid.Parse(param),
                 _ => throw new NotSupportedException($"{systemType.Name} is not supported")
             };
@@ -484,13 +474,20 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Processing will also occur for GraphQL sub-queries.
         /// </summary>
         /// <param name="dbPolicyClause">FilterClause from processed runtime configuration permissions Policy:Database</param>
+        /// <param name="operation">CRUD operation for which the database policy predicates are to be evaluated.</param>
         /// <exception cref="DataApiBuilderException">Thrown when the OData visitor traversal fails. Possibly due to malformed clause.</exception>
-        public void ProcessOdataClause(FilterClause odataClause)
+        public void ProcessOdataClause(FilterClause? dbPolicyClause, Config.Operation operation)
         {
-            ODataASTVisitor visitor = new(this, this.MetadataProvider);
+            if (dbPolicyClause is null)
+            {
+                DbPolicyPredicatesForOperations[operation] = null;
+                return;
+            }
+
+            ODataASTVisitor visitor = new(this, MetadataProvider, operation);
             try
             {
-                DbPolicyPredicates = GetFilterPredicatesFromOdataClause(odataClause, visitor);
+                DbPolicyPredicatesForOperations[operation] = GetFilterPredicatesFromOdataClause(dbPolicyClause, visitor);
             }
             catch (Exception ex)
             {
@@ -505,6 +502,77 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         protected static string? GetFilterPredicatesFromOdataClause(FilterClause filterClause, ODataASTVisitor visitor)
         {
             return filterClause.Expression.Accept<string>(visitor);
+        }
+
+        /// <summary>
+        /// Helper method to get the database policy for the given operation.
+        /// </summary>
+        /// <param name="operation">Operation for which the database policy is to be determined.</param>
+        /// <returns>Database policy for the operation.</returns>
+        public string? GetDbPolicyForOperation(Config.Operation operation)
+        {
+            if (!DbPolicyPredicatesForOperations.TryGetValue(operation, out string? policy))
+            {
+                policy = null;
+            }
+
+            return policy;
+        }
+
+        /// <summary>
+        /// Gets the value of the parameter cast as the system type
+        /// </summary>
+        /// <param name="fieldValue">Field value as a string</param>
+        /// <param name="fieldName">Field name whose value is being converted to the specified system type. This is used only for constructing the error messages incase of conversion failures</param>
+        /// <param name="systemType">System type to which the parameter value is parsed to</param>
+        /// <returns>The parameter value parsed to the specified system type</returns>
+        /// <exception cref="DataApiBuilderException">Raised when the conversion of parameter value to the specified system type fails. The error message returned will be different in development
+        /// and production modes. In production mode, the error message returned will be generic so as to not reveal information about the database object backing the entity</exception>
+        protected object GetParamAsSystemType(string fieldValue, string fieldName, Type systemType)
+        {
+            try
+            {
+                return ParseParamAsSystemType(fieldValue, systemType);
+            }
+            catch (Exception e) when (e is FormatException || e is ArgumentNullException || e is OverflowException)
+            {
+
+                string errorMessage;
+                SourceType sourceTypeOfDbObject = MetadataProvider.EntityToDatabaseObject[EntityName].SourceType;
+                if (MetadataProvider.IsDevelopmentMode())
+                {
+                    if (sourceTypeOfDbObject is SourceType.StoredProcedure)
+                    {
+                        errorMessage = $@"Parameter ""{fieldValue}"" cannot be resolved as stored procedure parameter ""{fieldName}"" " +
+                                $@"with type ""{systemType.Name}"".";
+                    }
+                    else
+                    {
+                        errorMessage = $"Parameter \"{fieldValue}\" cannot be resolved as column \"{fieldName}\" " +
+                                $"with type \"{systemType.Name}\".";
+                    }
+                }
+                else
+                {
+                    string fieldNameToBeDisplayedInErrorMessage = fieldName;
+                    if (sourceTypeOfDbObject is SourceType.Table || sourceTypeOfDbObject is SourceType.View)
+                    {
+                        if (MetadataProvider.TryGetExposedColumnName(EntityName, fieldName, out string? exposedName))
+                        {
+                            fieldNameToBeDisplayedInErrorMessage = exposedName!;
+                        }
+                    }
+
+                    errorMessage = $"Invalid value provided for field: {fieldNameToBeDisplayedInErrorMessage}";
+                }
+
+                throw new DataApiBuilderException(
+                    message: errorMessage,
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                    innerException: e);
+
+            }
         }
     }
 }

@@ -11,6 +11,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
 using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers;
 using HotChocolate.Language;
+using HotChocolate.Types;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
@@ -908,7 +909,6 @@ type Foo @model(name:""Foo"") {{
         public static ObjectTypeDefinitionNode GetMutationNode(DocumentNode mutationRoot)
         {
             return (ObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is ObjectTypeDefinitionNode node && node.Name.Value == "Mutation");
-
         }
 
         private (DocumentNode mutationRoot, FieldDefinitionNode field) GenerateTestMutationFieldNodes(string gql)
@@ -1026,6 +1026,7 @@ type Foo @model(name:""Foo"") {{
         [DataRow(GraphQLOperation.Query, new[] { Config.Operation.Execute }, new[] { "execute" }, false, DisplayName = "Mutation field not generated because the configured operation is query.")]
         public void StoredProcedureEntityAsMutationField(GraphQLOperation? graphQLOperation, Config.Operation[] operations, string[] permissionOperations, bool expectsMutationField)
         {
+            string entityName = "MyStoredProcedure";
             string gql =
             @"
             type StoredProcedureType @model(name:""MyStoredProcedure"") {
@@ -1035,17 +1036,29 @@ type Foo @model(name:""Foo"") {{
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
             _entityPermissions = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
-                    new string[] { "MyStoredProcedure" },
+                    new string[] { entityName },
                     operations,
                     new string[] { "anonymous", "authenticated" }
                     );
             Entity entity = GraphQLTestHelpers.GenerateStoredProcedureEntity(graphQLTypeName: "StoredProcedureType", graphQLOperation, permissionOperations);
 
+            DatabaseObject spDbObj = new DatabaseStoredProcedure(schemaName: "dbo", tableName: "dbObjectName")
+            {
+                SourceType = SourceType.StoredProcedure,
+                StoredProcedureDefinition = new()
+                {
+                    Parameters = new() {
+                        { "field1", new() { SystemType = typeof(string) } }
+                    }
+                }
+            };
+
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
                 DatabaseType.mssql,
-                new Dictionary<string, Entity> { { "MyStoredProcedure", entity } },
-                entityPermissionsMap: _entityPermissions
+                new Dictionary<string, Entity> { { entityName, entity } },
+                entityPermissionsMap: _entityPermissions,
+                dbObjects: new Dictionary<string, DatabaseObject> { { entityName, spDbObj } }
             );
 
             const string FIELDNOTFOUND_ERROR = "The expected mutation field schema was not detected.";

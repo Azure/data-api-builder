@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
@@ -469,6 +470,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                    LIMIT 5) AS `subq1`";
 
             await TestQueryOnCompositeView(mySqlQuery);
+        }
+
+        /// <inheritdoc />
+        [DataTestMethod]
+        [DataRow(null, null, 1113, "Real Madrid", DisplayName = "No Overriding of existing relationship fields in DB.")]
+        [DataRow(new string[] { "new_club_id" }, new string[] { "id" }, 1111, "Manchester United", DisplayName = "Overriding existing relationship fields in DB.")]
+        public async Task TestConfigTakesPrecedenceForRelationshipFieldsOverDB(
+            string[] sourceFields,
+            string[] targetFields,
+            int club_id,
+            string club_name)
+        {
+            await TestConfigTakesPrecedenceForRelationshipFieldsOverDB(
+                sourceFields,
+                targetFields,
+                club_id,
+                club_name,
+                DatabaseType.mysql,
+                TestCategory.MYSQL);
         }
 
         #endregion

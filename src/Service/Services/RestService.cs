@@ -437,7 +437,7 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 // Authorization failed so the request terminates.
                 throw new DataApiBuilderException(
-                    message: "Authorization Failure: Access Not Allowed.",
+                    message: DataApiBuilderException.AUTHORIZATION_FAILURE,
                     statusCode: HttpStatusCode.Forbidden,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
             }

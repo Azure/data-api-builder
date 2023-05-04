@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Net;
 using Azure.DataApiBuilder.Auth;
@@ -458,7 +459,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                                                     columnName: columnName,
                                                     tableAlias: SourceAlias)),
                     PredicateOperation.Equal,
-                    new PredicateOperand($"{MakeParamWithValue(parameter.Value)}")
+                    new PredicateOperand($"{MakeDbConnectionParam(parameter.Value, columnName)}")
                 ));
             }
         }
@@ -478,8 +479,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
                 column.TableAlias = SourceAlias;
                 column.ParamName = column.Value is not null ?
-                     MakeParamWithValue(GetParamAsSystemType(column.Value!.ToString()!, column.ColumnName, GetColumnSystemType(column.ColumnName))) :
-                     MakeParamWithValue(value: null);
+                     MakeDbConnectionParam(GetParamAsSystemType(column.Value!.ToString()!, column.ColumnName, GetColumnSystemType(column.ColumnName))) :
+                     MakeDbConnectionParam(null, column.ColumnName);
             }
 
             PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(afterJsonValues.ToList());
@@ -500,8 +501,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 string parameterName;
                 if (value != null)
                 {
-                    parameterName = MakeParamWithValue(
-                        GetParamAsSystemType(value.ToString()!, backingColumn, GetColumnSystemType(backingColumn)));
+                    parameterName = MakeDbConnectionParam(
+                        GetParamAsSystemType(value.ToString()!, backingColumn, GetColumnSystemType(backingColumn)), backingColumn);
                     Predicates.Add(new Predicate(
                         new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, backingColumn, SourceAlias)),
                         op,
@@ -663,7 +664,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
                     // pass the parameters of the subquery to the current query so upmost query has all the
                     // parameters of the query tree and it can pass them to the database query executor
-                    foreach (KeyValuePair<string, object?> parameter in subquery.Parameters)
+                    foreach (KeyValuePair<string, DbConnectionParam> parameter in subquery.Parameters)
                     {
                         Parameters.Add(parameter.Key, parameter.Value);
                     }
@@ -846,7 +847,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             foreach (LabelledColumn column in Columns)
             {
-                ColumnLabelToParam.Add(column.Label, $"{MakeParamWithValue(column.Label)}");
+                ColumnLabelToParam.Add(column.Label, $"{MakeDbConnectionParam(column.Label)}");
             }
         }
     }

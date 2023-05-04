@@ -4,7 +4,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 {
@@ -33,20 +32,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                     WITHOUT_ARRAY_WRAPPER,
                     INCLUDE_NULL_VALUES
             ";
-        }
-
-        /// <summary>
-        /// Explicitly declaring a parameter for a bytearray type is not possible due to:
-        /// https://stackoverflow.com/questions/29254690/why-does-dbnull-value-require-a-proper-sqldbtype
-        /// </summary>
-        protected override bool IsSupportedType(string type)
-        {
-            if (type.Equals(BYTEARRAY_TYPE))
-            {
-                return false;
-            }
-
-            return true;
         }
     }
 }

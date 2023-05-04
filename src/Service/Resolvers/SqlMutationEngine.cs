@@ -39,7 +39,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly GQLFilterParser _gQLFilterParser;
-        public const string IS_FIRST_RESULT_SET = "IsFirstResultSet";
+        public const string IS_UPDATE_RESULT_SET = "IsUpdateResultSet";
 
         /// <summary>
         /// Constructor
@@ -300,15 +300,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 {
                     Dictionary<string, object?> resultRow = dbResultSetRow.Columns;
 
-                    bool isFirstResultSet = false;
-                    if (upsertOperationResult.ResultProperties.TryGetValue(IS_FIRST_RESULT_SET, out object? isFirstResultSetValue))
+                    bool isUpdateResultSet = false;
+                    if (upsertOperationResult.ResultProperties.TryGetValue(IS_UPDATE_RESULT_SET, out object? isUpdateResultSetValue))
                     {
-                        isFirstResultSet = Convert.ToBoolean(isFirstResultSetValue);
+                        isUpdateResultSet = Convert.ToBoolean(isUpdateResultSetValue);
                     }
 
                     // For MsSql, MySql, if it's not the first result, the upsert resulted in an INSERT operation.
                     // Even if its first result, postgresql may still be an insert op here, if so, return CreatedResult
-                    if (!isFirstResultSet ||
+                    if (!isUpdateResultSet ||
                         (_sqlMetadataProvider.GetDatabaseType() is DatabaseType.postgresql &&
                         PostgresQueryBuilder.IsInsert(resultRow)))
                     {
@@ -347,7 +347,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         throw new DataApiBuilderException(
                             message: "Could not insert row with given values.",
                             statusCode: HttpStatusCode.Forbidden,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure
                             );
                     }
 
@@ -435,7 +435,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 IMiddlewareContext? context = null)
         {
             string queryString;
-            Dictionary<string, object?> queryParameters;
+            Dictionary<string, DbConnectionParam> queryParameters;
             switch (operationType)
             {
                 case Config.Operation.Insert:
@@ -547,7 +547,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                         throw new DataApiBuilderException(
                             message: "Could not insert row with given values.",
                             statusCode: HttpStatusCode.Forbidden,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure
                             );
                     }
 
@@ -597,7 +597,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 IDictionary<string, object?> parameters)
         {
             string queryString;
-            Dictionary<string, object?> queryParameters;
+            Dictionary<string, DbConnectionParam> queryParameters;
             SqlDeleteStructure deleteStructure = new(
                 entityName,
                 _sqlMetadataProvider,
@@ -632,7 +632,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 RestRequestContext context)
         {
             string queryString;
-            Dictionary<string, object?> queryParameters;
+            Dictionary<string, DbConnectionParam> queryParameters;
             Config.Operation operationType = context.OperationType;
             string entityName = context.EntityName;
 

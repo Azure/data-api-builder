@@ -944,8 +944,8 @@ namespace Cli
         /// <summary>
         /// This method will try starting the engine.
         /// It will use the config provided by the user, else based on the environment value
-        /// it will either merge the config if base config and environmentConfig is present.
-        /// Otherwise it will choose a single config based on precedence (left to right) of
+        /// it will either merge the config if base config and environmentConfig is present
+        /// else it will choose a single config based on precedence (left to right) of
         /// overrides < environmentConfig < defaultConfig 
         /// Also preforms validation to check connection string is not null or empty.
         /// </summary>

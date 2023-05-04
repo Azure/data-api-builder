@@ -120,7 +120,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string outputColumns = MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted);
             string queryToGetCountOfRecordWithPK = $"SELECT COUNT(*) as {COUNT_ROWS_WITH_GIVEN_PK} FROM {tableName} WHERE {pkPredicates}";
 
-            // Query to initiate transaction and get number of records with given PK.
+            // Query to get the number of records with a given PK.
             string prefixQuery = $"DECLARE @ROWS_TO_UPDATE int;" +
                 $"SET @ROWS_TO_UPDATE = ({queryToGetCountOfRecordWithPK}); " +
                 $"{queryToGetCountOfRecordWithPK};";

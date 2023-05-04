@@ -5,13 +5,6 @@
         <Configurations>Debug;Release;Docker</Configurations>
         <OutputPath>$(BaseOutputPath)\engine</OutputPath>
         <RuntimeIdentifiers>win-x64;linux-x64;osx-x64</RuntimeIdentifiers>
-        <EmbedUntrackedSources>true</EmbedUntrackedSources>
-        <IncludeSymbols>true</IncludeSymbols>
-        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    </PropertyGroup>
-
-    <PropertyGroup Condition="'$(TF_BUILD)' == 'true'">
-      <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
     </PropertyGroup>
 
     <ItemGroup>
@@ -71,7 +64,6 @@
         </PackageReference>
         <PackageReference Include="System.CommandLine" />
         <PackageReference Include="System.IO.Abstractions" />
-        <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All"/>
     </ItemGroup>
     <ItemGroup>
         <ProjectCapability Include="CSharp;Managed;ClassDesigner" />

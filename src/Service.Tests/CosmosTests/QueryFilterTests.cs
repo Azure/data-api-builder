@@ -714,7 +714,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             JsonElement response = await ExecuteGraphQLRequestAsync(
                 queryName: "planets",
                 query: gqlQuery,
-                variables: new() {},
+                variables: new() { },
                 authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
                 clientRoleHeader: clientRoleHeader);
 

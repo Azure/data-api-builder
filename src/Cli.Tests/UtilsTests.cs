@@ -21,10 +21,10 @@ public class UtilsTests
     }
 
     [TestMethod]
-    public void ConstructRestOptionsWithNullDisablesRest()
+    public void ConstructRestOptionsWithNullEnablesRest()
     {
         EntityRestOptions options = ConstructRestOptions(null, Array.Empty<SupportedHttpVerb>());
-        Assert.IsFalse(options.Enabled);
+        Assert.IsTrue(options.Enabled);
     }
 
     [TestMethod]
@@ -61,10 +61,10 @@ public class UtilsTests
     }
 
     [TestMethod]
-    public void ConstructGraphQLOptionsWithNullWillDisable()
+    public void ConstructGraphQLOptionsWithNullWillEnable()
     {
         EntityGraphQLOptions options = ConstructGraphQLTypeDetails(null, null);
-        Assert.IsFalse(options.Enabled);
+        Assert.IsTrue(options.Enabled);
     }
 
     [TestMethod]

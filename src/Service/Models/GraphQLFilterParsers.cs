@@ -204,7 +204,7 @@ namespace Azure.DataApiBuilder.Service.Models
                                     schemaName,
                                     sourceName,
                                     sourceAlias,
-                                    queryStructure.MakeParamWithValue)));
+                                    queryStructure.MakeDbConnectionParam)));
                     }
                 }
             }
@@ -300,7 +300,7 @@ namespace Azure.DataApiBuilder.Service.Models
             predicates.Push(new PredicateOperand(existsPredicate));
 
             // Add all parameters from the exists subquery to the main queryStructure.
-            foreach ((string key, object? value) in existsQuery.Parameters)
+            foreach ((string key, DbConnectionParam value) in existsQuery.Parameters)
             {
                 queryStructure.Parameters.Add(key, value);
             }
@@ -346,7 +346,7 @@ namespace Azure.DataApiBuilder.Service.Models
             string schemaName,
             string tableName,
             string tableAlias,
-            Func<object, string> processLiterals)
+            Func<object, string?, string> processLiterals)
         {
             Column column = new(schemaName, tableName, columnName: name, tableAlias);
 
@@ -472,7 +472,7 @@ namespace Azure.DataApiBuilder.Service.Models
             IInputField argumentSchema,
             Column column,
             List<ObjectFieldNode> fields,
-            Func<object, string> processLiterals)
+            Func<object, string?, string> processLiterals)
         {
             List<PredicateOperand> predicates = new();
 
@@ -542,7 +542,7 @@ namespace Azure.DataApiBuilder.Service.Models
                 predicates.Push(new PredicateOperand(new Predicate(
                     new PredicateOperand(column),
                     op,
-                    new PredicateOperand(processLiteral ? $"{processLiterals(value)}" : value.ToString()))
+                    new PredicateOperand(processLiteral ? $"{processLiterals(value, column.ColumnName)}" : value.ToString()))
                 ));
             }
 

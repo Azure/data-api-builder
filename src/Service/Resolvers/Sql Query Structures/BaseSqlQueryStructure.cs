@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -27,6 +28,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     /// </summary>
     public abstract class BaseSqlQueryStructure : BaseQueryStructure
     {
+
+        public Dictionary<string, DbType> ParamToDbTypeMap { get; set; } = new();
+
         /// <summary>
         /// All tables/views that should be in the FROM clause of the query.
         /// All these objects are linked via an INNER JOIN.
@@ -44,13 +48,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// DbPolicyPredicates is a string that represents the filter portion of our query
         /// in the WHERE Clause added by virtue of the database policy.
         /// </summary>
-        public string? DbPolicyPredicates { get; set; }
+        public Dictionary<Config.Operation, string?> DbPolicyPredicatesForOperations { get; set; } = new();
 
         /// <summary>
         /// Collection of all the fields referenced in the database policy for create action.
         /// The fields referenced in the database policy should be a subset of the fields that are being inserted via the insert statement,
         /// as then only we would be able to make them a part of our SELECT FROM clause from the temporary table.
-        /// This will only be populated for POST operation currently.
+        /// This will only be populated for POST/PUT/PATCH operations.
         /// </summary>
         public HashSet<string> FieldsReferencedInDbPolicyForCreateAction { get; set; } = new();
 
@@ -111,7 +115,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     Predicate predicate = new(
                         new PredicateOperand(new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, leftoverColumn)),
                         PredicateOperation.Equal,
-                        new PredicateOperand($"{MakeParamWithValue(value: null)}")
+                        new PredicateOperand($"{MakeDbConnectionParam(value: null, leftoverColumn)}")
                     );
 
                     updateOperations.Add(predicate);
@@ -472,12 +476,18 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="dbPolicyClause">FilterClause from processed runtime configuration permissions Policy:Database</param>
         /// <param name="operation">CRUD operation for which the database policy predicates are to be evaluated.</param>
         /// <exception cref="DataApiBuilderException">Thrown when the OData visitor traversal fails. Possibly due to malformed clause.</exception>
-        public void ProcessOdataClause(FilterClause dbPolicyClause, EntityActionOperation operation)
+        public void ProcessOdataClause(FilterClause? dbPolicyClause, EntityActionOperation operation)
         {
+            if (dbPolicyClause is null)
+            {
+                DbPolicyPredicatesForOperations[operation] = null;
+                return;
+            }
+
             ODataASTVisitor visitor = new(this, MetadataProvider, operation);
             try
             {
-                DbPolicyPredicates = GetFilterPredicatesFromOdataClause(dbPolicyClause, visitor);
+                DbPolicyPredicatesForOperations[operation] = GetFilterPredicatesFromOdataClause(dbPolicyClause, visitor);
             }
             catch (Exception ex)
             {
@@ -492,6 +502,21 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         protected static string? GetFilterPredicatesFromOdataClause(FilterClause filterClause, ODataASTVisitor visitor)
         {
             return filterClause.Expression.Accept<string>(visitor);
+        }
+
+        /// <summary>
+        /// Helper method to get the database policy for the given operation.
+        /// </summary>
+        /// <param name="operation">Operation for which the database policy is to be determined.</param>
+        /// <returns>Database policy for the operation.</returns>
+        public string? GetDbPolicyForOperation(Config.Operation operation)
+        {
+            if (!DbPolicyPredicatesForOperations.TryGetValue(operation, out string? policy))
+            {
+                policy = null;
+            }
+
+            return policy;
         }
 
         /// <summary>
@@ -549,6 +574,5 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             }
         }
-
     }
 }

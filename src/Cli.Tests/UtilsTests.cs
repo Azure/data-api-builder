@@ -213,6 +213,8 @@ namespace Cli.Tests
         /// So it is added to the merged config as it is with no change.
         /// 4. Merging when a property is only present in the environmentConfig file: Publisher entity is present only in environment config,
         /// So it is directly added to the merged config. 
+        /// 5. Properties of same name but different level do not conflict: source is both a entityName and a property inside book entity, both are
+        /// treated differently.
         /// </summary>
         [TestMethod]
         public void TestMergeConfig()

@@ -960,10 +960,6 @@ namespace Cli.Tests
           ""connection-string"": ""localhost:5000;User ID={USER_NAME};Password={USER_PASSWORD};MultipleActiveResultSets=False;""
         },
         ""runtime"": {
-          ""rest"": {
-            ""path"": ""/api"",
-            ""enabled"": false
-          },
           ""graphql"": {
             ""path"": ""/graphql"",
             ""enabled"": true,
@@ -981,8 +977,21 @@ namespace Cli.Tests
           }
         },
         ""entities"": {
+          ""source"":{
+            ""source"": ""src"",
+            ""rest"": ""true"",
+            ""permissions"": [
+              {
+                ""role"": ""authenticated"",
+                ""actions"": [
+                  ""*""
+                ]
+              }
+            ]
+          },
           ""book"": {
             ""source"": ""books"",
+            ""rest"": ""true"",
             ""permissions"": [
               {
                 ""role"": ""authenticated"",
@@ -1019,7 +1028,7 @@ namespace Cli.Tests
         ""runtime"": {
           ""rest"": {
             ""path"": ""/api"",
-            ""enabled"": false
+            ""enabled"": true
           },
           ""graphql"": {
             ""path"": ""/graphql"",
@@ -1038,8 +1047,21 @@ namespace Cli.Tests
           }
         },
         ""entities"": {
+          ""source"":{
+            ""source"": ""src"",
+            ""rest"": ""true"",
+            ""permissions"": [
+              {
+                ""role"": ""authenticated"",
+                ""actions"": [
+                  ""*""
+                ]
+              }
+            ]
+          },
           ""book"": {
             ""source"": ""books"",
+            ""rest"": ""true"",
             ""permissions"": [
               {
                 ""role"": ""authenticated"",

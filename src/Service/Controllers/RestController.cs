@@ -99,9 +99,9 @@ namespace Azure.DataApiBuilder.Service.Controllers
         public async Task<IActionResult> Find(
             string route)
         {
-                return await HandleOperation(
-                route,
-                Config.Operation.Read);
+            return await HandleOperation(
+            route,
+            Config.Operation.Read);
         }
 
         /// <summary>

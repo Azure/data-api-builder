@@ -3,8 +3,8 @@
 
 using System.Collections;
 using System.Collections.Generic;
-using Azure.DataApiBuilder.Config;
 using System.Diagnostics.CodeAnalysis;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Swashbuckle.AspNetCore.SwaggerUI;
 

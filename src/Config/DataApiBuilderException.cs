@@ -90,9 +90,9 @@ namespace Azure.DataApiBuilder.Service.Exceptions
             /// </summary>
             OpenApiDocumentAlreadyExists,
             /// <summary>
-            /// Attempting to generate OpenAPI document failed.
+            /// Attempt to create OpenAPI document failed.
             /// </summary>
-            OpenApiDocumentGenerationFailure,
+            OpenApiDocumentCreationFailure,
             /// <summary>
             /// Global REST endpoint disabled in runtime configuration.
             /// </summary>

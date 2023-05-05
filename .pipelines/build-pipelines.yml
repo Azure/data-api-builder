@@ -43,7 +43,7 @@ steps:
     then
       dabVersion=$(major).$(minor).$(patch)
     else
-      dabVersion=$(major).$(minor).$(patch)-$(Build.BuildId)
+      dabVersion=$(major).$(minor).$(patch)
     fi
     echo dabVersion = $dabVersion
     echo "##vso[task.setvariable variable=dabVersion]$dabVersion"

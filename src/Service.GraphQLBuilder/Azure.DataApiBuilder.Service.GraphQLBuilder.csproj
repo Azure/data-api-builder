@@ -12,6 +12,10 @@
     <ProjectReference Include="..\Config\Azure.DataApiBuilder.Config.csproj" />
   </ItemGroup>
 
+  <PropertyGroup Condition="'$(TF_BUILD)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="HotChocolate" />
     <PackageReference Include="HotChocolate.AspNetCore.Authorization" />

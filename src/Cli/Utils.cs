@@ -914,7 +914,7 @@ namespace Cli
             {
                 string baseConfigFile = RuntimeConfigPath.DefaultName;
                 string environmentBasedConfigFile = RuntimeConfigPath.GetFileName(environmentValue, considerOverrides: false);
-                mergedConfigFile = RuntimeConfigPath.GetMergedFileNameForEnvironment(baseConfigFile, environmentValue);
+                mergedConfigFile = RuntimeConfigPath.GetMergedFileNameForEnvironment(CONFIGFILE_NAME, environmentValue);
 
                 if (DoesFileExistInCurrentDirectory(baseConfigFile) && !string.IsNullOrEmpty(environmentBasedConfigFile))
                 {

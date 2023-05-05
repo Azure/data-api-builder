@@ -28,6 +28,7 @@ variables:
   patch: $[counter(format('{0}_{1}', variables['build.reason'], variables['minor']), 0)]
   isReleaseBuild: $(isNugetRelease)
   additionalProperties.version: 'https://github.com/Azure/data-api-builder/releases/download/v$(major).$(minor).$(patch)/dab.draft.schema.json'
+  SNAPSHOOTER_STRICT_MODE: true
 
 steps:
 - task: NuGetAuthenticate@1

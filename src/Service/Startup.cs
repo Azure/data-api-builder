@@ -368,7 +368,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 app.UseSwaggerUI(c =>
                 {
-                    c.SwaggerEndpoint("/openapi", "DataApibuilder-OpenAPI-PREVIEW");
+                    c.ConfigObject.Urls = new SwaggerEndpointMapper(runtimeConfigProvider);
                 });
             }
 

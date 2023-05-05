@@ -1415,7 +1415,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// Test different graphql endpoints in different host modes
+        /// Test different Swagger endpoints in different host modes
         /// when accessed interactively via browser.
         /// </summary>
         /// <param name="endpoint">The endpoint route</param>

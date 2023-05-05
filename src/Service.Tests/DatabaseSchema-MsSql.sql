@@ -66,7 +66,7 @@ CREATE TABLE books(
 
 CREATE TABLE players(
     id int IDENTITY(5001, 1) PRIMARY KEY,
-    name varchar(max) NOT NULL,
+    [name] varchar(max) NOT NULL,
     current_club_id int NOT NULL,
     new_club_id int NOT NULL
 );
@@ -378,7 +378,7 @@ VALUES (1, 'Awesome book', 1234),
 SET IDENTITY_INSERT books OFF
 
 SET IDENTITY_INSERT players ON
-INSERT INTO players(id, name, current_club_id, new_club_id)
+INSERT INTO players(id, [name], current_club_id, new_club_id)
 VALUES (1, 'Cristiano Ronaldo', 1113, 1111),
 (2, 'Leonel Messi', 1112, 1113);
 SET IDENTITY_INSERT players OFF

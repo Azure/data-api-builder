@@ -291,6 +291,36 @@ mutation {{
         }
 
         /// <summary>
+        /// Mutation performed on the unauthorized fields throws permission denied error because the
+        /// wildcard is used in the excluded field for the update operation on the anonymous role defined
+        /// for entity 'earth'
+        /// </summary>
+        [TestMethod]
+        public async Task UpdateItemWithUnauthorizedWildCardReturnsError()
+        {
+            // Run mutation Update Earth;
+            string id = Guid.NewGuid().ToString();
+            string mutation = @"
+mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdateEarthInput!) {
+    updateEarth (id: $id, _partitionKeyValue: $partitionKeyValue, item: $item) {
+        id
+        name
+     }
+}";
+            var update = new
+            {
+                id = id,
+                name = "new_name"
+            };
+
+            JsonElement response = await ExecuteGraphQLRequestAsync("updateEarth", mutation, variables: new() { { "id", id }, { "partitionKeyValue", id }, { "item", update } });
+
+            // Validate the result contains the GraphQL authorization error code.
+            string errorMessage = response.ToString();
+            Assert.IsTrue(errorMessage.Contains("Unauthorized due to one or more fields in this mutation."));
+        }
+
+        /// <summary>
         /// Runs once after all tests in this class are executed
         /// </summary>
         [ClassCleanup]

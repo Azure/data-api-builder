@@ -179,7 +179,15 @@
       ]
               }
             },
-            "update",
+            {
+              "action": "update",
+              "fields": {
+                "include": [],
+                "exclude": [
+                  "*"
+                ]
+              }
+            },
             "delete"
           ]
         },

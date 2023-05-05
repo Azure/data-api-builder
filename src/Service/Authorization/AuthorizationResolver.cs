@@ -680,7 +680,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// <summary>
         /// For a given entityName, retrieve the column names on the associated table
         /// from the metadataProvider.
-        /// For Cosmos_nosql, read all the column names from schema.gql GraphQL type fields
+        /// For CosmosDb_NoSql, read all the column names from schema.gql GraphQL type fields
         /// </summary>
         /// <param name="entityName">Used to lookup table definition of specific entity</param>
         /// <returns>Collection of columns in table definition.</returns>

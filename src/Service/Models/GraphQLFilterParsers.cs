@@ -182,7 +182,7 @@ namespace Azure.DataApiBuilder.Service.Models
                         else
                         {
                             // This path will never get called for sql since the primary key will always required
-                            // This path will only be exercised for Cosmos_nosql
+                            // This path will only be exercised for CosmosDb_NoSql
                             queryStructure.DatabaseObject.Name = sourceName + "." + backingColumnName;
                             queryStructure.SourceAlias = sourceName + "." + backingColumnName;
                             string? nestedFieldType = _metadataProvider.GetSchemaGraphQLFieldTypeByFieldName(queryStructure.EntityName, name);

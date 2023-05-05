@@ -15,6 +15,8 @@ namespace Azure.DataApiBuilder.Config
         /// <summary>
         /// Parse the string and call the helper methods to merge based on their value kind, i.e. Objects or Array.
         /// </summary>
+        /// <param name="originalJson">Base Json string that needs to be overridden.</param>
+        /// <param name="overridingJson">Json to override the base json.</param>
         public static string Merge(string originalJson, string overridingJson)
         {
             ArrayBufferWriter<byte> outputBuffer = new();
@@ -52,6 +54,9 @@ namespace Azure.DataApiBuilder.Config
         /// <summary>
         /// This helper method tries to merge two Json Objects recursively.
         /// </summary>
+        /// <param name="jsonWriter">JsonWriter to write UTF-8 encoded Json.</param>
+        /// <param name="root1">Json element from base Json.</param>
+        /// <param name="root2">Json element from overriding Json.</param>
         private static void MergeObjects(Utf8JsonWriter jsonWriter, JsonElement root1, JsonElement root2)
         {
             jsonWriter.WriteStartObject();
@@ -109,6 +114,8 @@ namespace Azure.DataApiBuilder.Config
         /// <summary>
         /// This helper method creates the final merged JsonArray containing elements from the second Json.
         /// </summary>
+        /// <param name="jsonWriter">JsonWriter to write UTF-8 encoded Json.</param>
+        /// <param name="root2">Json element from overriding Json.</param>
         private static void OverrideArrays(Utf8JsonWriter jsonWriter, JsonElement root2)
         {
             jsonWriter.WriteStartArray();

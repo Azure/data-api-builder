@@ -409,9 +409,9 @@ namespace Cli.Tests
                 graphQLOperationForStoredProcedure: graphQLOperation
                 );
 
-            RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? runtimeConfig);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? runtimeConfig), "Parsing initial config");
 
-            Assert.IsTrue(TryAddNewEntity(options, runtimeConfig!, out RuntimeConfig updatedRuntimeConfig));
+            Assert.IsTrue(TryAddNewEntity(options, runtimeConfig, out RuntimeConfig updatedRuntimeConfig), "Added entity successfully");
 
             Assert.AreNotSame(runtimeConfig, updatedRuntimeConfig);
 

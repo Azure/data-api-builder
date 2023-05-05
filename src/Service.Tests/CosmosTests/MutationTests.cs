@@ -244,12 +244,14 @@ mutation {{
         }
 
         /// <summary>
-        /// Mutation can be performed on the authorized fields
+        /// Mutation can be performed on the authorized fields because the
+        /// field `id` is an included field for the create operation on the anonymous role defined
+        /// for entity 'earth'
         /// </summary>
         [TestMethod]
         public async Task CanCreateItemWithAuthorizedFields()
         {
-            // Run mutation Add planet;
+            // Run mutation Add Earth;
             string id = Guid.NewGuid().ToString();
             string mutation = $@"
 mutation {{
@@ -264,12 +266,14 @@ mutation {{
         }
 
         /// <summary>
-        /// Mutation performed on the unauthorized fields throws permission denied error
+        /// Mutation performed on the unauthorized fields throws permission denied error because the
+        /// field `name` is an excluded field for the create operation on the anonymous role defined
+        /// for entity 'earth'
         /// </summary>
         [TestMethod]
         public async Task CreateItemWithUnauthorizedFieldsReturnsError()
         {
-            // Run mutation Add planet;
+            // Run mutation Add Earth;
             string id = Guid.NewGuid().ToString();
             const string name = "test_name";
             string mutation = $@"

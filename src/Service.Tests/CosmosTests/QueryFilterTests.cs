@@ -649,7 +649,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
         #region Field Level Auth
         /// <summary>
-        /// Tests that the field level query filter succeeds requests when filter fileds are authorized
+        /// Tests that the field level query filter succeeds requests when filter fields are authorized
         /// </summary>
         [TestMethod]
         public async Task TestQueryFilterFieldAuth_AuthorizedField()
@@ -668,7 +668,9 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         }
 
         /// <summary>
-        /// Tests that the field level query filter fails requests when filter fileds are unauthorized
+        /// Tests that the field level query filter fails authorization when filter fields are
+        /// unauthorized because the field 'name' on object type 'earth' is an excluded field of the read
+        /// operation permissions defined for the anonymous role.
         /// </summary>
         [TestMethod]
         public async Task TestQueryFilterFieldAuth_UnauthorizedField()
@@ -696,7 +698,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         }
 
         /// <summary>
-        /// Tests that the field level query filter succeeds requests when filter fileds are authorized
+        /// Tests that the field level query filter succeeds requests when filter fields are authorized
         /// </summary>
         [TestMethod]
         public async Task TestQueryFilterFieldAuth_AuthorizedWildCard()
@@ -722,7 +724,9 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         }
 
         /// <summary>
-        /// Tests that the nested field level query filter succeeds requests when nested filter fileds are authorized
+        /// Tests that the nested field level query filter passes authorization when nested filter fields are unauthorized
+        /// because the field 'id' on object type 'earth' is an included field of the read operation 
+        /// permissions defined for the anonymous role.
         /// </summary>
         [TestMethod]
         public async Task TestQueryFilterNestedFieldAuth_AuthorizedNestedField()
@@ -743,7 +747,9 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         }
 
         /// <summary>
-        /// Tests that the nested field level query filter fails requests when nested filter fileds are unauthorized
+        /// Tests that the nested field level query filter fails authorization when nested filter fields are 
+        /// unauthorized because the field 'name' on object type 'earth' is an excluded field of the read
+        /// operation permissions defined for the anonymous role.
         /// </summary>
         [TestMethod]
         public async Task TestQueryFilterNestedFieldAuth_UnauthorizedNestedField()

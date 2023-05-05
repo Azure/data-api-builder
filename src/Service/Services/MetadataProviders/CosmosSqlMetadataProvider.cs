@@ -152,6 +152,15 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         private void ParseSchemaGraphQLFieldsForGraphQLType()
         {
             string graphqlSchema = GraphQLSchema();
+
+            if (string.IsNullOrEmpty(graphqlSchema))
+            {
+                throw new DataApiBuilderException(
+                    message: "No GraphQL object model was provided for CosmosDB. Please define a GraphQL object model and link it in the runtime config.",
+                    statusCode: System.Net.HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+            }
+
             DocumentNode root = Utf8GraphQLParser.Parse(graphqlSchema);
 
             IEnumerable<ObjectTypeDefinitionNode> objectNodes = root.Definitions.Where(d => d is ObjectTypeDefinitionNode).Cast<ObjectTypeDefinitionNode>();

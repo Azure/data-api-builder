@@ -128,10 +128,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 case Config.Operation.Create:
                     isAuthorized = _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: role, operation: mutationOperation, inputArgumentKeys);
                     break;
-                case Config.Operation.Execute:
                 case Config.Operation.Delete:
-                    // Authorization is not performed for the 'execute' operation because stored procedure
-                    // backed entities do not support column level authorization.
                     // Field level authorization is not supported for delete mutations. A requestor must be authorized
                     // to perform the delete operation on the entity to reach this point.
                     isAuthorized = true;

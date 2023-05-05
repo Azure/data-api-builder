@@ -14,29 +14,29 @@ namespace Azure.DataApiBuilder.Service.Services.OpenAPI
     public enum JsonDataType
     {
         Undefined = 0,
-        //
-        // Summary:
-        //     A JSON object.
+        /// <summary>
+        /// A JSON Object
+        /// </summary>
         Object = 1,
-        //
-        // Summary:
-        //     A JSON array.
+        /// <summary>
+        /// A JSON array
+        /// </summary>
         Array = 2,
-        //
-        // Summary:
-        //     A JSON string.
+        /// <summary>
+        /// A JSON string
+        /// </summary>
         String = 3,
-        //
-        // Summary:
-        //     A JSON number.
+        /// <summary>
+        /// A JSON number
+        /// </summary>
         Number = 4,
-        //
-        // Summary:
-        //     A JSON Boolean
+        /// <summary>
+        /// A JSON Boolean
+        /// </summary>
         Boolean = 5,
-        //
-        // Summary:
-        //     The JSON value null.
+        /// <summary>
+        /// The JSON value null
+        /// </summary>
         Null = 6
     }
 }

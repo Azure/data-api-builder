@@ -9,8 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Azure.DataApiBuilder.Service.Controllers
 {
     /// <summary>
-    /// Facilitate access to a created OpenAPI description document or trigger the creation of
-    /// the OpenAPI description document.
+    /// Facilitate access to the created OpenAPI description document.
     /// </summary>
     [Route("[controller]")]
     [ApiController]
@@ -35,7 +34,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
         /// HTTP 404 - OpenAPI description document not available since it hasn't been created
         /// or failed to be created.</returns>
         [HttpGet]
-        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(type: typeof(string), statusCode: StatusCodes.Status200OK, contentType: MediaTypeNames.Application.Json)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public IActionResult Get()
         {

@@ -190,7 +190,7 @@ namespace Azure.DataApiBuilder.Service.Models
                             if (nestedFieldType is null)
                             {
                                 throw new DataApiBuilderException(
-                                    message: "Invalid filter object nested field input value type.",
+                                    message: "Invalid filter object used as a nested field input value type.",
                                     statusCode: HttpStatusCode.BadRequest,
                                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                             }

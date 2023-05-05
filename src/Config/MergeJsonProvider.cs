@@ -8,7 +8,7 @@ using System.Text.Json;
 namespace Azure.DataApiBuilder.Config
 {
     /// <summary>
-    /// This Class contains methods to merge two Json string.
+    /// This Class contains methods to merge two Json strings.
     /// </summary>
     public class MergeJsonProvider
     {
@@ -107,7 +107,7 @@ namespace Azure.DataApiBuilder.Config
         }
 
         /// <summary>
-        /// This helper methods creates the final merged JsonArray containing elements from the second Json.
+        /// This helper method creates the final merged JsonArray containing elements from the second Json.
         /// </summary>
         private static void OverrideArrays(Utf8JsonWriter jsonWriter, JsonElement root2)
         {

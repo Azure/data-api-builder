@@ -235,7 +235,7 @@ namespace Azure.DataApiBuilder.Config
 
         public static string GetMergedFileNameForEnvironment(string fileName, string environmentValue)
         {
-            return $"{fileName}{environmentValue}.merged{CONFIG_EXTENSION}";
+            return $"{fileName}.{environmentValue}.merged{CONFIG_EXTENSION}";
         }
 
         public static bool DoesFileExistInCurrentDirectory(string fileName)

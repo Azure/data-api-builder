@@ -248,9 +248,9 @@ namespace Cli.Tests
                 File.Delete("my-config.json");
             }
 
-            if (File.Exists($"{CONFIGFILE_NAME}.merged{CONFIG_EXTENSION}"))
+            if (File.Exists($"{CONFIGFILE_NAME}.Test.merged{CONFIG_EXTENSION}"))
             {
-                File.Delete($"{CONFIGFILE_NAME}.merged{CONFIG_EXTENSION}");
+                File.Delete($"{CONFIGFILE_NAME}.Test.merged{CONFIG_EXTENSION}");
             }
         }
     }

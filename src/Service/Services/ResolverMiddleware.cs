@@ -202,6 +202,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 SingleType => Single.Parse(leafJson),
                 DateTimeType => DateTimeOffset.Parse(leafJson),
                 ByteArrayType => Convert.FromBase64String(leafJson),
+                TimeSpanType => TimeSpan.Parse(leafJson),
                 _ => leafJson
             };
         }

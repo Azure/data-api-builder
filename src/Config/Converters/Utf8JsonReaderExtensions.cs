@@ -17,9 +17,14 @@ static internal class Utf8JsonReaderExtensions
     /// <exception cref="JsonException">Thrown if the <see cref="JsonTokenType"/> is not String.</exception>
     public static string? DeserializeString(this Utf8JsonReader reader)
     {
+        if (reader.TokenType is JsonTokenType.Null)
+        {
+            return null;
+        }
+
         if (reader.TokenType is not JsonTokenType.String)
         {
-            throw new JsonException("Expected string token type");
+            throw new JsonException($"Expected string token type, received: {reader.TokenType}");
         }
 
         JsonSerializerOptions options = new();

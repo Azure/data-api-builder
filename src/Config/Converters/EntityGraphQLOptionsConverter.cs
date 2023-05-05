@@ -27,7 +27,7 @@ internal class EntityGraphQLOptionsConverter : JsonConverter<EntityGraphQLOption
 
                 if (reader.TokenType == JsonTokenType.PropertyName)
                 {
-                    string? property = reader.DeserializeString();
+                    string? property = reader.GetString();
                     reader.Read();
 
                     switch (property)
@@ -51,7 +51,7 @@ internal class EntityGraphQLOptionsConverter : JsonConverter<EntityGraphQLOption
 
                                     if (reader.TokenType == JsonTokenType.PropertyName)
                                     {
-                                        string? property2 = reader.DeserializeString();
+                                        string? property2 = reader.GetString();
                                         reader.Read();
                                         switch (property2)
                                         {

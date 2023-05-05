@@ -21,7 +21,7 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
                     break;
                 }
 
-                string? propertyName = reader.DeserializeString();
+                string? propertyName = reader.GetString();
 
                 switch (propertyName)
                 {

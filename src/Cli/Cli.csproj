@@ -26,6 +26,7 @@
     <Dependencies>
       <Group targetFramework="net6.0" />
     </Dependencies>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TF_BUILD)' == 'true'">

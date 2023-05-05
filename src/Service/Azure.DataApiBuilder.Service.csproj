@@ -5,6 +5,7 @@
         <Configurations>Debug;Release;Docker</Configurations>
         <OutputPath>$(BaseOutputPath)\engine</OutputPath>
         <RuntimeIdentifiers>win-x64;linux-x64;osx-x64</RuntimeIdentifiers>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
     </PropertyGroup>
 
     <ItemGroup>

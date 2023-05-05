@@ -215,7 +215,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
                     return NotFound();
                 }
 
-                (string entityName, string primaryKeyRoute) = _restService.GetEntityNameAndPrimaryKeyRouteFromRoute(route);
+                (string entityName, string primaryKeyRoute) = _restService.GetEntityNameAndPrimaryKeyRouteFromRoute(routeAfterPathBase);
 
                 IActionResult? result = await _restService.ExecuteAsync(entityName, operationType, primaryKeyRoute);
 

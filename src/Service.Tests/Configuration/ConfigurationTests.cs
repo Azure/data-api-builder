@@ -21,6 +21,7 @@ using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
 using Azure.DataApiBuilder.Service.Services.MetadataProviders;
+using Azure.DataApiBuilder.Service.Services.OpenAPI;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using HotChocolate;
@@ -51,6 +52,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         private const string CUSTOM_CONFIG_FILENAME = "custom-config.json";
         private const string OPENAPI_SWAGGER_ENDPOINT = "swagger";
         private const string OPENAPI_DOCUMENT_ENDPOINT = "openapi";
+        private const string BROWSER_USER_AGENT_HEADER = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36";
+        private const string BROWSER_ACCEPT_HEADER = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9";
 
         private const int RETRY_COUNT = 5;
         private const int RETRY_WAIT_SECONDS = 1;
@@ -400,7 +403,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, preConfigHydrationResult.StatusCode);
 
             HttpResponseMessage preConfigOpenApiDocumentExistence =
-                await httpClient.GetAsync($"/{OPENAPI_DOCUMENT_ENDPOINT}");
+                await httpClient.GetAsync($"/api/{OPENAPI_DOCUMENT_ENDPOINT}");
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, preConfigOpenApiDocumentExistence.StatusCode);
 
             // SwaggerUI (OpenAPI user interface) is not made available in production/hosting mode.
@@ -431,7 +434,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             // OpenAPI document is created during config hydration and
             // is made available after config hydration completes.
             HttpResponseMessage postConfigOpenApiDocumentExistence =
-                await httpClient.GetAsync($"/{OPENAPI_DOCUMENT_ENDPOINT}");
+                await httpClient.GetAsync($"/api/{OPENAPI_DOCUMENT_ENDPOINT}");
             Assert.AreEqual(HttpStatusCode.OK, postConfigOpenApiDocumentExistence.StatusCode);
 
             // SwaggerUI (OpenAPI user interface) is not made available in production/hosting mode.
@@ -925,19 +928,20 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 $"--ConfigFileName={CUSTOM_CONFIG}"
             };
 
-            TestServer server = new(Program.CreateWebHostBuilder(args));
+            using TestServer server = new(Program.CreateWebHostBuilder(args));
+            using HttpClient client = server.CreateClient();
+            {
+                HttpRequestMessage request = new(HttpMethod.Get, endpoint);
 
-            HttpClient client = server.CreateClient();
-            HttpRequestMessage request = new(HttpMethod.Get, endpoint);
+                // Adding the following headers simulates an interactive browser request.
+                request.Headers.Add("user-agent", BROWSER_USER_AGENT_HEADER);
+                request.Headers.Add("accept", BROWSER_ACCEPT_HEADER);
 
-            // Adding the following headers simulates an interactive browser request.
-            request.Headers.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36");
-            request.Headers.Add("accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9");
-
-            HttpResponseMessage response = await client.SendAsync(request);
-            Assert.AreEqual(expectedStatusCode, response.StatusCode);
-            string actualBody = await response.Content.ReadAsStringAsync();
-            Assert.IsTrue(actualBody.Contains(expectedContent));
+                HttpResponseMessage response = await client.SendAsync(request);
+                Assert.AreEqual(expectedStatusCode, response.StatusCode);
+                string actualBody = await response.Content.ReadAsStringAsync();
+                Assert.IsTrue(actualBody.Contains(expectedContent));
+            }
         }
 
         /// <summary>
@@ -1415,28 +1419,40 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// Test different Swagger endpoints in different host modes
-        /// when accessed interactively via browser.
+        /// Test different Swagger endpoints in different host modes when accessed interactively via browser.
+        /// Two pass request scheme:
+        /// 1 - Send get request to expected Swagger endpoint /swagger
+        /// Response - Internally Swagger sends HTTP 301 Moved Permanently with Location header
+        /// pointing to exact Swagger page (/swagger/index.html)
+        /// 2 - Send GET request to path referred to by Location header in previous response
+        /// Response - Successful loading of SwaggerUI HTML, with reference to endpoint used
+        /// to retrieve OpenAPI document. This test ensures that Swagger components load, but
+        /// does not confirm that a proper OpenAPI document was created.
         /// </summary>
-        /// <param name="endpoint">The endpoint route</param>
+        /// <param name="customRestPath">The custom REST route</param>
         /// <param name="hostModeType">The mode in which the service is executing.</param>
         /// <param name="expectedStatusCode">Expected Status Code.</param>
-        /// <param name="expectedContent">The expected phrase in the response body.</param>
+        /// <param name="expectedOpenApiTargetContent">Snippet of expected HTML to be emitted from successful page load.
+        /// This should note the openapi route that Swagger will use to retrieve the OpenAPI document.</param>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow("/swagger", HostModeType.Development, HttpStatusCode.OK, "", DisplayName = "SwaggerUI enabled in development mode.")]
-        [DataRow("/swagger", HostModeType.Production, HttpStatusCode.BadRequest, "", DisplayName = "SwaggerUI disabled in production mode.")]
+        [DataRow("/api", HostModeType.Development, false, HttpStatusCode.OK, "{\"urls\":[{\"url\":\"/api/openapi\"", DisplayName = "SwaggerUI enabled in development mode.")]
+        [DataRow("/custompath", HostModeType.Development, false, HttpStatusCode.OK, "{\"urls\":[{\"url\":\"/custompath/openapi\"", DisplayName = "SwaggerUI enabled with custom REST path in development mode.")]
+        [DataRow("/api", HostModeType.Production, true, HttpStatusCode.BadRequest, "", DisplayName = "SwaggerUI disabled in production mode.")]
+        [DataRow("/custompath", HostModeType.Production, true, HttpStatusCode.BadRequest, "", DisplayName = "SwaggerUI disabled in production mode with custom REST path.")]
         public async Task OpenApi_InteractiveSwaggerUI(
-            string endpoint,
+            string customRestPath,
             HostModeType hostModeType,
+            bool expectsError,
             HttpStatusCode expectedStatusCode,
-            string expectedContent = "")
+            string expectedOpenApiTargetContent)
         {
+            string swaggerEndpoint = "/swagger";
             Dictionary<GlobalSettingsType, object> settings = new()
             {
                 { GlobalSettingsType.Host, JsonSerializer.SerializeToElement(new HostGlobalSettings(){ Mode = hostModeType}) },
                 { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){ Enabled = true }) },
-                { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings(){ Enabled = true }) }
+                { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings(){ Enabled = true, Path = customRestPath }) }
             };
 
             DataSource dataSource = new(DatabaseType.mssql)
@@ -1455,19 +1471,35 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     $"--ConfigFileName={CUSTOM_CONFIG}"
             };
 
-            TestServer server = new(Program.CreateWebHostBuilder(args));
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                HttpRequestMessage initialRequest = new(HttpMethod.Get, swaggerEndpoint);
 
-            HttpClient client = server.CreateClient();
-            HttpRequestMessage request = new(HttpMethod.Get, endpoint);
+                // Adding the following headers simulates an interactive browser request.
+                initialRequest.Headers.Add("user-agent", BROWSER_USER_AGENT_HEADER);
+                initialRequest.Headers.Add("accept", BROWSER_ACCEPT_HEADER);
 
-            // Adding the following headers simulates an interactive browser request.
-            request.Headers.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36");
-            request.Headers.Add("accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9");
+                HttpResponseMessage response = await client.SendAsync(initialRequest);
+                if (expectsError)
+                {
+                    // Swagger endpoint internally configured to reroute from /swagger to /swagger/index.html
+                    Assert.AreEqual(expectedStatusCode, response.StatusCode);
+                }
+                else
+                {
+                    // Swagger endpoint internally configured to reroute from /swagger to /swagger/index.html
+                    Assert.AreEqual(HttpStatusCode.MovedPermanently, response.StatusCode);
 
-            HttpResponseMessage response = await client.SendAsync(request);
-            Assert.AreEqual(expectedStatusCode, response.StatusCode);
-            string actualBody = await response.Content.ReadAsStringAsync();
-            Assert.IsTrue(actualBody.Contains(expectedContent));
+                    HttpRequestMessage followUpRequest = new(HttpMethod.Get, response.Headers.Location);
+                    HttpResponseMessage followUpResponse = await client.SendAsync(followUpRequest);
+                    Assert.AreEqual(expectedStatusCode, followUpResponse.StatusCode);
+
+                    // Validate that Swagger requests OpenAPI document using REST path defined in runtime config.
+                    string actualBody = await followUpResponse.Content.ReadAsStringAsync();
+                    Assert.AreEqual(true, actualBody.Contains(expectedOpenApiTargetContent));
+                }
+            }
         }
 
         /// <summary>
@@ -1511,10 +1543,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             using (HttpClient client = server.CreateClient())
             {
                 // Setup and send GET request
-                HttpRequestMessage readOpenApiDocumentRequest = new(HttpMethod.Get, "/openapi");
+                HttpRequestMessage readOpenApiDocumentRequest = new(HttpMethod.Get, $"/api/{OPENAPI_DOCUMENT_ENDPOINT}");
                 HttpResponseMessage response = await client.SendAsync(readOpenApiDocumentRequest);
-                string responseBody = await response.Content.ReadAsStringAsync();
-                Dictionary<string, JsonElement> responseProperties = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(responseBody);
 
                 // Validate response
                 if (expectsError)
@@ -1523,6 +1553,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 }
                 else
                 {
+                    // Process response body
+                    string responseBody = await response.Content.ReadAsStringAsync();
+                    Dictionary<string, JsonElement> responseProperties = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(responseBody);
+
+                    // Validate response body
                     Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
                     ValidateOpenApiDocTopLevelPropertiesExist(responseProperties);
                 }
@@ -1573,7 +1608,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             using (HttpClient client = server.CreateClient())
             {
                 // Setup and send GET request
-                HttpRequestMessage readOpenApiDocumentRequest = new(HttpMethod.Get, "/openapi");
+                HttpRequestMessage readOpenApiDocumentRequest = new(HttpMethod.Get, $"/api/{OpenApiDocumentor.OPENAPI_ROUTE}");
                 HttpResponseMessage response = await client.SendAsync(readOpenApiDocumentRequest);
 
                 // Parse response metadata

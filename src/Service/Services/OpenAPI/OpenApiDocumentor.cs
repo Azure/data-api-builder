@@ -625,7 +625,7 @@ namespace Azure.DataApiBuilder.Service.Services.OpenAPI
                 }
 
                 SourceDefinition sourceDefinition = _metadataProvider.GetSourceDefinition(entityName);
-                List<string> exposedColumnNames = GetExposedColumnNames(entityName, sourceDefinition.Columns.Keys.ToList());
+                HashSet<string> exposedColumnNames = GetExposedColumnNames(entityName, sourceDefinition.Columns.Keys.ToList());
 
                 // Create component for FULL entity with PK.
                 schemas.Add(entityName, CreateComponentSchema(entityName, fields: exposedColumnNames));
@@ -666,7 +666,7 @@ namespace Azure.DataApiBuilder.Service.Services.OpenAPI
         /// <exception cref="DataApiBuilderException">Raised when an entity's database metadata can't be found,
         /// indicating a failure due to the provided entityName.</exception>
         /// <returns>Entity's OpenApiSchema representation.</returns>
-        private OpenApiSchema CreateComponentSchema(string entityName, List<string> fields)
+        private OpenApiSchema CreateComponentSchema(string entityName, HashSet<string> fields)
         {
             if (!_metadataProvider.EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? dbObject) || dbObject is null)
             {
@@ -711,9 +711,9 @@ namespace Azure.DataApiBuilder.Service.Services.OpenAPI
         /// <param name="entityName">Name of the entity.</param>
         /// <param name="unmappedColumnNames">List of unmapped column names for the entity.</param>
         /// <returns>List of mapped columns names</returns>
-        private List<string> GetExposedColumnNames(string entityName, IEnumerable<string> unmappedColumnNames)
+        private HashSet<string> GetExposedColumnNames(string entityName, IEnumerable<string> unmappedColumnNames)
         {
-            List<string> mappedColumnNames = new();
+            HashSet<string> mappedColumnNames = new();
 
             foreach (string dbColumnName in unmappedColumnNames)
             {

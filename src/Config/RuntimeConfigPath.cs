@@ -188,7 +188,7 @@ namespace Azure.DataApiBuilder.Config
             return configFileNameWithExtension;
         }
 
-        // Used for testing
+        // Default config file name
         public static string DefaultName
         {
             get
@@ -206,7 +206,7 @@ namespace Azure.DataApiBuilder.Config
         /// generate the config file name for.</param>
         /// <param name="considerOverrides">whether to look for overrides file or not.</param>
         /// <returns></returns>
-        private static string GetFileName(string? environmentValue, bool considerOverrides)
+        public static string GetFileName(string? environmentValue, bool considerOverrides)
         {
             string configFileName =
                 !string.IsNullOrEmpty(environmentValue)
@@ -233,7 +233,12 @@ namespace Azure.DataApiBuilder.Config
             return $"{fileName}.overrides{CONFIG_EXTENSION}";
         }
 
-        private static bool DoesFileExistInCurrentDirectory(string fileName)
+        public static string GetMergedFileNameForEnvironment(string fileName, string environmentValue)
+        {
+            return $"{fileName}.{environmentValue}.merged{CONFIG_EXTENSION}";
+        }
+
+        public static bool DoesFileExistInCurrentDirectory(string fileName)
         {
             string currentDir = Directory.GetCurrentDirectory();
             // Unable to use ILogger because this code is invoked before LoggerFactory

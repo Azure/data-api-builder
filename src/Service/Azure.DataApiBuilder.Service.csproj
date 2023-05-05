@@ -8,6 +8,10 @@
         <EmbedUntrackedSources>true</EmbedUntrackedSources>
     </PropertyGroup>
 
+    <PropertyGroup Condition="'$(TF_BUILD)' == 'true'">
+        <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+    </PropertyGroup>
+
     <ItemGroup>
         <None Remove="schema.gql" />
     </ItemGroup>
@@ -21,10 +25,6 @@
         <CopyToOutputDirectoryAction Condition="'$(Configuration)' == 'Release'">Always</CopyToOutputDirectoryAction>
         <CopyToOutputDirectoryAction Condition="'$(Configuration)'=='Docker'">Never</CopyToOutputDirectoryAction>
         <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
-    </PropertyGroup>
-
-    <PropertyGroup Condition="'$(TF_BUILD)' == 'true'">
-        <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Docker|AnyCPU'">

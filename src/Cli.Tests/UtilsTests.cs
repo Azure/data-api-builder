@@ -13,10 +13,9 @@ namespace Cli.Tests
         /// Setup the logger for CLI
         /// </summary>
         [ClassInitialize]
-        public static void SetupLoggerForCLI(TestContext context)
+        public static void Setup(TestContext context)
         {
-            Mock<ILogger<Utils>> utilsLogger = new();
-            Utils.SetCliUtilsLogger(utilsLogger.Object);
+            TestHelper.SetupTestLoggerForCLI();
         }
 
         /// <summary>
@@ -78,7 +77,7 @@ namespace Cli.Tests
         {
             if (!File.Exists(expectedRuntimeConfigFile))
             {
-                File.Create(expectedRuntimeConfigFile);
+                File.Create(expectedRuntimeConfigFile).Dispose();
             }
 
             string? envValueBeforeTest = Environment.GetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME);
@@ -200,6 +199,41 @@ namespace Cli.Tests
             );
         }
 
+        /// <summary>
+        /// Test to verify that when DAB_ENVIRONMENT variable is set, also base config and 
+        /// dab-config.{DAB_ENVIRONMENT}.json file is present, then when DAB engine is started, it will merge
+        /// the two config and use the merged config to startup the engine.
+        /// Here, baseConfig(dab-config.json) has no connection_string, while dab-config.Test.json has a defined connection string.
+        /// once the `dab start` is executed the merge happens and the merged file contains the connection string from the
+        /// Test config.
+        /// Scenarios Covered:
+        /// 1. Merging of Array: Complete override of Book permissions from the second config (environment based config).
+        /// 2. Merging Property when present in both config: Connection string in the second config overrides that of the first.
+        /// 3. Non-merging when a property in the environmentConfig file is null: {data-source.options} is null in the environment config,
+        /// So it is added to the merged config as it is with no change.
+        /// 4. Merging when a property is only present in the environmentConfig file: Publisher entity is present only in environment config,
+        /// So it is directly added to the merged config. 
+        /// 5. Properties of same name but different level do not conflict: source is both a entityName and a property inside book entity, both are
+        /// treated differently.
+        /// </summary>
+        [TestMethod]
+        public void TestMergeConfig()
+        {
+            Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, "Test");
+            File.WriteAllText("dab-config.json", BASE_CONFIG);
+            File.WriteAllText("dab-config.Test.json", ENV_BASED_CONFIG);
+            if (TryMergeConfigsIfAvailable(out string mergedConfig))
+            {
+                Assert.AreEqual(mergedConfig, "dab-config.Test.merged.json");
+                Assert.IsTrue(File.Exists(mergedConfig));
+                Assert.IsTrue(JToken.DeepEquals(JObject.Parse(MERGED_CONFIG), JObject.Parse(File.ReadAllText(mergedConfig))));
+            }
+            else
+            {
+                Assert.Fail("Failed to merge config files.");
+            }
+        }
+
         [ClassCleanup]
         public static void Cleanup()
         {
@@ -216,6 +250,11 @@ namespace Cli.Tests
             if (File.Exists("my-config.json"))
             {
                 File.Delete("my-config.json");
+            }
+
+            if (File.Exists($"{CONFIGFILE_NAME}.Test.merged{CONFIG_EXTENSION}"))
+            {
+                File.Delete($"{CONFIGFILE_NAME}.Test.merged{CONFIG_EXTENSION}");
             }
         }
     }

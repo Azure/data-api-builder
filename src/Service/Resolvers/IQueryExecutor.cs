@@ -30,7 +30,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <returns>An object formed using the results of the query as returned by the given handler.</returns>
         public Task<TResult?> ExecuteQueryAsync<TResult>(
             string sqltext,
-            IDictionary<string, object?> parameters,
+            IDictionary<string, DbConnectionParam> parameters,
             Func<DbDataReader, List<string>?, Task<TResult>>? dataReaderHandler,
             HttpContext? httpContext = null,
             List<string>? args = null);
@@ -69,15 +69,15 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 List<string>? args = null);
 
         /// <summary>
-        /// Extracts first result set and returns it immediately if it has > 0 rows.
-        /// If no rows, tries to get the subsequent result set if any.
-        /// Throws an exception if the second result is null as well.
+        /// Extracts the result set corresponding to the operation (update/insert) being executed.
+        /// For PgSql,MySql, returns the first result set (among the two for update/insert) having non-zero affected rows.
+        /// For MsSql, returns the only result set having non-zero affected rows which corresponds to either update/insert operation.
         /// </summary>
         /// <param name="dbDataReader">A DbDataReader.</param>
         /// <param name="args">The arguments to this handler - args[0] = primary key in pretty format, args[1] = entity name.</param>
         /// <returns>Single row read from DbDataReader.
         /// If the first result set is being returned, DbResultSet.ResultProperties dictionary has
-        /// the property "IsFirstResultSet" set to true.</returns>
+        /// the property "IsUpdateResultSet" set to true.</returns>
         public Task<DbResultSet> GetMultipleResultSetsIfAnyAsync(
                 DbDataReader dbDataReader,
                 List<string>? args = null);
@@ -111,6 +111,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="httpContext">Current user httpContext.</param>
         /// <param name="parameters">Dictionary of parameters/value required to execute the query.</param>
         /// <returns>empty string / query to set session parameters for the connection.</returns>
-        public string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, object?> parameters);
+        public string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, DbConnectionParam> parameters);
+
+        /// <summary>
+        /// Helper method to populate DbType for parameter. Currently DbTypes for parameters are only populated for MsSql.
+        /// </summary>
+        /// <param name="parameterEntry">Entry corresponding to current database parameter to be created.</param>
+        /// <param name="parameter">Parameter sent to database.</param>
+        public void PopulateDbTypeForParameter(KeyValuePair<string, DbConnectionParam> parameterEntry, DbParameter parameter);
     }
 }

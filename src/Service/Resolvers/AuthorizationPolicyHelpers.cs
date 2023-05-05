@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.Generic;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -24,13 +25,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Then, the OData clause is processed for the passed in SqlQueryStructure
         /// by calling OData visitor helpers.
         /// </summary>
-        /// <param name="operationType">Action to provide the authorizationResolver during policy lookup.</param>
+        /// <param name="operation">Action to provide the authorizationResolver during policy lookup.</param>
         /// <param name="queryStructure">SqlQueryStructure object, could be a subQueryStucture which is of the same type.</param>
         /// <param name="context">The GraphQL Middleware context with request metadata like HttpContext.</param>
         /// <param name="authorizationResolver">Used to lookup authorization policies.</param>
         /// <param name="sqlMetadataProvider">Provides helper method to process ODataFilterClause.</param>
         public static void ProcessAuthorizationPolicies(
-            Config.Operation operationType,
+            Config.Operation operation,
             BaseSqlQueryStructure queryStructure,
             HttpContext context,
             IAuthorizationResolver authorizationResolver,
@@ -45,25 +46,23 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             string clientRoleHeader = roleHeaderValue.ToString();
+            List<Config.Operation> elementalOperations = ResolveCompoundOperationToElementalOperations(operation);
 
-            string dbQueryPolicy = authorizationResolver.ProcessDBPolicy(
+            foreach (Config.Operation elementalOperation in elementalOperations)
+            {
+                string dbQueryPolicy = authorizationResolver.ProcessDBPolicy(
                 queryStructure.EntityName,
                 clientRoleHeader,
-                operationType,
+                elementalOperation,
                 context);
 
-            FilterClause? filterClause = GetDBPolicyClauseForQueryStructure(
-                dbQueryPolicy,
-                entityName: queryStructure.EntityName,
-                resourcePath: queryStructure.DatabaseObject.FullName,
-                sqlMetadataProvider);
-
-            if (filterClause is null)
-            {
-                return;
+                FilterClause? filterClause = GetDBPolicyClauseForQueryStructure(
+                    dbQueryPolicy,
+                    entityName: queryStructure.EntityName,
+                    resourcePath: queryStructure.DatabaseObject.FullName,
+                    sqlMetadataProvider);
+                queryStructure.ProcessOdataClause(filterClause, elementalOperation);
             }
-
-            queryStructure.ProcessOdataClause(filterClause, operationType);
         }
 
         /// <summary>
@@ -95,6 +94,24 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Resolves compound operations like Upsert,UpsertIncremental into the corresponding constituent elemental operations i.e. Create,Update.
+        /// For simple operations, returns the operation itself.
+        /// </summary>
+        /// <param name="operation">Operation to be resolved.</param>
+        /// <returns>Constituent operations for the operation.</returns>
+        private static List<Config.Operation> ResolveCompoundOperationToElementalOperations(Config.Operation operation)
+        {
+            switch (operation)
+            {
+                case Config.Operation.Upsert:
+                case Config.Operation.UpsertIncremental:
+                    return new List<Config.Operation> { Config.Operation.Update, Config.Operation.Create };
+                default:
+                    return new List<Config.Operation> { operation };
+            }
         }
     }
 }

@@ -12,6 +12,8 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Humanizer;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Config.AuthenticationConfig;
+using static Azure.DataApiBuilder.Config.MergeJsonProvider;
+using static Azure.DataApiBuilder.Config.RuntimeConfigPath;
 using static Azure.DataApiBuilder.Service.Configurations.RuntimeConfigValidator;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
@@ -896,6 +898,44 @@ namespace Cli
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// This method will check if DAB_ENVIRONMENT value is set.
+        /// If yes, it will try to merge dab-config.json with dab-config.{DAB_ENVIRONMENT}.json
+        /// and create a merged file called dab-config.{DAB_ENVIRONMENT}.merged.json
+        /// </summary>
+        /// <returns>Returns the name of the merged Config if successful.</returns>
+        public static bool TryMergeConfigsIfAvailable(out string mergedConfigFile)
+        {
+            string? environmentValue = Environment.GetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME);
+            mergedConfigFile = string.Empty;
+            if (!string.IsNullOrEmpty(environmentValue))
+            {
+                string baseConfigFile = RuntimeConfigPath.DefaultName;
+                string environmentBasedConfigFile = RuntimeConfigPath.GetFileName(environmentValue, considerOverrides: false);
+                mergedConfigFile = RuntimeConfigPath.GetMergedFileNameForEnvironment(CONFIGFILE_NAME, environmentValue);
+
+                if (DoesFileExistInCurrentDirectory(baseConfigFile) && !string.IsNullOrEmpty(environmentBasedConfigFile))
+                {
+                    try
+                    {
+                        string baseConfigJson = File.ReadAllText(baseConfigFile);
+                        string overrideConfigJson = File.ReadAllText(environmentBasedConfigFile);
+                        string mergedConfigJson = Merge(baseConfigJson, overrideConfigJson);
+
+                        File.WriteAllText(mergedConfigFile, mergedConfigJson);
+                        return true;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"Failed to merge the config files.");
+                        return false;
+                    }
+                }
+            }
+
+            return false;
         }
 
         /// <summary>

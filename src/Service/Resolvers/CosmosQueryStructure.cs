@@ -47,6 +47,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             Init(parameters);
         }
 
+        /// <inheritdoc/>
+        public override string MakeDbConnectionParam(object? value, string? columnName = null)
+        {
+            string encodedParamName = $"{PARAM_NAME_PREFIX}param{Counter.Next()}";
+            Parameters.Add(encodedParamName, new(value));
+            return encodedParamName;
+        }
+
         private static IEnumerable<LabelledColumn> GenerateQueryColumns(SelectionSetNode selectionSet, DocumentNode document, string tableName)
         {
             foreach (ISelectionNode selectionNode in selectionSet.Selections)
@@ -179,7 +187,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     Predicates.Add(new Predicate(
                         new PredicateOperand(new Column(tableSchema: string.Empty, _containerAlias, parameter.Key)),
                         PredicateOperation.Equal,
-                        new PredicateOperand($"{MakeParamWithValue(parameter.Value)}")
+                        new PredicateOperand($"{MakeDbConnectionParam(parameter.Value)}")
                     ));
                 }
             }

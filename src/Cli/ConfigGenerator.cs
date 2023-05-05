@@ -943,12 +943,21 @@ namespace Cli
 
         /// <summary>
         /// This method will try starting the engine.
-        /// It will use the config provided by the user, else will look for the default config.
-        /// Does validation to check connection string is not null or empty.
+        /// It will use the config provided by the user, else based on the environment value
+        /// it will either merge the config if base config and environmentConfig is present
+        /// else it will choose a single config based on precedence (left to right) of
+        /// overrides < environmentConfig < defaultConfig 
+        /// Also preforms validation to check connection string is not null or empty.
         /// </summary>
         public static bool TryStartEngineWithOptions(StartOptions options)
         {
-            if (!TryGetConfigFileBasedOnCliPrecedence(options.Config, out string runtimeConfigFile))
+            string? configToBeUsed = options.Config;
+            if (string.IsNullOrEmpty(configToBeUsed) && TryMergeConfigsIfAvailable(out configToBeUsed))
+            {
+                _logger.LogInformation($"Using merged config file based on environment:{configToBeUsed}.");
+            }
+
+            if (!TryGetConfigFileBasedOnCliPrecedence(configToBeUsed, out string runtimeConfigFile))
             {
                 _logger.LogError("Config not provided and default config file doesn't exist.");
                 return false;

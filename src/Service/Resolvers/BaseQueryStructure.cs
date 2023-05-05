@@ -51,7 +51,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// Parameters values required to execute the query.
         /// </summary>
-        public Dictionary<string, object?> Parameters { get; set; }
+        public Dictionary<string, DbConnectionParam> Parameters { get; set; }
 
         /// <summary>
         /// Predicates that should filter the result set of the query.
@@ -109,11 +109,30 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         ///  Add parameter to Parameters and return the name associated with it
         /// </summary>
         /// <param name="value">Value to be assigned to parameter, which can be null for nullable columns.</param>
-        public string MakeParamWithValue(object? value)
+        /// <param name="paramName"> The name of the parameter - column name for table/views or parameter name for stored procedures.</param>
+        public virtual string MakeDbConnectionParam(object? value, string? paramName = null)
         {
-            string paramName = $"{PARAM_NAME_PREFIX}param{Counter.Next()}";
-            Parameters.Add(paramName, value);
-            return paramName;
+            string encodedParamName = GetEncodedParamName(Counter.Next());
+            if (!string.IsNullOrEmpty(paramName))
+            {
+                Parameters.Add(encodedParamName, new(value, GetUnderlyingSourceDefinition().GetDbTypeForParam(paramName)));
+            }
+            else
+            {
+                Parameters.Add(encodedParamName, new(value));
+            }
+
+            return encodedParamName;
+        }
+
+        /// <summary>
+        /// Helper method to create encoded parameter name.
+        /// </summary>
+        /// <param name="counterValue">The counter value used as a suffix in the encoded parameter name.</param>
+        /// <returns>Encoded parameter name.</returns>
+        public static string GetEncodedParamName(ulong counterValue)
+        {
+            return $"{PARAM_NAME_PREFIX}param{counterValue}";
         }
 
         /// <summary>

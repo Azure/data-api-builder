@@ -222,6 +222,8 @@ namespace Cli.Tests
             File.WriteAllText("dab-config.Test.json", ENV_BASED_CONFIG);
             if (TryMergeConfigsIfAvailable(out string mergedConfig))
             {
+                Assert.AreEqual(mergedConfig, "dab-config.Test.merged.json");
+                Assert.IsTrue(File.Exists(mergedConfig));
                 Assert.IsTrue(JToken.DeepEquals(JObject.Parse(MERGED_CONFIG), JObject.Parse(File.ReadAllText(mergedConfig))));
             }
             else

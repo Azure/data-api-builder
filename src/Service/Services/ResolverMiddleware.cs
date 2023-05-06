@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Authorization;
@@ -200,9 +201,9 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 ByteType => byte.Parse(leafJson),
                 SingleType => Single.Parse(leafJson),
-                DateTimeType => DateTimeOffset.Parse(leafJson),
+                DateTimeType => DateTimeOffset.Parse(leafJson, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal),
                 ByteArrayType => Convert.FromBase64String(leafJson),
-                TimeSpanType => TimeSpan.Parse(leafJson),
+                TimeSpanType => TimeSpan.Parse(leafJson, DateTimeFormatInfo.InvariantInfo),
                 _ => leafJson
             };
         }

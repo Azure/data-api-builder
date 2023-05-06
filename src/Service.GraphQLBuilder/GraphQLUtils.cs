@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Net;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -239,8 +240,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                     SINGLE_TYPE => new(SINGLE_TYPE, new SingleType().ParseValue(float.Parse(defaultValueFromConfig))),
                     FLOAT_TYPE => new(FLOAT_TYPE, new FloatValueNode(double.Parse(defaultValueFromConfig))),
                     DECIMAL_TYPE => new(DECIMAL_TYPE, new FloatValueNode(decimal.Parse(defaultValueFromConfig))),
-                    DATETIME_TYPE => new(DATETIME_TYPE, new DateTimeType().ParseResult(DateTime.Parse(defaultValueFromConfig))),
-                    TIMESPAN_TYPE => new(TIMESPAN_TYPE, new TimeSpanType().ParseValue(defaultValueFromConfig)),
+                    DATETIME_TYPE => new(DATETIME_TYPE, new DateTimeType().ParseResult(
+                        DateTime.Parse(defaultValueFromConfig, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal))),
+                    TIMESPAN_TYPE => new(TIMESPAN_TYPE, new TimeSpanType().ParseResult(defaultValueFromConfig)),
                     BYTEARRAY_TYPE => new(BYTEARRAY_TYPE, new ByteArrayType().ParseValue(Convert.FromBase64String(defaultValueFromConfig))),
                     _ => throw new NotSupportedException(message: $"The {defaultValueFromConfig} parameter's value type [{paramValueType}] is not supported.")
                 };

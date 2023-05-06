@@ -113,7 +113,6 @@ steps:
 - task: notice@0
   # This will generate the NOTICE.txt for distribution
   displayName: Generate NOTICE file
-  condition: and(succeeded())
   inputs:
     outputfile: $(Build.SourcesDirectory)/NOTICE.txt
     outputformat: text

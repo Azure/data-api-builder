@@ -53,6 +53,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         [DataRow(typeof(DateTime), DATETIME_TYPE, "12/31/2030 12:00:00 AM", false, DisplayName = "DateTime")]
         [DataRow(typeof(DateTime), DATETIME_TYPE, "12/31/2030 12000 AM", true, DisplayName = "DateTime")]
         [DataRow(typeof(DateTimeOffset), DATETIME_TYPE, "11/19/2012 10:57:11 AM -08:00", false, DisplayName = "DateTimeOffset")]
+        [DataRow(typeof(TimeSpan), TIMESPAN_TYPE, "10:57:11 AM -08:00", false, DisplayName = "TimeSpan")]
         [DataRow(typeof(byte[]), BYTEARRAY_TYPE, "AgQGCAoMDhASFA==", false, DisplayName = "Byte[]")]
         public void StoredProcedure_ParameterValueTypeResolution(
             Type systemType,

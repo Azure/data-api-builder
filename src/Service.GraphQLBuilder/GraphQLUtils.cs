@@ -240,6 +240,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                     FLOAT_TYPE => new(FLOAT_TYPE, new FloatValueNode(double.Parse(defaultValueFromConfig))),
                     DECIMAL_TYPE => new(DECIMAL_TYPE, new FloatValueNode(decimal.Parse(defaultValueFromConfig))),
                     DATETIME_TYPE => new(DATETIME_TYPE, new DateTimeType().ParseResult(DateTime.Parse(defaultValueFromConfig))),
+                    TIMESPAN_TYPE => new(TIMESPAN_TYPE, new TimeSpanType().ParseValue(defaultValueFromConfig)),
                     BYTEARRAY_TYPE => new(BYTEARRAY_TYPE, new ByteArrayType().ParseValue(Convert.FromBase64String(defaultValueFromConfig))),
                     _ => throw new NotSupportedException(message: $"The {defaultValueFromConfig} parameter's value type [{paramValueType}] is not supported.")
                 };

@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -364,9 +365,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 "Double" => double.Parse(param),
                 "Decimal" => decimal.Parse(param),
                 "Boolean" => bool.Parse(param),
-                "DateTime" => DateTimeOffset.Parse(param),
+                "DateTime" => DateTimeOffset.Parse(param, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal),
                 "DateTimeOffset" => DateTimeOffset.Parse(param),
                 "Date" => DateOnly.Parse(param),
+                "TimeSpan" => TimeSpan.Parse(param, DateTimeFormatInfo.InvariantInfo),
                 "Guid" => Guid.Parse(param),
                 _ => throw new NotSupportedException($"{systemType.Name} is not supported")
             };

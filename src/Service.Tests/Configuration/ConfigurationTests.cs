@@ -672,19 +672,19 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// has highest precedence irrespective of what the connection string is in the config file.
         /// Verifying the Exception thrown.
         /// </summary>
-        [TestMethod("Validates that environment variable DAB_CONNSTRING has highest precedence."), TestCategory(TestCategory.COSMOSDBNOSQL)]
+        [TestMethod($"Validates that environment variable {RuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING} has highest precedence."), TestCategory(TestCategory.COSMOSDBNOSQL)]
         public void TestConnectionStringEnvVarHasHighestPrecedence()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
             Environment.SetEnvironmentVariable(
-                $"{RuntimeConfigLoader.ENVIRONMENT_PREFIX}CONNSTRING",
+                RuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING,
                 "Invalid Connection String");
 
             try
             {
                 TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
                 _ = server.Services.GetService(typeof(CosmosClientProvider)) as CosmosClientProvider;
-                Assert.Fail($"{RuntimeConfigLoader.ENVIRONMENT_PREFIX}CONNSTRING is not given highest precedence");
+                Assert.Fail($"{RuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING} is not given highest precedence");
             }
             catch (Exception e)
             {
@@ -762,7 +762,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
             FileSystem fileSystem = new();
             RuntimeConfigLoader loader = new(fileSystem);
-            loader.TryLoadDefaultConfig(out RuntimeConfig config);
+            loader.TryLoadKnownConfig(out RuntimeConfig config);
 
             RuntimeConfig configWithCustomHostMode = config with
             {

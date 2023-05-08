@@ -33,7 +33,8 @@ public class RuntimeConfigProvider
 
     private readonly RuntimeConfigLoader _runtimeConfigLoader;
     private RuntimeConfig? _runtimeConfig;
-    public string? ConfigFilePath;
+
+    public string RuntimeConfigFileName => _runtimeConfigLoader.ConfigFileName;
 
     public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader)
     {
@@ -47,7 +48,7 @@ public class RuntimeConfigProvider
             return _runtimeConfig;
         }
 
-        if (_runtimeConfigLoader.TryLoadDefaultConfig(out RuntimeConfig? config))
+        if (_runtimeConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config))
         {
             _runtimeConfig = config;
         }
@@ -72,7 +73,7 @@ public class RuntimeConfigProvider
     {
         if (_runtimeConfig is null)
         {
-            if (_runtimeConfigLoader.TryLoadDefaultConfig(out RuntimeConfig? config))
+            if (_runtimeConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config))
             {
                 _runtimeConfig = config;
             }

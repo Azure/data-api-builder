@@ -17,20 +17,25 @@ public class RuntimeConfigLoader
 {
     private readonly IFileSystem _fileSystem;
     private readonly string _baseConfigFileName;
+    private readonly string? _connectionString;
     public const string CONFIGFILE_NAME = "dab-config";
     public const string CONFIG_EXTENSION = ".json";
 
     public const string ENVIRONMENT_PREFIX = "DAB_";
     public const string RUNTIME_ENVIRONMENT_VAR_NAME = $"{ENVIRONMENT_PREFIX}ENVIRONMENT";
+    public const string RUNTIME_ENV_CONNECTION_STRING = $"{ENVIRONMENT_PREFIX}CONNSTRING";
 
     public static bool CheckPrecedenceForConfigInEngine = true;
 
     public const string SCHEMA = "dab.draft.schema.json";
 
-    public RuntimeConfigLoader(IFileSystem fileSystem, string baseConfigFileName = DEFAULT_CONFIG_FILE_NAME)
+    public string ConfigFileName => GetFileNameForEnvironment(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), false);
+
+    public RuntimeConfigLoader(IFileSystem fileSystem, string baseConfigFileName = DEFAULT_CONFIG_FILE_NAME, string? connectionString = null)
     {
         _fileSystem = fileSystem;
         _baseConfigFileName = baseConfigFileName;
+        _connectionString = connectionString;
     }
 
     /// <summary>
@@ -44,7 +49,7 @@ public class RuntimeConfigLoader
         if (_fileSystem.File.Exists(path))
         {
             string json = _fileSystem.File.ReadAllText(path);
-            return TryParseConfig(json, out config);
+            return TryParseConfig(json, out config, connectionString: _connectionString);
         }
 
         config = null;
@@ -57,7 +62,7 @@ public class RuntimeConfigLoader
     /// <param name="json">JSON that represents the config file.</param>
     /// <param name="config">The parsed config, or null if it parsed unsuccessfully.</param>
     /// <returns>True if the config was parsed, otherwise false.</returns>
-    public static bool TryParseConfig(string json, [NotNullWhen(true)] out RuntimeConfig? config, ILogger? logger = null)
+    public static bool TryParseConfig(string json, [NotNullWhen(true)] out RuntimeConfig? config, ILogger? logger = null, string? connectionString = null)
     {
         JsonSerializerOptions options = GetSerializationOption();
 
@@ -68,6 +73,11 @@ public class RuntimeConfigLoader
             if (config is null)
             {
                 return false;
+            }
+
+            if (!string.IsNullOrEmpty(connectionString))
+            {
+                config = config with { DataSource = config.DataSource with { ConnectionString = connectionString } };
             }
         }
         catch (JsonException ex)
@@ -112,15 +122,13 @@ public class RuntimeConfigLoader
     }
 
     /// <summary>
-    /// Tries to load the config file using its default name and for the default environment.
+    /// Tries to load the config file using the filename known to the RuntimeConfigLoader and for the default environment.
     /// </summary>
     /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
-    public bool TryLoadDefaultConfig(out RuntimeConfig? config)
+    public bool TryLoadKnownConfig(out RuntimeConfig? config)
     {
-        string filename = GetFileNameForEnvironment(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), false);
-
-        return TryLoadConfig(filename, out config);
+        return TryLoadConfig(ConfigFileName, out config);
     }
 
     /// <summary>

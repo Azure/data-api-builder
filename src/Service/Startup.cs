@@ -56,8 +56,11 @@ namespace Azure.DataApiBuilder.Service
         public void ConfigureServices(IServiceCollection services)
         {
             string configFileName = Configuration.GetValue<string>("ConfigFileName", RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME);
+            string? connectionString = Configuration.GetValue<string?>(
+                RuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING.Replace(RuntimeConfigLoader.ENVIRONMENT_PREFIX, ""),
+                null);
             IFileSystem fileSystem = new FileSystem();
-            RuntimeConfigLoader configLoader = new(fileSystem, configFileName);
+            RuntimeConfigLoader configLoader = new(fileSystem, configFileName, connectionString);
             RuntimeConfigProvider configProvider = new(configLoader);
 
             services.AddSingleton(fileSystem);
@@ -286,7 +289,7 @@ namespace Azure.DataApiBuilder.Service
                 isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
                 if (_logger is not null)
                 {
-                    _logger.LogDebug("Loaded config file from {filePath}", runtimeConfigProvider.ConfigFilePath);
+                    _logger.LogDebug("Loaded config file from {filePath}", runtimeConfigProvider.RuntimeConfigFileName);
                 }
 
                 if (!isRuntimeReady)
@@ -297,7 +300,7 @@ namespace Azure.DataApiBuilder.Service
                         _logger.LogError("Exiting the runtime engine...");
                     }
 
-                    throw new ApplicationException($"Could not initialize the engine with the runtime config file: {runtimeConfigProvider.ConfigFilePath}");
+                    throw new ApplicationException($"Could not initialize the engine with the runtime config file: {runtimeConfigProvider.RuntimeConfigFileName}");
                 }
             }
             else

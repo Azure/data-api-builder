@@ -71,7 +71,7 @@ type Moon @model(name:""Moon"") @authorize(policy: ""Crater"") {
             // Read the base config from the file system
             TestHelper.SetupDatabaseEnvironment(TestCategory.COSMOSDBNOSQL);
             RuntimeConfigLoader baseLoader = TestHelper.GetRuntimeConfigLoader();
-            if (!baseLoader.TryLoadDefaultConfig(out RuntimeConfig baseConfig))
+            if (!baseLoader.TryLoadKnownConfig(out RuntimeConfig baseConfig))
             {
                 throw new ApplicationException("Failed to load the default CosmosDB_NoSQL config and cannot continue with tests.");
             }

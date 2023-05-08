@@ -82,36 +82,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             TestContext.Properties.Add(RUNTIME_ENVIRONMENT_VAR_NAME, Environment.GetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME));
         }
 
-        [ClassCleanup]
-        public static void Cleanup()
-        {
-            if (File.Exists($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}"))
-            {
-                File.Delete($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}");
-            }
-
-            if (File.Exists($"{CONFIGFILE_NAME}.HostTest{CONFIG_EXTENSION}"))
-            {
-                File.Delete($"{CONFIGFILE_NAME}.HostTest{CONFIG_EXTENSION}");
-            }
-
-            if (File.Exists($"{CONFIGFILE_NAME}.Test.overrides{CONFIG_EXTENSION}"))
-            {
-                File.Delete($"{CONFIGFILE_NAME}.Test.overrides{CONFIG_EXTENSION}");
-            }
-
-            if (File.Exists($"{CONFIGFILE_NAME}.HostTest.overrides{CONFIG_EXTENSION}"))
-            {
-                File.Delete($"{CONFIGFILE_NAME}.HostTest.overrides{CONFIG_EXTENSION}");
-            }
-        }
-
         [TestCleanup]
         public void CleanupAfterEachTest()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, (string)TestContext.Properties[ASP_NET_CORE_ENVIRONMENT_VAR_NAME]);
             Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, (string)TestContext.Properties[RUNTIME_ENVIRONMENT_VAR_NAME]);
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, "");
+            Environment.SetEnvironmentVariable(RuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING, null);
         }
 
         /// <summary>

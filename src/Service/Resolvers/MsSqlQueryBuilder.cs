@@ -105,12 +105,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 $"{BuildProcedureParameterList(structure.ProcedureParameters)}";
         }
 
-        /// <summary>
-        /// Avoid redundant check, wrap the sequence in a transaction,
-        /// and protect the first table access with appropriate locking.
-        /// </summary>
-        /// <param name="structure"></param>
-        /// <returns>Query generated for the PUT(upsert)/PATCH(upsertIncremental) operation.</returns>
+        /// <inheritdoc />
         public string Build(SqlUpsertQueryStructure structure)
         {
             string tableName = $"{QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)}";
@@ -125,10 +120,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string outputColumns = MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted);
             string queryToGetCountOfRecordWithPK = $"SELECT COUNT(*) as {COUNT_ROWS_WITH_GIVEN_PK} FROM {tableName} WHERE {pkPredicates}";
 
-            // Query to initiate transaction and get number of records with given PK.
-            string prefixQuery = $"SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;" +
-                $"BEGIN TRANSACTION;" +
-                $"DECLARE @ROWS_TO_UPDATE int;" +
+            // Query to get the number of records with a given PK.
+            string prefixQuery = $"DECLARE @ROWS_TO_UPDATE int;" +
                 $"SET @ROWS_TO_UPDATE = ({queryToGetCountOfRecordWithPK}); " +
                 $"{queryToGetCountOfRecordWithPK};";
 
@@ -137,8 +130,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             // Query to update record (if there exists one for given PK).
             StringBuilder updateQuery = new(
-                $"IF @ROWS_TO_UPDATE = 1" +
-                $"UPDATE {tableName} WITH(UPDLOCK) " +
+                $"IF @ROWS_TO_UPDATE = 1 " +
+                $"UPDATE {tableName} " +
                 $"SET {updateOperations} " +
                 $"OUTPUT {outputColumns} " +
                 $"WHERE {updatePredicates};");
@@ -171,9 +164,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 // Append the insert query to the upsert query.
                 upsertQuery.Append(insertQuery.ToString());
             }
-
-            // Commit the transaction.
-            upsertQuery.Append("COMMIT TRANSACTION");
 
             return upsertQuery.ToString();
         }

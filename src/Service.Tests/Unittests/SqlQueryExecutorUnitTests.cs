@@ -102,7 +102,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 }
                 else
                 {
-                    provider.Initialize(
+                    await provider.Initialize(
                         provider.GetConfig().ToJson(),
                         graphQLSchema: null,
                         connectionString: connectionString,

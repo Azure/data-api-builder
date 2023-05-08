@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -81,7 +82,7 @@ public class RuntimeConfigProvider
         return _runtimeConfig is not null;
     }
 
-    public bool Initialize(string jsonConfig, string? graphQLSchema, string connectionString, string? accessToken)
+    public async Task<bool> Initialize(string jsonConfig, string? graphQLSchema, string connectionString, string? accessToken)
     {
         if (string.IsNullOrEmpty(connectionString))
         {
@@ -125,7 +126,21 @@ public class RuntimeConfigProvider
             // Update the connection string in the parsed config with the one that was provided to the controller
             _runtimeConfig = runtimeConfig with { DataSource = runtimeConfig.DataSource with { ConnectionString = connectionString } };
 
-            return true;
+            List<Task<bool>> configLoadedTasks = new();
+            if (_runtimeConfig is not null)
+            {
+                foreach (RuntimeConfigLoadedHandler configLoadedHandler in RuntimeConfigLoadedHandlers)
+                {
+                    configLoadedTasks.Add(configLoadedHandler(this, _runtimeConfig));
+                }
+            }
+
+            bool[] results = await Task.WhenAll(configLoadedTasks);
+
+            IsLateConfigured = true;
+
+            // Verify that all tasks succeeded.
+            return results.All(r => r);
         }
 
         return false;

@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Configurations;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -29,7 +30,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
         /// <param name="configuration">Runtime configuration, schema, resolvers and connection string.</param>
         /// <returns>Ok in case of success or Conflict with the key:value.</returns>
         [HttpPost]
-        public ActionResult Index([FromBody] ConfigurationPostParameters configuration)
+        public async Task<ActionResult> Index([FromBody] ConfigurationPostParameters configuration)
         {
             if (_configurationProvider.TryGetConfig(out _))
             {
@@ -38,7 +39,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
 
             try
             {
-                bool initResult = _configurationProvider.Initialize(
+                bool initResult = await _configurationProvider.Initialize(
                     configuration.Configuration,
                     configuration.Schema,
                     configuration.ConnectionString,

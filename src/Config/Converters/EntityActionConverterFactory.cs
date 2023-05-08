@@ -26,7 +26,7 @@ internal class EntityActionConverterFactory : JsonConverterFactory
             {
                 EntityActionOperation op = JsonSerializer.Deserialize<EntityActionOperation>(ref reader, options);
 
-                return new EntityAction(op, new EntityActionFields(Exclude: new()), new EntityActionPolicy(null, null));
+                return new EntityAction(op, null, new EntityActionPolicy(null, null));
             }
 
             JsonSerializerOptions innerOptions = new(options);

@@ -33,7 +33,7 @@ namespace Cli
 
             Task server = Task.Run(() =>
             {
-                _ = ConfigGenerator.TryStartEngineWithOptions(startOptions, loader);
+                _ = ConfigGenerator.TryStartEngineWithOptions(startOptions, loader, fileSystem);
             }, cancellationToken);
 
             if (options.GraphQL)

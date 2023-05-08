@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
 using CommandLine;
 using Microsoft.Extensions.Logging;
@@ -33,10 +34,10 @@ namespace Cli.Commands
         [Option("no-https-redirect", Required = false, HelpText = "Disables automatic https redirects.")]
         public bool IsHttpsRedirectionDisabled { get; }
 
-        public void Handler(ILogger logger, RuntimeConfigLoader loader)
+        public void Handler(ILogger logger, RuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             logger.LogInformation($"{PRODUCT_NAME} {GetProductVersion()}");
-            bool isSuccess = ConfigGenerator.TryStartEngineWithOptions(this, loader);
+            bool isSuccess = ConfigGenerator.TryStartEngineWithOptions(this, loader, fileSystem);
 
             if (!isSuccess)
             {

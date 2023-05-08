@@ -215,5 +215,44 @@ public class UtilsTests
             ValidateAudienceAndIssuerForJwtProvider(authenticationProvider, audience, issuer)
         );
     }
+
+    /// <summary>
+    /// Test to verify that when DAB_ENVIRONMENT variable is set, also base config and 
+    /// dab-config.{DAB_ENVIRONMENT}.json file is present, then when DAB engine is started, it will merge
+    /// the two config and use the merged config to startup the engine.
+    /// Here, baseConfig(dab-config.json) has no connection_string, while dab-config.Test.json has a defined connection string.
+    /// once the `dab start` is executed the merge happens and the merged file contains the connection string from the
+    /// Test config.
+    /// Scenarios Covered:
+    /// 1. Merging of Array: Complete override of Book permissions from the second config (environment based config).
+    /// 2. Merging Property when present in both config: Connection string in the second config overrides that of the first.
+    /// 3. Non-merging when a property in the environmentConfig file is null: {data-source.options} is null in the environment config,
+    /// So it is added to the merged config as it is with no change.
+    /// 4. Merging when a property is only present in the environmentConfig file: Publisher entity is present only in environment config,
+    /// So it is directly added to the merged config. 
+    /// 5. Properties of same name but different level do not conflict: source is both a entityName and a property inside book entity, both are
+    /// treated differently.
+    /// </summary>
+    [TestMethod]
+    public void TestMergeConfig()
+    {
+        MockFileSystem fileSystem = new();
+        fileSystem.AddFile("dab-config.json", new MockFileData(BASE_CONFIG));
+        fileSystem.AddFile("dab-config.Test.json", new MockFileData(ENV_BASED_CONFIG));
+
+        RuntimeConfigLoader loader = new(fileSystem);
+
+        Environment.SetEnvironmentVariable(RuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, "Test");
+        if (TryMergeConfigsIfAvailable(fileSystem, loader, out string mergedConfig))
+        {
+            Assert.AreEqual(mergedConfig, "dab-config.Test.merged.json");
+            Assert.IsTrue(fileSystem.File.Exists(mergedConfig));
+            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(MERGED_CONFIG), JObject.Parse(fileSystem.File.ReadAllText(mergedConfig))));
+        }
+        else
+        {
+            Assert.Fail("Failed to merge config files.");
+        }
+    }
 }
 

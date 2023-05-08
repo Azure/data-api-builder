@@ -54,7 +54,7 @@ namespace Cli
                 .WithParsed((Action<InitOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))
                 .WithParsed((Action<AddOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))
                 .WithParsed((Action<UpdateOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))
-                .WithParsed((Action<StartOptions>)(options => options.Handler(cliLogger, loader)))
+                .WithParsed((Action<StartOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))
                 .WithParsed((Action<ExportOptions>)(options => Exporter.Export(options, cliLogger, loader, fileSystem)))
                 .WithNotParsed(err =>
                 {

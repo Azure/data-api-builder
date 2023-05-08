@@ -214,7 +214,7 @@ public class RuntimeConfigLoader
         return $"{fileName}.overrides{CONFIG_EXTENSION}";
     }
 
-    private bool DoesFileExistInCurrentDirectory(string fileName)
+    public bool DoesFileExistInCurrentDirectory(string fileName)
     {
         string currentDir = _fileSystem.Directory.GetCurrentDirectory();
         // Unable to use ILogger because this code is invoked before LoggerFactory
@@ -282,6 +282,11 @@ public class RuntimeConfigLoader
         }
 
         return versionNum;
+    }
+
+    public static string GetMergedFileNameForEnvironment(string fileName, string environmentValue)
+    {
+        return $"{fileName}.{environmentValue}.merged{CONFIG_EXTENSION}";
     }
 }
 

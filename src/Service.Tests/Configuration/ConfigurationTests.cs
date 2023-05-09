@@ -403,7 +403,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, preConfigHydrationResult.StatusCode);
 
             HttpResponseMessage preConfigOpenApiDocumentExistence =
-                await httpClient.GetAsync($"/api/{OPENAPI_DOCUMENT_ENDPOINT}");
+                await httpClient.GetAsync($"{GlobalSettings.REST_DEFAULT_PATH}/{OPENAPI_DOCUMENT_ENDPOINT}");
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, preConfigOpenApiDocumentExistence.StatusCode);
 
             // SwaggerUI (OpenAPI user interface) is not made available in production/hosting mode.
@@ -434,7 +434,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             // OpenAPI document is created during config hydration and
             // is made available after config hydration completes.
             HttpResponseMessage postConfigOpenApiDocumentExistence =
-                await httpClient.GetAsync($"/api/{OPENAPI_DOCUMENT_ENDPOINT}");
+                await httpClient.GetAsync($"{GlobalSettings.REST_DEFAULT_PATH}/{OPENAPI_DOCUMENT_ENDPOINT}");
             Assert.AreEqual(HttpStatusCode.OK, postConfigOpenApiDocumentExistence.StatusCode);
 
             // SwaggerUI (OpenAPI user interface) is not made available in production/hosting mode.
@@ -1546,7 +1546,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             using (HttpClient client = server.CreateClient())
             {
                 // Setup and send GET request
-                HttpRequestMessage readOpenApiDocumentRequest = new(HttpMethod.Get, $"/api/{OPENAPI_DOCUMENT_ENDPOINT}");
+                HttpRequestMessage readOpenApiDocumentRequest = new(HttpMethod.Get, $"{GlobalSettings.REST_DEFAULT_PATH}/{OPENAPI_DOCUMENT_ENDPOINT}");
                 HttpResponseMessage response = await client.SendAsync(readOpenApiDocumentRequest);
 
                 // Validate response
@@ -1611,7 +1611,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             using (HttpClient client = server.CreateClient())
             {
                 // Setup and send GET request
-                HttpRequestMessage readOpenApiDocumentRequest = new(HttpMethod.Get, $"/api/{OpenApiDocumentor.OPENAPI_ROUTE}");
+                HttpRequestMessage readOpenApiDocumentRequest = new(HttpMethod.Get, $"{GlobalSettings.REST_DEFAULT_PATH}/{OpenApiDocumentor.OPENAPI_ROUTE}");
                 HttpResponseMessage response = await client.SendAsync(readOpenApiDocumentRequest);
 
                 // Parse response metadata

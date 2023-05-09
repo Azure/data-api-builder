@@ -192,9 +192,8 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
                 }
             }
 
-            // Get all the fields for a graph type
-            _graphQLTypeToFieldsMap.TryGetValue(entityName, out fields);
-            return fields is null ? new List<string>() : fields.Select(x => x.Name.Value).ToList();
+            // Otherwise, entity name is not found
+            return new List<string>();
         }
 
         public string? GetSchemaGraphQLFieldTypeByFieldName(string graphQLType, string fieldName)

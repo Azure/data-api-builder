@@ -172,7 +172,8 @@
               "action": "read",
               "fields": {
                 "include": [
-                  "id"
+                  "id",
+                  "type"
                 ],
                 "exclude": [
                   "name"

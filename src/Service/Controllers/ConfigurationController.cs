@@ -51,10 +51,12 @@ namespace Azure.DataApiBuilder.Service.Controllers
                     return BadRequest();
                 }
 
+                string mergedConfiguration = MergeJsonProvider.Merge(configuration.Configuration, configuration.ConfigurationOverrides);
+
+
                 bool initResult = await _configurationProvider.Initialize(
-                    configuration.Configuration,
+                    mergedConfiguration,
                     configuration.Schema,
-                    configurationOverrides.ConnectionString,
                     configuration.AccessToken);
 
                 if (initResult && _configurationProvider.TryGetRuntimeConfiguration(out _))

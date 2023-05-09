@@ -780,6 +780,33 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             string errorMessage = response.ToString();
             Assert.IsTrue(errorMessage.Contains(DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE));
         }
+
+        /// <summary>
+        /// This is for testing the scenario when the filter field is authorized, but the query field is unauthorized.
+        /// For "type" field in "Earth" GraphQL type, it has @authorize(policy: "authenticated") directive in the test schema,
+        /// but in the runtime config, this field is marked as included field for read operation with anonymous role,
+        /// this should return unauthorized.
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryFieldAuthConflictingWithFilterFieldAuth_Unauthorized()
+        {
+            // Run query
+            string gqlQuery = @"{
+                earths(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {id : {eq : """ + _idList[0] + @"""}})
+                { 
+                    items {
+                        id
+                        type
+                    }
+                }
+            }";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync(_graphQLQueryName, query: gqlQuery);
+
+            // Validate the result contains the GraphQL authorization error code.
+            string errorMessage = response.ToString();
+            Assert.IsTrue(errorMessage.Contains("The current user is not authorized to access this resource."));
+        }
         #endregion
 
         [ClassCleanup]

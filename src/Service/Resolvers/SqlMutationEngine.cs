@@ -11,6 +11,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
+using System.Transactions;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -41,6 +42,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly GQLFilterParser _gQLFilterParser;
         public const string IS_UPDATE_RESULT_SET = "IsUpdateResultSet";
+        private const string TRANSACTION_EXCEPTION_ERROR_MSG = "An unexpected error occurred during the transaction execution";
+
+        private static DataApiBuilderException _dabExceptionWithTransactionErrorMessage = new(message: TRANSACTION_EXCEPTION_ERROR_MSG,
+                                                                                            statusCode: HttpStatusCode.InternalServerError,
+                                                                                            subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
 
         /// <summary>
         /// Constructor
@@ -92,58 +98,74 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // If authorization fails, an exception will be thrown and request execution halts.
             AuthorizeMutationFields(context, parameters, entityName, mutationOperation);
 
-            if (mutationOperation is EntityActionOperation.Delete)
+            try
             {
-                // compute the mutation result before removing the element,
-                // since typical GraphQL delete mutations return the metadata of the deleted item.
-                result = await _queryEngine.ExecuteAsync(context, GetBackingColumnsFromCollection(entityName, parameters));
-
-                Dictionary<string, object>? resultProperties =
-                    await PerformDeleteOperation(
-                        entityName,
-                        parameters);
-
-                // If the number of records affected by DELETE were zero,
-                // and yet the result was not null previously, it indicates this DELETE lost
-                // a concurrent request race. Hence, empty the non-null result.
-                if (resultProperties is not null
-                    && resultProperties.TryGetValue(nameof(DbDataReader.RecordsAffected), out object? value)
-                    && Convert.ToInt32(value) == 0
-                    && result is not null && result.Item1 is not null)
+                // Creating an implicit transaction
+                using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType())
                 {
-                    result = new Tuple<JsonDocument?, IMetadata?>(
-                        default(JsonDocument),
-                        PaginationMetadata.MakeEmptyPaginationMetadata());
+                    if (mutationOperation is EntityActionOperation.Delete)
+                    {
+                        // compute the mutation result before removing the element,
+                        // since typical GraphQL delete mutations return the metadata of the deleted item.
+                        result = await _queryEngine.ExecuteAsync(context, GetBackingColumnsFromCollection(entityName, parameters));
+
+                        Dictionary<string, object>? resultProperties =
+                            await PerformDeleteOperation(
+                                entityName,
+                                parameters);
+
+                        // If the number of records affected by DELETE were zero,
+                        // and yet the result was not null previously, it indicates this DELETE lost
+                        // a concurrent request race. Hence, empty the non-null result.
+                        if (resultProperties is not null
+                            && resultProperties.TryGetValue(nameof(DbDataReader.RecordsAffected), out object? value)
+                            && Convert.ToInt32(value) == 0
+                            && result is not null && result.Item1 is not null)
+                        {
+                            result = new Tuple<JsonDocument?, IMetadata?>(
+                                default(JsonDocument),
+                                PaginationMetadata.MakeEmptyPaginationMetadata());
+                        }
+                    }
+                    else
+                    {
+                        DbResultSetRow? mutationResultRow =
+                            await PerformMutationOperation(
+                                entityName,
+                                mutationOperation,
+                                parameters,
+                                context);
+
+                        if (mutationResultRow is not null && mutationResultRow.Columns.Count > 0
+                            && !context.Selection.Type.IsScalarType())
+                        {
+                            // Because the GraphQL mutation result set columns were exposed (mapped) column names,
+                            // the column names must be converted to backing (source) column names so the
+                            // PrimaryKeyPredicates created in the SqlQueryStructure created by the query engine
+                            // represent database column names.
+                            result = await _queryEngine.ExecuteAsync(
+                                        context,
+                                        GetBackingColumnsFromCollection(entityName, mutationResultRow.Columns));
+                        }
+                    }
+
+                    transactionScope.Complete();
                 }
             }
-            else
+            // All the exceptions that can be thrown by .Complete() and .Dispose() methods of transactionScope
+            // derive from TransactionException. Hence, TransactionException acts as a catch-all.
+            // When an exception related to Transactions is encountered, the mutation is deemed unsuccessful and
+            // a DataApiBuilderException is thrown
+            catch (TransactionException)
             {
-                DbResultSetRow? mutationResultRow =
-                    await PerformMutationOperation(
-                        entityName,
-                        mutationOperation,
-                        parameters,
-                        context);
-
-                if (mutationResultRow is not null && mutationResultRow.Columns.Count > 0
-                    && !context.Selection.Type.IsScalarType())
-                {
-                    // Because the GraphQL mutation result set columns were exposed (mapped) column names,
-                    // the column names must be converted to backing (source) column names so the
-                    // PrimaryKeyPredicates created in the SqlQueryStructure created by the query engine
-                    // represent database column names.
-                    result = await _queryEngine.ExecuteAsync(
-                                context,
-                                GetBackingColumnsFromCollection(entityName, mutationResultRow.Columns));
-                }
+                throw _dabExceptionWithTransactionErrorMessage;
             }
 
             if (result is null)
             {
-                throw new DataApiBuilderException(
-                    message: "Failed to resolve any query based on the current configuration.",
-                    statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                throw new DataApiBuilderException(message: "Failed to resolve any query based on the current configuration.",
+                                                  statusCode: HttpStatusCode.BadRequest,
+                                                  subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
             }
 
             return result;
@@ -192,12 +214,32 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 context.ResolvedParameters);
             string queryText = _queryBuilder.Build(executeQueryStructure);
 
-            JsonArray? resultArray =
-                await _queryExecutor.ExecuteQueryAsync(
-                    queryText,
-                    executeQueryStructure.Parameters,
-                    _queryExecutor.GetJsonArrayAsync,
-                    GetHttpContext());
+            JsonArray? resultArray = null;
+
+            try
+            {
+                // Creating an implicit transaction
+                using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType())
+                {
+                    resultArray =
+                        await _queryExecutor.ExecuteQueryAsync(
+                            queryText,
+                            executeQueryStructure.Parameters,
+                            _queryExecutor.GetJsonArrayAsync,
+                            GetHttpContext());
+
+                    transactionScope.Complete();
+                }
+            }
+
+            // All the exceptions that can be thrown by .Complete() and .Dispose() methods of transactionScope
+            // derive from TransactionException. Hence, TransactionException acts as a catch-all.
+            // When an exception related to Transactions is encountered, the mutation is deemed unsuccessful and
+            // a DataApiBuilderException is thrown
+            catch (TransactionException)
+            {
+                throw _dabExceptionWithTransactionErrorMessage;
+            }
 
             // A note on returning stored procedure results:
             // We can't infer what the stored procedure actually did beyond the HasRows and RecordsAffected attributes
@@ -272,10 +314,28 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             if (context.OperationType is EntityActionOperation.Delete)
             {
-                Dictionary<string, object>? resultProperties =
-                    await PerformDeleteOperation(
-                        context.EntityName,
-                        parameters);
+                Dictionary<string, object>? resultProperties = null;
+
+                try
+                {
+                    // Creating an implicit transaction
+                    using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType())
+                    {
+                        resultProperties = await PerformDeleteOperation(
+                                context.EntityName,
+                                parameters);
+                        transactionScope.Complete();
+                    }
+                }
+
+                // All the exceptions that can be thrown by .Complete() and .Dispose() methods of transactionScope
+                // derive from TransactionException. Hence, TransactionException acts as a catch-all.
+                // When an exception related to Transactions is encountered, the mutation is deemed unsuccessful and
+                // a DataApiBuilderException is thrown
+                catch (TransactionException)
+                {
+                    throw _dabExceptionWithTransactionErrorMessage;
+                }
 
                 // Records affected tells us that item was successfully deleted.
                 // No records affected happens for a DELETE request on nonexistent object
@@ -288,10 +348,28 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else if (context.OperationType is EntityActionOperation.Upsert || context.OperationType is EntityActionOperation.UpsertIncremental)
             {
-                DbResultSet? upsertOperationResult =
-                    await PerformUpsertOperation(
-                        parameters,
-                        context);
+                DbResultSet? upsertOperationResult = null;
+
+                try
+                {
+                    // Creating an implicit transaction
+                    using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType())
+                    {
+                        upsertOperationResult = await PerformUpsertOperation(
+                                                            parameters,
+                                                            context);
+                        transactionScope.Complete();
+                    }
+                }
+
+                // All the exceptions that can be thrown by .Complete() and .Dispose() methods of transactionScope
+                // derive from TransactionException. Hence, TransactionException acts as a catch-all.
+                // When an exception related to Transactions is encountered, the mutation is deemed unsuccessful and
+                // a DataApiBuilderException is thrown
+                catch (TransactionException)
+                {
+                    throw _dabExceptionWithTransactionErrorMessage;
+                }
 
                 DbResultSetRow? dbResultSetRow = upsertOperationResult is not null ?
                     (upsertOperationResult.Rows.FirstOrDefault() ?? new()) : null;
@@ -324,11 +402,30 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
             else
             {
-                DbResultSetRow? mutationResultRow =
-                    await PerformMutationOperation(
-                        context.EntityName,
-                        context.OperationType,
-                        parameters);
+                DbResultSetRow? mutationResultRow = null;
+
+                try
+                {
+                    // Creating an implicit transaction
+                    using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType())
+                    {
+                        mutationResultRow =
+                                await PerformMutationOperation(
+                                    context.EntityName,
+                                    context.OperationType,
+                                    parameters);
+                        transactionScope.Complete();
+                    }
+                }
+
+                // All the exceptions that can be thrown by .Complete() and .Dispose() methods of transactionScope
+                // derive from TransactionException. Hence, TransactionException acts as a catch-all.
+                // When an exception related to Transactions is encountered, the mutation is deemed unsuccessful and
+                // a DataApiBuilderException is thrown
+                catch (TransactionException)
+                {
+                    throw _dabExceptionWithTransactionErrorMessage;
+                }
 
                 if (context.OperationType is EntityActionOperation.Insert)
                 {
@@ -825,6 +922,36 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private HttpContext GetHttpContext()
         {
             return _httpContextAccessor.HttpContext!;
+        }
+
+        /// <summary>
+        /// For MySql database type, the isolation level is set at Repeatable Read as it is the default isolation level. Likeweise, for MsSql and PostgreSql
+        /// database types, the isolation level is set at Read Committed as it is the default.
+        /// </summary>
+        /// <returns>TransactionScope object with the appropriate isolation level based on the database type</returns>
+        private TransactionScope ConstructTransactionScopeBasedOnDbType()
+        {
+            return _sqlMetadataProvider.GetDatabaseType() is DatabaseType.mysql ? ConstructTransactionScopeWithSpecifiedIsolationLevel(isolationLevel: System.Transactions.IsolationLevel.RepeatableRead)
+                                                                                : ConstructTransactionScopeWithSpecifiedIsolationLevel(isolationLevel: System.Transactions.IsolationLevel.ReadCommitted);
+        }
+
+        /// <summary>
+        /// Helper method to construct a TransactionScope object with the specified isolation level and
+        /// with the TransactionScopeAsyncFlowOption option enabled.
+        /// </summary>
+        /// <param name="isolationLevel">Transaction isolation level</param>
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/framework/data/transactions/implementing-an-implicit-transaction-using-transaction-scope"/>
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeoption?view=net-6.0#fields" />
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeasyncflowoption?view=net-6.0#fields" />
+        /// <returns>TransactionScope object set at the specified isolation level</returns>
+        private static TransactionScope ConstructTransactionScopeWithSpecifiedIsolationLevel(System.Transactions.IsolationLevel isolationLevel)
+        {
+            return new(TransactionScopeOption.Required,
+                        new TransactionOptions
+                        {
+                            IsolationLevel = isolationLevel
+                        },
+                        TransactionScopeAsyncFlowOption.Enabled);
         }
     }
 }

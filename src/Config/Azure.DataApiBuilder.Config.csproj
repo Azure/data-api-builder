@@ -6,8 +6,6 @@
     <Nullable>enable</Nullable>
     <OutputPath>$(BaseOutputPath)\engine</OutputPath>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
-    <IncludeSymbols>true</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TF_BUILD)' == 'true'">

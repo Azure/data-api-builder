@@ -925,13 +925,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
-        /// For MySql database type, the isolation level is set at Repeatable Read as it is the default isolation level. Likeweise, for MsSql and PostgreSql
+        /// For MySql database type, the isolation level is set at Repeatable Read as it is the default isolation level. Likewise, for MsSql and PostgreSql
         /// database types, the isolation level is set at Read Committed as it is the default.
         /// </summary>
         /// <returns>TransactionScope object with the appropriate isolation level based on the database type</returns>
         private TransactionScope ConstructTransactionScopeBasedOnDbType()
         {
-            return _sqlMetadataProvider.GetDatabaseType() is DatabaseType.mysql ? ConstructTransactionScopeWithSpecifiedIsolationLevel(isolationLevel: System.Transactions.IsolationLevel.RepeatableRead)
+            return _sqlMetadataProvider.GetDatabaseType() is DatabaseType.MySQL ? ConstructTransactionScopeWithSpecifiedIsolationLevel(isolationLevel: System.Transactions.IsolationLevel.RepeatableRead)
                                                                                 : ConstructTransactionScopeWithSpecifiedIsolationLevel(isolationLevel: System.Transactions.IsolationLevel.ReadCommitted);
         }
 

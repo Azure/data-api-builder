@@ -19,9 +19,11 @@ namespace Azure.DataApiBuilder.Service.Tests
             Environment.SetEnvironmentVariable(RuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, database);
         }
 
-        public static void UnsetDatabaseEnvironment()
+        public static void UnsetAllDABEnvironmentVariables()
         {
             Environment.SetEnvironmentVariable(RuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, null);
+            Environment.SetEnvironmentVariable(RuntimeConfigLoader.ASP_NET_CORE_ENVIRONMENT_VAR_NAME, null);
+            Environment.SetEnvironmentVariable(RuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING, null);
         }
 
         /// <summary>

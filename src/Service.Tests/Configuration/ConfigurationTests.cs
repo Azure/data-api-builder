@@ -41,7 +41,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
     [TestClass]
     public class ConfigurationTests
     {
-        private const string ASP_NET_CORE_ENVIRONMENT_VAR_NAME = "ASPNETCORE_ENVIRONMENT";
         private const string COSMOS_ENVIRONMENT = TestCategory.COSMOSDBNOSQL;
         private const string MSSQL_ENVIRONMENT = TestCategory.MSSQL;
         private const string MYSQL_ENVIRONMENT = TestCategory.MYSQL;
@@ -73,22 +72,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     }
                 ";
 
-        public TestContext TestContext { get; set; }
-
-        [TestInitialize]
-        public void Setup()
-        {
-            TestContext.Properties.Add(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, Environment.GetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME));
-            TestContext.Properties.Add(RUNTIME_ENVIRONMENT_VAR_NAME, Environment.GetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME));
-        }
-
         [TestCleanup]
         public void CleanupAfterEachTest()
         {
-            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, (string)TestContext.Properties[ASP_NET_CORE_ENVIRONMENT_VAR_NAME]);
-            Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, (string)TestContext.Properties[RUNTIME_ENVIRONMENT_VAR_NAME]);
-            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, "");
-            Environment.SetEnvironmentVariable(RuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING, null);
+            TestHelper.UnsetAllDABEnvironmentVariables();
         }
 
         /// <summary>
@@ -640,7 +627,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     configValidatorLogger.Object);
 
             configValidator.ValidateConfig();
-            TestHelper.UnsetDatabaseEnvironment();
+            TestHelper.UnsetAllDABEnvironmentVariables();
         }
 
         /// <summary>
@@ -768,7 +755,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             string actualBody = await response.Content.ReadAsStringAsync();
             Assert.IsTrue(actualBody.Contains(expectedContent));
 
-            TestHelper.UnsetDatabaseEnvironment();
+            TestHelper.UnsetAllDABEnvironmentVariables();
         }
 
         /// <summary>

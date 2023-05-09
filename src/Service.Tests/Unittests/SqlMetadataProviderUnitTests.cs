@@ -156,7 +156,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
             }
 
-            TestHelper.UnsetDatabaseEnvironment();
+            TestHelper.UnsetAllDABEnvironmentVariables();
         }
 
         /// <summary>
@@ -178,7 +178,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual("get_books", entity.Source.Object);
             Assert.AreEqual(EntityType.StoredProcedure, entity.Source.Type);
 
-            TestHelper.UnsetDatabaseEnvironment();
+            TestHelper.UnsetAllDABEnvironmentVariables();
         }
 
         [DataTestMethod, TestCategory(TestCategory.MSSQL)]

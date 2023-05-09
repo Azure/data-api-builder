@@ -29,7 +29,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [TestCleanup]
         public void TestCleanup()
         {
-            TestHelper.UnsetDatabaseEnvironment();
+            TestHelper.UnsetAllDABEnvironmentVariables();
         }
 
         /// <summary>

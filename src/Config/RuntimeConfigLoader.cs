@@ -24,6 +24,7 @@ public class RuntimeConfigLoader
     public const string ENVIRONMENT_PREFIX = "DAB_";
     public const string RUNTIME_ENVIRONMENT_VAR_NAME = $"{ENVIRONMENT_PREFIX}ENVIRONMENT";
     public const string RUNTIME_ENV_CONNECTION_STRING = $"{ENVIRONMENT_PREFIX}CONNSTRING";
+    public const string ASP_NET_CORE_ENVIRONMENT_VAR_NAME = "ASPNETCORE_ENVIRONMENT";
 
     public static bool CheckPrecedenceForConfigInEngine = true;
 

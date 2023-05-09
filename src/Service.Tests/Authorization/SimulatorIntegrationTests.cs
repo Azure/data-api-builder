@@ -42,6 +42,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             _client = _server.CreateClient();
         }
 
+        [TestCleanup]
+        public void CleanupAfterEachTest()
+        {
+            TestHelper.UnsetAllDABEnvironmentVariables();
+        }
+
         /// <summary>
         /// Tests REST and GraphQL requests against the engine when configured
         /// with the authentication simulator.

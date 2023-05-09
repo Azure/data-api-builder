@@ -254,8 +254,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // For each attempt logger is invoked twice. The query executes successfully in in 1st retry .i.e. 2nd attempt of execution.
             // An additional information log is added when the query executes successfully in a retry attempt.
             Assert.AreEqual(2 * 2 + 1, queryExecutorLogger.Invocations.Count);
+        }
 
-            TestHelper.UnsetDatabaseEnvironment();
+        [TestCleanup]
+        public void CleanupAfterEachTest()
+        {
+            TestHelper.UnsetAllDABEnvironmentVariables();
         }
     }
 }

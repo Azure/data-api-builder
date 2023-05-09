@@ -537,5 +537,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 clientRoleHeader: clientRoleHeader
             );
         }
+
+        [TestCleanup]
+        public void CleanupAfterEachTest()
+        {
+            TestHelper.UnsetAllDABEnvironmentVariables();
+        }
     }
 }

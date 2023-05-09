@@ -1,4 +1,4 @@
-﻿{
+{
   "Schema": null,
   "DataSource": {
     "DatabaseType": "CosmosDB_NoSQL",

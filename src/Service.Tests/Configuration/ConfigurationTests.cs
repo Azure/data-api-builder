@@ -567,12 +567,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         /// <summary>
         /// Helper method to validate the deserialization of the "entities" section of the config file
-        /// This is used in unit tests that validate the deserialiation of the config files
+        /// This is used in unit tests that validate the deserialization of the config files
         /// </summary>
         /// <param name="runtimeConfig"></param>
         private static void ConfigFileDeserializationValidationHelper(string jsonString)
         {
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(jsonString, out RuntimeConfig runtimeConfig), "Deserialization of the config file failed.");
+            RuntimeConfig configWithoutConnectionString = runtimeConfig with { DataSource = runtimeConfig.DataSource with { ConnectionString = "" } };
             Snapshot.Match(runtimeConfig);
         }
 

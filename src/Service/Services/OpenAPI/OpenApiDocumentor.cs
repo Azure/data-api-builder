@@ -38,6 +38,7 @@ namespace Azure.DataApiBuilder.Service.Services.OpenAPI
         private const string PUT_DESCRIPTION = "Replace or create entity.";
         private const string PATCH_DESCRIPTION = "Update or create entity.";
         private const string DELETE_DESCRIPTION = "Delete entity.";
+        private const string SP_EXECUTE_DESCRIPTION = "Executes a stored procedure.";
         private const string RESPONSE_VALUE_PROPERTY = "value";
         private const string RESPONSE_ARRAY_PROPERTY = "array";
 
@@ -164,8 +165,17 @@ namespace Azure.DataApiBuilder.Service.Services.OpenAPI
         {
             OpenApiPaths pathsCollection = new();
 
-            foreach (string entityName in _metadataProvider.EntityToDatabaseObject.Keys.ToList())
+            foreach (KeyValuePair<string, DatabaseObject> entityDbMetadataMap in _metadataProvider.EntityToDatabaseObject)
             {
+                // Entities which disable their REST endpoint must not be included in
+                // the OpenAPI description document.
+                string entityName = entityDbMetadataMap.Key;
+                string entityRestPath = GetEntityRestPath(entityName);
+                string entityBasePathComponent = $"/{entityRestPath}";
+
+                DatabaseObject dbObject = entityDbMetadataMap.Value;
+                SourceDefinition sourceDefinition = _metadataProvider.GetSourceDefinition(entityName);
+
                 // Entities which disable their REST endpoint must not be included in
                 // the OpenAPI description document.
                 if (_runtimeConfig.Entities.TryGetValue(entityName, out Entity? entity) && entity is not null)
@@ -179,152 +189,308 @@ namespace Azure.DataApiBuilder.Service.Services.OpenAPI
                     }
                 }
 
-                // Routes excluding primary key
-                Tuple<string, OpenApiPathItem> path = BuildPath(entityName, includePrimaryKeyPathComponent: false);
-                pathsCollection.Add(path.Item1, path.Item2);
+                // Explicitly exclude setting the tag's Description property since the Name property is self-explanatory.
+                OpenApiTag openApiTag = new()
+                {
+                    Name = entityRestPath
+                };
 
-                // Routes including primary key
-                Tuple<string, OpenApiPathItem> pathGetAllPost = BuildPath(entityName, includePrimaryKeyPathComponent: true);
-                pathsCollection.TryAdd(pathGetAllPost.Item1, pathGetAllPost.Item2);
+                // The OpenApiTag will categorize all paths created using the entity's name or overridden REST path value.
+                // The tag categorization will instruct OpenAPI document visualization tooling to display all generated paths together.
+                List<OpenApiTag> tags = new()
+                {
+                    openApiTag
+                };
+
+                Dictionary<OperationType, bool> configuredRestOperations = GetConfiguredRestOperations(entityName, dbObject);
+
+                if (dbObject.SourceType is SourceType.StoredProcedure)
+                {
+                    Dictionary<OperationType, OpenApiOperation> operations = CreateStoredProcedureOperations(
+                        entityName: entityName,
+                        sourceDefinition: sourceDefinition,
+                        configuredRestOperations: configuredRestOperations,
+                        tags: tags);
+
+                    OpenApiPathItem openApiPathItem = new()
+                    {
+                        Operations = operations
+                    };
+
+                    pathsCollection.TryAdd(entityBasePathComponent, openApiPathItem);
+                }
+                else
+                {
+                    // Create operations for SourceType.Table and SourceType.View
+                    // Operations including primary key
+                    Dictionary<OperationType, OpenApiOperation> pkOperations = CreateOperations(
+                        entityName: entityName,
+                        sourceDefinition: sourceDefinition,
+                        includePrimaryKeyPathComponent: true,
+                        tags: tags);
+
+                    Tuple<string, List<OpenApiParameter>> pkComponents = CreatePrimaryKeyPathComponentAndParameters(entityName);
+                    string pkPathComponents = pkComponents.Item1;
+                    string fullPathComponent = entityBasePathComponent + pkPathComponents;
+
+                    OpenApiPathItem openApiPkPathItem = new()
+                    {
+                        Operations = pkOperations,
+                        Parameters = pkComponents.Item2
+                    };
+
+                    pathsCollection.TryAdd(fullPathComponent, openApiPkPathItem);
+
+                    // Operations excluding primary key
+                    Dictionary<OperationType, OpenApiOperation> operations = CreateOperations(
+                        entityName: entityName,
+                        sourceDefinition: sourceDefinition,
+                        includePrimaryKeyPathComponent: false,
+                        tags: tags);
+
+                    OpenApiPathItem openApiPathItem = new()
+                    {
+                        Operations = operations
+                    };
+
+                    pathsCollection.TryAdd(entityBasePathComponent, openApiPathItem);
+                }
             }
 
             return pathsCollection;
         }
 
         /// <summary>
-        /// Includes Path with Operations(+responses) and Parameters
-        /// Parameters are the placeholders for pk values in curly braces { } in the URL route
-        /// localhost:5000/api/Entity/pk1/{pk1}/pk2/{pk2}
-        /// more generically:
-        /// /entityName OR /RestPathName followed by (/pk/{pkValue}) * Number of primary keys.
+        /// Creates OpenApiOperation definitions for entities with SourceType.Table/View
         /// </summary>
-        /// <returns>Tuple of the path value: e.g. "/Entity/pk1/{pk1}"
-        /// and path metadata.</returns>
-        private Tuple<string, OpenApiPathItem> BuildPath(string entityName, bool includePrimaryKeyPathComponent)
+        /// <param name="entityName">Name of the entity</param>
+        /// <param name="sourceDefinition">Database object information</param>
+        /// <param name="includePrimaryKeyPathComponent">Whether to create operations which will be mapped to
+        /// a path containing primary key parameters.
+        /// TRUE: GET (one), PUT, PATCH, DELETE
+        /// FALSE: GET (Many), POST</param>
+        /// <param name="tags">Tags denoting how the operations should be categorized.
+        /// Typically one tag value, the entity's REST path.</param>
+        /// <returns>Collection of operation types and associated definitions.</returns>
+        private Dictionary<OperationType, OpenApiOperation> CreateOperations(
+            string entityName,
+            SourceDefinition sourceDefinition,
+            bool includePrimaryKeyPathComponent,
+            List<OpenApiTag> tags)
         {
-            SourceDefinition sourceDefinition = _metadataProvider.GetSourceDefinition(entityName);
-
-            string entityRestPath = GetEntityRestPath(entityName);
-            string entityBasePathComponent = $"/{entityRestPath}";
-
-            // Explicitly exclude setting the tag's Description property since the Name property is self-explanatory.
-            OpenApiTag openApiTag = new()
-            {
-                Name = entityRestPath
-            };
-
-            // The OpenApiTag will categorize all paths created using the entity's name or overridden REST path value.
-            // The tag categorization will instruct OpenAPI document visualization tooling to display all generated paths together.
-            List<OpenApiTag> tags = new()
-            {
-                openApiTag
-            };
+            Dictionary<OperationType, OpenApiOperation> openApiPathItemOperations = new();
 
             if (includePrimaryKeyPathComponent)
             {
-                Tuple<string, List<OpenApiParameter>> pkComponents = CreatePrimaryKeyPathComponentAndParameters(entityName);
-                string pkPathComponents = pkComponents.Item1;
-                string fullPathComponent = entityBasePathComponent + pkPathComponents;
-
-                /// The OpenApiResponses dictionary key represents the integer value of the HttpStatusCode,
-                /// which is returned when using Enum.ToString("D").
-                /// The "D" format specified "displays the enumeration entry as an integer value in the shortest representation possible."
-                OpenApiOperation getOperation = new()
-                {
-                    Description = GETONE_DESCRIPTION,
-                    Tags = tags,
-                    Responses = new(_defaultOpenApiResponses),
-                };
+                // The OpenApiResponses dictionary key represents the integer value of the HttpStatusCode,
+                // which is returned when using Enum.ToString("D").
+                // The "D" format specified "displays the enumeration entry as an integer value in the shortest representation possible."
+                OpenApiOperation getOperation = CreateBaseOperation(description: GETONE_DESCRIPTION, tags: tags);
                 getOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
+                openApiPathItemOperations.Add(OperationType.Get, getOperation);
 
                 // PUT and PATCH requests have the same criteria for decided whether a request body is required.
                 bool requestBodyRequired = IsRequestBodyRequired(sourceDefinition, considerPrimaryKeys: false);
 
                 // PUT requests must include the primary key(s) in the URI path and exclude from the request body,
                 // independent of whether the PK(s) are autogenerated.
-                OpenApiOperation putOperation = new()
-                {
-                    Description = PUT_DESCRIPTION,
-                    Tags = tags,
-                    Responses = new(_defaultOpenApiResponses),
-                    RequestBody = CreateOpenApiRequestBodyPayload($"{entityName}_NoPK", requestBodyRequired)
-                };
+                OpenApiOperation putOperation = CreateBaseOperation(description: PUT_DESCRIPTION, tags: tags);
+                putOperation.RequestBody = CreateOpenApiRequestBodyPayload($"{entityName}_NoPK", requestBodyRequired);
                 putOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
                 putOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
+                openApiPathItemOperations.Add(OperationType.Put, putOperation);
 
                 // PATCH requests must include the primary key(s) in the URI path and exclude from the request body,
                 // independent of whether the PK(s) are autogenerated.
-                OpenApiOperation patchOperation = new()
-                {
-                    Description = PATCH_DESCRIPTION,
-                    Tags = tags,
-                    Responses = new(_defaultOpenApiResponses),
-                    RequestBody = CreateOpenApiRequestBodyPayload($"{entityName}_NoPK", requestBodyRequired)
-                };
+                OpenApiOperation patchOperation = CreateBaseOperation(description: PATCH_DESCRIPTION, tags: tags);
+                patchOperation.RequestBody = CreateOpenApiRequestBodyPayload($"{entityName}_NoPK", requestBodyRequired);
                 patchOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
                 patchOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
+                openApiPathItemOperations.Add(OperationType.Patch, patchOperation);
 
-                OpenApiOperation deleteOperation = new()
-                {
-                    Description = DELETE_DESCRIPTION,
-                    Tags = tags,
-                    Responses = new(_defaultOpenApiResponses)
-                };
+                OpenApiOperation deleteOperation = CreateBaseOperation(description: DELETE_DESCRIPTION, tags: tags);
                 deleteOperation.Responses.Add(HttpStatusCode.NoContent.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.NoContent)));
+                openApiPathItemOperations.Add(OperationType.Delete, deleteOperation);
 
-                OpenApiPathItem openApiPathItem = new()
-                {
-                    Operations = new Dictionary<OperationType, OpenApiOperation>()
-                    {
-                        // Creation GET (by ID), PUT, PATCH, DELETE operations
-                        [OperationType.Get] = getOperation,
-                        [OperationType.Put] = putOperation,
-                        [OperationType.Patch] = patchOperation,
-                        [OperationType.Delete] = deleteOperation
-                    },
-                    Parameters = pkComponents.Item2
-                };
-
-                return new(fullPathComponent, openApiPathItem);
+                return openApiPathItemOperations;
             }
             else
             {
                 // Primary key(s) are not included in the URI paths of the GET (all) and POST operations.
-                OpenApiOperation getAllOperation = new()
-                {
-                    Description = GETALL_DESCRIPTION,
-                    Tags = tags,
-                    Responses = new(_defaultOpenApiResponses),
-                };
+                OpenApiOperation getAllOperation = CreateBaseOperation(description: GETALL_DESCRIPTION, tags: tags);
                 getAllOperation.Responses.Add(
                     HttpStatusCode.OK.ToString("D"),
                     CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName, includeNextLink: true));
+                openApiPathItemOperations.Add(OperationType.Get, getAllOperation);
 
                 // - POST requests must include primary key(s) in request body when PK(s) are not autogenerated.
-                string postBodySchemaReferenceId = DoesSourceContainsAutogeneratedPrimaryKey(sourceDefinition) ? $"{entityName}_NoPK" : $"{entityName}";
+                string postBodySchemaReferenceId = DoesSourceContainAutogeneratedPrimaryKey(sourceDefinition) ? $"{entityName}_NoAutoPK" : $"{entityName}";
 
-                OpenApiOperation postOperation = new()
-                {
-                    Description = POST_DESCRIPTION,
-                    Tags = tags,
-                    Responses = new(_defaultOpenApiResponses),
-                    RequestBody = CreateOpenApiRequestBodyPayload(postBodySchemaReferenceId, IsRequestBodyRequired(sourceDefinition, considerPrimaryKeys: true))
-                };
+                OpenApiOperation postOperation = CreateBaseOperation(description: POST_DESCRIPTION, tags: tags);
+                postOperation.RequestBody = CreateOpenApiRequestBodyPayload(postBodySchemaReferenceId, IsRequestBodyRequired(sourceDefinition, considerPrimaryKeys: true));
                 postOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
                 postOperation.Responses.Add(HttpStatusCode.Conflict.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Conflict)));
+                openApiPathItemOperations.Add(OperationType.Post, postOperation);
 
-                OpenApiPathItem openApiPathItem = new()
-                {
-                    Operations = new Dictionary<OperationType, OpenApiOperation>()
-                    {
-                        // Creation GET (all) and POST operations
-                        [OperationType.Get] = getAllOperation,
-                        [OperationType.Post] = postOperation
-                    }
-                };
-
-                return new(entityBasePathComponent, openApiPathItem);
+                return openApiPathItemOperations;
             }
+        }
+
+        /// <summary>
+        /// Creates OpenApiOperation definitions for entities with SourceType.StoredProcedure
+        /// </summary>
+        /// <param name="entityName">Entity name.</param>
+        /// <param name="sourceDefinition">Database object information.</param>
+        /// <param name="configuredRestOperations">Collection of which operations should be created for the stored procedure. </param>
+        /// <param name="tags">Tags denoting how the operations should be categorized.
+        /// Typically one tag value, the entity's REST path.</param>
+        /// <returns>Collection of operation types and associated definitions.</returns>
+        private Dictionary<OperationType, OpenApiOperation> CreateStoredProcedureOperations(
+            string entityName,
+            SourceDefinition sourceDefinition,
+            Dictionary<OperationType, bool> configuredRestOperations,
+            List<OpenApiTag> tags)
+        {
+            Dictionary<OperationType, OpenApiOperation> openApiPathItemOperations = new();
+
+            if (configuredRestOperations[OperationType.Get])
+            {
+                OpenApiOperation getOperation = CreateBaseOperation(description: SP_EXECUTE_DESCRIPTION, tags: tags);
+                getOperation.Responses.Add(
+                    HttpStatusCode.OK.ToString("D"),
+                    CreateOpenApiResponse(
+                        description: nameof(HttpStatusCode.OK),
+                        responseObjectSchemaName: entityName,
+                        includeNextLink: false));
+                openApiPathItemOperations.Add(OperationType.Get, getOperation);
+            }
+
+            if (configuredRestOperations[OperationType.Post])
+            {
+                // POST requests for stored procedure entities must include primary key(s) in request body.
+                OpenApiOperation postOperation = CreateBaseOperation(description: SP_EXECUTE_DESCRIPTION, tags: tags);
+                postOperation.RequestBody = CreateOpenApiRequestBodyPayload($"{entityName}", IsRequestBodyRequired(sourceDefinition, considerPrimaryKeys: true));
+                postOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
+                postOperation.Responses.Add(HttpStatusCode.Conflict.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Conflict)));
+                openApiPathItemOperations.Add(OperationType.Post, postOperation);
+            }
+
+            // PUT and PATCH requests have the same criteria for decided whether a request body is required.
+            bool requestBodyRequired = IsRequestBodyRequired(sourceDefinition, considerPrimaryKeys: false);
+
+            if (configuredRestOperations[OperationType.Put])
+            {
+                // PUT requests for stored procedure entities must include primary key(s) in request body.
+                OpenApiOperation putOperation = CreateBaseOperation(description: SP_EXECUTE_DESCRIPTION, tags: tags);
+                putOperation.RequestBody = CreateOpenApiRequestBodyPayload($"{entityName}", requestBodyRequired);
+                putOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
+                putOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
+                openApiPathItemOperations.Add(OperationType.Put, putOperation);
+            }
+
+            if (configuredRestOperations[OperationType.Patch])
+            {
+                // PATCH requests for stored procedure entities must include primary key(s) in request body
+                OpenApiOperation patchOperation = CreateBaseOperation(description: SP_EXECUTE_DESCRIPTION, tags: tags);
+                patchOperation.RequestBody = CreateOpenApiRequestBodyPayload($"{entityName}", requestBodyRequired);
+                patchOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
+                patchOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
+                openApiPathItemOperations.Add(OperationType.Patch, patchOperation);
+            }
+
+            if (configuredRestOperations[OperationType.Delete])
+            {
+                OpenApiOperation deleteOperation = CreateBaseOperation(description: SP_EXECUTE_DESCRIPTION, tags: tags);
+                deleteOperation.Responses.Add(HttpStatusCode.NoContent.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.NoContent)));
+                openApiPathItemOperations.Add(OperationType.Delete, deleteOperation);
+            }
+
+            return openApiPathItemOperations;
+        }
+
+        /// <summary>
+        /// Creates an OpenApiOperation object pre-populated with common properties used
+        /// across all operation types (GET (one/all), POST, PUT, PATCH, DELETE)
+        /// </summary>
+        /// <param name="description">Description of the operation.</param>
+        /// <param name="tags">Tags defining how to categorize the operation in the OpenAPI document.</param>
+        /// <returns>OpenApiOperation</returns>
+        private OpenApiOperation CreateBaseOperation(string description, List<OpenApiTag> tags)
+        {
+            OpenApiOperation operation = new()
+            {
+                Description = description,
+                Tags = tags,
+                Responses = new(_defaultOpenApiResponses)
+            };
+
+            return operation;
+        }
+
+        /// <summary>
+        /// Returns collection of OpenAPI OperationTypes and associated flag indicating whether they are enabled
+        /// for the engine's REST endpoint.
+        /// Acts as a helper for stored procedures where the runtime config can denote any combination of REST verbs
+        /// to enable.
+        /// </summary>
+        /// <param name="entityName">Name of the entity.</param>
+        /// <param name="dbObject">Database object metadata, indicating entity SourceType</param>
+        /// <returns>Collection of OpenAPI OperationTypes and whether they should be created.</returns>
+        private Dictionary<OperationType, bool> GetConfiguredRestOperations(string entityName, DatabaseObject dbObject)
+        {
+            Dictionary<OperationType, bool> configuredOperations = new()
+            {
+                [OperationType.Get] = false,
+                [OperationType.Post] = false,
+                [OperationType.Put] = false,
+                [OperationType.Patch] = false,
+                [OperationType.Delete] = false
+            };
+
+            if (dbObject.SourceType == SourceType.StoredProcedure)
+            {
+                Entity entityTest = _runtimeConfig.Entities[entityName];
+                List<RestMethod>? spRestMethods = entityTest.GetRestMethodsConfiguredForStoredProcedure()?.ToList();
+
+                if (spRestMethods is null)
+                {
+                    return configuredOperations;
+                }
+
+                foreach (RestMethod restMethod in spRestMethods)
+                {
+                    switch (restMethod)
+                    {
+                        case RestMethod.Get:
+                            configuredOperations[OperationType.Get] = true;
+                            break;
+                        case RestMethod.Post:
+                            configuredOperations[OperationType.Post] = true;
+                            break;
+                        case RestMethod.Put:
+                            configuredOperations[OperationType.Put] = true;
+                            break;
+                        case RestMethod.Patch:
+                            configuredOperations[OperationType.Patch] = true;
+                            break;
+                        case RestMethod.Delete:
+                            configuredOperations[OperationType.Delete] = true;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+            else
+            {
+                configuredOperations[OperationType.Get] = true;
+                configuredOperations[OperationType.Post] = true;
+                configuredOperations[OperationType.Put] = true;
+                configuredOperations[OperationType.Patch] = true;
+                configuredOperations[OperationType.Delete] = true;
+            }
+
+            return configuredOperations;
         }
 
         /// <summary>
@@ -419,7 +585,7 @@ namespace Azure.DataApiBuilder.Service.Services.OpenAPI
         /// </summary>
         /// <param name="sourceDefinition">Database object metadata.</param>
         /// <returns>True, when the primary key is autogenerated. Otherwise, false.</returns>
-        private static bool DoesSourceContainsAutogeneratedPrimaryKey(SourceDefinition sourceDefinition)
+        private static bool DoesSourceContainAutogeneratedPrimaryKey(SourceDefinition sourceDefinition)
         {
             bool sourceObjectHasAutogeneratedPK = false;
             // Create primary key path component.
@@ -598,7 +764,8 @@ namespace Azure.DataApiBuilder.Service.Services.OpenAPI
         /// Builds the schema objects for all entities present in the runtime configuration.
         /// Two schemas per entity are created:
         /// 1) {EntityName}      -> Primary keys present in schema, used for request bodies (excluding GET) and all response bodies.
-        /// 2) {EntityName}_NoPK -> No primary keys present in schema, used for POST requests where PK is autogenerated and GET (all).
+        /// 2) {EntityName}_NoAutoPK -> No auto-generated primary keys present in schema, used for POST requests where PK is not autogenerated and GET (all).
+        /// 3) {EntityName}_NoPK -> No primary keys present in schema, used for POST requests where PK is autogenerated and GET (all).
         /// Schema objects can be referenced elsewhere in the OpenAPI document with the intent to reduce document verbosity.
         /// </summary>
         /// <returns>Collection of schemas for entities defined in the runtime configuration.</returns>
@@ -626,31 +793,48 @@ namespace Azure.DataApiBuilder.Service.Services.OpenAPI
 
                 SourceDefinition sourceDefinition = _metadataProvider.GetSourceDefinition(entityName);
                 HashSet<string> exposedColumnNames = GetExposedColumnNames(entityName, sourceDefinition.Columns.Keys.ToList());
+                HashSet<string> autoGeneratedPKColumnNames = new();
 
-                // Create component for FULL entity with PK.
+                // Create component schema for FULL entity with all primary key columns (included auto-generated)
+                // which will typically represent the response body of a request or a stored procedure's request body.
                 schemas.Add(entityName, CreateComponentSchema(entityName, fields: exposedColumnNames));
 
-                // Create component for entity with no PK used for PUT and PATCH operations because
-                // they require all primary key references to be in the URI path, not the request body.
-                // A POST request may
-                foreach (string primaryKeyColumn in sourceDefinition.PrimaryKey)
+                if (dbObject.SourceType is not SourceType.StoredProcedure)
                 {
-                    // Non-Autogenerated primary key(s) should appear in the request body.
-                    if (!sourceDefinition.Columns[primaryKeyColumn].IsAutoGenerated)
+                    // Create an entity's request body component schema excluding autogenerated primary keys.
+                    // A POST request requires any non-autogenerated primary key references to be in the request body.
+                    foreach (string primaryKeyColumn in sourceDefinition.PrimaryKey)
                     {
-                        continue;
+                        // Non-Autogenerated primary key(s) should appear in the request body.
+                        if (!sourceDefinition.Columns[primaryKeyColumn].IsAutoGenerated)
+                        {
+                            autoGeneratedPKColumnNames.Add(primaryKeyColumn);
+                            continue;
+                        }
+
+                        if (_metadataProvider.TryGetExposedColumnName(entityName, backingFieldName: primaryKeyColumn, out string? exposedColumnName)
+                            && exposedColumnName is not null)
+                        {
+                            exposedColumnNames.Remove(exposedColumnName);
+                        }
                     }
 
-                    if (_metadataProvider.TryGetExposedColumnName(entityName, backingFieldName: primaryKeyColumn, out string? exposedColumnName)
-                        && exposedColumnName is not null)
-                    {
-                        exposedColumnNames.Remove(exposedColumnName);
-                    }
-                }
+                    schemas.Add($"{entityName}_NoAutoPK", CreateComponentSchema(entityName, fields: exposedColumnNames));
 
-                // Create component for TABLE (view?) NOT STOREDPROC entity with no PK.
-                if (dbObject.SourceType is not SourceType.StoredProcedure or SourceType.View)
-                {
+                    // Create an entity's request body component schema excluding all primary keys
+                    // by removing the tracked autogenerated primary key column names and removing them from
+                    // the exposedColumnNames collection.
+                    // The schema component without primary keys is used for PUT and PATCH operation request bodies because
+                    // those operations require all primary key references to be in the URI path, not the request body.
+                    foreach (string primaryKeyColumn in autoGeneratedPKColumnNames)
+                    {
+                        if (_metadataProvider.TryGetExposedColumnName(entityName, backingFieldName: primaryKeyColumn, out string? exposedColumnName)
+                            && exposedColumnName is not null)
+                        {
+                            exposedColumnNames.Remove(exposedColumnName);
+                        }
+                    }
+
                     schemas.Add($"{entityName}_NoPK", CreateComponentSchema(entityName, fields: exposedColumnNames));
                 }
             }

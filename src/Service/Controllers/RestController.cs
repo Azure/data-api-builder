@@ -46,11 +46,6 @@ namespace Azure.DataApiBuilder.Service.Controllers
         /// </summary>
         public const string REDIRECTED_ROUTE = "favicon.ico";
 
-        /// <summary>
-        /// OpenAPI route value 
-        /// </summary>
-        public const string OPENAPI_ROUTE = "openapi";
-
         private readonly ILogger<RestController> _logger;
 
         /// <summary>

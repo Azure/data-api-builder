@@ -1431,6 +1431,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// </summary>
         /// <param name="customRestPath">The custom REST route</param>
         /// <param name="hostModeType">The mode in which the service is executing.</param>
+        /// <param name="expectsError">Whether to expect an error.</param>
         /// <param name="expectedStatusCode">Expected Status Code.</param>
         /// <param name="expectedOpenApiTargetContent">Snippet of expected HTML to be emitted from successful page load.
         /// This should note the openapi route that Swagger will use to retrieve the OpenAPI document.</param>
@@ -1483,7 +1484,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 HttpResponseMessage response = await client.SendAsync(initialRequest);
                 if (expectsError)
                 {
-                    // Swagger endpoint internally configured to reroute from /swagger to /swagger/index.html
+                    // Redirect(HTTP 301) and follow up request to the returned path
+                    // do not occur in a failure scenario. Only HTTP 400 (Bad Request)
+                    // is expected.
                     Assert.AreEqual(expectedStatusCode, response.StatusCode);
                 }
                 else

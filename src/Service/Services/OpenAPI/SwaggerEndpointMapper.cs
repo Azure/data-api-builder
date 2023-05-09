@@ -3,9 +3,6 @@
 
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Service.Configurations;
 using Swashbuckle.AspNetCore.SwaggerUI;
 
 namespace Azure.DataApiBuilder.Service.Services.OpenAPI
@@ -17,15 +14,21 @@ namespace Azure.DataApiBuilder.Service.Services.OpenAPI
     /// </summary>
     public class SwaggerEndpointMapper : IEnumerable<UrlDescriptor>
     {
-        private readonly RuntimeConfigProvider _runtimeConfigurationProvider;
+        private readonly RestService? _restService;
 
         // Default configured REST endpoint path used when
         // not defined or customized in runtime configuration.
         private const string DEFAULT_REST_PATH = "/api";
 
-        public SwaggerEndpointMapper(RuntimeConfigProvider runtimeConfigurationProvider)
+        /// <summary>
+        /// Constructor to setup required services
+        /// </summary>
+        /// <param name="restService">RestService contains helpers and references to runtime
+        /// configuration which return the configured REST path. Will be null during late
+        /// bound config, so returns default REST path for SwaggerUI.</param>
+        public SwaggerEndpointMapper(RestService? restService)
         {
-            _runtimeConfigurationProvider = runtimeConfigurationProvider;
+            _restService = restService;
         }
 
         /// <summary>
@@ -38,7 +41,7 @@ namespace Azure.DataApiBuilder.Service.Services.OpenAPI
         /// <returns>Returns a new instance of IEnumerator that iterates over the URIs in the collection.</returns>
         public IEnumerator<UrlDescriptor> GetEnumerator()
         {
-            if (!TryGetRestRouteFromConfig(out string? configuredRestRoute))
+            if (_restService is null || !_restService.TryGetRestRouteFromConfig(out string? configuredRestRoute))
             {
                 configuredRestRoute = DEFAULT_REST_PATH;
             }
@@ -52,24 +55,5 @@ namespace Azure.DataApiBuilder.Service.Services.OpenAPI
         /// </summary>
         /// <returns>Returns a new instance of IEnumerator that iterates over the URIs in the collection.</returns>
         IEnumerator IEnumerable.GetEnumerator() => this.GetEnumerator();
-
-        /// <summary>
-        /// When configuration exists and the REST endpoint is enabled,
-        /// return the configured REST endpoint path. 
-        /// </summary>
-        /// <param name="configuredRestRoute">The configured REST route path</param>
-        /// <returns>True when configuredRestRoute is defined, otherwise false.</returns>
-        private bool TryGetRestRouteFromConfig([NotNullWhen(true)] out string? configuredRestRoute)
-        {
-            if (_runtimeConfigurationProvider.TryGetRuntimeConfiguration(out RuntimeConfig? config) &&
-                config.RestGlobalSettings.Enabled)
-            {
-                configuredRestRoute = config.RestGlobalSettings.Path;
-                return true;
-            }
-
-            configuredRestRoute = null;
-            return false;
-        }
     }
 }

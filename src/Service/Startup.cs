@@ -364,11 +364,12 @@ namespace Azure.DataApiBuilder.Service
 
             // SwaggerUI visualization of the OpenAPI description document is only available
             // in developer mode in alignment with the restriction placed on ChilliCream's BananaCakePop IDE.
+            // Consequently, SwaggerUI is not presented in a StaticWebApps (late-bound config) environment.
             if (runtimeConfigProvider.IsDeveloperMode() || env.IsDevelopment())
             {
                 app.UseSwaggerUI(c =>
                 {
-                    c.ConfigObject.Urls = new SwaggerEndpointMapper(runtimeConfigProvider);
+                    c.ConfigObject.Urls = new SwaggerEndpointMapper(app.ApplicationServices.GetService<RestService>());
                 });
             }
 

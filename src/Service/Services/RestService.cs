@@ -348,21 +348,30 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Returns {entity}/{pkName}/{pkValue} from {pathBase}/{entity}/{pkName}/{pkValue}
+        /// Input route: {pathBase}/{entity}/{pkName}/{pkValue}
         /// Validates that the {pathBase} value matches the configured REST path.
+        /// Returns {entity}/{pkName}/{pkValue} after stripping {pathBase}
+        /// and the proceding slash /.
         /// </summary>
-        /// <param name="route"></param>
-        /// <returns>Path proceeding the base without a forward slash.</returns>
-        /// <exception cref="DataApiBuilderException">Raised when the routes base
-        /// does not match the configured REST path.</exception>
+        /// <param name="route">{pathBase}/{entity}/{pkName}/{pkValue} with no starting '/'.</param>
+        /// <returns>Route without pathBase and without a forward slash.</returns>
+        /// <exception cref="DataApiBuilderException">Raised when the routes path base
+        /// does not match the configured REST path or the global REST endpoint is disabled.</exception>
         public string GetRouteAfterPathBase(string route)
         {
-            // configuredRestPathBase will ignore the leading '/' in the runtime configuration REST path.
-            // so we trim here to allow for restPath
-            // that start with '/'.
+            if (!TryGetRestRouteFromConfig(out string? configuredRestPathBase))
+            {
+                throw new DataApiBuilderException(
+                    message: $"The global REST endpoint is disabled.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.GlobalRestEndpointDisabled);
+            }
+
+            // Strip the leading '/' from the REST path provided in the runtime configuration
+            // because the input argument 'route' has no starting '/'.
             // The RuntimeConfigProvider enforces the expectation that the configured REST path starts with a
             // forward slash '/'.
-            string configuredRestPathBase = _runtimeConfigProvider.RestPath.Substring(1);
+            configuredRestPathBase = configuredRestPathBase.Substring(1);
             if (!route.StartsWith(configuredRestPathBase))
             {
                 throw new DataApiBuilderException(
@@ -371,11 +380,28 @@ namespace Azure.DataApiBuilder.Service.Services
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
 
-            // entity's path comes after the restPath, so get substring starting from
-            // the end of restPath. If restPath is not empty we trim the '/' following the path.
-            // e.g. Drops /{pathBase}/ from /{pathBase}/{entityName}/{pkName}/{pkValue}
+            // Drop {pathBase}/ from {pathBase}/{entityName}/{pkName}/{pkValue}
             // resulting in: {entityName}/{pkName}/{pkValue}
             return route.Substring(configuredRestPathBase.Length).TrimStart('/');
+        }
+
+        /// <summary>
+        /// When configuration exists and the REST endpoint is enabled,
+        /// return the configured REST endpoint path. 
+        /// </summary>
+        /// <param name="configuredRestRoute">The configured REST route path</param>
+        /// <returns>True when configuredRestRoute is defined, otherwise false.</returns>
+        public bool TryGetRestRouteFromConfig([NotNullWhen(true)] out string? configuredRestRoute)
+        {
+            if (_runtimeConfigProvider.TryGetRuntimeConfiguration(out RuntimeConfig? config) &&
+                config.RestGlobalSettings.Enabled)
+            {
+                configuredRestRoute = config.RestGlobalSettings.Path;
+                return true;
+            }
+
+            configuredRestRoute = null;
+            return false;
         }
 
         /// <summary>

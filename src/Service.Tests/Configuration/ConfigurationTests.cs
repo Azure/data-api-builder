@@ -573,8 +573,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         private static void ConfigFileDeserializationValidationHelper(string jsonString)
         {
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(jsonString, out RuntimeConfig runtimeConfig), "Deserialization of the config file failed.");
-            RuntimeConfig configWithoutConnectionString = runtimeConfig with { DataSource = runtimeConfig.DataSource with { ConnectionString = "" } };
-            Snapshot.Match(runtimeConfig);
+            runtimeConfig.MatchSnapshot();
         }
 
         /// <summary>

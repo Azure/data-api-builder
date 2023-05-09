@@ -42,6 +42,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             {
                 BYTE_TYPE => false,
                 DATETIME_NONUTC_TYPE => false,
+                TIMESPAN_TYPE => false,
                 _ => true
             };
         }

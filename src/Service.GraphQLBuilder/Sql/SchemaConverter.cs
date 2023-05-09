@@ -263,7 +263,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 decimal value => new ObjectValueNode(new ObjectFieldNode(DECIMAL_TYPE, new FloatValueNode(value))),
                 DateTimeOffset value => new ObjectValueNode(new ObjectFieldNode(DATETIME_TYPE, new DateTimeType().ParseValue(value))),
                 DateTime value => new ObjectValueNode(new ObjectFieldNode(DATETIME_TYPE, new DateTimeType().ParseResult(value))),
-                TimeSpan value => new ObjectValueNode(new ObjectFieldNode(TIMESPAN_TYPE, new TimeSpanType().ParseValue(value))),
+                TimeSpan value => new ObjectValueNode(new ObjectFieldNode(TIMESPAN_TYPE, new TimeSpanType().ParseResult(value))),
                 byte[] value => new ObjectValueNode(new ObjectFieldNode(BYTEARRAY_TYPE, new ByteArrayType().ParseValue(value))),
                 _ => throw new DataApiBuilderException(
                     message: $"The type {metadataValue.GetType()} is not supported as a GraphQL default value",

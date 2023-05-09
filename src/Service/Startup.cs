@@ -369,7 +369,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 app.UseSwaggerUI(c =>
                 {
-                    c.ConfigObject.Urls = new SwaggerEndpointMapper(app.ApplicationServices.GetService<RestService>());
+                    c.ConfigObject.Urls = new SwaggerEndpointMapper(app.ApplicationServices.GetService<RuntimeConfigProvider?>());
                 });
             }
 

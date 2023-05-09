@@ -3,6 +3,8 @@
 
 using System.Collections;
 using System.Collections.Generic;
+using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Configurations;
 using Swashbuckle.AspNetCore.SwaggerUI;
 
 namespace Azure.DataApiBuilder.Service.Services.OpenAPI
@@ -14,21 +16,16 @@ namespace Azure.DataApiBuilder.Service.Services.OpenAPI
     /// </summary>
     public class SwaggerEndpointMapper : IEnumerable<UrlDescriptor>
     {
-        private readonly RestService? _restService;
-
-        // Default configured REST endpoint path used when
-        // not defined or customized in runtime configuration.
-        private const string DEFAULT_REST_PATH = "/api";
+        private readonly RuntimeConfigProvider? _runtimeConfigProvider;
 
         /// <summary>
         /// Constructor to setup required services
         /// </summary>
-        /// <param name="restService">RestService contains helpers and references to runtime
-        /// configuration which return the configured REST path. Will be null during late
-        /// bound config, so returns default REST path for SwaggerUI.</param>
-        public SwaggerEndpointMapper(RestService? restService)
+        /// <param name="runtimeConfigProvider">RuntimeConfigProvider contains the reference to the
+        /// configured REST path. Will be empty during late bound config, so returns default REST path for SwaggerUI.</param>
+        public SwaggerEndpointMapper(RuntimeConfigProvider? runtimeConfigProvider)
         {
-            _restService = restService;
+            _runtimeConfigProvider = runtimeConfigProvider;
         }
 
         /// <summary>
@@ -41,12 +38,8 @@ namespace Azure.DataApiBuilder.Service.Services.OpenAPI
         /// <returns>Returns a new instance of IEnumerator that iterates over the URIs in the collection.</returns>
         public IEnumerator<UrlDescriptor> GetEnumerator()
         {
-            if (_restService is null || !_restService.TryGetRestRouteFromConfig(out string? configuredRestRoute))
-            {
-                configuredRestRoute = DEFAULT_REST_PATH;
-            }
-
-            yield return new UrlDescriptor { Name = "DataApibuilder-OpenAPI-PREVIEW", Url = $"{configuredRestRoute}/{OpenApiDocumentor.OPENAPI_ROUTE}" };
+            string configuredRestPath = _runtimeConfigProvider?.RestPath ?? GlobalSettings.REST_DEFAULT_PATH;
+            yield return new UrlDescriptor { Name = "DataApibuilder-OpenAPI-PREVIEW", Url = $"{configuredRestPath}/{OpenApiDocumentor.OPENAPI_ROUTE}" };
         }
 
         /// <summary>

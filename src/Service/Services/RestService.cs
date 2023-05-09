@@ -359,13 +359,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// does not match the configured REST path or the global REST endpoint is disabled.</exception>
         public string GetRouteAfterPathBase(string route)
         {
-            if (!TryGetRestRouteFromConfig(out string? configuredRestPathBase))
-            {
-                throw new DataApiBuilderException(
-                    message: $"The global REST endpoint is disabled.",
-                    statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.GlobalRestEndpointDisabled);
-            }
+            string configuredRestPathBase = _runtimeConfigProvider.RestPath;
 
             // Strip the leading '/' from the REST path provided in the runtime configuration
             // because the input argument 'route' has no starting '/'.

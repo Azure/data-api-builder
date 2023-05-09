@@ -149,7 +149,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             return _cosmosDb.GraphQLSchema;
         }
 
-        private void ParseSchemaGraphQLFieldsForGraphQLType()
+        public DocumentNode ParseSchemaGraphQLDocument()
         {
             string graphqlSchema = GraphQLSchema();
 
@@ -161,7 +161,12 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
                     subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
             }
 
-            DocumentNode root = Utf8GraphQLParser.Parse(graphqlSchema);
+            return Utf8GraphQLParser.Parse(graphqlSchema);
+        }
+
+        private void ParseSchemaGraphQLFieldsForGraphQLType()
+        {
+            DocumentNode root = ParseSchemaGraphQLDocument();
 
             IEnumerable<ObjectTypeDefinitionNode> objectNodes = root.Definitions.Where(d => d is ObjectTypeDefinitionNode).Cast<ObjectTypeDefinitionNode>();
             foreach (ObjectTypeDefinitionNode node in objectNodes)

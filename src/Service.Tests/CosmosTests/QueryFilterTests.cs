@@ -724,7 +724,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         }
 
         /// <summary>
-        /// Tests that the nested field level query filter passes authorization when nested filter fields are unauthorized
+        /// Tests that the nested field level query filter passes authorization when nested filter fields are authorized
         /// because the field 'id' on object type 'earth' is an included field of the read operation 
         /// permissions defined for the anonymous role.
         /// </summary>

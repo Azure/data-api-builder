@@ -80,14 +80,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             return response.Resource;
         }
 
-        /// <summary>
-        /// Authorization check on mutation fields provided in a GraphQL Mutation request.
-        /// </summary>
-        /// <param name="context"></param>
-        /// <param name="parameters"></param>
-        /// <param name="entityName"></param>
-        /// <param name="mutationOperation"></param>
-        /// <exception cref="DataApiBuilderException"></exception>
+        /// <inheritdoc/>
         public void AuthorizeMutationFields(
             IMiddlewareContext context,
             IDictionary<string, object?> parameters,

@@ -185,7 +185,7 @@ namespace Azure.DataApiBuilder.Service.Models
                             // This path will only be exercised for CosmosDb_NoSql
                             queryStructure.DatabaseObject.Name = sourceName + "." + backingColumnName;
                             queryStructure.SourceAlias = sourceName + "." + backingColumnName;
-                            string? nestedFieldType = _metadataProvider.GetSchemaGraphQLFieldTypeByFieldName(queryStructure.EntityName, name);
+                            string? nestedFieldType = _metadataProvider.GetSchemaGraphQLFieldTypeByEntityFieldName(queryStructure.EntityName, name);
 
                             if (nestedFieldType is null)
                             {

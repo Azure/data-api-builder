@@ -196,12 +196,25 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             return new List<string>();
         }
 
-        public string? GetSchemaGraphQLFieldTypeByFieldName(string graphQLType, string fieldName)
+        /// <summary>
+        /// Give an entity name and its field name, 
+        /// this method is to first look up the GraphQL field type using the entity name,
+        /// then find the field type with graphQL type and its field name.
+        /// </summary>
+        /// <param name="graphQLType">GraphQL type</param>
+        /// <param name="fieldName">GraphQL field name</param>
+        /// <returns></returns>
+        public string? GetSchemaGraphQLFieldTypeByEntityFieldName(string entityName, string fieldName)
         {
             List<FieldDefinitionNode>? fields;
-            if (_graphQLTypeToFieldsMap.TryGetValue(graphQLType, out fields))
+
+            // Check if entity name is using alias name, if so, fetch graph type name with the entity alias name
+            foreach (string graphQLType in _graphQLSingularTypeToEntityNameMap.Keys)
             {
-                return fields is null ? null : fields.Where(x => x.Name.Value == fieldName).FirstOrDefault()?.Type.ToString();
+                if (_graphQLSingularTypeToEntityNameMap[graphQLType] == entityName && _graphQLTypeToFieldsMap.TryGetValue(graphQLType, out fields))
+                {
+                    return fields is null ? null : fields.Where(x => x.Name.Value == fieldName).FirstOrDefault()?.Type.ToString();
+                }
             }
 
             return null;

@@ -65,7 +65,7 @@ type Moon @model(name:""Moon"") @authorize(policy: ""Crater"") {
 type Earth @model(name:""Earth"") {
     id : ID,
     name : String,
-    type: String @authorize(policy: ""authenticated"")
+    type: String @authorize(roles: [""authenticated""])
 }";
 
         private static string[] _planets = { "Earth", "Mars", "Jupiter", "Tatooine", "Endor", "Dagobah", "Hoth", "Bespin", "Spec%ial" };

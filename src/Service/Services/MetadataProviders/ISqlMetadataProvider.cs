@@ -46,7 +46,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <summary>
         /// Obtains the underlying GraphQL object type for an entity field.
         /// </summary>
-        string? GetSchemaGraphQLFieldTypeByFieldName(string graphQLType, string fieldName);
+        string? GetSchemaGraphQLFieldTypeByEntityFieldName(string entityName, string fieldName);
 
         /// <summary>
         /// Obtains the underlying SourceDefinition for the given entity name.

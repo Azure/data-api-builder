@@ -793,7 +793,7 @@ namespace Azure.DataApiBuilder.Service.Services
             => throw new NotImplementedException();
 
         /// <inheritdoc />
-        public string? GetSchemaGraphQLFieldTypeByEntityFieldName(string graphQLType, string fieldName)
+        public string? GetSchemaGraphQLFieldTypeFromFieldName(string graphQLType, string fieldName)
             => throw new NotImplementedException();
 
         /// <summary>

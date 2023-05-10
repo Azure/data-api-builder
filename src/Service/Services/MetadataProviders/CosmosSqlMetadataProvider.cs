@@ -27,7 +27,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         private Dictionary<string, string> _graphQLSingularTypeToEntityNameMap = new();
         private Dictionary<string, List<FieldDefinitionNode>> _graphQLTypeToFieldsMap = new();
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
-        public DocumentNode root;
+        public DocumentNode GraphQLSchemaRoot;
 
         /// <inheritdoc />
         public Dictionary<string, string> GraphQLStoredProcedureExposedNameToEntityNameMap { get; set; } = new();
@@ -59,7 +59,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             _cosmosDb = cosmosDb;
             ParseSchemaGraphQLDocument();
 
-            if (root is null)
+            if (GraphQLSchemaRoot is null)
             {
                 throw new DataApiBuilderException(
                     message: "Invalid GraphQL schema was provided for CosmosDB. Please define a valid GraphQL object model in the schema file.",
@@ -172,12 +172,12 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
                     subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
             }
 
-            root = Utf8GraphQLParser.Parse(graphqlSchema);
+            GraphQLSchemaRoot = Utf8GraphQLParser.Parse(graphqlSchema);
         }
 
         private void ParseSchemaGraphQLFieldsForGraphQLType()
         {
-            IEnumerable<ObjectTypeDefinitionNode> objectNodes = root.Definitions.Where(d => d is ObjectTypeDefinitionNode).Cast<ObjectTypeDefinitionNode>();
+            IEnumerable<ObjectTypeDefinitionNode> objectNodes = GraphQLSchemaRoot.Definitions.Where(d => d is ObjectTypeDefinitionNode).Cast<ObjectTypeDefinitionNode>();
             foreach (ObjectTypeDefinitionNode node in objectNodes)
             {
                 string typeName = node.Name.Value;
@@ -192,7 +192,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         public List<string> GetSchemaGraphQLFieldNamesForEntityName(string entityName)
         {
             List<FieldDefinitionNode>? fields;
-            // Check if entity name is using alias name, if so, fetch graph type name with the alias name
+            // Check if entity name has a GraphQL object type name alias. If so, fetch GraphQL object type fields with the alias name
             foreach (string typeName in _graphQLSingularTypeToEntityNameMap.Keys)
             {
                 if (_graphQLSingularTypeToEntityNameMap[typeName] == entityName && _graphQLTypeToFieldsMap.TryGetValue(typeName, out fields))
@@ -208,12 +208,12 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         /// <summary>
         /// Give an entity name and its field name, 
         /// this method is to first look up the GraphQL field type using the entity name,
-        /// then find the field type with graphQL type and its field name.
+        /// then find the field type with the entity name and its field name.
         /// </summary>
-        /// <param name="graphQLType">GraphQL type</param>
+        /// <param name="entityName">entity name</param>
         /// <param name="fieldName">GraphQL field name</param>
         /// <returns></returns>
-        public string? GetSchemaGraphQLFieldTypeByEntityFieldName(string entityName, string fieldName)
+        public string? GetSchemaGraphQLFieldTypeFromFieldName(string entityName, string fieldName)
         {
             List<FieldDefinitionNode>? fields;
 

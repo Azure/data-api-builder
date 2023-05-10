@@ -128,6 +128,26 @@
         }
       }
     },
+    "TagAlias": {
+      "source": "graphqldb.tag",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        }
+      ],
+      "graphql": {
+        "type": {
+          "singular": "Tag",
+          "plural": "Tags"
+        }
+      }
+    },
     "Moon": {
       "source": "graphqldb.moon",
       "permissions": [

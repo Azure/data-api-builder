@@ -5,6 +5,7 @@ update Planet --config "dab-config.CosmosDb_NoSql.json" --permissions "authentic
 add Character --config "dab-config.CosmosDb_NoSql.json" --source "graphqldb.character" --permissions "anonymous:create,read,update,delete" --graphql "Character:Characters"
 add StarAlias --config "dab-config.CosmosDb_NoSql.json" --source "graphqldb.star" --permissions "anonymous:create,read,update,delete" --graphql "Star:Stars"
 update StarAlias --config "dab-config.CosmosDb_NoSql.json" --source "graphqldb.star" --permissions "authenticated:create,read,update,delete"
+add TagAlias --config "dab-config.CosmosDb_NoSql.json" --source "graphqldb.tag" --permissions "anonymous:create,read,update,delete" --graphql "Tag:Tags"
 add Moon --config "dab-config.CosmosDb_NoSql.json" --source "graphqldb.moon" --permissions "anonymous:create,read,update,delete" --graphql true
 update Moon --config "dab-config.CosmosDb_NoSql.json" --source "graphqldb.moon" --permissions "authenticated:create,read,update,delete"
 add Earth --config "dab-config.CosmosDb_NoSql.json" --source "graphqldb.earth" --permissions "anonymous:delete" --graphql "Earth:Earths"

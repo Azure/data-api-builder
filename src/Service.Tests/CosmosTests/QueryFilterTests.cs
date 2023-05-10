@@ -35,6 +35,8 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             _idList = CreateItems(DATABASE_NAME, _containerName, 10);
             OverrideEntityContainer("Planet", _containerName);
             OverrideEntityContainer("Earth", _containerName);
+            OverrideEntityContainer("StarAlias", _containerName);
+            OverrideEntityContainer("TagAlias", _containerName);
         }
 
         /// <summary>
@@ -645,6 +647,28 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
             string dbQuery = "SELECT top 1 c.id, c.name, c.character FROM c where c.character.star.name = \"Endor_star\"";
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
+        }
+
+        /// <summary>
+        /// Test filters when entity name is using alias
+        /// </summary>
+        [TestMethod]
+        public async Task TestFilterWithEntityNameAlias()
+        {
+            string gqlQuery = @"{
+                stars(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {tag : {name : {eq : ""test name""}}})
+                { 
+                    items {
+                        tag {
+                            id
+                            name
+                        }
+                    }
+                 }
+            }";
+
+            string dbQuery = "SELECT top 1 c.tag FROM c where c.tag.name = \"test name\"";
+            await ExecuteAndValidateResult("stars", gqlQuery, dbQuery);
         }
 
         #region Field Level Auth

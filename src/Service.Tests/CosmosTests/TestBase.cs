@@ -53,8 +53,14 @@ type Planet @model(name:""Planet"") {
 
 type Star @model(name:""StarAlias"") {
     id : ID,
-    name : String
+    name : String,
+    tag: Tag
 }
+
+type Tag @model(name:""TagAlias"") {
+    id : ID,
+    name : String
+} 
 
 type Moon @model(name:""Moon"") @authorize(policy: ""Crater"") {
     id : ID,

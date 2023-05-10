@@ -212,7 +212,7 @@ namespace Azure.DataApiBuilder.Service.Services
         private (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) GenerateCosmosGraphQLObjects()
         {
             Dictionary<string, InputObjectTypeDefinitionNode> inputObjects = new();
-            DocumentNode root = ((CosmosSqlMetadataProvider)_sqlMetadataProvider).ParseSchemaGraphQLDocument();
+            DocumentNode root = ((CosmosSqlMetadataProvider)_sqlMetadataProvider).root;
 
             IEnumerable<ObjectTypeDefinitionNode> objectNodes = root.Definitions.Where(d => d is ObjectTypeDefinitionNode).Cast<ObjectTypeDefinitionNode>();
             foreach (ObjectTypeDefinitionNode node in objectNodes)

@@ -27,6 +27,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         private Dictionary<string, string> _graphQLSingularTypeToEntityNameMap = new();
         private Dictionary<string, List<FieldDefinitionNode>> _graphQLTypeToFieldsMap = new();
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
+        public DocumentNode root;
 
         /// <inheritdoc />
         public Dictionary<string, string> GraphQLStoredProcedureExposedNameToEntityNameMap { get; set; } = new();
@@ -56,6 +57,16 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             }
 
             _cosmosDb = cosmosDb;
+            ParseSchemaGraphQLDocument();
+
+            if (root is null)
+            {
+                throw new DataApiBuilderException(
+                    message: "Invalid GraphQL schema was provided for CosmosDB. Please define a valid GraphQL object model in the schema file.",
+                    statusCode: System.Net.HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+            }
+
             ParseSchemaGraphQLFieldsForGraphQLType();
         }
 
@@ -149,7 +160,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             return _cosmosDb.GraphQLSchema;
         }
 
-        public DocumentNode ParseSchemaGraphQLDocument()
+        public void ParseSchemaGraphQLDocument()
         {
             string graphqlSchema = GraphQLSchema();
 
@@ -161,13 +172,11 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
                     subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
             }
 
-            return Utf8GraphQLParser.Parse(graphqlSchema);
+            root = Utf8GraphQLParser.Parse(graphqlSchema);
         }
 
         private void ParseSchemaGraphQLFieldsForGraphQLType()
         {
-            DocumentNode root = ParseSchemaGraphQLDocument();
-
             IEnumerable<ObjectTypeDefinitionNode> objectNodes = root.Definitions.Where(d => d is ObjectTypeDefinitionNode).Cast<ObjectTypeDefinitionNode>();
             foreach (ObjectTypeDefinitionNode node in objectNodes)
             {

@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
@@ -41,18 +40,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
 
             try
             {
-                // TODO: Once the configuration merging logic is implemented, merge the 2
-                // configuration files instead of only taking the connection string from
-                // the configuration overrides.
-                RuntimeConfig? configurationOverrides = JsonSerializer.Deserialize<RuntimeConfig>(configuration.ConfigurationOverrides);
-                if (configurationOverrides == null)
-                {
-                    _logger.LogError($"Failed to read ConfigurationOverrides.");
-                    return BadRequest();
-                }
-
                 string mergedConfiguration = MergeJsonProvider.Merge(configuration.Configuration, configuration.ConfigurationOverrides);
-
 
                 bool initResult = await _configurationProvider.Initialize(
                     mergedConfiguration,

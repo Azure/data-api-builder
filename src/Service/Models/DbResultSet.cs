@@ -13,8 +13,8 @@ namespace Azure.DataApiBuilder.Service.Models
         public DbResultSet(
             Dictionary<string, object> resultProperties)
         {
-            this.Rows = new();
-            this.ResultProperties = resultProperties;
+            Rows = new();
+            ResultProperties = resultProperties;
         }
 
         /// <summary>

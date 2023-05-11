@@ -91,6 +91,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "PatchOneUpdateWithDatabasePolicy",
+                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
+                $"WHERE [categoryid] = 100 AND [pieceid] = 99 AND [categoryName] = 'Historical' " +
+                $"AND [piecesAvailable]= 4 AND [piecesRequired] = 0 AND [pieceid] != 1 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PatchOneInsertWithDatabasePolicy",
+                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
+                $"WHERE [categoryid] = 0 AND [pieceid] = 7 AND [categoryName] = 'SciFi' " +
+                $"AND [piecesAvailable]= 4 AND [piecesRequired] = 0 AND ([pieceid] != 6 AND [piecesAvailable] > 0) " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
                 "PatchOne_Update_Default_Test",
                 $"SELECT [id], [book_id], [content] FROM { _tableWithCompositePrimaryKey } " +
                 $"WHERE id = 567 AND [book_id] = 1 AND [content] = 'That''s a great book' " +

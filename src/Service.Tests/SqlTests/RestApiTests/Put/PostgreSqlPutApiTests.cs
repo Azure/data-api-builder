@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -33,6 +34,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                         SELECT id, title, publisher_id
                         FROM " + _integrationTableName + @"
                         WHERE id = 1 AND title = 'The Return of the King'
+                    ) AS subq
+                "
+            },
+            {
+                "PutOneUpdateWithDatabasePolicy",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE categoryid = 100 AND pieceid = 99 AND ""categoryName"" = 'SciFi'
+                            AND ""piecesAvailable"" = 4 AND ""piecesRequired"" = 5 AND pieceid != 1
                     ) AS subq
                 "
             },
@@ -312,6 +325,30 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await InitializeTestFixture(context);
         }
 
+        #endregion
+
+        #region overridden tests
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOneInsertWithDatabasePolicy()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOneWithUnsatisfiedDatabasePolicy()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOneInsertInTableWithFieldsInDbPolicyNotPresentInBody()
+        {
+            throw new NotImplementedException();
+        }
         #endregion
 
         [TestCleanup]

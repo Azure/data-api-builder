@@ -244,21 +244,31 @@ public class UtilsTests
     public void TestMergeConfig()
     {
         MockFileSystem fileSystem = new();
-        fileSystem.AddFile("dab-config.json", new MockFileData(BASE_CONFIG));
+        fileSystem.AddFile(RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(BASE_CONFIG));
         fileSystem.AddFile("dab-config.Test.json", new MockFileData(ENV_BASED_CONFIG));
 
         RuntimeConfigLoader loader = new(fileSystem);
+        bool old = RuntimeConfigLoader.CheckPrecedenceForConfigInEngine;
+        RuntimeConfigLoader.CheckPrecedenceForConfigInEngine = true;
 
         Environment.SetEnvironmentVariable(RuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, "Test");
-        if (TryMergeConfigsIfAvailable(fileSystem, loader, out string mergedConfig))
+
+        try
         {
-            Assert.AreEqual(mergedConfig, "dab-config.Test.merged.json");
-            Assert.IsTrue(fileSystem.File.Exists(mergedConfig));
-            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(MERGED_CONFIG), JObject.Parse(fileSystem.File.ReadAllText(mergedConfig))));
+            if (TryMergeConfigsIfAvailable(fileSystem, loader, out string mergedConfig))
+            {
+                Assert.AreEqual(mergedConfig, "dab-config.Test.merged.json");
+                Assert.IsTrue(fileSystem.File.Exists(mergedConfig));
+                Assert.IsTrue(JToken.DeepEquals(JObject.Parse(MERGED_CONFIG), JObject.Parse(fileSystem.File.ReadAllText(mergedConfig))));
+            }
+            else
+            {
+                Assert.Fail("Failed to merge config files.");
+            }
         }
-        else
+        finally
         {
-            Assert.Fail("Failed to merge config files.");
+            RuntimeConfigLoader.CheckPrecedenceForConfigInEngine = old;
         }
     }
 }

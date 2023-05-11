@@ -33,7 +33,6 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using MySqlConnector;
 using Npgsql;
-using Snapshooter.MSTest;
 using static Azure.DataApiBuilder.Config.RuntimeConfigLoader;
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration

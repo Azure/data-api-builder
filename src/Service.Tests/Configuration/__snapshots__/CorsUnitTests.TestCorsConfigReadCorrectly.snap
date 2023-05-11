@@ -5,7 +5,10 @@
   },
   "Authentication": {
     "Provider": "StaticWebApps",
-    "Jwt": null
+            "Jwt": {
+          "Audience": null,
+          "Issuer": null
+        }
   },
   "Mode": "Development"
 }

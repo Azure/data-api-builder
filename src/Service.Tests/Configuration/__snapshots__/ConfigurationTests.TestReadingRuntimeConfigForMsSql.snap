@@ -1,4 +1,4 @@
-﻿{
+{
   "Schema": null,
   "DataSource": {
     "DatabaseType": "MSSQL",
@@ -29,7 +29,10 @@
       },
       "Authentication": {
         "Provider": "StaticWebApps",
-        "Jwt": null
+        "Jwt": {
+          "Audience": null,
+          "Issuer": null
+        }
       },
       "Mode": "Development"
     }

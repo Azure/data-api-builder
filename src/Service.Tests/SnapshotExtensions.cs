@@ -52,7 +52,7 @@ internal static class SnapshotExtensions
 
         List<string> diff = new();
 
-        for(int i = 0; i < actualLines.Length; i++)
+        for (int i = 0; i < actualLines.Length; i++)
         {
             string line = "";
             if (i > expectedLines.Length - 1 || expectedLines[i] != actualLines[i])

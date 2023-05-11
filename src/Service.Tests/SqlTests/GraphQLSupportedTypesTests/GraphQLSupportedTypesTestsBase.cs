@@ -333,6 +333,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             {
                 CompareTimeSpanResults(actual.ToString(), expected);
             }
+            else
             {
                 SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
             }

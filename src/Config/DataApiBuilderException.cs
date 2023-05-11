@@ -16,6 +16,7 @@ namespace Azure.DataApiBuilder.Service.Exceptions
         public const string CONNECTION_STRING_ERROR_MESSAGE = "A valid Connection String should be provided.";
         public const string GRAPHQL_FILTER_ENTITY_AUTHZ_FAILURE = "Access forbidden to the target entity described in the filter.";
         public const string GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE = "Access forbidden to a field referenced in the filter.";
+        public const string GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE = "Unauthorized due to one or more fields in this mutation.";
 
         public enum SubStatusCodes
         {

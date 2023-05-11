@@ -137,7 +137,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             if (!isAuthorized)
             {
                 throw new DataApiBuilderException(
-                    message: "Unauthorized due to one or more fields in this mutation.",
+                    message: DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE,
                     statusCode: HttpStatusCode.Forbidden,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
                 );

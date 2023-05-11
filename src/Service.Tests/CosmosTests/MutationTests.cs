@@ -4,6 +4,7 @@
 using System;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
@@ -287,7 +288,7 @@ mutation {{
 
             // Validate the result contains the GraphQL authorization error code.
             string errorMessage = response.ToString();
-            Assert.IsTrue(errorMessage.Contains("Unauthorized due to one or more fields in this mutation."));
+            Assert.IsTrue(errorMessage.Contains(DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE));
         }
 
         /// <summary>
@@ -317,7 +318,7 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdateEarthInput!) {
 
             // Validate the result contains the GraphQL authorization error code.
             string errorMessage = response.ToString();
-            Assert.IsTrue(errorMessage.Contains("Unauthorized due to one or more fields in this mutation."));
+            Assert.IsTrue(errorMessage.Contains(DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE));
         }
 
         /// <summary>

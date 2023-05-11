@@ -653,7 +653,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// Test filters when entity names are using alias.
         /// This exercises the scenario when top level entity name is using an alias,
         /// as well as the nested level entity name is using an alias,
-        /// in both layers, the enity name to GraphQL type lookup is successfully performed.
+        /// in both layers, the entity name to GraphQL type lookup is successfully performed.
         /// </summary>
         [TestMethod]
         public async Task TestFilterWithEntityNameAlias()

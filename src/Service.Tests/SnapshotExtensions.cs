@@ -3,10 +3,10 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using Azure.DataApiBuilder.Config;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Snapshooter;
+using Snapshooter.Core;
 using Snapshooter.Core.Serialization;
 using Snapshooter.MSTest;
 
@@ -32,7 +32,9 @@ internal static class SnapshotExtensions
         {
             SnapshotFullName fullName = Snapshot.FullName();
 
-            string expected = File.ReadAllText(Path.Join(fullName.FolderPath, fullName.Filename));
+            SnapshotFileHandler fileHandler = new();
+
+            string expected = fileHandler.ReadSnapshot(fullName);
 
             SnapshotSerializer snapshotSerializer = new(new GlobalSnapshotSettingsResolver());
             string actual = snapshotSerializer.SerializeObject(config);
@@ -46,14 +48,14 @@ internal static class SnapshotExtensions
     private static string BasicDiffDisplay(string expected, string actual)
     {
         string[] expectedLines = expected.Split(Environment.NewLine);
-        string[] actualLines = actual.Split(Environment.NewLine);
+        string[] actualLines = actual.Split("\n");
 
         List<string> diff = new();
 
         for(int i = 0; i < actualLines.Length; i++)
         {
             string line = "";
-            if (expectedLines[i] != actualLines[i])
+            if (i > expectedLines.Length - 1 || expectedLines[i] != actualLines[i])
             {
                 line = "> ";
             }

@@ -172,7 +172,17 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
                     subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
             }
 
-            GraphQLSchemaRoot = Utf8GraphQLParser.Parse(graphqlSchema);
+            try
+            {
+                GraphQLSchemaRoot = Utf8GraphQLParser.Parse(graphqlSchema);
+            }
+            catch (Exception)
+            {
+                throw new DataApiBuilderException(
+                    message: "Invalid GraphQL schema was provided for CosmosDB. Please define a valid GraphQL object model in the schema file.",
+                    statusCode: System.Net.HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+            }
         }
 
         private void ParseSchemaGraphQLFieldsForGraphQLType()

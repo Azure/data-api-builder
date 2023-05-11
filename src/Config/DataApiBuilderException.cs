@@ -85,7 +85,19 @@ namespace Azure.DataApiBuilder.Service.Exceptions
             /// <summary>
             /// Error encountered while doing data type conversions.
             /// </summary>
-            ErrorProcessingData
+            ErrorProcessingData,
+            /// <summary>
+            /// Attempting to generate OpenAPI document when one already exists.
+            /// </summary>
+            OpenApiDocumentAlreadyExists,
+            /// <summary>
+            /// Attempt to create OpenAPI document failed.
+            /// </summary>
+            OpenApiDocumentCreationFailure,
+            /// <summary>
+            /// Global REST endpoint disabled in runtime configuration.
+            /// </summary>
+            GlobalRestEndpointDisabled
         }
 
         public HttpStatusCode StatusCode { get; }

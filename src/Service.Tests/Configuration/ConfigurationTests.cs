@@ -1572,14 +1572,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
             else if (configurationEndpoint == CONFIGURATION_ENDPOINT_V2)
             {
-                RuntimeConfig overrides = new(null, new DataSource(DatabaseType.mysql), null, null)
+                RuntimeConfig overrides = new(null, new DataSource(DatabaseType.mssql), null, null)
                 {
                     ConnectionString = connectionString
                 };
-                // TODO: Update this.
+
                 ConfigurationPostParametersV2 returnParams = new(
                     Configuration: serializedConfiguration,
-                    ConfigurationOverrides: JsonSerializer.Serialize(overrides),//null, // Does this work or do we need to pass the connection string through?
+                    ConfigurationOverrides: JsonSerializer.Serialize(overrides),
                     Schema: null,
                     AccessToken: null);
 

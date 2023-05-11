@@ -1,8 +1,7 @@
-{
-  "Schema": null,
+﻿{
+  "Schema": "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json",
   "DataSource": {
     "DatabaseType": "CosmosDB_NoSQL",
-    "ConnectionString": "AccountEndpoint=https://aapowell-project-hawaii-local.documents.azure.com:443/;AccountKey=DkwWkYI3Ss51yHLLkI5lfSZzFgNlYQYwfjfXStENQjZxaOOfMLFtts8qrNAvKx6G9CJVgtIehFF7aXKD1cKCiQ==;",
     "Options": {
       "database": {
         "ValueKind": "String"
@@ -50,8 +49,8 @@
         "Source": {
           "Object": "graphqldb.planet",
           "Type": "Table",
-          "Parameters": {},
-          "KeyFields": []
+          "Parameters": null,
+          "KeyFields": null
         },
         "GraphQL": {
           "Singular": "Planet",
@@ -60,15 +59,9 @@
           "Operation": null
         },
         "Rest": {
-          "Methods": [
-            "Get",
-            "Post",
-            "Put",
-            "Patch",
-            "Delete"
-          ],
+          "Methods": [],
           "Path": null,
-          "Enabled": true
+          "Enabled": false
         },
         "Permissions": [
           {
@@ -156,8 +149,8 @@
         "Source": {
           "Object": "graphqldb.character",
           "Type": "Table",
-          "Parameters": {},
-          "KeyFields": []
+          "Parameters": null,
+          "KeyFields": null
         },
         "GraphQL": {
           "Singular": "Character",
@@ -166,15 +159,9 @@
           "Operation": null
         },
         "Rest": {
-          "Methods": [
-            "Get",
-            "Post",
-            "Put",
-            "Patch",
-            "Delete"
-          ],
+          "Methods": [],
           "Path": null,
-          "Enabled": true
+          "Enabled": false
         },
         "Permissions": [
           {
@@ -225,8 +212,8 @@
         "Source": {
           "Object": "graphqldb.star",
           "Type": "Table",
-          "Parameters": {},
-          "KeyFields": []
+          "Parameters": null,
+          "KeyFields": null
         },
         "GraphQL": {
           "Singular": "Star",
@@ -235,15 +222,9 @@
           "Operation": null
         },
         "Rest": {
-          "Methods": [
-            "Get",
-            "Post",
-            "Put",
-            "Patch",
-            "Delete"
-          ],
+          "Methods": [],
           "Path": null,
-          "Enabled": true
+          "Enabled": false
         },
         "Permissions": [
           {
@@ -331,8 +312,8 @@
         "Source": {
           "Object": "graphqldb.moon",
           "Type": "Table",
-          "Parameters": {},
-          "KeyFields": []
+          "Parameters": null,
+          "KeyFields": null
         },
         "GraphQL": {
           "Singular": "Moon",
@@ -341,15 +322,9 @@
           "Operation": null
         },
         "Rest": {
-          "Methods": [
-            "Get",
-            "Post",
-            "Put",
-            "Patch",
-            "Delete"
-          ],
+          "Methods": [],
           "Path": null,
-          "Enabled": true
+          "Enabled": false
         },
         "Permissions": [
           {

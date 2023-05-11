@@ -329,7 +329,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             {
                 CompareDateTimeResults(actual.ToString(), expected);
             }
-            else
+            else if (type == TIMESPAN_TYPE)
+            {
+                CompareTimeSpanResults(actual.ToString(), expected);
+            }
             {
                 SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
             }
@@ -397,6 +400,30 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             else
             {
                 Assert.AreEqual(DateTimeOffset.Parse(expectedDateTime), DateTimeOffset.Parse(actualDateTime));
+            }
+        }
+
+        /// <summary>
+        /// Required due to different format between SQL time and HotChocolate TimeSpan time(ISO-8601) result.
+        /// </summary>
+        private static void CompareTimeSpanResults(string actual, string expected)
+        {
+            string fieldName = "timespan_types";
+
+            using JsonDocument actualJsonDoc = JsonDocument.Parse(actual);
+            using JsonDocument expectedJsonDoc = JsonDocument.Parse(expected);
+
+            string actualDateTime = actualJsonDoc.RootElement.GetProperty(fieldName).ToString();
+            string expectedDateTime = expectedJsonDoc.RootElement.GetProperty(fieldName).ToString();
+
+            // handles cases when one of the values is null
+            if (string.IsNullOrEmpty(actualDateTime) || string.IsNullOrEmpty(expectedDateTime))
+            {
+                Assert.AreEqual(expectedDateTime, actualDateTime);
+            }
+            else
+            {
+                Assert.AreEqual(TimeSpan.Parse(expectedDateTime), TimeSpan.Parse(actualDateTime));
             }
         }
 

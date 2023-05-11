@@ -79,6 +79,24 @@
     <ProjectReference Include="..\Service\Azure.DataApiBuilder.Service.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Configuration\__snapshots__\ConfigurationTests.TestReadingRuntimeConfigForCosmos.snap">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Configuration\__snapshots__\ConfigurationTests.TestReadingRuntimeConfigForMsSql.snap">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Configuration\__snapshots__\ConfigurationTests.TestReadingRuntimeConfigForMySql.snap">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Configuration\__snapshots__\ConfigurationTests.TestReadingRuntimeConfigForPostgreSql.snap">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Configuration\__snapshots__\CorsUnitTests.TestCorsConfigReadCorrectly.snap">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
   <ProjectExtensions><VisualStudio><UserProperties /></VisualStudio></ProjectExtensions>
 
 </Project>

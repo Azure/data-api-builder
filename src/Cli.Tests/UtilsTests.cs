@@ -255,16 +255,10 @@ public class UtilsTests
 
         try
         {
-            if (TryMergeConfigsIfAvailable(fileSystem, loader, out string mergedConfig))
-            {
-                Assert.AreEqual(mergedConfig, "dab-config.Test.merged.json");
-                Assert.IsTrue(fileSystem.File.Exists(mergedConfig));
-                Assert.IsTrue(JToken.DeepEquals(JObject.Parse(MERGED_CONFIG), JObject.Parse(fileSystem.File.ReadAllText(mergedConfig))));
-            }
-            else
-            {
-                Assert.Fail("Failed to merge config files.");
-            }
+            Assert.IsTrue(TryMergeConfigsIfAvailable(fileSystem, loader, out string mergedConfig), "Failed to merge config files");
+            Assert.AreEqual(mergedConfig, "dab-config.Test.merged.json");
+            Assert.IsTrue(fileSystem.File.Exists(mergedConfig));
+            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(MERGED_CONFIG), JObject.Parse(fileSystem.File.ReadAllText(mergedConfig))));
         }
         finally
         {

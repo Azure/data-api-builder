@@ -19,6 +19,7 @@ using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
 using Azure.DataApiBuilder.Service.Services.MetadataProviders;
+using Azure.DataApiBuilder.Service.Services.OpenAPI;
 using HotChocolate.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -249,6 +250,7 @@ namespace Azure.DataApiBuilder.Service
             });
             services.AddSingleton<IAuthorizationHandler, RestAuthorizationHandler>();
             services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
+            services.AddSingleton<IOpenApiDocumentor, OpenApiDocumentor>();
 
             AddGraphQL(services);
 
@@ -359,6 +361,18 @@ namespace Azure.DataApiBuilder.Service
             // https://andrewlock.net/understanding-pathbase-in-aspnetcore/#placing-usepathbase-in-the-correct-location
             app.UseCorrelationIdMiddleware();
             app.UsePathRewriteMiddleware();
+
+            // SwaggerUI visualization of the OpenAPI description document is only available
+            // in developer mode in alignment with the restriction placed on ChilliCream's BananaCakePop IDE.
+            // Consequently, SwaggerUI is not presented in a StaticWebApps (late-bound config) environment.
+            if (runtimeConfigProvider.IsDeveloperMode() || env.IsDevelopment())
+            {
+                app.UseSwaggerUI(c =>
+                {
+                    c.ConfigObject.Urls = new SwaggerEndpointMapper(app.ApplicationServices.GetService<RuntimeConfigProvider?>());
+                });
+            }
+
             app.UseRouting();
 
             // Adding CORS Middleware
@@ -620,6 +634,20 @@ namespace Azure.DataApiBuilder.Service
                 }
 
                 runtimeConfigValidator.ValidateStoredProceduresInConfig(runtimeConfig, sqlMetadataProvider!);
+
+                // Attempt to create OpenAPI document.
+                // Errors must not crash nor halt the intialization of the engine
+                // because OpenAPI document creation is not required for the engine to operate.
+                // Errors will be logged.
+                try
+                {
+                    IOpenApiDocumentor openApiDocumentor = app.ApplicationServices.GetRequiredService<IOpenApiDocumentor>();
+                    openApiDocumentor.CreateDocument();
+                }
+                catch (DataApiBuilderException dabException)
+                {
+                    _logger.LogError($"{dabException.Message}");
+                }
 
                 _logger.LogInformation($"Successfully completed runtime initialization.");
                 return true;

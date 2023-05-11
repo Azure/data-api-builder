@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Azure.DataApiBuilder.Config;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Snapshooter;
@@ -41,7 +42,7 @@ internal static class SnapshotExtensions
 
             string diff = BasicDiffDisplay(expected, actual);
 
-            throw new AssertFailedException($"Snapshot {fullName} did not match. Diff:{Environment.NewLine}{diff}", ex);
+            throw new AssertFailedException($"Snapshot {fullName} did not match. Diff:{Environment.NewLine}{diff}{Environment.NewLine}Expected:{Environment.NewLine}{expected}{Environment.NewLine}Actual:{Environment.NewLine}{actual}", ex);
         }
     }
 

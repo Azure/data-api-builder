@@ -307,23 +307,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual(HttpStatusCode.BadRequest, postResult.StatusCode);
         }
 
-        [TestMethod("Validates containing field permission in configuration returns a bad request."), TestCategory(TestCategory.COSMOSDBNOSQL)]
-        public async Task TestInvalidConfigurationWithFieldPermission()
-        {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
-            HttpClient httpClient = server.CreateClient();
-
-            ConfigurationPostParameters config = GetCosmosConfigurationParameters();
-            config = config with
-            {
-                Configuration = "{\"$schema\":\"dab.draft.schema.json\",\"data-source\":{\"database-type\":\"cosmosdb_nosql\",\"options\":{\"database\":\"graphqldb\",\"schema\":\"schema.gql\"}},\"entities\":{\"Planet\":{\"source\":\"graphqldb.planet\",\"graphql\":{\"type\":{\"singular\":\"Planet\",\"plural\":\"Planets\"}},\"permissions\":[{\"role\":\"anonymous\",\"actions\":[{\"action\":\"read\",\"fields\":{\"include\":[\"*\"],\"exclude\":[]}}]}]}}}"
-            };
-
-            HttpResponseMessage postResult =
-                await httpClient.PostAsync("/configuration", JsonContent.Create(config));
-            Assert.AreEqual(HttpStatusCode.BadRequest, postResult.StatusCode);
-        }
-
         [TestMethod("Validates a failure in one of the config updated handlers returns a bad request."), TestCategory(TestCategory.COSMOSDBNOSQL)]
         public async Task TestSettingFailureConfigurations()
         {

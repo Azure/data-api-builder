@@ -17,6 +17,7 @@ namespace Azure.DataApiBuilder.Service.Exceptions
         public const string GRAPHQL_FILTER_ENTITY_AUTHZ_FAILURE = "Access forbidden to the target entity described in the filter.";
         public const string GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE = "Access forbidden to a field referenced in the filter.";
         public const string AUTHORIZATION_FAILURE = "Authorization Failure: Access Not Allowed.";
+        public const string GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE = "Unauthorized due to one or more fields in this mutation.";
 
         public enum SubStatusCodes
         {

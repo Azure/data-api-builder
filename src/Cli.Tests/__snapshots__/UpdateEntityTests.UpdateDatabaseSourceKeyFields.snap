@@ -27,10 +27,7 @@
       },
       "Authentication": {
         "Provider": "StaticWebApps",
-        "Jwt": {
-          "Audience": null,
-          "Issuer": null
-        }
+        "Jwt": null
       },
       "Mode": "Development"
     }

@@ -64,10 +64,7 @@
             "Actions": [
               {
                 "Action": "Create",
-                "Fields": {
-                  "Exclude": [],
-                  "Include": null
-                },
+                "Fields": null,
                 "Policy": {
                   "Request": null,
                   "Database": null
@@ -75,10 +72,7 @@
               },
               {
                 "Action": "Read",
-                "Fields": {
-                  "Exclude": [],
-                  "Include": null
-                },
+                "Fields": null,
                 "Policy": {
                   "Request": null,
                   "Database": null
@@ -127,10 +121,7 @@
             "Actions": [
               {
                 "Action": "Create",
-                "Fields": {
-                  "Exclude": [],
-                  "Include": null
-                },
+                "Fields": null,
                 "Policy": {
                   "Request": null,
                   "Database": null
@@ -138,10 +129,7 @@
               },
               {
                 "Action": "Read",
-                "Fields": {
-                  "Exclude": [],
-                  "Include": null
-                },
+                "Fields": null,
                 "Policy": {
                   "Request": null,
                   "Database": null

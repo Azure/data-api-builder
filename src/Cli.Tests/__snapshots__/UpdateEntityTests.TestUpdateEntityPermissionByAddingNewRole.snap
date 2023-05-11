@@ -58,10 +58,7 @@
             "Actions": [
               {
                 "Action": "Read",
-                "Fields": {
-                  "Exclude": [],
-                  "Include": null
-                },
+                "Fields": null,
                 "Policy": {
                   "Request": null,
                   "Database": null
@@ -69,10 +66,7 @@
               },
               {
                 "Action": "Update",
-                "Fields": {
-                  "Exclude": [],
-                  "Include": null
-                },
+                "Fields": null,
                 "Policy": {
                   "Request": null,
                   "Database": null

@@ -362,6 +362,11 @@ namespace Azure.DataApiBuilder.Service.Models
             return _integer++;
         }
 
+        public ulong Current()
+        {
+            return _integer;
+        }
+
     }
 
     /// <summary>

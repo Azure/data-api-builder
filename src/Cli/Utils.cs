@@ -879,8 +879,14 @@ namespace Cli
         /// </summary>
         /// <param name="restRoute">Input entered using --rest option</param>
         /// <returns>Constructed REST Path</returns>
-        public static EntityRestOptions ConstructRestOptions(string? restRoute, SupportedHttpVerb[] supportedHttpVerbs)
+        public static EntityRestOptions ConstructRestOptions(string? restRoute, SupportedHttpVerb[] supportedHttpVerbs, bool isCosmosDbNoSql)
         {
+            // REST is not supported for CosmosDB NoSQL, so we'll forcibly disable it.
+            if (isCosmosDbNoSql)
+            {
+                return new(Array.Empty<SupportedHttpVerb>(), Enabled: false);
+            }
+
             EntityRestOptions restOptions = new(supportedHttpVerbs);
 
             // Default state for REST is enabled, so if no value is provided, we enable it

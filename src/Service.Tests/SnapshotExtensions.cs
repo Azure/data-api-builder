@@ -54,10 +54,22 @@ internal static class SnapshotExtensions
 
         for (int i = 0; i < actualLines.Length; i++)
         {
-            string line = "";
-            if (i > expectedLines.Length - 1 || expectedLines[i] != actualLines[i])
+            string line = "  ";
+
+            if (i > expectedLines.Length - 1)
             {
-                line = "> ";
+                line = "+ ";
+            }
+            else if (expectedLines[i] != actualLines[i])
+            {
+                if (expectedLines.Length > actualLines.Length)
+                {
+                    line = "+ ";
+                }
+                else
+                {
+                    line = "- ";
+                }
             }
 
             line += actualLines[i];

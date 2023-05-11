@@ -32,7 +32,7 @@ internal static class SnapshotExtensions
         {
             SnapshotFullName fullName = Snapshot.FullName();
 
-            string expected = File.ReadAllText(fullName.Filename);
+            string expected = File.ReadAllText(Path.Join(fullName.FolderPath, fullName.Filename));
 
             SnapshotSerializer snapshotSerializer = new(new GlobalSnapshotSettingsResolver());
             string actual = snapshotSerializer.SerializeObject(config);

@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
@@ -213,6 +214,17 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // nextLink is the URL needed to get the next page of records using the same query options
             // with $after base64 encoded for opaqueness
             string path = UriHelper.GetEncodedUrl(_httpContextAccessor.HttpContext!.Request).Split('?')[0];
+
+            // If the base route is not empty, we need to insert it into the URI before the entity name.
+            string baseRoute = _runtimeConfigProvider.RestBaseRoute;
+            if (!string.IsNullOrEmpty(baseRoute))
+            {
+                StringBuilder pathWithBaseRoute = new(path.Substring(0, path.Length - context.EntityName.Length - 1));
+                pathWithBaseRoute.Append(baseRoute);
+                pathWithBaseRoute.Append($"/{context.EntityName}");
+                path = pathWithBaseRoute.ToString();
+            }
+
             JsonElement nextLink = SqlPaginationUtil.CreateNextLink(
                                   path,
                                   nvc: context!.ParsedQueryString,

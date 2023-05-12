@@ -3,11 +3,14 @@
 
 using System;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.IO.Abstractions.TestingHelpers;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Security.Claims;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -29,6 +32,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using MySqlConnector;
@@ -1766,7 +1770,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     configParams = configParams with
                     {
                         ConnectionString = "AccountEndpoint=https://localhost:8081/;",
-                        AccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoxMjMzNDQ1Nn0.1cdRZfqwndt67f-sHKgOfEgTfO9xDyGFl6_d-RRyf4U"
+                        AccessToken = GenerateMockJwtToken()
                     };
                 }
 
@@ -1795,7 +1799,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     configParams = configParams with
                     {
                         ConfigurationOverrides = JsonSerializer.Serialize(overrides),
-                        AccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoxMjMzNDQ1Nn0.1cdRZfqwndt67f-sHKgOfEgTfO9xDyGFl6_d-RRyf4U"
+                        AccessToken = GenerateMockJwtToken()
                     };
                 }
 
@@ -1805,6 +1809,25 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             {
                 throw new ArgumentException($"Unexpected configuration endpoint. {endpoint}");
             }
+        }
+
+        private static string GenerateMockJwtToken()
+        {
+            string mySecret = "PlaceholderPlaceholder";
+            SymmetricSecurityKey mySecurityKey = new(Encoding.ASCII.GetBytes(mySecret));
+
+            JwtSecurityTokenHandler tokenHandler = new();
+            SecurityTokenDescriptor tokenDescriptor = new()
+            {
+                Subject = new ClaimsIdentity(new Claim[] { }),
+                Expires = DateTime.UtcNow.AddMinutes(5),
+                Issuer = "http://mysite.com",
+                Audience = "http://myaudience.com",
+                SigningCredentials = new SigningCredentials(mySecurityKey, SecurityAlgorithms.HmacSha256Signature)
+            };
+
+            SecurityToken token = tokenHandler.CreateToken(tokenDescriptor);
+            return tokenHandler.WriteToken(token);
         }
 
         private static ConfigurationPostParameters GetCosmosConfigurationParameters()

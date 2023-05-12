@@ -22,7 +22,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private string? _accountKey;
         private readonly string? _accessToken;
         public const string DAB_APP_NAME_ENV = "DAB_APP_NAME_ENV";
-        public static readonly string DEFAULT_APP_NAME = $"dab_oss_{DABUtils.GetProductVersion()}";
+        public static readonly string DEFAULT_APP_NAME = $"dab_oss_{Utils.GetProductVersion()}";
 
         public CosmosClient? Client { get; private set; }
         public CosmosClientProvider(RuntimeConfigProvider runtimeConfigProvider)

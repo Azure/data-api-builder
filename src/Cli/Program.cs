@@ -3,8 +3,8 @@
 
 using CommandLine;
 using Microsoft.Extensions.Logging;
-using static Cli.Utils;
 using static Azure.DataApiBuilder.Service.Utils;
+using static Cli.Utils;
 
 namespace Cli
 {

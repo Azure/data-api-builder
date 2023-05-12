@@ -1,23 +1,23 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
+using System.Collections.Generic;
+using System.IO.Abstractions;
+using System.IO.Abstractions.TestingHelpers;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
-using System.Collections.Generic;
-using System.IO.Abstractions.TestingHelpers;
 using Azure.DataApiBuilder.Service.Resolvers;
-using Azure.DataApiBuilder.Service.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Services;
+using Azure.DataApiBuilder.Service.Services.MetadataProviders;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using Microsoft.AspNetCore.TestHost;
-using System.IO.Abstractions;
-using System;
 
 namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 {

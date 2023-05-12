@@ -38,19 +38,6 @@ namespace Cli
         }
 
         /// <summary>
-        /// Reads the product version from the executing assembly's file version information.
-        /// </summary>
-        /// <returns>Product version if not null, default version 1.0.0 otherwise.</returns>
-        public static string GetProductVersion()
-        {
-            Assembly assembly = Assembly.GetExecutingAssembly();
-            FileVersionInfo fileVersionInfo = FileVersionInfo.GetVersionInfo(assembly.Location);
-            string? version = fileVersionInfo.ProductVersion;
-
-            return version ?? DEFAULT_VERSION;
-        }
-
-        /// <summary>
         /// Creates the REST object which can be either a boolean value
         /// or a RestEntitySettings object containing api route based on the input.
         /// Returns null when no REST configuration is provided.

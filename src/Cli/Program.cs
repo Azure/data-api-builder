@@ -4,6 +4,7 @@
 using CommandLine;
 using Microsoft.Extensions.Logging;
 using static Cli.Utils;
+using static Azure.DataApiBuilder.Service.DABUtils;
 
 namespace Cli
 {

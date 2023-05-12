@@ -3,11 +3,14 @@
 
 using System;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.IO.Abstractions.TestingHelpers;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Security.Claims;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -29,6 +32,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using MySqlConnector;
@@ -57,6 +61,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         private const int RETRY_COUNT = 5;
         private const int RETRY_WAIT_SECONDS = 1;
+
+        // TODO: Remove the old endpoint once we've updated all callers to use the new one.
+        private const string CONFIGURATION_ENDPOINT = "/configuration";
+        private const string CONFIGURATION_ENDPOINT_V2 = "/configuration/v2";
 
         /// <summary>
         /// A valid REST API request body with correct parameter types for all the fields.
@@ -249,22 +257,26 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         [TestMethod("Validates that once the configuration is set, the config controller isn't reachable."), TestCategory(TestCategory.COSMOSDBNOSQL)]
-        public async Task TestConflictAlreadySetConfiguration()
+        [DataRow(CONFIGURATION_ENDPOINT)]
+        [DataRow(CONFIGURATION_ENDPOINT_V2)]
+        public async Task TestConflictAlreadySetConfiguration(string configurationEndpoint)
         {
             TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
-            ConfigurationPostParameters config = GetCosmosConfigurationParameters();
+            JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint);
 
-            _ = await httpClient.PostAsync("/configuration", JsonContent.Create(config));
+            _ = await httpClient.PostAsync(configurationEndpoint, content);
             ValidateCosmosDbSetup(server);
 
-            HttpResponseMessage result = await httpClient.PostAsync("/configuration", JsonContent.Create(config));
+            HttpResponseMessage result = await httpClient.PostAsync(configurationEndpoint, content);
             Assert.AreEqual(HttpStatusCode.Conflict, result.StatusCode);
         }
 
         [TestMethod("Validates that the config controller returns a conflict when using local configuration."), TestCategory(TestCategory.COSMOSDBNOSQL)]
-        public async Task TestConflictLocalConfiguration()
+        [DataRow(CONFIGURATION_ENDPOINT)]
+        [DataRow(CONFIGURATION_ENDPOINT_V2)]
+        public async Task TestConflictLocalConfiguration(string configurationEndpoint)
         {
             Environment.SetEnvironmentVariable
                 (ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
@@ -273,47 +285,52 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             ValidateCosmosDbSetup(server);
 
-            ConfigurationPostParameters config = GetCosmosConfigurationParameters();
+            JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint);
 
             HttpResponseMessage result =
-                await httpClient.PostAsync("/configuration", JsonContent.Create(config));
+                await httpClient.PostAsync(configurationEndpoint, content);
             Assert.AreEqual(HttpStatusCode.Conflict, result.StatusCode);
         }
 
         [TestMethod("Validates setting the configuration at runtime."), TestCategory(TestCategory.COSMOSDBNOSQL)]
-        public async Task TestSettingConfigurations()
+        [DataRow(CONFIGURATION_ENDPOINT)]
+        [DataRow(CONFIGURATION_ENDPOINT_V2)]
+        public async Task TestSettingConfigurations(string configurationEndpoint)
         {
             TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
-            ConfigurationPostParameters config = GetCosmosConfigurationParameters();
+            JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint);
 
             HttpResponseMessage postResult =
-                await httpClient.PostAsync("/configuration", JsonContent.Create(config));
+                await httpClient.PostAsync(configurationEndpoint, content);
             Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
         }
 
         [TestMethod("Validates an invalid configuration returns a bad request."), TestCategory(TestCategory.COSMOSDBNOSQL)]
-        public async Task TestInvalidConfigurationAtRuntime()
+        [DataRow(CONFIGURATION_ENDPOINT)]
+        [DataRow(CONFIGURATION_ENDPOINT_V2)]
+        public async Task TestInvalidConfigurationAtRuntime(string configurationEndpoint)
         {
             TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
-            ConfigurationPostParameters config = GetCosmosConfigurationParameters();
-            config = config with { Configuration = "invalidString" };
+            JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint, "invalidString");
 
             HttpResponseMessage postResult =
-                await httpClient.PostAsync("/configuration", JsonContent.Create(config));
+                await httpClient.PostAsync(configurationEndpoint, content);
             Assert.AreEqual(HttpStatusCode.BadRequest, postResult.StatusCode);
         }
 
         [TestMethod("Validates a failure in one of the config updated handlers returns a bad request."), TestCategory(TestCategory.COSMOSDBNOSQL)]
-        public async Task TestSettingFailureConfigurations()
+        [DataRow(CONFIGURATION_ENDPOINT)]
+        [DataRow(CONFIGURATION_ENDPOINT_V2)]
+        public async Task TestSettingFailureConfigurations(string configurationEndpoint)
         {
             TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
-            ConfigurationPostParameters config = GetCosmosConfigurationParameters();
+            JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint);
 
             RuntimeConfigProvider runtimeConfigProvider = server.Services.GetService<RuntimeConfigProvider>();
             runtimeConfigProvider.RuntimeConfigLoadedHandlers.Add((_, _) =>
@@ -322,18 +339,20 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             });
 
             HttpResponseMessage postResult =
-                await httpClient.PostAsync("/configuration", JsonContent.Create(config));
+                await httpClient.PostAsync(configurationEndpoint, content);
 
             Assert.AreEqual(HttpStatusCode.BadRequest, postResult.StatusCode);
         }
 
         [TestMethod("Validates that the configuration endpoint doesn't return until all configuration loaded handlers have executed."), TestCategory(TestCategory.COSMOSDBNOSQL)]
-        public async Task TestLongRunningConfigUpdatedHandlerConfigurations()
+        [DataRow(CONFIGURATION_ENDPOINT)]
+        [DataRow(CONFIGURATION_ENDPOINT_V2)]
+        public async Task TestLongRunningConfigUpdatedHandlerConfigurations(string configurationEndpoint)
         {
             TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
-            ConfigurationPostParameters config = GetCosmosConfigurationParameters();
+            JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint);
 
             RuntimeConfigProvider runtimeConfigProvider = server.Services.GetService<RuntimeConfigProvider>();
             bool taskHasCompleted = false;
@@ -345,7 +364,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             });
 
             HttpResponseMessage postResult =
-                await httpClient.PostAsync("/configuration", JsonContent.Create(config));
+                await httpClient.PostAsync(configurationEndpoint, content);
 
             Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
             Assert.IsTrue(taskHasCompleted);
@@ -365,7 +384,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// </summary>
         [TestCategory(TestCategory.MSSQL)]
         [TestMethod("Validates setting the AuthN/Z configuration post-startup during runtime.")]
-        public async Task TestSqlSettingPostStartupConfigurations()
+        [DataRow(CONFIGURATION_ENDPOINT)]
+        [DataRow(CONFIGURATION_ENDPOINT_V2)]
+        public async Task TestSqlSettingPostStartupConfigurations(string configurationEndpoint)
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
 
@@ -379,7 +400,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 operation: Config.Operation.Read,
                 includedCols: new HashSet<string>() { "*" });
 
-            ConfigurationPostParameters config = GetPostStartupConfigParams(MSSQL_ENVIRONMENT, configuration);
+            JsonContent content = GetPostStartupConfigParams(MSSQL_ENVIRONMENT, configuration, configurationEndpoint);
 
             HttpResponseMessage preConfigHydrationResult =
                 await httpClient.GetAsync($"/{POST_STARTUP_CONFIG_ENTITY}");
@@ -394,7 +415,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 await httpClient.GetAsync($"/{OPENAPI_SWAGGER_ENDPOINT}");
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, preConfigOpenApiSwaggerEndpointAvailability.StatusCode);
 
-            HttpStatusCode responseCode = await HydratePostStartupConfiguration(httpClient, config);
+            HttpStatusCode responseCode = await HydratePostStartupConfiguration(httpClient, content, configurationEndpoint);
 
             // When the authorization resolver is properly configured, authorization will have failed
             // because no auth headers are present.
@@ -438,14 +459,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         [TestMethod("Validates access token is correctly loaded when Account Key is not present for Cosmos."), TestCategory(TestCategory.COSMOSDBNOSQL)]
-        public async Task TestLoadingAccessTokenForCosmosClient()
+        [DataRow(CONFIGURATION_ENDPOINT)]
+        [DataRow(CONFIGURATION_ENDPOINT_V2)]
+        public async Task TestLoadingAccessTokenForCosmosClient(string configurationEndpoint)
         {
             TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
-            ConfigurationPostParameters config = GetCosmosConfigurationParametersWithAccessToken();
+            JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint, null, true);
 
-            HttpResponseMessage authorizedResponse = await httpClient.PostAsync("/configuration", JsonContent.Create(config));
+            HttpResponseMessage authorizedResponse = await httpClient.PostAsync(configurationEndpoint, content);
 
             Assert.AreEqual(expected: HttpStatusCode.OK, actual: authorizedResponse.StatusCode);
             CosmosClientProvider cosmosClientProvider = server.Services.GetService(typeof(CosmosClientProvider)) as CosmosClientProvider;
@@ -520,27 +543,31 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         [TestMethod("Validates that trying to override configs that are already set fail."), TestCategory(TestCategory.COSMOSDBNOSQL)]
-        public async Task TestOverridingLocalSettingsFails()
+        [DataRow(CONFIGURATION_ENDPOINT)]
+        [DataRow(CONFIGURATION_ENDPOINT_V2)]
+        public async Task TestOverridingLocalSettingsFails(string configurationEndpoint)
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
             HttpClient client = server.CreateClient();
 
-            ConfigurationPostParameters config = GetCosmosConfigurationParameters();
+            JsonContent config = GetJsonContentForCosmosConfigRequest(configurationEndpoint);
 
-            HttpResponseMessage postResult = await client.PostAsync("/configuration", JsonContent.Create(config));
+            HttpResponseMessage postResult = await client.PostAsync(configurationEndpoint, config);
             Assert.AreEqual(HttpStatusCode.Conflict, postResult.StatusCode);
         }
 
         [TestMethod("Validates that setting the configuration at runtime will instantiate the proper classes."), TestCategory(TestCategory.COSMOSDBNOSQL)]
-        public async Task TestSettingConfigurationCreatesCorrectClasses()
+        [DataRow(CONFIGURATION_ENDPOINT)]
+        [DataRow(CONFIGURATION_ENDPOINT_V2)]
+        public async Task TestSettingConfigurationCreatesCorrectClasses(string configurationEndpoint)
         {
             TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
             HttpClient client = server.CreateClient();
 
-            ConfigurationPostParameters config = GetCosmosConfigurationParameters();
+            JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint);
 
-            HttpResponseMessage postResult = await client.PostAsync("/configuration", JsonContent.Create(config));
+            HttpResponseMessage postResult = await client.PostAsync(configurationEndpoint, content);
             Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
 
             ValidateCosmosDbSetup(server);
@@ -553,9 +580,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsNotNull(configuration, "TryGetRuntimeConfiguration should set the config in the out parameter.");
             Assert.IsTrue(isConfigSet, "TryGetRuntimeConfiguration should return true when the config is set.");
 
+            ConfigurationPostParameters expectedParameters = GetCosmosConfigurationParameters();
+            string expectedSchema = expectedParameters.Schema;
+            string expectedConnectionString = expectedParameters.ConnectionString;
+
             Assert.AreEqual(DatabaseType.cosmosdb_nosql, configuration.DatabaseType, "Expected cosmosdb_nosql database type after configuring the runtime with cosmosdb_nosql settings.");
-            Assert.AreEqual(config.Schema, configuration.DataSource.CosmosDbNoSql.GraphQLSchema, "Expected the schema in the configuration to match the one sent to the configuration endpoint.");
-            Assert.AreEqual(config.ConnectionString, configuration.ConnectionString, "Expected the connection string in the configuration to match the one sent to the configuration endpoint.");
+            Assert.AreEqual(expectedSchema, configuration.DataSource.CosmosDbNoSql.GraphQLSchema, "Expected the schema in the configuration to match the one sent to the configuration endpoint.");
+            Assert.AreEqual(expectedConnectionString, configuration.ConnectionString, "Expected the connection string in the configuration to match the one sent to the configuration endpoint.");
             string db = configProvider.GetRuntimeConfiguration().DataSource.CosmosDbNoSql.Database;
             Assert.AreEqual(COSMOS_DATABASE_NAME, db, "Expected the database name in the runtime config to match the one sent to the configuration endpoint.");
         }
@@ -1065,14 +1096,18 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <param name="expectedStatusCodeForGraphQL">Expected HTTP status code code for the GraphQL request</param>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow(true, true, HttpStatusCode.OK, HttpStatusCode.OK, DisplayName = "Both Rest and GraphQL endpoints enabled globally")]
-        [DataRow(true, false, HttpStatusCode.OK, HttpStatusCode.NotFound, DisplayName = "Rest enabled and GraphQL endpoints disabled globally")]
-        [DataRow(false, true, HttpStatusCode.NotFound, HttpStatusCode.OK, DisplayName = "Rest disabled and GraphQL endpoints enabled globally")]
+        [DataRow(true, true, HttpStatusCode.OK, HttpStatusCode.OK, CONFIGURATION_ENDPOINT, DisplayName = "V1 - Both Rest and GraphQL endpoints enabled globally")]
+        [DataRow(true, false, HttpStatusCode.OK, HttpStatusCode.NotFound, CONFIGURATION_ENDPOINT, DisplayName = "V1 - Rest enabled and GraphQL endpoints disabled globally")]
+        [DataRow(false, true, HttpStatusCode.NotFound, HttpStatusCode.OK, CONFIGURATION_ENDPOINT, DisplayName = "V1 - Rest disabled and GraphQL endpoints enabled globally")]
+        [DataRow(true, true, HttpStatusCode.OK, HttpStatusCode.OK, CONFIGURATION_ENDPOINT_V2, DisplayName = "V2 - Both Rest and GraphQL endpoints enabled globally")]
+        [DataRow(true, false, HttpStatusCode.OK, HttpStatusCode.NotFound, CONFIGURATION_ENDPOINT_V2, DisplayName = "V2 - Rest enabled and GraphQL endpoints disabled globally")]
+        [DataRow(false, true, HttpStatusCode.NotFound, HttpStatusCode.OK, CONFIGURATION_ENDPOINT_V2, DisplayName = "V2 - Rest disabled and GraphQL endpoints enabled globally")]
         public async Task TestGlobalFlagToEnableRestAndGraphQLForHostedAndNonHostedEnvironment(
             bool isRestEnabled,
             bool isGraphQLEnabled,
             HttpStatusCode expectedStatusCodeForREST,
-            HttpStatusCode expectedStatusCodeForGraphQL)
+            HttpStatusCode expectedStatusCodeForGraphQL,
+            string configurationEndpoint)
         {
             Dictionary<GlobalSettingsType, object> settings = new()
             {
@@ -1128,10 +1163,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             using (TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>())))
             using (HttpClient client = server.CreateClient())
             {
-                ConfigurationPostParameters config = GetPostStartupConfigParams(MSSQL_ENVIRONMENT, configuration);
+                JsonContent content = GetPostStartupConfigParams(MSSQL_ENVIRONMENT, configuration, configurationEndpoint);
 
                 HttpResponseMessage postResult =
-                await client.PostAsync("/configuration", JsonContent.Create(config));
+                await client.PostAsync(configurationEndpoint, content);
                 Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
 
                 HttpStatusCode restResponseCode = await GetRestResponsePostConfigHydration(client);
@@ -1283,9 +1318,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <seealso cref="https://github.com/ChilliCream/hotchocolate/blob/6b2cfc94695cb65e2f68f5d8deb576e48397a98a/src/HotChocolate/Core/src/Abstractions/ErrorCodes.cs#L287"/>
         [TestCategory(TestCategory.MSSQL)]
         [DataTestMethod]
-        [DataRow(false, true, "Introspection is not allowed for the current request.", DisplayName = "Disabled introspection returns GraphQL error.")]
-        [DataRow(true, false, null, DisplayName = "Enabled introspection does not return introspection forbidden error.")]
-        public async Task TestSchemaIntrospectionQuery(bool enableIntrospection, bool expectError, string errorMessage)
+        [DataRow(false, true, "Introspection is not allowed for the current request.", CONFIGURATION_ENDPOINT, DisplayName = "Disabled introspection returns GraphQL error.")]
+        [DataRow(true, false, null, CONFIGURATION_ENDPOINT, DisplayName = "Enabled introspection does not return introspection forbidden error.")]
+        [DataRow(false, true, "Introspection is not allowed for the current request.", CONFIGURATION_ENDPOINT_V2, DisplayName = "Disabled introspection returns GraphQL error.")]
+        [DataRow(true, false, null, CONFIGURATION_ENDPOINT_V2, DisplayName = "Enabled introspection does not return introspection forbidden error.")]
+        public async Task TestSchemaIntrospectionQuery(bool enableIntrospection, bool expectError, string errorMessage, string configurationEndpoint)
         {
             Dictionary<GlobalSettingsType, object> settings = new()
             {
@@ -1319,8 +1356,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             using (TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>())))
             using (HttpClient client = server.CreateClient())
             {
-                ConfigurationPostParameters config = GetPostStartupConfigParams(MSSQL_ENVIRONMENT, configuration);
-                HttpStatusCode responseCode = await HydratePostStartupConfiguration(client, config);
+                JsonContent content = GetPostStartupConfigParams(MSSQL_ENVIRONMENT, configuration, configurationEndpoint);
+                HttpStatusCode responseCode = await HydratePostStartupConfiguration(client, content, configurationEndpoint);
 
                 Assert.AreEqual(expected: HttpStatusCode.OK, actual: responseCode, message: "Configuration hydration failed.");
 
@@ -1718,6 +1755,81 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
         }
 
+        private static JsonContent GetJsonContentForCosmosConfigRequest(string endpoint, string config = null, bool useAccessToken = false)
+        {
+            if (CONFIGURATION_ENDPOINT == endpoint)
+            {
+                ConfigurationPostParameters configParams = GetCosmosConfigurationParameters();
+                if (config != null)
+                {
+                    configParams = configParams with { Configuration = config };
+                }
+
+                if (useAccessToken)
+                {
+                    configParams = configParams with
+                    {
+                        ConnectionString = "AccountEndpoint=https://localhost:8081/;",
+                        AccessToken = GenerateMockJwtToken()
+                    };
+                }
+
+                return JsonContent.Create(configParams);
+            }
+            else if (CONFIGURATION_ENDPOINT_V2 == endpoint)
+            {
+                ConfigurationPostParametersV2 configParams = GetCosmosConfigurationParametersV2();
+                if (config != null)
+                {
+                    configParams = configParams with { Configuration = config };
+                }
+
+                if (useAccessToken)
+                {
+                    // With an invalid access token, when a new instance of CosmosClient is created with that token, it
+                    // won't throw an exception.  But when a graphql request is coming in, that's when it throws a 401
+                    // exception. To prevent this, CosmosClientProvider parses the token and retrieves the "exp" property
+                    // from the token, if it's not valid, then we will throw an exception from our code before it
+                    // initiating a client. Uses a valid fake JWT access token for testing purposes.
+                    RuntimeConfig overrides = new(null, new DataSource(DatabaseType.cosmosdb_nosql), null, null)
+                    {
+                        ConnectionString = "AccountEndpoint=https://localhost:8081/;"
+                    };
+
+                    configParams = configParams with
+                    {
+                        ConfigurationOverrides = JsonSerializer.Serialize(overrides),
+                        AccessToken = GenerateMockJwtToken()
+                    };
+                }
+
+                return JsonContent.Create(configParams);
+            }
+            else
+            {
+                throw new ArgumentException($"Unexpected configuration endpoint. {endpoint}");
+            }
+        }
+
+        private static string GenerateMockJwtToken()
+        {
+            string mySecret = "PlaceholderPlaceholder";
+            SymmetricSecurityKey mySecurityKey = new(Encoding.ASCII.GetBytes(mySecret));
+
+            JwtSecurityTokenHandler tokenHandler = new();
+            SecurityTokenDescriptor tokenDescriptor = new()
+            {
+                Subject = new ClaimsIdentity(new Claim[] { }),
+                Expires = DateTime.UtcNow.AddMinutes(5),
+                Issuer = "http://mysite.com",
+                Audience = "http://myaudience.com",
+                SigningCredentials = new SigningCredentials(mySecurityKey, SecurityAlgorithms.HmacSha256Signature)
+            };
+
+            SecurityToken token = tokenHandler.CreateToken(tokenDescriptor);
+            return tokenHandler.WriteToken(token);
+        }
+
         private static ConfigurationPostParameters GetCosmosConfigurationParameters()
         {
             string cosmosFile = $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}";
@@ -1728,22 +1840,19 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 AccessToken: null);
         }
 
-        /// <summary>
-        /// With an invalid access token, when a new instance of CosmosClient is created with that token, it won't throw an exception.
-        /// But when a graphql request is coming in, that's when it throws an 401 exception.
-        /// To prevent this, CosmosClientProvider parses the token and retrieves the "exp" property from the token,
-        /// if it's not valid, then we will throw an exception from our code before it initiating a client.
-        /// Uses a valid fake JWT access token for testing purposes.
-        /// </summary>
-        /// <returns>ConfigurationPostParameters object</returns>
-        private static ConfigurationPostParameters GetCosmosConfigurationParametersWithAccessToken()
+        private static ConfigurationPostParametersV2 GetCosmosConfigurationParametersV2()
         {
             string cosmosFile = $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}";
+            RuntimeConfig overrides = new(null, new DataSource(DatabaseType.cosmosdb_nosql), null, null)
+            {
+                ConnectionString = $"AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==;Database={COSMOS_DATABASE_NAME}"
+            };
+
             return new(
                 File.ReadAllText(cosmosFile),
+                JsonSerializer.Serialize(overrides),
                 File.ReadAllText("schema.gql"),
-                "AccountEndpoint=https://localhost:8081/;",
-                AccessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoxMjMzNDQ1Nn0.1cdRZfqwndt67f-sHKgOfEgTfO9xDyGFl6_d-RRyf4U");
+                AccessToken: null);
         }
 
         /// <summary>
@@ -1752,17 +1861,40 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// Additional pre-processing performed acquire database connection string from a local file.
         /// </summary>
         /// <returns>ConfigurationPostParameters object.</returns>
-        private static ConfigurationPostParameters GetPostStartupConfigParams(string environment, RuntimeConfig runtimeConfig)
+        private static JsonContent GetPostStartupConfigParams(string environment, RuntimeConfig runtimeConfig, string configurationEndpoint)
         {
             string connectionString = GetConnectionStringFromEnvironmentConfig(environment);
 
             string serializedConfiguration = JsonSerializer.Serialize(runtimeConfig);
 
-            return new ConfigurationPostParameters(
-                Configuration: serializedConfiguration,
-                Schema: null,
-                ConnectionString: connectionString,
-                AccessToken: null);
+            if (configurationEndpoint == CONFIGURATION_ENDPOINT)
+            {
+                ConfigurationPostParameters returnParams = new(
+                    Configuration: serializedConfiguration,
+                    Schema: null,
+                    ConnectionString: connectionString,
+                    AccessToken: null);
+                return JsonContent.Create(returnParams);
+            }
+            else if (configurationEndpoint == CONFIGURATION_ENDPOINT_V2)
+            {
+                RuntimeConfig overrides = new(null, new DataSource(DatabaseType.mssql), null, null)
+                {
+                    ConnectionString = connectionString
+                };
+
+                ConfigurationPostParametersV2 returnParams = new(
+                    Configuration: serializedConfiguration,
+                    ConfigurationOverrides: JsonSerializer.Serialize(overrides),
+                    Schema: null,
+                    AccessToken: null);
+
+                return JsonContent.Create(returnParams);
+            }
+            else
+            {
+                throw new InvalidOperationException("Invalid configurationEndpoint");
+            }
         }
 
         /// <summary>
@@ -1772,11 +1904,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <param name="httpClient">Client used for request execution.</param>
         /// <param name="config">Post-startup configuration</param>
         /// <returns>ServiceUnavailable if service is not successfully hydrated with config</returns>
-        private static async Task<HttpStatusCode> HydratePostStartupConfiguration(HttpClient httpClient, ConfigurationPostParameters config)
+        private static async Task<HttpStatusCode> HydratePostStartupConfiguration(HttpClient httpClient, JsonContent content, string configurationEndpoint)
         {
             // Hydrate configuration post-startup
             HttpResponseMessage postResult =
-                await httpClient.PostAsync("/configuration", JsonContent.Create(config));
+                await httpClient.PostAsync(configurationEndpoint, content);
             Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
 
             return await GetRestResponsePostConfigHydration(httpClient);

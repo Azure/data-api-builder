@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using Cli.Commands;
-using Snapshooter.MSTest;
 
 namespace Cli.Tests
 {
@@ -11,6 +10,7 @@ namespace Cli.Tests
     /// </summary>
     [TestClass]
     public class AddEntityTests
+        : VerifyBase
     {
         [TestInitialize]
         public void TestInitialize()
@@ -30,7 +30,7 @@ namespace Cli.Tests
         /// entities: {}
         /// </summary>
         [TestMethod]
-        public void AddNewEntityWhenEntitiesEmpty()
+        public Task AddNewEntityWhenEntitiesEmpty()
         {
             AddOptions options = new(
                 source: "MyTable",
@@ -50,20 +50,14 @@ namespace Cli.Tests
                 graphQLOperationForStoredProcedure: null
             );
 
-            RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? runtimeConfig);
-
-            Assert.IsTrue(TryAddNewEntity(options, runtimeConfig!, out RuntimeConfig updatedRuntimeConfig));
-
-            Assert.AreNotSame(runtimeConfig, updatedRuntimeConfig);
-
-            Snapshot.Match(updatedRuntimeConfig!);
+            return ExecuteVerifyTest(options);
         }
 
         /// <summary>
         /// Add second entity to a config.
         /// </summary>
         [TestMethod]
-        public void AddNewEntityWhenEntitiesNotEmpty()
+        public Task AddNewEntityWhenEntitiesNotEmpty()
         {
             AddOptions options = new(
                 source: "MyTable",
@@ -85,13 +79,7 @@ namespace Cli.Tests
 
             string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
 
-            RuntimeConfigLoader.TryParseConfig(initialConfiguration, out RuntimeConfig? runtimeConfig);
-
-            Assert.IsTrue(TryAddNewEntity(options, runtimeConfig!, out RuntimeConfig updatedRuntimeConfig));
-
-            Assert.AreNotSame(runtimeConfig, updatedRuntimeConfig);
-
-            Snapshot.Match(updatedRuntimeConfig!);
+            return ExecuteVerifyTest(options, initialConfiguration);
         }
 
         /// <summary>
@@ -119,9 +107,9 @@ namespace Cli.Tests
                 );
 
             string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
-            RuntimeConfigLoader.TryParseConfig(initialConfiguration, out RuntimeConfig? runtimeConfig);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(initialConfiguration, out RuntimeConfig? runtimeConfig), "Loaded config");
 
-            Assert.IsFalse(TryAddNewEntity(options, runtimeConfig!, out RuntimeConfig updatedRuntimeConfig));
+            Assert.IsFalse(TryAddNewEntity(options, runtimeConfig, out RuntimeConfig updatedRuntimeConfig));
 
             Assert.AreSame(runtimeConfig!, updatedRuntimeConfig);
         }
@@ -131,7 +119,7 @@ namespace Cli.Tests
         /// a different case in one or more characters should be successful.
         /// </summary>
         [TestMethod]
-        public void AddEntityWithAnExistingNameButWithDifferentCase()
+        public Task AddEntityWithAnExistingNameButWithDifferentCase()
         {
             AddOptions options = new(
                source: "MyTable",
@@ -152,13 +140,7 @@ namespace Cli.Tests
             );
 
             string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
-            RuntimeConfigLoader.TryParseConfig(initialConfiguration, out RuntimeConfig? runtimeConfig);
-
-            Assert.IsTrue(TryAddNewEntity(options, runtimeConfig!, out RuntimeConfig updatedRuntimeConfig));
-
-            Assert.AreNotSame(runtimeConfig, updatedRuntimeConfig);
-
-            Snapshot.Match(updatedRuntimeConfig!);
+            return ExecuteVerifyTest(options, initialConfiguration);
         }
 
         /// <summary>
@@ -167,26 +149,13 @@ namespace Cli.Tests
         [DataTestMethod]
         [DataRow(new string[] { "*" }, new string[] { "level", "rating" }, "@claims.name eq 'dab'", "@claims.id eq @item.id", DisplayName = "Check adding new Entity with both Policy and Fields")]
         [DataRow(new string[] { }, new string[] { }, "@claims.name eq 'dab2'", "@claims.id eq @item.id", DisplayName = "Check adding new Entity with Policy")]
-        [DataRow(new string[] { "*" }, new string[] { "level", "rating" }, "null", "null", DisplayName = "Check adding new Entity with fieldsToInclude and FieldsToExclude")]
-        public void AddEntityWithPolicyAndFieldProperties(
+        [DataRow(new string[] { "*" }, new string[] { "level", "rating" }, null, null, DisplayName = "Check adding new Entity with fieldsToInclude and FieldsToExclude")]
+        public Task AddEntityWithPolicyAndFieldProperties(
             IEnumerable<string>? fieldsToInclude,
             IEnumerable<string>? fieldsToExclude,
             string? policyRequest,
             string? policyDatabase)
         {
-            // these bits are to work around these two bugs:
-            // - https://github.com/SwissLife-OSS/snapshooter/issues/178
-            // - https://github.com/SwissLife-OSS/snapshooter/issues/180
-            if (policyRequest == "null")
-            {
-                policyRequest = null;
-            }
-
-            if (policyDatabase == "null")
-            {
-                policyDatabase = null;
-            }
-
             AddOptions options = new(
                source: "MyTable",
                permissions: new string[] { "anonymous", "delete" },
@@ -205,20 +174,17 @@ namespace Cli.Tests
                 graphQLOperationForStoredProcedure: null
             );
 
-            RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? runtimeConfig);
-
-            Assert.IsTrue(TryAddNewEntity(options, runtimeConfig!, out RuntimeConfig updatedRuntimeConfig));
-
-            Assert.AreNotSame(runtimeConfig, updatedRuntimeConfig);
-
-            Snapshot.Match(updatedRuntimeConfig!);
+            // Create VerifySettings and add all arguments to the method as parameters
+            VerifySettings verifySettings = new();
+            verifySettings.UseParameters(fieldsToExclude, fieldsToInclude, policyDatabase, policyRequest);
+            return ExecuteVerifyTest(options, settings: verifySettings);
         }
 
         /// <summary>
         /// Simple test to add a new entity to json config where source is a stored procedure.
         /// </summary>
         [TestMethod]
-        public void AddNewEntityWhenEntitiesWithSourceAsStoredProcedure()
+        public Task AddNewEntityWhenEntitiesWithSourceAsStoredProcedure()
         {
             AddOptions options = new(
                 source: "s001.book",
@@ -238,13 +204,7 @@ namespace Cli.Tests
                 graphQLOperationForStoredProcedure: null
                 );
 
-            RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? runtimeConfig);
-
-            Assert.IsTrue(TryAddNewEntity(options, runtimeConfig!, out RuntimeConfig updatedRuntimeConfig));
-
-            Assert.AreNotSame(runtimeConfig, updatedRuntimeConfig);
-
-            Snapshot.Match(updatedRuntimeConfig!);
+            return ExecuteVerifyTest(options);
         }
 
         /// <summary>
@@ -253,7 +213,7 @@ namespace Cli.Tests
         /// the explicitly configured REST methods (Post, Put, Patch) and GraphQL operation (Query).
         /// </summary>
         [TestMethod]
-        public void TestAddStoredProcedureWithRestMethodsAndGraphQLOperations()
+        public Task TestAddStoredProcedureWithRestMethodsAndGraphQLOperations()
         {
             AddOptions options = new(
                 source: "s001.book",
@@ -273,13 +233,7 @@ namespace Cli.Tests
                 graphQLOperationForStoredProcedure: "Query"
                 );
 
-            RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? runtimeConfig);
-
-            Assert.IsTrue(TryAddNewEntity(options, runtimeConfig!, out RuntimeConfig updatedRuntimeConfig));
-
-            Assert.AreNotSame(runtimeConfig, updatedRuntimeConfig);
-
-            Snapshot.Match(updatedRuntimeConfig!);
+            return ExecuteVerifyTest(options);
         }
 
         /// <summary>
@@ -345,52 +299,28 @@ namespace Cli.Tests
         /// <param name="graphQLType">Whether GraphQL is explicitly enabled/disabled on the entity.</param>
         /// <param name="testType">Scenario that is tested. It is used for constructing the expected JSON.</param>
         [DataTestMethod]
-        [DataRow(new string[] { }, "null", "null", "null", "NoOptions", DisplayName = "Default Case without any customization")]
-        [DataRow(new string[] { }, "null", "true", "null", "RestEnabled", DisplayName = "REST enabled without any methods explicitly configured")]
-        [DataRow(new string[] { }, "null", "book", "null", "CustomRestPath", DisplayName = "Custom REST path defined without any methods explicitly configured")]
-        [DataRow(new string[] { "Get", "Post", "Patch" }, "null", "null", "null", "RestMethods", DisplayName = "REST methods defined without REST Path explicitly configured")]
-        [DataRow(new string[] { "Get", "Post", "Patch" }, "null", "true", "null", "RestEnabledWithMethods", DisplayName = "REST enabled along with some methods")]
-        [DataRow(new string[] { "Get", "Post", "Patch" }, "null", "book", "null", "CustomRestPathWithMethods", DisplayName = "Custom REST path defined along with some methods")]
-        [DataRow(new string[] { }, "null", "null", "true", "GQLEnabled", DisplayName = "GraphQL enabled without any operation explicitly configured")]
-        [DataRow(new string[] { }, "null", "null", "book", "GQLCustomType", DisplayName = "Custom GraphQL Type defined without any operation explicitly configured")]
-        [DataRow(new string[] { }, "null", "null", "book:books", "GQLSingularPluralCustomType", DisplayName = "SingularPlural GraphQL Type enabled without any operation explicitly configured")]
-        [DataRow(new string[] { }, "Query", "null", "true", "GQLEnabledWithCustomOperation", DisplayName = "GraphQL enabled with Query operation")]
-        [DataRow(new string[] { }, "Query", "null", "book", "GQLCustomTypeAndOperation", DisplayName = "Custom GraphQL Type defined along with Query operation")]
-        [DataRow(new string[] { }, "Query", "null", "book:books", "GQLSingularPluralTypeAndOperation", DisplayName = "SingularPlural GraphQL Type defined along with Query operation")]
-        [DataRow(new string[] { }, "null", "true", "true", "RestAndGQLEnabled", DisplayName = "Both REST and GraphQL enabled without any methods and operations configured explicitly")]
-        [DataRow(new string[] { "Get" }, "Query", "true", "true", "CustomRestMethodAndGqlOperation", DisplayName = "Both REST and GraphQL enabled with custom REST methods and GraphQL operations")]
-        [DataRow(new string[] { "Post", "Patch", "Put" }, "Query", "book", "book:books", "CustomRestAndGraphQLAll", DisplayName = "Configuration with REST Path, Methods and GraphQL Type, Operation")]
-        public void TestAddNewSpWithDifferentRestAndGraphQLOptions(
+        [DataRow(null, null, null, null, DisplayName = "Default Case without any customization")]
+        [DataRow(null, null, "true", null, DisplayName = "REST enabled without any methods explicitly configured")]
+        [DataRow(null, null, "book", null, DisplayName = "Custom REST path defined without any methods explicitly configured")]
+        [DataRow(new string[] { "Get", "Post", "Patch" }, null, null, null, DisplayName = "REST methods defined without REST Path explicitly configured")]
+        [DataRow(new string[] { "Get", "Post", "Patch" }, null, "true", null, DisplayName = "REST enabled along with some methods")]
+        [DataRow(new string[] { "Get", "Post", "Patch" }, null, "book", null, DisplayName = "Custom REST path defined along with some methods")]
+        [DataRow(null, null, null, "true", DisplayName = "GraphQL enabled without any operation explicitly configured")]
+        [DataRow(null, null, null, "book", DisplayName = "Custom GraphQL Type defined without any operation explicitly configured")]
+        [DataRow(null, null, null, "book:books", DisplayName = "SingularPlural GraphQL Type enabled without any operation explicitly configured")]
+        [DataRow(null, "Query", null, "true", DisplayName = "GraphQL enabled with Query operation")]
+        [DataRow(null, "Query", null, "book", DisplayName = "Custom GraphQL Type defined along with Query operation")]
+        [DataRow(null, "Query", null, "book:books", DisplayName = "SingularPlural GraphQL Type defined along with Query operation")]
+        [DataRow(null, null, "true", "true", DisplayName = "Both REST and GraphQL enabled without any methods and operations configured explicitly")]
+        [DataRow(new string[] { "Get" }, "Query", "true", "true", DisplayName = "Both REST and GraphQL enabled with custom REST methods and GraphQL operations")]
+        [DataRow(new string[] { "Post", "Patch", "Put" }, "Query", "book", "book:books", DisplayName = "Configuration with REST Path, Methods and GraphQL Type, Operation")]
+        public Task TestAddNewSpWithDifferentRestAndGraphQLOptions(
                 IEnumerable<string>? restMethods,
                 string? graphQLOperation,
                 string? restRoute,
-                string? graphQLType,
-                string testType
+                string? graphQLType
             )
         {
-            // these bits are to work around these two bugs:
-            // - https://github.com/SwissLife-OSS/snapshooter/issues/178
-            // - https://github.com/SwissLife-OSS/snapshooter/issues/180
-            if (!restMethods!.Any())
-            {
-                restMethods = null;
-            }
-
-            if (graphQLOperation == "null")
-            {
-                graphQLOperation = null;
-            }
-
-            if (restRoute == "null")
-            {
-                restRoute = null;
-            }
-
-            if (graphQLType == "null")
-            {
-                graphQLType = null;
-            }
-
             AddOptions options = new(
                 source: "s001.book",
                 permissions: new string[] { "anonymous", "execute" },
@@ -409,18 +339,14 @@ namespace Cli.Tests
                 graphQLOperationForStoredProcedure: graphQLOperation
                 );
 
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? runtimeConfig), "Parsing initial config");
-
-            Assert.IsTrue(TryAddNewEntity(options, runtimeConfig, out RuntimeConfig updatedRuntimeConfig), "Added entity successfully");
-
-            Assert.AreNotSame(runtimeConfig, updatedRuntimeConfig);
-
-            Snapshot.Match(updatedRuntimeConfig!);
+            VerifySettings settings = new();
+            settings.UseParameters(restMethods, graphQLOperation, restRoute, graphQLType);
+            return ExecuteVerifyTest(options, settings: settings);
         }
 
         [DataTestMethod]
-        [DataRow(new string[] { }, "Mutation", "true", "false", DisplayName = "Conflicting configurations - GraphQL operation specified but entity is disabled for GraphQL")]
-        [DataRow(new string[] { "Get" }, "null", "false", "true", DisplayName = "Conflicting configurations - REST methods specified but entity is disabled for REST")]
+        [DataRow(null, "Mutation", "true", "false", DisplayName = "Conflicting configurations - GraphQL operation specified but entity is disabled for GraphQL")]
+        [DataRow(new string[] { "Get" }, null, "false", "true", DisplayName = "Conflicting configurations - REST methods specified but entity is disabled for REST")]
         public void TestAddStoredProcedureWithConflictingRestGraphQLOptions(
             IEnumerable<string>? restMethods,
                 string? graphQLOperation,
@@ -428,29 +354,6 @@ namespace Cli.Tests
                 string? graphQLType
                 )
         {
-            // these bits are to work around these two bugs:
-            // - https://github.com/SwissLife-OSS/snapshooter/issues/178
-            // - https://github.com/SwissLife-OSS/snapshooter/issues/180
-            if (!restMethods!.Any())
-            {
-                restMethods = null;
-            }
-
-            if (graphQLOperation == "null")
-            {
-                graphQLOperation = null;
-            }
-
-            if (restRoute == "null")
-            {
-                restRoute = null;
-            }
-
-            if (graphQLType == "null")
-            {
-                graphQLType = null;
-            }
-
             AddOptions options = new(
                 source: "s001.book",
                 permissions: new string[] { "anonymous", "execute" },
@@ -527,6 +430,16 @@ namespace Cli.Tests
                 }
             }";
         }
-    }
 
+        private Task ExecuteVerifyTest(AddOptions options, string config = INITIAL_CONFIG, VerifySettings? settings = null)
+        {
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(config, out RuntimeConfig? runtimeConfig), "Loaded base config.");
+
+            Assert.IsTrue(TryAddNewEntity(options, runtimeConfig, out RuntimeConfig updatedRuntimeConfig), "Added entity to config.");
+
+            Assert.AreNotSame(runtimeConfig, updatedRuntimeConfig);
+
+            return Verify(updatedRuntimeConfig, settings);
+        }
+    }
 }

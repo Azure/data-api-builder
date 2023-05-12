@@ -1,0 +1,33 @@
+﻿{
+  DataSource: {
+    DatabaseType: MSSQL,
+    Options: {
+      set-session-context: {
+        ValueKind: False
+      }
+    },
+    DatabaseTypeNotSupportedMessage: The provided database-type value: MSSQL is currently not supported. Please check the configuration file.
+  },
+  Runtime: {
+    Rest: {
+      Enabled: true,
+      Path: /api
+    },
+    GraphQL: {
+      Enabled: true,
+      Path: /graphql,
+      AllowIntrospection: true
+    },
+    Host: {
+      Cors: {
+        AllowCredentials: false
+      },
+      Authentication: {
+        Provider: StaticWebApps,
+        Jwt: {}
+      },
+      Mode: Production
+    }
+  },
+  Entities: []
+}

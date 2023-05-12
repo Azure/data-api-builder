@@ -1,0 +1,109 @@
+﻿{
+  DataSource: {
+    DatabaseType: MSSQL,
+    DatabaseTypeNotSupportedMessage: The provided database-type value: MSSQL is currently not supported. Please check the configuration file.
+  },
+  Runtime: {
+    Rest: {
+      Enabled: true,
+      Path: /
+    },
+    GraphQL: {
+      Enabled: true,
+      Path: /graphql,
+      AllowIntrospection: true
+    },
+    Host: {
+      Cors: {
+        AllowCredentials: false
+      },
+      Authentication: {
+        Provider: StaticWebApps,
+        Jwt: {
+          Audience: ,
+          Issuer: 
+        }
+      }
+    }
+  },
+  Entities: [
+    {
+      FirstEntity: {
+        Source: {
+          Object: Table1
+        },
+        GraphQL: {
+          Singular: FirstEntity,
+          Plural: FirstEntities,
+          Enabled: true
+        },
+        Rest: {
+          Methods: [
+            Get,
+            Post,
+            Put,
+            Patch,
+            Delete
+          ],
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Create,
+                Policy: {}
+              },
+              {
+                Action: Read,
+                Policy: {}
+              }
+            ]
+          }
+        ],
+        Relationships: {
+          r1: {
+            TargetEntity: SecondEntity
+          }
+        }
+      }
+    },
+    {
+      SecondEntity: {
+        Source: {
+          Object: Table2
+        },
+        GraphQL: {
+          Singular: SecondEntity,
+          Plural: SecondEntities,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Create,
+                Policy: {}
+              },
+              {
+                Action: Read,
+                Policy: {}
+              }
+            ]
+          }
+        ],
+        Relationships: {
+          r2: {
+            Cardinality: Many,
+            TargetEntity: FirstEntity
+          }
+        }
+      }
+    }
+  ]
+}

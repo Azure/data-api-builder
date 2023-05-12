@@ -5,7 +5,6 @@ using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
 using System.Reflection;
 using Cli.Commands;
-using Snapshooter.MSTest;
 
 namespace Cli.Tests
 {
@@ -14,6 +13,7 @@ namespace Cli.Tests
     /// </summary>
     [TestClass]
     public class InitTests
+        : VerifyBase
     {
         private IFileSystem? _fileSystem;
         private RuntimeConfigLoader? _runtimeConfigLoader;
@@ -54,7 +54,7 @@ namespace Cli.Tests
         /// There is no need for a separate test.
         /// </summary>
         [TestMethod]
-        public void MssqlDatabase()
+        public Task MsSQLDatabase()
         {
             InitOptions options = new(
                 databaseType: DatabaseType.MSSQL,
@@ -69,16 +69,14 @@ namespace Cli.Tests
                 restPath: "rest-api",
                 config: TEST_RUNTIME_CONFIG_FILE);
 
-            Assert.IsTrue(TryCreateRuntimeConfig(options, _runtimeConfigLoader!, _fileSystem!, out RuntimeConfig? runtimeConfig));
-
-            Snapshot.Match(runtimeConfig);
+            return ExecuteVerifyTest(options);
         }
 
         /// <summary>
         /// Test the simple init config for cosmosdb_postgresql database.
         /// </summary>
         [TestMethod]
-        public void CosmosDbPostgreSqlDatabase()
+        public Task CosmosDbPostgreSqlDatabase()
         {
             InitOptions options = new(
                 databaseType: DatabaseType.CosmosDB_PostgreSQL,
@@ -93,9 +91,7 @@ namespace Cli.Tests
                 restPath: "/rest-endpoint",
                 config: TEST_RUNTIME_CONFIG_FILE);
 
-            Assert.IsTrue(TryCreateRuntimeConfig(options, _runtimeConfigLoader!, _fileSystem!, out RuntimeConfig? runtimeConfig));
-
-            Snapshot.Match(runtimeConfig);
+            return ExecuteVerifyTest(options);
         }
 
         /// <summary>
@@ -103,7 +99,7 @@ namespace Cli.Tests
         /// connection-string
         /// </summary>
         [TestMethod]
-        public void TestInitializingConfigWithoutConnectionString()
+        public Task TestInitializingConfigWithoutConnectionString()
         {
             InitOptions options = new(
                 databaseType: DatabaseType.MSSQL,
@@ -117,16 +113,14 @@ namespace Cli.Tests
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
                 config: TEST_RUNTIME_CONFIG_FILE);
 
-            Assert.IsTrue(TryCreateRuntimeConfig(options, _runtimeConfigLoader!, _fileSystem!, out RuntimeConfig? runtimeConfig));
-
-            Snapshot.Match(runtimeConfig);
+            return ExecuteVerifyTest(options);
         }
 
         /// <summary>
         /// Test cosmosdb_nosql specifc settings like cosmosdb_nosql-database, cosmosdb_nosql-container, cosmos-schema file.
         /// </summary>
         [TestMethod]
-        public void CosmosDbNoSqlDatabase()
+        public Task CosmosDbNoSqlDatabase()
         {
             // Mock the schema file. It can be empty as we are not testing the schema file contents in this test.
             ((MockFileSystem)_fileSystem!).AddFile(TEST_SCHEMA_FILE, new MockFileData(""));
@@ -143,9 +137,7 @@ namespace Cli.Tests
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
                 config: TEST_RUNTIME_CONFIG_FILE);
 
-            Assert.IsTrue(TryCreateRuntimeConfig(options, _runtimeConfigLoader!, _fileSystem!, out RuntimeConfig? runtimeConfig));
-
-            Snapshot.Match(runtimeConfig);
+            return ExecuteVerifyTest(options);
         }
 
         /// <summary>
@@ -252,7 +244,7 @@ namespace Cli.Tests
         /// such as [!,@,#,$,%,^,&,*, ,(,)] in connection-string.
         /// </summary>
         [TestMethod]
-        public void TestSpecialCharactersInConnectionString()
+        public Task TestSpecialCharactersInConnectionString()
         {
             InitOptions options = new(
                 databaseType: DatabaseType.MSSQL,
@@ -266,9 +258,7 @@ namespace Cli.Tests
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
                 config: TEST_RUNTIME_CONFIG_FILE);
 
-            Assert.IsTrue(TryCreateRuntimeConfig(options, _runtimeConfigLoader!, _fileSystem!, out RuntimeConfig? runtimeConfig));
-
-            Snapshot.Match(runtimeConfig);
+            return ExecuteVerifyTest(options);
         }
 
         /// <summary>
@@ -318,28 +308,15 @@ namespace Cli.Tests
         /// }
         /// </summary>
         [DataTestMethod]
-        [DataRow("StaticWebApps", "null", "null", DisplayName = "StaticWebApps with no audience and no issuer specified.")]
-        [DataRow("AppService", "null", "null", DisplayName = "AppService with no audience and no issuer specified.")]
-        [DataRow("Simulator", "null", "null", DisplayName = "Simulator with no audience and no issuer specified.")]
+        [DataRow("StaticWebApps", null, null, DisplayName = "StaticWebApps with no audience and no issuer specified.")]
+        [DataRow("AppService", null, null, DisplayName = "AppService with no audience and no issuer specified.")]
+        [DataRow("Simulator", null, null, DisplayName = "Simulator with no audience and no issuer specified.")]
         [DataRow("AzureAD", "aud-xxx", "issuer-xxx", DisplayName = "AzureAD with both audience and issuer specified.")]
-        public void EnsureCorrectConfigGenerationWithDifferentAuthenticationProviders(
+        public Task EnsureCorrectConfigGenerationWithDifferentAuthenticationProviders(
             string authenticationProvider,
             string? audience,
             string? issuer)
         {
-            // these bits are to work around these two bugs:
-            // - https://github.com/SwissLife-OSS/snapshooter/issues/178
-            // - https://github.com/SwissLife-OSS/snapshooter/issues/180
-            if (audience == "null")
-            {
-                audience = null;
-            }
-
-            if (issuer == "null")
-            {
-                issuer = null;
-            }
-
             InitOptions options = new(
                 databaseType: DatabaseType.MSSQL,
                 connectionString: "testconnectionstring",
@@ -354,9 +331,10 @@ namespace Cli.Tests
                 issuer: issuer,
                 config: TEST_RUNTIME_CONFIG_FILE);
 
-            Assert.IsTrue(TryCreateRuntimeConfig(options, _runtimeConfigLoader!, _fileSystem!, out RuntimeConfig? runtimeConfig));
-
-            Snapshot.Match(runtimeConfig);
+            // Create VerifySettings and add all arguments to the method as parameters
+            VerifySettings verifySettings = new();
+            verifySettings.UseParameters(authenticationProvider, audience, issuer);
+            return ExecuteVerifyTest(options, verifySettings);
         }
 
         /// <summary>
@@ -401,6 +379,13 @@ namespace Cli.Tests
             Assert.AreEqual(
                 expected: PlatformID.Unix.Equals(Environment.OSVersion.Platform) ? true : false,
                 actual: TryGenerateConfig(initOptionsWithAllUpperCaseFileName, _runtimeConfigLoader!, _fileSystem!));
+        }
+
+        private Task ExecuteVerifyTest(InitOptions options, VerifySettings? settings = null)
+        {
+            Assert.IsTrue(TryCreateRuntimeConfig(options, _runtimeConfigLoader!, _fileSystem!, out RuntimeConfig? runtimeConfig));
+
+            return Verify(runtimeConfig, settings);
         }
     }
 }

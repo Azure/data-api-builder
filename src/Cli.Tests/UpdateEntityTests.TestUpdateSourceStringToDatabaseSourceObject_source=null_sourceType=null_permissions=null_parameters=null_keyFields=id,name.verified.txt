@@ -1,0 +1,62 @@
+﻿{
+  DataSource: {
+    DatabaseType: MSSQL,
+    Options: {
+      set-session-context: {
+        ValueKind: True
+      }
+    },
+    DatabaseTypeNotSupportedMessage: The provided database-type value: MSSQL is currently not supported. Please check the configuration file.
+  },
+  Runtime: {
+    Rest: {
+      Enabled: true,
+      Path: /api
+    },
+    GraphQL: {
+      Enabled: true,
+      Path: /graphql,
+      AllowIntrospection: true
+    },
+    Host: {
+      Cors: {
+        AllowCredentials: false
+      },
+      Authentication: {
+        Provider: StaticWebApps
+      }
+    }
+  },
+  Entities: [
+    {
+      MyEntity: {
+        Source: {
+          Object: s001.book,
+          KeyFields: [
+            id,
+            name
+          ]
+        },
+        GraphQL: {
+          Singular: MyEntity,
+          Plural: MyEntities,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *,
+                Policy: {}
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

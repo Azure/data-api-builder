@@ -3,7 +3,6 @@
 
 using Azure.DataApiBuilder.Config.Converters;
 using Cli.Commands;
-using Snapshooter.MSTest;
 
 namespace Cli.Tests
 {
@@ -11,7 +10,7 @@ namespace Cli.Tests
     /// Tests for Updating Entity.
     /// </summary>
     [TestClass]
-    public class UpdateEntityTests
+    public class UpdateEntityTests : VerifyBase
     {
         [TestInitialize]
         public void TestInitialize()
@@ -30,7 +29,7 @@ namespace Cli.Tests
         /// Initially it contained only "read" and "update". adding a new action "create"
         /// </summary>
         [TestMethod, Description("it should update the permission by adding a new action.")]
-        public void TestUpdateEntityPermission()
+        public Task TestUpdateEntityPermission()
         {
             UpdateOptions options = GenerateBaseUpdateOptions(
                 source: "MyTable",
@@ -52,7 +51,7 @@ namespace Cli.Tests
                         }
                     }";
 
-            ExecuteSnapshotTest(initialConfig, options);
+            return ExecuteVerifyTest(initialConfig, options);
         }
 
         /// <summary>
@@ -60,7 +59,7 @@ namespace Cli.Tests
         /// Initially the role "authenticated" was not present, so it will create a new role.
         /// </summary>
         [TestMethod, Description("it should update the permission by adding a new role.")]
-        public void TestUpdateEntityPermissionByAddingNewRole()
+        public Task TestUpdateEntityPermissionByAddingNewRole()
         {
             UpdateOptions options = GenerateBaseUpdateOptions(
                 source: "MyTable",
@@ -83,7 +82,7 @@ namespace Cli.Tests
                         }
                     }";
 
-            ExecuteSnapshotTest(initialConfig, options);
+            return ExecuteVerifyTest(initialConfig, options);
         }
 
         /// <summary>
@@ -91,7 +90,7 @@ namespace Cli.Tests
         /// Adding fields to Include/Exclude to update action.
         /// </summary>
         [TestMethod, Description("Should update the action which already exists in permissions.")]
-        public void TestUpdateEntityPermissionWithExistingAction()
+        public Task TestUpdateEntityPermissionWithExistingAction()
         {
             UpdateOptions options = GenerateBaseUpdateOptions(
                 source: "MyTable",
@@ -114,7 +113,7 @@ namespace Cli.Tests
                         }
                     }";
 
-            ExecuteSnapshotTest(initialConfig, options);
+            return ExecuteVerifyTest(initialConfig, options);
         }
 
         /// <summary>
@@ -122,7 +121,7 @@ namespace Cli.Tests
         /// It will update only "read" and "delete".
         /// </summary>
         [TestMethod, Description("it should update the permission which has action as WILDCARD.")]
-        public void TestUpdateEntityPermissionHavingWildcardAction()
+        public Task TestUpdateEntityPermissionHavingWildcardAction()
         {
             UpdateOptions options = GenerateBaseUpdateOptions(
                 source: "MyTable",
@@ -152,7 +151,7 @@ namespace Cli.Tests
                             }
                         }
                     }";
-            ExecuteSnapshotTest(initialConfig, options);
+            return ExecuteVerifyTest(initialConfig, options);
         }
 
         /// <summary>
@@ -160,7 +159,7 @@ namespace Cli.Tests
         /// It will apply the update as WILDCARD.
         /// </summary>
         [TestMethod, Description("it should update the permission with \"*\".")]
-        public void TestUpdateEntityPermissionWithWildcardAction()
+        public Task TestUpdateEntityPermissionWithWildcardAction()
         {
             UpdateOptions options = GenerateBaseUpdateOptions(
                 source: "MyTable",
@@ -183,14 +182,14 @@ namespace Cli.Tests
                         }
                     }";
 
-            ExecuteSnapshotTest(initialConfig, options);
+            return ExecuteVerifyTest(initialConfig, options);
         }
 
         /// <summary>
         /// Simple test to update an entity by adding a new relationship.
         /// </summary>
         [TestMethod, Description("it should add a new relationship")]
-        public void TestUpdateEntityByAddingNewRelationship()
+        public Task TestUpdateEntityByAddingNewRelationship()
         {
             UpdateOptions options = GenerateBaseUpdateOptions(
                 entity: "SecondEntity",
@@ -233,7 +232,7 @@ namespace Cli.Tests
                             }
                         }
                     }";
-            ExecuteSnapshotTest(initialConfig, options);
+            return ExecuteVerifyTest(initialConfig, options);
         }
 
         /// <summary>
@@ -241,7 +240,7 @@ namespace Cli.Tests
         /// It will add source.fields, target.fields, linking.object, linking.source.fields, linking.target.fields
         /// </summary>
         [TestMethod, Description("it should update an existing relationship")]
-        public void TestUpdateEntityByModifyingRelationship()
+        public Task TestUpdateEntityByModifyingRelationship()
         {
             UpdateOptions options = GenerateBaseUpdateOptions(
                 entity: "SecondEntity",
@@ -295,7 +294,7 @@ namespace Cli.Tests
                         }
                     }";
 
-            ExecuteSnapshotTest(initialConfig, options);
+            return ExecuteVerifyTest(initialConfig, options);
         }
 
         /// <summary>
@@ -389,7 +388,7 @@ namespace Cli.Tests
         [DataRow(new string[] { "*" }, new string[] { "level", "rating" }, "@claims.name eq 'dab'", "@claims.id eq @item.id", "PolicyAndFields", DisplayName = "Check adding new Policy and Fields to Action")]
         [DataRow(new string[] { }, new string[] { }, "@claims.name eq 'dab'", "@claims.id eq @item.id", "Policy", DisplayName = "Check adding new Policy to Action")]
         [DataRow(new string[] { "*" }, new string[] { "level", "rating" }, "null", "null", "Fields", DisplayName = "Check adding new fieldsToInclude and FieldsToExclude to Action")]
-        public void TestUpdateEntityWithPolicyAndFieldProperties(IEnumerable<string>? fieldsToInclude,
+        public Task TestUpdateEntityWithPolicyAndFieldProperties(IEnumerable<string>? fieldsToInclude,
                                                             IEnumerable<string>? fieldsToExclude,
                                                             string? policyRequest,
                                                             string? policyDatabase,
@@ -418,18 +417,20 @@ namespace Cli.Tests
 
             string initialConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY);
 
-            ExecuteSnapshotTest(initialConfig, options);
+            VerifySettings settings = new ();
+            settings.UseParameters(fieldsToInclude, fieldsToExclude, policyRequest, policyDatabase);
+            return ExecuteVerifyTest(initialConfig, options, settings);
         }
 
         /// <summary>
         /// Simple test to verify success on updating a source from string to source object for valid fields.
         /// </summary>
         [DataTestMethod]
-        [DataRow("s001.book", "null", new string[] { "anonymous", "*" }, new string[] { }, new string[] { }, "UpdateSourceName", DisplayName = "Updating sourceName with no change in parameters or keyfields.")]
-        [DataRow("null", "view", new string[] { }, new string[] { }, new string[] { "col1", "col2" }, "ConvertToView", DisplayName = "Source KeyFields with View")]
-        [DataRow("null", "table", new string[] { }, new string[] { }, new string[] { "id", "name" }, "ConvertToTable", DisplayName = "Source KeyFields with Table")]
-        [DataRow("null", "null", new string[] { }, new string[] { }, new string[] { "id", "name" }, "ConvertToDefaultType", DisplayName = "Source KeyFields with SourceType not provided")]
-        public void TestUpdateSourceStringToDatabaseSourceObject(
+        [DataRow("s001.book", null, new string[] { "anonymous", "*" }, null, null, "UpdateSourceName", DisplayName = "Updating sourceName with no change in parameters or keyfields.")]
+        [DataRow(null, "view", null, null, new string[] { "col1", "col2" }, "ConvertToView", DisplayName = "Source KeyFields with View")]
+        [DataRow(null, "table", null, null, new string[] { "id", "name" }, "ConvertToTable", DisplayName = "Source KeyFields with Table")]
+        [DataRow(null, null, null, null, new string[] { "id", "name" }, "ConvertToDefaultType", DisplayName = "Source KeyFields with SourceType not provided")]
+        public Task TestUpdateSourceStringToDatabaseSourceObject(
             string? source,
             string? sourceType,
             string[]? permissions,
@@ -437,34 +438,6 @@ namespace Cli.Tests
             IEnumerable<string>? keyFields,
             string task)
         {
-            // these bits are to work around these two bugs:
-            // - https://github.com/SwissLife-OSS/snapshooter/issues/178
-            // - https://github.com/SwissLife-OSS/snapshooter/issues/180
-            if (source == "null")
-            {
-                source = null;
-            }
-
-            if (sourceType == "null")
-            {
-                sourceType = null;
-            }
-
-            if (!permissions!.Any())
-            {
-                permissions = null;
-            }
-
-            if (!parameters!.Any())
-            {
-                parameters = null;
-            }
-
-            if (!keyFields!.Any())
-            {
-                keyFields = null;
-            }
-
             UpdateOptions options = GenerateBaseUpdateOptions(
                 permissions: permissions,
                 source: source,
@@ -473,11 +446,14 @@ namespace Cli.Tests
                 sourceKeyFields: keyFields);
 
             string initialConfig = AddPropertiesToJson(INITIAL_CONFIG, BASIC_ENTITY_WITH_ANONYMOUS_ROLE);
-            ExecuteSnapshotTest(initialConfig, options);
+
+            VerifySettings settings = new ();
+            settings.UseParameters(source, sourceType, permissions, parameters, keyFields);
+            return ExecuteVerifyTest(initialConfig, options, settings);
         }
 
         [TestMethod]
-        public void UpdateDatabaseSourceName()
+        public Task UpdateDatabaseSourceName()
         {
             UpdateOptions options = GenerateBaseUpdateOptions(
                 source: "newSourceName",
@@ -486,11 +462,11 @@ namespace Cli.Tests
 
             string initialConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
 
-            ExecuteSnapshotTest(initialConfig, options);
+            return ExecuteVerifyTest(initialConfig, options);
         }
 
         [TestMethod]
-        public void UpdateDatabaseSourceParameters()
+        public Task UpdateDatabaseSourceParameters()
         {
             UpdateOptions options = GenerateBaseUpdateOptions(
                 permissions: new string[] { "anonymous", "execute" },
@@ -499,11 +475,11 @@ namespace Cli.Tests
 
             string initialConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
 
-            ExecuteSnapshotTest(initialConfig, options);
+            return ExecuteVerifyTest(initialConfig, options);
         }
 
         [TestMethod]
-        public void UpdateDatabaseSourceKeyFields()
+        public Task UpdateDatabaseSourceKeyFields()
         {
             UpdateOptions options = GenerateBaseUpdateOptions(
                 permissions: new string[] { "anonymous", "read" },
@@ -511,7 +487,7 @@ namespace Cli.Tests
 
             string initialConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_SOURCE_AS_TABLE);
 
-            ExecuteSnapshotTest(initialConfig, options);
+            return ExecuteVerifyTest(initialConfig, options);
         }
 
         /// <summary>
@@ -522,31 +498,31 @@ namespace Cli.Tests
         /// </summary>
         [DataTestMethod]
         [DataRow(SINGLE_ENTITY_WITH_ONLY_READ_PERMISSION, "stored-procedure", new string[] { "param1:123", "param2:hello", "param3:true" },
-            new string[] { }, SINGLE_ENTITY_WITH_STORED_PROCEDURE, new string[] { "anonymous", "execute" }, false, true,
+            null, SINGLE_ENTITY_WITH_STORED_PROCEDURE, new string[] { "anonymous", "execute" }, false, true,
             DisplayName = "PASS - Convert table to stored-procedure with valid parameters.")]
-        [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "stored-procedure", new string[] { }, new string[] { "col1", "col2" },
+        [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "stored-procedure", null, new string[] { "col1", "col2" },
             SINGLE_ENTITY_WITH_STORED_PROCEDURE, new string[] { "anonymous", "execute" }, false, false,
             DisplayName = "FAIL - Convert table to stored-procedure with invalid KeyFields.")]
-        [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "stored-procedure", new string[] { }, new string[] { }, SINGLE_ENTITY_WITH_STORED_PROCEDURE, new string[] { },
+        [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "stored-procedure", null, null, SINGLE_ENTITY_WITH_STORED_PROCEDURE, null,
             true, true, DisplayName = "PASS - Convert table with wildcard CRUD operation to stored-procedure.")]
-        [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "table", new string[] { }, new string[] { "id", "name" },
+        [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "table", null, new string[] { "id", "name" },
             SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, new string[] { "anonymous", "*" }, false, true,
             DisplayName = "PASS - Convert stored-procedure to table with valid KeyFields.")]
-        [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "view", new string[] { }, new string[] { "col1", "col2" },
+        [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "view", null, new string[] { "col1", "col2" },
             SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, new string[] { "anonymous", "*" }, false, true,
             DisplayName = "PASS - Convert stored-procedure to view with valid KeyFields.")]
         [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "table", new string[] { "param1:kind", "param2:true" },
-            new string[] { }, SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, new string[] { }, false, false,
+            null, SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, null, false, false,
             DisplayName = "FAIL - Convert stored-procedure to table with parameters is not allowed.")]
-        [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "table", new string[] { }, new string[] { }, SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, new string[] { },
+        [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "table", null, null, SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, null,
             true, true, DisplayName = "PASS - Convert stored-procedure to table with no parameters or KeyFields.")]
-        [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "view", new string[] { }, new string[] { "col1", "col2" },
-            SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, new string[] { }, false, true,
+        [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "view", null, new string[] { "col1", "col2" },
+            SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, null, false, true,
             DisplayName = "PASS - Convert table to view with KeyFields.")]
-        [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "view", new string[] { "param1:kind", "param2:true" }, new string[] { },
-            SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, new string[] { }, false, false,
+        [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "view", new string[] { "param1:kind", "param2:true" }, null,
+            SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, null, false, false,
             DisplayName = "FAIL - Convert table to view with parameters is not allowed.")]
-        public void TestConversionOfSourceObject(
+        public Task TestConversionOfSourceObject(
             string initialSourceObjectEntity,
             string sourceType,
             IEnumerable<string>? parameters,
@@ -556,24 +532,6 @@ namespace Cli.Tests
             bool expectNoKeyFieldsAndParameters,
             bool expectSuccess)
         {
-            // these bits are to work around these two bugs:
-            // - https://github.com/SwissLife-OSS/snapshooter/issues/178
-            // - https://github.com/SwissLife-OSS/snapshooter/issues/180
-            if (!permissions!.Any())
-            {
-                permissions = null;
-            }
-
-            if (!parameters!.Any())
-            {
-                parameters = null;
-            }
-
-            if (!keyFields!.Any())
-            {
-                keyFields = null;
-            }
-
             UpdateOptions options = GenerateBaseUpdateOptions(
                 source: "s001.book",
                 permissions: permissions,
@@ -588,19 +546,19 @@ namespace Cli.Tests
             if (expectSuccess)
             {
                 Assert.AreNotSame(runtimeConfig, updatedConfig);
-                // We can't do a snapshot test here because the filename it generates would be invalid
-                // since the schema is one of the input arguments and it contains invalid characters.
-                // Once https://github.com/SwissLife-OSS/snapshooter/pull/179 is merged and we upgrade
-                // to a release using it, we can add a snapshot test here.
-                // Snapshot.Match(updatedConfig);
+                VerifySettings settings = new();
+                settings.UseParameters(sourceType, parameters, keyFields, permissions, expectNoKeyFieldsAndParameters);
+                return Verify(updatedConfig, settings);
             }
+
+            return Task.CompletedTask;
         }
 
         /// <summary>
         /// Update Policy for an action
         /// </summary>
         [TestMethod]
-        public void TestUpdatePolicy()
+        public Task TestUpdatePolicy()
         {
             UpdateOptions options = GenerateBaseUpdateOptions(
                source: "MyTable",
@@ -610,7 +568,7 @@ namespace Cli.Tests
             );
 
             string? initialConfig = AddPropertiesToJson(INITIAL_CONFIG, ENTITY_CONFIG_WITH_POLCIY_AND_ACTION_FIELDS);
-            ExecuteSnapshotTest(initialConfig, options);
+            return ExecuteVerifyTest(initialConfig, options);
         }
 
         /// <summary>
@@ -647,7 +605,7 @@ namespace Cli.Tests
         /// Test to Update Entity with New mappings
         /// </summary>
         [TestMethod]
-        public void TestUpdateEntityWithMappings()
+        public Task TestUpdateEntityWithMappings()
         {
             UpdateOptions options = GenerateBaseUpdateOptions(map: new string[] { "id:Identity", "name:Company Name" });
 
@@ -665,7 +623,7 @@ namespace Cli.Tests
                         }
                     }";
 
-            ExecuteSnapshotTest(initialConfig, options);
+            return ExecuteVerifyTest(initialConfig, options);
         }
 
         /// <summary>
@@ -713,7 +671,7 @@ namespace Cli.Tests
         /// Test to Update Entity with New mappings containing special unicode characters
         /// </summary>
         [TestMethod]
-        public void TestUpdateEntityWithSpecialCharacterInMappings()
+        public Task TestUpdateEntityWithSpecialCharacterInMappings()
         {
             UpdateOptions options = GenerateBaseUpdateOptions(
                 map: new string[] { "Macaroni:Mac & Cheese", "region:United State's Region", "russian:русский", "chinese:中文" }
@@ -733,14 +691,14 @@ namespace Cli.Tests
                         }
                     }";
 
-            ExecuteSnapshotTest(initialConfig, options);
+            return ExecuteVerifyTest(initialConfig, options);
         }
 
         /// <summary>
         /// Test to Update existing mappings of an entity
         /// </summary>
         [TestMethod]
-        public void TestUpdateExistingMappings()
+        public Task TestUpdateExistingMappings()
         {
             UpdateOptions options = GenerateBaseUpdateOptions(
                 map: new string[] { "name:Company Name", "addr:Company Address", "number:Contact Details" }
@@ -764,7 +722,7 @@ namespace Cli.Tests
                         }
                     }";
 
-            ExecuteSnapshotTest(initialConfig, options);
+            return ExecuteVerifyTest(initialConfig, options);
         }
 
         /// <summary>
@@ -777,51 +735,28 @@ namespace Cli.Tests
         /// <param name="graphQLType">GraphQL Type configured for the entity</param>
         /// <param name="testType">Scenario that is tested. It is also used to construct the expected JSON.</param>
         [DataTestMethod]
-        [DataRow(new string[] { }, "null", "true", "null", "RestEnabled", DisplayName = "Entity Update - REST enabled without any methods explicitly configured")]
-        [DataRow(new string[] { }, "null", "book", "null", "CustomRestPath", DisplayName = "Entity Update - Custom REST path defined without any methods explicitly configured")]
-        [DataRow(new string[] { "Get", "Post", "Patch" }, "null", "null", "null", "RestMethods", DisplayName = "Entity Update - REST methods defined without REST Path explicitly configured")]
-        [DataRow(new string[] { "Get", "Post", "Patch" }, "null", "true", "null", "RestEnabledWithMethods", DisplayName = "Entity Update - REST enabled along with some methods")]
-        [DataRow(new string[] { "Get", "Post", "Patch" }, "null", "book", "null", "CustomRestPathWithMethods", DisplayName = "Entity Update - Custom REST path defined along with some methods")]
-        [DataRow(new string[] { }, "null", "null", "true", "GQLEnabled", DisplayName = "Entity Update - GraphQL enabled without any operation explicitly configured")]
-        [DataRow(new string[] { }, "null", "null", "book", "GQLCustomType", DisplayName = "Entity Update - Custom GraphQL Type defined without any operation explicitly configured")]
-        [DataRow(new string[] { }, "null", "null", "book:books", "GQLSingularPluralCustomType", DisplayName = "Entity Update - SingularPlural GraphQL Type enabled without any operation explicitly configured")]
-        [DataRow(new string[] { }, "Query", "null", "true", "GQLEnabledWithCustomOperation", DisplayName = "Entity Update - GraphQL enabled with Query operation")]
-        [DataRow(new string[] { }, "Query", "null", "book", "GQLCustomTypeAndOperation", DisplayName = "Entity Update - Custom GraphQL Type defined along with Query operation")]
-        [DataRow(new string[] { }, "Query", "null", "book:books", "GQLSingularPluralTypeAndOperation", DisplayName = "Entity Update - SingularPlural GraphQL Type defined along with Query operation")]
-        [DataRow(new string[] { }, "null", "true", "true", "RestAndGQLEnabled", DisplayName = "Entity Update - Both REST and GraphQL enabled without any methods and operations configured explicitly")]
-        [DataRow(new string[] { }, "null", "false", "false", "RestAndGQLDisabled", DisplayName = "Entity Update - Both REST and GraphQL disabled without any methods and operations configured explicitly")]
+        [DataRow(null, null, "true", null, "RestEnabled", DisplayName = "Entity Update - REST enabled without any methods explicitly configured")]
+        [DataRow(null, null, "book", null, "CustomRestPath", DisplayName = "Entity Update - Custom REST path defined without any methods explicitly configured")]
+        [DataRow(new string[] { "Get", "Post", "Patch" }, null, null, null, "RestMethods", DisplayName = "Entity Update - REST methods defined without REST Path explicitly configured")]
+        [DataRow(new string[] { "Get", "Post", "Patch" }, null, "true", null, "RestEnabledWithMethods", DisplayName = "Entity Update - REST enabled along with some methods")]
+        [DataRow(new string[] { "Get", "Post", "Patch" }, null, "book", null, "CustomRestPathWithMethods", DisplayName = "Entity Update - Custom REST path defined along with some methods")]
+        [DataRow(null, null, null, "true", "GQLEnabled", DisplayName = "Entity Update - GraphQL enabled without any operation explicitly configured")]
+        [DataRow(null, null, null, "book", "GQLCustomType", DisplayName = "Entity Update - Custom GraphQL Type defined without any operation explicitly configured")]
+        [DataRow(null, null, null, "book:books", "GQLSingularPluralCustomType", DisplayName = "Entity Update - SingularPlural GraphQL Type enabled without any operation explicitly configured")]
+        [DataRow(null, "Query", null, "true", "GQLEnabledWithCustomOperation", DisplayName = "Entity Update - GraphQL enabled with Query operation")]
+        [DataRow(null, "Query", null, "book", "GQLCustomTypeAndOperation", DisplayName = "Entity Update - Custom GraphQL Type defined along with Query operation")]
+        [DataRow(null, "Query", null, "book:books", "GQLSingularPluralTypeAndOperation", DisplayName = "Entity Update - SingularPlural GraphQL Type defined along with Query operation")]
+        [DataRow(null, null, "true", "true", "RestAndGQLEnabled", DisplayName = "Entity Update - Both REST and GraphQL enabled without any methods and operations configured explicitly")]
+        [DataRow(null, null, "false", "false", "RestAndGQLDisabled", DisplayName = "Entity Update - Both REST and GraphQL disabled without any methods and operations configured explicitly")]
         [DataRow(new string[] { "Get" }, "Query", "true", "true", "CustomRestMethodAndGqlOperation", DisplayName = "Entity Update - Both REST and GraphQL enabled with custom REST methods and GraphQL operations")]
         [DataRow(new string[] { "Post", "Patch", "Put" }, "Query", "book", "book:books", "CustomRestAndGraphQLAll", DisplayName = "Entity Update - Configuration with REST Path, Methods and GraphQL Type, Operation")]
-        public void TestUpdateRestAndGraphQLSettingsForStoredProcedures(
+        public Task TestUpdateRestAndGraphQLSettingsForStoredProcedures(
             IEnumerable<string>? restMethods,
             string? graphQLOperation,
             string? restRoute,
             string? graphQLType,
             string testType)
         {
-            // these bits are to work around these two bugs:
-            // - https://github.com/SwissLife-OSS/snapshooter/issues/178
-            // - https://github.com/SwissLife-OSS/snapshooter/issues/180
-            if (!restMethods!.Any())
-            {
-                restMethods = null;
-            }
-
-            if (graphQLOperation == "null")
-            {
-                graphQLOperation = null;
-            }
-
-            if (restRoute == "null")
-            {
-                restRoute = null;
-            }
-
-            if (graphQLType == "null")
-            {
-                graphQLType = null;
-            }
-
             UpdateOptions options = GenerateBaseUpdateOptions(
                 restRoute: restRoute,
                 graphQLType: graphQLType,
@@ -831,7 +766,9 @@ namespace Cli.Tests
 
             string initialConfig = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_METHODS_GRAPHQL_OPERATION);
 
-            ExecuteSnapshotTest(initialConfig, options);
+            VerifySettings settings = new();
+            settings.UseParameters(restMethods, graphQLOperation, restRoute, graphQLType, testType);
+            return ExecuteVerifyTest(initialConfig, options, settings);
         }
 
         /// <summary>
@@ -844,8 +781,8 @@ namespace Cli.Tests
         /// <param name="restRoute"></param>
         /// <param name="graphQLType"></param>
         [DataTestMethod]
-        [DataRow(new string[] { }, "Mutation", "true", "false", DisplayName = "Conflicting configurations during update - GraphQL operation specified but entity is disabled for GraphQL")]
-        [DataRow(new string[] { "Get" }, "null", "false", "true", DisplayName = "Conflicting configurations during update - REST methods specified but entity is disabled for REST")]
+        [DataRow(null, "Mutation", "true", "false", DisplayName = "Conflicting configurations during update - GraphQL operation specified but entity is disabled for GraphQL")]
+        [DataRow(new string[] { "Get" }, null, "false", "true", DisplayName = "Conflicting configurations during update - REST methods specified but entity is disabled for REST")]
         public void TestUpdateStoredProcedureWithConflictingRestGraphQLOptions(
             IEnumerable<string>? restMethods,
                 string? graphQLOperation,
@@ -853,19 +790,6 @@ namespace Cli.Tests
                 string graphQLType
                 )
         {
-            // these bits are to work around these two bugs:
-            // - https://github.com/SwissLife-OSS/snapshooter/issues/178
-            // - https://github.com/SwissLife-OSS/snapshooter/issues/180
-            if (!restMethods!.Any())
-            {
-                restMethods = null;
-            }
-
-            if (graphQLOperation == "null")
-            {
-                graphQLOperation = null;
-            }
-
             UpdateOptions options = GenerateBaseUpdateOptions(
                 restRoute: restRoute,
                 graphQLType: graphQLType,
@@ -1217,15 +1141,15 @@ namespace Cli.Tests
             );
         }
 
-        private static void ExecuteSnapshotTest(string initialConfig, UpdateOptions options)
+        private Task ExecuteVerifyTest(string initialConfig, UpdateOptions options, VerifySettings? settings = null)
         {
-            RuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig), "Parsed config file.");
 
-            Assert.IsTrue(TryUpdateExistingEntity(options, runtimeConfig!, out RuntimeConfig updatedRuntimeConfig));
+            Assert.IsTrue(TryUpdateExistingEntity(options, runtimeConfig, out RuntimeConfig updatedRuntimeConfig), "Successfully added entity to config.");
 
-            Assert.AreNotSame(initialConfig, updatedRuntimeConfig);
+            Assert.AreNotSame(runtimeConfig, updatedRuntimeConfig);
 
-            Snapshot.Match(updatedRuntimeConfig!);
+            return Verify(updatedRuntimeConfig, settings);
         }
     }
 }

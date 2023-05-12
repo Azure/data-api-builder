@@ -1,0 +1,31 @@
+﻿{
+  DataSource: {
+    DatabaseType: CosmosDB_PostgreSQL,
+    DatabaseTypeNotSupportedMessage: The provided database-type value: CosmosDB_PostgreSQL is currently not supported. Please check the configuration file.
+  },
+  Runtime: {
+    Rest: {
+      Enabled: true,
+      Path: /rest-endpoint
+    },
+    GraphQL: {
+      Enabled: true,
+      Path: /graphql,
+      AllowIntrospection: true
+    },
+    Host: {
+      Cors: {
+        Origins: [
+          http://localhost:3000,
+          http://nolocalhost:80
+        ],
+        AllowCredentials: false
+      },
+      Authentication: {
+        Provider: StaticWebApps,
+        Jwt: {}
+      }
+    }
+  },
+  Entities: []
+}

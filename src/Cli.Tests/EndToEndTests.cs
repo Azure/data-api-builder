@@ -4,7 +4,6 @@
 using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
 using System.Reflection;
-using Snapshooter.MSTest;
 
 namespace Cli.Tests;
 
@@ -13,6 +12,7 @@ namespace Cli.Tests;
 /// </summary>
 [TestClass]
 public class EndToEndTests
+    : VerifyBase
 {
     private IFileSystem? _fileSystem;
     private RuntimeConfigLoader? _runtimeConfigLoader;
@@ -58,7 +58,7 @@ public class EndToEndTests
     /// Initializing config for CosmosDB_NoSQL.
     /// </summary>
     [TestMethod]
-    public void TestInitForCosmosDBNoSql()
+    public Task TestInitForCosmosDBNoSql()
     {
         string[] args = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "cosmosdb_nosql",
                           "--connection-string", "localhost:5000", "--cosmosdb_nosql-database",
@@ -81,7 +81,7 @@ public class EndToEndTests
         HostOptions hostGlobalSettings = runtimeConfig.Runtime.Host;
         CollectionAssert.AreEqual(new string[] { "localhost:3000", "www.nolocalhost.com:80" }, hostGlobalSettings.Cors!.Origins);
 
-        Snapshot.Match(runtimeConfig);
+        return Verify(runtimeConfig);
     }
 
     /// <summary>
@@ -249,7 +249,7 @@ public class EndToEndTests
     /// Test the exact config json generated to verify adding a new Entity without IEnumerable options.
     /// </summary>
     [TestMethod]
-    public void TestConfigGeneratedAfterAddingEntityWithoutIEnumerables()
+    public Task TestConfigGeneratedAfterAddingEntityWithoutIEnumerables()
     {
         string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql", "--connection-string", "localhost:5000",
             "--set-session-context", "true" };
@@ -263,14 +263,14 @@ public class EndToEndTests
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? updatedRuntimeConfig));
         Assert.AreNotSame(runtimeConfig, updatedRuntimeConfig);
-        Snapshot.Match(updatedRuntimeConfig);
+        return Verify(updatedRuntimeConfig);
     }
 
     /// <summary>
     /// Test the exact config json generated to verify adding source as stored-procedure.
     /// </summary>
     [TestMethod]
-    public void TestConfigGeneratedAfterAddingEntityWithSourceAsStoredProcedure()
+    public Task TestConfigGeneratedAfterAddingEntityWithSourceAsStoredProcedure()
     {
         string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql",
             "--host-mode", "Development", "--connection-string", "testconnectionstring", "--set-session-context", "true" };
@@ -284,7 +284,7 @@ public class EndToEndTests
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? updatedRuntimeConfig));
         Assert.AreNotSame(runtimeConfig, updatedRuntimeConfig);
-        Snapshot.Match(updatedRuntimeConfig);
+        return Verify(updatedRuntimeConfig);
     }
 
     /// <summary>
@@ -318,7 +318,7 @@ public class EndToEndTests
     /// --rest.methods and --graphql.operation options.
     /// </summary>
     [TestMethod]
-    public void TestAddingStoredProcedureWithRestMethodsAndGraphQLOperations()
+    public Task TestAddingStoredProcedureWithRestMethodsAndGraphQLOperations()
     {
         string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql",
             "--host-mode", "Development", "--connection-string", "testconnectionstring", "--set-session-context", "true" };
@@ -332,7 +332,7 @@ public class EndToEndTests
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? updatedRuntimeConfig));
         Assert.AreNotSame(runtimeConfig, updatedRuntimeConfig);
-        Snapshot.Match(updatedRuntimeConfig);
+        return Verify(updatedRuntimeConfig);
     }
 
     /// <summary>
@@ -340,7 +340,7 @@ public class EndToEndTests
     /// with explicit rest method GET and GraphQL endpoint disabled.
     /// </summary>
     [TestMethod]
-    public void TestUpdatingStoredProcedureWithRestMethodsAndGraphQLOperations()
+    public Task TestUpdatingStoredProcedureWithRestMethodsAndGraphQLOperations()
     {
         string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql",
             "--host-mode", "Development", "--connection-string", "testconnectionstring", "--set-session-context", "true" };
@@ -361,14 +361,14 @@ public class EndToEndTests
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? updatedRuntimeConfig2));
         Assert.AreNotSame(updatedRuntimeConfig, updatedRuntimeConfig2);
-        Snapshot.Match(updatedRuntimeConfig2);
+        return Verify(updatedRuntimeConfig2);
     }
 
     /// <summary>
     /// Test the exact config json generated to verify adding a new Entity with default source type and given key-fields.
     /// </summary>
     [TestMethod]
-    public void TestConfigGeneratedAfterAddingEntityWithSourceWithDefaultType()
+    public Task TestConfigGeneratedAfterAddingEntityWithSourceWithDefaultType()
     {
         string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql", "--host-mode", "Development",
             "--connection-string", "testconnectionstring", "--set-session-context", "true"  };
@@ -382,7 +382,7 @@ public class EndToEndTests
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? updatedRuntimeConfig));
         Assert.AreNotSame(runtimeConfig, updatedRuntimeConfig);
-        Snapshot.Match(updatedRuntimeConfig);
+        return Verify(updatedRuntimeConfig);
     }
 
     /// <summary>

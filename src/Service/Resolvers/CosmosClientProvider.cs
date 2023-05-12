@@ -10,7 +10,6 @@ using Azure.Core;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.Identity;
-using HotChocolate.Types.Helpers;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Fluent;
 
@@ -133,6 +132,5 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             return Environment.GetEnvironmentVariable(DAB_APP_NAME_ENV) ?? DEFAULT_APP_NAME;
         }
-
     }
 }

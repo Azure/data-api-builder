@@ -24,10 +24,10 @@ namespace Azure.DataApiBuilder.Service.Controllers
         }
 
         /// <summary>
-        /// Takes in the runtime configuration and the configuration overrides and configures the runtime.
+        /// Takes in the runtime configuration, configuration overrides, schema and access token configures the runtime.
         /// If the runtime is already configured, it will return a conflict result.
         /// </summary>
-        /// <param name="configuration">Runtime configuration, schema, resolvers and connection string.</param>
+        /// <param name="configuration">Runtime configuration, config overrides, schema and access token.</param>
         /// <returns>Ok in case of success, Bad request on bad config
         /// or Conflict if the runtime is already configured </returns>
         [HttpPost("v2")]
@@ -64,6 +64,13 @@ namespace Azure.DataApiBuilder.Service.Controllers
             return BadRequest();
         }
 
+        /// <summary>
+        /// Takes in the runtime configuration, schema, connection string and access token and configures the runtime.
+        /// If the runtime is already configured, it will return a conflict result.
+        /// </summary>
+        /// <param name="configuration">Runtime configuration, schema, connection string and access token.</param>
+        /// <returns>Ok in case of success, Bad request on bad config
+        /// or Conflict if the runtime is already configured </returns>
         public async Task<ActionResult> Index([FromBody] ConfigurationPostParameters configuration)
         {
             if (_configurationProvider.TryGetRuntimeConfiguration(out _))

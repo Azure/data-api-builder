@@ -236,8 +236,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// </summary>
         /// <param name="configuration">The engine configuration.</param>
         /// <param name="schema">The GraphQL Schema. Can be left null for SQL configurations.</param>
-        /// <param name="accessToken">The string representation of a managed identity access token
-        /// <returns></returns>
+        /// <param name="accessToken">The string representation of a managed identity access token</param>
+        /// <returns>true if the initialization succeeded, false otherwise.</returns>
         public async Task<bool> Initialize(
             string configuration,
             string? schema,
@@ -279,7 +279,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <param name="configuration">The engine configuration.</param>
         /// <param name="schema">The GraphQL Schema. Can be left null for SQL configurations.</param>
         /// <param name="connectionString">The connection string to the database.</param>
-        /// <param name="accessToken">The string representation of a managed identity access token
+        /// <param name="accessToken">The string representation of a managed identity access token</param>
+        /// <returns>true if the initialization succeeded, false otherwise.</returns>
         public async Task<bool> Initialize(
             string configuration,
             string? schema,

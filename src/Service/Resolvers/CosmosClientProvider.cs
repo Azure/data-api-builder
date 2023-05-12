@@ -10,6 +10,7 @@ using Azure.Core;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.Identity;
+using HotChocolate.Types.Helpers;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Fluent;
 
@@ -21,8 +22,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private string? _accountEndpoint;
         private string? _accountKey;
         private readonly string? _accessToken;
-        private const string DAB_APP_NAME_ENV = "DAB_APP_NAME_ENV";
-        public static string DEFAULT_APP_NAME = "dab_oss";
+        public const string DAB_APP_NAME_ENV = "DAB_APP_NAME_ENV";
+        public static readonly string DEFAULT_APP_NAME = $"dab_oss_{DABUtils.GetProductVersion()}";
 
         public CosmosClient? Client { get; private set; }
         public CosmosClientProvider(RuntimeConfigProvider runtimeConfigProvider)

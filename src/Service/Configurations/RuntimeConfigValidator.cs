@@ -55,8 +55,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
         // Error messages.
         public const string INVALID_CLAIMS_IN_POLICY_ERR_MSG = "One or more claim types supplied in the database policy are not supported.";
-        public const string INVALID_REST_PATH_WITH_RESERVED_CHAR_ERR_MSG = "REST path contains one or more reserved characters.";
-        public const string INVALID_GRAPHQL_PATH_WITH_RESERVED_CHAR_ERR_MSG = "GraphQL path contains one or more reserved characters.";
 
         public RuntimeConfigValidator(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -334,8 +332,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
             }
 
-            ValidateRestPathForRelationalDbs(runtimeConfig);
-            ValidateGraphQLPath(runtimeConfig);
+            ValidateRestURI(runtimeConfig);
+            ValidateGraphQLURI(runtimeConfig);
             // Do not check for conflicts if GraphQL or REST endpoints are disabled.
             if (!runtimeConfig.GraphQLGlobalSettings.Enabled || !runtimeConfig.RestGlobalSettings.Enabled)
             {
@@ -355,11 +353,11 @@ namespace Azure.DataApiBuilder.Service.Configurations
         }
 
         /// <summary>
-        /// Method to validate that the rest path prefix.
+        /// Method to validate that the REST URI (REST path prefix, REST base route).
         /// Skips validation for cosmosDB since it doesn't support REST.
         /// </summary>
         /// <param name="runtimeConfig"></param>
-        public static void ValidateRestPathForRelationalDbs(RuntimeConfig runtimeConfig)
+        public static void ValidateRestURI(RuntimeConfig runtimeConfig)
         {
             // cosmosdb_nosql does not support rest. No need to do any validations.
             if (runtimeConfig.DatabaseType is DatabaseType.cosmosdb_nosql)
@@ -368,72 +366,74 @@ namespace Azure.DataApiBuilder.Service.Configurations
             }
 
             string restPath = runtimeConfig.RestGlobalSettings.Path;
+            string restBaseRoute = runtimeConfig.RestGlobalSettings.BaseRoute;
 
-            ValidateApiPath(restPath, ApiType.REST);
+            ValidateURIComponent(restPath, ApiType.REST, ApiSettings.PROPERTY_NAME_PATH);
+            ValidateURIComponent(restBaseRoute, ApiType.REST, ApiSettings.PROPERTY_NAME_BASE_ROUTE);
         }
 
         /// <summary>
-        /// Method to validate that the GraphQL path prefix.
+        /// Method to validate that the GraphQL URI (GraphQL path prefix, GraphQL base route).
         /// </summary>
         /// <param name="runtimeConfig"></param>
-        public static void ValidateGraphQLPath(RuntimeConfig runtimeConfig)
+        public static void ValidateGraphQLURI(RuntimeConfig runtimeConfig)
         {
             string graphqlPath = runtimeConfig.GraphQLGlobalSettings.Path;
-
-            ValidateApiPath(graphqlPath, ApiType.GraphQL);
+            string graphqlBaseRoute = runtimeConfig.GraphQLGlobalSettings.BaseRoute;
+            ValidateURIComponent(graphqlPath, ApiType.GraphQL, ApiSettings.PROPERTY_NAME_PATH);
+            ValidateURIComponent(graphqlBaseRoute, ApiType.GraphQL, ApiSettings.PROPERTY_NAME_BASE_ROUTE);
         }
 
         /// <summary>
-        /// Method to validate that the REST/GraphQL path prefix is well formed and does not contain
+        /// Method to validate that the REST/GraphQL URI component is well formed and does not contain
         /// any forbidden characters.
         /// </summary>
-        /// <param name="apiPath">path prefix for rest/graphql apis</param>
+        /// <param name="uriComponent">path prefix for rest/graphql apis</param>
         /// <param name="apiType">Either REST or GraphQL</param>
         /// <exception cref="DataApiBuilderException"></exception>
-        private static void ValidateApiPath(string apiPath, ApiType apiType)
+        private static void ValidateURIComponent(string uriComponent, ApiType apiType, string apiProperty)
         {
-            if (string.IsNullOrEmpty(apiPath))
+            if (string.IsNullOrEmpty(uriComponent) && apiProperty.Equals(ApiSettings.PROPERTY_NAME_BASE_ROUTE))
+            {
+                return;
+            }
+
+            if (string.IsNullOrEmpty(uriComponent))
             {
                 throw new DataApiBuilderException(
-                    message: $"{apiType} path prefix cannot be null or empty.",
+                    message: $"{apiType} {apiProperty} cannot be null or empty.",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
             }
 
             // A valid api path prefix should start with a forward slash '/'.
-            if (!apiPath.StartsWith("/"))
+            if (!uriComponent.StartsWith("/"))
             {
                 throw new DataApiBuilderException(
-                    message: $"{apiType} path should start with a '/'.",
+                    message: $"{apiType} {apiProperty} should start with a '/'.",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
             }
 
-            apiPath = apiPath.Substring(1);
+            uriComponent = uriComponent.Substring(1);
 
             // API path prefix should not contain any reserved characters.
-            DoApiPathInvalidCharCheck(apiPath, apiType);
+            DoURIComponentInvalidCharCheck(uriComponent, apiType, apiProperty);
         }
 
         /// <summary>
         /// Method to validate that the REST/GraphQL path prefix does not contain
         /// any forbidden characters.
         /// </summary>
-        /// <param name="apiPath">path prefix for rest/graphql apis</param>
+        /// <param name="uriComponent">path prefix for rest/graphql apis</param>
         /// <param name="apiType">Either REST or GraphQL</param>
         /// <exception cref="DataApiBuilderException"></exception>
-        public static void DoApiPathInvalidCharCheck(string apiPath, ApiType apiType)
+        public static void DoURIComponentInvalidCharCheck(string uriComponent, ApiType apiType, string apiProperty = "")
         {
-            if (_invalidApiPathCharsRgx.IsMatch(apiPath))
+            if (_invalidApiPathCharsRgx.IsMatch(uriComponent))
             {
-                string errorMessage = INVALID_GRAPHQL_PATH_WITH_RESERVED_CHAR_ERR_MSG;
-                if (apiType is ApiType.REST)
-                {
-                    errorMessage = INVALID_REST_PATH_WITH_RESERVED_CHAR_ERR_MSG;
-                }
-
                 throw new DataApiBuilderException(
-                    message: errorMessage,
+                    message: $"{apiType} {apiProperty} contains one or more reserved characters.",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
             }

@@ -68,6 +68,7 @@ namespace Cli
 
             DatabaseType dbType = options.DatabaseType;
             string? restPath = options.RestPath;
+            string? restBaseRoute = options.RestBaseRoute;
             object? dbOptions = null;
 
             switch (dbType)
@@ -96,7 +97,16 @@ namespace Cli
                             "it does not support REST yet.");
                     }
 
+                    // If the option --rest.base-route is specified for cosmosdb_nosql, log a warning because
+                    // rest is not supported for cosmosdb_nosql yet.
+                    if (!string.Empty.Equals(restPath))
+                    {
+                        _logger.LogWarning("Configuration option --rest.base-route is not honored for cosmosdb_nosql since " +
+                            "it does not support REST yet.");
+                    }
+
                     restPath = null;
+                    restBaseRoute = null;
                     dbOptions = new CosmosDbNoSqlOptions(cosmosDatabase, cosmosContainer, graphQLSchemaPath, GraphQLSchema: null);
                     break;
 
@@ -127,7 +137,11 @@ namespace Cli
                 return false;
             }
 
-            if (!IsApiPathValid(restPath, ApiType.REST) || !IsApiPathValid(options.GraphQLPath, ApiType.GraphQL))
+            if (!IsURIComponentValid(restPath, ApiType.REST, ApiSettings.PROPERTY_NAME_PATH) ||
+                !IsURIComponentValid(options.GraphQLPath, ApiType.GraphQL, ApiSettings.PROPERTY_NAME_PATH) ||
+                !IsURIComponentValid(restBaseRoute, ApiType.REST, ApiSettings.PROPERTY_NAME_BASE_ROUTE) ||
+                !IsURIComponentValid(options.GraphQLBaseRoute, ApiType.GraphQL, ApiSettings.PROPERTY_NAME_BASE_ROUTE))
+
             {
                 return false;
             }
@@ -148,8 +162,10 @@ namespace Cli
                     options.Audience,
                     options.Issuer,
                     restPath,
+                    restBaseRoute,
                     !options.RestDisabled,
                     options.GraphQLPath,
+                    options.GraphQLBaseRoute,
                     !options.GraphQLDisabled),
                 Entities: new Dictionary<string, Entity>());
 

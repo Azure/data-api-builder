@@ -58,6 +58,11 @@ namespace Azure.DataApiBuilder.Service.Configurations
             get { return RuntimeConfiguration is not null ? RuntimeConfiguration.RestGlobalSettings.Path : string.Empty; }
         }
 
+        public virtual string RestBaseRoute
+        {
+            get { return RuntimeConfiguration is not null ? RuntimeConfiguration.RestGlobalSettings.BaseRoute : string.Empty; }
+        }
+
         /// <summary>
         /// The access token representing a Managed Identity to connect to the database.
         /// </summary>

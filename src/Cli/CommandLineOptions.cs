@@ -42,8 +42,10 @@ namespace Cli
             string? audience = null,
             string? issuer = null,
             string restPath = GlobalSettings.REST_DEFAULT_PATH,
+            string restBaseRoute = "",
             bool restDisabled = false,
             string graphQLPath = GlobalSettings.GRAPHQL_DEFAULT_PATH,
+            string gqlBaseRoute = "",
             bool graphqlDisabled = false,
             string? config = null)
             : base(config)
@@ -60,8 +62,10 @@ namespace Cli
             Audience = audience;
             Issuer = issuer;
             RestPath = restPath;
+            RestBaseRoute = restBaseRoute;
             RestDisabled = restDisabled;
             GraphQLPath = graphQLPath;
+            GraphQLBaseRoute = gqlBaseRoute;
             GraphQLDisabled = graphqlDisabled;
         }
 
@@ -101,11 +105,17 @@ namespace Cli
         [Option("rest.path", Default = GlobalSettings.REST_DEFAULT_PATH, Required = false, HelpText = "Specify the REST endpoint's default prefix.")]
         public string RestPath { get; }
 
+        [Option("rest.base-route", Default = "", Required = false, HelpText = "Specifies the base route for REST requests.")]
+        public string RestBaseRoute { get; }
+
         [Option("rest.disabled", Default = false, Required = false, HelpText = "Disables REST endpoint for all entities.")]
         public bool RestDisabled { get; }
 
         [Option("graphql.path", Default = GlobalSettings.GRAPHQL_DEFAULT_PATH, Required = false, HelpText = "Specify the GraphQL endpoint's default prefix.")]
         public string GraphQLPath { get; }
+
+        [Option("graphql.base-route", Default = "", Required = false, HelpText = "Specifies the base route for GraphQL requests.")]
+        public string GraphQLBaseRoute { get; }
 
         [Option("graphql.disabled", Default = false, Required = false, HelpText = "Disables GraphQL endpoint for all entities.")]
         public bool GraphQLDisabled { get; }

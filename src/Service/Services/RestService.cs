@@ -368,6 +368,7 @@ namespace Azure.DataApiBuilder.Service.Services
             // route will ignore leading '/' so we trim here to allow for restPath
             // that start with '/'. We can be assured here that _runtimeConfigProvider.RestPath[0]='/'.
             string restPath = _runtimeConfigProvider.RestPath.Substring(1);
+
             if (!route.StartsWith(restPath))
             {
                 throw new DataApiBuilderException(
@@ -376,9 +377,24 @@ namespace Azure.DataApiBuilder.Service.Services
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
 
+            string routeAfterPath = route.Substring(restPath.Length).TrimStart('/');
+            string restBaseRoute = _runtimeConfigProvider.RestBaseRoute;
+
+            if(!string.IsNullOrEmpty(restBaseRoute))
+            {
+                restBaseRoute = restBaseRoute.Substring(1);
+                if (!routeAfterPath.StartsWith(restBaseRoute))
+                {
+                    throw new DataApiBuilderException(
+                        message: $"Invalid base-route for route: {route}.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                }
+            }
+
             // entity's path comes after the restPath, so get substring starting from
             // the end of restPath. If restPath is not empty we trim the '/' following the path.
-            string routeAfterPath = route.Substring(restPath.Length).TrimStart('/');
+            string routeAfterBaseRoute = routeAfterPath.Substring(restBaseRoute.Length).TrimStart('/');
             // Split routeAfterPath on the first occurrence of '/', if we get back 2 elements
             // this means we have a non empty primary key route which we save. Otherwise, save
             // primary key route as empty string. Entity Path will always be the element at index 0.
@@ -386,7 +402,7 @@ namespace Azure.DataApiBuilder.Service.Services
             // splits into [{EntityPath}] when there is an empty primary key route and into
             // [{EntityPath}, {Primarykeyroute}] when there is a non empty primary key route.
             int maxNumberOfElementsFromSplit = 2;
-            string[] entityPathAndPKRoute = routeAfterPath.Split(new[] { '/' }, maxNumberOfElementsFromSplit);
+            string[] entityPathAndPKRoute = routeAfterBaseRoute.Split(new[] { '/' }, maxNumberOfElementsFromSplit);
             string entityPath = entityPathAndPKRoute[0];
             string primaryKeyRoute = entityPathAndPKRoute.Length == maxNumberOfElementsFromSplit ? entityPathAndPKRoute[1] : string.Empty;
 

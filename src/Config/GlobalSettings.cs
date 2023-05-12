@@ -23,8 +23,14 @@ namespace Azure.DataApiBuilder.Config
     /// <param name="Path">The URL path at which the API is available.</param>
     public record ApiSettings(
         bool Enabled = true,
-        string Path = ""
-        ) : GlobalSettings();
+        string Path = "",
+        [property: JsonPropertyName(ApiSettings.PROPERTY_NAME_BASE_ROUTE)]
+        string BaseRoute = ""
+        ) : GlobalSettings()
+    {
+        public const string PROPERTY_NAME_PATH = "path";
+        public const string PROPERTY_NAME_BASE_ROUTE = "base-route";
+    }
 
     /// <summary>
     /// Holds the global settings used at runtime for REST Apis.
@@ -34,8 +40,9 @@ namespace Azure.DataApiBuilder.Config
     /// for all entities will be exposed.</param>
     public record RestGlobalSettings(
         bool Enabled = true,
-        string Path = GlobalSettings.REST_DEFAULT_PATH
-        ) : ApiSettings(Enabled, Path);
+        string Path = GlobalSettings.REST_DEFAULT_PATH,
+        string BaseRoute = ""
+        ) : ApiSettings(Enabled, Path, BaseRoute);
 
     /// <summary>
     /// Holds the global settings used at runtime for GraphQL.
@@ -48,8 +55,9 @@ namespace Azure.DataApiBuilder.Config
         bool Enabled = true,
         string Path = GlobalSettings.GRAPHQL_DEFAULT_PATH,
         [property: JsonPropertyName("allow-introspection")]
-        bool AllowIntrospection = true)
-        : ApiSettings(Enabled, Path);
+        bool AllowIntrospection = true,
+        string BaseRoute = "")
+        : ApiSettings(Enabled, Path, BaseRoute);
 
     /// <summary>
     /// Global settings related to hosting.

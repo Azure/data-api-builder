@@ -319,8 +319,10 @@ namespace Cli
                                                                                       string? audience = null,
                                                                                       string? issuer = null,
                                                                                       string? restPath = GlobalSettings.REST_DEFAULT_PATH,
+                                                                                      string? restBaseRoute = "",
                                                                                       bool restEnabled = true,
                                                                                       string graphqlPath = GlobalSettings.GRAPHQL_DEFAULT_PATH,
+                                                                                      string graphqlBaseRoute = "",
                                                                                       bool graphqlEnabled = true)
         {
             // Prefix rest path with '/', if not already present.
@@ -329,22 +331,32 @@ namespace Cli
                 restPath = "/" + restPath;
             }
 
+            if (!string.IsNullOrEmpty(restBaseRoute) && !restBaseRoute.StartsWith("/"))
+            {
+                restBaseRoute = "/" + restBaseRoute;
+            }
+
             // Prefix graphql path with '/', if not already present.
             if (!graphqlPath.StartsWith('/'))
             {
                 graphqlPath = "/" + graphqlPath;
             }
 
+            if (!string.IsNullOrEmpty(graphqlBaseRoute) && !graphqlBaseRoute.StartsWith("/"))
+            {
+                graphqlBaseRoute = "/" + graphqlBaseRoute;
+            }
+
             Dictionary<GlobalSettingsType, object> defaultGlobalSettings = new();
 
             // If restPath is null, it implies we are dealing with cosmosdb_nosql,
             // which only supports graphql.
-            if (restPath is not null)
+            if (restPath is not null && restBaseRoute is not null)
             {
-                defaultGlobalSettings.Add(GlobalSettingsType.Rest, new RestGlobalSettings(Enabled: restEnabled, Path: restPath));
+                defaultGlobalSettings.Add(GlobalSettingsType.Rest, new RestGlobalSettings(Enabled: restEnabled, Path: restPath, BaseRoute: restBaseRoute));
             }
 
-            defaultGlobalSettings.Add(GlobalSettingsType.GraphQL, new GraphQLGlobalSettings(Enabled: graphqlEnabled, Path: graphqlPath));
+            defaultGlobalSettings.Add(GlobalSettingsType.GraphQL, new GraphQLGlobalSettings(Enabled: graphqlEnabled, Path: graphqlPath, BaseRoute: graphqlBaseRoute));
             defaultGlobalSettings.Add(
                 GlobalSettingsType.Host,
                 GetDefaultHostGlobalSettings(
@@ -359,26 +371,26 @@ namespace Cli
         /// <summary>
         /// Returns true if the api path contains any reserved characters like "[\.:\?#/\[\]@!$&'()\*\+,;=]+"
         /// </summary>
-        /// <param name="apiPath">path prefix for rest/graphql apis</param>
+        /// <param name="uriComponent">Path prefix/base route for REST/GraphQL APIs.</param>
         /// <param name="apiType">Either REST or GraphQL</param>
-        public static bool IsApiPathValid(string? apiPath, ApiType apiType)
+        public static bool IsURIComponentValid(string? uriComponent, ApiType apiType, string apiProperty)
         {
-            // apiPath is null only in case of cosmosDB and apiType=REST. For this case, validation is not required.
+            // uriComponent is null only in case of cosmosDB and apiType=REST. For this case, validation is not required.
             // Since, cosmosDB do not support REST calls.
-            if (apiPath is null)
+            if (uriComponent is null)
             {
                 return true;
             }
 
             // removing leading '/' before checking for forbidden characters.
-            if (apiPath.StartsWith('/'))
+            if (uriComponent.StartsWith('/'))
             {
-                apiPath = apiPath.Substring(1);
+                uriComponent = uriComponent.Substring(1);
             }
 
             try
             {
-                DoApiPathInvalidCharCheck(apiPath, apiType);
+                DoURIComponentInvalidCharCheck(uriComponent, apiType, apiProperty);
                 return true;
             }
             catch (DataApiBuilderException ex)

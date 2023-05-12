@@ -162,7 +162,7 @@ namespace Cli.Tests
         [DataRow("/api path", ApiType.REST, true, DisplayName = "Api path containing space.")]
         public void TestApiPathIsWellFormed(string apiPath, ApiType apiType, bool expectSuccess)
         {
-            Assert.AreEqual(expectSuccess, IsApiPathValid(apiPath, apiType));
+            Assert.AreEqual(expectSuccess, IsURIComponentValid(apiPath, apiType, ApiSettings.JSON_PROPERTY_NAME));
         }
 
         /// <summary>

@@ -6,7 +6,7 @@ using System.Reflection;
 
 namespace Azure.DataApiBuilder.Service
 {
-    public class DABUtils
+    public class Utils
     {
         public const string DEFAULT_VERSION = "1.0.0";
 

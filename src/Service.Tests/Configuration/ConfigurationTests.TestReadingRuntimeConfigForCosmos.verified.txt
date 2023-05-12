@@ -1,0 +1,256 @@
+﻿{
+  DataSource: {
+    Options: {
+      container: {
+        ValueKind: String
+      },
+      database: {
+        ValueKind: String
+      },
+      schema: {
+        ValueKind: String
+      }
+    },
+    DatabaseTypeNotSupportedMessage: The provided database-type value: CosmosDB_NoSQL is currently not supported. Please check the configuration file.
+  },
+  Runtime: {
+    Rest: {
+      Enabled: true,
+      Path: /api
+    },
+    GraphQL: {
+      Enabled: true,
+      Path: /graphql,
+      AllowIntrospection: true
+    },
+    Host: {
+      Cors: {
+        Origins: [
+          http://localhost:5000
+        ],
+        AllowCredentials: false
+      },
+      Authentication: {
+        Provider: StaticWebApps,
+        Jwt: {}
+      }
+    }
+  },
+  Entities: [
+    {
+      Planet: {
+        Source: {
+          Object: graphqldb.planet
+        },
+        GraphQL: {
+          Singular: Planet,
+          Plural: Planets,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: false
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Create,
+                Policy: {}
+              },
+              {
+                Action: Read,
+                Policy: {}
+              },
+              {
+                Action: Update,
+                Policy: {}
+              },
+              {
+                Action: Delete,
+                Policy: {}
+              }
+            ]
+          },
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: Create,
+                Policy: {}
+              },
+              {
+                Action: Read,
+                Policy: {}
+              },
+              {
+                Action: Update,
+                Policy: {}
+              },
+              {
+                Action: Delete,
+                Policy: {}
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      Character: {
+        Source: {
+          Object: graphqldb.character
+        },
+        GraphQL: {
+          Singular: Character,
+          Plural: Characters,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: false
+        },
+        Permissions: [
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: Create,
+                Policy: {}
+              },
+              {
+                Action: Read,
+                Policy: {}
+              },
+              {
+                Action: Update,
+                Policy: {}
+              },
+              {
+                Action: Delete,
+                Policy: {}
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      StarAlias: {
+        Source: {
+          Object: graphqldb.star
+        },
+        GraphQL: {
+          Singular: Star,
+          Plural: Stars,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: false
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Create,
+                Policy: {}
+              },
+              {
+                Action: Read,
+                Policy: {}
+              },
+              {
+                Action: Update,
+                Policy: {}
+              },
+              {
+                Action: Delete,
+                Policy: {}
+              }
+            ]
+          },
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: Create,
+                Policy: {}
+              },
+              {
+                Action: Read,
+                Policy: {}
+              },
+              {
+                Action: Update,
+                Policy: {}
+              },
+              {
+                Action: Delete,
+                Policy: {}
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      Moon: {
+        Source: {
+          Object: graphqldb.moon
+        },
+        GraphQL: {
+          Singular: Moon,
+          Plural: Moons,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: false
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Create,
+                Policy: {}
+              },
+              {
+                Action: Read,
+                Policy: {}
+              },
+              {
+                Action: Update,
+                Policy: {}
+              },
+              {
+                Action: Delete,
+                Policy: {}
+              }
+            ]
+          },
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: Create,
+                Policy: {}
+              },
+              {
+                Action: Read,
+                Policy: {}
+              },
+              {
+                Action: Update,
+                Policy: {}
+              },
+              {
+                Action: Delete,
+                Policy: {}
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

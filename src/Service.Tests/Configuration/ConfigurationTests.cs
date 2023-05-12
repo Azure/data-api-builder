@@ -33,12 +33,14 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using MySqlConnector;
 using Npgsql;
+using VerifyMSTest;
 using static Azure.DataApiBuilder.Config.RuntimeConfigLoader;
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration
 {
     [TestClass]
     public class ConfigurationTests
+        : VerifyBase
     {
         private const string COSMOS_ENVIRONMENT = TestCategory.COSMOSDBNOSQL;
         private const string MSSQL_ENVIRONMENT = TestCategory.MSSQL;
@@ -529,9 +531,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// deserialization succeeds.
         /// </summary>
         [TestMethod("Validates if deserialization of MsSql config file succeeds."), TestCategory(TestCategory.MSSQL)]
-        public void TestReadingRuntimeConfigForMsSql()
+        public Task TestReadingRuntimeConfigForMsSql()
         {
-            ConfigFileDeserializationValidationHelper(File.ReadAllText($"{RuntimeConfigLoader.CONFIGFILE_NAME}.{MSSQL_ENVIRONMENT}{RuntimeConfigLoader.CONFIG_EXTENSION}"));
+            return ConfigFileDeserializationValidationHelper(File.ReadAllText($"{RuntimeConfigLoader.CONFIGFILE_NAME}.{MSSQL_ENVIRONMENT}{RuntimeConfigLoader.CONFIG_EXTENSION}"));
         }
 
         /// <summary>
@@ -539,9 +541,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// deserialization succeeds.
         /// </summary>
         [TestMethod("Validates if deserialization of MySql config file succeeds."), TestCategory(TestCategory.MYSQL)]
-        public void TestReadingRuntimeConfigForMySql()
+        public Task TestReadingRuntimeConfigForMySql()
         {
-            ConfigFileDeserializationValidationHelper(File.ReadAllText($"{RuntimeConfigLoader.CONFIGFILE_NAME}.{MYSQL_ENVIRONMENT}{RuntimeConfigLoader.CONFIG_EXTENSION}"));
+            return ConfigFileDeserializationValidationHelper(File.ReadAllText($"{RuntimeConfigLoader.CONFIGFILE_NAME}.{MYSQL_ENVIRONMENT}{RuntimeConfigLoader.CONFIG_EXTENSION}"));
         }
 
         /// <summary>
@@ -549,9 +551,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// deserialization succeeds.
         /// </summary>
         [TestMethod("Validates if deserialization of PostgreSql config file succeeds."), TestCategory(TestCategory.POSTGRESQL)]
-        public void TestReadingRuntimeConfigForPostgreSql()
+        public Task TestReadingRuntimeConfigForPostgreSql()
         {
-            ConfigFileDeserializationValidationHelper(File.ReadAllText($"{RuntimeConfigLoader.CONFIGFILE_NAME}.{POSTGRESQL_ENVIRONMENT}{RuntimeConfigLoader.CONFIG_EXTENSION}"));
+            return ConfigFileDeserializationValidationHelper(File.ReadAllText($"{RuntimeConfigLoader.CONFIGFILE_NAME}.{POSTGRESQL_ENVIRONMENT}{RuntimeConfigLoader.CONFIG_EXTENSION}"));
         }
 
         /// <summary>
@@ -559,9 +561,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// deserialization succeeds.
         /// </summary>
         [TestMethod("Validates if deserialization of the CosmosDB_NoSQL config file succeeds."), TestCategory(TestCategory.COSMOSDBNOSQL)]
-        public void TestReadingRuntimeConfigForCosmos()
+        public Task TestReadingRuntimeConfigForCosmos()
         {
-            ConfigFileDeserializationValidationHelper(File.ReadAllText($"{RuntimeConfigLoader.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigLoader.CONFIG_EXTENSION}"));
+            return ConfigFileDeserializationValidationHelper(File.ReadAllText($"{RuntimeConfigLoader.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigLoader.CONFIG_EXTENSION}"));
         }
 
         /// <summary>
@@ -569,10 +571,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// This is used in unit tests that validate the deserialization of the config files
         /// </summary>
         /// <param name="runtimeConfig"></param>
-        private static void ConfigFileDeserializationValidationHelper(string jsonString)
+        private Task ConfigFileDeserializationValidationHelper(string jsonString)
         {
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(jsonString, out RuntimeConfig runtimeConfig), "Deserialization of the config file failed.");
-            runtimeConfig.MatchSnapshot();
+            return Verify(runtimeConfig);
         }
 
         /// <summary>

@@ -142,11 +142,10 @@ namespace Azure.DataApiBuilder.Service.Models
                         relationshipField = false;
                     }
 
-                    // Only perform field (column) authorization when the field is not a relationship field and when the database type is not Cosmos DB.
-                    // Currently Cosmos DB doesn't support field level authorization.
+                    // Only perform field (column) authorization when the field is not a relationship field.
                     // Due to the recursive behavior of SqlExistsQueryStructure compilation, the column authorization
                     // check only occurs when access to the column's owner entity is confirmed.
-                    if (!relationshipField && _metadataProvider.GetDatabaseType() is not DatabaseType.CosmosDB_NoSQL)
+                    if (!relationshipField)
                     {
                         string targetEntity = queryStructure.EntityName;
 
@@ -183,8 +182,21 @@ namespace Azure.DataApiBuilder.Service.Models
                         }
                         else
                         {
+                            // This path will never get called for sql since the primary key will always required
+                            // This path will only be exercised for CosmosDb_NoSql
                             queryStructure.DatabaseObject.Name = sourceName + "." + backingColumnName;
                             queryStructure.SourceAlias = sourceName + "." + backingColumnName;
+                            string? nestedFieldType = _metadataProvider.GetSchemaGraphQLFieldTypeFromFieldName(queryStructure.EntityName, name);
+
+                            if (nestedFieldType is null)
+                            {
+                                throw new DataApiBuilderException(
+                                    message: "Invalid filter object used as a nested field input value type.",
+                                    statusCode: HttpStatusCode.BadRequest,
+                                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                            }
+
+                            queryStructure.EntityName = _metadataProvider.GetEntityName(nestedFieldType);
                             predicates.Push(new PredicateOperand(Parse(ctx,
                                 filterArgumentObject.Fields[name],
                                 subfields,

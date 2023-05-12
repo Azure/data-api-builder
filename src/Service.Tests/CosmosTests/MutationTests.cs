@@ -4,6 +4,7 @@
 using System;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
@@ -238,6 +239,83 @@ mutation {{
 }}";
             JsonElement response = await ExecuteGraphQLRequestAsync("deletePlanet", mutation, variables: new());
             Assert.AreEqual("The argument `_partitionKeyValue` is required.", response[0].GetProperty("message").ToString());
+        }
+
+        /// <summary>
+        /// Mutation can be performed on the authorized fields because the
+        /// field `id` is an included field for the create operation on the anonymous role defined
+        /// for entity 'earth'
+        /// </summary>
+        [TestMethod]
+        public async Task CanCreateItemWithAuthorizedFields()
+        {
+            // Run mutation Add Earth;
+            string id = Guid.NewGuid().ToString();
+            string mutation = $@"
+mutation {{
+    createEarth (item: {{ id: ""{id}"" }}) {{
+        id
+    }}
+}}";
+            JsonElement response = await ExecuteGraphQLRequestAsync("createEarth", mutation, variables: new());
+
+            // Validate results
+            Assert.AreEqual(id, response.GetProperty("id").GetString());
+        }
+
+        /// <summary>
+        /// Mutation performed on the unauthorized fields throws permission denied error because the
+        /// field `name` is an excluded field for the create operation on the anonymous role defined
+        /// for entity 'earth'
+        /// </summary>
+        [TestMethod]
+        public async Task CreateItemWithUnauthorizedFieldsReturnsError()
+        {
+            // Run mutation Add Earth;
+            string id = Guid.NewGuid().ToString();
+            const string name = "test_name";
+            string mutation = $@"
+mutation {{
+    createEarth (item: {{ id: ""{id}"", name: ""{name}"" }}) {{
+        id
+        name
+    }}
+}}";
+            JsonElement response = await ExecuteGraphQLRequestAsync("createEarth", mutation, variables: new());
+
+            // Validate the result contains the GraphQL authorization error code.
+            string errorMessage = response.ToString();
+            Assert.IsTrue(errorMessage.Contains(DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE));
+        }
+
+        /// <summary>
+        /// Mutation performed on the unauthorized fields throws permission denied error because the
+        /// wildcard is used in the excluded field for the update operation on the anonymous role defined
+        /// for entity 'earth'
+        /// </summary>
+        [TestMethod]
+        public async Task UpdateItemWithUnauthorizedWildCardReturnsError()
+        {
+            // Run mutation Update Earth;
+            string id = Guid.NewGuid().ToString();
+            string mutation = @"
+mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdateEarthInput!) {
+    updateEarth (id: $id, _partitionKeyValue: $partitionKeyValue, item: $item) {
+        id
+        name
+     }
+}";
+            var update = new
+            {
+                id = id,
+                name = "new_name"
+            };
+
+            JsonElement response = await ExecuteGraphQLRequestAsync("updateEarth", mutation, variables: new() { { "id", id }, { "partitionKeyValue", id }, { "item", update } });
+
+            // Validate the result contains the GraphQL authorization error code.
+            string errorMessage = response.ToString();
+            Assert.IsTrue(errorMessage.Contains(DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE));
         }
 
         /// <summary>

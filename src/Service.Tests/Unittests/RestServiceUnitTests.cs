@@ -28,9 +28,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         #region Positive Cases
 
         /// <summary>
-        /// Test the REST Service for parsing entity name
-        /// and primary key route from the route, given a
-        /// particular path.
+        /// Validates that the RestService helper function GetEntityNameAndPrimaryKeyRouteFromRoute
+        /// properly parses the entity name and primary key route from the route,
+        /// given the input path (which does not include the path base).
         /// </summary>
         /// <param name="route">The route to parse.</param>
         /// <param name="path">The path that the route starts with.</param>
@@ -43,14 +43,16 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("rest api/Book/id/1", "/rest api", "Book", "id/1")]
         [DataRow(" rest_api/commodities/categoryid/1/pieceid/1", "/ rest_api", "commodities", "categoryid/1/pieceid/1")]
         [DataRow("rest-api/Book/id/1", "/rest-api", "Book", "id/1")]
-        public void ParseEntityNameAndPrimaryKeyTest(string route,
-                                                     string path,
-                                                     string expectedEntityName,
-                                                     string expectedPrimaryKeyRoute)
+        public void ParseEntityNameAndPrimaryKeyTest(
+            string route,
+            string path,
+            string expectedEntityName,
+            string expectedPrimaryKeyRoute)
         {
             InitializeTest(path, expectedEntityName);
+            string routeAfterPathBase = _restService.GetRouteAfterPathBase(route);
             (string actualEntityName, string actualPrimaryKeyRoute) =
-                _restService.GetEntityNameAndPrimaryKeyRouteFromRoute(route);
+                _restService.GetEntityNameAndPrimaryKeyRouteFromRoute(routeAfterPathBase);
             Assert.AreEqual(expectedEntityName, actualEntityName);
             Assert.AreEqual(expectedPrimaryKeyRoute, actualPrimaryKeyRoute);
         }
@@ -77,8 +79,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             InitializeTest(path, route);
             try
             {
-                (string actualEntityName, string actualPrimaryKeyRoute) =
-                _restService.GetEntityNameAndPrimaryKeyRouteFromRoute(route);
+                string routeAfterPathBase = _restService.GetRouteAfterPathBase(route);
             }
             catch (DataApiBuilderException e)
             {

@@ -417,7 +417,7 @@ namespace Cli.Tests
 
             string initialConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY);
 
-            VerifySettings settings = new ();
+            VerifySettings settings = new();
             settings.UseParameters(fieldsToInclude, fieldsToExclude, policyRequest, policyDatabase);
             return ExecuteVerifyTest(initialConfig, options, settings);
         }
@@ -447,7 +447,7 @@ namespace Cli.Tests
 
             string initialConfig = AddPropertiesToJson(INITIAL_CONFIG, BASIC_ENTITY_WITH_ANONYMOUS_ROLE);
 
-            VerifySettings settings = new ();
+            VerifySettings settings = new();
             settings.UseParameters(source, sourceType, permissions, parameters, keyFields);
             return ExecuteVerifyTest(initialConfig, options, settings);
         }

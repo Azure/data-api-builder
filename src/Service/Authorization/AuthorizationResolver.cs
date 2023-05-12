@@ -654,6 +654,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// <summary>
         /// For a given entityName, retrieve the column names on the associated table
         /// from the metadataProvider.
+        /// For CosmosDb_NoSql, read all the column names from schema.gql GraphQL type fields
         /// </summary>
         /// <param name="entityName">Used to lookup table definition of specific entity</param>
         /// <returns>Collection of columns in table definition.</returns>
@@ -661,7 +662,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         {
             if (_metadataProvider.GetDatabaseType() is DatabaseType.CosmosDB_NoSQL)
             {
-                return new List<string>();
+                return _metadataProvider.GetSchemaGraphQLFieldNamesForEntityName(entityName);
             }
 
             // Table definition is null on stored procedure entities

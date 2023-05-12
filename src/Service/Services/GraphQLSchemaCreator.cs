@@ -212,18 +212,8 @@ namespace Azure.DataApiBuilder.Service.Services
 
         private (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) GenerateCosmosGraphQLObjects()
         {
-            string graphqlSchema = ((CosmosSqlMetadataProvider)_sqlMetadataProvider).GraphQLSchema();
-
-            if (string.IsNullOrEmpty(graphqlSchema))
-            {
-                throw new DataApiBuilderException(
-                    message: "No GraphQL object model was provided for CosmosDB. Please define a GraphQL object model and link it in the runtime config.",
-                    statusCode: System.Net.HttpStatusCode.InternalServerError,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
-            }
-
             Dictionary<string, InputObjectTypeDefinitionNode> inputObjects = new();
-            DocumentNode root = Utf8GraphQLParser.Parse(graphqlSchema);
+            DocumentNode root = ((CosmosSqlMetadataProvider)_sqlMetadataProvider).GraphQLSchemaRoot;
 
             IEnumerable<ObjectTypeDefinitionNode> objectNodes = root.Definitions.Where(d => d is ObjectTypeDefinitionNode).Cast<ObjectTypeDefinitionNode>();
             foreach (ObjectTypeDefinitionNode node in objectNodes)

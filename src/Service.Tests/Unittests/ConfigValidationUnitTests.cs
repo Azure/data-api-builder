@@ -848,7 +848,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             if (expectsException)
             {
                 DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
-                    action: () => RuntimeConfigValidator.ValidateEntityNamesInConfig(entityCollection),
+                    action: () => RuntimeConfigValidator.ValidateEntityConfiguration(entityCollection),
                     message: $"Entity name \"{entityNameFromConfig}\" incorrectly passed validation.");
 
                 Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
@@ -856,7 +856,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
             else
             {
-                RuntimeConfigValidator.ValidateEntityNamesInConfig(entityCollection);
+                RuntimeConfigValidator.ValidateEntityConfiguration(entityCollection);
             }
         }
 

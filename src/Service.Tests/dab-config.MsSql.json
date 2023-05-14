@@ -10,7 +10,8 @@
   "runtime": {
     "rest": {
       "enabled": true,
-      "path": "/api"
+      "path": "/api",
+      "base-route": ""
     },
     "graphql": {
       "allow-introspection": true,

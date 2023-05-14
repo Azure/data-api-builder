@@ -67,6 +67,8 @@ namespace Azure.DataApiBuilder.Service.Services
 
         private Dictionary<string, string> EntityPathToEntityName { get; } = new();
 
+        private Dictionary<string, string> EntityNameToEntityPath { get; } = new();
+
         /// <summary>
         /// Maps an entity name to a DatabaseObject.
         /// </summary>
@@ -195,6 +197,12 @@ namespace Azure.DataApiBuilder.Service.Services
         public virtual bool TryGetEntityNameFromPath(string entityPathName, [NotNullWhen(true)] out string? entityName)
         {
             return EntityPathToEntityName.TryGetValue(entityPathName, out entityName);
+        }
+
+        /// <inheritdoc/>
+        public virtual bool TryGetEntityPathFromName(string entityName, [NotNullWhen(true)] out string? entityPathName)
+        {
+            return EntityNameToEntityPath.TryGetValue(entityName, out entityPathName);
         }
 
         /// <inheritdoc />
@@ -372,6 +380,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 if (!string.IsNullOrEmpty(path))
                 {
                     EntityPathToEntityName[path] = entityName;
+                    EntityNameToEntityPath[entityName] = path;
                 }
             }
         }

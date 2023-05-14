@@ -251,6 +251,11 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             throw new NotImplementedException();
         }
 
+        public virtual bool TryGetEntityPathFromName(string entityName, [NotNullWhen(true)] out string? entityPathName)
+        {
+            throw new NotImplementedException();
+        }
+
         /// <inheritdoc />
         public string GetEntityName(string graphQLType)
         {

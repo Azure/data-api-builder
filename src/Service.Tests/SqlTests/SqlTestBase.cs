@@ -358,6 +358,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             string sqlQuery,
             Config.Operation operationType = Config.Operation.Read,
             string restPath = "api",
+            string baseRoute = "rest-route",
             IHeaderDictionary headers = null,
             string requestBody = null,
             bool exceptionExpected = false,
@@ -464,7 +465,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 }
                 else
                 {
-                    string baseUrl = HttpClient.BaseAddress.ToString() + restPath + "/" + entityNameOrPath;
+                    string baseUrl = HttpClient.BaseAddress.ToString() + baseRoute + "/" + restPath + "/" + entityNameOrPath;
                     if (!string.IsNullOrEmpty(queryString))
                     {
                         // Parse query string with AspNetCore components for consistent URI encoding.

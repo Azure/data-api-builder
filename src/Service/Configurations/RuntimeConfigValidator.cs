@@ -277,7 +277,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             {
                                 // Presence of multiple entities having the same rest path configured causes conflict.
                                 throw new DataApiBuilderException(
-                                    message: $"Multiple entities found with same rest path: {entityName}.",
+                                    message: $"Multiple entities found with same rest path: {path}.",
                                     statusCode: HttpStatusCode.ServiceUnavailable,
                                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
                                     );

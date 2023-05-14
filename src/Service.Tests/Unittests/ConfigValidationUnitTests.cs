@@ -1654,7 +1654,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Method to validate that any field set (included/excluded) if misconfigured, thorws an exception during
+        /// Method to validate that any field set (included/excluded) if misconfigured, throws an exception during
         /// config validation stage. If any field set contains a wildcard and any other field, we consider it as misconfigured.
         /// </summary>
         /// <param name="databasePolicy">Database policy for a particular role/action combination for an entity.</param>
@@ -1745,6 +1745,43 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             else
             {
                 configValidator.ValidatePermissionsInConfig(runtimeConfig);
+            }
+        }
+
+        /// <summary>
+        /// Test to validate that when multiple entities have the same custom rest path configured, we throw an exception.
+        /// </summary>
+        /// <param name="exceptionExpected">Whether an exception is expected as a result of test run.</param>
+        /// <param name="restPathForFirstEntity">Custom rest path to be configured for the first entity.</param>
+        /// <param name="restPathForSecondEntity">Custom rest path to be configured for the second entity.</param>
+        [DataTestMethod]
+        [DataRow(true, "restPath", "restPath", DisplayName = "Duplicate rest paths configures for entities fail config validation.")]
+        [DataRow(false, "restPath1", "restPath2", DisplayName = "Unique rest paths configured for entities pass config validation.")]
+        public void ValidateUniqueRestPathsForEntitiesInConfig(bool exceptionExpected, string restPathForFirstEntity, string restPathForSecondEntity)
+        {
+            Dictionary<string, Entity> entityCollection = new();
+
+            // Create first entity with REST settings.
+            Entity entity = SchemaConverterTests.GenerateEmptyEntity();
+            entity.Rest = new RestEntitySettings(Path : restPathForFirstEntity);
+            entityCollection.Add("EntityA", entity);
+
+            // Create second entity with REST settings.
+            entity = SchemaConverterTests.GenerateEmptyEntity();
+            entity.Rest = new RestEntitySettings(Path: restPathForSecondEntity);
+            entityCollection.Add("EntityB", entity);
+
+            if (exceptionExpected)
+            {
+                DataApiBuilderException dabException =
+                    Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidateEntityConfiguration(entityCollection));
+                Assert.AreEqual($"Multiple entities found with same rest path: {restPathForFirstEntity}.", dabException.Message);
+                Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
+                Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
+            }
+            else
+            {
+                RuntimeConfigValidator.ValidateEntityConfiguration(entityCollection);
             }
         }
     }

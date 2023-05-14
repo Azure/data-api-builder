@@ -237,13 +237,60 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// Initialize the runtime configuration provider with the specified configurations.
         /// This initialization method is used when the configuration is sent to the ConfigurationController
         /// in the form of a string instead of reading the configuration from a configuration file.
+        /// This method assumes the connection string is provided as part of the configuration.
+        /// </summary>
+        /// <param name="configuration">The engine configuration.</param>
+        /// <param name="schema">The GraphQL Schema. Can be left null for SQL configurations.</param>
+        /// <param name="accessToken">The string representation of a managed identity access token</param>
+        /// <returns>true if the initialization succeeded, false otherwise.</returns>
+        public async Task<bool> Initialize(
+            string configuration,
+            string? schema,
+            string? accessToken)
+        {
+            if (string.IsNullOrEmpty(configuration))
+            {
+                throw new ArgumentException($"'{nameof(configuration)}' cannot be null or empty.", nameof(configuration));
+            }
+
+            if (RuntimeConfig.TryGetDeserializedRuntimeConfig(
+                    configuration,
+                    out RuntimeConfig? runtimeConfig,
+                    ConfigProviderLogger!))
+            {
+                RuntimeConfiguration = runtimeConfig;
+                RuntimeConfiguration!.MapGraphQLSingularTypeToEntityName(ConfigProviderLogger);
+
+                if (string.IsNullOrEmpty(runtimeConfig.ConnectionString))
+                {
+                    throw new ArgumentException($"'{nameof(runtimeConfig.ConnectionString)}' cannot be null or empty.", nameof(runtimeConfig.ConnectionString));
+                }
+
+                if (RuntimeConfiguration!.DatabaseType == DatabaseType.cosmosdb_nosql)
+                {
+                    HandleCosmosNoSqlConfiguration(schema);
+                }
+            }
+
+            ManagedIdentityAccessToken = accessToken;
+
+            bool configLoadSucceeded = await InvokeConfigLoadedHandlersAsync();
+
+            IsLateConfigured = true;
+
+            return configLoadSucceeded;
+        }
+
+        /// <summary>
+        /// Initialize the runtime configuration provider with the specified configurations.
+        /// This initialization method is used when the configuration is sent to the ConfigurationController
+        /// in the form of a string instead of reading the configuration from a configuration file.
         /// </summary>
         /// <param name="configuration">The engine configuration.</param>
         /// <param name="schema">The GraphQL Schema. Can be left null for SQL configurations.</param>
         /// <param name="connectionString">The connection string to the database.</param>
-        /// <param name="accessToken">The string representation of a managed identity access token
-        /// <param name="Database"> The name of the database to be used for Cosmos</param>
-        /// useful to connect to the database.</param>
+        /// <param name="accessToken">The string representation of a managed identity access token</param>
+        /// <returns>true if the initialization succeeded, false otherwise.</returns>
         public async Task<bool> Initialize(
             string configuration,
             string? schema,
@@ -260,14 +307,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 throw new ArgumentException($"'{nameof(configuration)}' cannot be null or empty.", nameof(configuration));
             }
 
-            DbConnectionStringBuilder dbConnectionStringBuilder = new()
-            {
-                ConnectionString = connectionString
-            };
-
-            // SWA may provide cosmosdb database name in connectionString 
-            string? database = dbConnectionStringBuilder.ContainsKey("Database") ? (string)dbConnectionStringBuilder["Database"] : null;
-
             if (RuntimeConfig.TryGetDeserializedRuntimeConfig(
                     configuration,
                     out RuntimeConfig? runtimeConfig,
@@ -279,40 +318,18 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
                 if (RuntimeConfiguration!.DatabaseType == DatabaseType.cosmosdb_nosql)
                 {
-                    if (string.IsNullOrEmpty(schema))
-                    {
-                        throw new ArgumentException($"'{nameof(schema)}' cannot be null or empty.", nameof(schema));
-                    }
-
-                    CosmosDbNoSqlOptions? cosmosDb = RuntimeConfiguration.DataSource.CosmosDbNoSql! with { GraphQLSchema = schema };
-
-                    if (!string.IsNullOrEmpty(database))
-                    {
-                        cosmosDb = cosmosDb with { Database = database };
-                    }
-
-                    DataSource dataSource = RuntimeConfiguration.DataSource with { CosmosDbNoSql = cosmosDb };
-                    RuntimeConfiguration = RuntimeConfiguration with { DataSource = dataSource };
+                    HandleCosmosNoSqlConfiguration(schema);
                 }
             }
 
             ManagedIdentityAccessToken = accessToken;
 
-            List<Task<bool>> configLoadedTasks = new();
-            if (RuntimeConfiguration is not null)
-            {
-                foreach (RuntimeConfigLoadedHandler configLoadedHandler in RuntimeConfigLoadedHandlers)
-                {
-                    configLoadedTasks.Add(configLoadedHandler(this, RuntimeConfiguration));
-                }
-            }
-
-            await Task.WhenAll(configLoadedTasks);
+            bool configLoadSucceeded = await InvokeConfigLoadedHandlersAsync();
 
             IsLateConfigured = true;
 
             // Verify that all tasks succeeded. 
-            return configLoadedTasks.All(x => x.Result);
+            return configLoadSucceeded;
         }
 
         public virtual RuntimeConfig GetRuntimeConfiguration()
@@ -351,6 +368,49 @@ namespace Azure.DataApiBuilder.Service.Configurations
         public virtual bool IsIntrospectionAllowed()
         {
             return RuntimeConfiguration is not null && RuntimeConfiguration.GraphQLGlobalSettings.AllowIntrospection;
+        }
+
+        private async Task<bool> InvokeConfigLoadedHandlersAsync()
+        {
+            List<Task<bool>> configLoadedTasks = new();
+            if (RuntimeConfiguration is not null)
+            {
+                foreach (RuntimeConfigLoadedHandler configLoadedHandler in RuntimeConfigLoadedHandlers)
+                {
+                    configLoadedTasks.Add(configLoadedHandler(this, RuntimeConfiguration));
+                }
+            }
+
+            await Task.WhenAll(configLoadedTasks);
+
+            // Verify that all tasks succeeded. 
+            return configLoadedTasks.All(x => x.Result);
+        }
+
+        private void HandleCosmosNoSqlConfiguration(string? schema)
+        {
+            string connectionString = RuntimeConfiguration!.ConnectionString;
+            DbConnectionStringBuilder dbConnectionStringBuilder = new()
+            {
+                ConnectionString = connectionString
+            };
+
+            // SWA may provide cosmosdb database name in connectionString 
+            string? database = dbConnectionStringBuilder.ContainsKey("Database") ? (string)dbConnectionStringBuilder["Database"] : null;
+            if (string.IsNullOrEmpty(schema))
+            {
+                throw new ArgumentException($"'{nameof(schema)}' cannot be null or empty.", nameof(schema));
+            }
+
+            CosmosDbNoSqlOptions? cosmosDb = RuntimeConfiguration.DataSource.CosmosDbNoSql! with { GraphQLSchema = schema };
+
+            if (!string.IsNullOrEmpty(database))
+            {
+                cosmosDb = cosmosDb with { Database = database };
+            }
+
+            DataSource dataSource = RuntimeConfiguration.DataSource with { CosmosDbNoSql = cosmosDb };
+            RuntimeConfiguration = RuntimeConfiguration with { DataSource = dataSource };
         }
     }
 }

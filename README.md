@@ -3,7 +3,7 @@
 [![NuGet Package](https://img.shields.io/nuget/v/microsoft.dataapibuilder.svg?color=success)](https://www.nuget.org/packages/Microsoft.DataApiBuilder)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-Latest version of Data API builder is **0.6.14** [What's new?](https://learn.microsoft.com/azure/data-api-builder/whats-new)
+Latest version of Data API builder is **0.7.5** [What's new?](https://learn.microsoft.com/azure/data-api-builder/whats-new)
 
 ## About
 

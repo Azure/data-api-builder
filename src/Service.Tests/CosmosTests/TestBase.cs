@@ -10,13 +10,16 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Resolvers;
-using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers;
+using Azure.DataApiBuilder.Service.Services;
+using Azure.DataApiBuilder.Service.Services.MetadataProviders;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Newtonsoft.Json.Linq;
@@ -26,7 +29,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
     public class TestBase
     {
         internal const string DATABASE_NAME = "graphqldb";
-        private const string GRAPHQL_SCHEMA = @"
+        internal const string GRAPHQL_SCHEMA = @"
 type Character @model(name:""Character"") {
     id : ID,
     name : String,
@@ -42,6 +45,7 @@ type Planet @model(name:""Planet"") {
     character: Character,
     age : Int,
     dimension : String,
+    earth: Earth,
     stars: [Star],
     moons: [Moon],
     tags: [String!]
@@ -49,13 +53,25 @@ type Planet @model(name:""Planet"") {
 
 type Star @model(name:""StarAlias"") {
     id : ID,
-    name : String
+    name : String,
+    tag: Tag
 }
+
+type Tag @model(name:""TagAlias"") {
+    id : ID,
+    name : String
+} 
 
 type Moon @model(name:""Moon"") @authorize(policy: ""Crater"") {
     id : ID,
     name : String,
     details : String
+}
+
+type Earth @model(name:""Earth"") {
+    id : ID,
+    name : String,
+    type: String @authorize(roles: [""authenticated""])
 }";
 
         private static string[] _planets = { "Earth", "Mars", "Jupiter", "Tatooine", "Endor", "Dagobah", "Hoth", "Bespin", "Spec%ial" };
@@ -71,15 +87,10 @@ type Moon @model(name:""Moon"") @authorize(policy: ""Crater"") {
                 { @"../schema.gql", new MockFileData(GRAPHQL_SCHEMA) }
             });
 
-            //create mock authorization resolver where mock entityPermissionsMap is created for Planet and Character.
-            Mock<IAuthorizationResolver> authorizationResolverCosmos = new();
-            authorizationResolverCosmos.Setup(x => x.EntityPermissionsMap).Returns(GetEntityPermissionsMap(new string[] { "Character", "Planet", "StarAlias", "Moon" }));
-            authorizationResolverCosmos.Setup(x => x.AreColumnsAllowedForOperation(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<Config.Operation>(),
-                It.IsAny<IEnumerable<string>>()
-                )).Returns(false);
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(CosmosTestHelper.ConfigPath);
+            ISqlMetadataProvider cosmosSqlMetadataProvider = new CosmosSqlMetadataProvider(runtimeConfigProvider, fileSystem);
+            Mock<ILogger<AuthorizationResolver>> authorizationResolverLogger = new();
+            IAuthorizationResolver authorizationResolverCosmos = new AuthorizationResolver(runtimeConfigProvider, cosmosSqlMetadataProvider, authorizationResolverLogger.Object);
 
             _application = new WebApplicationFactory<Startup>()
                 .WithWebHostBuilder(builder =>
@@ -87,12 +98,10 @@ type Moon @model(name:""Moon"") @authorize(policy: ""Crater"") {
                     _ = builder.ConfigureTestServices(services =>
                     {
                         services.AddSingleton<IFileSystem>(fileSystem);
-                        services.AddSingleton(TestHelper.GetRuntimeConfigProvider(CosmosTestHelper.ConfigPath));
-                        services.AddSingleton(authorizationResolverCosmos.Object);
+                        services.AddSingleton(runtimeConfigProvider);
+                        services.AddSingleton(authorizationResolverCosmos);
                     });
                 });
-
-            RuntimeConfigProvider configProvider = _application.Services.GetService<RuntimeConfigProvider>();
 
             _client = _application.CreateClient();
         }
@@ -170,15 +179,5 @@ type Moon @model(name:""Moon"") @authorize(policy: ""Crater"") {
 
             return JsonDocument.Parse(jarray.ToString().Trim());
         }
-
-        private static Dictionary<string, EntityMetadata> GetEntityPermissionsMap(string[] entities)
-        {
-            return GraphQLTestHelpers.CreateStubEntityPermissionsMap(
-                    entityNames: entities,
-                    operations: new Config.Operation[] { Config.Operation.Create, Config.Operation.Read, Config.Operation.Update, Config.Operation.Delete },
-                    roles: new string[] { "anonymous", "authenticated" }
-                );
-        }
-
     }
 }

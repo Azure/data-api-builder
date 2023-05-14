@@ -21,6 +21,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private string? _accountEndpoint;
         private string? _accountKey;
         private readonly string? _accessToken;
+        public const string DAB_APP_NAME_ENV = "DAB_APP_NAME_ENV";
+        public static readonly string DEFAULT_APP_NAME = $"dab_oss_{Utils.GetProductVersion()}";
 
         public CosmosClient? Client { get; private set; }
         public CosmosClientProvider(RuntimeConfigProvider runtimeConfigProvider)
@@ -58,21 +60,29 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             if (string.IsNullOrEmpty(_connectionString) || configuration.ConnectionString != _connectionString)
             {
+                string userAgent = GetCosmosUserAgent();
+                CosmosClientOptions options = new()
+                {
+                    ApplicationName = userAgent
+                };
+
                 _connectionString = configuration.ConnectionString;
                 ParseCosmosConnectionString();
 
                 if (!string.IsNullOrEmpty(_accountKey))
                 {
-                    Client = new CosmosClientBuilder(_connectionString).WithContentResponseOnWrite(true).Build();
+                    Client = new CosmosClientBuilder(_connectionString).WithContentResponseOnWrite(true)
+                        .WithApplicationName(userAgent)
+                        .Build();
                 }
                 else if (string.IsNullOrEmpty(_accessToken))
                 {
-                    Client = new CosmosClient(_accountEndpoint, new DefaultAzureCredential());
+                    Client = new CosmosClient(_accountEndpoint, new DefaultAzureCredential(), options);
                 }
                 else
                 {
                     TokenCredential servicePrincipal = new AADTokenCredential(_accessToken);
-                    Client = new CosmosClient(_accountEndpoint, servicePrincipal);
+                    Client = new CosmosClient(_accountEndpoint, servicePrincipal, options);
                 }
             }
         }
@@ -116,6 +126,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             _accountEndpoint = dbConnectionStringBuilder.ContainsKey("AccountEndpoint") ? (string)dbConnectionStringBuilder["AccountEndpoint"] : null;
             _accountKey = dbConnectionStringBuilder.ContainsKey("AccountKey") ? (string)dbConnectionStringBuilder["AccountKey"] : null;
+        }
+
+        private static string GetCosmosUserAgent()
+        {
+            return Environment.GetEnvironmentVariable(DAB_APP_NAME_ENV) ?? DEFAULT_APP_NAME;
         }
     }
 }

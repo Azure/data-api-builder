@@ -1435,7 +1435,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Dictionary<GlobalSettingsType, object> settings = new()
             {
-                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(Path: graphQLPathPrefix, BaseRoute: "/gql-route")) },
+                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(Path: graphQLPathPrefix)) },
                 { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings(){ Path = restPathPrefix, BaseRoute = "/rest-route" }) }
 
             };

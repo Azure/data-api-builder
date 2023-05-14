@@ -139,8 +139,7 @@ namespace Cli
 
             if (!IsURIComponentValid(restPath, ApiType.REST, ApiSettings.PROPERTY_NAME_PATH) ||
                 !IsURIComponentValid(options.GraphQLPath, ApiType.GraphQL, ApiSettings.PROPERTY_NAME_PATH) ||
-                !IsURIComponentValid(restBaseRoute, ApiType.REST, ApiSettings.PROPERTY_NAME_BASE_ROUTE) ||
-                !IsURIComponentValid(options.GraphQLBaseRoute, ApiType.GraphQL, ApiSettings.PROPERTY_NAME_BASE_ROUTE))
+                !IsURIComponentValid(restBaseRoute, ApiType.REST, ApiSettings.PROPERTY_NAME_BASE_ROUTE))
 
             {
                 return false;
@@ -165,7 +164,6 @@ namespace Cli
                     restBaseRoute,
                     !options.RestDisabled,
                     options.GraphQLPath,
-                    options.GraphQLBaseRoute,
                     !options.GraphQLDisabled),
                 Entities: new Dictionary<string, Entity>());
 

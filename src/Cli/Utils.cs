@@ -322,7 +322,6 @@ namespace Cli
                                                                                       string? restBaseRoute = "",
                                                                                       bool restEnabled = true,
                                                                                       string graphqlPath = GlobalSettings.GRAPHQL_DEFAULT_PATH,
-                                                                                      string graphqlBaseRoute = "",
                                                                                       bool graphqlEnabled = true)
         {
             // Prefix rest path with '/', if not already present.
@@ -342,11 +341,6 @@ namespace Cli
                 graphqlPath = "/" + graphqlPath;
             }
 
-            if (!string.IsNullOrEmpty(graphqlBaseRoute) && !graphqlBaseRoute.StartsWith("/"))
-            {
-                graphqlBaseRoute = "/" + graphqlBaseRoute;
-            }
-
             Dictionary<GlobalSettingsType, object> defaultGlobalSettings = new();
 
             // If restPath is null, it implies we are dealing with cosmosdb_nosql,
@@ -356,7 +350,7 @@ namespace Cli
                 defaultGlobalSettings.Add(GlobalSettingsType.Rest, new RestGlobalSettings(Enabled: restEnabled, Path: restPath, BaseRoute: restBaseRoute));
             }
 
-            defaultGlobalSettings.Add(GlobalSettingsType.GraphQL, new GraphQLGlobalSettings(Enabled: graphqlEnabled, Path: graphqlPath, BaseRoute: graphqlBaseRoute));
+            defaultGlobalSettings.Add(GlobalSettingsType.GraphQL, new GraphQLGlobalSettings(Enabled: graphqlEnabled, Path: graphqlPath));
             defaultGlobalSettings.Add(
                 GlobalSettingsType.Host,
                 GetDefaultHostGlobalSettings(

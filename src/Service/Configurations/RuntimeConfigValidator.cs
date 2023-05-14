@@ -373,15 +373,13 @@ namespace Azure.DataApiBuilder.Service.Configurations
         }
 
         /// <summary>
-        /// Method to validate that the GraphQL URI (GraphQL path prefix, GraphQL base route).
+        /// Method to validate that the GraphQL URI (GraphQL path prefix).
         /// </summary>
         /// <param name="runtimeConfig"></param>
         public static void ValidateGraphQLURI(RuntimeConfig runtimeConfig)
         {
             string graphqlPath = runtimeConfig.GraphQLGlobalSettings.Path;
-            string graphqlBaseRoute = runtimeConfig.GraphQLGlobalSettings.BaseRoute;
             ValidateURIComponent(graphqlPath, ApiType.GraphQL, ApiSettings.PROPERTY_NAME_PATH);
-            ValidateURIComponent(graphqlBaseRoute, ApiType.GraphQL, ApiSettings.PROPERTY_NAME_BASE_ROUTE);
         }
 
         /// <summary>

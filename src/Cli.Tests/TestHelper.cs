@@ -100,7 +100,8 @@ namespace Cli.Tests
             ""runtime"": {
               ""rest"": {
                 ""path"": ""/api"",
-                ""enabled"": true
+                ""enabled"": true,
+                ""base-route"": """"
               },
               ""graphql"": {
                 ""path"": ""/graphql"",
@@ -862,7 +863,8 @@ namespace Cli.Tests
         ""runtime"": {
           ""rest"": {
             ""path"": ""/api"",
-            ""enabled"": true
+            ""enabled"": true,
+            ""base-route"": ""/rest-route""
           },
           ""graphql"": {
             ""path"": ""/graphql"",

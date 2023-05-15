@@ -109,7 +109,7 @@ namespace Cli
                 }
                 else
                 {
-                    result.Add(op, new EntityAction(op, null, new EntityActionPolicy(null, null)));
+                    result.Add(op, operation);
                 }
             }
 

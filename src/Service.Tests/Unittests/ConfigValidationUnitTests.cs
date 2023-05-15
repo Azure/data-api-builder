@@ -1752,22 +1752,25 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// Test to validate that when multiple entities have the same custom rest path configured, we throw an exception.
         /// </summary>
         /// <param name="exceptionExpected">Whether an exception is expected as a result of test run.</param>
-        /// <param name="expectedExceptionMessage">The expected exception message.</param>
         /// <param name="restPathForFirstEntity">Custom rest path to be configured for the first entity.</param>
         /// <param name="restPathForSecondEntity">Custom rest path to be configured for the second entity.</param>
+        /// <param name="expectedExceptionMessage">The expected exception message.</param>
         [DataTestMethod]
-        [DataRow(true, "Multiple entities found with same rest path: restPath.", "restPath", "restPath",
+        [DataRow(false, "restPathA", "restPathB", DisplayName = "Unique rest paths configured for entities pass config validation.")]
+        [DataRow(false, true, false, DisplayName = "Rest path configured as boolean values for an entities fails config validation.")]
+        [DataRow(true, "restPath", "restPath", "Multiple entities found with same rest path: restPath.",
             DisplayName = "Duplicate rest paths configures for entities fail config validation.")]
-        [DataRow(false, "", "restPathA", "restPathB", DisplayName = "Unique rest paths configured for entities pass config validation.")]
-        [DataRow(true, "Entity: EntityA has an empty rest path.", "", "restPathB",
+        [DataRow(true, "", "restPathB", "Entity: EntityA has an empty rest path.",
             DisplayName = "Empty rest path configured for an entitiy fails config validation.")]
-        [DataRow(true, "Entity: EntityB has a null rest path. Accepted value types are: string, boolean.", "restPathA", null,
+        [DataRow(true, "restPathA", null, "Entity: EntityB has a null rest path. Accepted value types are: string, boolean.",
             DisplayName = "NULL rest path configured for an entitiy fails config validation.")]
+        [DataRow(true, "restPathA", 1, $"Entity: EntityB has rest path specified with incorrect data type. Accepted data types are: string, boolean.",
+            DisplayName = "Rest path configured as integer for an entitiy fails config validation.")]
         public void ValidateRestPathsForEntitiesInConfig(
             bool exceptionExpected,
-            string expectedExceptionMessage,
-            string restPathForFirstEntity,
-            string restPathForSecondEntity)
+            object restPathForFirstEntity,
+            object restPathForSecondEntity,
+            string expectedExceptionMessage = "")
         {
             Dictionary<string, Entity> entityCollection = new();
 

@@ -83,6 +83,62 @@ public class RuntimeConfigProvider
         return _runtimeConfig is not null;
     }
 
+    /// <summary>
+    /// Initialize the runtime configuration provider with the specified configurations.
+    /// This initialization method is used when the configuration is sent to the ConfigurationController
+    /// in the form of a string instead of reading the configuration from a configuration file.
+    /// This method assumes the connection string is provided as part of the configuration.
+    /// </summary>
+    /// <param name="configuration">The engine configuration.</param>
+    /// <param name="schema">The GraphQL Schema. Can be left null for SQL configurations.</param>
+    /// <param name="accessToken">The string representation of a managed identity access token</param>
+    /// <returns>true if the initialization succeeded, false otherwise.</returns>
+    public async Task<bool> Initialize(
+        string configuration,
+        string? schema,
+        string? accessToken)
+    {
+        if (string.IsNullOrEmpty(configuration))
+        {
+            throw new ArgumentException($"'{nameof(configuration)}' cannot be null or empty.", nameof(configuration));
+        }
+
+        if (RuntimeConfigLoader.TryParseConfig(
+                configuration,
+                out RuntimeConfig? runtimeConfig))
+        {
+            _runtimeConfig = runtimeConfig;
+
+            if (string.IsNullOrEmpty(runtimeConfig.DataSource.ConnectionString))
+            {
+                throw new ArgumentException($"'{nameof(runtimeConfig.DataSource.ConnectionString)}' cannot be null or empty.", nameof(runtimeConfig.DataSource.ConnectionString));
+            }
+
+            if (_runtimeConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL)
+            {
+                _runtimeConfig = HandleCosmosNoSqlConfiguration(schema, _runtimeConfig);
+            }
+        }
+
+        ManagedIdentityAccessToken = accessToken;
+
+        bool configLoadSucceeded = await InvokeConfigLoadedHandlersAsync();
+
+        IsLateConfigured = true;
+
+        return configLoadSucceeded;
+    }
+
+    /// <summary>
+    /// Initialize the runtime configuration provider with the specified configurations.
+    /// This initialization method is used when the configuration is sent to the ConfigurationController
+    /// in the form of a string instead of reading the configuration from a configuration file.
+    /// </summary>
+    /// <param name="configuration">The engine configuration.</param>
+    /// <param name="schema">The GraphQL Schema. Can be left null for SQL configurations.</param>
+    /// <param name="connectionString">The connection string to the database.</param>
+    /// <param name="accessToken">The string representation of a managed identity access token</param>
+    /// <returns>true if the initialization succeeded, false otherwise.</returns>
     public async Task<bool> Initialize(string jsonConfig, string? graphQLSchema, string connectionString, string? accessToken)
     {
         if (string.IsNullOrEmpty(connectionString))
@@ -106,22 +162,7 @@ public class RuntimeConfigProvider
         {
             if (runtimeConfig.DataSource.DatabaseType is DatabaseType.CosmosDB_NoSQL)
             {
-                if (graphQLSchema is null)
-                {
-                    throw new ArgumentNullException(nameof(graphQLSchema));
-                }
-
-                // push the "raw" GraphQL schema into the options to pull out later when requested
-                runtimeConfig.DataSource.Options[CosmosDbNoSQLDataSourceOptions.GRAPHQL_RAW_KEY] = JsonSerializer.SerializeToElement(graphQLSchema);
-
-                // SWA may provide CosmosDB database name in connectionString
-                string? database = dbConnectionStringBuilder.ContainsKey("Database") ? (string)dbConnectionStringBuilder["Database"] : null;
-
-                if (database is not null)
-                {
-                    // Add or update the options to contain the parsed database
-                    runtimeConfig.DataSource.Options["database"] = JsonSerializer.SerializeToElement(database);
-                }
+                _runtimeConfig = HandleCosmosNoSqlConfiguration(graphQLSchema, runtimeConfig);
             }
 
             // Update the connection string in the parsed config with the one that was provided to the controller
@@ -146,4 +187,54 @@ public class RuntimeConfigProvider
 
         return false;
     }
+
+    private async Task<bool> InvokeConfigLoadedHandlersAsync()
+    {
+        List<Task<bool>> configLoadedTasks = new();
+        if (_runtimeConfig is not null)
+        {
+            foreach (RuntimeConfigLoadedHandler configLoadedHandler in RuntimeConfigLoadedHandlers)
+            {
+                configLoadedTasks.Add(configLoadedHandler(this, _runtimeConfig));
+            }
+        }
+
+        await Task.WhenAll(configLoadedTasks);
+
+        // Verify that all tasks succeeded. 
+        return configLoadedTasks.All(x => x.Result);
+    }
+
+    private static RuntimeConfig HandleCosmosNoSqlConfiguration(string? schema, RuntimeConfig runtimeConfig)
+    {
+        string connectionString = runtimeConfig.DataSource.ConnectionString;
+        DbConnectionStringBuilder dbConnectionStringBuilder = new()
+        {
+            ConnectionString = connectionString
+        };
+
+        if (string.IsNullOrEmpty(schema))
+        {
+            throw new ArgumentException($"'{nameof(schema)}' cannot be null or empty.", nameof(schema));
+        }
+
+        Dictionary<string, JsonElement> options = new(runtimeConfig.DataSource.Options)
+        {
+            // push the "raw" GraphQL schema into the options to pull out later when requested
+            { CosmosDbNoSQLDataSourceOptions.GRAPHQL_RAW_KEY, JsonSerializer.SerializeToElement(schema) }
+        };
+
+        // SWA may provide CosmosDB database name in connectionString
+        string? database = dbConnectionStringBuilder.ContainsKey("Database") ? (string)dbConnectionStringBuilder["Database"] : null;
+
+        if (database is not null)
+        {
+            // Add or update the options to contain the parsed database
+            options.Add("database", JsonSerializer.SerializeToElement(database));
+        }
+
+        // Update the connection string in the parsed config with the one that was provided to the controller
+        return runtimeConfig with { DataSource = runtimeConfig.DataSource with { Options = options } };
+    }
+
 }

@@ -3,6 +3,7 @@
 
 using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Service;
 using CommandLine;
 using Microsoft.Extensions.Logging;
 using static Cli.Utils;
@@ -57,7 +58,7 @@ namespace Cli.Commands
 
         public void Handler(ILogger logger, RuntimeConfigLoader loader, IFileSystem fileSystem)
         {
-            logger.LogInformation($"{PRODUCT_NAME} {GetProductVersion()}");
+            logger.LogInformation($"{PRODUCT_NAME} {ProductInfo.GetProductVersion()}");
             if (!IsEntityProvided(Entity, logger, command: "add"))
             {
                 return;

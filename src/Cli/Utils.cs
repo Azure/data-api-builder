@@ -1,10 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
-using System.Reflection;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -28,7 +26,6 @@ namespace Cli
 
         public const string WILDCARD = "*";
         public static readonly string SEPARATOR = ":";
-        public const string DEFAULT_VERSION = "1.0.0";
 
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         private static ILogger<Utils> _logger;
@@ -39,20 +36,6 @@ namespace Cli
             _logger = cliUtilsLogger;
         }
 
-        /// <summary>
-        /// Reads the product version from the executing assembly's file version information.
-        /// </summary>
-        /// <returns>Product version if not null, default version 1.0.0 otherwise.</returns>
-        public static string GetProductVersion()
-        {
-            Assembly assembly = Assembly.GetExecutingAssembly();
-            FileVersionInfo fileVersionInfo = FileVersionInfo.GetVersionInfo(assembly.Location);
-            string? version = fileVersionInfo.ProductVersion;
-
-            return version ?? DEFAULT_VERSION;
-        }
-
-        /// <summary>
         /// Creates an array of Operation element which contains one of the CRUD operation and
         /// fields to which this operation is allowed as permission setting based on the given input.
         /// </summary>

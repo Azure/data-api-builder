@@ -267,12 +267,32 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 {
                     JsonElement restJsonElement = JsonSerializer.SerializeToElement(entity.Rest);
 
-                    if (restJsonElement.ValueKind is JsonValueKind.Object)
+                    // We do the validation for rest path only if the 'rest' property maps to a json object.
+                    // Since path is an optional property, we skip validation if its absent.
+                    if (restJsonElement.ValueKind is JsonValueKind.Object && restJsonElement.TryGetProperty("path", out JsonElement pathElement))
                     {
-                        JsonElement pathElement = restJsonElement.GetProperty("path");
+                        if (pathElement.ValueKind is JsonValueKind.Null)
+                        {
+                            throw new DataApiBuilderException(
+                                message: $"Entity: {entityName} has a null rest path. Accepted value types are: string, boolean.",
+                                statusCode: HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
+                                );
+                        }
+
                         if (pathElement.ValueKind is JsonValueKind.String)
                         {
                             string path = pathElement.ToString();
+
+                            if (string.IsNullOrEmpty(path))
+                            {
+                                throw new DataApiBuilderException(
+                                    message: $"Entity: {entityName} has an empty rest path.",
+                                    statusCode: HttpStatusCode.ServiceUnavailable,
+                                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
+                                    );
+                            }
+
                             if (restPathsForEntities.Contains(path))
                             {
                                 // Presence of multiple entities having the same rest path configured causes conflict.

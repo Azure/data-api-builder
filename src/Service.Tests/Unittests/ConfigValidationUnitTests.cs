@@ -1752,12 +1752,22 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// Test to validate that when multiple entities have the same custom rest path configured, we throw an exception.
         /// </summary>
         /// <param name="exceptionExpected">Whether an exception is expected as a result of test run.</param>
+        /// <param name="expectedExceptionMessage">The expected exception message.</param>
         /// <param name="restPathForFirstEntity">Custom rest path to be configured for the first entity.</param>
         /// <param name="restPathForSecondEntity">Custom rest path to be configured for the second entity.</param>
         [DataTestMethod]
-        [DataRow(true, "restPath", "restPath", DisplayName = "Duplicate rest paths configures for entities fail config validation.")]
-        [DataRow(false, "restPath1", "restPath2", DisplayName = "Unique rest paths configured for entities pass config validation.")]
-        public void ValidateUniqueRestPathsForEntitiesInConfig(bool exceptionExpected, string restPathForFirstEntity, string restPathForSecondEntity)
+        [DataRow(true, "Multiple entities found with same rest path: restPath.", "restPath", "restPath",
+            DisplayName = "Duplicate rest paths configures for entities fail config validation.")]
+        [DataRow(false, "", "restPathA", "restPathB", DisplayName = "Unique rest paths configured for entities pass config validation.")]
+        [DataRow(true, "Entity: EntityA has an empty rest path.", "", "restPathB",
+            DisplayName = "Empty rest path configured for an entitiy fails config validation.")]
+        [DataRow(true, "Entity: EntityB has a null rest path. Accepted value types are: string, boolean.", "restPathA", null,
+            DisplayName = "NULL rest path configured for an entitiy fails config validation.")]
+        public void ValidateRestPathsForEntitiesInConfig(
+            bool exceptionExpected,
+            string expectedExceptionMessage,
+            string restPathForFirstEntity,
+            string restPathForSecondEntity)
         {
             Dictionary<string, Entity> entityCollection = new();
 
@@ -1775,7 +1785,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 DataApiBuilderException dabException =
                     Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidateEntityConfiguration(entityCollection));
-                Assert.AreEqual($"Multiple entities found with same rest path: {restPathForFirstEntity}.", dabException.Message);
+                Assert.AreEqual(expectedExceptionMessage, dabException.Message);
                 Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
                 Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
             }

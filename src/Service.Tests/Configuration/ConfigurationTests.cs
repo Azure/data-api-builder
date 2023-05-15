@@ -543,7 +543,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             ConfigurationPostParameters expectedParameters = GetCosmosConfigurationParameters();
             Assert.AreEqual(DatabaseType.CosmosDB_NoSQL, configuration.DataSource.DatabaseType, "Expected CosmosDB_NoSQL database type after configuring the runtime with CosmosDB_NoSQL settings.");
             Assert.AreEqual(expectedParameters.Schema, configuration.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>().GraphQLSchema, "Expected the schema in the configuration to match the one sent to the configuration endpoint.");
-            Assert.AreEqual(expectedParameters.ConnectionString, configuration.DataSource.ConnectionString, "Expected the connection string in the configuration to match the one sent to the configuration endpoint.");
+
+            // Don't use Assert.AreEqual, because a failure will print the entire connection string in the error message.
+            Assert.IsTrue(expectedParameters.ConnectionString == configuration.DataSource.ConnectionString, "Expected the connection string in the configuration to match the one sent to the configuration endpoint.");
             string db = configuration.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>().Database;
             Assert.AreEqual(COSMOS_DATABASE_NAME, db, "Expected the database name in the runtime config to match the one sent to the configuration endpoint.");
         }

@@ -271,12 +271,12 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     if (restJsonElement.ValueKind is JsonValueKind.Object)
                     {
                         // Since path is an optional property, we skip validation if its absent.
-                        if (restJsonElement.TryGetProperty("path", out JsonElement pathElement))
+                        if (restJsonElement.TryGetProperty(RestEntitySettings.PROPERTY_PATH, out JsonElement pathElement))
                         {
                             if (pathElement.ValueKind is JsonValueKind.Null)
                             {
                                 throw new DataApiBuilderException(
-                                    message: $"Entity: {entityName} has a null rest path. Accepted value types are: string, boolean.",
+                                    message: $"Entity: {entityName} has a null rest {RestEntitySettings.PROPERTY_PATH}. Accepted value types are: string, boolean.",
                                     statusCode: HttpStatusCode.ServiceUnavailable,
                                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
                                     );
@@ -289,7 +289,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                 if (string.IsNullOrEmpty(path))
                                 {
                                     throw new DataApiBuilderException(
-                                        message: $"Entity: {entityName} has an empty rest path.",
+                                        message: $"Entity: {entityName} has an empty rest {RestEntitySettings.PROPERTY_PATH}.",
                                         statusCode: HttpStatusCode.ServiceUnavailable,
                                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
                                         );
@@ -299,7 +299,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                 {
                                     // Presence of multiple entities having the same rest path configured causes conflict.
                                     throw new DataApiBuilderException(
-                                        message: $"Multiple entities found with same rest path: {path}.",
+                                        message: $"Multiple entities found with same rest {RestEntitySettings.PROPERTY_PATH}: {path}.",
                                         statusCode: HttpStatusCode.ServiceUnavailable,
                                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
                                         );
@@ -309,13 +309,13 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             }
                         }
 
-                        if (restJsonElement.TryGetProperty("methods", out JsonElement methodsElement))
+                        if (restJsonElement.TryGetProperty(RestStoredProcedureEntitySettings.PROPERTY_METHODS, out JsonElement methodsElement))
                         {
                             if (entity.ObjectType is not SourceType.StoredProcedure)
                             {
                                 throw new DataApiBuilderException(
-                                    message: $"The rest property 'methods' present for entity: {entityName} of type: {entity.ObjectType} " +
-                                    $"is only valid for type: {SourceType.StoredProcedure}.",
+                                    message: $"The rest property '{RestStoredProcedureEntitySettings.PROPERTY_METHODS}' present for entity: {entityName} " +
+                                    $"of type: {entity.ObjectType} is only valid for type: {SourceType.StoredProcedure}.",
                                     statusCode: HttpStatusCode.ServiceUnavailable,
                                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
                                     );
@@ -324,7 +324,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             if (methodsElement.ValueKind is not JsonValueKind.Array)
                             {
                                 throw new DataApiBuilderException(
-                                    message: $"The rest property 'methods' for entity: {entityName} is expected to be of type array.",
+                                    message: $"The rest property '{RestStoredProcedureEntitySettings.PROPERTY_METHODS}' for entity: {entityName} " +
+                                    $"is expected to be an array.",
                                     statusCode: HttpStatusCode.ServiceUnavailable,
                                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
                                     );
@@ -335,7 +336,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                 if (restVerbElement.ValueKind is not JsonValueKind.String)
                                 {
                                     throw new DataApiBuilderException(
-                                        message: $"The rest property 'methods' for entity: {entityName} can only contain string as a valid array element.",
+                                        message: $"The rest property '{RestStoredProcedureEntitySettings.PROPERTY_METHODS}' for entity: {entityName} " +
+                                        $"can only contain string as a valid array element.",
                                         statusCode: HttpStatusCode.ServiceUnavailable,
                                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
                                     );
@@ -345,7 +347,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                 if (!Enum.TryParse(restVerb, ignoreCase: true, out RestMethod restMethod))
                                 {
                                     throw new DataApiBuilderException(
-                                        message: $"The rest property 'methods' for entity: {entityName} contains an invalid rest operation: {restVerb}.",
+                                        message: $"The rest property '{RestStoredProcedureEntitySettings.PROPERTY_METHODS}' for entity: {entityName} " +
+                                        $"contains an invalid rest operation: {restVerb}.",
                                         statusCode: HttpStatusCode.ServiceUnavailable,
                                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
                                     );

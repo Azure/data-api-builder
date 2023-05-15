@@ -577,13 +577,19 @@ namespace Azure.DataApiBuilder.Config
     /// at which the REST endpoint for this entity is exposed
     /// instead of using the entity-name. Can be a string type.
     /// </param>
-    public record RestEntitySettings([property: JsonPropertyName("path")] object? Path);
+    public record RestEntitySettings([property: JsonPropertyName(RestEntitySettings.PROPERTY_PATH)] object? Path)
+    {
+        public const string PROPERTY_PATH = "path";
+    }
 
     /// <summary>
     /// Describes the REST settings specific to an entity backed by a stored procedure.
     /// </summary>
     /// <param name="RestMethods">Defines the HTTP actions that are supported for stored procedures.</param>
-    public record RestStoredProcedureEntitySettings([property: JsonPropertyName("methods")] RestMethod[]? RestMethods = null);
+    public record RestStoredProcedureEntitySettings([property: JsonPropertyName(RestStoredProcedureEntitySettings.PROPERTY_METHODS)] RestMethod[]? RestMethods = null)
+    {
+        public const string PROPERTY_METHODS = "methods";
+    }
 
     /// <summary>
     /// Describes the verbose REST settings specific to an entity backed by a stored procedure.
@@ -594,8 +600,8 @@ namespace Azure.DataApiBuilder.Config
     /// instead of using the entity-name. Can be a string type.
     /// </param>
     /// <param name="RestMethods">Defines the HTTP actions that are supported for stored procedures.</param>
-    public record RestStoredProcedureEntityVerboseSettings(object? Path,
-                                     [property: JsonPropertyName("methods")] RestMethod[]? RestMethods = null);
+    public record RestStoredProcedureEntityVerboseSettings([property: JsonPropertyName(RestEntitySettings.PROPERTY_PATH)] object? Path,
+                                     [property: JsonPropertyName(RestStoredProcedureEntitySettings.PROPERTY_METHODS)] RestMethod[]? RestMethods = null);
 
     /// <summary>
     /// Describes the GraphQL settings specific to an entity.

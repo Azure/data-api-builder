@@ -311,6 +311,16 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
                         if (restJsonElement.TryGetProperty("methods", out JsonElement methodsElement))
                         {
+                            if (entity.ObjectType is not SourceType.StoredProcedure)
+                            {
+                                throw new DataApiBuilderException(
+                                    message: $"The rest property 'methods' present for entity: {entityName} of type: {entity.ObjectType} " +
+                                    $"is only valid for type: {SourceType.StoredProcedure}.",
+                                    statusCode: HttpStatusCode.ServiceUnavailable,
+                                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
+                                    );
+                            }
+
                             if (methodsElement.ValueKind is not JsonValueKind.Array)
                             {
                                 throw new DataApiBuilderException(

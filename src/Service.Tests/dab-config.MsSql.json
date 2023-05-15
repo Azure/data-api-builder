@@ -1,5 +1,5 @@
 {
-  "$schema": "../../../schemas/dab.draft.schema.json",
+  "$schema": "../../schemas/dab.draft.schema.json",
   "data-source": {
     "database-type": "mssql",
     "options": {

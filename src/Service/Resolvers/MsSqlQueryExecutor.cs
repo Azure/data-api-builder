@@ -19,7 +19,6 @@ using Azure.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
 {
@@ -232,9 +231,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 // We would only attempt an update , and that too when a record exists for given PK.
                 // However since the dbResultSet is null here, it indicates we didn't perform an update either.
                 // This happens when count of rows with given PK = 0.
-
-                // Assert that there are no records for the given PK.
-                Assert.AreEqual(0, numOfRecordsWithGivenPK);
 
                 if (args is not null && args.Count > 1)
                 {

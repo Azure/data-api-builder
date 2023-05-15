@@ -16,7 +16,6 @@ using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.OpenApi.Models;
 using Microsoft.OpenApi.Writers;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Services.OpenAPI
 {
@@ -662,7 +661,6 @@ namespace Azure.DataApiBuilder.Service.Services.OpenAPI
                 entityRestPath = entityRestPath.Substring(1);
             }
 
-            Assert.IsFalse(Equals('/', entityRestPath));
             return entityRestPath;
         }
 

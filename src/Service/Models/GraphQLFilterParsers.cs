@@ -147,10 +147,10 @@ namespace Azure.DataApiBuilder.Service.Models
                     // check only occurs when access to the column's owner entity is confirmed.
                     if (!relationshipField)
                     {
-                        string targetEntity = queryStructure.EntityName;
+                        string graphQLTypeName = queryStructure.EntityName;
 
                         bool columnAccessPermitted = queryStructure.AuthorizationResolver.AreColumnsAllowedForOperation(
-                            entityName: targetEntity,
+                            graphQLTypeName: graphQLTypeName,
                             roleName: GetHttpContextFromMiddlewareContext(ctx).Request.Headers[CLIENT_ROLE_HEADER],
                             operation: EntityActionOperation.Read,
                             columns: new[] { name });

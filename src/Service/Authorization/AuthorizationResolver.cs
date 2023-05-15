@@ -17,7 +17,6 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Authorization
 {
@@ -129,10 +128,9 @@ namespace Azure.DataApiBuilder.Service.Authorization
         }
 
         /// <inheritdoc />
-        public bool AreColumnsAllowedForOperation(string entityName, string roleName, EntityActionOperation operation, IEnumerable<string> columns)
+        public bool AreColumnsAllowedForOperation(string graphQLTypeName, string roleName, EntityActionOperation operation, IEnumerable<string> columns)
         {
-            // Columns.Count() will never be zero because this method is called after a check ensures Count() > 0
-            Assert.IsFalse(columns.Count() == 0, message: "columns.Count() should be greater than 0.");
+            string entityName = _metadataProvider.GetEntityName(graphQLTypeName);
 
             if (!EntityPermissionsMap[entityName].RoleToOperationMap.TryGetValue(roleName, out RoleMetadata? roleMetadata) && roleMetadata is null)
             {

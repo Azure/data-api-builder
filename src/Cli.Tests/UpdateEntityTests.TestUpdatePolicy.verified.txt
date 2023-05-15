@@ -47,6 +47,15 @@
             Actions: [
               {
                 Action: Delete,
+                Fields: {
+                  Exclude: [
+                    level,
+                    rating
+                  ],
+                  Include: [
+                    *
+                  ]
+                },
                 Policy: {
                   Request: @claims.name eq 'api_builder',
                   Database: @claims.name eq @item.name

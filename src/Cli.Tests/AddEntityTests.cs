@@ -176,7 +176,7 @@ namespace Cli.Tests
 
             // Create VerifySettings and add all arguments to the method as parameters
             VerifySettings verifySettings = new();
-            verifySettings.UseParameters(fieldsToExclude, fieldsToInclude, policyDatabase, policyRequest);
+            verifySettings.UseParametersHash(fieldsToExclude, fieldsToInclude, policyDatabase, policyRequest);
             return ExecuteVerifyTest(options, settings: verifySettings);
         }
 
@@ -340,7 +340,7 @@ namespace Cli.Tests
                 );
 
             VerifySettings settings = new();
-            settings.UseParameters(restMethods, graphQLOperation, restRoute, graphQLType);
+            settings.UseParametersHash(restMethods, graphQLOperation, restRoute, graphQLType);
             return ExecuteVerifyTest(options, settings: settings);
         }
 

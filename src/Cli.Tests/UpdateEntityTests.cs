@@ -387,26 +387,13 @@ namespace Cli.Tests
         [DataTestMethod]
         [DataRow(new string[] { "*" }, new string[] { "level", "rating" }, "@claims.name eq 'dab'", "@claims.id eq @item.id", "PolicyAndFields", DisplayName = "Check adding new Policy and Fields to Action")]
         [DataRow(new string[] { }, new string[] { }, "@claims.name eq 'dab'", "@claims.id eq @item.id", "Policy", DisplayName = "Check adding new Policy to Action")]
-        [DataRow(new string[] { "*" }, new string[] { "level", "rating" }, "null", "null", "Fields", DisplayName = "Check adding new fieldsToInclude and FieldsToExclude to Action")]
+        [DataRow(new string[] { "*" }, new string[] { "level", "rating" }, null, null, "Fields", DisplayName = "Check adding new fieldsToInclude and FieldsToExclude to Action")]
         public Task TestUpdateEntityWithPolicyAndFieldProperties(IEnumerable<string>? fieldsToInclude,
                                                             IEnumerable<string>? fieldsToExclude,
                                                             string? policyRequest,
                                                             string? policyDatabase,
                                                             string check)
         {
-            // these bits are to work around these two bugs:
-            // - https://github.com/SwissLife-OSS/snapshooter/issues/178
-            // - https://github.com/SwissLife-OSS/snapshooter/issues/180
-            if (policyRequest == "null")
-            {
-                policyRequest = null;
-            }
-
-            if (policyDatabase == "null")
-            {
-                policyDatabase = null;
-            }
-
             UpdateOptions options = GenerateBaseUpdateOptions(
                source: "MyTable",
                permissions: new string[] { "anonymous", "delete" },
@@ -418,7 +405,7 @@ namespace Cli.Tests
             string initialConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY);
 
             VerifySettings settings = new();
-            settings.UseParameters(fieldsToInclude, fieldsToExclude, policyRequest, policyDatabase);
+            settings.UseParametersHash(fieldsToInclude, fieldsToExclude, policyRequest, policyDatabase);
             return ExecuteVerifyTest(initialConfig, options, settings);
         }
 
@@ -448,7 +435,7 @@ namespace Cli.Tests
             string initialConfig = AddPropertiesToJson(INITIAL_CONFIG, BASIC_ENTITY_WITH_ANONYMOUS_ROLE);
 
             VerifySettings settings = new();
-            settings.UseParameters(source, sourceType, permissions, parameters, keyFields);
+            settings.UseParametersHash(source, sourceType, permissions, parameters, keyFields);
             return ExecuteVerifyTest(initialConfig, options, settings);
         }
 
@@ -547,7 +534,7 @@ namespace Cli.Tests
             {
                 Assert.AreNotSame(runtimeConfig, updatedConfig);
                 VerifySettings settings = new();
-                settings.UseParameters(sourceType, parameters, keyFields, permissions, expectNoKeyFieldsAndParameters);
+                settings.UseParametersHash(sourceType, parameters, keyFields, permissions, expectNoKeyFieldsAndParameters);
                 return Verify(updatedConfig, settings);
             }
 
@@ -767,7 +754,7 @@ namespace Cli.Tests
             string initialConfig = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_METHODS_GRAPHQL_OPERATION);
 
             VerifySettings settings = new();
-            settings.UseParameters(restMethods, graphQLOperation, restRoute, graphQLType, testType);
+            settings.UseParametersHash(restMethods, graphQLOperation, restRoute, graphQLType, testType);
             return ExecuteVerifyTest(initialConfig, options, settings);
         }
 

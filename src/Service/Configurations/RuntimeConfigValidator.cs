@@ -263,6 +263,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             foreach (string entityName in entityCollection.Keys)
             {
                 Entity entity = entityCollection[entityName];
+                entity.TryPopulateSourceFields();
                 if (entity.Rest is not null)
                 {
                     JsonElement restJsonElement = JsonSerializer.SerializeToElement(entity.Rest);
@@ -277,6 +278,17 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             {
                                 throw new DataApiBuilderException(
                                     message: $"Entity: {entityName} has a null rest {RestEntitySettings.PROPERTY_PATH}. Accepted value types are: string, boolean.",
+                                    statusCode: HttpStatusCode.ServiceUnavailable,
+                                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
+                                    );
+                            }
+
+                            if (pathElement.ValueKind is not JsonValueKind.True && pathElement.ValueKind is not JsonValueKind.False
+                                && pathElement.ValueKind is not JsonValueKind.String)
+                            {
+                                throw new DataApiBuilderException(
+                                    message: $"Entity: {entityName} has rest {RestEntitySettings.PROPERTY_PATH} specified with incorrect data type. " +
+                                    $"Accepted data types are: string, boolean.",
                                     statusCode: HttpStatusCode.ServiceUnavailable,
                                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
                                     );

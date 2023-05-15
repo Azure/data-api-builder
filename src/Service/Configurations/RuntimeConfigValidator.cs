@@ -343,7 +343,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
             if (pathElement.ValueKind is JsonValueKind.String)
             {
                 string path = pathElement.ToString();
-
                 if (string.IsNullOrEmpty(path))
                 {
                     // The rest 'path' cannot be empty.
@@ -380,7 +379,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
         {
             // This is needed to correctly populate the source type for the entity.
             entity.TryPopulateSourceFields();
-
             if (entity.ObjectType is not SourceType.StoredProcedure)
             {
                 // The rest property 'methods' can only be present for stored procedures.

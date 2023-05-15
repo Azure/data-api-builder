@@ -1773,7 +1773,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Create first entity with REST settings.
             Entity entity = SchemaConverterTests.GenerateEmptyEntity();
-            entity.Rest = new RestEntitySettings(Path : restPathForFirstEntity);
+            entity.Rest = new RestEntitySettings(Path: restPathForFirstEntity);
             entityCollection.Add("EntityA", entity);
 
             // Create second entity with REST settings.

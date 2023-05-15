@@ -50,6 +50,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                               .Callback(new metaDataCallback((string entity, string exposedField, out string? backingColumn) => _ = _exposedNameToBackingColumnMapping[entity].TryGetValue(exposedField, out backingColumn)))
                               .Returns((string entity, string exposedField, string? backingColumn) => _exposedNameToBackingColumnMapping[entity].TryGetValue(exposedField, out backingColumn));
 
+            metadataProvider.Setup(x => x.GetEntityName(It.IsAny<string>()))
+                .Returns((string entity) => entity);
+
             return new AuthorizationResolver(runtimeConfigProvider, metadataProvider.Object);
         }
 

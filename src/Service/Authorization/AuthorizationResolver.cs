@@ -229,9 +229,9 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// during runtime.
         /// </summary>
         /// <param name="runtimeConfig"></param>
-        public void SetEntityPermissionMap(RuntimeConfig? runtimeConfig)
+        public void SetEntityPermissionMap(RuntimeConfig runtimeConfig)
         {
-            foreach ((string entityName, Entity entity) in runtimeConfig!.Entities)
+            foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
                 EntityMetadata entityToRoleMap = new()
                 {

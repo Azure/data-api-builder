@@ -502,7 +502,15 @@
             },
             {
               "action": "read",
-              "fields": null,
+              "fields": {
+                "exclude": [
+                  "name"
+                ],
+                "include": [
+                  "id",
+                  "type"
+                ]
+              },
               "policy": {
                 "request": null,
                 "database": null
@@ -510,7 +518,14 @@
             },
             {
               "action": "create",
-              "fields": null,
+              "fields": {
+                "exclude": [
+                  "name"
+                ],
+                "include": [
+                  "id"
+                ]
+              },
               "policy": {
                 "request": null,
                 "database": null

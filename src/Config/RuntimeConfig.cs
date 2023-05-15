@@ -110,7 +110,7 @@ public record RuntimeEntities : IEnumerable<KeyValuePair<string, Entity>>
 }
 
 public record RuntimeConfig(
-    string Schema,
+    [property: JsonPropertyName("$schema")] string Schema,
     DataSource DataSource,
     RuntimeOptions Runtime,
     RuntimeEntities Entities)

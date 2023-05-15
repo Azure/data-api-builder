@@ -12,5 +12,6 @@ static class ModuleInitializer
     {
         VerifierSettings.IgnoreMember<DataSource>(dataSource => dataSource.ConnectionString);
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.Schema);
+        VerifyDiffPlex.Initialize();
     }
 }

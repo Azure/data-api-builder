@@ -21,6 +21,7 @@
         <PackageReference Include="Newtonsoft.Json" />
         <PackageReference Include="System.IO.Abstractions.TestingHelpers" />
         <PackageReference Include="Verify.MSTest" />
+        <PackageReference Include="Verify.DiffPlex" />
     </ItemGroup>
 
     <ItemGroup>

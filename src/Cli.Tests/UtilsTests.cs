@@ -233,7 +233,7 @@ namespace Cli.Tests
                 Assert.Fail("Failed to merge config files.");
             }
         }
-        
+
         /// <summary>
         /// Test to verify that merged config file is only used for the below scenario
         /// 1. Environment value is set.
@@ -248,7 +248,7 @@ namespace Cli.Tests
         [DataRow("Test", false, false, "", false, DisplayName = "Environment value set but base config not available, merged config file is not generated.")]
         [DataRow("Test", false, true, "", false, DisplayName = "Environment value set but base config not available, merged config file is not generated.")]
         [DataRow("Test", true, false, "", false, DisplayName = "Environment value set but env based config not available, merged config file is not generated.")]
-        [DataRow("Test", true, true, "dab-config.Test.merged.json", true, DisplayName = "environment value set and both base and envConfig available, merged config file is generated.")]
+        [DataRow("Test", true, true, "dab-config.Test.merged.json", true, DisplayName = "Environment value set and both base and envConfig available, merged config file is generated.")]
         public void TestMergeConfigAvailability(
             string environmentValue,
             bool isBaseConfigPresent,

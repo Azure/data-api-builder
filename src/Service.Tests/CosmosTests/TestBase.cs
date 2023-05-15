@@ -82,6 +82,13 @@ type Earth @model(name:""Earth"") {
     [TestInitialize]
     public void Init()
     {
+        _application = SetupTestApplicationFactory();
+
+        _client = _application.CreateClient();
+    }
+
+    protected WebApplicationFactory<Startup> SetupTestApplicationFactory()
+    {
         // Read the base config from the file system
         TestHelper.SetupDatabaseEnvironment(TestCategory.COSMOSDBNOSQL);
         RuntimeConfigLoader baseLoader = TestHelper.GetRuntimeConfigLoader();
@@ -112,7 +119,7 @@ type Earth @model(name:""Earth"") {
         ISqlMetadataProvider cosmosSqlMetadataProvider = new CosmosSqlMetadataProvider(provider, fileSystem);
         IAuthorizationResolver authorizationResolverCosmos = new AuthorizationResolver(provider, cosmosSqlMetadataProvider);
 
-        _application = new WebApplicationFactory<Startup>()
+        return new WebApplicationFactory<Startup>()
             .WithWebHostBuilder(builder =>
             {
                 _ = builder.ConfigureTestServices(services =>
@@ -123,8 +130,6 @@ type Earth @model(name:""Earth"") {
                     services.AddSingleton(authorizationResolverCosmos);
                 });
             });
-
-        _client = _application.CreateClient();
     }
 
     [TestCleanup]

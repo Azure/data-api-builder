@@ -28,6 +28,7 @@ namespace Azure.DataApiBuilder.Service
 
         public static bool StartEngine(string[] args)
         {
+            DotNetEnv.Env.TraversePath().Load();
             // Unable to use ILogger because this code is invoked before LoggerFactory
             // is instantiated.
             Console.WriteLine("Starting the runtime engine...");

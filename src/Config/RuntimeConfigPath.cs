@@ -168,6 +168,8 @@ namespace Azure.DataApiBuilder.Config
                 string.Empty
             };
 
+            Console.WriteLine("Just Checking: " + Environment.GetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME));
+
             for (short index = 0;
                 index < environmentPrecedence.Length
                 && string.IsNullOrEmpty(configFileNameWithExtension);

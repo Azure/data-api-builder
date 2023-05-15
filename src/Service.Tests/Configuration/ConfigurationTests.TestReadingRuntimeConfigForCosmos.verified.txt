@@ -55,11 +55,16 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Create,
+                Action: Read,
+                Fields: {
+                  Include: [
+                    *
+                  ]
+                },
                 Policy: {}
               },
               {
-                Action: Read,
+                Action: Create,
                 Policy: {}
               },
               {
@@ -111,7 +116,7 @@
         },
         Permissions: [
           {
-            Role: authenticated,
+            Role: anonymous,
             Actions: [
               {
                 Action: Create,
@@ -194,6 +199,44 @@
       }
     },
     {
+      TagAlias: {
+        Source: {
+          Object: graphqldb.tag
+        },
+        GraphQL: {
+          Singular: Tag,
+          Plural: Tags,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: false
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Create,
+                Policy: {}
+              },
+              {
+                Action: Read,
+                Policy: {}
+              },
+              {
+                Action: Update,
+                Policy: {}
+              },
+              {
+                Action: Delete,
+                Policy: {}
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       Moon: {
         Source: {
           Object: graphqldb.moon
@@ -220,6 +263,87 @@
               },
               {
                 Action: Update,
+                Policy: {}
+              },
+              {
+                Action: Delete,
+                Policy: {}
+              }
+            ]
+          },
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: Create,
+                Policy: {}
+              },
+              {
+                Action: Read,
+                Policy: {}
+              },
+              {
+                Action: Update,
+                Policy: {}
+              },
+              {
+                Action: Delete,
+                Policy: {}
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      Earth: {
+        Source: {
+          Object: graphqldb.earth
+        },
+        GraphQL: {
+          Singular: Earth,
+          Plural: Earths,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: false
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Update,
+                Fields: {
+                  Exclude: [
+                    *
+                  ]
+                },
+                Policy: {}
+              },
+              {
+                Action: Read,
+                Fields: {
+                  Exclude: [
+                    name
+                  ],
+                  Include: [
+                    id,
+                    type
+                  ]
+                },
+                Policy: {}
+              },
+              {
+                Action: Create,
+                Fields: {
+                  Exclude: [
+                    name
+                  ],
+                  Include: [
+                    id
+                  ]
+                },
                 Policy: {}
               },
               {

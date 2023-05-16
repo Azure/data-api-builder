@@ -92,6 +92,11 @@
               },
               {
                 Action: Update,
+                Fields: {
+                  Include: [
+                    *
+                  ]
+                },
                 Policy: {}
               },
               {
@@ -120,6 +125,11 @@
               },
               {
                 Action: Update,
+                Fields: {
+                  Include: [
+                    *
+                  ]
+                },
                 Policy: {}
               },
               {
@@ -148,6 +158,11 @@
               },
               {
                 Action: Update,
+                Fields: {
+                  Include: [
+                    *
+                  ]
+                },
                 Policy: {}
               },
               {
@@ -176,6 +191,11 @@
               },
               {
                 Action: Update,
+                Fields: {
+                  Include: [
+                    *
+                  ]
+                },
                 Policy: {}
               },
               {
@@ -204,6 +224,11 @@
               },
               {
                 Action: Update,
+                Fields: {
+                  Include: [
+                    *
+                  ]
+                },
                 Policy: {}
               },
               {
@@ -227,11 +252,15 @@
               },
               {
                 Action: Update,
-                Policy: {}
+                Policy: {
+                  Database: @item.id ne 1234
+                }
               },
               {
                 Action: Read,
-                Policy: {}
+                Policy: {
+                  Database: @item.id ne 1234 or @item.id gt 1940
+                }
               }
             ]
           }
@@ -330,7 +359,9 @@
               },
               {
                 Action: Update,
-                Policy: {}
+                Policy: {
+                  Database: @item.pieceid ne 1
+                }
               }
             ]
           }
@@ -414,6 +445,11 @@
               },
               {
                 Action: Update,
+                Fields: {
+                  Include: [
+                    *
+                  ]
+                },
                 Policy: {}
               },
               {
@@ -442,6 +478,11 @@
               },
               {
                 Action: Update,
+                Fields: {
+                  Include: [
+                    *
+                  ]
+                },
                 Policy: {}
               },
               {
@@ -470,6 +511,11 @@
               },
               {
                 Action: Update,
+                Fields: {
+                  Include: [
+                    *
+                  ]
+                },
                 Policy: {}
               },
               {
@@ -498,6 +544,11 @@
               },
               {
                 Action: Update,
+                Fields: {
+                  Include: [
+                    *
+                  ]
+                },
                 Policy: {}
               },
               {
@@ -526,6 +577,11 @@
               },
               {
                 Action: Update,
+                Fields: {
+                  Include: [
+                    *
+                  ]
+                },
                 Policy: {}
               },
               {
@@ -562,6 +618,11 @@
               },
               {
                 Action: Update,
+                Fields: {
+                  Include: [
+                    *
+                  ]
+                },
                 Policy: {}
               }
             ]
@@ -582,11 +643,23 @@
               },
               {
                 Action: Read,
+                Fields: {
+                  Include: [
+                    *
+                  ]
+                },
                 Policy: {}
               },
               {
                 Action: Update,
-                Policy: {}
+                Fields: {
+                  Include: [
+                    *
+                  ]
+                },
+                Policy: {
+                  Database: @item.id ne 9
+                }
               },
               {
                 Action: Create,
@@ -608,11 +681,25 @@
               },
               {
                 Action: Delete,
-                Policy: {}
+                Fields: {
+                  Include: [
+                    *
+                  ]
+                },
+                Policy: {
+                  Database: @item.id eq 9
+                }
               },
               {
                 Action: Update,
-                Policy: {}
+                Fields: {
+                  Include: [
+                    *
+                  ]
+                },
+                Policy: {
+                  Database: @item.id eq 9
+                }
               },
               {
                 Action: Create,
@@ -1702,7 +1789,14 @@
               },
               {
                 Action: Read,
-                Policy: {}
+                Fields: {
+                  Include: [
+                    *
+                  ]
+                },
+                Policy: {
+                  Database: @item ne 1
+                }
               }
             ]
           }
@@ -1737,7 +1831,14 @@
               },
               {
                 Action: Update,
-                Policy: {}
+                Fields: {
+                  Include: [
+                    *
+                  ]
+                },
+                Policy: {
+                  Database: @item.id ne 1
+                }
               },
               {
                 Action: Create,
@@ -1765,11 +1866,23 @@
               },
               {
                 Action: Read,
+                Fields: {
+                  Exclude: [
+                    *
+                  ]
+                },
                 Policy: {}
               },
               {
                 Action: Update,
-                Policy: {}
+                Fields: {
+                  Include: [
+                    *
+                  ]
+                },
+                Policy: {
+                  Database: @item.id eq 1
+                }
               },
               {
                 Action: Create,

@@ -36,7 +36,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             OverrideEntityContainer("Planet", _containerName);
             OverrideEntityContainer("Earth", _containerName);
             OverrideEntityContainer("StarAlias", _containerName);
-            OverrideEntityContainer("TagAlias", _containerName);
+            OverrideEntityContainer("Sun", _containerName);
         }
 
         /// <summary>
@@ -833,6 +833,28 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             // Validate the result contains the GraphQL authorization error code.
             string errorMessage = response.ToString();
             Assert.IsTrue(errorMessage.Contains("The current user is not authorized to access this resource."));
+        }
+
+        /// <summary>
+        /// Tests that the field level query filter succeeds requests
+        /// when GraphQL is set to ture without setting singular type in runtime config and
+        /// when include fields are WILDCARD,
+        /// all the columns are able to be retrieved for authorization validation. 
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryFilterFieldAuthWithoutSingularType()
+        {
+            string gqlQuery = @"{
+                suns(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {id : {eq : """ + _idList[0] + @"""}})
+                { 
+                    items {
+                        id
+                    }
+                }
+            }";
+
+            string dbQuery = $"SELECT top 1 c.id FROM c where c.id = \"{_idList[0]}\"";
+            await ExecuteAndValidateResult("suns", gqlQuery, dbQuery);
         }
         #endregion
 

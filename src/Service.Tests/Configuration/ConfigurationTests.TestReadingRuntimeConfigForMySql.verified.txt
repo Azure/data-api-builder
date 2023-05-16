@@ -21,7 +21,8 @@
         AllowCredentials: false
       },
       Authentication: {
-        Provider: StaticWebApps
+        Provider: StaticWebApps,
+        Jwt: {}
       }
     }
   },
@@ -37,13 +38,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -288,6 +282,23 @@
         },
         Permissions: [
           {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Create,
+                Policy: {}
+              },
+              {
+                Action: Read,
+                Policy: {}
+              },
+              {
+                Action: Update,
+                Policy: {}
+              }
+            ]
+          },
+          {
             Role: authenticated,
             Actions: [
               {
@@ -304,24 +315,6 @@
               },
               {
                 Action: Delete,
-                Policy: {}
-              }
-            ]
-          },
-          {
-            Role: TestNestedFilterFieldIsNull_ColumnForbidden,
-            Actions: [
-              {
-                Action: Read,
-                Policy: {}
-              }
-            ]
-          },
-          {
-            Role: TestNestedFilterFieldIsNull_EntityReadForbidden,
-            Actions: [
-              {
-                Action: Read,
                 Policy: {}
               }
             ]
@@ -345,13 +338,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -716,13 +702,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -778,13 +757,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -839,13 +811,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -906,18 +871,11 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
           {
-            Role: authenticated,
+            Role: anonymous,
             Actions: [
               {
                 Action: Create,
@@ -930,50 +888,18 @@
               {
                 Action: Update,
                 Policy: {}
-              },
-              {
-                Action: Delete,
-                Policy: {}
               }
             ]
           },
           {
-            Role: TestNestedFilterManyOne_ColumnForbidden,
-            Actions: [
-              {
-                Action: Read,
-                Policy: {}
-              }
-            ]
-          },
-          {
-            Role: TestNestedFilterManyOne_EntityReadForbidden,
-            Actions: [
-              {
-                Action: Read,
-                Policy: {}
-              }
-            ]
-          },
-          {
-            Role: TestNestedFilterOneMany_ColumnForbidden,
-            Actions: [
-              {
-                Action: Read,
-                Fields: {
-                  Exclude: [
-                    categoryName
-                  ]
-                },
-                Policy: {}
-              }
-            ]
-          },
-          {
-            Role: TestNestedFilterOneMany_EntityReadForbidden,
+            Role: authenticated,
             Actions: [
               {
                 Action: Create,
+                Policy: {}
+              },
+              {
+                Action: Read,
                 Policy: {}
               },
               {
@@ -1005,13 +931,6 @@
           Enabled: false
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -1059,13 +978,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: false
         },
         Permissions: [
@@ -1125,13 +1037,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -1194,16 +1099,18 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: false
         },
         Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Read,
+                Policy: {}
+              }
+            ]
+          },
           {
             Role: authenticated,
             Actions: [
@@ -1224,29 +1131,6 @@
                 Policy: {}
               }
             ]
-          },
-          {
-            Role: TestNestedFilterFieldIsNull_ColumnForbidden,
-            Actions: [
-              {
-                Action: Read,
-                Fields: {
-                  Exclude: [
-                    price
-                  ]
-                },
-                Policy: {}
-              }
-            ]
-          },
-          {
-            Role: TestNestedFilterFieldIsNull_EntityReadForbidden,
-            Actions: [
-              {
-                Action: Create,
-                Policy: {}
-              }
-            ]
           }
         ]
       }
@@ -1262,13 +1146,6 @@
           Enabled: false
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -1395,13 +1272,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -1473,7 +1343,10 @@
       books_view_all: {
         Source: {
           Object: books_view_all,
-          Type: View
+          Type: View,
+          KeyFields: [
+            id
+          ]
         },
         GraphQL: {
           Singular: books_view_all,
@@ -1481,13 +1354,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -1539,13 +1405,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -1568,7 +1427,11 @@
       stocks_view_selected: {
         Source: {
           Object: stocks_view_selected,
-          Type: View
+          Type: View,
+          KeyFields: [
+            categoryid,
+            pieceid
+          ]
         },
         GraphQL: {
           Singular: stocks_view_selected,
@@ -1576,13 +1439,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -1623,7 +1479,11 @@
       books_publishers_view_composite: {
         Source: {
           Object: books_publishers_view_composite,
-          Type: View
+          Type: View,
+          KeyFields: [
+            id,
+            pub_id
+          ]
         },
         GraphQL: {
           Singular: books_publishers_view_composite,
@@ -1631,13 +1491,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -1678,7 +1531,11 @@
       books_publishers_view_composite_insertable: {
         Source: {
           Object: books_publishers_view_composite_insertable,
-          Type: View
+          Type: View,
+          KeyFields: [
+            id,
+            publisher_id
+          ]
         },
         GraphQL: {
           Singular: books_publishers_view_composite_insertable,
@@ -1719,13 +1576,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -1773,13 +1623,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -1825,13 +1668,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -1931,13 +1767,6 @@
           Enabled: false
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -1979,70 +1808,14 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
           {
-            Role: authenticated,
+            Role: anonymous,
             Actions: [
               {
                 Action: *,
-                Policy: {}
-              }
-            ]
-          },
-          {
-            Role: TestNestedFilterManyOne_ColumnForbidden,
-            Actions: [
-              {
-                Action: Read,
-                Fields: {
-                  Exclude: [
-                    name
-                  ]
-                },
-                Policy: {}
-              }
-            ]
-          },
-          {
-            Role: TestNestedFilterManyOne_EntityReadForbidden,
-            Actions: [
-              {
-                Action: Create,
-                Policy: {}
-              },
-              {
-                Action: Update,
-                Policy: {}
-              },
-              {
-                Action: Delete,
-                Policy: {}
-              }
-            ]
-          },
-          {
-            Role: TestNestedFilterOneMany_EntityReadForbidden,
-            Actions: [
-              {
-                Action: Read,
-                Policy: {}
-              }
-            ]
-          },
-          {
-            Role: TestNestedFilterOneMany_ColumnForbidden,
-            Actions: [
-              {
-                Action: Read,
                 Policy: {}
               }
             ]
@@ -2067,13 +1840,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -2109,13 +1875,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -2155,13 +1914,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -2197,13 +1949,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [

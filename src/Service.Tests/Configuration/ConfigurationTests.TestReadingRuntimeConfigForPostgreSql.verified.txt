@@ -21,7 +21,8 @@
         AllowCredentials: false
       },
       Authentication: {
-        Provider: StaticWebApps
+        Provider: StaticWebApps,
+        Jwt: {}
       }
     }
   },
@@ -37,13 +38,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -288,6 +282,27 @@
         },
         Permissions: [
           {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Create,
+                Policy: {}
+              },
+              {
+                Action: Read,
+                Policy: {}
+              },
+              {
+                Action: Update,
+                Policy: {}
+              },
+              {
+                Action: Delete,
+                Policy: {}
+              }
+            ]
+          },
+          {
             Role: authenticated,
             Actions: [
               {
@@ -309,6 +324,21 @@
             ]
           },
           {
+            Role: database_policy_tester,
+            Actions: [
+              {
+                Action: Update,
+                Policy: {
+                  Database: @item.pieceid ne 1
+                }
+              },
+              {
+                Action: Create,
+                Policy: {}
+              }
+            ]
+          },
+          {
             Role: TestNestedFilterFieldIsNull_ColumnForbidden,
             Actions: [
               {
@@ -323,21 +353,6 @@
               {
                 Action: Read,
                 Policy: {}
-              }
-            ]
-          },
-          {
-            Role: database_policy_tester,
-            Actions: [
-              {
-                Action: Create,
-                Policy: {}
-              },
-              {
-                Action: Update,
-                Policy: {
-                  Database: @item.pieceid ne 1
-                }
               }
             ]
           }
@@ -360,13 +375,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -731,13 +739,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -793,13 +794,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -854,13 +848,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -921,16 +908,26 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Create,
+                Policy: {}
+              },
+              {
+                Action: Read,
+                Policy: {}
+              },
+              {
+                Action: Update,
+                Policy: {}
+              }
+            ]
+          },
           {
             Role: authenticated,
             Actions: [
@@ -1020,13 +1017,6 @@
           Enabled: false
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -1074,13 +1064,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: false
         },
         Permissions: [
@@ -1140,13 +1123,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -1209,14 +1185,7 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
-          Enabled: false
+          Enabled: true
         },
         Permissions: [
           {
@@ -1231,11 +1200,11 @@
                 Policy: {}
               },
               {
-                Action: Delete,
+                Action: Update,
                 Policy: {}
               },
               {
-                Action: Update,
+                Action: Delete,
                 Policy: {}
               }
             ]
@@ -1277,13 +1246,6 @@
           Enabled: false
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -1410,13 +1372,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -1536,13 +1491,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -1685,13 +1633,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -1739,13 +1680,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -1791,13 +1725,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -1897,13 +1824,6 @@
           Enabled: false
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -1945,18 +1865,11 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
           {
-            Role: authenticated,
+            Role: anonymous,
             Actions: [
               {
                 Action: *,
@@ -1996,7 +1909,7 @@
             ]
           },
           {
-            Role: TestNestedFilterOneMany_EntityReadForbidden,
+            Role: TestNestedFilterOneMany_ColumnForbidden,
             Actions: [
               {
                 Action: Read,
@@ -2005,7 +1918,7 @@
             ]
           },
           {
-            Role: TestNestedFilterOneMany_ColumnForbidden,
+            Role: TestNestedFilterOneMany_EntityReadForbidden,
             Actions: [
               {
                 Action: Read,
@@ -2033,13 +1946,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -2075,13 +1981,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -2121,13 +2020,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -2163,13 +2055,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -2195,6 +2080,283 @@
         Mappings: {
           bkname: name,
           id: bkid
+        }
+      }
+    },
+    {
+      PublisherNF: {
+        Source: {
+          Object: publishers
+        },
+        GraphQL: {
+          Singular: PublisherNF,
+          Plural: PublisherNFs,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: Create,
+                Policy: {}
+              },
+              {
+                Action: Read,
+                Policy: {}
+              },
+              {
+                Action: Update,
+                Policy: {}
+              },
+              {
+                Action: Delete,
+                Policy: {}
+              }
+            ]
+          },
+          {
+            Role: TestNestedFilter_EntityReadForbidden,
+            Actions: [
+              {
+                Action: Read,
+                Policy: {}
+              }
+            ]
+          },
+          {
+            Role: TestNestedFilter_ColumnForbidden,
+            Actions: [
+              {
+                Action: Read,
+                Policy: {}
+              }
+            ]
+          },
+          {
+            Role: TestNestedFilterChained_EntityReadForbidden,
+            Actions: [
+              {
+                Action: Create,
+                Policy: {}
+              }
+            ]
+          },
+          {
+            Role: TestNestedFilterChained_ColumnForbidden,
+            Actions: [
+              {
+                Action: Read,
+                Fields: {
+                  Exclude: [
+                    name
+                  ]
+                },
+                Policy: {}
+              }
+            ]
+          }
+        ],
+        Relationships: {
+          books: {
+            Cardinality: Many,
+            TargetEntity: BookNF
+          }
+        }
+      }
+    },
+    {
+      BookNF: {
+        Source: {
+          Object: books
+        },
+        GraphQL: {
+          Singular: bookNF,
+          Plural: booksNF,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: Create,
+                Policy: {}
+              },
+              {
+                Action: Read,
+                Policy: {}
+              },
+              {
+                Action: Update,
+                Policy: {}
+              },
+              {
+                Action: Delete,
+                Policy: {}
+              }
+            ]
+          },
+          {
+            Role: TestNestedFilter_EntityReadForbidden,
+            Actions: [
+              {
+                Action: Read,
+                Policy: {}
+              }
+            ]
+          },
+          {
+            Role: TestNestedFilter_ColumnForbidden,
+            Actions: [
+              {
+                Action: Read,
+                Policy: {}
+              }
+            ]
+          },
+          {
+            Role: TestNestedFilterChained_EntityReadForbidden,
+            Actions: [
+              {
+                Action: Read,
+                Policy: {}
+              }
+            ]
+          },
+          {
+            Role: TestNestedFilterChained_ColumnForbidden,
+            Actions: [
+              {
+                Action: Read,
+                Policy: {}
+              }
+            ]
+          }
+        ],
+        Mappings: {
+          id: id,
+          title: title
+        },
+        Relationships: {
+          authors: {
+            Cardinality: Many,
+            TargetEntity: AuthorNF,
+            LinkingObject: book_author_link,
+            LinkingSourceFields: [
+              book_id
+            ],
+            LinkingTargetFields: [
+              author_id
+            ]
+          },
+          publishers: {
+            TargetEntity: PublisherNF
+          },
+          reviews: {
+            Cardinality: Many,
+            TargetEntity: Review
+          },
+          websiteplacement: {
+            TargetEntity: BookWebsitePlacement
+          }
+        }
+      }
+    },
+    {
+      AuthorNF: {
+        Source: {
+          Object: authors
+        },
+        GraphQL: {
+          Singular: AuthorNF,
+          Plural: AuthorNFs,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: Create,
+                Policy: {}
+              },
+              {
+                Action: Read,
+                Policy: {}
+              },
+              {
+                Action: Update,
+                Policy: {}
+              },
+              {
+                Action: Delete,
+                Policy: {}
+              }
+            ]
+          },
+          {
+            Role: TestNestedFilter_EntityReadForbidden,
+            Actions: [
+              {
+                Action: Create,
+                Fields: {
+                  Exclude: [
+                    name
+                  ]
+                },
+                Policy: {}
+              }
+            ]
+          },
+          {
+            Role: TestNestedFilter_ColumnForbidden,
+            Actions: [
+              {
+                Action: Read,
+                Fields: {
+                  Exclude: [
+                    name
+                  ]
+                },
+                Policy: {}
+              }
+            ]
+          },
+          {
+            Role: TestNestedFilterChained_EntityReadForbidden,
+            Actions: [
+              {
+                Action: Read,
+                Policy: {}
+              }
+            ]
+          },
+          {
+            Role: TestNestedFilterChained_ColumnForbidden,
+            Actions: [
+              {
+                Action: Read,
+                Policy: {}
+              }
+            ]
+          }
+        ],
+        Relationships: {
+          books: {
+            Cardinality: Many,
+            TargetEntity: BookNF,
+            LinkingObject: book_author_link
+          }
         }
       }
     }

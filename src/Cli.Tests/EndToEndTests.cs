@@ -656,7 +656,7 @@ public class EndToEndTests
 
         // Clearing Environment variable in the System
         Environment.SetEnvironmentVariable(envVariableName, "");
-        Assert.ThrowsException<DataApiBuilderException>(()=>
+        Assert.ThrowsException<DataApiBuilderException>(() =>
             RuntimeConfigPath.ParseConfigJsonAndReplaceEnvVariables(jsonWithEnvVariable),
             $"Environmental Variable, {envVariableName}, not found.");
 
@@ -669,7 +669,6 @@ public class EndToEndTests
         resolvedJson = RuntimeConfigPath.ParseConfigJsonAndReplaceEnvVariables(jsonWithEnvVariable);
         Assert.IsNotNull(resolvedJson);
         Assert.IsTrue(JToken.DeepEquals(JObject.Parse(@"{""envValue"": ""DEVELOPMENT""}"), JObject.Parse(resolvedJson)));
-
 
         // The variable set in the .env file takes precedence over the environment value set in the system.
         Environment.SetEnvironmentVariable(envVariableName, "TEST");

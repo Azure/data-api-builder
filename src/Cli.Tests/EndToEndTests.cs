@@ -632,6 +632,76 @@ public class EndToEndTests
     }
 
     /// <summary>
+    /// Test to verify that .env is supported by our CLI.
+    /// Below test is covering the following scenarios:
+    /// 1. Setting up environment variable in the system is consumed correctly.
+    /// 2. .env file if available will use the variable values from the .env file.
+    /// 3. If same variable is defined in both system and .env file, .env file takes precedence.
+    /// 4. If a variable is not present in the .env file then the system defined variable would be used, if defined.
+    /// </summary>
+    [TestMethod]
+    public void TestSupportForEnvironmentVariableFile()
+    {
+        string envVariableName = "DAB_TEST_ENVIRONMENT";
+        string jsonWithEnvVariable = @"{""envValue"": ""@env('DAB_TEST_ENVIRONMENT')""}";
+
+        // No environment File, No environment variable set in the system
+        Assert.AreEqual(null, Environment.GetEnvironmentVariable(envVariableName));
+
+        // Configuring environment variable in the system
+        Environment.SetEnvironmentVariable(envVariableName, "TEST");
+        string? resolvedJson = RuntimeConfigPath.ParseConfigJsonAndReplaceEnvVariables(jsonWithEnvVariable);
+        Assert.IsNotNull(resolvedJson);
+        Assert.IsTrue(JToken.DeepEquals(JObject.Parse(@"{""envValue"": ""TEST""}"), JObject.Parse(resolvedJson)));
+
+        // Clearing Environment variable in the System
+        Environment.SetEnvironmentVariable(envVariableName, "");
+        Assert.ThrowsException<DataApiBuilderException>(()=>
+            RuntimeConfigPath.ParseConfigJsonAndReplaceEnvVariables(jsonWithEnvVariable),
+            $"Environmental Variable, {envVariableName}, not found.");
+
+        // Creating environment variable file
+        File.Create("test.env").Close();
+        File.WriteAllText("test.env", $"{envVariableName}=DEVELOPMENT");
+        DotNetEnv.Env.Load("test.env");
+
+        Assert.AreEqual("DEVELOPMENT", Environment.GetEnvironmentVariable(envVariableName));
+        resolvedJson = RuntimeConfigPath.ParseConfigJsonAndReplaceEnvVariables(jsonWithEnvVariable);
+        Assert.IsNotNull(resolvedJson);
+        Assert.IsTrue(JToken.DeepEquals(JObject.Parse(@"{""envValue"": ""DEVELOPMENT""}"), JObject.Parse(resolvedJson)));
+
+
+        // The variable set in the .env file takes precedence over the environment value set in the system.
+        Environment.SetEnvironmentVariable(envVariableName, "TEST");
+        DotNetEnv.Env.Load("test.env");     // It contains value DEVELOPMENT
+        Assert.AreEqual("DEVELOPMENT", Environment.GetEnvironmentVariable(envVariableName));
+
+        // If a variable is not present in the .env file then the system defined variable would be used if defined.
+        Environment.SetEnvironmentVariable("HOSTING_TEST_ENVIRONMENT", "PHOENIX_TEST");
+        resolvedJson = RuntimeConfigPath.ParseConfigJsonAndReplaceEnvVariables(
+            @"{
+                ""envValue"": ""@env('DAB_TEST_ENVIRONMENT')"",
+                ""hostingEnvValue"": ""@env('HOSTING_TEST_ENVIRONMENT')""
+                }"
+        );
+        Assert.IsNotNull(resolvedJson);
+        Assert.IsTrue(JToken.DeepEquals(
+            JObject.Parse(
+                @"{
+                    ""envValue"": ""DEVELOPMENT"",
+                    ""hostingEnvValue"": ""PHOENIX_TEST""
+                }"),
+            JObject.Parse(resolvedJson)));
+
+        // Removing the .env file it will then use the value of system environment variable.
+        Environment.SetEnvironmentVariable(envVariableName, "TEST");
+        File.Delete("test.env");
+        DotNetEnv.Env.Load("test.env");
+        Assert.AreEqual("TEST", Environment.GetEnvironmentVariable(envVariableName));
+
+    }
+
+    /// <summary>
     /// Test to verify that if entity is not specified in the add/update
     /// command, a custom (more user friendly) message is displayed.
     /// NOTE: Below order of execution is important, changing the order for DataRow might result in test failures.

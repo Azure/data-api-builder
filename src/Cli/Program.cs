@@ -29,6 +29,8 @@ namespace Cli
                 }
             );
 
+            DotNetEnv.Env.TraversePath().Load();
+
             // Setting up Logger for CLI.
             ILoggerFactory loggerFactory = new LoggerFactory();
             loggerFactory.AddProvider(new CustomLoggerProvider());

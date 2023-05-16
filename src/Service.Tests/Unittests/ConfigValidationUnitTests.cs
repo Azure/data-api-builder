@@ -1749,6 +1749,91 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Test to validate that the rest methods are correctly configured for entities in the config.
+        /// Rest methods can only be configured for stored procedures as an array of valid REST operations. 
+        /// </summary>
+        /// <param name="sourceType"></param>
+        /// <param name="methods"></param>
+        /// <param name="exceptionExpected"></param>
+        /// <param name="expectedErrorMessage"></param>
+        [DataTestMethod]
+        [DataRow(SourceType.Table, "[\"get\"]", true,
+            $"The rest property '{RestStoredProcedureEntitySettings.PROPERTY_METHODS}' present for entity: HybridEntity of type: Table is only valid for type: StoredProcedure.",
+            DisplayName = "Rest methods specified for non-storedprocedure entity fail config validation.")]
+        [DataRow(SourceType.StoredProcedure, "\"get\"", true,
+            $"The rest property '{RestStoredProcedureEntitySettings.PROPERTY_METHODS}' for entity: HybridEntity is expected to be an array.",
+            DisplayName = "Rest methods specified as a non-array element fail config validation.")]
+        [DataRow(SourceType.StoredProcedure, "[\"post\", 1]", true,
+            $"The rest property '{RestStoredProcedureEntitySettings.PROPERTY_METHODS}' for entity: HybridEntity can only contain string as a valid array element.",
+            DisplayName = "Rest methods containing non-string element fail config validation.")]
+        [DataRow(SourceType.StoredProcedure, "[\"set\"]", true,
+            $"The rest property '{RestStoredProcedureEntitySettings.PROPERTY_METHODS}' for entity: HybridEntity contains an invalid REST operation: 'set'.",
+            DisplayName = "Invalid rest operation specified in rest methods fail config validation.")]
+        [DataRow(SourceType.StoredProcedure, "[\"Get\", \"post\", \"PUT\", \"paTch\", \"delete\"]", false,
+            DisplayName = "Valid rest operations specified in rest methods for stored procedure pass config validation.")]
+        public void ValidateRestMethodsForEntityInConfig(
+            SourceType sourceType,
+            string methods,
+            bool exceptionExpected,
+            string expectedErrorMessage = "")
+        {
+            string runtimeConfigString = @"{
+                    " +
+                @"""$schema"": ""test_schema""," +
+                @"""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""testconnectionstring"",
+                    ""options"":{
+                        ""set-session-context"": false
+                    }
+                },
+                ""runtime"": {
+                    ""host"": {
+                    ""mode"": ""development"",
+                    ""authentication"": {
+                        ""provider"": ""StaticWebApps""
+                    }
+                  }
+                },
+                ""entities"": {
+                    ""HybridEntity"":{
+                        ""source"": {
+                            ""object"": ""hybridSource"",
+                            ""type"":" + $"\"{sourceType}\"" + @"
+                        },
+                        ""permissions"": [
+                           {
+                            ""role"": ""anonymous"",
+                            ""actions"": [
+                               ""*""
+                            ]
+                           }
+                         ],
+                        ""rest"":{
+                            ""methods"":" +$"{methods}" + @"
+                         }
+                       }
+                    }
+                }";
+
+            RuntimeConfig runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(runtimeConfigString, RuntimeConfig.SerializerOptions);
+
+            // Perform validation on the entity in the config and assert the expected results.
+            if (exceptionExpected)
+            {
+                DataApiBuilderException ex =
+                    Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig.Entities));
+                Assert.AreEqual(expectedErrorMessage, ex.Message);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+            }
+            else
+            {
+                RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig.Entities);
+            }
+        }
+
+        /// <summary>
         /// Test to validate that when multiple entities have the same custom rest path configured, we throw an exception.
         /// </summary>
         /// <param name="exceptionExpected">Whether an exception is expected as a result of test run.</param>

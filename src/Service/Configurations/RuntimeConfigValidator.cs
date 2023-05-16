@@ -313,12 +313,12 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// configured for any other entity.
         /// </summary>
         /// <param name="entityName">Name of the entity.</param>
-        /// <param name="pathElement">The path element for the entity.</param>
+        /// <param name="restPathElement">The rest path element for the entity.</param>
         /// <param name="restPathsForEntities">Set of unique rest paths configured for the entities in the config.</param>
         /// <exception cref="DataApiBuilderException"></exception>
-        private static void ValidateRestPathForEntity(string entityName, JsonElement pathElement, HashSet<string> restPathsForEntities)
+        private static void ValidateRestPathForEntity(string entityName, JsonElement restPathElement, HashSet<string> restPathsForEntities)
         {
-            if (pathElement.ValueKind is JsonValueKind.Null)
+            if (restPathElement.ValueKind is JsonValueKind.Null)
             {
                 // The rest path can't be null.
                 throw new DataApiBuilderException(
@@ -328,8 +328,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     );
             }
 
-            if (pathElement.ValueKind is not JsonValueKind.True && pathElement.ValueKind is not JsonValueKind.False
-                && pathElement.ValueKind is not JsonValueKind.String)
+            if (restPathElement.ValueKind is not JsonValueKind.True && restPathElement.ValueKind is not JsonValueKind.False
+                && restPathElement.ValueKind is not JsonValueKind.String)
             {
                 // The rest path can only be a string or a boolean value.
                 throw new DataApiBuilderException(
@@ -340,9 +340,9 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     );
             }
 
-            if (pathElement.ValueKind is JsonValueKind.String)
+            if (restPathElement.ValueKind is JsonValueKind.String)
             {
-                string path = pathElement.ToString();
+                string path = restPathElement.ToString();
                 if (string.IsNullOrEmpty(path))
                 {
                     // The rest 'path' cannot be empty.
@@ -369,13 +369,13 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
         /// <summary>
         /// Helper method to validate that the Rest methods are correctly configured for the entity.
-        /// Rest methods can only be an array of valid REST operations and can only be configured for stored procedures.
+        /// Rest methods can only be configured for stored procedures as an array of valid REST operations.
         /// </summary>
         /// <param name="entityName">Name of the entity.</param>
-        /// <param name="methodsElement">Rest methods element configured for the entity.</param>
+        /// <param name="restMethodsElement">Rest methods element configured for the entity.</param>
         /// <param name="entity">Entity object.</param>
         /// <exception cref="DataApiBuilderException">Throws exception whenever a validation fails.</exception>
-        private static void ValidateRestMethodsForEntity(string entityName, JsonElement methodsElement, Entity entity)
+        private static void ValidateRestMethodsForEntity(string entityName, JsonElement restMethodsElement, Entity entity)
         {
             // This is needed to correctly populate the source type for the entity.
             entity.TryPopulateSourceFields();
@@ -390,7 +390,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     );
             }
 
-            if (methodsElement.ValueKind is not JsonValueKind.Array)
+            if (restMethodsElement.ValueKind is not JsonValueKind.Array)
             {
                 // The rest property 'methods' can only hold an array.
                 throw new DataApiBuilderException(
@@ -401,7 +401,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     );
             }
 
-            foreach (JsonElement restVerbElement in methodsElement.EnumerateArray())
+            foreach (JsonElement restVerbElement in restMethodsElement.EnumerateArray())
             {
                 if (restVerbElement.ValueKind is not JsonValueKind.String)
                 {
@@ -420,7 +420,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     // Every element in the 'methods' array should be a valid REST operation.
                     throw new DataApiBuilderException(
                         message: $"The rest property '{RestStoredProcedureEntitySettings.PROPERTY_METHODS}' for entity: {entityName} " +
-                        $"contains an invalid REST operation: {restVerb}.",
+                        $"contains an invalid REST operation: '{restVerb}'.",
                         statusCode: HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
                     );

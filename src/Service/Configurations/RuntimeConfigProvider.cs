@@ -116,7 +116,7 @@ public class RuntimeConfigProvider
 
             if (_runtimeConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL)
             {
-                _runtimeConfig = HandleCosmosNoSqlConfiguration(schema, _runtimeConfig);
+                _runtimeConfig = HandleCosmosNoSqlConfiguration(schema, _runtimeConfig, _runtimeConfig.DataSource.ConnectionString);
             }
         }
 
@@ -151,38 +151,17 @@ public class RuntimeConfigProvider
             throw new ArgumentException($"'{nameof(jsonConfig)}' cannot be null or empty.", nameof(jsonConfig));
         }
 
-        DbConnectionStringBuilder dbConnectionStringBuilder = new()
-        {
-            ConnectionString = connectionString
-        };
-
         ManagedIdentityAccessToken = accessToken;
 
         if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig))
         {
-            if (runtimeConfig.DataSource.DatabaseType is DatabaseType.CosmosDB_NoSQL)
+            _runtimeConfig = runtimeConfig.DataSource.DatabaseType switch
             {
-                _runtimeConfig = HandleCosmosNoSqlConfiguration(graphQLSchema, runtimeConfig);
-            }
+                DatabaseType.CosmosDB_NoSQL => HandleCosmosNoSqlConfiguration(graphQLSchema, runtimeConfig, connectionString),
+                _ => runtimeConfig with { DataSource = runtimeConfig.DataSource with { ConnectionString = connectionString } }
+            };
 
-            // Update the connection string in the parsed config with the one that was provided to the controller
-            _runtimeConfig = runtimeConfig with { DataSource = runtimeConfig.DataSource with { ConnectionString = connectionString } };
-
-            List<Task<bool>> configLoadedTasks = new();
-            if (_runtimeConfig is not null)
-            {
-                foreach (RuntimeConfigLoadedHandler configLoadedHandler in RuntimeConfigLoadedHandlers)
-                {
-                    configLoadedTasks.Add(configLoadedHandler(this, _runtimeConfig));
-                }
-            }
-
-            bool[] results = await Task.WhenAll(configLoadedTasks);
-
-            IsLateConfigured = true;
-
-            // Verify that all tasks succeeded.
-            return results.All(r => r);
+            return await InvokeConfigLoadedHandlersAsync();
         }
 
         return false;
@@ -199,15 +178,14 @@ public class RuntimeConfigProvider
             }
         }
 
-        await Task.WhenAll(configLoadedTasks);
+        bool[] results = await Task.WhenAll(configLoadedTasks);
 
-        // Verify that all tasks succeeded. 
-        return configLoadedTasks.All(x => x.Result);
+        // Verify that all tasks succeeded.
+        return results.All(x => x);
     }
 
-    private static RuntimeConfig HandleCosmosNoSqlConfiguration(string? schema, RuntimeConfig runtimeConfig)
+    private static RuntimeConfig HandleCosmosNoSqlConfiguration(string? schema, RuntimeConfig runtimeConfig, string connectionString)
     {
-        string connectionString = runtimeConfig.DataSource.ConnectionString;
         DbConnectionStringBuilder dbConnectionStringBuilder = new()
         {
             ConnectionString = connectionString
@@ -230,11 +208,17 @@ public class RuntimeConfigProvider
         if (database is not null)
         {
             // Add or update the options to contain the parsed database
-            options.Add("database", JsonSerializer.SerializeToElement(database));
+            options["database"] = JsonSerializer.SerializeToElement(database);
         }
 
         // Update the connection string in the parsed config with the one that was provided to the controller
-        return runtimeConfig with { DataSource = runtimeConfig.DataSource with { Options = options } };
+        return runtimeConfig
+            with
+        {
+            DataSource = runtimeConfig.DataSource
+            with
+            { Options = options, ConnectionString = connectionString }
+        };
     }
 
 }

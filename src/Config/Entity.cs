@@ -609,8 +609,8 @@ namespace Azure.DataApiBuilder.Config
     /// <param name="Type">Defines the name of the GraphQL type.
     /// Can be a string or Singular-Plural type.
     /// If string, a default plural route will be added as per the rules at
-    /// </param>
     /// <seealso cref="<https://engdic.org/singular-and-plural-noun-rules-definitions-examples/"/>
+    /// </param>
     public record GraphQLEntitySettings([property: JsonPropertyName("type")] object? Type = null);
 
     /// <summary>

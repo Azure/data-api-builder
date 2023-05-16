@@ -1810,7 +1810,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                            }
                          ],
                         ""rest"":{
-                            ""methods"":" +$"{methods}" + @"
+                            ""methods"":" + $"{methods}" + @"
                          }
                        }
                     }

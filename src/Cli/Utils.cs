@@ -901,14 +901,15 @@ namespace Cli
 
                 if (DoesFileExistInCurrentDirectory(baseConfigFile) && !string.IsNullOrEmpty(environmentBasedConfigFile))
                 {
-                    mergedConfigFile = RuntimeConfigPath.GetMergedFileNameForEnvironment(CONFIGFILE_NAME, environmentValue);
                     try
                     {
                         string baseConfigJson = File.ReadAllText(baseConfigFile);
                         string overrideConfigJson = File.ReadAllText(environmentBasedConfigFile);
+                        _logger.LogInformation($"Merging {baseConfigFile} and {environmentBasedConfigFile}");
                         string mergedConfigJson = Merge(baseConfigJson, overrideConfigJson);
-
+                        mergedConfigFile = RuntimeConfigPath.GetMergedFileNameForEnvironment(CONFIGFILE_NAME, environmentValue);
                         File.WriteAllText(mergedConfigFile, mergedConfigJson);
+                        _logger.LogInformation($"Generated merged config file: {mergedConfigFile}");
                         return true;
                     }
                     catch (Exception ex)

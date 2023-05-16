@@ -25,8 +25,8 @@ internal static class VerifyExtensions
             paramsToHash.Append(s);
         }
 
-        using MD5 md5Hash = MD5.Create();
-        byte[] data = md5Hash.ComputeHash(Encoding.UTF8.GetBytes(paramsToHash.ToString()));
+        using SHA256 hasher = SHA256.Create();
+        byte[] data = hasher.ComputeHash(Encoding.UTF8.GetBytes(paramsToHash.ToString()));
 
         StringBuilder hashBuilder = new();
 

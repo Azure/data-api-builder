@@ -1089,6 +1089,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             // Clears or sets App Service Environment Variables based on test input.
             Environment.SetEnvironmentVariable(AppServiceAuthenticationInfo.APPSERVICESAUTH_ENABLED_ENVVAR, setEnvVars ? "true" : null);
             Environment.SetEnvironmentVariable(AppServiceAuthenticationInfo.APPSERVICESAUTH_IDENTITYPROVIDER_ENVVAR, setEnvVars ? "AzureActiveDirectory" : null);
+            TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
 
             FileSystem fileSystem = new();
             RuntimeConfigLoader loader = new(fileSystem);
@@ -1192,7 +1193,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             bool expectError)
         {
             GraphQLRuntimeOptions graphqlOptions = new(Enabled: globalGraphQLEnabled);
-            RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
+            RestRuntimeOptions restRuntimeOptions = new(Enabled: true);
 
             DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), new());
 
@@ -1583,7 +1584,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
                     configParams = configParams with
                     {
-                        ConfigurationOverrides = JsonSerializer.Serialize(overrides),
+                        ConfigurationOverrides = overrides.ToJson(),
                         AccessToken = GenerateMockJwtToken()
                     };
                 }
@@ -1651,7 +1652,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             string connectionString = GetConnectionStringFromEnvironmentConfig(environment);
 
-            string serializedConfiguration = JsonSerializer.Serialize(runtimeConfig);
+            string serializedConfiguration = runtimeConfig.ToJson();
 
             if (configurationEndpoint == CONFIGURATION_ENDPOINT)
             {
@@ -1668,7 +1669,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
                 ConfigurationPostParametersV2 returnParams = new(
                     Configuration: serializedConfiguration,
-                    ConfigurationOverrides: JsonSerializer.Serialize(overrides),
+                    ConfigurationOverrides: overrides.ToJson(),
                     Schema: null,
                     AccessToken: null);
 

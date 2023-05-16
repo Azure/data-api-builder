@@ -90,7 +90,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
                             "Double" => EdmPrimitiveTypeKind.Double,
                             "Decimal" => EdmPrimitiveTypeKind.Decimal,
                             "Boolean" => EdmPrimitiveTypeKind.Boolean,
-                            "DateTime" => EdmPrimitiveTypeKind.DateTimeOffset,
+                            "DateTime" or "DateTimeOffset" => EdmPrimitiveTypeKind.DateTimeOffset,
                             "Date" => EdmPrimitiveTypeKind.Date,
                             _ => throw new ArgumentException($"Column type {columnSystemType.Name} not yet supported."),
                         };

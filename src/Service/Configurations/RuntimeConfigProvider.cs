@@ -84,6 +84,18 @@ public class RuntimeConfigProvider
     }
 
     /// <summary>
+    /// Attempt to acquire runtime configuration metadata from a previously loaded one.
+    /// This method will not load the config if it hasn't been loaded yet.
+    /// </summary>
+    /// <param name="runtimeConfig">Populated runtime configuration, if present.</param>
+    /// <returns>True when runtime config is provided, otherwise false.</returns>
+    public bool TryGetLoadedConfig([NotNullWhen(true)] out RuntimeConfig? runtimeConfig)
+    {
+        runtimeConfig = _runtimeConfig;
+        return _runtimeConfig is not null;
+    }
+
+    /// <summary>
     /// Initialize the runtime configuration provider with the specified configurations.
     /// This initialization method is used when the configuration is sent to the ConfigurationController
     /// in the form of a string instead of reading the configuration from a configuration file.

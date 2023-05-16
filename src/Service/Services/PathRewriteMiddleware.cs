@@ -99,7 +99,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <returns>True when graphQLRoute is defined, otherwise false.</returns>
         private bool TryGetGraphQLRouteFromConfig([NotNullWhen(true)] out string? graphQLRoute)
         {
-            if (_runtimeConfigurationProvider.TryGetConfig(out RuntimeConfig? config) &&
+            if (_runtimeConfigurationProvider.TryGetLoadedConfig(out RuntimeConfig? config) &&
                 config.Runtime.GraphQL.Enabled)
             {
                 graphQLRoute = config.Runtime.GraphQL.Path;
@@ -120,7 +120,7 @@ namespace Azure.DataApiBuilder.Service.Services
         private bool IsEndPointDisabledGlobally(HttpContext httpContext)
         {
             PathString requestPath = httpContext.Request.Path;
-            if (_runtimeConfigurationProvider.TryGetConfig(out RuntimeConfig? config))
+            if (_runtimeConfigurationProvider.TryGetLoadedConfig(out RuntimeConfig? config))
             {
                 string restPath = config.Runtime.Rest.Path;
                 string graphQLPath = config.Runtime.GraphQL.Path;

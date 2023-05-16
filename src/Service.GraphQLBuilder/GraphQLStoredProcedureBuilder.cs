@@ -45,7 +45,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                     // to the exact value type defined in the database schema.
                     // e.g. Runtime config parameter value set as 1, while database schema denotes value type decimal.
                     // Without database metadata, there is no way to know to cast 1 to a decimal versus an integer.
-                    string defaultValueFromConfig = ((JsonElement)entity.Source.Parameters[param]).ToString();
+                    string defaultValueFromConfig = entity.Source.Parameters[param].ToString()!;
                     Tuple<string, IValueNode> defaultGraphQLValue = ConvertValueToGraphQLType(defaultValueFromConfig, parameterDefinition: spdef.Parameters[param]);
                     inputValues.Add(
                         new(

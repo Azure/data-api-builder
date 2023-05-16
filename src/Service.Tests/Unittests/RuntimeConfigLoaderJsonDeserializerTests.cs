@@ -22,7 +22,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     /// variable names are not found.
     /// </summary>
     [TestClass, TestCategory(TestCategory.MSSQL)]
-    public class RuntimeConfigPathUnitTests
+    public class RuntimeConfigLoaderJsonDeserializerTests
     {
         #region Positive Tests
 
@@ -39,17 +39,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="repKeys">Replacement used as key to get environment variable.</param>
         /// <param name="repValues">Replacement value.</param>
         [DataTestMethod]
-        [DataRow(new string[] { "@env(')", "@env()", "@env(')'@env('()", "@env('@env()'", "@@eennvv((''''))" },
-            new object[]
-            {
-                new string[] { "@env(')", "@env()", "@env(')'@env('()", "@env('@env()'", "@@eennvv((''''))" }
-            },
+        [DataRow(
+            new string[] { "@env(')", "@env()", "@env(')'@env('()", "@env('@env()'", "@@eennvv((''''))" },
+            new string[] { "@env(')", "@env()", "@env(')'@env('()", "@env('@env()'", "@@eennvv((''''))" },
             DisplayName = "Replacement strings that won't match.")]
-        [DataRow(new string[] { "@env('envVarName')", "@env(@env('envVarName'))", "@en@env('envVarName')", "@env'()@env'@env('envVarName')')')" },
-            new object[]
-            {
-                new string[] { "envVarValue", "@env(envVarValue)", "@enenvVarValue", "@env'()@env'envVarValue')')" }
-            },
+        [DataRow(
+            new string[] { "@env('envVarName')", "@env(@env('envVarName'))", "@en@env('envVarName')", "@env'()@env'@env('envVarName')')')" },
+            new string[] { "envVarValue", "@env(envVarValue)", "@enenvVarValue", "@env'()@env'envVarValue')')" },
             DisplayName = "Replacement strings that match.")]
         //  since we match strings surrounded by single quotes,
         //  the following are environment variable names set to the
@@ -57,11 +53,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         // 'envVarName  -> _envVarName
         //  envVarName' ->  envVarName_
         // 'envVarName' -> _envVarName_
-        [DataRow(new string[] { "@env(')", "@env()", "@env('envVarName')", "@env(''envVarName')", "@env('envVarName'')", "@env(''envVarName'')" },
-            new object[]
-            {
-                new string[] { "@env(')", "@env()", "envVarValue", "_envVarValue", "envVarValue_", "_envVarValue_" }
-            },
+        [DataRow(
+            new string[] { "@env(')", "@env()", "@env('envVarName')", "@env(''envVarName')", "@env('envVarName'')", "@env(''envVarName'')" },
+            new string[] { "@env(')", "@env()", "envVarValue", "_envVarValue", "envVarValue_", "_envVarValue_" },
             DisplayName = "Replacement strings with some matches.")]
         public void CheckConfigEnvParsingTest(string[] repKeys, string[] repValues)
         {

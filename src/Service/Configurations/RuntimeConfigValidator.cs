@@ -261,6 +261,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             foreach (string entityName in entityCollection.Keys)
             {
                 Entity entity = entityCollection[entityName];
+                string pathForEntity = entityName;
                 if (entity.Rest is not null)
                 {
                     JsonElement restJsonElement = JsonSerializer.SerializeToElement(entity.Rest);
@@ -271,7 +272,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         // Since 'path' is an optional property, we skip validation if its absent.
                         if (restJsonElement.TryGetProperty(RestEntitySettings.PROPERTY_PATH, out JsonElement pathElement))
                         {
-                            ValidateRestPathForEntity(entityName, pathElement, restPathsForEntities);
+                            pathForEntity = ValidateAndGetRestPathForEntity(entityName, pathElement);
                         }
 
                         // Since 'methods' is an optional property, we skip validation if its absent.
@@ -280,6 +281,17 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             ValidateRestMethodsForEntity(entityName, methodsElement, entity);
                         }
                     }
+                }
+
+
+                if (!restPathsForEntities.Add(pathForEntity))
+                {
+                    // Presence of multiple entities having the same rest path configured causes conflict.
+                    throw new DataApiBuilderException(
+                        message: $"Multiple entities found with same rest path: {pathForEntity}.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
+                        );
                 }
 
                 if (entity.GraphQL is null)
@@ -307,16 +319,15 @@ namespace Azure.DataApiBuilder.Service.Configurations
         }
 
         /// <summary>
-        /// Helper method to validate that the rest path is correctly configured for the entity.
+        /// Helper method to get the rest path for the entity if it is correctly configured.
         /// The rest path can only be a boolean value or a string.
         /// If configured as a string, it should not be null/empty and should not conflict with the rest path
         /// configured for any other entity.
         /// </summary>
         /// <param name="entityName">Name of the entity.</param>
         /// <param name="restPathElement">The rest path element for the entity.</param>
-        /// <param name="restPathsForEntities">Set of unique rest paths configured for the entities in the config.</param>
         /// <exception cref="DataApiBuilderException">Throws exception when rest path contains an unexpected value.</exception>
-        private static void ValidateRestPathForEntity(string entityName, JsonElement restPathElement, HashSet<string> restPathsForEntities)
+        private static string ValidateAndGetRestPathForEntity(string entityName, JsonElement restPathElement)
         {
             if (restPathElement.ValueKind is JsonValueKind.Null)
             {
@@ -353,16 +364,10 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         );
                 }
 
-                if (!restPathsForEntities.Add(path))
-                {
-                    // Presence of multiple entities having the same rest path configured causes conflict.
-                    throw new DataApiBuilderException(
-                        message: $"Multiple entities found with same rest {RestEntitySettings.PROPERTY_PATH}: {path}.",
-                        statusCode: HttpStatusCode.ServiceUnavailable,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
-                        );
-                }
+                return path;
             }
+
+            return entityName;
         }
 
         /// <summary>

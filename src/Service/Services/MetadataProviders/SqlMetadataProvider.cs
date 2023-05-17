@@ -425,7 +425,7 @@ namespace Azure.DataApiBuilder.Service.Services
             }
 
             JsonElement restConfigElement = (JsonElement)entity.Rest;
-            if (restConfigElement.TryGetProperty("path", out JsonElement path))
+            if (restConfigElement.TryGetProperty(RestEntitySettings.PROPERTY_PATH, out JsonElement path))
             {
                 if (path.ValueKind is JsonValueKind.String)
                 {

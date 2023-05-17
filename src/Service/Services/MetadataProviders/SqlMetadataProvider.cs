@@ -424,48 +424,20 @@ namespace Azure.DataApiBuilder.Service.Services
                 return string.Empty;
             }
 
-            // otherwise we have to convert each part of the Rest property we want into correct objects
-            // they are json element so this means deserializing at each step with case insensitivity
-            JsonSerializerOptions options = RuntimeConfig.SerializerOptions;
             JsonElement restConfigElement = (JsonElement)entity.Rest;
-            if (entity.ObjectType is SourceType.StoredProcedure)
+            if (restConfigElement.TryGetProperty("path", out JsonElement path))
             {
-                if (restConfigElement.TryGetProperty("path", out JsonElement path))
+                if (path.ValueKind is JsonValueKind.String)
                 {
-                    if (path.ValueKind is JsonValueKind.True || path.ValueKind is JsonValueKind.False)
-                    {
-                        bool restEnabled = JsonSerializer.Deserialize<bool>(path, options)!;
-                        if (restEnabled)
-                        {
-                            return entityName;
-                        }
-                        else
-                        {
-                            return string.Empty;
-                        }
-                    }
-                    else
-                    {
-                        return JsonSerializer.Deserialize<string>(path, options)!;
-                    }
+                    return path.ToString();
                 }
                 else
                 {
-                    return entityName;
+                    return path.ValueKind is JsonValueKind.True ? entityName : string.Empty;
                 }
             }
-            else
-            {
-                RestEntitySettings rest = JsonSerializer.Deserialize<RestEntitySettings>((JsonElement)restConfigElement, options)!;
-                if (rest.Path is not null)
-                {
-                    return JsonSerializer.Deserialize<string>((JsonElement)rest.Path, options)!;
-                }
-                else
-                {
-                    return entityName;
-                }
-            }
+
+            return entityName;
         }
 
         /// <summary>

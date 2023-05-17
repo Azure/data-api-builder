@@ -837,7 +837,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
         /// <summary>
         /// Tests that the field level query filter succeeds requests
-        /// when GraphQL is set to ture without setting singular type in runtime config and
+        /// when GraphQL is set to true without setting singular type in runtime config and
         /// when include fields are WILDCARD,
         /// all the columns are able to be retrieved for authorization validation. 
         /// </summary>

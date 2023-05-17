@@ -239,7 +239,7 @@ namespace Cli.Tests
         /// 1. Environment value is set.
         /// 2. Both Base and envBased config file is present.
         /// In all other cases, the TryMergeConfigsIfAvailable method should return false
-        /// and out string for the mergedConfigFile should be empty.
+        /// and out param for the mergedConfigFile should be null.
         /// </summary>
         [DataTestMethod]
         [DataRow("", false, false, null, false, DisplayName = "If environment value is not set, merged config file is not generated.")]

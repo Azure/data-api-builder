@@ -262,6 +262,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             {
                 Entity entity = entityCollection[entityName];
                 string pathForEntity = entityName;
+                bool restEnabled = true;
                 if (entity.Rest is not null)
                 {
                     JsonElement restJsonElement = JsonSerializer.SerializeToElement(entity.Rest);
@@ -281,12 +282,23 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             ValidateRestMethodsForEntity(entityName, methodsElement, entity);
                         }
                     }
+                    else if (restJsonElement.ValueKind is JsonValueKind.False)
+                    {
+                        restEnabled = false;
+                    }
+                    else if (restJsonElement.ValueKind is not JsonValueKind.True)
+                    {
+                        throw new DataApiBuilderException(
+                        message: $"The 'rest' property for entity: {entityName} can only be a boolean value or a json object.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
+                        );
+                    }
                 }
 
-
-                if (!restPathsForEntities.Add(pathForEntity))
+                if (restEnabled && !restPathsForEntities.Add(pathForEntity))
                 {
-                    // Presence of multiple entities having the same rest path configured causes conflict.
+                    // Presence of multiple entities having the rest endpoint enabled and having the same rest path configured causes conflict.
                     throw new DataApiBuilderException(
                         message: $"Multiple entities found with same rest path: {pathForEntity}.",
                         statusCode: HttpStatusCode.ServiceUnavailable,

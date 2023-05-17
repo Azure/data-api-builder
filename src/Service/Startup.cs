@@ -320,7 +320,10 @@ namespace Azure.DataApiBuilder.Service
                 app.UseDeveloperExceptionPage();
             }
 
-            app.UseHttpsRedirection();
+            if (!Program.IsHttpsRedirectionDisabled)
+            {
+                app.UseHttpsRedirection();
+            }
 
             // URL Rewrite middleware MUST be called prior to UseRouting().
             // https://andrewlock.net/understanding-pathbase-in-aspnetcore/#placing-usepathbase-in-the-correct-location

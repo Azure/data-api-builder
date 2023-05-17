@@ -24,7 +24,7 @@ Before running the code, ensure you have the correct version of .NET installed (
 
 The next step is to ensure you have a config file for DAB defined. If you want to use the sample one [you can use the generator tool](#an-alternative-way-to-generate-config-files), otherwise, ensure that the `dab-config.<engine>.json` file is in the `src/Service` directory (and if the database is CosmosDb_NoSql the GraphQL schema file too).
 
-Make sure the config has a valid connection string, or you use the [`@env` syntax to reference an environment variable](https://learn.microsoft.com/en-us/azure/data-api-builder/configuration-file#accessing-environment-variables).
+Make sure the config has a valid connection string, or you use the [`@env` syntax to reference an environment variable](https://learn.microsoft.com/azure/data-api-builder/configuration-file#accessing-environment-variables).
 
 #### Visual Studio
 
@@ -54,7 +54,7 @@ To run the SQL tests locally you will need to:
 
 1. Setup a database using the server(s) that you want to test against.
 1. Create the database schema using the `DatabaseSchema-<engine>.sql` file.
-1. Set the connection string in `dab-config.<engine>.json` or use the [`@env` syntax to reference an environment variable](https://learn.microsoft.com/en-us/azure/data-api-builder/configuration-file#accessing-environment-variables).
+1. Set the connection string in `dab-config.<engine>.json` or use the [`@env` syntax to reference an environment variable](https://learn.microsoft.com/azure/data-api-builder/configuration-file#accessing-environment-variables).
    - Note - do not commit the connection string to the repo.
 
 Tests can then be run using the following commands:

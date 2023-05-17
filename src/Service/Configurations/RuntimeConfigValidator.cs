@@ -372,7 +372,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
             if (restPathElement.ValueKind is JsonValueKind.String)
             {
-                string path = restPathElement.ToString().TrimStart('/');
+                string path = restPathElement.ToString().TrimStart('/').TrimStart(' ');
                 if (string.IsNullOrEmpty(path))
                 {
                     // The rest 'path' cannot be empty.

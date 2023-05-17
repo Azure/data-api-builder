@@ -90,7 +90,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             if (runtimeConfig.GraphQLGlobalSettings.Enabled
                  && runtimeConfig.HostGlobalSettings.Mode is HostModeType.Development)
             {
-                ValidateEntityConfiguration(runtimeConfig.Entities);
+                ValidateEntityConfiguration(runtimeConfig);
                 ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(runtimeConfig.Entities);
             }
         }
@@ -252,17 +252,21 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// have GraphQL configuration: when entity.GraphQL == false or null.
         /// </summary>
         /// <seealso cref="https://spec.graphql.org/October2021/#Name"/>
-        /// <param name="runtimeConfig"></param>
-        public static void ValidateEntityConfiguration(Dictionary<string, Entity> entityCollection)
+        /// <param name="runtimeConfig">The runtime configuration.</param>
+        public static void ValidateEntityConfiguration(RuntimeConfig runtimeConfig)
         {
             // Stores the unique rest paths configured for different entities present in the config.
             HashSet<string> restPathsForEntities = new();
+            bool isRestEnabledGlobally = runtimeConfig.RestGlobalSettings.Enabled;
 
-            foreach (string entityName in entityCollection.Keys)
+            foreach (string entityName in runtimeConfig.Entities.Keys)
             {
-                Entity entity = entityCollection[entityName];
+                Entity entity = runtimeConfig.Entities[entityName];
+                // If no custom rest path is defined for the entity, we default it to the entityName.
                 string pathForEntity = entityName;
-                bool restEnabled = true;
+
+                // We assume that the by default the rest endpoint is enabled for the entity.
+                bool isRestEnabledForEntity = true;
                 if (entity.Rest is not null)
                 {
                     JsonElement restJsonElement = JsonSerializer.SerializeToElement(entity.Rest);
@@ -284,7 +288,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     }
                     else if (restJsonElement.ValueKind is JsonValueKind.False)
                     {
-                        restEnabled = false;
+                        isRestEnabledForEntity = false;
                     }
                     else if (restJsonElement.ValueKind is not JsonValueKind.True)
                     {
@@ -296,11 +300,14 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     }
                 }
 
-                if (restEnabled && !restPathsForEntities.Add(pathForEntity))
+                // We perform the validations for unique rest paths for entities in the config only when:
+                // 1. The rest endpoint is enabled globally, and
+                // 2. The rest endpoint is enabled for the entity.
+                if (isRestEnabledGlobally && isRestEnabledForEntity && !restPathsForEntities.Add(pathForEntity))
                 {
-                    // Presence of multiple entities having the rest endpoint enabled and having the same rest path configured causes conflict.
+                    // Presence of multiple entities having the same rest path configured causes conflict.
                     throw new DataApiBuilderException(
-                        message: $"Multiple entities found with same rest path: {pathForEntity}.",
+                        message: $"The rest path: {pathForEntity} specified for entity: {entityName} is already used by another entity.",
                         statusCode: HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
                         );
@@ -365,7 +372,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
             if (restPathElement.ValueKind is JsonValueKind.String)
             {
-                string path = restPathElement.ToString();
+                string path = restPathElement.ToString().TrimStart('/');
                 if (string.IsNullOrEmpty(path))
                 {
                     // The rest 'path' cannot be empty.

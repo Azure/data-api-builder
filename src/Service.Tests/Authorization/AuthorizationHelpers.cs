@@ -115,15 +115,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 { entityName, sampleEntity }
             };
 
-            // Create runtime settings for the config.
-            Dictionary<GlobalSettingsType, object> runtimeSettings = new();
-            AuthenticationConfig authenticationConfig = new(Provider: authProvider);
-            HostGlobalSettings hostGlobal = new(Authentication: authenticationConfig);
-            JsonElement hostGlobalJson = JsonSerializer.SerializeToElement(hostGlobal);
-            RestGlobalSettings restGlobalSettings = new();
-            JsonElement restGlobalJson = JsonSerializer.SerializeToElement(restGlobalSettings);
-            runtimeSettings.Add(GlobalSettingsType.Host, hostGlobalJson);
-            runtimeSettings.Add(GlobalSettingsType.Rest, restGlobalJson);
+            Dictionary<GlobalSettingsType, object> runtimeSettings = CreateRuntimeSettings(authProvider);
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
@@ -135,6 +127,25 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             runtimeConfig.DetermineGlobalSettings();
 
             return runtimeConfig;
+        }
+
+        /// <summary>
+        /// Helper method to create runtime settings with given authentication provider.
+        /// </summary>
+        /// <param name="authProvider">Authentication provider.</param>
+        /// <returns>Created runtime settings.</returns>
+        public static Dictionary<GlobalSettingsType, object> CreateRuntimeSettings(string authProvider = "AppService")
+        {
+            // Create runtime settings for the config.
+            Dictionary<GlobalSettingsType, object> runtimeSettings = new();
+            AuthenticationConfig authenticationConfig = new(Provider: authProvider);
+            HostGlobalSettings hostGlobal = new(Authentication: authenticationConfig);
+            JsonElement hostGlobalJson = JsonSerializer.SerializeToElement(hostGlobal);
+            RestGlobalSettings restGlobalSettings = new();
+            JsonElement restGlobalJson = JsonSerializer.SerializeToElement(restGlobalSettings);
+            runtimeSettings.Add(GlobalSettingsType.Host, hostGlobalJson);
+            runtimeSettings.Add(GlobalSettingsType.Rest, restGlobalJson);
+            return runtimeSettings;
         }
 
         /// <summary>

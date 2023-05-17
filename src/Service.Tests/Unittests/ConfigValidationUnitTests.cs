@@ -3,6 +3,7 @@
 
 #nullable disable
 using System.Collections.Generic;
+using System.Data;
 using System.Net;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
@@ -845,10 +846,17 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             entity.GraphQL = new GraphQLEntitySettings(Type: singularPlural);
             entityCollection.Add("EntityC", entity);
 
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
+                RuntimeSettings: AuthorizationHelpers.CreateRuntimeSettings(),
+                Entities: entityCollection
+                );
+            runtimeConfig.DetermineGlobalSettings();
             if (expectsException)
             {
                 DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
-                    action: () => RuntimeConfigValidator.ValidateEntityConfiguration(entityCollection),
+                    action: () => RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig),
                     message: $"Entity name \"{entityNameFromConfig}\" incorrectly passed validation.");
 
                 Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
@@ -856,7 +864,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
             else
             {
-                RuntimeConfigValidator.ValidateEntityConfiguration(entityCollection);
+                RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig);
             }
         }
 
@@ -1817,19 +1825,20 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 }";
 
             RuntimeConfig runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(runtimeConfigString, RuntimeConfig.SerializerOptions);
+            runtimeConfig.DetermineGlobalSettings();
 
             // Perform validation on the entity in the config and assert the expected results.
             if (exceptionExpected)
             {
                 DataApiBuilderException ex =
-                    Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig.Entities));
+                    Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig));
                 Assert.AreEqual(expectedErrorMessage, ex.Message);
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
             }
             else
             {
-                RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig.Entities);
+                RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig);
             }
         }
 
@@ -1859,17 +1868,24 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             entity.Rest = new RestEntitySettings(Path: restPathForEntity);
             entityCollection.Add("EntityA", entity);
 
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
+                RuntimeSettings: AuthorizationHelpers.CreateRuntimeSettings(),
+                Entities: entityCollection
+                );
+            runtimeConfig.DetermineGlobalSettings();
             if (exceptionExpected)
             {
                 DataApiBuilderException dabException =
-                    Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidateEntityConfiguration(entityCollection));
+                    Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig));
                 Assert.AreEqual(expectedExceptionMessage, dabException.Message);
                 Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
                 Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
             }
             else
             {
-                RuntimeConfigValidator.ValidateEntityConfiguration(entityCollection);
+                RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig);
             }
         }
 
@@ -1883,7 +1899,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataTestMethod]
         [DataRow(false, "restPathA", "restPathB", DisplayName = "Unique rest paths configured for entities pass config validation.")]
         [DataRow(false, true, false, DisplayName = "Rest path configured as boolean values for an entities pass config validation.")]
-        [DataRow(true, "restPath", "restPath", "Multiple entities found with same rest path: restPath.",
+        [DataRow(true, "restPath", "restPath", "The rest path: restPath specified for entity: EntityB is already used by another entity.",
             DisplayName = "Duplicate rest paths configures for entities fail config validation.")]
         public void ValidateUniqueRestPathsForEntitiesInConfig(
             bool exceptionExpected,
@@ -1903,17 +1919,24 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             entity.Rest = new RestEntitySettings(Path: restPathForSecondEntity);
             entityCollection.Add("EntityB", entity);
 
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
+                RuntimeSettings: AuthorizationHelpers.CreateRuntimeSettings(),
+                Entities: entityCollection
+                );
+            runtimeConfig.DetermineGlobalSettings();
             if (exceptionExpected)
             {
                 DataApiBuilderException dabException =
-                    Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidateEntityConfiguration(entityCollection));
+                    Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig));
                 Assert.AreEqual(expectedExceptionMessage, dabException.Message);
                 Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
                 Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
             }
             else
             {
-                RuntimeConfigValidator.ValidateEntityConfiguration(entityCollection);
+                RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig);
             }
         }
     }

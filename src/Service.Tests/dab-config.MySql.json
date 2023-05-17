@@ -1,5 +1,5 @@
 {
-  "$schema": "../../../schemas/dab.draft.schema.json",
+  "$schema": "../../schemas/dab.draft.schema.json",
   "data-source": {
     "database-type": "mysql",
     "connection-string": "server=localhost;database=dab;Allow User Variables=true;uid=root;pwd=REPLACEME"

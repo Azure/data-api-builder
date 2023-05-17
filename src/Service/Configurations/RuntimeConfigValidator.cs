@@ -315,7 +315,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <param name="entityName">Name of the entity.</param>
         /// <param name="restPathElement">The rest path element for the entity.</param>
         /// <param name="restPathsForEntities">Set of unique rest paths configured for the entities in the config.</param>
-        /// <exception cref="DataApiBuilderException"></exception>
+        /// <exception cref="DataApiBuilderException">Throws exception when rest path contains an unexpected value.</exception>
         private static void ValidateRestPathForEntity(string entityName, JsonElement restPathElement, HashSet<string> restPathsForEntities)
         {
             if (restPathElement.ValueKind is JsonValueKind.Null)
@@ -353,7 +353,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         );
                 }
 
-                if (restPathsForEntities.Contains(path))
+                if (!restPathsForEntities.Add(path))
                 {
                     // Presence of multiple entities having the same rest path configured causes conflict.
                     throw new DataApiBuilderException(
@@ -362,8 +362,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
                         );
                 }
-
-                restPathsForEntities.Add(path);
             }
         }
 
@@ -374,7 +372,8 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <param name="entityName">Name of the entity.</param>
         /// <param name="restMethodsElement">Rest methods element configured for the entity.</param>
         /// <param name="entity">Entity object.</param>
-        /// <exception cref="DataApiBuilderException">Throws exception whenever a validation fails.</exception>
+        /// <exception cref="DataApiBuilderException">Throws exception whenever a the rest methods are configured for a non-stored procedure entity or
+        /// contain an unexpected value.</exception>
         private static void ValidateRestMethodsForEntity(string entityName, JsonElement restMethodsElement, Entity entity)
         {
             // This is needed to correctly populate the source type for the entity.

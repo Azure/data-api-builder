@@ -222,7 +222,7 @@ namespace Cli.Tests
             Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, "Test");
             File.WriteAllText("dab-config.json", BASE_CONFIG);
             File.WriteAllText("dab-config.Test.json", ENV_BASED_CONFIG);
-            if (TryMergeConfigsIfAvailable(out string mergedConfig))
+            if (TryMergeConfigsIfAvailable(out string? mergedConfig))
             {
                 Assert.AreEqual(mergedConfig, "dab-config.Test.merged.json");
                 Assert.IsTrue(File.Exists(mergedConfig));
@@ -242,21 +242,26 @@ namespace Cli.Tests
         /// and out string for the mergedConfigFile should be empty.
         /// </summary>
         [DataTestMethod]
-        [DataRow("", false, false, "", false, DisplayName = "If environment value is not set, merged config file is not generated.")]
-        [DataRow("", false, true, "", false, DisplayName = "If environment value is not set, merged config file is not generated.")]
-        [DataRow("", true, false, "", false, DisplayName = "If environment value is not set, merged config file is not generated.")]
-        [DataRow("", true, true, "", false, DisplayName = "If environment value is not set, merged config file is not generated.")]
-        [DataRow("Test", false, false, "", false, DisplayName = "Environment value set but base config not available, merged config file is not generated.")]
-        [DataRow("Test", false, true, "", false, DisplayName = "Environment value set but base config not available, merged config file is not generated.")]
-        [DataRow("Test", true, false, "", false, DisplayName = "Environment value set but env based config not available, merged config file is not generated.")]
+        [DataRow("", false, false, null, false, DisplayName = "If environment value is not set, merged config file is not generated.")]
+        [DataRow("", false, true, null, false, DisplayName = "If environment value is not set, merged config file is not generated.")]
+        [DataRow("", true, false, null, false, DisplayName = "If environment value is not set, merged config file is not generated.")]
+        [DataRow("", true, true, null, false, DisplayName = "If environment value is not set, merged config file is not generated.")]
+        [DataRow(null, false, false, null, false, DisplayName = "If environment variable is removed, merged config file is not generated.")]
+        [DataRow(null, false, true, null, false, DisplayName = "If environment variable is removed, merged config file is not generated.")]
+        [DataRow(null, true, false, null, false, DisplayName = "If environment variable is removed, merged config file is not generated.")]
+        [DataRow(null, true, true, null, false, DisplayName = "If environment variable is removed, merged config file is not generated.")]
+        [DataRow("Test", false, false, null, false, DisplayName = "Environment value set but base config not available, merged config file is not generated.")]
+        [DataRow("Test", false, true, null, false, DisplayName = "Environment value set but base config not available, merged config file is not generated.")]
+        [DataRow("Test", true, false, null, false, DisplayName = "Environment value set but env based config not available, merged config file is not generated.")]
         [DataRow("Test", true, true, "dab-config.Test.merged.json", true, DisplayName = "Environment value set and both base and envConfig available, merged config file is generated.")]
         public void TestMergeConfigAvailability(
-            string environmentValue,
+            string? environmentValue,
             bool isBaseConfigPresent,
             bool isEnvironmentBasedConfigPresent,
-            string expectedMergedConfigFileName,
+            string? expectedMergedConfigFileName,
             bool expectedIsMergedConfigAvailable)
         {
+            // Setting up the test scenarios
             Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
             string baseConfig = "dab-config.json";
             string envBasedConfig = "dab-config.Test.json";
@@ -288,7 +293,7 @@ namespace Cli.Tests
                 }
             }
 
-            Assert.AreEqual(expectedIsMergedConfigAvailable, TryMergeConfigsIfAvailable(out string mergedConfigFile));
+            Assert.AreEqual(expectedIsMergedConfigAvailable, TryMergeConfigsIfAvailable(out string? mergedConfigFile));
             Assert.AreEqual(expectedMergedConfigFileName, mergedConfigFile);
         }
 

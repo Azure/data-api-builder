@@ -1,21 +1,9 @@
 {
   "profiles": {
-    "WSL": {
-      "commandName": "WSL2",
-      "distributionName": ""
-    },
-    "cli - start": {
+    "Cli": {
       "commandName": "Project",
       "commandLineArgs": "start",
       "httpPort": 5002
-    },
-    "cli - init mssql": {
-      "commandName": "Project",
-      "commandLineArgs": "init --config \"dab-config.MsSql.json\" --database-type mssql --connection-string \"Server=tcp,127.0.0.1;1433;User ID=sa;Password=REPLACEME;Connection Timeout=5;\""
-    },
-    "cli - add mssql": {
-      "commandName": "Project",
-      "commandLineArgs": "add Book -c dab-config.MsSql.json --source dbo.books --permissions \"anonymous:*\""
     }
   }
 }

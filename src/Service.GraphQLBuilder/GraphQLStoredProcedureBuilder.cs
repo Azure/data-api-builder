@@ -37,6 +37,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             // which are needed because parameter and column names can differ.
             StoredProcedureDefinition spdef = (StoredProcedureDefinition)dbObject.SourceDefinition;
 
+            // Create input value definitions from parameters defined in runtime config.
             if (entity.Source.Parameters is not null)
             {
                 foreach (string param in entity.Source.Parameters.Keys)

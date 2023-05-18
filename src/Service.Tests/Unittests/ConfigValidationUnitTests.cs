@@ -1449,7 +1449,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 {
                     expectedErrorMessage = $"{apiType} {ApiSettings.PROPERTY_NAME_PATH} contains one or more reserved characters.";
                 }
-                
+
                 DataApiBuilderException ex;
                 if (apiType is ApiType.REST)
                 {

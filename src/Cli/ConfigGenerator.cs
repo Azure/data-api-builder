@@ -99,7 +99,7 @@ namespace Cli
 
                     // If the option --rest.base-route is specified for cosmosdb_nosql, log a warning because
                     // rest is not supported for cosmosdb_nosql yet.
-                    if (!string.Empty.Equals(restPath))
+                    if (!string.Empty.Equals(restBaseRoute))
                     {
                         _logger.LogWarning("Configuration option --rest.base-route is not honored for cosmosdb_nosql since " +
                             "it does not support REST yet.");

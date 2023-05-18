@@ -14,6 +14,17 @@ using Azure.DataApiBuilder.Service.Exceptions;
 
 namespace Azure.DataApiBuilder.Service.Configurations;
 
+/// <summary>
+/// This class is responsible for exposing the runtime config to the rest of the service.
+/// The <c>RuntimeConfigProvider</c> won't directly load the config, but will instead rely on the <see cref="RuntimeConfigLoader"/> to do so.
+/// </summary>
+/// <remarks>
+/// The <c>RuntimeConfigProvider</c> will maintain internal state of the config, and will only load it once.
+///
+/// This class should be treated as the owner of the config that is available within the service, and other classes
+/// should not load the config directly, or maintain a reference to it, so that we can do hot-reloading by replacing
+/// the config that is available from this type.
+/// </remarks>
 public class RuntimeConfigProvider
 {
     public delegate Task<bool> RuntimeConfigLoadedHandler(RuntimeConfigProvider sender, RuntimeConfig config);
@@ -41,6 +52,12 @@ public class RuntimeConfigProvider
         _runtimeConfigLoader = runtimeConfigLoader;
     }
 
+    /// <summary>
+    /// Return the previous loaded config, or it will attempt to load the config that
+    /// is known by the loader.
+    /// </summary>
+    /// <returns>The RuntimeConfig instance.</returns>
+    /// <exception cref="DataApiBuilderException">Thrown when the loader is unable to load an instance of the config from its known location.</exception>
     public RuntimeConfig GetConfig()
     {
         if (_runtimeConfig is not null)

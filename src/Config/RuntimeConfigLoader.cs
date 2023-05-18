@@ -13,22 +13,33 @@ using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Config;
 
+/// <summary>
+/// This class is responsible for loading the runtime config from either a JSON string
+/// or a file located on disk, depending on how the service is being run.
+/// </summary>
+/// <remarks>
+/// This class does not maintain any internal state of the loaded config, instead it will
+/// always generate a new config when it is requested.
+///
+/// To support better testability, the <see cref="IFileSystem"/> abstraction is provided
+/// which allows for mocking of the file system in tests, providing a way to run the test
+/// in isolation of other tests or the actual file system.
+/// </remarks>
 public class RuntimeConfigLoader
 {
     private readonly IFileSystem _fileSystem;
     private readonly string _baseConfigFileName;
     private readonly string? _connectionString;
+
     public const string CONFIGFILE_NAME = "dab-config";
     public const string CONFIG_EXTENSION = ".json";
-
     public const string ENVIRONMENT_PREFIX = "DAB_";
     public const string RUNTIME_ENVIRONMENT_VAR_NAME = $"{ENVIRONMENT_PREFIX}ENVIRONMENT";
     public const string RUNTIME_ENV_CONNECTION_STRING = $"{ENVIRONMENT_PREFIX}CONNSTRING";
     public const string ASP_NET_CORE_ENVIRONMENT_VAR_NAME = "ASPNETCORE_ENVIRONMENT";
+    public const string SCHEMA = "dab.draft.schema.json";
 
     public static bool CheckPrecedenceForConfigInEngine = true;
-
-    public const string SCHEMA = "dab.draft.schema.json";
 
     public string ConfigFileName => GetFileNameForEnvironment(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), false);
 

@@ -232,5 +232,4 @@ public class RuntimeConfigProvider
             { Options = options, ConnectionString = connectionString }
         };
     }
-
 }

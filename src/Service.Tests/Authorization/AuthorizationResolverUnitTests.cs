@@ -136,7 +136,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 operation: EntityActionOperation.All);
 
             // Override the permission operations to be a list of operations for wildcard
-            // instead of a list ofs created by readAction, updateAction()
+            // instead of a list of objects created by readAction, updateAction
             Entity entity = runtimeConfig.Entities[AuthorizationHelpers.TEST_ENTITY];
             entity = entity with { Permissions = new[] { new EntityPermission(AuthorizationHelpers.TEST_ROLE, new EntityAction[] { new(EntityActionOperation.All, null, new(null, null)) }) } };
             runtimeConfig = runtimeConfig with { Entities = new(new Dictionary<string, Entity> { { AuthorizationHelpers.TEST_ENTITY, entity } }) };
@@ -931,7 +931,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             Mock<HttpContext> context = new();
 
-            //sAdd identity to the readAction, updateActionext.
+            //Add identity to the readAction, updateAction.
             ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationOptions.ROLE_CLAIM_TYPE);
             identity.AddClaim(new Claim("user_email", "xyz@microsoft.com", ClaimValueTypes.String));
             identity.AddClaim(new Claim("name", "Aaron", ClaimValueTypes.String));
@@ -1040,7 +1040,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             Mock<HttpContext> context = new();
 
-            //sAdd identity to the readAction, updateActionext.
+            //Add identity to the readAction, updateAction
             ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationOptions.ROLE_CLAIM_TYPE);
             identity.AddClaim(new Claim("user_email", "xyz@microsoft.com", ClaimValueTypes.String));
             identity.AddClaim(new Claim("isemployee", "true", ClaimValueTypes.Boolean));

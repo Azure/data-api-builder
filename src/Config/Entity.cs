@@ -72,7 +72,9 @@ public record EntityRestOptions(SupportedHttpVerb[] Methods, string? Path = null
 {
     public static readonly SupportedHttpVerb[] DEFAULT_SUPPORTED_VERBS = new[] { SupportedHttpVerb.Get, SupportedHttpVerb.Post, SupportedHttpVerb.Put, SupportedHttpVerb.Patch, SupportedHttpVerb.Delete };
 }
+
 public record EntityActionFields(HashSet<string> Exclude, HashSet<string>? Include = null);
+
 public record EntityActionPolicy(string? Request = null, string? Database = null)
 {
     public string ProcessedDatabaseFields()
@@ -107,11 +109,13 @@ public record EntityActionPolicy(string? Request = null, string? Database = null
         return processedPolicy;
     }
 }
+
 public record EntityAction(EntityActionOperation Action, EntityActionFields? Fields, EntityActionPolicy Policy)
 {
     public static readonly HashSet<EntityActionOperation> ValidPermissionOperations = new() { EntityActionOperation.Create, EntityActionOperation.Read, EntityActionOperation.Update, EntityActionOperation.Delete };
     public static readonly HashSet<EntityActionOperation> ValidStoredProcedurePermissionOperations = new() { EntityActionOperation.Execute };
 }
+
 public record EntityPermission(string Role, EntityAction[] Actions);
 
 public record EntityRelationship(

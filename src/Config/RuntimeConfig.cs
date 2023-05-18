@@ -62,7 +62,7 @@ public record RuntimeEntities : IEnumerable<KeyValuePair<string, Entity>>
         {
             nameCorrectedEntity = nameCorrectedEntity
                 with
-            { GraphQL = new(Singular: string.Empty, Plural: string.Empty) };
+            { GraphQL = new(Singular: entityName, Plural: string.Empty) };
         }
 
         // If no Singular version of the entity name was provided, use the Entity Name from the config

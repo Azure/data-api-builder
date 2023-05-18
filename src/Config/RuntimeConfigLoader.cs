@@ -104,7 +104,7 @@ public class RuntimeConfigLoader
         return true;
     }
 
-    public static JsonSerializerOptions GetSerializationOption()
+    public static JsonSerializerOptions GetSerializationOptions()
     {
         JsonSerializerOptions options = new()
         {

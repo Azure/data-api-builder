@@ -1,3 +1,7 @@
 namespace Azure.DataApiBuilder.Config;
 
-public enum HostMode { Development, Production }
+public enum HostMode
+{
+    Development,
+    Production
+}

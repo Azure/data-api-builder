@@ -252,8 +252,8 @@ namespace Azure.DataApiBuilder.Service.Authorization
                 {
                     string role = permission.Role;
                     RoleMetadata roleToOperation = new();
-                    EntityAction[] Operations = permission.Actions;
-                    foreach (EntityAction operationElement in Operations)
+                    EntityAction[] operations = permission.Actions;
+                    foreach (EntityAction operationElement in operations)
                     {
                         EntityActionOperation operation = operationElement.Action;
                         OperationMetadata operationToColumn = new();

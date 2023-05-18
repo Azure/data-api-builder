@@ -294,18 +294,18 @@ namespace Cli
             sourceObject = null;
 
             // default entity type will be table
-            EntityType objectType = EntityType.Table;
+            EntitySourceType objectType = EntitySourceType.Table;
 
             if (options.SourceType is not null)
             {
                 // Try to Parse the SourceType
-                if (!EnumExtensions.TryDeserialize(options.SourceType, out EntityType? et))
+                if (!EnumExtensions.TryDeserialize(options.SourceType, out EntitySourceType? et))
                 {
-                    _logger.LogError(EnumExtensions.GenerateMessageForInvalidInput<EntityType>(options.SourceType));
+                    _logger.LogError(EnumExtensions.GenerateMessageForInvalidInput<EntitySourceType>(options.SourceType));
                     return false;
                 }
 
-                objectType = (EntityType)et;
+                objectType = (EntitySourceType)et;
             }
 
             // Verify that parameter is provided with stored-procedure only
@@ -359,7 +359,7 @@ namespace Cli
             IEnumerable<string> permissions,
             EntityActionPolicy? policy,
             EntityActionFields? fields,
-            EntityType sourceType)
+            EntitySourceType sourceType)
         {
             // Getting Role and Operations from permission string
             string? role, operations;
@@ -481,7 +481,7 @@ namespace Cli
                 _logger.LogWarning("Disabling GraphQL for this entity will restrict it's usage in relationships");
             }
 
-            EntityType updatedSourceType = updatedSource.Type;
+            EntitySourceType updatedSourceType = updatedSource.Type;
 
             if (options.Permissions is not null && options.Permissions.Any())
             {
@@ -510,7 +510,7 @@ namespace Cli
                     return false;
                 }
 
-                if (updatedSourceType is EntityType.StoredProcedure &&
+                if (updatedSourceType is EntitySourceType.StoredProcedure &&
                     !VerifyPermissionOperationsForStoredProcedures(entity.Permissions))
                 {
                     return false;
@@ -577,7 +577,7 @@ namespace Cli
                                                                         IEnumerable<string> permissions,
                                                                         EntityActionPolicy policy,
                                                                         EntityActionFields? fields,
-                                                                        EntityType sourceType)
+                                                                        EntitySourceType sourceType)
         {
             string? newRole, newOperations;
 
@@ -607,7 +607,7 @@ namespace Cli
                 if (permission.Role.Equals(newRole))
                 {
                     role_found = true;
-                    if (sourceType is EntityType.StoredProcedure)
+                    if (sourceType is EntitySourceType.StoredProcedure)
                     {
                         // Since, Stored-Procedures can have only 1 CRUD action. So, when update is requested with new action, we simply replace it.
                         updatedPermissionsList.Add(CreatePermissions(newRole, newOperationArray.First(), policy: null, fields: null));
@@ -710,20 +710,20 @@ namespace Cli
             updatedSourceObject = null;
             string updatedSourceName = options.Source ?? entity.Source.Object;
             string[]? updatedKeyFields = entity.Source.KeyFields;
-            EntityType updatedSourceType = entity.Source.Type;
+            EntitySourceType updatedSourceType = entity.Source.Type;
             Dictionary<string, object>? updatedSourceParameters = entity.Source.Parameters;
 
             // If SourceType provided by user is null,
             // no update is required.
             if (options.SourceType is not null)
             {
-                if (!EnumExtensions.TryDeserialize(options.SourceType, out EntityType? deserializedEntityType))
+                if (!EnumExtensions.TryDeserialize(options.SourceType, out EntitySourceType? deserializedEntityType))
                 {
-                    _logger.LogError(EnumExtensions.GenerateMessageForInvalidInput<EntityType>(options.SourceType));
+                    _logger.LogError(EnumExtensions.GenerateMessageForInvalidInput<EntitySourceType>(options.SourceType));
                     return false;
                 }
 
-                updatedSourceType = (EntityType)deserializedEntityType;
+                updatedSourceType = (EntitySourceType)deserializedEntityType;
 
                 if (IsStoredProcedureConvertedToOtherTypes(entity, options) || IsEntityBeingConvertedToStoredProcedure(entity, options))
                 {
@@ -748,7 +748,7 @@ namespace Cli
             // should automatically update the parameters to be null.
             // Similarly from table/view to stored-procedure, key-fields
             // should be marked null.
-            if (EntityType.StoredProcedure.Equals(updatedSourceType))
+            if (EntitySourceType.StoredProcedure.Equals(updatedSourceType))
             {
                 updatedKeyFields = null;
             }

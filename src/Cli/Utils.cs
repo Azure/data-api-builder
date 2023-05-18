@@ -90,7 +90,7 @@ namespace Cli
         /// </summary>
         /// <param name="operations">Array of operations which is of type JsonElement.</param>
         /// <returns>Dictionary of operations</returns>
-        public static IDictionary<EntityActionOperation, EntityAction> ConvertOperationArrayToIEnumerable(EntityAction[] operations, EntityType sourceType)
+        public static IDictionary<EntityActionOperation, EntityAction> ConvertOperationArrayToIEnumerable(EntityAction[] operations, EntitySourceType sourceType)
         {
             Dictionary<EntityActionOperation, EntityAction> result = new();
             foreach (EntityAction operation in operations)
@@ -98,7 +98,7 @@ namespace Cli
                 EntityActionOperation op = operation.Action;
                 if (op is EntityActionOperation.All)
                 {
-                    HashSet<EntityActionOperation> resolvedOperations = sourceType is EntityType.StoredProcedure ?
+                    HashSet<EntityActionOperation> resolvedOperations = sourceType is EntitySourceType.StoredProcedure ?
                         EntityAction.ValidStoredProcedurePermissionOperations :
                         EntityAction.ValidPermissionOperations;
                     // Expand wildcard to all valid operations (except execute)
@@ -297,7 +297,7 @@ namespace Cli
         /// </summary>
         /// <param name="operations">array of string containing operations for permissions</param>
         /// <returns>True if no invalid operation is found.</returns>
-        public static bool VerifyOperations(string[] operations, EntityType sourceType)
+        public static bool VerifyOperations(string[] operations, EntitySourceType sourceType)
         {
             // Check if there are any duplicate operations
             // Ex: read,read,create
@@ -309,7 +309,7 @@ namespace Cli
             }
 
             // Currently, Stored Procedures can be configured with only Execute Operation.
-            bool isStoredProcedure = sourceType is EntityType.StoredProcedure;
+            bool isStoredProcedure = sourceType is EntitySourceType.StoredProcedure;
             if (isStoredProcedure && !VerifyExecuteOperationForStoredProcedure(operations))
             {
                 return false;
@@ -421,11 +421,11 @@ namespace Cli
         /// <param name="keyFields">IEnumerable string containing key columns for table/view.</param>
         /// <returns> Returns true when successful else on failure, returns false.</returns>
         public static bool VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
-            EntityType? sourceType,
+            EntitySourceType? sourceType,
             IEnumerable<string>? parameters,
             IEnumerable<string>? keyFields)
         {
-            if (sourceType is EntityType.StoredProcedure)
+            if (sourceType is EntitySourceType.StoredProcedure)
             {
                 if (keyFields is not null && keyFields.Any())
                 {
@@ -442,7 +442,7 @@ namespace Cli
                     return false;
                 }
 
-                if (sourceType is EntityType.View && (keyFields is null || !keyFields.Any()))
+                if (sourceType is EntitySourceType.View && (keyFields is null || !keyFields.Any()))
                 {
                     _logger.LogError("Key-fields are mandatory for views, but not provided.");
                     return false;
@@ -464,7 +464,7 @@ namespace Cli
         /// <returns>True in case of successful creation of source object.</returns>
         public static bool TryCreateSourceObject(
             string name,
-            EntityType type,
+            EntitySourceType type,
             Dictionary<string, object>? parameters,
             string[]? keyFields,
             [NotNullWhen(true)] out EntitySource? sourceObject)
@@ -770,9 +770,9 @@ namespace Cli
         /// <returns></returns>
         public static bool IsStoredProcedure(EntityOptions options)
         {
-            if (options.SourceType is not null && EnumExtensions.TryDeserialize(options.SourceType, out EntityType? sourceObjectType))
+            if (options.SourceType is not null && EnumExtensions.TryDeserialize(options.SourceType, out EntitySourceType? sourceObjectType))
             {
-                return sourceObjectType is EntityType.StoredProcedure;
+                return sourceObjectType is EntitySourceType.StoredProcedure;
             }
 
             return false;
@@ -786,7 +786,7 @@ namespace Cli
         /// <returns></returns>
         public static bool IsStoredProcedure(Entity entity)
         {
-            return entity.Source.Type is EntityType.StoredProcedure;
+            return entity.Source.Type is EntitySourceType.StoredProcedure;
         }
 
         /// <summary>

@@ -304,7 +304,7 @@ public class EndToEndTests
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
         Assert.IsNotNull(runtimeConfig);
         Entity entity = runtimeConfig.Entities["MyEntity"];
-        Assert.AreEqual(EntityType.StoredProcedure, entity.Source.Type);
+        Assert.AreEqual(EntitySourceType.StoredProcedure, entity.Source.Type);
         Assert.AreEqual("dbo.books", entity.Source.Object);
         Assert.IsNotNull(entity.Source.Parameters);
         Assert.AreEqual(3, entity.Source.Parameters.Count);

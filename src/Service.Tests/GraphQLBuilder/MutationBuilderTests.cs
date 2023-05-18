@@ -43,7 +43,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         private static Entity GenerateEmptyEntity()
         {
             return new Entity(
-                Source: new("dbo.entity", EntityType.Table, null, null),
+                Source: new("dbo.entity", EntitySourceType.Table, null, null),
                 Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS, Enabled: false),
                 GraphQL: new("Foo", "Foos", Enabled: true),
                 Permissions: Array.Empty<EntityPermission>(),
@@ -1055,7 +1055,7 @@ type Foo @model(name:""Foo"") {{
 
             DatabaseObject spDbObj = new DatabaseStoredProcedure(schemaName: "dbo", tableName: "dbObjectName")
             {
-                SourceType = EntityType.StoredProcedure,
+                SourceType = EntitySourceType.StoredProcedure,
                 StoredProcedureDefinition = new()
                 {
                     Parameters = new() {

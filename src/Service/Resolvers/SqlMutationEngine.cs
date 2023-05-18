@@ -785,7 +785,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <returns>the primary key route e.g. /id/1/partition/2 where id and partition are primary keys.</returns>
         public string ConstructPrimaryKeyRoute(RestRequestContext context, Dictionary<string, object?> entity)
         {
-            if (context.DatabaseObject.SourceType is EntityType.View)
+            if (context.DatabaseObject.SourceType is EntitySourceType.View)
             {
                 return string.Empty;
             }

@@ -161,7 +161,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             )
         {
             return InitRuntimeConfig(
-                entitySource: new EntitySource(entitySource ?? TEST_ENTITY, EntityType.Table, null, null),
+                entitySource: new EntitySource(entitySource ?? TEST_ENTITY, EntitySourceType.Table, null, null),
                 entityName: entityName,
                 roleName: roleName,
                 operation: operation,

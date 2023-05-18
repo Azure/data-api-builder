@@ -70,7 +70,7 @@ namespace Azure.DataApiBuilder.Service.Tests
         public static RuntimeConfig AddMissingEntitiesToConfig(RuntimeConfig config, string entityKey, string entityName)
         {
             Entity entity = new(
-                Source: new(entityName, EntityType.Table, null, null),
+                Source: new(entityName, EntitySourceType.Table, null, null),
                 GraphQL: new(entityKey, entityKey.Pluralize()),
                 Rest: new(Array.Empty<SupportedHttpVerb>()),
                 Permissions: new[]

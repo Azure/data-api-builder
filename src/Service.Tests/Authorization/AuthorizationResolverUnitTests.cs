@@ -887,7 +887,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            List<EntityActionOperation> operations = AuthorizationResolver.GetAllOperationsForObjectType(operation, EntityType.Table).ToList();
+            List<EntityActionOperation> operations = AuthorizationResolver.GetAllOperationsForObjectType(operation, EntitySourceType.Table).ToList();
 
             foreach (EntityActionOperation testOperation in operations)
             {
@@ -1260,7 +1260,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         private static RuntimeConfig BuildTestRuntimeConfig(EntityPermission[] permissions, string entityName)
         {
             Entity sampleEntity = new(
-                Source: new(entityName, EntityType.Table, null, null),
+                Source: new(entityName, EntitySourceType.Table, null, null),
                 Rest: new(Array.Empty<SupportedHttpVerb>()),
                 GraphQL: new("", ""),
                 Permissions: permissions,

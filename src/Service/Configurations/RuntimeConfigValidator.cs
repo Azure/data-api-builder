@@ -181,7 +181,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 }
 
                 bool containsDuplicateOperationNames = false;
-                if (entity.Source.Type is EntityType.StoredProcedure)
+                if (entity.Source.Type is EntitySourceType.StoredProcedure)
                 {
                     // For Stored Procedures a single query/mutation is generated.
                     string storedProcedureQueryName = GenerateStoredProcedureGraphQLFieldName(entityName, entity);
@@ -479,7 +479,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     }
 
                     // Stored procedures only support the "execute" operation.
-                    if (entity.Source.Type is EntityType.StoredProcedure)
+                    if (entity.Source.Type is EntitySourceType.StoredProcedure)
                     {
                         if ((operationsList.Count > 1)
                             || (operationsList.Count is 1 && !IsValidPermissionAction(operationsList[0], entity, entityName)))
@@ -540,7 +540,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     continue;
                 }
 
-                if (entity.Source.Type is not EntityType.Table && entity.Relationships is not null
+                if (entity.Source.Type is not EntitySourceType.Table && entity.Relationships is not null
                     && entity.Relationships.Count > 0)
                 {
                     throw new DataApiBuilderException(
@@ -675,7 +675,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 // We are only doing this pre-check for GraphQL because for GraphQL we need the correct schema while making request
                 // so if the schema is not correct we will halt the engine
                 // but for rest we can do it when a request is made and only fail that particular request.
-                if (entity.Source.Type is EntityType.StoredProcedure && entity.GraphQL.Enabled)
+                if (entity.Source.Type is EntitySourceType.StoredProcedure && entity.GraphQL.Enabled)
                 {
                     DatabaseObject dbObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
                     StoredProcedureRequestContext sqRequestContext =
@@ -839,7 +839,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <returns>Boolean value indicating whether the action is valid or not.</returns>
         public static bool IsValidPermissionAction(Config.EntityActionOperation action, Entity entity, string entityName)
         {
-            if (entity.Source.Type is EntityType.StoredProcedure)
+            if (entity.Source.Type is EntitySourceType.StoredProcedure)
             {
                 if (action is not EntityActionOperation.All && !EntityAction.ValidStoredProcedurePermissionOperations.Contains(action))
                 {

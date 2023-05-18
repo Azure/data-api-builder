@@ -406,7 +406,7 @@ type Table @model(name: ""table"") {
 
             DatabaseObject spDbObj = new DatabaseStoredProcedure(schemaName: "dbo", tableName: "dbObjectName")
             {
-                SourceType = EntityType.StoredProcedure,
+                SourceType = EntitySourceType.StoredProcedure,
                 StoredProcedureDefinition = new()
                 {
                     Parameters = new() {

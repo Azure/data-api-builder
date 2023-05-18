@@ -176,7 +176,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Entity entity = runtimeConfig.Entities["GetBooks"];
             Assert.AreEqual("get_books", entity.Source.Object);
-            Assert.AreEqual(EntityType.StoredProcedure, entity.Source.Type);
+            Assert.AreEqual(EntitySourceType.StoredProcedure, entity.Source.Type);
 
             TestHelper.UnsetAllDABEnvironmentVariables();
         }
@@ -237,7 +237,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             columnNameMappings.Add(key: dbColumnName, value: mappedName);
 
             Entity sampleEntity = new(
-                Source: new("sampleElement", EntityType.Table, null, null),
+                Source: new("sampleElement", EntitySourceType.Table, null, null),
                 Rest: new(Array.Empty<SupportedHttpVerb>(), Enabled: false),
                 GraphQL: new("", ""),
                 Permissions: new EntityPermission[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },

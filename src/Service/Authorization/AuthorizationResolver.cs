@@ -236,7 +236,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                     ObjectType = entity.Source.Type,
                 };
 
-                bool isStoredProcedureEntity = entity.Source.Type is EntityType.StoredProcedure;
+                bool isStoredProcedureEntity = entity.Source.Type is EntitySourceType.StoredProcedure;
                 if (isStoredProcedureEntity)
                 {
                     SupportedHttpVerb[] methods = entity.Rest.Methods;
@@ -390,16 +390,16 @@ namespace Azure.DataApiBuilder.Service.Authorization
         }
 
         /// <summary>
-        /// Returns a list of all possible operations depending on the provided EntityType.
+        /// Returns a list of all possible operations depending on the provided EntitySourceType.
         /// Stored procedures only support Operation.Execute.
         /// In case the operation is Operation.All (wildcard), it gets resolved to a set of CRUD operations.
         /// </summary>
         /// <param name="operation">operation type.</param>
         /// <param name="sourceType">Type of database object: Table, View, or Stored Procedure.</param>
         /// <returns>IEnumerable of all available operations.</returns>
-        public static IEnumerable<EntityActionOperation> GetAllOperationsForObjectType(EntityActionOperation operation, EntityType sourceType)
+        public static IEnumerable<EntityActionOperation> GetAllOperationsForObjectType(EntityActionOperation operation, EntitySourceType sourceType)
         {
-            if (sourceType is EntityType.StoredProcedure)
+            if (sourceType is EntitySourceType.StoredProcedure)
             {
                 return new List<EntityActionOperation> { EntityActionOperation.Execute };
             }
@@ -675,9 +675,9 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// There are only five possible operations
         /// </summary>
         /// <returns>Dictionary: Key - Operation | Value - List of roles.</returns>
-        private static Dictionary<EntityActionOperation, List<string>> CreateOperationToRoleMap(EntityType sourceType)
+        private static Dictionary<EntityActionOperation, List<string>> CreateOperationToRoleMap(EntitySourceType sourceType)
         {
-            if (sourceType is EntityType.StoredProcedure)
+            if (sourceType is EntitySourceType.StoredProcedure)
             {
                 return new Dictionary<EntityActionOperation, List<string>>()
                 {

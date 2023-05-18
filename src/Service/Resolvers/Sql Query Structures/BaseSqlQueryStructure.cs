@@ -539,10 +539,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
 
                 string errorMessage;
-                EntityType sourceTypeOfDbObject = MetadataProvider.EntityToDatabaseObject[EntityName].SourceType;
+                EntitySourceType sourceTypeOfDbObject = MetadataProvider.EntityToDatabaseObject[EntityName].SourceType;
                 if (MetadataProvider.IsDevelopmentMode())
                 {
-                    if (sourceTypeOfDbObject is EntityType.StoredProcedure)
+                    if (sourceTypeOfDbObject is EntitySourceType.StoredProcedure)
                     {
                         errorMessage = $@"Parameter ""{fieldValue}"" cannot be resolved as stored procedure parameter ""{fieldName}"" " +
                                 $@"with type ""{systemType.Name}"".";
@@ -556,7 +556,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 else
                 {
                     string fieldNameToBeDisplayedInErrorMessage = fieldName;
-                    if (sourceTypeOfDbObject is EntityType.Table || sourceTypeOfDbObject is EntityType.View)
+                    if (sourceTypeOfDbObject is EntitySourceType.Table || sourceTypeOfDbObject is EntitySourceType.View)
                     {
                         if (MetadataProvider.TryGetExposedColumnName(EntityName, fieldName, out string? exposedName))
                         {

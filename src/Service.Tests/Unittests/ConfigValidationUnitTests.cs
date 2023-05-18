@@ -104,7 +104,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
 
             EntitySource entitySource = new(
-                    Type: EntityType.StoredProcedure,
+                    Type: EntitySourceType.StoredProcedure,
                     Object: "sourceName",
                     Parameters: null,
                     KeyFields: null
@@ -843,7 +843,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 });
 
             Entity sampleEntity = new(
-                Source: new(AuthorizationHelpers.TEST_ENTITY, EntityType.Table, null, null),
+                Source: new(AuthorizationHelpers.TEST_ENTITY, EntitySourceType.Table, null, null),
                 Rest: null,
                 GraphQL: null,
                 Permissions: new[] { permissionForEntity },
@@ -1005,12 +1005,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Entity Type: table
             // pk_query: executebook_by_pk
             // List Query: executebooks
-            Entity bookTable = GraphQLTestHelpers.GenerateEmptyEntity(sourceType: EntityType.Table);
+            Entity bookTable = GraphQLTestHelpers.GenerateEmptyEntity(sourceType: EntitySourceType.Table);
 
             // Entity Name: book_by_pk
             // Entity Type: Stored Procedure
             // StoredProcedure Query: executebook_by_pk
-            Entity bookByPkStoredProcedure = GraphQLTestHelpers.GenerateEmptyEntity(sourceType: EntityType.StoredProcedure);
+            Entity bookByPkStoredProcedure = GraphQLTestHelpers.GenerateEmptyEntity(sourceType: EntitySourceType.StoredProcedure);
 
             SortedDictionary<string, Entity> entityCollection = new()
             {
@@ -1047,12 +1047,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Entity Name: Book
             // Entity Type: table
             // mutation generated: createBook, updateBook, deleteBook
-            Entity bookTable = GraphQLTestHelpers.GenerateEmptyEntity(sourceType: EntityType.Table);
+            Entity bookTable = GraphQLTestHelpers.GenerateEmptyEntity(sourceType: EntitySourceType.Table);
 
             // Entity Name: AddBook
             // Entity Type: Stored Procedure
             // StoredProcedure mutation: createBook
-            Entity addBookStoredProcedure = GraphQLTestHelpers.GenerateEntityWithStringType("Books", EntityType.StoredProcedure);
+            Entity addBookStoredProcedure = GraphQLTestHelpers.GenerateEntityWithStringType("Books", EntitySourceType.StoredProcedure);
 
             SortedDictionary<string, Entity> entityCollection = new()
             {
@@ -1342,7 +1342,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Actions: new[] { actionForRole });
 
             Entity sampleEntity = new(
-                Source: new(source, EntityType.Table, null, null),
+                Source: new(source, EntitySourceType.Table, null, null),
                 Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS, Enabled: false),
                 GraphQL: graphQLDetails,
                 Permissions: new[] { permissionForEntity },

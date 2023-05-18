@@ -156,7 +156,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     IEnumerable<string> rolesAllowedForEntity = _authorizationResolver.GetRolesForEntity(entityName);
                     Dictionary<string, IEnumerable<string>> rolesAllowedForFields = new();
                     SourceDefinition sourceDefinition = _sqlMetadataProvider.GetSourceDefinition(entityName);
-                    bool isStoredProcedure = entity.Source.Type is EntityType.StoredProcedure;
+                    bool isStoredProcedure = entity.Source.Type is EntitySourceType.StoredProcedure;
                     foreach (string column in sourceDefinition.Columns.Keys)
                     {
                         Config.EntityActionOperation operation = isStoredProcedure ? Config.EntityActionOperation.Execute : Config.EntityActionOperation.Read;
@@ -184,7 +184,7 @@ namespace Azure.DataApiBuilder.Service.Services
                             rolesAllowedForFields
                         );
 
-                        if (databaseObject.SourceType is not EntityType.StoredProcedure)
+                        if (databaseObject.SourceType is not EntitySourceType.StoredProcedure)
                         {
                             InputTypeBuilder.GenerateInputTypesForObjectType(node, inputObjects);
                         }

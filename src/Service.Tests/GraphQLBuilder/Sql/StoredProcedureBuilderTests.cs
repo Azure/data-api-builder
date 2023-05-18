@@ -72,7 +72,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             Dictionary<string, ParameterDefinition> dbSourcedParameters = new() { { parameterName, new() { SystemType = systemType } } };
             DatabaseObject spDbObj = new DatabaseStoredProcedure(schemaName: "dbo", tableName: "dbObjectName")
             {
-                SourceType = EntityType.StoredProcedure,
+                SourceType = EntitySourceType.StoredProcedure,
                 StoredProcedureDefinition = new()
                 {
                     Parameters = dbSourcedParameters

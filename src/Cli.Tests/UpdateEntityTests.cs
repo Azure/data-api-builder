@@ -1007,7 +1007,7 @@ namespace Cli.Tests
                 Actions: new[] { actionForRole });
 
             Entity sampleEntity1 = new(
-                Source: new("SOURCE1", EntityType.Table, null, null),
+                Source: new("SOURCE1", EntitySourceType.Table, null, null),
                 Rest: new(Array.Empty<SupportedHttpVerb>()),
                 GraphQL: new("SOURCE1", "SOURCE1s"),
                 Permissions: new[] { permissionForEntity },
@@ -1017,7 +1017,7 @@ namespace Cli.Tests
 
             // entity with graphQL disabled
             Entity sampleEntity2 = new(
-                Source: new("SOURCE2", EntityType.Table, null, null),
+                Source: new("SOURCE2", EntitySourceType.Table, null, null),
                 Rest: new(Array.Empty<SupportedHttpVerb>()),
                 GraphQL: new("SOURCE2", "SOURCE2s", false),
                 Permissions: new[] { permissionForEntity },

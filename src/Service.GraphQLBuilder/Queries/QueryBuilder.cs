@@ -55,7 +55,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     string entityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
                     Entity entity = entities[entityName];
 
-                    if (entity.Source.Type is EntityType.StoredProcedure)
+                    if (entity.Source.Type is EntitySourceType.StoredProcedure)
                     {
                         // Check runtime configuration of the stored procedure entity to check that the GraphQL operation type was overridden to 'query' from the default 'mutation.'
                         bool isSPDefinedAsQuery = entity.GraphQL.Operation is GraphQLOperation.Query;

@@ -67,7 +67,7 @@ namespace Azure.DataApiBuilder.Service.Services
             RequestValidator.ValidateEntity(entityName, _sqlMetadataProvider.EntityToDatabaseObject.Keys);
             DatabaseObject dbObject = _sqlMetadataProvider.EntityToDatabaseObject[entityName];
 
-            if (dbObject.SourceType is not EntityType.StoredProcedure)
+            if (dbObject.SourceType is not EntitySourceType.StoredProcedure)
             {
                 await AuthorizationCheckForRequirementAsync(resource: entityName, requirement: new EntityRoleOperationPermissionsRequirement());
             }
@@ -88,7 +88,7 @@ namespace Azure.DataApiBuilder.Service.Services
             RestRequestContext context;
 
             // If request has resolved to a stored procedure entity, initialize and validate appropriate request context
-            if (dbObject.SourceType is EntityType.StoredProcedure)
+            if (dbObject.SourceType is EntitySourceType.StoredProcedure)
             {
                 if (!IsHttpMethodAllowedForStoredProcedure(entityName))
                 {
@@ -125,7 +125,7 @@ namespace Azure.DataApiBuilder.Service.Services
                             dbo: dbObject,
                             insertPayloadRoot,
                             operationType);
-                        if (context.DatabaseObject.SourceType is EntityType.Table)
+                        if (context.DatabaseObject.SourceType is EntitySourceType.Table)
                         {
                             RequestValidator.ValidateInsertRequestContext(
                             (InsertRequestContext)context,
@@ -150,7 +150,7 @@ namespace Azure.DataApiBuilder.Service.Services
                             dbo: dbObject,
                             upsertPayloadRoot,
                             operationType);
-                        if (context.DatabaseObject.SourceType is EntityType.Table)
+                        if (context.DatabaseObject.SourceType is EntitySourceType.Table)
                         {
                             RequestValidator.
                                 ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
@@ -184,7 +184,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
             // The final authorization check on columns occurs after the request is fully parsed and validated.
             // Stored procedures do not yet have semantics defined for column-level permissions
-            if (dbObject.SourceType is not EntityType.StoredProcedure)
+            if (dbObject.SourceType is not EntitySourceType.StoredProcedure)
             {
                 await AuthorizationCheckForRequirementAsync(resource: context, requirement: new ColumnsPermissionsRequirement());
             }

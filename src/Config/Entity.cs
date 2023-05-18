@@ -5,7 +5,7 @@ using Azure.DataApiBuilder.Config.Converters;
 
 namespace Azure.DataApiBuilder.Config;
 
-public enum EntityType
+public enum EntitySourceType
 {
     Table,
     View,
@@ -62,7 +62,7 @@ public enum Cardinality
     Many
 }
 
-public record EntitySource(string Object, EntityType Type, Dictionary<string, object>? Parameters, string[]? KeyFields);
+public record EntitySource(string Object, EntitySourceType Type, Dictionary<string, object>? Parameters, string[]? KeyFields);
 
 [JsonConverter(typeof(EntityGraphQLOptionsConverter))]
 public record EntityGraphQLOptions(string Singular, string Plural, bool Enabled = true, GraphQLOperation? Operation = null);

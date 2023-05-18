@@ -14,7 +14,7 @@ public abstract class DatabaseObject
 
     public string Name { get; set; } = null!;
 
-    public EntityType SourceType { get; set; } = EntityType.Table;
+    public EntitySourceType SourceType { get; set; } = EntitySourceType.Table;
 
     public DatabaseObject(string schemaName, string tableName)
     {
@@ -58,11 +58,11 @@ public abstract class DatabaseObject
         {
             return SourceType switch
             {
-                EntityType.Table => ((DatabaseTable)this).TableDefinition,
-                EntityType.View => ((DatabaseView)this).ViewDefinition,
-                EntityType.StoredProcedure => ((DatabaseStoredProcedure)this).StoredProcedureDefinition,
+                EntitySourceType.Table => ((DatabaseTable)this).TableDefinition,
+                EntitySourceType.View => ((DatabaseView)this).ViewDefinition,
+                EntitySourceType.StoredProcedure => ((DatabaseStoredProcedure)this).StoredProcedureDefinition,
                 _ => throw new Exception(
-                        message: $"Unsupported EntityType. It can either be Table,View, or Stored Procedure.")
+                        message: $"Unsupported EntitySourceType. It can either be Table,View, or Stored Procedure.")
             };
         }
     }

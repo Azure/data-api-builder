@@ -158,13 +158,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// Consider both cases for source as an object and as a string
         /// </summary>
         [DataTestMethod]
-        [DataRow(true, EntityType.StoredProcedure, "stored-procedure", DisplayName = "source is a stored-procedure")]
-        [DataRow(true, EntityType.Table, "table", DisplayName = "source is a table")]
-        [DataRow(true, EntityType.View, "view", DisplayName = "source is a view")]
+        [DataRow(true, EntitySourceType.StoredProcedure, "stored-procedure", DisplayName = "source is a stored-procedure")]
+        [DataRow(true, EntitySourceType.Table, "table", DisplayName = "source is a table")]
+        [DataRow(true, EntitySourceType.View, "view", DisplayName = "source is a view")]
         [DataRow(false, null, null, DisplayName = "source is just string")]
         public void TestCorrectSerializationOfSourceObject(
             bool isDatabaseObjectSource,
-            EntityType sourceObjectType,
+            EntitySourceType sourceObjectType,
             string sourceTypeName)
         {
             RuntimeConfig runtimeConfig;
@@ -212,7 +212,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
             else
             {
-                Assert.AreEqual(EntityType.Table, deserializedRuntimeConfig.Entities["MyEntity"].Source.Type);
+                Assert.AreEqual(EntitySourceType.Table, deserializedRuntimeConfig.Entities["MyEntity"].Source.Type);
             }
         }
 
@@ -1011,7 +1011,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), new());
             Entity viewEntity = new(
-                Source: new("books_view_all", EntityType.Table, null, null),
+                Source: new("books_view_all", EntitySourceType.Table, null, null),
                 Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
                 GraphQL: new("", ""),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
@@ -1207,7 +1207,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
 
             Entity entity = new(
-                Source: new("graphql_incompatible", EntityType.Table, null, null),
+                Source: new("graphql_incompatible", EntitySourceType.Table, null, null),
                 Rest: new(Array.Empty<SupportedHttpVerb>(), Enabled: false),
                 GraphQL: new("graphql_incompatible", "graphql_incompatibles", entityGraphQLEnabled),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
@@ -1341,7 +1341,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             // Even though this entity is not under test, it must be supplied to the config
             // file creation function.
             Entity requiredEntity = new(
-                Source: new("books", EntityType.Table, null, null),
+                Source: new("books", EntitySourceType.Table, null, null),
                 Rest: new(Array.Empty<SupportedHttpVerb>(), Enabled: false),
                 GraphQL: new("book", "books"),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
@@ -1395,7 +1395,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             // Create the entities under test.
             Entity restEnabledEntity = new(
-                Source: new("books", EntityType.Table, null, null),
+                Source: new("books", EntitySourceType.Table, null, null),
                 Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
                 GraphQL: new("", "", false),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
@@ -1403,7 +1403,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Mappings: null);
 
             Entity restDisabledEntity = new(
-                Source: new("publishers", EntityType.Table, null, null),
+                Source: new("publishers", EntitySourceType.Table, null, null),
                 Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS, Enabled: false),
                 GraphQL: new("publisher", "publishers", true),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
@@ -1786,7 +1786,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             string entityName = null)
         {
             entity ??= new(
-                Source: new("books", EntityType.Table, null, null),
+                Source: new("books", EntitySourceType.Table, null, null),
                 Rest: null,
                 GraphQL: new(Singular: "book", Plural: "books"),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },

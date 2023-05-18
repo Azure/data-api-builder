@@ -500,7 +500,7 @@ namespace Azure.DataApiBuilder.Service.Services
                         // initialize DatabaseObject as DatabaseStoredProcedure,
                         // else with DatabaseTable (for tables) / DatabaseView (for views).
 
-                        if (entity.Source.Type is EntityType.StoredProcedure)
+                        if (entity.Source.Type is EntitySourceType.StoredProcedure)
                         {
                             sourceObject = new DatabaseStoredProcedure(schemaName, dbObjectName)
                             {
@@ -508,7 +508,7 @@ namespace Azure.DataApiBuilder.Service.Services
                                 StoredProcedureDefinition = new()
                             };
                         }
-                        else if (entity.Source.Type is EntityType.Table)
+                        else if (entity.Source.Type is EntitySourceType.Table)
                         {
                             sourceObject = new DatabaseTable()
                             {
@@ -534,7 +534,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
                     EntityToDatabaseObject.Add(entityName, sourceObject);
 
-                    if (entity.Relationships is not null && entity.Source.Type is EntityType.Table)
+                    if (entity.Relationships is not null && entity.Source.Type is EntitySourceType.Table)
                     {
                         AddForeignKeysForRelationships(entityName, entity, (DatabaseTable)sourceObject);
                     }
@@ -763,8 +763,8 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             foreach ((string entityName, Entity entity) in _entities)
             {
-                EntityType entitySourceType = entity.Source.Type;
-                if (entitySourceType is EntityType.StoredProcedure)
+                EntitySourceType entitySourceType = entity.Source.Type;
+                if (entitySourceType is EntitySourceType.StoredProcedure)
                 {
                     await FillSchemaForStoredProcedureAsync(
                         entity,
@@ -781,7 +781,7 @@ namespace Azure.DataApiBuilder.Service.Services
                             GetStoredProcedureDefinition(entityName));
                     }
                 }
-                else if (entitySourceType is EntityType.Table)
+                else if (entitySourceType is EntitySourceType.Table)
                 {
                     await PopulateSourceDefinitionAsync(
                         entityName,
@@ -1260,7 +1260,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 // Ensure we're only doing this on tables, not stored procedures which have no table definition,
                 // not views whose underlying base table's foreign key constraints are taken care of
                 // by database itself.
-                if (dbObject.SourceType is EntityType.Table)
+                if (dbObject.SourceType is EntitySourceType.Table)
                 {
                     if (!sourceNameToSourceDefinition.ContainsKey(dbObject.Name))
                     {

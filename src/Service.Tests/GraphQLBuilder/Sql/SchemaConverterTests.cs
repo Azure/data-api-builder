@@ -740,7 +740,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         public static Entity GenerateEmptyEntity(string entityName)
         {
             return new Entity(
-                Source: new($"{SCHEMA_NAME}.{TABLE_NAME}", EntityType.Table, null, null),
+                Source: new($"{SCHEMA_NAME}.{TABLE_NAME}", EntitySourceType.Table, null, null),
                 Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
                 GraphQL: new(entityName, ""),
                 Permissions: Array.Empty<EntityPermission>(),

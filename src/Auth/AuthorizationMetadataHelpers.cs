@@ -47,7 +47,7 @@ namespace Azure.DataApiBuilder.Auth
         /// Defines the type of database object the entity represents.
         /// Examples include Table, View, StoredProcedure
         /// </summary>
-        public EntityType ObjectType { get; set; } = EntityType.Table;
+        public EntitySourceType ObjectType { get; set; } = EntitySourceType.Table;
     }
 
     /// <summary>

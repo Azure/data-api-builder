@@ -77,7 +77,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         /// Creates an empty entity with no permissions or exposed rest/graphQL endpoints.
         /// </summary>
         /// <param name="sourceType">type of source object. Default is Table.</param>
-        public static Entity GenerateEmptyEntity(EntityType sourceType = EntityType.Table)
+        public static Entity GenerateEmptyEntity(EntitySourceType sourceType = EntitySourceType.Table)
         {
             return new Entity(Source: new EntitySource(Type: sourceType, Object: "foo", Parameters: null, KeyFields: null),
                               Rest: new(Array.Empty<SupportedHttpVerb>()),
@@ -105,7 +105,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
             )
         {
             IEnumerable<EntityAction> actions = (permissionOperations ?? new string[] { }).Select(a => new EntityAction(EnumExtensions.Deserialize<EntityActionOperation>(a), null, new(null, null)));
-            Entity entity = new(Source: new EntitySource(Type: EntityType.StoredProcedure, Object: "foo", Parameters: parameters, KeyFields: null),
+            Entity entity = new(Source: new EntitySource(Type: EntitySourceType.StoredProcedure, Object: "foo", Parameters: parameters, KeyFields: null),
                               Rest: new(Array.Empty<SupportedHttpVerb>()),
                               GraphQL: new(Singular: graphQLTypeName, Plural: "", Enabled: true, Operation: graphQLOperation),
                               Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: actions.ToArray()) },
@@ -120,7 +120,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         /// <param name="singularNameForEntity"> Singular name defined by user in the config.</param>
         /// <param name="pluralNameForEntity"> Plural name defined by user in the config.</param>
         /// <param name="sourceType">type of source object. Default is Table.</param>
-        public static Entity GenerateEntityWithSingularPlural(string singularNameForEntity, string pluralNameForEntity, EntityType sourceType = EntityType.Table)
+        public static Entity GenerateEntityWithSingularPlural(string singularNameForEntity, string pluralNameForEntity, EntitySourceType sourceType = EntitySourceType.Table)
         {
             return new Entity(Source: new EntitySource(Type: sourceType, Object: "foo", Parameters: null, KeyFields: null),
                               Rest: new(Array.Empty<SupportedHttpVerb>()),
@@ -136,7 +136,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         /// <param name="singularGraphQLName"></param>
         /// <param name="sourceType">type of source object. Default is Table.</param>
         /// <returns></returns>
-        public static Entity GenerateEntityWithStringType(string singularGraphQLName, EntityType sourceType = EntityType.Table)
+        public static Entity GenerateEntityWithStringType(string singularGraphQLName, EntitySourceType sourceType = EntitySourceType.Table)
         {
             return new Entity(Source: new EntitySource(Type: sourceType, Object: "foo", Parameters: null, KeyFields: null),
                               Rest: new(Array.Empty<SupportedHttpVerb>()),

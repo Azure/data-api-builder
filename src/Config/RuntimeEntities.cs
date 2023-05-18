@@ -103,7 +103,7 @@ public record RuntimeEntities : IEnumerable<KeyValuePair<string, Entity>>
         }
 
         // If this is a Stored Procedure with no provided GraphQL operation, set it to Mutation as the default
-        if (nameCorrectedEntity.GraphQL.Operation is null && nameCorrectedEntity.Source.Type is EntityType.StoredProcedure)
+        if (nameCorrectedEntity.GraphQL.Operation is null && nameCorrectedEntity.Source.Type is EntitySourceType.StoredProcedure)
         {
             nameCorrectedEntity = nameCorrectedEntity
                 with

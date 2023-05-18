@@ -50,7 +50,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
                     // For stored procedures, only one mutation is created in the schema
                     // unlike table/views where we create one for each CUD operation.
-                    if (entities[dbEntityName].Source.Type is EntityType.StoredProcedure)
+                    if (entities[dbEntityName].Source.Type is EntitySourceType.StoredProcedure)
                     {
                         // check graphql sp config
                         string entityName = ObjectTypeToEntityName(objectTypeDefinitionNode);

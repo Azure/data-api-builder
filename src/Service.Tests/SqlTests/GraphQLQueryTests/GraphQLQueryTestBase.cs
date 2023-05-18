@@ -1475,7 +1475,7 @@ query {
             RuntimeConfig configuration = SqlTestHelper.InitBasicRuntimeConfigWithNoEntity(dbType, testEnvironment);
 
             Entity clubEntity = new(
-                Source: new("clubs", EntityType.Table, null, null),
+                Source: new("clubs", EntitySourceType.Table, null, null),
                 Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
                 GraphQL: new("club", "clubs"),
                 Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
@@ -1484,7 +1484,7 @@ query {
             );
 
             Entity playerEntity = new(
-                Source: new("players", EntityType.Table, null, null),
+                Source: new("players", EntitySourceType.Table, null, null),
                 Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
                 GraphQL: new("player", "players"),
                 Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },

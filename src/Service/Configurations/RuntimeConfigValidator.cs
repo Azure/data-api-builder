@@ -262,6 +262,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             foreach (string entityName in runtimeConfig.Entities.Keys)
             {
                 Entity entity = runtimeConfig.Entities[entityName];
+
                 // If no custom rest path is defined for the entity, we default it to the entityName.
                 string pathForEntity = entityName;
 

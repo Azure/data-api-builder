@@ -2,6 +2,11 @@
 // Licensed under the MIT License.
 
 namespace Cli.Tests;
+
+/// <summary>
+/// Creates a logger that can be used in test methods to verify logging behavior
+/// by capturing the messages and making them available for verification.
+/// </summary>
 internal class StringLogger : ILogger
 {
     public List<string> Messages { get; } = new();

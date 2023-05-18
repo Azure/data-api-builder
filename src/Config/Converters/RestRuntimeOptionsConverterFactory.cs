@@ -34,6 +34,7 @@ internal class RestRuntimeOptionsConverterFactory : JsonConverterFactory
                 return new RestRuntimeOptions(false);
             }
 
+            // Remove the converter so we don't recurse.
             JsonSerializerOptions innerOptions = new(options);
             _ = innerOptions.Converters.Remove(innerOptions.Converters.First(c => c is RestRuntimeOptionsConverterFactory));
 

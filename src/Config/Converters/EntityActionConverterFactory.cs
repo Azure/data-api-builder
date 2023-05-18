@@ -29,6 +29,7 @@ internal class EntityActionConverterFactory : JsonConverterFactory
                 return new EntityAction(op, null, new EntityActionPolicy(null, null));
             }
 
+            // Remove the converter so we don't recurse.
             JsonSerializerOptions innerOptions = new(options);
             innerOptions.Converters.Remove(innerOptions.Converters.First(c => c is EntityActionConverterFactory));
 
@@ -56,6 +57,7 @@ internal class EntityActionConverterFactory : JsonConverterFactory
 
         public override void Write(Utf8JsonWriter writer, EntityAction value, JsonSerializerOptions options)
         {
+            // Remove the converter so we don't recurse.
             JsonSerializerOptions innerOptions = new(options);
             innerOptions.Converters.Remove(innerOptions.Converters.First(c => c is EntityActionConverterFactory));
             JsonSerializer.Serialize(writer, value, innerOptions);

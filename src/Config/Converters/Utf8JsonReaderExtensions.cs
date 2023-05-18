@@ -27,6 +27,7 @@ static internal class Utf8JsonReaderExtensions
             throw new JsonException($"Expected string token type, received: {reader.TokenType}");
         }
 
+        // Add the StringConverterFactory so that we can do environment variable substitution.
         JsonSerializerOptions options = new();
         options.Converters.Add(new StringJsonConverterFactory());
         return JsonSerializer.Deserialize<string>(ref reader, options);

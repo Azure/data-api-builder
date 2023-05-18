@@ -32,6 +32,7 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
                 return new GraphQLRuntimeOptions(Enabled: false);
             }
 
+            // Remove the converter so we don't recurse.
             JsonSerializerOptions innerOptions = new(options);
             _ = innerOptions.Converters.Remove(innerOptions.Converters.First(c => c is GraphQLRuntimeOptionsConverterFactory));
 

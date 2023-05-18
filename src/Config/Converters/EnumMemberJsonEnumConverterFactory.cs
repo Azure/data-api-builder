@@ -12,9 +12,17 @@ namespace Azure.DataApiBuilder.Config.Converters;
 
 public static class EnumExtensions
 {
+    /// <summary>
+    /// Used to convert a string to an enum value.
+    ///
+    /// This will be used when we found a string value, such as CLI input, and need to convert it to an enum value.
+    /// </summary>
+    /// <typeparam name="T">The enum to deserialize as.</typeparam>
+    /// <param name="value">The string value.</param>
+    /// <returns>The deserialized enum value.</returns>
     public static T Deserialize<T>(string value) where T : struct, Enum
     {
-        HyphenatedJsonEnumConverterFactory.JsonStringEnumConverterEx<T> converter = new();
+        EnumMemberJsonEnumConverterFactory.JsonStringEnumConverterEx<T> converter = new();
 
         ReadOnlySpan<byte> bytes = new(Encoding.UTF8.GetBytes($"\"{value}\""));
 
@@ -24,6 +32,13 @@ public static class EnumExtensions
         return converter.Read(ref reader, typeof(T), new JsonSerializerOptions());
     }
 
+    /// <summary>
+    /// Used to convert an enum value to a string in a way that we gracefully handle failures.
+    /// </summary>
+    /// <typeparam name="T">The enum to deserialize as.</typeparam>
+    /// <param name="value">The string value.</param>
+    /// <param name="enum">The deserialized enum value.</param>
+    /// <returns><c>True</c> if successful, <c>False</c> if not.</returns>
     public static bool TryDeserialize<T>(string value, [NotNullWhen(true)] out T? @enum) where T : struct, Enum
     {
         try
@@ -45,7 +60,11 @@ public static class EnumExtensions
         => $"Invalid Source Type: {invalidType}. Valid values are: {string.Join(",", Enum.GetNames<T>())}";
 }
 
-internal class HyphenatedJsonEnumConverterFactory : JsonConverterFactory
+/// <summary>
+/// This converter is used to convert Enums to and from strings in a way that uses the
+/// <see cref="EnumMemberAttribute"/> serialization attribute.
+/// </summary>
+internal class EnumMemberJsonEnumConverterFactory : JsonConverterFactory
 {
     public override bool CanConvert(Type typeToConvert)
     {
@@ -99,7 +118,7 @@ internal class HyphenatedJsonEnumConverterFactory : JsonConverterFactory
                 return enumValue;
             }
 
-            throw new JsonException($"The value {stringValue} is not a valid enum value.");
+            throw new JsonException($"The value {stringValue} is not a valid enum value. of {typeof(TEnum)}");
         }
 
         public override void Write(Utf8JsonWriter writer, TEnum value, JsonSerializerOptions options)

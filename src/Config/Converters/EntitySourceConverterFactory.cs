@@ -30,6 +30,7 @@ internal class EntitySourceConverterFactory : JsonConverterFactory
                 return new EntitySource(obj ?? "", EntitySourceType.Table, new(), Enumerable.Empty<string>().ToArray());
             }
 
+            // Remove the converter so we don't recurse.
             JsonSerializerOptions innerOptions = new(options);
             innerOptions.Converters.Remove(innerOptions.Converters.First(c => c is EntitySourceConverterFactory));
 
@@ -57,6 +58,7 @@ internal class EntitySourceConverterFactory : JsonConverterFactory
 
         public override void Write(Utf8JsonWriter writer, EntitySource value, JsonSerializerOptions options)
         {
+            // Remove the converter so we don't recurse.
             JsonSerializerOptions innerOptions = new(options);
             innerOptions.Converters.Remove(innerOptions.Converters.First(c => c is EntitySourceConverterFactory));
 

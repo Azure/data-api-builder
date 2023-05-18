@@ -124,7 +124,7 @@ public class RuntimeConfigLoader
             ReadCommentHandling = JsonCommentHandling.Skip,
             WriteIndented = true,
         };
-        options.Converters.Add(new HyphenatedJsonEnumConverterFactory());
+        options.Converters.Add(new EnumMemberJsonEnumConverterFactory());
         options.Converters.Add(new RestRuntimeOptionsConverterFactory());
         options.Converters.Add(new GraphQLRuntimeOptionsConverterFactory());
         options.Converters.Add(new EntitySourceConverterFactory());

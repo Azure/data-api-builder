@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.ObjectModel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -10,8 +11,8 @@ class RuntimeEntitiesConverter : JsonConverter<RuntimeEntities>
 {
     public override RuntimeEntities? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        IDictionary<string, Entity> entities =
-            JsonSerializer.Deserialize<Dictionary<string, Entity>>(ref reader, options) ??
+        IReadOnlyDictionary<string, Entity> entities =
+            JsonSerializer.Deserialize<ReadOnlyDictionary<string, Entity>>(ref reader, options) ??
             throw new JsonException("Failed to read entities");
 
         return new RuntimeEntities(entities);

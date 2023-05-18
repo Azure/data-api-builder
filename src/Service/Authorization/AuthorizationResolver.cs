@@ -252,10 +252,10 @@ namespace Azure.DataApiBuilder.Service.Authorization
                 {
                     string role = permission.Role;
                     RoleMetadata roleToOperation = new();
-                    EntityAction[] operations = permission.Actions;
-                    foreach (EntityAction operationElement in operations)
+                    EntityAction[] entityActions = permission.Actions;
+                    foreach (EntityAction entityAction in entityActions)
                     {
-                        EntityActionOperation operation = operationElement.Action;
+                        EntityActionOperation operation = entityAction.Action;
                         OperationMetadata operationToColumn = new();
 
                         // Use a hashset to store all the backing field names
@@ -263,7 +263,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                         HashSet<string> allowedColumns = new();
                         IEnumerable<string> allTableColumns = ResolveEntityDefinitionColumns(entityName);
 
-                        if (operationElement.Fields is null)
+                        if (entityAction.Fields is null)
                         {
                             operationToColumn.Included.UnionWith(ResolveEntityDefinitionColumns(entityName));
                         }
@@ -273,32 +273,32 @@ namespace Azure.DataApiBuilder.Service.Authorization
                             // columns must be resolved and placed in the operationToColumn Key/Value store.
                             // This is especially relevant for find requests, where actual column names must be
                             // resolved when no columns were included in a request.
-                            if (operationElement.Fields.Include is null ||
-                                (operationElement.Fields.Include.Count == 1 && operationElement.Fields.Include.Contains(WILDCARD)))
+                            if (entityAction.Fields.Include is null ||
+                                (entityAction.Fields.Include.Count == 1 && entityAction.Fields.Include.Contains(WILDCARD)))
                             {
                                 operationToColumn.Included.UnionWith(ResolveEntityDefinitionColumns(entityName));
                             }
                             else
                             {
-                                operationToColumn.Included = operationElement.Fields.Include;
+                                operationToColumn.Included = entityAction.Fields.Include;
                             }
 
                             // When a wildcard (*) is defined for Excluded columns, all of the table's
                             // columns must be resolved and placed in the operationToColumn Key/Value store.
-                            if (operationElement.Fields.Exclude is null ||
-                                (operationElement.Fields.Exclude.Count == 1 && operationElement.Fields.Exclude.Contains(WILDCARD)))
+                            if (entityAction.Fields.Exclude is null ||
+                                (entityAction.Fields.Exclude.Count == 1 && entityAction.Fields.Exclude.Contains(WILDCARD)))
                             {
                                 operationToColumn.Excluded.UnionWith(ResolveEntityDefinitionColumns(entityName));
                             }
                             else
                             {
-                                operationToColumn.Excluded = operationElement.Fields.Exclude;
+                                operationToColumn.Excluded = entityAction.Fields.Exclude;
                             }
                         }
 
-                        if (operationElement.Policy is not null && operationElement.Policy.Database is not null)
+                        if (entityAction.Policy is not null && entityAction.Policy.Database is not null)
                         {
-                            operationToColumn.DatabasePolicy = operationElement.Policy.Database;
+                            operationToColumn.DatabasePolicy = entityAction.Policy.Database;
                         }
 
                         // Calculate the set of allowed backing column names.

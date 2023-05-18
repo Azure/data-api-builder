@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
 using System.Text.Json;
@@ -274,9 +275,11 @@ namespace Cli
                 Mappings: null);
 
             // Add entity to existing runtime config.
-            IDictionary<string, Entity> entities = initialRuntimeConfig.Entities.Entities;
-            entities.Add(options.Entity, entity);
-            updatedRuntimeConfig = initialRuntimeConfig with { Entities = new(entities) };
+            IDictionary<string, Entity> entities = new Dictionary<string, Entity>(initialRuntimeConfig.Entities.Entities)
+            {
+                { options.Entity, entity }
+            };
+            updatedRuntimeConfig = initialRuntimeConfig with { Entities = new(new ReadOnlyDictionary<string, Entity>(entities)) };
             return true;
         }
 
@@ -551,9 +554,11 @@ namespace Cli
                 Permissions: updatedPermissions,
                 Relationships: updatedRelationships,
                 Mappings: updatedMappings);
-            IDictionary<string, Entity> entities = initialConfig.Entities.Entities;
-            entities[options.Entity] = updatedEntity;
-            updatedConfig = initialConfig with { Entities = new(entities) };
+            IDictionary<string, Entity> entities = new Dictionary<string, Entity>(initialConfig.Entities.Entities)
+            {
+                [options.Entity] = updatedEntity
+            };
+            updatedConfig = initialConfig with { Entities = new(new ReadOnlyDictionary<string, Entity>(entities)) };
             return true;
         }
 

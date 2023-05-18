@@ -65,7 +65,7 @@ public class RuntimeConfigLoader
     /// <returns>True if the config was parsed, otherwise false.</returns>
     public static bool TryParseConfig(string json, [NotNullWhen(true)] out RuntimeConfig? config, ILogger? logger = null, string? connectionString = null)
     {
-        JsonSerializerOptions options = GetSerializationOption();
+        JsonSerializerOptions options = GetSerializationOptions();
 
         try
         {
@@ -261,7 +261,7 @@ public class RuntimeConfigLoader
 
         string? schemaPath = _fileSystem.Path.Combine(assemblyDirectory, "dab.draft.schema.json");
         string schemaFileContent = _fileSystem.File.ReadAllText(schemaPath);
-        Dictionary<string, object>? jsonDictionary = JsonSerializer.Deserialize<Dictionary<string, object>>(schemaFileContent, GetSerializationOption());
+        Dictionary<string, object>? jsonDictionary = JsonSerializer.Deserialize<Dictionary<string, object>>(schemaFileContent, GetSerializationOptions());
 
         if (jsonDictionary is null)
         {

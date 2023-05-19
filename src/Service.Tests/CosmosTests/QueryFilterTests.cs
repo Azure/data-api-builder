@@ -849,11 +849,12 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 { 
                     items {
                         id
+                        name
                     }
                 }
             }";
 
-            string dbQuery = $"SELECT top 1 c.id FROM c where c.id = \"{_idList[0]}\"";
+            string dbQuery = $"SELECT top 1 c.id, c.name FROM c where c.id = \"{_idList[0]}\"";
             await ExecuteAndValidateResult("suns", gqlQuery, dbQuery);
         }
         #endregion

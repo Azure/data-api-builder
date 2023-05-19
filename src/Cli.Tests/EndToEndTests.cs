@@ -74,7 +74,7 @@ public class EndToEndTests
         Assert.IsNotNull(cosmosDataSourceOptions);
         Assert.AreEqual("graphqldb", cosmosDataSourceOptions.Database);
         Assert.AreEqual("planet", cosmosDataSourceOptions.Container);
-        Assert.AreEqual(TEST_SCHEMA_FILE, cosmosDataSourceOptions.GraphQLSchemaPath);
+        Assert.AreEqual(TEST_SCHEMA_FILE, cosmosDataSourceOptions.Schema);
         Assert.IsNotNull(runtimeConfig.Runtime);
         Assert.IsNotNull(runtimeConfig.Runtime.Host);
 

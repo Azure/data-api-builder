@@ -148,7 +148,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
                 return _cosmosDb.GraphQLSchema;
             }
 
-            return _fileSystem.File.ReadAllText(_cosmosDb.GraphQLSchemaPath);
+            return _fileSystem.File.ReadAllText(_cosmosDb.Schema);
         }
 
         public void ParseSchemaGraphQLDocument()

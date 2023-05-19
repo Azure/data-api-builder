@@ -15,8 +15,9 @@ namespace Azure.DataApiBuilder.Config.NamingPolicies;
 /// This is used to simplify how we deserialize the JSON fields of the config file,
 /// turning something like <c>data-source</c> to <c>DataSource</c>.
 /// </remarks>
-internal class HyphenatedNamingPolicy : JsonNamingPolicy
+public sealed class HyphenatedNamingPolicy : JsonNamingPolicy
 {
+    /// <inheritdoc />
     public override string ConvertName(string name)
     {
         if (string.Equals(name, "graphql", StringComparison.OrdinalIgnoreCase))

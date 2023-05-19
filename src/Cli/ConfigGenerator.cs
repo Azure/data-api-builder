@@ -7,6 +7,7 @@ using System.IO.Abstractions;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
+using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Service;
 using Cli.Commands;
 using Microsoft.Extensions.Logging;
@@ -71,6 +72,8 @@ namespace Cli
             string? restPath = options.RestPath;
             Dictionary<string, JsonElement> dbOptions = new();
 
+            HyphenatedNamingPolicy namingPolicy = new();
+
             switch (dbType)
             {
                 case DatabaseType.CosmosDB_NoSQL:
@@ -97,13 +100,14 @@ namespace Cli
                     }
 
                     restPath = null;
-                    dbOptions.Add("database", JsonSerializer.SerializeToElement(cosmosDatabase));
-                    dbOptions.Add("container", JsonSerializer.SerializeToElement(cosmosContainer));
-                    dbOptions.Add("schema", JsonSerializer.SerializeToElement(graphQLSchemaPath));
+                    dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), JsonSerializer.SerializeToElement(cosmosDatabase));
+                    dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), JsonSerializer.SerializeToElement(cosmosContainer));
+                    dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), JsonSerializer.SerializeToElement(graphQLSchemaPath));
                     break;
 
                 case DatabaseType.MSSQL:
-                    dbOptions.Add("set-session-context", JsonSerializer.SerializeToElement(options.SetSessionContext));
+                    dbOptions.Add(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext)), JsonSerializer.SerializeToElement(options.SetSessionContext));
+                    
                     break;
                 case DatabaseType.MySQL:
                 case DatabaseType.PostgreSQL:

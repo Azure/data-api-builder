@@ -10,6 +10,7 @@ using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Service.Exceptions;
 
 namespace Azure.DataApiBuilder.Service.Configurations;
@@ -225,10 +226,12 @@ public class RuntimeConfigProvider
             throw new ArgumentException($"'{nameof(schema)}' cannot be null or empty.", nameof(schema));
         }
 
+        HyphenatedNamingPolicy namingPolicy = new();
+
         Dictionary<string, JsonElement> options = new(runtimeConfig.DataSource.Options)
         {
             // push the "raw" GraphQL schema into the options to pull out later when requested
-            { CosmosDbNoSQLDataSourceOptions.GRAPHQL_RAW_KEY, JsonSerializer.SerializeToElement(schema) }
+            { namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.GraphQLSchema)), JsonSerializer.SerializeToElement(schema) }
         };
 
         // SWA may provide CosmosDB database name in connectionString
@@ -237,7 +240,7 @@ public class RuntimeConfigProvider
         if (database is not null)
         {
             // Add or update the options to contain the parsed database
-            options["database"] = JsonSerializer.SerializeToElement(database);
+            options[namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database))] = JsonSerializer.SerializeToElement(database);
         }
 
         // Update the connection string in the parsed config with the one that was provided to the controller

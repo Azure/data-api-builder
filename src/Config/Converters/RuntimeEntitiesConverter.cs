@@ -9,6 +9,7 @@ namespace Azure.DataApiBuilder.Config.Converters;
 
 class RuntimeEntitiesConverter : JsonConverter<RuntimeEntities>
 {
+    /// <inheritdoc/>
     public override RuntimeEntities? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         IReadOnlyDictionary<string, Entity> entities =
@@ -18,6 +19,7 @@ class RuntimeEntitiesConverter : JsonConverter<RuntimeEntities>
         return new RuntimeEntities(entities);
     }
 
+    /// <inheritdoc/>
     public override void Write(Utf8JsonWriter writer, RuntimeEntities value, JsonSerializerOptions options)
     {
         writer.WriteStartObject();

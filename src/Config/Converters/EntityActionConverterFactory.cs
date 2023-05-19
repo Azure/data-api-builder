@@ -6,13 +6,21 @@ using System.Text.Json.Serialization;
 
 namespace Azure.DataApiBuilder.Config.Converters;
 
+/// <summary>
+/// Used to convert an <see cref="EntityAction"/> to and from JSON by creating a <see cref="EntityActionConverter"/> if needed.
+/// </summary>
+/// <remarks>
+/// This is needed so we can remove the converter from the options before we deserialize the object to avoid infinite recursion.
+/// </remarks>
 internal class EntityActionConverterFactory : JsonConverterFactory
 {
+    /// <inheritdoc/>
     public override bool CanConvert(Type typeToConvert)
     {
         return typeToConvert.IsAssignableTo(typeof(EntityAction));
     }
 
+    /// <inheritdoc/>
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
         return new EntityActionConverter();

@@ -8,11 +8,13 @@ namespace Azure.DataApiBuilder.Config.Converters;
 
 internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
 {
+    /// <inheritdoc/>
     public override bool CanConvert(Type typeToConvert)
     {
         return typeToConvert.IsAssignableTo(typeof(GraphQLRuntimeOptions));
     }
 
+    /// <inheritdoc/>
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
         return new GraphQLRuntimeOptionsConverter();

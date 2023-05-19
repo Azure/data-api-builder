@@ -66,11 +66,13 @@ public static class EnumExtensions
 /// </summary>
 internal class EnumMemberJsonEnumConverterFactory : JsonConverterFactory
 {
+    /// <inheritdoc/>
     public override bool CanConvert(Type typeToConvert)
     {
         return typeToConvert.IsEnum;
     }
 
+    /// <inheritdoc/>
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
         return (JsonConverter?)Activator.CreateInstance(
@@ -109,6 +111,7 @@ internal class EnumMemberJsonEnumConverterFactory : JsonConverterFactory
             }
         }
 
+        /// <inheritdoc/>
         public override TEnum Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             string? stringValue = reader.DeserializeString();
@@ -121,6 +124,7 @@ internal class EnumMemberJsonEnumConverterFactory : JsonConverterFactory
             throw new JsonException($"The value {stringValue} is not a valid enum value. of {typeof(TEnum)}");
         }
 
+        /// <inheritdoc/>
         public override void Write(Utf8JsonWriter writer, TEnum value, JsonSerializerOptions options)
         {
             writer.WriteStringValue(_enumToString[value]);

@@ -308,7 +308,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
             string restPath = runtimeConfig.Runtime.Rest.Path;
 
-            ValidateApiPath(restPath, "REST");
+            ValidateApiPath(restPath, ApiType.REST);
         }
 
         /// <summary>
@@ -319,7 +319,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         {
             string graphqlPath = runtimeConfig.Runtime.GraphQL.Path;
 
-            ValidateApiPath(graphqlPath, "GraphQL");
+            ValidateApiPath(graphqlPath, ApiType.GraphQL);
         }
 
         /// <summary>
@@ -329,7 +329,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <param name="apiPath">path prefix for rest/graphql apis</param>
         /// <param name="apiType">Either REST or GraphQL</param>
         /// <exception cref="DataApiBuilderException"></exception>
-        private static void ValidateApiPath(string apiPath, string apiType)
+        private static void ValidateApiPath(string apiPath, ApiType apiType)
         {
             if (string.IsNullOrEmpty(apiPath))
             {
@@ -361,12 +361,12 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <param name="apiPath">path prefix for rest/graphql apis</param>
         /// <param name="apiType">Either REST or GraphQL</param>
         /// <exception cref="DataApiBuilderException"></exception>
-        public static void DoApiPathInvalidCharCheck(string apiPath, string apiType)
+        public static void DoApiPathInvalidCharCheck(string apiPath, ApiType apiType)
         {
             if (_invalidApiPathCharsRgx.IsMatch(apiPath))
             {
                 string errorMessage = INVALID_GRAPHQL_PATH_WITH_RESERVED_CHAR_ERR_MSG;
-                if (apiType == "REST")
+                if (apiType == ApiType.REST)
                 {
                     errorMessage = INVALID_REST_PATH_WITH_RESERVED_CHAR_ERR_MSG;
                 }

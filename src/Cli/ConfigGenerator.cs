@@ -131,7 +131,7 @@ namespace Cli
                 return false;
             }
 
-            if (!IsApiPathValid(restPath, "rest") || !IsApiPathValid(options.GraphQLPath, "graphql"))
+            if (!IsApiPathValid(restPath, ApiType.REST) || !IsApiPathValid(options.GraphQLPath, ApiType.GraphQL))
             {
                 return false;
             }

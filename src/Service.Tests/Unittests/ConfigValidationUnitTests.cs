@@ -187,9 +187,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(DatabaseType.PostgreSQL, "1 eq @item.col1", true, DisplayName = "Database Policy defined for Create fails for PostgreSQL")]
         [DataRow(DatabaseType.PostgreSQL, null, false, DisplayName = "Database Policy set as null for Create passes on PostgreSQL.")]
         [DataRow(DatabaseType.PostgreSQL, "", false, DisplayName = "Database Policy left empty for Create passes for PostgreSQL.")]
+        [DataRow(DatabaseType.PostgreSQL, " ", false, DisplayName = "Database Policy only whitespace for Create passes for PostgreSQL.")]
         [DataRow(DatabaseType.MySQL, "1 eq @item.col1", true, DisplayName = "Database Policy defined for Create fails for MySQL")]
         [DataRow(DatabaseType.MySQL, null, false, DisplayName = "Database Policy set as for Create passes for MySQL")]
         [DataRow(DatabaseType.MySQL, "", false, DisplayName = "Database Policy left empty for Create passes for MySQL")]
+        [DataRow(DatabaseType.MySQL, " ", false, DisplayName = "Database Policy only whitespace for Create passes for MySQL")]
         [DataRow(DatabaseType.MSSQL, "2 eq @item.col3", false, DisplayName = "Database Policy defined for Create passes for MSSQL")]
         public void AddDatabasePolicyToCreateOperation(DatabaseType dbType, string dbPolicy, bool errorExpected)
         {

@@ -507,7 +507,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         {
             if (permission.Action is EntityActionOperation.Create)
             {
-                return string.IsNullOrEmpty(permission.Policy?.Database);
+                return string.IsNullOrWhiteSpace(permission.Policy?.Database);
             }
 
             return true;

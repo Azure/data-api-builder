@@ -107,7 +107,7 @@ namespace Cli
 
                 case DatabaseType.MSSQL:
                     dbOptions.Add(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext)), JsonSerializer.SerializeToElement(options.SetSessionContext));
-                    
+
                     break;
                 case DatabaseType.MySQL:
                 case DatabaseType.PostgreSQL:
@@ -373,8 +373,6 @@ namespace Cli
                 return null;
             }
 
-            // Parse the SourceType.
-            // Parsing won't fail as this check is already done during source object creation.
             // Check if provided operations are valid
             if (!VerifyOperations(operations!.Split(","), sourceType))
             {

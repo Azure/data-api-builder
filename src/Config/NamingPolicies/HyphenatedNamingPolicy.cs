@@ -15,6 +15,12 @@ namespace Azure.DataApiBuilder.Config.NamingPolicies;
 /// This is used to simplify how we deserialize the JSON fields of the config file,
 /// turning something like <c>data-source</c> to <c>DataSource</c>.
 /// </remarks>
+/// <example>
+/// <code>
+///     Input: DataSource
+///     Output: data-source
+/// </code>
+/// </example>
 public sealed class HyphenatedNamingPolicy : JsonNamingPolicy
 {
     /// <inheritdoc />

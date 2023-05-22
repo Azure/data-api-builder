@@ -894,7 +894,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
             {
-                HttpMethod httpMethod = SqlTestHelper.ConvertSupportedHttpVerbToHttpMethod(requestType);
+                HttpMethod httpMethod = SqlTestHelper.ConvertRestMethodToHttpMethod(requestType);
                 HttpRequestMessage request;
                 if (requestType is SupportedHttpVerb.Get || requestType is SupportedHttpVerb.Delete)
                 {

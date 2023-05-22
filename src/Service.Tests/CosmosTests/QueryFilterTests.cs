@@ -857,6 +857,38 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             string dbQuery = $"SELECT top 1 c.id, c.name FROM c where c.id = \"{_idList[0]}\"";
             await ExecuteAndValidateResult("suns", gqlQuery, dbQuery);
         }
+
+        /// <summary>
+        /// Tests that the field level query filter failed authorization validation
+        /// when include fields are WILDCARD and exclude fields specifies fields,
+        /// exclude fields takes precedence over include fields. 
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryFilterFieldAuth_ExcludeTakesPredecence()
+        {
+            string gqlQuery = @"{
+                suns(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {name : {eq : ""test name""}})
+                { 
+                    items {
+                        id
+                        name
+                    }
+                }
+            }";
+
+            string clientRoleHeader = AuthorizationType.Anonymous.ToString();
+            JsonElement response = await ExecuteGraphQLRequestAsync(
+                queryName: "suns",
+                query: gqlQuery,
+                variables: new() { { "name", "test name" } },
+                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
+                clientRoleHeader: clientRoleHeader);
+
+            // Validate the result contains the GraphQL authorization error code.
+            string errorMessage = response.ToString();
+            Assert.IsTrue(errorMessage.Contains(DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE));
+
+        }
         #endregion
 
         [ClassCleanup]

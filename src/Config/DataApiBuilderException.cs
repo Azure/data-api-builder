@@ -16,6 +16,8 @@ namespace Azure.DataApiBuilder.Service.Exceptions
         public const string CONNECTION_STRING_ERROR_MESSAGE = "A valid Connection String should be provided.";
         public const string GRAPHQL_FILTER_ENTITY_AUTHZ_FAILURE = "Access forbidden to the target entity described in the filter.";
         public const string GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE = "Access forbidden to a field referenced in the filter.";
+        public const string AUTHORIZATION_FAILURE = "Authorization Failure: Access Not Allowed.";
+        public const string GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE = "Unauthorized due to one or more fields in this mutation.";
 
         public enum SubStatusCodes
         {
@@ -36,6 +38,10 @@ namespace Azure.DataApiBuilder.Service.Exceptions
             /// Request failed authorization.
             /// </summary>
             AuthorizationCheckFailed,
+            /// <summary>
+            /// Request did not satisfy database policy for the operation.
+            /// </summary>
+            DatabasePolicyFailure,
             /// <summary>
             /// The requested operation failed on the database.
             /// </summary>
@@ -79,7 +85,19 @@ namespace Azure.DataApiBuilder.Service.Exceptions
             /// <summary>
             /// Error encountered while doing data type conversions.
             /// </summary>
-            ErrorProcessingData
+            ErrorProcessingData,
+            /// <summary>
+            /// Attempting to generate OpenAPI document when one already exists.
+            /// </summary>
+            OpenApiDocumentAlreadyExists,
+            /// <summary>
+            /// Attempt to create OpenAPI document failed.
+            /// </summary>
+            OpenApiDocumentCreationFailure,
+            /// <summary>
+            /// Global REST endpoint disabled in runtime configuration.
+            /// </summary>
+            GlobalRestEndpointDisabled
         }
 
         public HttpStatusCode StatusCode { get; }

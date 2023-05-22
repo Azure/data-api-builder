@@ -37,5 +37,19 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// Execution will be identical regardless of mutation operation, but result returned will differ
         /// </summary>
         public Task<IActionResult?> ExecuteAsync(StoredProcedureRequestContext context);
+
+        /// <summary>
+        /// Authorization check on mutation fields provided in a GraphQL Mutation request.
+        /// </summary>
+        /// <param name="context">Middleware context of the mutation</param>
+        /// <param name="parameters">parameters in the mutation query.</param>
+        /// <param name="entityName">entity name</param>
+        /// <param name="mutationOperation">mutation operation</param>
+        /// <exception cref="DataApiBuilderException"></exception>
+        public void AuthorizeMutationFields(
+            IMiddlewareContext context,
+            IDictionary<string, object?> parameters,
+            string entityName,
+            Config.Operation mutationOperation);
     }
 }

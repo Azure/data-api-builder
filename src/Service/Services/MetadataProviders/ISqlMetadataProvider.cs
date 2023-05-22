@@ -39,6 +39,16 @@ namespace Azure.DataApiBuilder.Service.Services
         (string, string) ParseSchemaAndDbTableName(string source);
 
         /// <summary>
+        /// Obtains all the underlying column names for each entity.
+        /// </summary>
+        List<string> GetSchemaGraphQLFieldNamesForEntityName(string entityName);
+
+        /// <summary>
+        /// Obtains the underlying GraphQL object type for an entity field.
+        /// </summary>
+        string? GetSchemaGraphQLFieldTypeFromFieldName(string entityName, string fieldName);
+
+        /// <summary>
         /// Obtains the underlying SourceDefinition for the given entity name.
         /// </summary>
         SourceDefinition GetSourceDefinition(string entityName);

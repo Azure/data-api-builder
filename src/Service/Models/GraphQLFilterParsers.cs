@@ -141,11 +141,10 @@ namespace Azure.DataApiBuilder.Service.Models
                         relationshipField = false;
                     }
 
-                    // Only perform field (column) authorization when the field is not a relationship field and when the database type is not Cosmos DB.
-                    // Currently Cosmos DB doesn't support field level authorization.
+                    // Only perform field (column) authorization when the field is not a relationship field.
                     // Due to the recursive behavior of SqlExistsQueryStructure compilation, the column authorization
                     // check only occurs when access to the column's owner entity is confirmed.
-                    if (!relationshipField && _metadataProvider.GetDatabaseType() is not DatabaseType.cosmosdb_nosql)
+                    if (!relationshipField)
                     {
                         string targetEntity = queryStructure.EntityName;
 
@@ -182,8 +181,21 @@ namespace Azure.DataApiBuilder.Service.Models
                         }
                         else
                         {
+                            // This path will never get called for sql since the primary key will always required
+                            // This path will only be exercised for CosmosDb_NoSql
                             queryStructure.DatabaseObject.Name = sourceName + "." + backingColumnName;
                             queryStructure.SourceAlias = sourceName + "." + backingColumnName;
+                            string? nestedFieldType = _metadataProvider.GetSchemaGraphQLFieldTypeFromFieldName(queryStructure.EntityName, name);
+
+                            if (nestedFieldType is null)
+                            {
+                                throw new DataApiBuilderException(
+                                    message: "Invalid filter object used as a nested field input value type.",
+                                    statusCode: HttpStatusCode.BadRequest,
+                                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                            }
+
+                            queryStructure.EntityName = _metadataProvider.GetEntityName(nestedFieldType);
                             predicates.Push(new PredicateOperand(Parse(ctx,
                                 filterArgumentObject.Fields[name],
                                 subfields,
@@ -204,7 +216,7 @@ namespace Azure.DataApiBuilder.Service.Models
                                     schemaName,
                                     sourceName,
                                     sourceAlias,
-                                    queryStructure.MakeParamWithValue)));
+                                    queryStructure.MakeDbConnectionParam)));
                     }
                 }
             }
@@ -300,7 +312,7 @@ namespace Azure.DataApiBuilder.Service.Models
             predicates.Push(new PredicateOperand(existsPredicate));
 
             // Add all parameters from the exists subquery to the main queryStructure.
-            foreach ((string key, object? value) in existsQuery.Parameters)
+            foreach ((string key, DbConnectionParam value) in existsQuery.Parameters)
             {
                 queryStructure.Parameters.Add(key, value);
             }
@@ -346,7 +358,7 @@ namespace Azure.DataApiBuilder.Service.Models
             string schemaName,
             string tableName,
             string tableAlias,
-            Func<object, string> processLiterals)
+            Func<object, string?, string> processLiterals)
         {
             Column column = new(schemaName, tableName, columnName: name, tableAlias);
 
@@ -472,7 +484,7 @@ namespace Azure.DataApiBuilder.Service.Models
             IInputField argumentSchema,
             Column column,
             List<ObjectFieldNode> fields,
-            Func<object, string> processLiterals)
+            Func<object, string?, string> processLiterals)
         {
             List<PredicateOperand> predicates = new();
 
@@ -542,7 +554,7 @@ namespace Azure.DataApiBuilder.Service.Models
                 predicates.Push(new PredicateOperand(new Predicate(
                     new PredicateOperand(column),
                     op,
-                    new PredicateOperand(processLiteral ? $"{processLiterals(value)}" : value.ToString()))
+                    new PredicateOperand(processLiteral ? $"{processLiterals(value, column.ColumnName)}" : value.ToString()))
                 ));
             }
 

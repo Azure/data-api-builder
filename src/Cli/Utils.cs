@@ -1,9 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -12,6 +10,8 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Humanizer;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Config.AuthenticationConfig;
+using static Azure.DataApiBuilder.Config.MergeJsonProvider;
+using static Azure.DataApiBuilder.Config.RuntimeConfigPath;
 using static Azure.DataApiBuilder.Service.Configurations.RuntimeConfigValidator;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
@@ -24,7 +24,6 @@ namespace Cli
     {
         public const string WILDCARD = "*";
         public static readonly string SEPARATOR = ":";
-        public const string DEFAULT_VERSION = "1.0.0";
 
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         private static ILogger<Utils> _logger;
@@ -33,19 +32,6 @@ namespace Cli
         public static void SetCliUtilsLogger(ILogger<Utils> cliUtilsLogger)
         {
             _logger = cliUtilsLogger;
-        }
-
-        /// <summary>
-        /// Reads the product version from the executing assembly's file version information.
-        /// </summary>
-        /// <returns>Product version if not null, default version 1.0.0 otherwise.</returns>
-        public static string GetProductVersion()
-        {
-            Assembly assembly = Assembly.GetExecutingAssembly();
-            FileVersionInfo fileVersionInfo = FileVersionInfo.GetVersionInfo(assembly.Location);
-            string? version = fileVersionInfo.ProductVersion;
-
-            return version ?? DEFAULT_VERSION;
         }
 
         /// <summary>
@@ -896,6 +882,48 @@ namespace Cli
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// This method will check if DAB_ENVIRONMENT value is set.
+        /// If yes, it will try to merge dab-config.json with dab-config.{DAB_ENVIRONMENT}.json
+        /// and create a merged file called dab-config.{DAB_ENVIRONMENT}.merged.json
+        /// </summary>
+        /// <returns>Returns the name of the merged config if successful.</returns>
+        public static bool TryMergeConfigsIfAvailable([NotNullWhen(true)] out string? mergedConfigFile)
+        {
+            string? environmentValue = Environment.GetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME);
+            mergedConfigFile = null;
+            if (!string.IsNullOrEmpty(environmentValue))
+            {
+                string baseConfigFile = RuntimeConfigPath.DefaultName;
+                string environmentBasedConfigFile = RuntimeConfigPath.GetFileName(environmentValue, considerOverrides: false);
+
+                if (DoesFileExistInCurrentDirectory(baseConfigFile) && !string.IsNullOrEmpty(environmentBasedConfigFile))
+                {
+                    try
+                    {
+                        string baseConfigJson = File.ReadAllText(baseConfigFile);
+                        string overrideConfigJson = File.ReadAllText(environmentBasedConfigFile);
+                        string currentDir = Directory.GetCurrentDirectory();
+                        _logger.LogInformation($"Merging {Path.Combine(currentDir, baseConfigFile)}"
+                            + $" and {Path.Combine(currentDir, environmentBasedConfigFile)}");
+                        string mergedConfigJson = Merge(baseConfigJson, overrideConfigJson);
+                        mergedConfigFile = RuntimeConfigPath.GetMergedFileNameForEnvironment(CONFIGFILE_NAME, environmentValue);
+                        File.WriteAllText(mergedConfigFile, mergedConfigJson);
+                        _logger.LogInformation($"Generated merged config file: {Path.Combine(currentDir, mergedConfigFile)}");
+                        return true;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"Failed to merge the config files.");
+                        mergedConfigFile = null;
+                        return false;
+                    }
+                }
+            }
+
+            return false;
         }
 
         /// <summary>

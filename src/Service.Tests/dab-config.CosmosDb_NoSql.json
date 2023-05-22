@@ -40,7 +40,15 @@
           "role": "anonymous",
           "actions": [
             "create",
-            "read",
+            {
+              "action": "read",
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": []
+              }
+            },
             "update",
             "delete"
           ]
@@ -65,6 +73,15 @@
     "Character": {
       "source": "graphqldb.character",
       "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        },
         {
           "role": "authenticated",
           "actions": [
@@ -111,6 +128,26 @@
         }
       }
     },
+    "TagAlias": {
+      "source": "graphqldb.tag",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+        }
+      ],
+      "graphql": {
+        "type": {
+          "singular": "Tag",
+          "plural": "Tags"
+        }
+      }
+    },
     "Moon": {
       "source": "graphqldb.moon",
       "permissions": [
@@ -133,6 +170,64 @@
           ]
         }
       ]
+    },
+    "Earth": {
+      "source": "graphqldb.earth",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "create",
+              "fields": {
+                "include": [
+                  "id"
+                ],
+                "exclude": [
+                  "name"
+                ]
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "include": [
+                  "id",
+                  "type"
+                ],
+                "exclude": [
+                  "name"
+      ]
+              }
+            },
+            {
+              "action": "update",
+              "fields": {
+                "include": [],
+                "exclude": [
+                  "*"
+                ]
+              }
+            },
+            "delete"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "create",
+            "read",
+            "update",
+            "delete"
+          ]
+    }
+      ],
+      "graphql": {
+        "type": {
+          "singular": "Earth",
+          "plural": "Earths"
+        }
+      }
     }
   }
 }

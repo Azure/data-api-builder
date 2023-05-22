@@ -5,14 +5,14 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
-using System.Text.Json;
+using System.Linq;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Resolvers;
+using HotChocolate.Language;
 
 namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
 {
@@ -25,7 +25,9 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         private readonly RuntimeConfig _runtimeConfig;
         private Dictionary<string, string> _partitionKeyPaths = new();
         private Dictionary<string, string> _graphQLSingularTypeToEntityNameMap = new();
+        private Dictionary<string, List<FieldDefinitionNode>> _graphQLTypeToFieldsMap = new();
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
+        public DocumentNode GraphQLSchemaRoot;
 
         /// <inheritdoc />
         public Dictionary<string, string> GraphQLStoredProcedureExposedNameToEntityNameMap { get; set; } = new();
@@ -44,7 +46,6 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             _entities = _runtimeConfig.Entities;
             _databaseType = _runtimeConfig.DatabaseType;
             _graphQLSingularTypeToEntityNameMap = _runtimeConfig.GraphQLSingularTypeToEntityNameMap;
-
             CosmosDbNoSqlOptions? cosmosDb = _runtimeConfig.DataSource.CosmosDbNoSql;
 
             if (cosmosDb is null)
@@ -55,42 +56,18 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
-            foreach (Entity entity in _runtimeConfig.Entities.Values)
-            {
-                CheckFieldPermissionsForEntity(entity);
-            }
-
             _cosmosDb = cosmosDb;
-        }
+            ParseSchemaGraphQLDocument();
 
-        public void CheckFieldPermissionsForEntity(Entity entity)
-        {
-            foreach (PermissionSetting permission in entity.Permissions)
+            if (GraphQLSchemaRoot is null)
             {
-                string role = permission.Role;
-                RoleMetadata roleToOperation = new();
-                object[] Operations = permission.Operations;
-                foreach (JsonElement operationElement in Operations)
-                {
-                    if (operationElement.ValueKind is JsonValueKind.String)
-                    {
-                        continue;
-                    }
-                    else
-                    {
-                        // If not a string, the operationObj is expected to be an object that can be deserialized into PermissionOperation
-                        // object.
-                        if (RuntimeConfig.TryGetDeserializedJsonString(operationElement.ToString(), out PermissionOperation? operationObj, null!)
-                            && operationObj is not null && operationObj.Fields is not null)
-                        {
-                            throw new DataApiBuilderException(
-                                message: "Invalid runtime configuration, CosmosDB_NoSql currently doesn't support field level authorization.",
-                                statusCode: System.Net.HttpStatusCode.BadRequest,
-                                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-                        }
-                    }
-                }
+                throw new DataApiBuilderException(
+                    message: "Invalid GraphQL schema was provided for CosmosDB. Please define a valid GraphQL object model in the schema file.",
+                    statusCode: System.Net.HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
             }
+
+            ParseSchemaGraphQLFieldsForGraphQLType();
         }
 
         /// <inheritdoc />
@@ -181,6 +158,85 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             }
 
             return _cosmosDb.GraphQLSchema;
+        }
+
+        public void ParseSchemaGraphQLDocument()
+        {
+            string graphqlSchema = GraphQLSchema();
+
+            if (string.IsNullOrEmpty(graphqlSchema))
+            {
+                throw new DataApiBuilderException(
+                    message: "No GraphQL object model was provided for CosmosDB. Please define a GraphQL object model and link it in the runtime config.",
+                    statusCode: System.Net.HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+            }
+
+            try
+            {
+                GraphQLSchemaRoot = Utf8GraphQLParser.Parse(graphqlSchema);
+            }
+            catch (Exception)
+            {
+                throw new DataApiBuilderException(
+                    message: "Invalid GraphQL schema was provided for CosmosDB. Please define a valid GraphQL object model in the schema file.",
+                    statusCode: System.Net.HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+            }
+        }
+
+        private void ParseSchemaGraphQLFieldsForGraphQLType()
+        {
+            IEnumerable<ObjectTypeDefinitionNode> objectNodes = GraphQLSchemaRoot.Definitions.Where(d => d is ObjectTypeDefinitionNode).Cast<ObjectTypeDefinitionNode>();
+            foreach (ObjectTypeDefinitionNode node in objectNodes)
+            {
+                string typeName = node.Name.Value;
+                _graphQLTypeToFieldsMap.TryAdd(typeName, new List<FieldDefinitionNode>());
+                foreach (FieldDefinitionNode field in node.Fields)
+                {
+                    _graphQLTypeToFieldsMap[typeName].Add(field);
+                }
+            }
+        }
+
+        public List<string> GetSchemaGraphQLFieldNamesForEntityName(string entityName)
+        {
+            List<FieldDefinitionNode>? fields;
+            // Check if entity name has a GraphQL object type name alias. If so, fetch GraphQL object type fields with the alias name
+            foreach (string typeName in _graphQLSingularTypeToEntityNameMap.Keys)
+            {
+                if (_graphQLSingularTypeToEntityNameMap[typeName] == entityName && _graphQLTypeToFieldsMap.TryGetValue(typeName, out fields))
+                {
+                    return fields is null ? new List<string>() : fields.Select(x => x.Name.Value).ToList();
+                }
+            }
+
+            // Otherwise, entity name is not found
+            return new List<string>();
+        }
+
+        /// <summary>
+        /// Give an entity name and its field name, 
+        /// this method is to first look up the GraphQL field type using the entity name,
+        /// then find the field type with the entity name and its field name.
+        /// </summary>
+        /// <param name="entityName">entity name</param>
+        /// <param name="fieldName">GraphQL field name</param>
+        /// <returns></returns>
+        public string? GetSchemaGraphQLFieldTypeFromFieldName(string entityName, string fieldName)
+        {
+            List<FieldDefinitionNode>? fields;
+
+            // Check if entity name is using alias name, if so, fetch graph type name with the entity alias name
+            foreach (string graphQLType in _graphQLSingularTypeToEntityNameMap.Keys)
+            {
+                if (_graphQLSingularTypeToEntityNameMap[graphQLType] == entityName && _graphQLTypeToFieldsMap.TryGetValue(graphQLType, out fields))
+                {
+                    return fields is null ? null : fields.Where(x => x.Name.Value == fieldName).FirstOrDefault()?.Type.ToString();
+                }
+            }
+
+            return null;
         }
 
         public ODataParser GetODataParser()

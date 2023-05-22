@@ -334,7 +334,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 );
         }
         /// <summary>
-        /// Tests the PatchOne functionality with a REST PUT request using
+        /// Tests the PatchOne functionality with a REST PATCH request using
         /// headers that include as a key "If-Match" with an item that does exist,
         /// resulting in an update occuring. Verify update with Find.
         /// </summary>
@@ -358,6 +358,58 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     headers: new HeaderDictionary(headerDictionary),
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
+                );
+        }
+
+        /// <summary>
+        /// Test to validate successful execution of PATCH operation which satisfies the database policy for the update operation it resolves into.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOneUpdateWithDatabasePolicy()
+        {
+            // PATCH operation resolves to update because we have a record present for given PK.
+            // Since the database policy for update operation ("@item.pieceid ne 1") is satisfied by the operation, it executes successfully.
+            string requestBody = @"
+            {
+                ""piecesAvailable"": 4
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/100/pieceid/99",
+                    queryString: null,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    sqlQuery: GetQuery("PatchOneUpdateWithDatabasePolicy"),
+                    operationType: Config.Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK,
+                    clientRoleHeader: "database_policy_tester"
+                );
+        }
+
+        /// <summary>
+        /// Test to validate successful execution of PATCH operation which satisfies the database policy for the insert operation it resolves into.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOneInsertWithDatabasePolicy()
+        {
+            // PATCH operation resolves to insert because we don't have a record present for given PK.
+            // Since the database policy for insert operation ("@item.pieceid ne 6 and @item.piecesAvailable gt 0") is satisfied by the operation, it executes successfully.
+            string requestBody = @"
+            {
+                ""piecesAvailable"": 4,
+                ""categoryName"": ""SciFi""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/0/pieceid/7",
+                    queryString: null,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    sqlQuery: GetQuery("PatchOneInsertWithDatabasePolicy"),
+                    operationType: Config.Operation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    clientRoleHeader: "database_policy_tester",
+                    expectedLocationHeader: "categoryid/0/pieceid/7"
                 );
         }
 
@@ -424,7 +476,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         /// <summary>
-        /// Tests the PatchOne functionality with a REST PUT request using
+        /// Tests the PatchOne functionality with a REST PATCH request using
         /// headers that include as a key "If-Match" with an item that does not exist,
         /// resulting in a DataApiBuilderException with status code of Precondition Failed.
         /// </summary>
@@ -589,53 +641,66 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         /// <summary>
-        /// Test to validate that PATCH operation fails because the database policy("@item.id ne 1234")
-        /// restricts modifying records where id is not 1234.
+        /// Test to validate failure of PATCH operation failing to satisfy the database policy for the update operation.
+        /// (because a record exists for given PK).
         /// </summary>
         [TestMethod]
-        public virtual async Task PatchOneUpdateInAccessibleRowWithDatabasePolicy()
+        public virtual async Task PatchOneUpdateWithUnsatisfiedDatabasePolicy()
         {
-            // Perform PATCH update with upsert incrmental semantics.
+            // PATCH operation resolves to update because we have a record present for given PK.
+            // However, the update fails to execute successfully because the database policy ("@item.pieceid ne 1") for update operation is not satisfied.
             string requestBody = @"
             {
-                ""name"": ""New Publisher""
+                ""categoryName"": ""SciFi"",
+                ""piecesRequired"": 5,
+                ""piecesAvailable"": 2
             }";
 
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "id/1234",
+                    primaryKeyRoute: "categoryid/0/pieceid/1",
                     queryString: null,
-                    entityNameOrPath: _foreignKeyEntityName,
-                    sqlQuery: string.Empty,
-                    operationType: Config.Operation.UpsertIncremental,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    operationType: Config.Operation.Upsert,
                     requestBody: requestBody,
+                    sqlQuery: string.Empty,
                     exceptionExpected: true,
-                    expectedErrorMessage: $"Cannot perform INSERT and could not find {_foreignKeyEntityName} with primary key <id: 1234> to perform UPDATE on.",
-                    expectedStatusCode: HttpStatusCode.NotFound,
-                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString(),
+                    expectedErrorMessage: DataApiBuilderException.AUTHORIZATION_FAILURE,
+                    expectedStatusCode: HttpStatusCode.Forbidden,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure.ToString(),
                     clientRoleHeader: "database_policy_tester"
                     );
+        }
 
-            // Perform PATCH update with update semantics.
-            Dictionary<string, StringValues> headerDictionary = new()
+        /// <summary>
+        /// Test to validate failure of PATCH operation failing to satisfy the database policy for the update operation.
+        /// (because no record exists for given PK).
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOneInsertWithUnsatisfiedDatabasePolicy()
+        {
+            // PATCH operation resolves to insert because we don't have a record present for given PK.
+            // However, the insert fails to execute successfully because the database policy ("@item.pieceid ne 6 and @item.piecesAvailable gt 6")
+            // for insert operation is not satisfied.
+            string requestBody = @"
             {
-                { "If-Match", "*" }
-            };
+                ""categoryName"": ""SciFi"",
+                ""piecesRequired"": 5,
+                ""piecesAvailable"": 2
+            }";
 
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "id/1234",
+                    primaryKeyRoute: "categoryid/0/pieceid/6",
                     queryString: null,
-                    entityNameOrPath: _foreignKeyEntityName,
-                    sqlQuery: string.Empty,
-                    operationType: Config.Operation.UpsertIncremental,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    operationType: Config.Operation.Upsert,
                     requestBody: requestBody,
-                    headers: new HeaderDictionary(headerDictionary),
+                    sqlQuery: string.Empty,
                     exceptionExpected: true,
-                    expectedErrorMessage: $"No Update could be performed, record not found",
-                    expectedStatusCode: HttpStatusCode.PreconditionFailed,
-                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString(),
+                    expectedErrorMessage: DataApiBuilderException.AUTHORIZATION_FAILURE,
+                    expectedStatusCode: HttpStatusCode.Forbidden,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure.ToString(),
                     clientRoleHeader: "database_policy_tester"
                     );
-
         }
 
         /// <summary>

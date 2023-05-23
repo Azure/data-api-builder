@@ -61,7 +61,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Adds a useful failure message around the excepted == actual operation.
+        /// Adds a useful failure message around the expected == actual operation.
         /// <summary>
         public static void PerformTestEqualJsonStrings(string expected, string actual)
         {
@@ -219,52 +219,33 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="operationType">The operation to be executed on the entity.</param>
         /// <returns>HttpMethod representing the passed in operationType.</returns>
         /// <exception cref="DataApiBuilderException"></exception>
-        public static HttpMethod GetHttpMethodFromOperation(EntityActionOperation operationType, SupportedHttpVerb? restMethod = null)
+        public static HttpMethod GetHttpMethodFromOperation(EntityActionOperation operationType, SupportedHttpVerb? restMethod = null) => operationType switch
         {
-            switch (operationType)
-            {
-                case EntityActionOperation.Read:
-                    return HttpMethod.Get;
-                case EntityActionOperation.Insert:
-                    return HttpMethod.Post;
-                case EntityActionOperation.Delete:
-                    return HttpMethod.Delete;
-                case EntityActionOperation.Upsert:
-                    return HttpMethod.Put;
-                case EntityActionOperation.UpsertIncremental:
-                    return HttpMethod.Patch;
-                case EntityActionOperation.Execute:
-                    return ConvertRestMethodToHttpMethod(restMethod);
-                default:
-                    throw new DataApiBuilderException(
-                        message: "Operation not supported for the request.",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
-            }
-        }
+            EntityActionOperation.Read => HttpMethod.Get,
+            EntityActionOperation.Insert => HttpMethod.Post,
+            EntityActionOperation.Delete => HttpMethod.Delete,
+            EntityActionOperation.Upsert => HttpMethod.Put,
+            EntityActionOperation.UpsertIncremental => HttpMethod.Patch,
+            EntityActionOperation.Execute => ConvertRestMethodToHttpMethod(restMethod),
+            _ => throw new DataApiBuilderException(
+                                    message: "Operation not supported for the request.",
+                                    statusCode: HttpStatusCode.BadRequest,
+                                    subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported),
+        };
 
         /// <summary>
         /// Converts the provided RestMethod to the corresponding HttpMethod
         /// </summary>
         /// <param name="restMethod"></param>
         /// <returns>HttpMethod corresponding the RestMethod provided as input.</returns>
-        private static HttpMethod ConvertRestMethodToHttpMethod(SupportedHttpVerb? restMethod)
+        public static HttpMethod ConvertRestMethodToHttpMethod(SupportedHttpVerb? restMethod) => restMethod switch
         {
-            switch (restMethod)
-            {
-                case SupportedHttpVerb.Get:
-                    return HttpMethod.Get;
-                case SupportedHttpVerb.Put:
-                    return HttpMethod.Put;
-                case SupportedHttpVerb.Patch:
-                    return HttpMethod.Patch;
-                case SupportedHttpVerb.Delete:
-                    return HttpMethod.Delete;
-                case SupportedHttpVerb.Post:
-                default:
-                    return HttpMethod.Post;
-            }
-        }
+            SupportedHttpVerb.Get => HttpMethod.Get,
+            SupportedHttpVerb.Put => HttpMethod.Put,
+            SupportedHttpVerb.Patch => HttpMethod.Patch,
+            SupportedHttpVerb.Delete => HttpMethod.Delete,
+            _ => HttpMethod.Post,
+        };
 
         /// <summary>
         /// Helper function handles the loading of the runtime config.
@@ -585,15 +566,5 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
   }
 }";
         }
-
-        internal static HttpMethod ConvertSupportedHttpVerbToHttpMethod(SupportedHttpVerb requestType) => requestType switch
-        {
-            SupportedHttpVerb.Get => HttpMethod.Get,
-            SupportedHttpVerb.Put => HttpMethod.Put,
-            SupportedHttpVerb.Patch => HttpMethod.Patch,
-            SupportedHttpVerb.Delete => HttpMethod.Delete,
-            SupportedHttpVerb.Post => HttpMethod.Post,
-            _ => HttpMethod.Post
-        };
     }
 }

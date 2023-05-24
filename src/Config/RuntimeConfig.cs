@@ -237,6 +237,7 @@ namespace Azure.DataApiBuilder.Config
                 if (entity.GraphQL is null || entity.GraphQL is true)
                 {
                     // Use entity name since GraphQL type unavailable
+                    GraphQLSingularTypeToEntityNameMap.TryAdd(entityName, entityName);
                     logger?.LogInformation($"GraphQL type for {entityName} is {entityName}");
                 }
             }

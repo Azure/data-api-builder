@@ -333,7 +333,7 @@ namespace Cli.Tests
 
             // Create VerifySettings and add all arguments to the method as parameters
             VerifySettings verifySettings = new();
-            verifySettings.UseParametersHash(authenticationProvider, audience, issuer);
+            verifySettings.UseHashedParameters(authenticationProvider, audience, issuer);
             return ExecuteVerifyTest(options, verifySettings);
         }
 

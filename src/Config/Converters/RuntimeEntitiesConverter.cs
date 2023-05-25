@@ -12,11 +12,11 @@ class RuntimeEntitiesConverter : JsonConverter<RuntimeEntities>
     /// <inheritdoc/>
     public override RuntimeEntities? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        IReadOnlyDictionary<string, Entity> entities =
-            JsonSerializer.Deserialize<ReadOnlyDictionary<string, Entity>>(ref reader, options) ??
+        IDictionary<string, Entity> entities =
+            JsonSerializer.Deserialize<Dictionary<string, Entity>>(ref reader, options) ??
             throw new JsonException("Failed to read entities");
 
-        return new RuntimeEntities(entities);
+        return new RuntimeEntities(new ReadOnlyDictionary<string, Entity>(entities));
     }
 
     /// <inheritdoc/>

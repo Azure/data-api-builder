@@ -890,7 +890,7 @@ namespace Cli
         public static bool TryStartEngineWithOptions(StartOptions options, RuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             string? configToBeUsed = options.Config;
-            if (string.IsNullOrEmpty(configToBeUsed) && TryMergeConfigsIfAvailable(fileSystem, loader, out configToBeUsed))
+            if (string.IsNullOrEmpty(configToBeUsed) && ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, _logger, out configToBeUsed))
             {
                 _logger.LogInformation($"Using merged config file based on environment:{configToBeUsed}.");
             }

@@ -71,6 +71,11 @@ type Earth @model(name:""Earth"") {
     id : ID,
     name : String,
     type: String @authorize(roles: [""authenticated""])
+}
+
+type Sun @model(name:""Sun"") {
+    id : ID,
+    name : String
 }";
 
     private static string[] _planets = { "Earth", "Mars", "Jupiter", "Tatooine", "Endor", "Dagobah", "Hoth", "Bespin", "Spec%ial" };

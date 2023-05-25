@@ -205,7 +205,7 @@ public class RuntimeConfigLoader
     /// generate the config file name for.</param>
     /// <param name="considerOverrides">whether to look for overrides file or not.</param>
     /// <returns></returns>
-    private string GetFileName(string? environmentValue, bool considerOverrides)
+    public string GetFileName(string? environmentValue, bool considerOverrides)
     {
         string fileNameWithoutExtension = _fileSystem.Path.GetFileNameWithoutExtension(_baseConfigFileName);
         string fileExtension = _fileSystem.Path.GetExtension(_baseConfigFileName);

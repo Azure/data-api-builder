@@ -154,7 +154,7 @@ public class UtilsTests
     /// Validates permissions operations are valid for the provided source type.
     /// </summary>
     /// <param name="operations">CRUD + Execute + *</param>
-    /// <param name="sourceType">Table, StoredProcedure, View</param>
+    /// <param name="entitySourceType">Table, StoredProcedure, View</param>
     /// <param name="isSuccess">True/False</param>
     [DataTestMethod]
     [DataRow(new string[] { "*" }, EntitySourceType.StoredProcedure, true, DisplayName = "PASS: Stored-Procedure with wildcard CRUD operation.")]
@@ -169,10 +169,10 @@ public class UtilsTests
 
     public void TestStoredProcedurePermissions(
         string[] operations,
-        EntitySourceType sourceType,
+        EntitySourceType entitySourceType,
         bool isSuccess)
     {
-        Assert.AreEqual(isSuccess, VerifyOperations(operations, sourceType));
+        Assert.AreEqual(isSuccess, VerifyOperations(operations, entitySourceType));
     }
 
     /// <summary>
@@ -224,7 +224,7 @@ public class UtilsTests
     }
 
     /// <summary>
-    /// Test to verify that when DAB_ENVIRONMENT variable is set, also base config and 
+    /// Test to verify that when DAB_ENVIRONMENT variable is set, also base config and
     /// dab-config.{DAB_ENVIRONMENT}.json file is present, then when DAB engine is started, it will merge
     /// the two config and use the merged config to startup the engine.
     /// Here, baseConfig(dab-config.json) has no connection_string, while dab-config.Test.json has a defined connection string.
@@ -236,7 +236,7 @@ public class UtilsTests
     /// 3. Non-merging when a property in the environmentConfig file is null: {data-source.options} is null in the environment config,
     /// So it is added to the merged config as it is with no change.
     /// 4. Merging when a property is only present in the environmentConfig file: Publisher entity is present only in environment config,
-    /// So it is directly added to the merged config. 
+    /// So it is directly added to the merged config.
     /// 5. Properties of same name but different level do not conflict: source is both a entityName and a property inside book entity, both are
     /// treated differently.
     /// </summary>
@@ -255,7 +255,7 @@ public class UtilsTests
 
         try
         {
-            Assert.IsTrue(TryMergeConfigsIfAvailable(fileSystem, loader, out string mergedConfig), "Failed to merge config files");
+            Assert.IsTrue(Cli.ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, new StringLogger(), out string? mergedConfig), "Failed to merge config files");
             Assert.AreEqual(mergedConfig, "dab-config.Test.merged.json");
             Assert.IsTrue(fileSystem.File.Exists(mergedConfig));
             Assert.IsTrue(JToken.DeepEquals(JObject.Parse(MERGED_CONFIG), JObject.Parse(fileSystem.File.ReadAllText(mergedConfig))));
@@ -264,6 +264,61 @@ public class UtilsTests
         {
             RuntimeConfigLoader.CheckPrecedenceForConfigInEngine = old;
         }
+    }
+
+    /// <summary>
+    /// Test to verify that merged config file is only used for the below scenario
+    /// 1. Environment value is set.
+    /// 2. Both Base and envBased config file is present.
+    /// In all other cases, the TryMergeConfigsIfAvailable method should return false
+    /// and out param for the mergedConfigFile should be null.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow("", false, false, null, false, DisplayName = "If environment value is not set, merged config file is not generated.")]
+    [DataRow("", false, true, null, false, DisplayName = "If environment value is not set, merged config file is not generated.")]
+    [DataRow("", true, false, null, false, DisplayName = "If environment value is not set, merged config file is not generated.")]
+    [DataRow("", true, true, null, false, DisplayName = "If environment value is not set, merged config file is not generated.")]
+    [DataRow(null, false, false, null, false, DisplayName = "If environment variable is removed, merged config file is not generated.")]
+    [DataRow(null, false, true, null, false, DisplayName = "If environment variable is removed, merged config file is not generated.")]
+    [DataRow(null, true, false, null, false, DisplayName = "If environment variable is removed, merged config file is not generated.")]
+    [DataRow(null, true, true, null, false, DisplayName = "If environment variable is removed, merged config file is not generated.")]
+    [DataRow("Test", false, false, null, false, DisplayName = "Environment value set but base config not available, merged config file is not generated.")]
+    [DataRow("Test", false, true, null, false, DisplayName = "Environment value set but base config not available, merged config file is not generated.")]
+    [DataRow("Test", true, false, null, false, DisplayName = "Environment value set but env based config not available, merged config file is not generated.")]
+    [DataRow("Test", true, true, "dab-config.Test.merged.json", true, DisplayName = "Environment value set and both base and envConfig available, merged config file is generated.")]
+    public void TestMergeConfigAvailability(
+        string? environmentValue,
+        bool isBaseConfigPresent,
+        bool isEnvironmentBasedConfigPresent,
+        string? expectedMergedConfigFileName,
+        bool expectedIsMergedConfigAvailable)
+    {
+        MockFileSystem fileSystem = new();
+
+        // Setting up the test scenarios
+        Environment.SetEnvironmentVariable(RuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
+        string baseConfig = "dab-config.json";
+        string envBasedConfig = "dab-config.Test.json";
+
+        if (isBaseConfigPresent)
+        {
+            fileSystem.AddFile(baseConfig, new("{}"));
+        }
+
+        if (isEnvironmentBasedConfigPresent)
+        {
+            fileSystem.AddFile(envBasedConfig, new("{}"));
+        }
+
+        RuntimeConfigLoader loader = new(fileSystem);
+
+        Assert.AreEqual(
+            expectedIsMergedConfigAvailable,
+            ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, new StringLogger(), out string? mergedConfigFile),
+            "Availability of merge config should match");
+        Assert.AreEqual(expectedMergedConfigFileName, mergedConfigFile, "Merge config file name should match expected");
+
+        Environment.SetEnvironmentVariable(RuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, null);
     }
 }
 

@@ -30,6 +30,5 @@ public class RuntimeConfigLoaderTests
         bool loaded = loader.TryLoadConfig("dab-config.json", out RuntimeConfig _);
 
         Assert.IsTrue(loaded);
-
     }
 }

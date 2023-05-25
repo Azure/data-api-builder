@@ -10,8 +10,7 @@
       schema: {
         ValueKind: String
       }
-    },
-    DatabaseTypeNotSupportedMessage: The provided database-type value: CosmosDB_NoSQL is currently not supported. Please check the configuration file.
+    }
   },
   Runtime: {
     Rest: {

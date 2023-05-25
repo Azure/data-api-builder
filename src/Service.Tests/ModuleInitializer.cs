@@ -16,6 +16,7 @@ static class ModuleInitializer
     {
         VerifierSettings.IgnoreMember<DataSource>(dataSource => dataSource.ConnectionString);
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.Schema);
+        VerifierSettings.IgnoreMember<DataSource>(dataSource => dataSource.DatabaseTypeNotSupportedMessage);
         VerifyBase.DerivePathInfo(
             (sourceFile, projectDirectory, type, method) => new(
                 directory: Path.Combine(projectDirectory, "Snapshots"),

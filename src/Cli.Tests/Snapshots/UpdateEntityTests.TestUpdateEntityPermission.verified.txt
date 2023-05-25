@@ -1,7 +1,6 @@
 ﻿{
   DataSource: {
-    DatabaseType: MSSQL,
-    DatabaseTypeNotSupportedMessage: The provided database-type value: MSSQL is currently not supported. Please check the configuration file.
+    DatabaseType: MSSQL
   },
   Runtime: {
     Rest: {

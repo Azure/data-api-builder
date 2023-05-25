@@ -1,7 +1,6 @@
 ﻿{
   DataSource: {
-    DatabaseType: CosmosDB_PostgreSQL,
-    DatabaseTypeNotSupportedMessage: The provided database-type value: CosmosDB_PostgreSQL is currently not supported. Please check the configuration file.
+    DatabaseType: CosmosDB_PostgreSQL
   },
   Runtime: {
     Rest: {

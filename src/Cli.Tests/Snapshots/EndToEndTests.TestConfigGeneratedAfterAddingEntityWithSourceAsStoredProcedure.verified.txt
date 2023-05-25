@@ -5,8 +5,7 @@
       set-session-context: {
         ValueKind: True
       }
-    },
-    DatabaseTypeNotSupportedMessage: The provided database-type value: MSSQL is currently not supported. Please check the configuration file.
+    }
   },
   Runtime: {
     Rest: {

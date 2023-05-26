@@ -9,6 +9,7 @@ using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
@@ -71,9 +72,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             ItemResponse<JObject>? response = resolver.OperationType switch
             {
-                Config.EntityActionOperation.UpdateGraphQL => await HandleUpdateAsync(queryArgs, container),
-                Config.EntityActionOperation.Create => await HandleCreateAsync(queryArgs, container),
-                Config.EntityActionOperation.Delete => await HandleDeleteAsync(queryArgs, container),
+                EntityActionOperation.UpdateGraphQL => await HandleUpdateAsync(queryArgs, container),
+                EntityActionOperation.Create => await HandleCreateAsync(queryArgs, container),
+                EntityActionOperation.Delete => await HandleDeleteAsync(queryArgs, container),
                 _ => throw new NotSupportedException($"unsupported operation type: {resolver.OperationType}")
             };
 
@@ -85,7 +86,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             IMiddlewareContext context,
             IDictionary<string, object?> parameters,
             string entityName,
-            Config.EntityActionOperation mutationOperation)
+            EntityActionOperation mutationOperation)
         {
             string role = string.Empty;
             if (context.ContextData.TryGetValue(key: AuthorizationResolver.CLIENT_ROLE_HEADER, out object? value) && value is StringValues stringVals)
@@ -102,7 +103,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             List<string> inputArgumentKeys;
-            if (mutationOperation != Config.EntityActionOperation.Delete)
+            if (mutationOperation != EntityActionOperation.Delete)
             {
                 inputArgumentKeys = BaseSqlQueryStructure.GetSubArgumentNamesFromGQLMutArguments(MutationBuilder.INPUT_ARGUMENT_NAME, parameters);
             }
@@ -113,11 +114,11 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             bool isAuthorized = mutationOperation switch
             {
-                Config.EntityActionOperation.UpdateGraphQL =>
-                    _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: role, operation: Config.EntityActionOperation.Update, inputArgumentKeys),
-                Config.EntityActionOperation.Create =>
+                EntityActionOperation.UpdateGraphQL =>
+                    _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: role, operation: EntityActionOperation.Update, inputArgumentKeys),
+                EntityActionOperation.Create =>
                     _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: role, operation: mutationOperation, inputArgumentKeys),
-                Config.EntityActionOperation.Delete => true,// Field level authorization is not supported for delete mutations. A requestor must be authorized
+                EntityActionOperation.Delete => true,// Field level authorization is not supported for delete mutations. A requestor must be authorized
                                                             // to perform the delete operation on the entity to reach this point.
                 _ => throw new DataApiBuilderException(
                                         message: "Invalid operation for GraphQL Mutation, must be Create, UpdateGraphQL, or Delete",
@@ -317,7 +318,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string containerName = _metadataProvider.GetDatabaseObjectName(entityName);
 
             string graphqlMutationName = context.Selection.Field.Name.Value;
-            Config.EntityActionOperation mutationOperation =
+            EntityActionOperation mutationOperation =
                 MutationBuilder.DetermineMutationOperationTypeBasedOnInputType(graphqlMutationName);
 
             CosmosOperationMetadata mutation = new(databaseName, containerName, mutationOperation);

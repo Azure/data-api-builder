@@ -1,12 +1,21 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 
-namespace Azure.DataApiBuilder.Config;
+namespace Azure.DataApiBuilder.Config.ObjectModel;
 
 public record DataSource(DatabaseType DatabaseType, string ConnectionString, Dictionary<string, JsonElement> Options)
 {
-    public TOptionType? GetTypedOptions<TOptionType>() where TOptionType : IDataSourceOptions
+    /// <summary>
+    /// Converts the <c>Options</c> dictionary into a typed options object.
+    /// </summary>
+    /// <typeparam name="TOptionType">The strongly typed object for Options.</typeparam>
+    /// <returns>The strongly typed representation of Options.</returns>
+    /// <exception cref="NotSupportedException">Thrown when the provided <c>TOptionType</c> is not supported for parsing.</exception>
+    public TOptionType GetTypedOptions<TOptionType>() where TOptionType : IDataSourceOptions
     {
         HyphenatedNamingPolicy namingPolicy = new();
 
@@ -26,7 +35,7 @@ public record DataSource(DatabaseType DatabaseType, string ConnectionString, Dic
                 SetSessionContext: ReadBoolOption(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext))));
         }
 
-        throw new NotImplementedException();
+        throw new NotSupportedException($"The type {typeof(TOptionType).FullName} is not a supported strongly typed options object");
     }
 
     private string? ReadStringOption(string option) => Options.ContainsKey(option) ? Options[option].GetString() : null;

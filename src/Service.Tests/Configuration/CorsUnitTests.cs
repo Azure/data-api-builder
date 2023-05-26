@@ -6,6 +6,7 @@ using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -50,7 +51,7 @@ public class CorsUnitTests
         RuntimeConfigLoader loader = new(fileSystem);
         Assert.IsTrue(loader.TryLoadConfig(RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, out RuntimeConfig runtimeConfig), "Load runtime config.");
 
-        Config.HostOptions hostGlobalSettings = runtimeConfig.Runtime.Host;
+        Config.ObjectModel.HostOptions hostGlobalSettings = runtimeConfig.Runtime.Host;
         return Verify(hostGlobalSettings);
     }
 

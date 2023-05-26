@@ -3,6 +3,7 @@
 
 using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Cli.Commands;
 using HotChocolate.Utilities.Introspection;
 using Microsoft.Extensions.Logging;

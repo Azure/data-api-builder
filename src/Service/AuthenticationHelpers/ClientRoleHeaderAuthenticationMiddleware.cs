@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Models;
@@ -13,7 +13,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using AuthenticationOptions = Azure.DataApiBuilder.Config.AuthenticationOptions;
+using AuthenticationOptions = Azure.DataApiBuilder.Config.ObjectModel.AuthenticationOptions;
 
 namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
 {

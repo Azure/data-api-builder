@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
 using Microsoft.OData.Edm;
@@ -16,9 +16,9 @@ namespace Azure.DataApiBuilder.Service.Parsers
     /// </summary>
     public class ODataASTVisitor : QueryNodeVisitor<string>
     {
-        private BaseSqlQueryStructure _struct;
-        private ISqlMetadataProvider _metadataProvider;
-        private EntityActionOperation _operation;
+        private readonly BaseSqlQueryStructure _struct;
+        private readonly ISqlMetadataProvider _metadataProvider;
+        private readonly EntityActionOperation _operation;
 
         public ODataASTVisitor(BaseSqlQueryStructure structure, ISqlMetadataProvider metadataProvider, EntityActionOperation operation = EntityActionOperation.None)
         {

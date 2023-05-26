@@ -3,8 +3,8 @@
 
 using System;
 using System.Collections.Generic;
-using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Services;
 using Microsoft.OData.Edm;
 

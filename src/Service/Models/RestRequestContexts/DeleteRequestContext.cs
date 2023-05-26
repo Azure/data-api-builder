@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 
 namespace Azure.DataApiBuilder.Service.Models
 {
@@ -21,7 +22,7 @@ namespace Azure.DataApiBuilder.Service.Models
             PrimaryKeyValuePairs = new();
             FieldValuePairsInBody = new();
             IsMany = isList;
-            OperationType = Config.EntityActionOperation.Delete;
+            OperationType = EntityActionOperation.Delete;
         }
     }
 }

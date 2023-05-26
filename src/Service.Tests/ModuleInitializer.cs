@@ -3,7 +3,7 @@
 
 using System.IO;
 using System.Runtime.CompilerServices;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using VerifyMSTest;
 using VerifyTests;
 

@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Cli.Commands;
 
 namespace Cli.Tests

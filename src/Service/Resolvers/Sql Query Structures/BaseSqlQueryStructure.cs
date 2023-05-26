@@ -8,8 +8,8 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Parsers;
@@ -49,7 +49,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// DbPolicyPredicates is a string that represents the filter portion of our query
         /// in the WHERE Clause added by virtue of the database policy.
         /// </summary>
-        public Dictionary<Config.EntityActionOperation, string?> DbPolicyPredicatesForOperations { get; set; } = new();
+        public Dictionary<EntityActionOperation, string?> DbPolicyPredicatesForOperations { get; set; } = new();
 
         /// <summary>
         /// Collection of all the fields referenced in the database policy for create action.
@@ -67,7 +67,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string entityName = "",
             IncrementingInteger? counter = null,
             HttpContext? httpContext = null,
-            Config.EntityActionOperation operationType = Config.EntityActionOperation.None
+            EntityActionOperation operationType = EntityActionOperation.None
             )
             : base(metadataProvider, authorizationResolver, gQLFilterParser, predicates, entityName, counter)
         {
@@ -510,7 +510,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         /// <param name="operation">Operation for which the database policy is to be determined.</param>
         /// <returns>Database policy for the operation.</returns>
-        public string? GetDbPolicyForOperation(Config.EntityActionOperation operation)
+        public string? GetDbPolicyForOperation(EntityActionOperation operation)
         {
             if (!DbPolicyPredicatesForOperations.TryGetValue(operation, out string? policy))
             {

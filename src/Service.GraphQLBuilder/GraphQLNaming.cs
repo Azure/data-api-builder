@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Text.RegularExpressions;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
 

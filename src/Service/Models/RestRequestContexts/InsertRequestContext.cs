@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 
 namespace Azure.DataApiBuilder.Service.Models
 {
@@ -19,7 +20,7 @@ namespace Azure.DataApiBuilder.Service.Models
             string entityName,
             DatabaseObject dbo,
             JsonElement insertPayloadRoot,
-            Config.EntityActionOperation operationType)
+            EntityActionOperation operationType)
             : base(entityName, dbo)
         {
             FieldsToBeReturned = new();

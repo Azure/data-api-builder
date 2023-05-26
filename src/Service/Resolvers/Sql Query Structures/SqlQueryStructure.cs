@@ -7,6 +7,7 @@ using System.Data;
 using System.Linq;
 using System.Net;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
@@ -325,7 +326,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             HttpContext httpContext = GraphQLFilterParser.GetHttpContextFromMiddlewareContext(ctx);
             // Process Authorization Policy of the entity being processed.
-            AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(Config.EntityActionOperation.Read, queryStructure: this, httpContext, authorizationResolver, sqlMetadataProvider);
+            AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(EntityActionOperation.Read, queryStructure: this, httpContext, authorizationResolver, sqlMetadataProvider);
 
             if (outputType.IsNonNullType())
             {
@@ -428,7 +429,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                   entityName,
                   counter,
                   httpContext,
-                  Config.EntityActionOperation.Read)
+                  EntityActionOperation.Read)
         {
             JoinQueries = new();
             PaginationMetadata = new(this);

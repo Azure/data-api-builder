@@ -1,10 +1,13 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.Converters;
 using Humanizer;
 
-namespace Azure.DataApiBuilder.Config;
+namespace Azure.DataApiBuilder.Config.ObjectModel;
 
 /// <summary>
 /// Represents the collection of <see cref="Entity"/> available from the RuntimeConfig.

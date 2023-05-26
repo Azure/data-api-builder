@@ -7,8 +7,8 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Net;
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
@@ -159,7 +159,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     bool isStoredProcedure = entity.Source.Type is EntitySourceType.StoredProcedure;
                     foreach (string column in sourceDefinition.Columns.Keys)
                     {
-                        Config.EntityActionOperation operation = isStoredProcedure ? Config.EntityActionOperation.Execute : Config.EntityActionOperation.Read;
+                        EntityActionOperation operation = isStoredProcedure ? EntityActionOperation.Execute : EntityActionOperation.Read;
                         IEnumerable<string> roles = _authorizationResolver.GetRolesForField(entityName, field: column, operation: operation);
                         if (!rolesAllowedForFields.TryAdd(key: column, value: roles))
                         {

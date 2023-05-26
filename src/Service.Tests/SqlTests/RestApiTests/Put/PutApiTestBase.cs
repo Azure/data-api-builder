@@ -4,7 +4,7 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Services;
 using Microsoft.AspNetCore.Http;
@@ -203,7 +203,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     queryString: null,
                     entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                     sqlQuery: GetQuery("PutOneUpdateWithDatabasePolicy"),
-                    operationType: Config.EntityActionOperation.Upsert,
+                    operationType: EntityActionOperation.Upsert,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK,
                     clientRoleHeader: "database_policy_tester"
@@ -881,7 +881,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     primaryKeyRoute: "categoryid/0/pieceid/1",
                     queryString: null,
                     entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
-                    operationType: Config.EntityActionOperation.Upsert,
+                    operationType: EntityActionOperation.Upsert,
                     requestBody: requestBody,
                     sqlQuery: string.Empty,
                     exceptionExpected: true,
@@ -905,7 +905,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     primaryKeyRoute: "categoryid/0/pieceid/6",
                     queryString: null,
                     entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
-                    operationType: Config.EntityActionOperation.Upsert,
+                    operationType: EntityActionOperation.Upsert,
                     requestBody: requestBody,
                     sqlQuery: string.Empty,
                     exceptionExpected: true,
@@ -932,7 +932,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 queryString: string.Empty,
                 entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: string.Empty,
-                operationType: Config.EntityActionOperation.Upsert,
+                operationType: EntityActionOperation.Upsert,
                 exceptionExpected: true,
                 requestBody: requestBody,
                 clientRoleHeader: "database_policy_tester",

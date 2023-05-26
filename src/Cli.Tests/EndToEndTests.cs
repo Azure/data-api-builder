@@ -4,6 +4,7 @@
 using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
 using System.Reflection;
+using Azure.DataApiBuilder.Config.ObjectModel;
 
 namespace Cli.Tests;
 

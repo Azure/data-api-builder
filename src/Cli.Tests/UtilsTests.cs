@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.IO.Abstractions.TestingHelpers;
+using Azure.DataApiBuilder.Config.ObjectModel;
 
 namespace Cli.Tests;
 

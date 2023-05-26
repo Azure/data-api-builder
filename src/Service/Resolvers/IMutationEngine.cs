@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Models;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Mvc;
@@ -50,6 +51,6 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             IMiddlewareContext context,
             IDictionary<string, object?> parameters,
             string entityName,
-            Config.EntityActionOperation mutationOperation);
+            EntityActionOperation mutationOperation);
     }
 }

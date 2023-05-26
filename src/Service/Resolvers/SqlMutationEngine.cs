@@ -13,8 +13,8 @@ using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using System.Transactions;
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
@@ -528,7 +528,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private async Task<DbResultSetRow?>
             PerformMutationOperation(
                 string entityName,
-                Config.EntityActionOperation operationType,
+                EntityActionOperation operationType,
                 IDictionary<string, object?> parameters,
                 IMiddlewareContext? context = null)
         {
@@ -536,8 +536,8 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             Dictionary<string, DbConnectionParam> queryParameters;
             switch (operationType)
             {
-                case Config.EntityActionOperation.Insert:
-                case Config.EntityActionOperation.Create:
+                case EntityActionOperation.Insert:
+                case EntityActionOperation.Create:
                     SqlInsertStructure insertQueryStruct = context is null
                         ? new(
                             entityName,

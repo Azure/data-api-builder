@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Data;
+using Azure.DataApiBuilder.Config.ObjectModel;
 
 namespace Azure.DataApiBuilder.Config.DatabasePrimitives;
 

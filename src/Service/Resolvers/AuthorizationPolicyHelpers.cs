@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Parsers;
@@ -31,7 +32,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="authorizationResolver">Used to lookup authorization policies.</param>
         /// <param name="sqlMetadataProvider">Provides helper method to process ODataFilterClause.</param>
         public static void ProcessAuthorizationPolicies(
-            Config.EntityActionOperation operationType,
+            EntityActionOperation operationType,
             BaseSqlQueryStructure queryStructure,
             HttpContext context,
             IAuthorizationResolver authorizationResolver,
@@ -46,9 +47,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             }
 
             string clientRoleHeader = roleHeaderValue.ToString();
-            List<Config.EntityActionOperation> elementalOperations = ResolveCompoundOperationToElementalOperations(operationType);
+            List<EntityActionOperation> elementalOperations = ResolveCompoundOperationToElementalOperations(operationType);
 
-            foreach (Config.EntityActionOperation elementalOperation in elementalOperations)
+            foreach (EntityActionOperation elementalOperation in elementalOperations)
             {
                 string dbQueryPolicy = authorizationResolver.ProcessDBPolicy(
                 queryStructure.EntityName,
@@ -102,14 +103,14 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         /// <param name="operation">Operation to be resolved.</param>
         /// <returns>Constituent operations for the operation.</returns>
-        private static List<Config.EntityActionOperation> ResolveCompoundOperationToElementalOperations(Config.EntityActionOperation operation)
+        private static List<EntityActionOperation> ResolveCompoundOperationToElementalOperations(EntityActionOperation operation)
         {
             return operation switch
             {
-                Config.EntityActionOperation.Upsert or
-                Config.EntityActionOperation.UpsertIncremental =>
-                    new List<Config.EntityActionOperation> { Config.EntityActionOperation.Update, Config.EntityActionOperation.Create },
-                _ => new List<Config.EntityActionOperation> { operation },
+                EntityActionOperation.Upsert or
+                EntityActionOperation.UpsertIncremental =>
+                    new List<EntityActionOperation> { EntityActionOperation.Update, EntityActionOperation.Create },
+                _ => new List<EntityActionOperation> { operation },
             };
         }
     }

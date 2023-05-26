@@ -1,10 +1,7 @@
-namespace Azure.DataApiBuilder.Config;
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 
-public enum EasyAuthType
-{
-    StaticWebApps,
-    AppService
-}
+namespace Azure.DataApiBuilder.Config.ObjectModel;
 
 public record AuthenticationOptions(string Provider, JwtOptions? Jwt)
 {
@@ -22,7 +19,7 @@ public record AuthenticationOptions(string Provider, JwtOptions? Jwt)
 
     /// <summary>
     /// Returns whether the configured Provider value matches
-    /// the AuthenticateDevModeRquests EasyAuth type.
+    /// the AuthenticateDevModeRequests EasyAuth type.
     /// </summary>
     /// <returns>True when development mode should authenticate all requests.</returns>
     public bool IsAuthenticationSimulatorEnabled() => Provider.Equals(SIMULATOR_AUTHENTICATION, StringComparison.OrdinalIgnoreCase);

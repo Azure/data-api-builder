@@ -8,8 +8,8 @@ using System.IO.Abstractions;
 using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.AuthenticationHelpers;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -410,7 +410,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         {
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
-                HashSet<Config.EntityActionOperation> totalSupportedOperationsFromAllRoles = new();
+                HashSet<EntityActionOperation> totalSupportedOperationsFromAllRoles = new();
                 foreach (EntityPermission permissionSetting in entity.Permissions)
                 {
                     string roleName = permissionSetting.Role;
@@ -445,7 +445,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                 // If that's the case with both of them, we specify 'included' in error.
                                 string misconfiguredColumnSet = action.Fields.Exclude.Contains(AuthorizationResolver.WILDCARD)
                                     && action.Fields.Exclude.Count > 1 ? "excluded" : "included";
-                                string actionName = actionOp is Config.EntityActionOperation.All ? "*" : actionOp.ToString();
+                                string actionName = actionOp is EntityActionOperation.All ? "*" : actionOp.ToString();
 
                                 throw new DataApiBuilderException(
                                         message: $"No other field can be present with wildcard in the {misconfiguredColumnSet} set for:" +
@@ -837,7 +837,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <param name="entity">Used to identify entity's representative object type.</param>
         /// <param name="entityName">Used to supplement error messages.</param>
         /// <returns>Boolean value indicating whether the action is valid or not.</returns>
-        public static bool IsValidPermissionAction(Config.EntityActionOperation action, Entity entity, string entityName)
+        public static bool IsValidPermissionAction(EntityActionOperation action, Entity entity, string entityName)
         {
             if (entity.Source.Type is EntitySourceType.StoredProcedure)
             {

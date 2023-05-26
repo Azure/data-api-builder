@@ -6,11 +6,11 @@ using System.Collections.Generic;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using AuthenticationOptions = Azure.DataApiBuilder.Config.AuthenticationOptions;
+using AuthenticationOptions = Azure.DataApiBuilder.Config.ObjectModel.AuthenticationOptions;
 
 namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
 {

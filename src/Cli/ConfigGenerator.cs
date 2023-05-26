@@ -662,7 +662,7 @@ namespace Cli
         {
             Dictionary<EntityActionOperation, EntityAction> updatedOperations = new();
 
-            EntityActionPolicy existingPolicy = new(null, null);
+            EntityActionPolicy existingPolicy = new();
             EntityActionFields? existingFields = null;
 
             // Adding the new operations in the updatedOperationList

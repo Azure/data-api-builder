@@ -45,13 +45,13 @@ namespace Cli
             {
                 return operations.Split(",")
                     .Select(op => EnumExtensions.Deserialize<EntityActionOperation>(op))
-                    .Select(op => new EntityAction(op, null, new EntityActionPolicy(null, null)))
+                    .Select(op => new EntityAction(op, null, new EntityActionPolicy()))
                     .ToArray();
             }
 
             if (operations is WILDCARD)
             {
-                operation_items = new[] { new EntityAction(EntityActionOperation.All, fields, policy ?? new(null, null)) };
+                operation_items = new[] { new EntityAction(EntityActionOperation.All, fields, policy ?? new()) };
             }
             else
             {
@@ -63,7 +63,7 @@ namespace Cli
                     {
                         if (EnumExtensions.TryDeserialize(operation_element, out EntityActionOperation? op))
                         {
-                            EntityAction operation_item = new((EntityActionOperation)op, fields, policy ?? new(null, null));
+                            EntityAction operation_item = new((EntityActionOperation)op, fields, policy ?? new());
                             operation_list.Add(operation_item);
                         }
                     }
@@ -74,7 +74,7 @@ namespace Cli
                 {
                     return operation_elements
                         .Select(op => EnumExtensions.Deserialize<EntityActionOperation>(op))
-                        .Select(op => new EntityAction(op, null, new EntityActionPolicy(null, null)))
+                        .Select(op => new EntityAction(op, null, new EntityActionPolicy()))
                         .ToArray();
                 }
             }
@@ -103,7 +103,7 @@ namespace Cli
                     // Expand wildcard to all valid operations (except execute)
                     foreach (EntityActionOperation validOp in resolvedOperations)
                     {
-                        result.Add(validOp, new EntityAction(validOp, null, new EntityActionPolicy(null, null)));
+                        result.Add(validOp, new EntityAction(validOp, null, new EntityActionPolicy()));
                     }
                 }
                 else

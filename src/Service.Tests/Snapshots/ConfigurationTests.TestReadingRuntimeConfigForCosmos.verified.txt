@@ -1,0 +1,425 @@
+﻿{
+  DataSource: {
+    Options: {
+      container: {
+        ValueKind: String
+      },
+      database: {
+        ValueKind: String
+      },
+      schema: {
+        ValueKind: String
+      }
+    }
+  },
+  Runtime: {
+    Rest: {
+      Enabled: true,
+      Path: /api
+    },
+    GraphQL: {
+      Enabled: true,
+      Path: /graphql,
+      AllowIntrospection: true
+    },
+    Host: {
+      Cors: {
+        Origins: [
+          http://localhost:5000
+        ],
+        AllowCredentials: false
+      },
+      Authentication: {
+        Provider: StaticWebApps,
+        Jwt: {}
+      }
+    }
+  },
+  Entities: [
+    {
+      Planet: {
+        Source: {
+          Object: graphqldb.planet
+        },
+        GraphQL: {
+          Singular: Planet,
+          Plural: Planets,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: false
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Read,
+                Fields: {
+                  Include: [
+                    *
+                  ]
+                },
+                Policy: {}
+              },
+              {
+                Action: Create,
+                Policy: {}
+              },
+              {
+                Action: Update,
+                Policy: {}
+              },
+              {
+                Action: Delete,
+                Policy: {}
+              }
+            ]
+          },
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: Create,
+                Policy: {}
+              },
+              {
+                Action: Read,
+                Policy: {}
+              },
+              {
+                Action: Update,
+                Policy: {}
+              },
+              {
+                Action: Delete,
+                Policy: {}
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      Character: {
+        Source: {
+          Object: graphqldb.character
+        },
+        GraphQL: {
+          Singular: Character,
+          Plural: Characters,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: false
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Create,
+                Policy: {}
+              },
+              {
+                Action: Read,
+                Policy: {}
+              },
+              {
+                Action: Update,
+                Policy: {}
+              },
+              {
+                Action: Delete,
+                Policy: {}
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      StarAlias: {
+        Source: {
+          Object: graphqldb.star
+        },
+        GraphQL: {
+          Singular: Star,
+          Plural: Stars,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: false
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Create,
+                Policy: {}
+              },
+              {
+                Action: Read,
+                Policy: {}
+              },
+              {
+                Action: Update,
+                Policy: {}
+              },
+              {
+                Action: Delete,
+                Policy: {}
+              }
+            ]
+          },
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: Create,
+                Policy: {}
+              },
+              {
+                Action: Read,
+                Policy: {}
+              },
+              {
+                Action: Update,
+                Policy: {}
+              },
+              {
+                Action: Delete,
+                Policy: {}
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      TagAlias: {
+        Source: {
+          Object: graphqldb.tag
+        },
+        GraphQL: {
+          Singular: Tag,
+          Plural: Tags,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: false
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Create,
+                Policy: {}
+              },
+              {
+                Action: Read,
+                Policy: {}
+              },
+              {
+                Action: Update,
+                Policy: {}
+              },
+              {
+                Action: Delete,
+                Policy: {}
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      Moon: {
+        Source: {
+          Object: graphqldb.moon
+        },
+        GraphQL: {
+          Singular: Moon,
+          Plural: Moons,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: false
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Create,
+                Policy: {}
+              },
+              {
+                Action: Read,
+                Policy: {}
+              },
+              {
+                Action: Update,
+                Policy: {}
+              },
+              {
+                Action: Delete,
+                Policy: {}
+              }
+            ]
+          },
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: Create,
+                Policy: {}
+              },
+              {
+                Action: Read,
+                Policy: {}
+              },
+              {
+                Action: Update,
+                Policy: {}
+              },
+              {
+                Action: Delete,
+                Policy: {}
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      Earth: {
+        Source: {
+          Object: graphqldb.earth
+        },
+        GraphQL: {
+          Singular: Earth,
+          Plural: Earths,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: false
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Update,
+                Fields: {
+                  Exclude: [
+                    *
+                  ]
+                },
+                Policy: {}
+              },
+              {
+                Action: Read,
+                Fields: {
+                  Exclude: [
+                    name
+                  ],
+                  Include: [
+                    id,
+                    type
+                  ]
+                },
+                Policy: {}
+              },
+              {
+                Action: Create,
+                Fields: {
+                  Exclude: [
+                    name
+                  ],
+                  Include: [
+                    id
+                  ]
+                },
+                Policy: {}
+              },
+              {
+                Action: Delete,
+                Policy: {}
+              }
+            ]
+          },
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: Create,
+                Policy: {}
+              },
+              {
+                Action: Read,
+                Policy: {}
+              },
+              {
+                Action: Update,
+                Policy: {}
+              },
+              {
+                Action: Delete,
+                Policy: {}
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      Sun: {
+        Source: {
+          Object: graphqldb.sun
+        },
+        GraphQL: {
+          Singular: Sun,
+          Plural: Suns,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: false
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Read,
+                Fields: {
+                  Exclude: [
+                    name
+                  ],
+                  Include: [
+                    *
+                  ]
+                },
+                Policy: {}
+              },
+              {
+                Action: Create,
+                Policy: {}
+              },
+              {
+                Action: Update,
+                Policy: {}
+              },
+              {
+                Action: Delete,
+                Policy: {}
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

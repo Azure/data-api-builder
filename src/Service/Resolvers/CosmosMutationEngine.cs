@@ -119,7 +119,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 EntityActionOperation.Create =>
                     _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: role, operation: mutationOperation, inputArgumentKeys),
                 EntityActionOperation.Delete => true,// Field level authorization is not supported for delete mutations. A requestor must be authorized
-                                                            // to perform the delete operation on the entity to reach this point.
+                                                     // to perform the delete operation on the entity to reach this point.
                 _ => throw new DataApiBuilderException(
                                         message: "Invalid operation for GraphQL Mutation, must be Create, UpdateGraphQL, or Delete",
                                         statusCode: HttpStatusCode.BadRequest,

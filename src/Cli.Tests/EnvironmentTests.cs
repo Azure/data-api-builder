@@ -20,7 +20,7 @@ public class EnvironmentTests
         string jsonWithEnvVariable = @"{""envValue"": ""@env('DAB_TEST_ENVIRONMENT')""}";
 
         // No environment File, No environment variable set in the system
-        Assert.AreEqual(null, Environment.GetEnvironmentVariable(envVariableName));
+        Assert.IsNull(Environment.GetEnvironmentVariable(envVariableName));
 
         // Configuring environment variable in the system
         Environment.SetEnvironmentVariable(envVariableName, "TEST");

@@ -257,17 +257,14 @@ namespace Azure.DataApiBuilder.Service.Configurations
         {
             // Stores the unique rest paths configured for different entities present in the config.
             HashSet<string> restPathsForEntities = new();
-            bool isRestEnabledGlobally = runtimeConfig.RestGlobalSettings.Enabled;
 
-            foreach (string entityName in runtimeConfig.Entities.Keys)
+            foreach (KeyValuePair<string, Entity> Entity in runtimeConfig.Entities)
             {
-                Entity entity = runtimeConfig.Entities[entityName];
+                string entityName = Entity.Key;
+                Entity entity = Entity.Value;
 
                 // If no custom rest path is defined for the entity, we default it to the entityName.
                 string pathForEntity = entityName;
-
-                // We assume that the by default the rest endpoint is enabled for the entity.
-                bool isRestEnabledForEntity = true;
                 if (entity.Rest is not null)
                 {
                     JsonElement restJsonElement = JsonSerializer.SerializeToElement(entity.Rest);
@@ -287,11 +284,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             ValidateRestMethodsForEntity(entityName, methodsElement, entity);
                         }
                     }
-                    else if (restJsonElement.ValueKind is JsonValueKind.False)
-                    {
-                        isRestEnabledForEntity = false;
-                    }
-                    else if (restJsonElement.ValueKind is not JsonValueKind.True)
+                    else if (restJsonElement.ValueKind is not JsonValueKind.True && restJsonElement.ValueKind is not JsonValueKind.False)
                     {
                         throw new DataApiBuilderException(
                         message: $"The 'rest' property for entity: {entityName} can only be a boolean value or a json object.",
@@ -301,10 +294,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     }
                 }
 
-                // We perform the validations for unique rest paths for entities in the config only when:
-                // 1. The rest endpoint is enabled globally, and
-                // 2. The rest endpoint is enabled for the entity.
-                if (isRestEnabledGlobally && isRestEnabledForEntity && !restPathsForEntities.Add(pathForEntity))
+                if (!restPathsForEntities.Add(pathForEntity))
                 {
                     // Presence of multiple entities having the same rest path configured causes conflict.
                     throw new DataApiBuilderException(

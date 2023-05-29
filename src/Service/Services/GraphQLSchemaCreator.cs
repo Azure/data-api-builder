@@ -41,6 +41,7 @@ namespace Azure.DataApiBuilder.Service.Services
         private readonly ISqlMetadataProvider _sqlMetadataProvider;
         private readonly DatabaseType _databaseType;
         private readonly Dictionary<string, Entity> _entities;
+        private readonly GraphQLGlobalSettings _graphQLGlobalSettings;
         private readonly IAuthorizationResolver _authorizationResolver;
 
         /// <summary>
@@ -62,6 +63,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
             _databaseType = runtimeConfig.DatabaseType;
             _entities = runtimeConfig.Entities;
+            _graphQLGlobalSettings = runtimeConfig.GraphQLGlobalSettings;
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
             _sqlMetadataProvider = sqlMetadataProvider;
@@ -156,6 +158,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     Dictionary<string, IEnumerable<string>> rolesAllowedForFields = new();
                     SourceDefinition sourceDefinition = _sqlMetadataProvider.GetSourceDefinition(entityName);
                     bool isStoredProcedure = entity.ObjectType is SourceType.StoredProcedure;
+                    bool forceNamingStyle = _graphQLGlobalSettings.ForceNamingStyle;
                     foreach (string column in sourceDefinition.Columns.Keys)
                     {
                         Config.Operation operation = isStoredProcedure ? Config.Operation.Execute : Config.Operation.Read;
@@ -180,7 +183,8 @@ namespace Azure.DataApiBuilder.Service.Services
                             entity,
                             entities,
                             rolesAllowedForEntity,
-                            rolesAllowedForFields
+                            rolesAllowedForFields,
+                            forceNamingStyle
                         );
 
                         if (databaseObject.SourceType is not SourceType.StoredProcedure)

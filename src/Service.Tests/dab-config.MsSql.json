@@ -1680,6 +1680,27 @@
       "rest": true,
       "graphql": true
     },
+    "Movies": {
+      "source": "movies",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "*"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "*"
+          ]
+        }
+      ],
+      "rest": true,
+      "graphql": {
+        "force-naming-style": true
+      }
+    },
     "PublisherNF": {
       "source": "publishers",
       "permissions": [

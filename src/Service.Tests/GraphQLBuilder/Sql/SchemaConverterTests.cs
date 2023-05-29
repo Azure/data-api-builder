@@ -31,11 +31,15 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         const string REFD_COLNAME = "fk_col";
 
         [DataTestMethod]
-        [DataRow("test", "test")]
-        [DataRow("Test", "Test")]
-        [DataRow("T_est", "T_est")]
-        [DataRow("Test1", "Test1")]
-        public void EntityNameBecomesObjectName(string entityName, string expected)
+        [DataRow("test", false, "test")]
+        [DataRow("Test", false, "Test")]
+        [DataRow("T_est", false, "T_est")]
+        [DataRow("Test1", false, "Test1")]
+        [DataRow("test", true, "test")]
+        [DataRow("Test", true, "Test")]
+        [DataRow("T_est", true, "T_est")]
+        [DataRow("Test1", true, "Test1")]
+        public void EntityNameBecomesObjectName(string entityName, bool forceNamingStyle, string expected)
         {
             DatabaseObject dbObject = new DatabaseTable() { TableDefinition = new() };
 
@@ -45,7 +49,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 GenerateEmptyEntity(),
                 new(),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
-                rolesAllowedForFields: GetFieldToRolesMap()
+                rolesAllowedForFields: GetFieldToRolesMap(),
+                forceNamingStyle: forceNamingStyle
                 );
 
             Assert.AreEqual(expected, od.Name.Value);
@@ -57,9 +62,13 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         /// <param name="columnName"></param>
         /// <param name="expected"></param>
         [DataTestMethod]
-        [DataRow("test", "test")]
-        [DataRow("Test", "Test")]
-        public void ColumnNameBecomesFieldName(string columnName, string expected)
+        [DataRow("test", false, "test")]
+        [DataRow("Test", false, "Test")]
+        [DataRow("test", true, "test")]
+        [DataRow("Test", true, "test")]
+        [DataRow("testTest", true, "testTest")]
+        [DataRow("TestTest", true, "testTest")]
+        public void ColumnNameBecomesFieldName(string columnName, bool forceNamingStyle, string expected)
         {
             SourceDefinition table = new();
             table.Columns.Add(columnName, new ColumnDefinition
@@ -75,7 +84,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 GenerateEmptyEntity(),
                 new(),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
-                rolesAllowedForFields: GetFieldToRolesMap(columnName: table.Columns.First().Key)
+                rolesAllowedForFields: GetFieldToRolesMap(columnName: table.Columns.First().Key),
+                forceNamingStyle: forceNamingStyle
                 );
 
             Assert.AreEqual(expected, od.Fields[0].Name.Value);
@@ -117,7 +127,9 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 configEntity,
                 entities: new(),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
-                rolesAllowedForFields: GetFieldToRolesMap(columnName: table.Columns.First().Key));
+                rolesAllowedForFields: GetFieldToRolesMap(columnName: table.Columns.First().Key),
+                forceNamingStyle: false
+                );
 
             string errorMessage = "Object field representing database column has an unexpected name value.";
             if (expectMappedName)
@@ -150,7 +162,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 GenerateEmptyEntity(),
                 new(),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
-                rolesAllowedForFields: GetFieldToRolesMap()
+                rolesAllowedForFields: GetFieldToRolesMap(),
+                forceNamingStyle: false
                 );
 
             FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == columnName);
@@ -179,7 +192,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 GenerateEmptyEntity(),
                 new(),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
-                rolesAllowedForFields: GetFieldToRolesMap()
+                rolesAllowedForFields: GetFieldToRolesMap(),
+                forceNamingStyle: false
                 );
 
             foreach (FieldDefinitionNode field in od.Fields)
@@ -209,7 +223,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 GenerateEmptyEntity(),
                 new(),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
-                rolesAllowedForFields: GetFieldToRolesMap(additionalColumns: customColumnCount)
+                rolesAllowedForFields: GetFieldToRolesMap(additionalColumns: customColumnCount),
+                forceNamingStyle: false
                 );
 
             Assert.AreEqual(table.Columns.Count, od.Fields.Count);
@@ -247,7 +262,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 GenerateEmptyEntity(),
                 new(),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
-                rolesAllowedForFields: GetFieldToRolesMap()
+                rolesAllowedForFields: GetFieldToRolesMap(),
+                forceNamingStyle: false
                 );
 
             FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == columnName);
@@ -274,7 +290,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 GenerateEmptyEntity(),
                 new(),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
-                rolesAllowedForFields: GetFieldToRolesMap()
+                rolesAllowedForFields: GetFieldToRolesMap(),
+                forceNamingStyle: false
                 );
 
             FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == columnName);
@@ -301,7 +318,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 GenerateEmptyEntity(),
                 new(),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
-                rolesAllowedForFields: GetFieldToRolesMap()
+                rolesAllowedForFields: GetFieldToRolesMap(),
+                forceNamingStyle: false
                 );
 
             FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == columnName);
@@ -372,7 +390,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                     configEntity,
                     new() { { TARGET_ENTITY, relationshipEntity } },
                     rolesAllowedForEntity: GetRolesAllowedForEntity(),
-                    rolesAllowedForFields: GetFieldToRolesMap()
+                    rolesAllowedForFields: GetFieldToRolesMap(),
+                    forceNamingStyle: false
                     );
 
             Assert.AreEqual(2, od.Fields.Count);
@@ -409,7 +428,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 configEntity,
                 new(),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
-                rolesAllowedForFields: GetFieldToRolesMap()
+                rolesAllowedForFields: GetFieldToRolesMap(),
+                forceNamingStyle: false
                 );
 
             Assert.AreEqual(expected, od.Name.Value);
@@ -441,7 +461,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 configEntity,
                 new(),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
-                rolesAllowedForFields: GetFieldToRolesMap()
+                rolesAllowedForFields: GetFieldToRolesMap(),
+                forceNamingStyle: false
                 );
 
             Assert.IsTrue(od.Fields[0].Directives.Any(d => d.Name.Value == AutoGeneratedDirectiveType.DirectiveName));
@@ -492,7 +513,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 configEntity,
                 new(),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
-                rolesAllowedForFields: GetFieldToRolesMap()
+                rolesAllowedForFields: GetFieldToRolesMap(),
+                forceNamingStyle: false
                 );
 
             // @authorize directive is implicitly created so the count to compare to is 2
@@ -536,7 +558,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 configEntity,
                 new(),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
-                rolesAllowedForFields: GetFieldToRolesMap(rolesForField: rolesForField)
+                rolesAllowedForFields: GetFieldToRolesMap(rolesForField: rolesForField),
+                forceNamingStyle: false
                 );
 
             // Ensures all fields added have the appropriate @authorize directive.
@@ -576,7 +599,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 configEntity,
                 new(),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
-                rolesAllowedForFields: GetFieldToRolesMap(rolesForField: rolesForField)
+                rolesAllowedForFields: GetFieldToRolesMap(rolesForField: rolesForField),
+                forceNamingStyle: false
                 );
 
             // Ensures no field has the @authorize directive.
@@ -618,7 +642,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 configEntity,
                 new(),
                 rolesAllowedForEntity: roles,
-                rolesAllowedForFields: GetFieldToRolesMap(rolesForField: roles)
+                rolesAllowedForFields: GetFieldToRolesMap(rolesForField: roles),
+                forceNamingStyle: false
                 );
 
             // Prepares error message, only used if assertion fails.
@@ -666,7 +691,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 configEntity,
                 new(),
                 rolesAllowedForEntity: rolesForEntity,
-                rolesAllowedForFields: GetFieldToRolesMap(rolesForField: rolesForFields)
+                rolesAllowedForFields: GetFieldToRolesMap(rolesForField: rolesForFields),
+                forceNamingStyle: false
                 );
 
             // Prepares error message, only used if assertion fails.
@@ -771,7 +797,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 dbObject,
                 configEntity, new() { { TARGET_ENTITY, relationshipEntity } },
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
-                rolesAllowedForFields: GetFieldToRolesMap()
+                rolesAllowedForFields: GetFieldToRolesMap(),
+                forceNamingStyle: false
                 );
         }
 

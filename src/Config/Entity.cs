@@ -120,10 +120,23 @@ namespace Azure.DataApiBuilder.Config
                         {
                             typeConfiguration = JsonSerializer.Deserialize<SingularPlural>(nameTypeSettings)!;
                         }
+                        else if (nameTypeSettings.ValueKind is JsonValueKind.Null)
+                        {
+                            typeConfiguration = null;
+                        }
                         else
                         {
                             // Not Supported Type
                             return false;
+                        }
+                    }
+
+                    bool forceNamingStyle = false;
+                    if (configElement.TryGetProperty(propertyName: "force-naming-style", out JsonElement forceNamingStyleSetting))
+                    {
+                        if (forceNamingStyleSetting.ValueKind is JsonValueKind.True || forceNamingStyleSetting.ValueKind is JsonValueKind.False)
+                        {
+                            forceNamingStyle = JsonSerializer.Deserialize<bool>(forceNamingStyleSetting);
                         }
                     }
 
@@ -181,7 +194,7 @@ namespace Azure.DataApiBuilder.Config
                     }
                     else
                     {
-                        GraphQL = new GraphQLEntitySettings(Type: typeConfiguration);
+                        GraphQL = new GraphQLEntitySettings(Type: typeConfiguration, ForceNamingStyle: forceNamingStyle);
                     }
                 }
             }
@@ -319,7 +332,25 @@ namespace Azure.DataApiBuilder.Config
             {
                 throw new JsonException("Unsupported GraphQL Type");
             }
+        }
 
+        /// <summary>
+        /// Gets an entity's GraphQL force naming style configuration setting.
+        /// </summary>
+        /// <returns>Boolean to indicate whether to force using the GraphQL naming conventions for this entity.</returns>
+        public bool FetchGraphQLForceNamingStyle()
+        {
+            if (GraphQL is null)
+            {
+                return false;
+            }
+
+            if (GraphQL is GraphQLEntitySettings settings)
+            {
+                return settings.ForceNamingStyle;
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -604,8 +635,14 @@ namespace Azure.DataApiBuilder.Config
     /// Can be a string or Singular-Plural type.
     /// If string, a default plural route will be added as per the rules at
     /// </param>
+    /// <param name="ForceNamingStyle">Forces the naming style of this entity to follow the GraphQL naming style conventions.
+    /// </param>
     /// <seealso cref="<https://engdic.org/singular-and-plural-noun-rules-definitions-examples/"/>
-    public record GraphQLEntitySettings([property: JsonPropertyName("type")] object? Type = null);
+    /// <seealso cref="https://github.com/hendrikniemann/graphql-style-guide#fields"/>
+    public record GraphQLEntitySettings(
+        [property: JsonPropertyName("type")] object? Type = null,
+        [property: JsonPropertyName("force-naming-style")] bool ForceNamingStyle = false
+        );
 
     /// <summary>
     /// Describes the GraphQL settings applicable to an entity which is backed by a stored procedure.

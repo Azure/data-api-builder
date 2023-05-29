@@ -47,6 +47,7 @@ DROP TABLE IF EXISTS graphql_incompatible;
 DROP TABLE IF EXISTS GQLmappings;
 DROP TABLE IF EXISTS bookmarks;
 DROP TABLE IF EXISTS mappedbookmarks;
+DROP TABLE IF EXISTS movies;
 DROP SCHEMA IF EXISTS [foo];
 COMMIT;
 
@@ -254,6 +255,12 @@ CREATE TABLE mappedbookmarks
 	bkname nvarchar(50) NOT NULL
 ) 
 
+CREATE TABLE movies
+(
+    id int IDENTITY(5001, 1) PRIMARY KEY,
+    MovieName text NULL
+);
+
 ALTER TABLE books
 ADD CONSTRAINT book_publisher_fk
 FOREIGN KEY (publisher_id)
@@ -357,6 +364,12 @@ SELECT
 FROM cteN WHERE [Number] <= @UpperBound;
 
 SET IDENTITY_INSERT mappedbookmarks OFF
+
+SET IDENTITY_INSERT movies ON
+INSERT INTO movies(id, MovieName)
+VALUES (1, 'Example Movie 1'),
+(2, 'Example Movie 2');
+SET IDENTITY_INSERT movies OFF
 
 SET IDENTITY_INSERT books ON
 INSERT INTO books(id, title, publisher_id)

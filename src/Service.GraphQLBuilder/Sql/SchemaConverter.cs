@@ -36,7 +36,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             [NotNull] Entity configEntity,
             Dictionary<string, Entity> entities,
             IEnumerable<string> rolesAllowedForEntity,
-            IDictionary<string, IEnumerable<string>> rolesAllowedForFields)
+            IDictionary<string, IEnumerable<string>> rolesAllowedForFields,
+            bool forceNamingStyle)
         {
             Dictionary<string, FieldDefinitionNode> fields = new();
             List<DirectiveNode> objectTypeDirectives = new();
@@ -94,6 +95,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                         if (configEntity.Mappings is not null && configEntity.Mappings.TryGetValue(key: columnName, out string? columnAlias))
                         {
                             exposedColumnName = columnAlias;
+                        }
+
+                        if (forceNamingStyle || configEntity.FetchGraphQLForceNamingStyle())
+                        {
+                            exposedColumnName = FormatNameForField(exposedColumnName);
                         }
 
                         NamedTypeNode fieldType = new(GetGraphQLTypeFromSystemType(column.SystemType));
@@ -169,9 +175,15 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping),
                     };
 
+                    string exposedRelationshipName = relationshipName;
+                    if (forceNamingStyle)
+                    {
+                        exposedRelationshipName = FormatNameForField(exposedRelationshipName);
+                    }
+
                     FieldDefinitionNode relationshipField = new(
                         location: null,
-                        new NameNode(relationshipName),
+                        new NameNode(exposedRelationshipName),
                         description: null,
                         new List<InputValueDefinitionNode>(),
                         isNullableRelationship ? targetField : new NonNullTypeNode(targetField),

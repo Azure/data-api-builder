@@ -1366,6 +1366,80 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
+        /// Integration test that validates naming conventions based on the setting 
+        /// of force-naming-style setting in the configuration.
+        /// TestCategory is required for CI/CD pipeline to inject a connection string.
+        /// </summary>
+        [TestCategory(TestCategory.MSSQL)]
+        [DataTestMethod]
+        [DataRow(false, "movieName", true, "does not exist on the type")]
+        [DataRow(false, "MovieName", false, "{\"items\":[{\"MovieName\":\"Example Movie 1\"},{\"MovieName\":\"Example Movie 2\"}]}")]
+        [DataRow(true, "movieName", false, "{\"items\":[{\"movieName\":\"Example Movie 1\"},{\"movieName\":\"Example Movie 2\"}]}")]
+        [DataRow(true, "MovieName", true, "does not exist on the type")]
+        public async Task TestForceNamingStyleQuery(bool enableForceNamingStyle, string queryPropertyName, bool expectError, string expected)
+        {
+            Entity graphQLEntityForceNaming = new(
+                Source: JsonSerializer.SerializeToElement("movies"),
+                Rest: JsonSerializer.SerializeToElement(false),
+                GraphQL: JsonSerializer.SerializeToElement(new GraphQLEntitySettings
+                {
+                    ForceNamingStyle = enableForceNamingStyle
+                }),
+                Permissions: new PermissionSetting[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: null,
+                Mappings: null);
+
+            Dictionary<string, Entity> entityMap = new()
+            {
+                { "Movie", graphQLEntityForceNaming }
+            };
+
+            CreateCustomConfigFile(globalRestEnabled: true, entityMap);
+
+            string[] args = new[]
+            {
+                    $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                string graphQLQueryName = "movies";
+                string graphQLQuery = @"{
+                movies {
+                    items {
+                        " + queryPropertyName + @"
+                    }
+                }
+            }";
+
+                Mock<ILogger<RuntimeConfigProvider>> logger = new();
+                RuntimeConfigProvider configProvider = new(new RuntimeConfigPath { ConfigFileName = CUSTOM_CONFIG_FILENAME }, logger.Object);
+
+                JsonElement actual = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                    client,
+                    configProvider,
+                    query: graphQLQuery,
+                    queryName: graphQLQueryName,
+                    variables: null,
+                    clientRoleHeader: null
+                    );
+
+                if (expectError)
+                {
+                    SqlTestHelper.TestForErrorInGraphQLResponse(
+                        response: actual.ToString(),
+                        message: expected
+                    );
+                }
+                else
+                {
+                    SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+                }
+            }
+        }
+
+        /// <summary>
         /// Indirectly tests IsGraphQLReservedName(). Runtime config provided to engine which will
         /// trigger SqlMetadataProvider PopulateSourceDefinitionAsync() to pull column metadata from
         /// the table "graphql_incompatible." That table contains columns which collide with reserved GraphQL

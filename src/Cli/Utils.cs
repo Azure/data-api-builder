@@ -895,16 +895,15 @@ namespace Cli
         /// If yes, it will try to merge dab-config.json with dab-config.{DAB_ENVIRONMENT}.json
         /// and create a merged file called dab-config.{DAB_ENVIRONMENT}.merged.json
         /// </summary>
-        /// <returns>Returns the name of the merged Config if successful.</returns>
-        public static bool TryMergeConfigsIfAvailable(out string mergedConfigFile)
+        /// <returns>Returns the name of the merged config if successful.</returns>
+        public static bool TryMergeConfigsIfAvailable([NotNullWhen(true)] out string? mergedConfigFile)
         {
             string? environmentValue = Environment.GetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME);
-            mergedConfigFile = string.Empty;
+            mergedConfigFile = null;
             if (!string.IsNullOrEmpty(environmentValue))
             {
                 string baseConfigFile = RuntimeConfigPath.DefaultName;
                 string environmentBasedConfigFile = RuntimeConfigPath.GetFileName(environmentValue, considerOverrides: false);
-                mergedConfigFile = RuntimeConfigPath.GetMergedFileNameForEnvironment(CONFIGFILE_NAME, environmentValue);
 
                 if (DoesFileExistInCurrentDirectory(baseConfigFile) && !string.IsNullOrEmpty(environmentBasedConfigFile))
                 {
@@ -912,14 +911,19 @@ namespace Cli
                     {
                         string baseConfigJson = File.ReadAllText(baseConfigFile);
                         string overrideConfigJson = File.ReadAllText(environmentBasedConfigFile);
+                        string currentDir = Directory.GetCurrentDirectory();
+                        _logger.LogInformation($"Merging {Path.Combine(currentDir, baseConfigFile)}"
+                            + $" and {Path.Combine(currentDir, environmentBasedConfigFile)}");
                         string mergedConfigJson = Merge(baseConfigJson, overrideConfigJson);
-
+                        mergedConfigFile = RuntimeConfigPath.GetMergedFileNameForEnvironment(CONFIGFILE_NAME, environmentValue);
                         File.WriteAllText(mergedConfigFile, mergedConfigJson);
+                        _logger.LogInformation($"Generated merged config file: {Path.Combine(currentDir, mergedConfigFile)}");
                         return true;
                     }
                     catch (Exception ex)
                     {
                         _logger.LogError(ex, $"Failed to merge the config files.");
+                        mergedConfigFile = null;
                         return false;
                     }
                 }

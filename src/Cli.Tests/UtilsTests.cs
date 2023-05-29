@@ -222,7 +222,7 @@ namespace Cli.Tests
             Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, "Test");
             File.WriteAllText("dab-config.json", BASE_CONFIG);
             File.WriteAllText("dab-config.Test.json", ENV_BASED_CONFIG);
-            if (TryMergeConfigsIfAvailable(out string mergedConfig))
+            if (TryMergeConfigsIfAvailable(out string? mergedConfig))
             {
                 Assert.AreEqual(mergedConfig, "dab-config.Test.merged.json");
                 Assert.IsTrue(File.Exists(mergedConfig));
@@ -232,6 +232,69 @@ namespace Cli.Tests
             {
                 Assert.Fail("Failed to merge config files.");
             }
+        }
+
+        /// <summary>
+        /// Test to verify that merged config file is only used for the below scenario
+        /// 1. Environment value is set.
+        /// 2. Both Base and envBased config file is present.
+        /// In all other cases, the TryMergeConfigsIfAvailable method should return false
+        /// and out param for the mergedConfigFile should be null.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("", false, false, null, false, DisplayName = "If environment value is not set, merged config file is not generated.")]
+        [DataRow("", false, true, null, false, DisplayName = "If environment value is not set, merged config file is not generated.")]
+        [DataRow("", true, false, null, false, DisplayName = "If environment value is not set, merged config file is not generated.")]
+        [DataRow("", true, true, null, false, DisplayName = "If environment value is not set, merged config file is not generated.")]
+        [DataRow(null, false, false, null, false, DisplayName = "If environment variable is removed, merged config file is not generated.")]
+        [DataRow(null, false, true, null, false, DisplayName = "If environment variable is removed, merged config file is not generated.")]
+        [DataRow(null, true, false, null, false, DisplayName = "If environment variable is removed, merged config file is not generated.")]
+        [DataRow(null, true, true, null, false, DisplayName = "If environment variable is removed, merged config file is not generated.")]
+        [DataRow("Test", false, false, null, false, DisplayName = "Environment value set but base config not available, merged config file is not generated.")]
+        [DataRow("Test", false, true, null, false, DisplayName = "Environment value set but base config not available, merged config file is not generated.")]
+        [DataRow("Test", true, false, null, false, DisplayName = "Environment value set but env based config not available, merged config file is not generated.")]
+        [DataRow("Test", true, true, "dab-config.Test.merged.json", true, DisplayName = "Environment value set and both base and envConfig available, merged config file is generated.")]
+        public void TestMergeConfigAvailability(
+            string? environmentValue,
+            bool isBaseConfigPresent,
+            bool isEnvironmentBasedConfigPresent,
+            string? expectedMergedConfigFileName,
+            bool expectedIsMergedConfigAvailable)
+        {
+            // Setting up the test scenarios
+            Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
+            string baseConfig = "dab-config.json";
+            string envBasedConfig = "dab-config.Test.json";
+            if (File.Exists(baseConfig))
+            {
+                File.Delete(baseConfig);
+            }
+
+            if (File.Exists(envBasedConfig))
+            {
+                File.Delete(envBasedConfig);
+            }
+
+            if (isBaseConfigPresent)
+            {
+                if (!File.Exists(baseConfig))
+                {
+                    File.Create(baseConfig).Close();
+                    File.WriteAllText(baseConfig, "{}");
+                }
+            }
+
+            if (isEnvironmentBasedConfigPresent)
+            {
+                if (!File.Exists(envBasedConfig))
+                {
+                    File.Create(envBasedConfig).Close();
+                    File.WriteAllText(envBasedConfig, "{}");
+                }
+            }
+
+            Assert.AreEqual(expectedIsMergedConfigAvailable, TryMergeConfigsIfAvailable(out string? mergedConfigFile));
+            Assert.AreEqual(expectedMergedConfigFileName, mergedConfigFile);
         }
 
         [ClassCleanup]

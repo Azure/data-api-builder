@@ -388,6 +388,118 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
+        /// 
+        /// </summary>
+        [TestMethod]
+        public async Task TypenameOnlyListQuery()
+        {
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"{
+                books(first: 3) {
+                    items {
+                        __typename
+                }
+            }";
+
+            string expected = @"
+            [
+                {
+                    ""__typename"": ""book""
+                },
+                {
+                    ""__typename"": ""book""
+                },
+                {
+                    ""__typename"": ""book""
+                }
+            ]";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        [TestMethod]
+        public async Task TypenameOnlyListQueryWithoutItemSelection()
+        {
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"{
+                books{
+                    __typename
+                }
+            }";
+
+            string expected = @"
+                {
+                  ""__typename"": ""bookConnection""
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("books").ToString());
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        [TestMethod]
+        public async Task TypenameOnlyPointQuery()
+        {
+            string graphQLQueryName = "book_by_pk";
+            string graphQLQuery = @"{
+                book_by_pk(id: 3) {
+                    __typename
+                }
+            }";
+
+            string expected = @"
+                {
+                    ""__typename"": ""book""
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("book_by_pk").ToString());
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        [TestMethod]
+        public async Task TypenameOnlyNestedPointQuery()
+        {
+            string graphQLQueryName = "book_by_pk";
+            string graphQLQuery = @"{
+                book_by_pk(id: 3) {
+                    __typename
+                    publishers {
+                      __typename
+                      books {
+                        __typename
+                      }
+                    }
+                }     
+            }";
+
+            string expected = @"
+                {
+                  ""__typename"": ""book"",
+                  ""publishers"": {
+                    ""__typename"": ""Publisher"",
+                    ""books"": {
+                      ""__typename"": ""bookConnection""
+                    }
+                  }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("book_by_pk").ToString());
+        }
+
+        /// <summary>
         /// Test One-To-One relationship both directions
         /// (book -> website placement, website placememnt -> book)
         /// <summary>

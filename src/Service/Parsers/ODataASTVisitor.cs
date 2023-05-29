@@ -28,7 +28,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
 
         /// <summary>
         /// Represents visiting a BinaryOperatorNode, which will hold either
-        /// a Predicate operation (eq, gt, lt, etc), or a Logical operaton (And, Or).
+        /// a Predicate operation (eq, gt, lt, etc), or a Logical operation (And, Or).
         /// </summary>
         /// <param name="nodeIn">The node visited.</param>
         /// <returns>String concatenation of (left op right).</returns>
@@ -53,7 +53,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
         /// Represents visiting a UnaryNode, which is what holds unary
         /// operators such as NOT.
         /// </summary>
-        /// <param name="nodeIn">The node visisted.</param>
+        /// <param name="nodeIn">The node visited.</param>
         /// <returns>String concatenation of (op children)</returns>
         public override string Visit(UnaryOperatorNode nodeIn)
         {

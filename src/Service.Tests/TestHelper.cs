@@ -155,7 +155,6 @@ namespace Azure.DataApiBuilder.Service.Tests
             RuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider runtimeConfigProvider = new(loader);
             return runtimeConfigProvider;
-
         }
 
         /// <summary>

@@ -28,8 +28,6 @@ public class RuntimeConfigLoaderTests
 
         RuntimeConfigLoader loader = new(fs);
 
-        bool loaded = loader.TryLoadConfig("dab-config.json", out RuntimeConfig _);
-
-        Assert.IsTrue(loaded);
+        Assert.IsTrue(loader.TryLoadConfig("dab-config.json", out RuntimeConfig _), "Failed to load config");
     }
 }

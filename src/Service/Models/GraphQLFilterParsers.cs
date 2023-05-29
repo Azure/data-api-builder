@@ -150,7 +150,7 @@ namespace Azure.DataApiBuilder.Service.Models
                         string graphQLTypeName = queryStructure.EntityName;
 
                         bool columnAccessPermitted = queryStructure.AuthorizationResolver.AreColumnsAllowedForOperation(
-                            graphQLTypeName: graphQLTypeName,
+                            entityIdentifier: graphQLTypeName,
                             roleName: GetHttpContextFromMiddlewareContext(ctx).Request.Headers[CLIENT_ROLE_HEADER],
                             operation: EntityActionOperation.Read,
                             columns: new[] { name });

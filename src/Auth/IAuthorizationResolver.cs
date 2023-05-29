@@ -39,12 +39,12 @@ namespace Azure.DataApiBuilder.Auth
         /// Any columns referenced in a request's headers, URL(filter/orderby/routes), and/or body
         /// are compared against the include/excluded column permission defined for the entityName->roleName->operation
         /// </summary>
-        /// <param name="graphQLTypeName">Entity from request</param>
+        /// <param name="entityIdentifier">Entity from request</param>
         /// <param name="roleName">Role defined in client role header</param>
         /// <param name="operation">Operation type: Create, Read, Update, Delete</param>
         /// <param name="columns">Compiled list of any column referenced in a request</param>
         /// <returns></returns>
-        public bool AreColumnsAllowedForOperation(string graphQLTypeName, string roleName, EntityActionOperation operation, IEnumerable<string> columns);
+        public bool AreColumnsAllowedForOperation(string entityIdentifier, string roleName, EntityActionOperation operation, IEnumerable<string> columns);
 
         /// <summary>
         /// Method to return the list of exposed columns for the given combination of

@@ -14,7 +14,6 @@ public static class EnumExtensions
 {
     /// <summary>
     /// Used to convert a string to an enum value.
-    ///
     /// This will be used when we found a string value, such as CLI input, and need to convert it to an enum value.
     /// </summary>
     /// <typeparam name="T">The enum to deserialize as.</typeparam>
@@ -28,7 +27,7 @@ public static class EnumExtensions
 
         Utf8JsonReader reader = new(bytes);
         // We need to read the first token to get the reader into a state where it can read the value as a string.
-        reader.Read();
+        _ = reader.Read();
         return converter.Read(ref reader, typeof(T), new JsonSerializerOptions());
     }
 
@@ -99,7 +98,7 @@ internal class EnumMemberJsonEnumConverterFactory : JsonConverterFactory
 
                 _stringToEnum.Add(value.ToString().ToLower(), value);
 
-                if (attr?.Value != null)
+                if (attr?.Value is not null)
                 {
                     _enumToString.Add(value, attr.Value);
                     _stringToEnum.Add(attr.Value, value);
@@ -116,12 +115,17 @@ internal class EnumMemberJsonEnumConverterFactory : JsonConverterFactory
         {
             string? stringValue = reader.DeserializeString();
 
-            if (_stringToEnum.TryGetValue(stringValue!.ToLower(), out TEnum enumValue))
+            if (stringValue == null)
+            {
+                throw new JsonException($"null is not a valid enum value of {typeof(TEnum)}");
+            }
+
+            if (_stringToEnum.TryGetValue(stringValue.ToLower(), out TEnum enumValue))
             {
                 return enumValue;
             }
 
-            throw new JsonException($"The value {stringValue} is not a valid enum value. of {typeof(TEnum)}");
+            throw new JsonException($"The value {stringValue} is not a valid enum value of {typeof(TEnum)}");
         }
 
         /// <inheritdoc/>

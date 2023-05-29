@@ -128,9 +128,9 @@ namespace Azure.DataApiBuilder.Service.Authorization
         }
 
         /// <inheritdoc />
-        public bool AreColumnsAllowedForOperation(string graphQLTypeName, string roleName, EntityActionOperation operation, IEnumerable<string> columns)
+        public bool AreColumnsAllowedForOperation(string entityIdentifier, string roleName, EntityActionOperation operation, IEnumerable<string> columns)
         {
-            string entityName = _metadataProvider.GetEntityName(graphQLTypeName);
+            string entityName = _metadataProvider.GetEntityName(entityIdentifier);
 
             if (!EntityPermissionsMap[entityName].RoleToOperationMap.TryGetValue(roleName, out RoleMetadata? roleMetadata) && roleMetadata is null)
             {

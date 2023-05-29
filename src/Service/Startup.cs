@@ -8,6 +8,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.AuthenticationHelpers;
 using Azure.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimulator;
@@ -490,7 +491,7 @@ namespace Azure.DataApiBuilder.Service
                 }
                 else if (runtimeConfig.Runtime.Host.Authentication.IsEasyAuthAuthenticationProvider())
                 {
-                    EasyAuthType easyAuthType = Enum.Parse<EasyAuthType>(runtimeConfig.Runtime.Host.Authentication.Provider, ignoreCase: true);
+                    EasyAuthType easyAuthType = EnumExtensions.Deserialize<EasyAuthType>(runtimeConfig.Runtime.Host.Authentication.Provider);
                     bool isProductionMode = runtimeConfig.Runtime.Host.Mode != HostMode.Development;
                     bool appServiceEnvironmentDetected = AppServiceAuthenticationInfo.AreExpectedAppServiceEnvVarsPresent();
 

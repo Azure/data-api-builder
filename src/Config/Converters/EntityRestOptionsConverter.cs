@@ -60,7 +60,7 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
                                 break;
                             }
 
-                            methods.Add(Enum.Parse<SupportedHttpVerb>(reader.DeserializeString()!, true));
+                            methods.Add(EnumExtensions.Deserialize<SupportedHttpVerb>(reader.DeserializeString()!));
                         }
 
                         restOptions = restOptions with { Methods = methods.ToArray() };

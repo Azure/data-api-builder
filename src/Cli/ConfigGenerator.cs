@@ -854,7 +854,7 @@ namespace Cli
             string[]? updatedLinkingSourceFields = options.LinkingSourceFields is null || !options.LinkingSourceFields.Any() ? null : options.LinkingSourceFields.ToArray();
             string[]? updatedLinkingTargetFields = options.LinkingTargetFields is null || !options.LinkingTargetFields.Any() ? null : options.LinkingTargetFields.ToArray();
 
-            Cardinality updatedCardinality = Enum.Parse<Cardinality>(options.Cardinality!, ignoreCase: true);
+            Cardinality updatedCardinality = EnumExtensions.Deserialize<Cardinality>(options.Cardinality!);
 
             if (options.RelationshipFields is not null && options.RelationshipFields.Any())
             {

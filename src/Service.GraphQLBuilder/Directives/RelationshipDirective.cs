@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using HotChocolate.Language;
 using HotChocolate.Types;
@@ -77,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Directives
 
             ArgumentNode arg = directive.Arguments.First(a => a.Name.Value == "cardinality");
 
-            return Enum.Parse<Cardinality>((string)arg.Value.Value!);
+            return EnumExtensions.Deserialize<Cardinality>((string)arg.Value.Value!);
         }
 
         /// <summary>

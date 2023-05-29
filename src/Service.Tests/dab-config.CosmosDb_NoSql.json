@@ -148,6 +148,31 @@
         }
       }
     },
+    "Sun": {
+      "source": "graphqldb.sun",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "create",
+            {
+              "action": "read",
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": [
+                  "name"
+                ]
+              }
+            },
+            "update",
+            "delete"
+          ]
+      }
+      ],
+      "graphql": true
+    },
     "Moon": {
       "source": "graphqldb.moon",
       "permissions": [

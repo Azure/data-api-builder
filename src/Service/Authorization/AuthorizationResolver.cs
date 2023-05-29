@@ -102,9 +102,9 @@ namespace Azure.DataApiBuilder.Service.Authorization
         }
 
         /// <inheritdoc />
-        public bool AreRoleAndOperationDefinedForEntity(string entityName, string roleName, EntityActionOperation operation)
+        public bool AreRoleAndOperationDefinedForEntity(string entityIdentifier, string roleName, EntityActionOperation operation)
         {
-            if (EntityPermissionsMap.TryGetValue(entityName, out EntityMetadata? valueOfEntityToRole))
+            if (EntityPermissionsMap.TryGetValue(entityIdentifier, out EntityMetadata? valueOfEntityToRole))
             {
                 if (valueOfEntityToRole.RoleToOperationMap.TryGetValue(roleName, out RoleMetadata? valueOfRoleToOperation))
                 {

@@ -262,7 +262,7 @@ namespace Azure.DataApiBuilder.Service.Models
 
             // Validate that the field referenced in the nested input filter can be accessed.
             bool entityAccessPermitted = queryStructure.AuthorizationResolver.AreRoleAndOperationDefinedForEntity(
-                entityName: nestedFilterEntityName,
+                entityIdentifier: nestedFilterEntityName,
                 roleName: GetHttpContextFromMiddlewareContext(ctx).Request.Headers[CLIENT_ROLE_HEADER],
                 operation: EntityActionOperation.Read);
 

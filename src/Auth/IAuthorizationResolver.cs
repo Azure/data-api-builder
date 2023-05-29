@@ -29,15 +29,15 @@ namespace Azure.DataApiBuilder.Auth
         /// Checks if the permissions collection of the requested entity
         /// contains an entry for the role defined in the client role header.
         /// </summary>
-        /// <param name="entityName">Entity from request</param>
+        /// <param name="entityIdentifier">Entity from request. This could be the name of the entity or it could be the GraphQL type name, depending on the entry point.</param>
         /// <param name="roleName">Role defined in client role header</param>
         /// <param name="operation">Operation type: Create, Read, Update, Delete</param>
         /// <returns>True, if a matching permission entry is found.</returns>
-        public bool AreRoleAndOperationDefinedForEntity(string entityName, string roleName, EntityActionOperation operation);
+        public bool AreRoleAndOperationDefinedForEntity(string entityIdentifier, string roleName, EntityActionOperation operation);
 
         /// <summary>
         /// Any columns referenced in a request's headers, URL(filter/orderby/routes), and/or body
-        /// are compared against the inclued/excluded column permission defined for the entityName->roleName->operation
+        /// are compared against the include/excluded column permission defined for the entityName->roleName->operation
         /// </summary>
         /// <param name="graphQLTypeName">Entity from request</param>
         /// <param name="roleName">Role defined in client role header</param>
@@ -110,7 +110,7 @@ namespace Azure.DataApiBuilder.Auth
         {
             if (entityName is null)
             {
-                throw new ArgumentNullException(paramName: "entityName");
+                throw new ArgumentNullException(paramName: nameof(entityName));
             }
 
             if (entityPermissionsMap is not null &&

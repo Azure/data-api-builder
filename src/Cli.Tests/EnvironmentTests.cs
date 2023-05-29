@@ -71,7 +71,6 @@ public class EnvironmentTests
     /// This test setups a environment variable in the system and also creates a .env file containing
     /// same variable with different value to show the value stored in .env file is given
     /// precedence over the system variable.
-    /// It also verifies that if the .env file is removed, the existing variable is used.
     /// </summary>
     [TestMethod]
     public void TestPrecedenceOfEnvironmentFileOverExistingVariables()
@@ -106,13 +105,15 @@ public class EnvironmentTests
         
     }
 
+    /// <summary>
+    /// Test to verify that if .env file is not present then existing system variables will be used.
+    /// </summary>
     [TestMethod]
-    public void TestSystemEnvironmentVariableIsPreserved()
-    {   File.Create("test.env").Close();
-        File.WriteAllText("test.env", $"{TEST_ENV_VARIABLE}=DEVELOPMENT");
+    public void TestSystemEnvironmentVariableIsUsedInAbsenceOfEnvironmentFile()
+    {
         Environment.SetEnvironmentVariable(TEST_ENV_VARIABLE, "TEST");
-        File.Delete("test.env");
-        DotNetEnv.Env.Load("test.env");
+        Assert.IsFalse(File.Exists("test.env"));
+        DotNetEnv.Env.Load("test.env"); // No error is thrown
         Assert.AreEqual("TEST", Environment.GetEnvironmentVariable(TEST_ENV_VARIABLE));
     }
 

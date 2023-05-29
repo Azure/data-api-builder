@@ -102,7 +102,7 @@ public class EnvironmentTests
             JObject.Parse(resolvedJson)), "JSON resolved with environment variable correctly");
 
         // Removing the .env file it will then use the value of system environment variable.
-        
+
     }
 
     /// <summary>

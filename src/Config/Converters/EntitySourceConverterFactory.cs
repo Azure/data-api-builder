@@ -39,6 +39,9 @@ internal class EntitySourceConverterFactory : JsonConverterFactory
 
             if (source?.Parameters is not null)
             {
+                // If we get parameters back the value field will be JsonElement, since that's what STJ uses for the `object` type.
+                // But we want to convert that to a CLR type so we can use it in our code and avoid having to do our own type checking
+                // and casting elsewhere.
                 return source with { Parameters = source.Parameters.ToDictionary(p => p.Key, p => GetClrValue((JsonElement)p.Value)) };
             }
 

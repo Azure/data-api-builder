@@ -366,6 +366,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 TestCategory.MSSQL);
         }
 
+        /// <summary>
+        /// List query with only __typename field on a stored procedure
+        /// </summary>
+        [TestMethod]
+        public override async Task TypenameOnlyQueryWithSP()
+        {
+            await base.TypenameOnlyQueryWithSP();
+        }
+
         #endregion
     }
 }

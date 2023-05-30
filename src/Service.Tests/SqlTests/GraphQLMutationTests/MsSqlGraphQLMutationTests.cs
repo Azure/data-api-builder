@@ -676,6 +676,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             await InsertIntoInsertableComplexView(msSqlQuery);
         }
 
+        /// <summary>
+        /// <code>Do: </code> Execute a stored procedure and return the typename of the SP entity
+        /// <code>Check :</code>if the mutation executed successfully and returned the correct typename
+        /// </summary>
+        [TestMethod]
+        public async override Task ExecuteMutationWithOnlyTypenameInSelectionSet()
+        {
+            await base.ExecuteMutationWithOnlyTypenameInSelectionSet();
+        }
+
         #endregion
 
         #region Negative Tests

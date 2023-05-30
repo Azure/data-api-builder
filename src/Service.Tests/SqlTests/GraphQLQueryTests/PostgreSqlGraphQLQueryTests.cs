@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -367,6 +368,14 @@ FROM
                 club_name,
                 DatabaseType.postgresql,
                 TestCategory.POSTGRESQL);
+        }
+
+        [TestMethod]
+        [Ignore]
+        /// <inheritdoc/>
+        public override Task TypenameOnlyQueryWithSP()
+        {
+            throw new NotImplementedException();
         }
 
         #endregion

@@ -388,7 +388,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
-        /// 
+        /// List query with only __typename field for each entity item
         /// </summary>
         [TestMethod]
         public async Task TypenameOnlyListQuery()
@@ -398,6 +398,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 books(first: 3) {
                     items {
                         __typename
+                    }
                 }
             }";
 
@@ -419,7 +420,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
-        /// 
+        /// List query with only __typename field without selecting any entity item
         /// </summary>
         [TestMethod]
         public async Task TypenameOnlyListQueryWithoutItemSelection()
@@ -438,11 +439,35 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             ";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("books").ToString());
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
 
         /// <summary>
-        /// 
+        /// List query with only __typename field without selecting any entity item on a table
+        /// with composite primary key
+        /// </summary>
+        [TestMethod]
+        public async Task TypenameOnlyListQueryWithoutItemSelectionWithCompositePK()
+        {
+            string graphQLQueryName = "stocks";
+            string graphQLQuery = @"{
+                stocks{
+                    __typename
+                }
+            }";
+
+            string expected = @"
+                {
+                  ""__typename"": ""StockConnection""
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: true);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Point query with only __typename field in the selection set
         /// </summary>
         [TestMethod]
         public async Task TypenameOnlyPointQuery()
@@ -461,11 +486,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             ";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("book_by_pk").ToString());
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
 
         /// <summary>
-        /// 
+        /// Nested point query with only __typename field at each level
         /// </summary>
         [TestMethod]
         public async Task TypenameOnlyNestedPointQuery()
@@ -496,7 +521,88 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             ";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("book_by_pk").ToString());
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// List query with only __typename field on a stored procedure
+        /// </summary>
+        public virtual async Task TypenameOnlyQueryWithSP()
+        {
+            string graphQLQueryName = "executeGetBooks";
+            string graphQLQuery = @"{
+                executeGetBooks{
+                    __typename
+                }     
+            }";
+
+            string expected = @"
+                [
+      {
+        ""__typename"": ""GetBooks""
+      },
+      {
+        ""__typename"": ""GetBooks""
+      },
+      {
+        ""__typename"": ""GetBooks""
+      },
+      {
+        ""__typename"": ""GetBooks""
+      },
+      {
+        ""__typename"": ""GetBooks""
+      },
+      {
+        ""__typename"": ""GetBooks""
+      },
+      {
+        ""__typename"": ""GetBooks""
+      },
+      {
+        ""__typename"": ""GetBooks""
+      },
+      {
+        ""__typename"": ""GetBooks""
+      },
+      {
+        ""__typename"": ""GetBooks""
+      },
+      {
+        ""__typename"": ""GetBooks""
+      },
+      {
+        ""__typename"": ""GetBooks""
+      },
+      {
+        ""__typename"": ""GetBooks""
+      },
+      {
+        ""__typename"": ""GetBooks""
+      },
+      {
+        ""__typename"": ""GetBooks""
+      },
+      {
+        ""__typename"": ""GetBooks""
+      },
+      {
+        ""__typename"": ""GetBooks""
+      },
+      {
+        ""__typename"": ""GetBooks""
+      },
+      {
+        ""__typename"": ""GetBooks""
+      },
+      {
+        ""__typename"": ""GetBooks""
+      }
+    ]
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
 
         /// <summary>

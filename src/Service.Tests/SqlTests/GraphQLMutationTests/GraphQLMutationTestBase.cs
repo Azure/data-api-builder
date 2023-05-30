@@ -304,6 +304,107 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
+        /// <code>Do: </code>Update book in database and return the typename of the entity
+        /// <code>Check: </code>if the mutation executed successfully and returned the correct typename
+        /// </summary>
+        [TestMethod]
+        public async Task UpdateMutationWithOnlyTypenameInSelectionSet()
+        {
+            string graphQLMutationName = "updatebook";
+            string graphQLMutation = @"
+                mutation {
+                    updatebook(id: 1, item: { title: ""Even Better Title"", publisher_id: 2345} ) {
+                        __typename
+                    }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            string expected = @"
+              {
+                ""__typename"": ""book""
+              }
+            ";
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// <code>Do :</code> Delete a book from database and return the typename of the book entity
+        /// <code>Check :</code>if the mutation executed successfully and returned the correct typename
+        /// </summary>
+        [TestMethod]
+        public async Task DeleteMutationWithOnlyTypename()
+        {
+            string graphQLMutationName = "deletebook";
+            string graphQLMutation = @"
+                mutation {
+                    deletebook(id: 1) {
+                        __typename
+                    }
+                }
+            ";
+
+            string expected = @"
+              {
+                ""__typename"": ""book""
+              }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// <code>Do: </code>Inserts a new book in database and returns the typename of the book entity
+        /// <code>Check: </code>if the mutation executed successfully and returned the correct typename
+        /// </summary>
+        [TestMethod]
+        public async Task InsertMutationWithOnlyTypenameInSelectionSet()
+        {
+            string graphQLMutationName = "createbook";
+            string graphQLMutation = @"
+                mutation {
+                    createbook(item: { title: ""Awesome Book"", publisher_id: 1234 }) {
+                        __typename
+                    }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            string expected = @"
+              {
+                ""__typename"": ""book""
+              }
+            ";
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// <code>Do: </code> Execute a stored procedure and return the typename of the SP entity
+        /// <code>Check :</code>if the mutation executed successfully and returned the correct typename
+        /// </summary>
+        public virtual async Task ExecuteMutationWithOnlyTypenameInSelectionSet()
+        {
+            string graphQLMutationName = "executeCountBooks";
+            string graphQLMutation = @"
+                executeCountBooks{
+                    __typename
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            string expected = @"
+              {
+                ""__typename"": ""CountBooks""
+              }
+            ";
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
         /// <code>Do: </code>Update Sales in database and return its updated fields
         /// <code>Check: The calculated column has successfully been updated after updating the other fields </code>
         /// </summary>

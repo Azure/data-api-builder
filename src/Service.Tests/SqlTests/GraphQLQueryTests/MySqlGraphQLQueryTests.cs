@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -489,6 +490,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 club_name,
                 DatabaseType.mysql,
                 TestCategory.MYSQL);
+        }
+
+        [TestMethod]
+        [Ignore]
+        /// <inheritdoc/>
+        public override Task TypenameOnlyQueryWithSP()
+        {
+            throw new NotImplementedException();
         }
 
         #endregion

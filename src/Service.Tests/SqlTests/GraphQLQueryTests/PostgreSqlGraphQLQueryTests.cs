@@ -373,7 +373,7 @@ FROM
         [TestMethod]
         [Ignore]
         /// <inheritdoc/>
-        public override Task TypenameOnlyQueryWithSP()
+        public override Task QueryAgainstSPWithOnlyTypenameInSelectionSet()
         {
             throw new NotImplementedException();
         }

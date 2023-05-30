@@ -322,8 +322,8 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdateEarthInput!) {
         }
 
         /// <summary>
-        /// Executes a create mutation with only __typename in the selection set. Validates that
-        /// the right type is returned.
+        /// Validates that a create mutation with only __typename in the selection set returns the
+        /// right type
         /// </summary>
         [TestMethod]
         public async Task CreateMutationWithOnlyTypenameInSelectionSet()
@@ -352,8 +352,8 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdateEarthInput!) {
         }
 
         /// <summary>
-        /// Executes an update mutation with only __typename in the selection set. Validates that
-        /// the right type is returned.
+        /// Validates that an update mutation with only __typename in the selection set returns the
+        /// right type
         /// </summary>
         [TestMethod]
         public async Task UpdateMutationWithOnlyTypenameInSelectionSet()

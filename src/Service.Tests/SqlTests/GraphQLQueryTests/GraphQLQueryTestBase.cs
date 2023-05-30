@@ -388,10 +388,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
-        /// List query with only __typename field for each entity item
+        /// Validates that a list query with only __typename field in the items section returns the right types
         /// </summary>
         [TestMethod]
-        public async Task TypenameOnlyListQuery()
+        public async Task ListQueryWithOnlyTypenameInSelectionSet()
         {
             string graphQLQueryName = "books";
             string graphQLQuery = @"{
@@ -420,10 +420,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
-        /// List query with only __typename field without selecting any entity item
+        /// Validates that a list query with only __typename in the selection set
+        /// returns the right types
         /// </summary>
         [TestMethod]
-        public async Task TypenameOnlyListQueryWithoutItemSelection()
+        public async Task ListQueryWithoutItemSelectionButWithTypename()
         {
             string graphQLQueryName = "books";
             string graphQLQuery = @"{
@@ -443,11 +444,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
-        /// List query with only __typename field without selecting any entity item on a table
-        /// with composite primary key
+        /// Validates that a list query against a table with composite Pk
+        /// with only __typename in the selection set returns the right types
         /// </summary>
         [TestMethod]
-        public async Task TypenameOnlyListQueryWithoutItemSelectionWithCompositePK()
+        public async Task ListQueryWithoutItemSelectionButOnlyTypenameAgainstTableWithCompositePK()
         {
             string graphQLQueryName = "stocks";
             string graphQLQuery = @"{
@@ -467,10 +468,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
-        /// Point query with only __typename field in the selection set
+        /// Validates that a point query with only __typename field in the selection set
+        /// returns the right type
         /// </summary>
         [TestMethod]
-        public async Task TypenameOnlyPointQuery()
+        public async Task PointQueryWithTypenameInSelectionSet()
         {
             string graphQLQueryName = "book_by_pk";
             string graphQLQuery = @"{
@@ -490,10 +492,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
-        /// Nested point query with only __typename field at each level
+        /// Validates that a nested point query with only __typename field in each selection set
+        /// returns the right types
         /// </summary>
         [TestMethod]
-        public async Task TypenameOnlyNestedPointQuery()
+        public async Task NestedPointQueryWithOnlyTypenameInEachSelectionSet()
         {
             string graphQLQueryName = "book_by_pk";
             string graphQLQuery = @"{
@@ -525,9 +528,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
-        /// List query with only __typename field on a stored procedure
+        /// Validates that querying a SP with only __typename field in the selection set
+        /// returns the right type(s)
         /// </summary>
-        public virtual async Task TypenameOnlyQueryWithSP()
+        public virtual async Task QueryAgainstSPWithOnlyTypenameInSelectionSet()
         {
             string graphQLQueryName = "executeGetBooks";
             string graphQLQuery = @"{

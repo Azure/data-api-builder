@@ -495,7 +495,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         [TestMethod]
         [Ignore]
         /// <inheritdoc/>
-        public override Task TypenameOnlyQueryWithSP()
+        public override Task QueryAgainstSPWithOnlyTypenameInSelectionSet()
         {
             throw new NotImplementedException();
         }

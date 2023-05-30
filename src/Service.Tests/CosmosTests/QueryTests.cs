@@ -127,8 +127,8 @@ query ($id: ID, $partitionKeyValue: String) {
         }
 
         /// <summary>
-        /// Executes a query with only __typename in the selection set. Validates that
-        /// the right type is returned.
+        /// Validates that a query with only __typename in the selection set
+        /// returns the right type
         /// </summary>
         [TestMethod]
         public async Task QueryWithOnlyTypenameInSelectionSet()

@@ -29,7 +29,8 @@ namespace Cli
                 }
             );
 
-            DotNetEnv.Env.TraversePath().Load();
+            // Load environment variables from .env file if present.
+            DotNetEnv.Env.Load();
 
             // Setting up Logger for CLI.
             ILoggerFactory loggerFactory = new LoggerFactory();

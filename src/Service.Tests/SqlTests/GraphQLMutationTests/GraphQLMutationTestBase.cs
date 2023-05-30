@@ -401,7 +401,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
               }
             ";
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("executeCountBooks").ToString());
         }
 
         /// <summary>

@@ -114,7 +114,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
         /// <summary>
         /// Throws exception if database type is incorrectly configured
-        /// in the config. 
+        /// in the config.
         /// </summary>
         public static void ValidateDatabaseType(
             RuntimeConfig runtimeConfig,

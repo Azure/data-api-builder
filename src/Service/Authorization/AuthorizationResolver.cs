@@ -258,7 +258,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                         EntityActionOperation operation = entityAction.Action;
                         OperationMetadata operationToColumn = new();
 
-                        // Use a hashset to store all the backing field names
+                        // Use a HashSet to store all the backing field names
                         // that are accessible to the user.
                         HashSet<string> allowedColumns = new();
                         IEnumerable<string> allTableColumns = ResolveEntityDefinitionColumns(entityName);
@@ -514,7 +514,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
             string processedPolicy = Regex.Replace(policy, claimCharsRgx,
                 (claimTypeMatch) => GetClaimValueFromClaim(claimTypeMatch, claimsInRequestContext));
 
-            //Remove occurences of @item. directives
+            // Remove occurrences of @item. directives
             processedPolicy = processedPolicy.Replace(FIELD_PREFIX, "");
             return processedPolicy;
         }

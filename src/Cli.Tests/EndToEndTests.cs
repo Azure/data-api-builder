@@ -26,7 +26,7 @@ public class EndToEndTests
 
         fileSystem.AddFile(
             fileSystem.Path.Combine(
-                fileSystem.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
+                fileSystem.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "",
                 "dab.draft.schema.json"),
             new MockFileData("{ \"additionalProperties\": {\"version\": \"https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json\"} }"));
 

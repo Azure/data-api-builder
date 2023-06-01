@@ -141,6 +141,7 @@ public class EnvironmentTests
         string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql", "--connection-string", "@env('CONN_STRING')" };
         Program.Main(initArgs);
 
+        // Trying to start the runtime engine
         using Process process = ExecuteDabCommand(
             "start",
             $"-c {TEST_RUNTIME_CONFIG_FILE}"
@@ -148,14 +149,17 @@ public class EnvironmentTests
 
         string? output = process.StandardOutput.ReadToEnd();
         Assert.IsNotNull(output);
+
         if (isFailure)
         {
+            // Failed to resolve the environment variables in the config.
+            Assert.IsFalse(output.Contains("Starting the runtime engine..."));
             Assert.IsTrue(output.Contains("Error: Failed due to: Environmental Variable, CONN_STRING, not found."));
             Assert.IsTrue(output.Contains("Error: Failed to start the engine."));
-            Assert.IsFalse(output.Contains("Starting the runtime engine..."));
         }
         else
         {
+            // config resolved correctly.
             Assert.IsTrue(output.Contains("Starting the runtime engine..."));
         }
     }

@@ -74,10 +74,14 @@ namespace Cli
             Dictionary<string, JsonElement> dbOptions = new();
 
             HyphenatedNamingPolicy namingPolicy = new();
+            bool restDisabled = options.RestDisabled;
 
             switch (dbType)
             {
                 case DatabaseType.CosmosDB_NoSQL:
+                    // If cosmosdb_nosql is specified, rest is disabled.
+                    restDisabled = true;
+
                     string? cosmosDatabase = options.CosmosNoSqlDatabase;
                     string? cosmosContainer = options.CosmosNoSqlContainer;
                     string? graphQLSchemaPath = options.GraphQLSchemaPath;
@@ -118,14 +122,9 @@ namespace Cli
                     throw new Exception($"DatabaseType: ${dbType} not supported.Please provide a valid database-type.");
             }
 
-            DataSource dataSource = new(dbType, string.Empty, dbOptions);
-
             // default value of connection-string should be used, i.e Empty-string
             // if not explicitly provided by the user
-            if (options.ConnectionString is not null)
-            {
-                dataSource = dataSource with { ConnectionString = options.ConnectionString };
-            }
+            DataSource dataSource = new(dbType, options.ConnectionString ?? string.Empty, dbOptions);
 
             if (!ValidateAudienceAndIssuerForJwtProvider(options.AuthenticationProvider, options.Audience, options.Issuer))
             {
@@ -149,7 +148,7 @@ namespace Cli
                 Schema: dabSchemaLink,
                 DataSource: dataSource,
                 Runtime: new(
-                    Rest: new(!options.RestDisabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH),
+                    Rest: new(!restDisabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH),
                     GraphQL: new(!options.GraphQLDisabled, options.GraphQLPath),
                     Host: new(
                         Cors: new(options.CorsOrigin?.ToArray() ?? Array.Empty<string>()),
@@ -416,11 +415,12 @@ namespace Cli
         }
 
         /// <summary>
-        /// Update an existing entity in the runtime config json.
-        /// On successful return of the function, runtimeConfigJson will be modified.
+        /// Update an existing entity in the runtime config. This method will receive the existing runtime config
+        /// and update the entity before returning a new instance of the runtime config.
         /// </summary>
         /// <param name="options">UpdateOptions.</param>
-        /// <param name="runtimeConfigJson">Json string of existing runtime config. This will be modified on successful return.</param>
+        /// <param name="initialConfig">The initial <c>RuntimeConfig</c>.</param>
+        /// <param name="updatedConfig">The updated <c>RuntimeConfig</c>.</param>
         /// <returns>True on success. False otherwise.</returns>
         public static bool TryUpdateExistingEntity(UpdateOptions options, RuntimeConfig initialConfig, out RuntimeConfig updatedConfig)
         {
@@ -482,7 +482,7 @@ namespace Cli
 
             if (!updatedGraphQLDetails.Enabled)
             {
-                _logger.LogWarning("Disabling GraphQL for this entity will restrict it's usage in relationships");
+                _logger.LogWarning("Disabling GraphQL for this entity will restrict its usage in relationships");
             }
 
             EntitySourceType updatedSourceType = updatedSource.Type;

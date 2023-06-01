@@ -22,6 +22,6 @@ When an issue is raised, a member of the team will respond as soon as possible, 
 
 ## Security issues
 
-Security issues and bugs should be reported privately, via email, to the Microsoft Security Response Center (secure@microsoft.com). You should receive a response within 24 hours.
+Security issues and bugs should be reported privately, via email, to the Microsoft Security Response Center (<secure@microsoft.com>). You should receive a response within 24 hours.
 
 For more information, review [SECURITY.md](SECURITY.md).

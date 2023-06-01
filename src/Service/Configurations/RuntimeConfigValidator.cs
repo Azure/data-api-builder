@@ -828,7 +828,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
                             if (configOperation.Policy is not null && configOperation.Policy.Database is not null)
                             {
-                                // Remove all the occurences of @item. directive from the policy.
+                                // Remove all the occurrences of @item. directive from the policy.
                                 configOperation.Policy.Database = ProcessFieldsInPolicy(configOperation.Policy.Database);
                             }
 
@@ -836,7 +836,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         }
                     }
 
-                    // Update the permissionsetting.Actions to point to the processedActions.
+                    // Update the permissionSetting.Actions to point to the processedActions.
                     permissionSetting.Operations = processedActions.ToArray();
                 }
             }

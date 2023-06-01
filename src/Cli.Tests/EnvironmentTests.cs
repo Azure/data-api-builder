@@ -54,9 +54,9 @@ public class EnvironmentTests
         Assert.IsNull(Environment.GetEnvironmentVariable(TEST_ENV_VARIABLE));
 
         // Creating environment variable file
-        File.Create("test.env").Close();
-        File.WriteAllText("test.env", $"{TEST_ENV_VARIABLE}=DEVELOPMENT");
-        DotNetEnv.Env.Load("test.env");
+        File.Create(".env").Close();
+        File.WriteAllText(".env", $"{TEST_ENV_VARIABLE}=DEVELOPMENT");
+        DotNetEnv.Env.Load();
 
         // Test environment variable is picked up from the .env file and is correctly resolved in the config file.
         Assert.AreEqual("DEVELOPMENT", Environment.GetEnvironmentVariable(TEST_ENV_VARIABLE));
@@ -79,9 +79,9 @@ public class EnvironmentTests
         Environment.SetEnvironmentVariable(TEST_ENV_VARIABLE, "TEST");
 
         // Creating environment variable file
-        File.Create("test.env").Close();
-        File.WriteAllText("test.env", $"{TEST_ENV_VARIABLE}=DEVELOPMENT");
-        DotNetEnv.Env.Load("test.env");     // It contains value DEVELOPMENT
+        File.Create(".env").Close();
+        File.WriteAllText(".env", $"{TEST_ENV_VARIABLE}=DEVELOPMENT");
+        DotNetEnv.Env.Load();     // It contains value DEVELOPMENT
         Assert.AreEqual("DEVELOPMENT", Environment.GetEnvironmentVariable(TEST_ENV_VARIABLE));
 
         // If a variable is not present in the .env file then the system defined variable would be used if defined.
@@ -106,23 +106,66 @@ public class EnvironmentTests
     }
 
     /// <summary>
-    /// Test to verify that if .env file is not present then existing system variables will be used.
+    /// Test to verify that no error is thrown if .env file is not present, and existing system variables is used.
     /// </summary>
     [TestMethod]
     public void TestSystemEnvironmentVariableIsUsedInAbsenceOfEnvironmentFile()
     {
         Environment.SetEnvironmentVariable(TEST_ENV_VARIABLE, "TEST");
-        Assert.IsFalse(File.Exists("test.env"));
-        DotNetEnv.Env.Load("test.env"); // No error is thrown
+        Assert.IsFalse(File.Exists(".env"));
+        DotNetEnv.Env.Load(); // No error is thrown
         Assert.AreEqual("TEST", Environment.GetEnvironmentVariable(TEST_ENV_VARIABLE));
+    }
+
+    /// <summary>
+    /// Test to verify that if the environment variables are not resolved correctly, runtime engine will not start.
+    /// Here, in the first scenario, engine failed to start because the variable defined in the environment file
+    /// is typed incorrectly and do not match with the one present in the config.
+    /// </summary>
+    [DataRow("COMM_STRINX=test_connection_string", true, DisplayName = "Incorrect Variable name used in the environment file.")]
+    [DataRow("CONN_STRING=test_connection_string", false, DisplayName = "Correct Variable name used in the environment file.")]
+    [DataTestMethod]
+    public void TestFailureToStartWithUnresolvedJsonConfig(
+        string environmentFileContent,
+        bool isFailure
+    )
+    {
+        // Creating environment variable file
+        File.Create(".env").Close();
+        File.WriteAllText(".env", environmentFileContent);
+        if (File.Exists(TEST_RUNTIME_CONFIG_FILE))
+        {
+            File.Delete(TEST_RUNTIME_CONFIG_FILE);
+        }
+
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql", "--connection-string", "@env('CONN_STRING')" };
+        Program.Main(initArgs);
+
+        using Process process = ExecuteDabCommand(
+            "start",
+            $"-c {TEST_RUNTIME_CONFIG_FILE}"
+        );
+
+        string? output = process.StandardOutput.ReadToEnd();
+        Assert.IsNotNull(output);
+        if (isFailure)
+        {
+            Assert.IsTrue(output.Contains("Error: Failed due to: Environmental Variable, CONN_STRING, not found."));
+            Assert.IsTrue(output.Contains("Error: Failed to start the engine."));
+            Assert.IsFalse(output.Contains("Starting the runtime engine..."));
+        }
+        else
+        {
+            Assert.IsTrue(output.Contains("Starting the runtime engine..."));
+        }
     }
 
     [TestCleanup]
     public void CleanUp()
     {
-        if (File.Exists("test.env"))
+        if (File.Exists(".env"))
         {
-            File.Delete("test.env");
+            File.Delete(".env");
         }
     }
 }

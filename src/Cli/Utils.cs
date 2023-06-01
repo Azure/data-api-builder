@@ -823,7 +823,9 @@ namespace Cli
         /// Constructs the REST Path using the add/update command --rest option
         /// </summary>
         /// <param name="restRoute">Input entered using --rest option</param>
-        /// <returns>Constructed REST Path</returns>
+        /// <param name="supportedHttpVerbs">Supported HTTP verbs for the entity.</param>
+        /// <param name="isCosmosDbNoSql">True when the entity is a CosmosDB NoSQL entity, and if it is true, REST is disabled.</param>
+        /// <returns>Constructed REST options for the entity.</returns>
         public static EntityRestOptions ConstructRestOptions(string? restRoute, SupportedHttpVerb[] supportedHttpVerbs, bool isCosmosDbNoSql)
         {
             // REST is not supported for CosmosDB NoSQL, so we'll forcibly disable it.
@@ -858,12 +860,13 @@ namespace Cli
         /// Constructs the graphQL Type from add/update command --graphql option
         /// </summary>
         /// <param name="graphQL">GraphQL type input from the CLI commands</param>
+        /// <param name="graphQLOperationsForStoredProcedures">GraphQL operation input from the CLI commands.</param>
         /// <returns>Constructed GraphQL Type</returns>
         public static EntityGraphQLOptions ConstructGraphQLTypeDetails(string? graphQL, GraphQLOperation? graphQLOperationsForStoredProcedures)
         {
             EntityGraphQLOptions graphQLType = new(
-                Singular: "",
-                Plural: "",
+                Singular: string.Empty,
+                Plural: string.Empty,
                 Operation: graphQLOperationsForStoredProcedures);
 
             // Default state for GraphQL is enabled, so if no value is provided, we enable it

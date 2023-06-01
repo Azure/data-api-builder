@@ -188,11 +188,12 @@ namespace Cli
         }
 
         /// <summary>
-        /// Add new entity to runtime config json. The function will add new entity to runtimeConfigJson string.
-        /// On successful return of the function, runtimeConfigJson will be modified.
+        /// Add new entity to runtime config. This method will take the existing runtime config and add a new entity to it
+        /// and return a new instance of the runtime config.
         /// </summary>
         /// <param name="options">AddOptions.</param>
-        /// <param name="runtimeConfigJson">Json string of existing runtime config. This will be modified on successful return.</param>
+        /// <param name="initialRuntimeConfig">The current instance of the <c>RuntimeConfig</c> that will be updated.</param>
+        /// <param name="updatedRuntimeConfig">The updated instance of the <c>RuntimeConfig</c>.</param>
         /// <returns>True on success. False otherwise.</returns>
         public static bool TryAddNewEntity(AddOptions options, RuntimeConfig initialRuntimeConfig, out RuntimeConfig updatedRuntimeConfig)
         {

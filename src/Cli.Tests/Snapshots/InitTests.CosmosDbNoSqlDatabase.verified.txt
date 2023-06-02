@@ -14,7 +14,7 @@
   },
   Runtime: {
     Rest: {
-      Enabled: true,
+      Enabled: false,
       Path: /api
     },
     GraphQL: {

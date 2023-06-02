@@ -264,8 +264,13 @@ namespace Cli
         /// Returns an object of type Policy
         /// If policyRequest or policyDatabase is provided. Otherwise, returns null.
         /// </summary>
-        public static EntityActionPolicy GetPolicyForOperation(string? policyRequest, string? policyDatabase)
+        public static EntityActionPolicy? GetPolicyForOperation(string? policyRequest, string? policyDatabase)
         {
+            if (policyDatabase is null && policyRequest is null)
+            {
+                return null;
+            }
+
             return new EntityActionPolicy(policyRequest, policyDatabase);
         }
 

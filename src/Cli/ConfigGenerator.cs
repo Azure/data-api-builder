@@ -477,7 +477,7 @@ namespace Cli
             EntityPermission[]? updatedPermissions = entity!.Permissions;
             Dictionary<string, EntityRelationship>? updatedRelationships = entity.Relationships;
             Dictionary<string, string>? updatedMappings = entity.Mappings;
-            EntityActionPolicy updatedPolicy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
+            EntityActionPolicy? updatedPolicy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
             EntityActionFields? updatedFields = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
 
             if (!updatedGraphQLDetails.Enabled)
@@ -579,7 +579,7 @@ namespace Cli
         /// <returns> On failure, returns null. Else updated PermissionSettings array will be returned.</returns>
         private static EntityPermission[]? GetUpdatedPermissionSettings(Entity entityToUpdate,
                                                                         IEnumerable<string> permissions,
-                                                                        EntityActionPolicy policy,
+                                                                        EntityActionPolicy? policy,
                                                                         EntityActionFields? fields,
                                                                         EntitySourceType sourceType)
         {
@@ -589,7 +589,7 @@ namespace Cli
             //
             if (!TryGetRoleAndOperationFromPermission(permissions, out newRole, out newOperations))
             {
-                _logger.LogError($"Failed to fetch the role and operation from the given permission string: {permissions}.");
+                _logger.LogError("Failed to fetch the role and operation from the given permission string: {permissions}.", permissions);
                 return null;
             }
 
@@ -658,7 +658,7 @@ namespace Cli
         /// <param name="existingOperations">operation items present in the config.</param>
         /// <returns>Array of updated operation objects</returns>
         private static EntityAction[] GetUpdatedOperationArray(string[] newOperations,
-                                                        EntityActionPolicy newPolicy,
+                                                        EntityActionPolicy? newPolicy,
                                                         EntityActionFields? newFields,
                                                         IDictionary<EntityActionOperation, EntityAction> existingOperations)
         {

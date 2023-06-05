@@ -1850,7 +1850,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="restPathForSecondEntity">Custom rest path to be configured for the second entity.</param>
         /// <param name="expectedExceptionMessage">The expected exception message.</param>
         [DataTestMethod]
-        [DataRow(true, "", "Entity: EntityA has an empty rest path.",
+        [DataRow(true, "", "The rest path for entity: EntityA cannot be empty.",
             DisplayName = "Empty rest path configured for an entity fails config validation.")]
         [DataRow(true, null, "Entity: EntityA has a null rest path. Accepted data types: string.",
             DisplayName = "NULL rest path configured for an entity fails config validation.")]

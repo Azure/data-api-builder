@@ -267,12 +267,12 @@ namespace Azure.DataApiBuilder.Service.Authorization
                         Config.Operation operation = Config.Operation.None;
                         OperationMetadata operationToColumn = new();
 
-                        // Use a hashset to store all the backing field names
+                        // Use a HashSet to store all the backing field names
                         // that are accessible to the user.
                         HashSet<string> allowedColumns = new();
                         IEnumerable<string> allTableColumns = ResolveEntityDefinitionColumns(entityName);
 
-                        // Implicitly, all table columns are 'allowed' when an operationtype is a string.
+                        // Implicitly, all table columns are 'allowed' when an operationElement is a string.
                         // Since no granular field permissions exist for this operation within the current role.
                         if (operationElement.ValueKind is JsonValueKind.String)
                         {
@@ -541,7 +541,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
             string processedPolicy = Regex.Replace(policy, claimCharsRgx,
                 (claimTypeMatch) => GetClaimValueFromClaim(claimTypeMatch, claimsInRequestContext));
 
-            //Remove occurences of @item. directives
+            // Remove occurrences of @item. directives
             processedPolicy = processedPolicy.Replace(FIELD_PREFIX, "");
             return processedPolicy;
         }

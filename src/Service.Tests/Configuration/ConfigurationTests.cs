@@ -1056,7 +1056,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             string expectedErrorMessage)
         {
             const string CUSTOM_CONFIG = "custom-config.json";
-            TestHelper.ConstructNewConfigWithSpecifiedHostMode(CUSTOM_CONFIG, HostModeType.Production, TestCategory.MSSQL);
+            TestHelper.ConstructNewConfigWithCustomSettings(CUSTOM_CONFIG, TestCategory.MSSQL, HostModeType.Production);
             string[] args = new[]
             {
                     $"--ConfigFileName={CUSTOM_CONFIG}"
@@ -1083,6 +1083,46 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 string body = await response.Content.ReadAsStringAsync();
                 Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
                 Assert.IsTrue(body.Contains(expectedErrorMessage));
+            }
+        }
+
+        /// <summary>
+        /// Test to validate that when an entity which will return a paginated response is queried and a custom rest base route is configured in the runtime configuration,
+        /// then the generated nextLink in the response would contain the rest base-route just before the rest path. For the subsequent query, the rest base-route will be trimmed
+        /// by the upstream before the request lands at DAB.
+        /// </summary>
+        [TestMethod]
+        public async Task TestRestBaseRouteInNextLinkForPaginatedRestResponse()
+        {
+            const string CUSTOM_CONFIG = "custom-config.json";
+            string restBaseRoute = "/rest-api";
+            TestHelper.ConstructNewConfigWithCustomSettings(CUSTOM_CONFIG, TestCategory.MSSQL, restBaseRoute: restBaseRoute);
+            string[] args = new[]
+            {
+                    $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                string requestPath = "/api/MappedBookmarks";
+                HttpMethod httpMethod = SqlTestHelper.ConvertRestMethodToHttpMethod(RestMethod.Get);
+                HttpRequestMessage request = new(httpMethod, requestPath);
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                string responseBody = await response.Content.ReadAsStringAsync();
+                Assert.IsTrue(response.StatusCode is HttpStatusCode.OK);
+
+                JsonElement responseElement = JsonSerializer.Deserialize<JsonElement>(responseBody);
+                JsonElement responseValue = responseElement.GetProperty(SqlTestHelper.jsonResultTopLevelKey);
+                string nextLink = responseElement.GetProperty("nextLink").ToString();
+
+                // Assert that we got an array response with length equal to the maximum allowed records in a paginated response.
+                Assert.IsTrue(responseValue.ValueKind is JsonValueKind.Array);
+                Assert.IsTrue(responseValue.GetArrayLength() == 100);
+
+                // Assert that the nextLink contains the rest base-route just before the request path.
+                Assert.IsTrue(nextLink.Contains(restBaseRoute + requestPath));
             }
         }
 

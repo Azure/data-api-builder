@@ -1766,7 +1766,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="expectedErrorMessage">Expected error message when an exception is expected for the test run.</param>
         [DataTestMethod]
         [DataRow(SourceType.Table, "[\"get\"]", true,
-            $"The rest property '{RestStoredProcedureEntitySettings.PROPERTY_METHODS}' present for entity: HybridEntity of type: Table is only valid for type: StoredProcedure.",
+            $"The rest property '{RestStoredProcedureEntitySettings.PROPERTY_METHODS}' is present for entity: HybridEntity of type: Table, but is only valid for type: StoredProcedure.",
             DisplayName = "Rest methods specified for non-storedprocedure entity fail config validation.")]
         [DataRow(SourceType.StoredProcedure, "\"get\"", true,
             $"The rest property '{RestStoredProcedureEntitySettings.PROPERTY_METHODS}' for entity: HybridEntity is expected to be an array.",
@@ -1851,11 +1851,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="expectedExceptionMessage">The expected exception message.</param>
         [DataTestMethod]
         [DataRow(true, "", "Entity: EntityA has an empty rest path.",
-            DisplayName = "Empty rest path configured for an entitiy fails config validation.")]
-        [DataRow(true, null, "Entity: EntityA has a null rest path. Accepted value types are: string, boolean.",
-            DisplayName = "NULL rest path configured for an entitiy fails config validation.")]
-        [DataRow(true, 1, $"Entity: EntityA has rest path specified with incorrect data type. Accepted data types are: string, boolean.",
-            DisplayName = "Rest path configured as integer for an entitiy fails config validation.")]
+            DisplayName = "Empty rest path configured for an entity fails config validation.")]
+        [DataRow(true, null, "Entity: EntityA has a null rest path. Accepted data types: string.",
+            DisplayName = "NULL rest path configured for an entity fails config validation.")]
+        [DataRow(true, 1, $"Entity: EntityA has rest path specified with incorrect data type. Accepted data types: string.",
+            DisplayName = "Rest path configured as integer for an entity fails config validation.")]
+        [DataRow(false, "entityRestPath", DisplayName = "Rest path correctly configured as string.")]
         public void ValidateRestPathForEntityInConfig(
             bool exceptionExpected,
             object restPathForEntity,
@@ -1898,7 +1899,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="expectedExceptionMessage">The expected exception message.</param>
         [DataTestMethod]
         [DataRow(false, "restPathA", "restPathB", DisplayName = "Unique rest paths configured for entities pass config validation.")]
-        [DataRow(false, true, false, DisplayName = "Rest path configured as boolean values for an entities pass config validation.")]
         [DataRow(true, "restPath", "restPath", "The rest path: restPath specified for entity: EntityB is already used by another entity.",
             DisplayName = "Duplicate rest paths configures for entities fail config validation.")]
         public void ValidateUniqueRestPathsForEntitiesInConfig(

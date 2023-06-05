@@ -28,7 +28,7 @@ namespace Azure.DataApiBuilder.Config
     }
 
     /// <summary>
-    /// Class to specify custom converter used while deserialising action from json config
+    /// Class to specify custom converter used while deserializing action from json config
     /// to Action.Name.
     /// </summary>
     public class OperationEnumJsonConverter : JsonConverter<Operation>

@@ -15,6 +15,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
+using HotChocolate;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
@@ -37,13 +38,13 @@ namespace Azure.DataApiBuilder.Service.Configurations
         // The claimType is invalid if there is a match found.
         private static readonly Regex _invalidClaimCharsRgx = new(_invalidClaimChars, RegexOptions.Compiled);
 
-        // "Reserved characters as defined in RFC3986 are not allowed to be present in the
-        // REST/GraphQL custom path because they are not acceptable to be present in URIs.
-        // " Refer here: https://www.rfc-editor.org/rfc/rfc3986#page-12.
-        private static readonly string _invalidPathChars = @"[\.:\?#/\[\]@!$&'()\*\+,;=]+";
+        // Reserved characters as defined in RFC3986 are not allowed to be present in the
+        // REST/GraphQL URI path because they are not acceptable to be present in URIs.
+        // Refer here: https://www.rfc-editor.org/rfc/rfc3986#page-12.
+        private static readonly string _invalidURIComponentChars = @"[\.:\?#/\[\]@!$&'()\*\+,;=]+";
 
-        //  Regex to validate rest/graphql custom path prefix.
-        public static readonly Regex _invalidApiPathCharsRgx = new(_invalidPathChars, RegexOptions.Compiled);
+        //  Regex to validate rest/graphql URI path components.
+        public static readonly Regex _invalidURIComponentCharsRgx = new(_invalidURIComponentChars, RegexOptions.Compiled);
 
         // Regex used to extract all claimTypes in policy. It finds all the substrings which are
         // of the form @claims.*** delimited by space character,end of the line or end of the string.
@@ -87,11 +88,14 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
             // Running these graphQL validations only in development mode to ensure
             // fast startup of engine in production mode.
-            if (runtimeConfig.GraphQLGlobalSettings.Enabled
-                 && runtimeConfig.HostGlobalSettings.Mode is HostModeType.Development)
+            if (runtimeConfig.HostGlobalSettings.Mode is HostModeType.Development)
             {
                 ValidateEntityConfiguration(runtimeConfig);
-                ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(runtimeConfig.Entities);
+
+                if (runtimeConfig.GraphQLGlobalSettings.Enabled)
+                {
+                    ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(runtimeConfig.Entities);
+                }
             }
         }
 
@@ -260,45 +264,73 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
-                // If no custom rest path is defined for the entity, we default it to the entityName.
-                string pathForEntity = entityName;
-                if (entity.Rest is not null)
+                if (runtimeConfig.RestGlobalSettings.Enabled)
                 {
-                    JsonElement restJsonElement = JsonSerializer.SerializeToElement(entity.Rest);
-
-                    // We do the validation for rest path only if the 'rest' property maps to a json object.
-                    if (restJsonElement.ValueKind is JsonValueKind.Object)
+                    // If no custom rest path is defined for the entity, we default it to the entityName.
+                    string pathForEntity = entityName;
+                    if (entity.Rest is not null)
                     {
-                        // Since 'path' is an optional property, we skip validation if its absent.
-                        if (restJsonElement.TryGetProperty(RestEntitySettings.PROPERTY_PATH, out JsonElement pathElement))
-                        {
-                            pathForEntity = ValidateAndGetRestPathForEntity(entityName, pathElement);
-                        }
+                        JsonElement restJsonElement = JsonSerializer.SerializeToElement(entity.Rest);
 
-                        // Since 'methods' is an optional property, we skip validation if its absent.
-                        if (restJsonElement.TryGetProperty(RestStoredProcedureEntitySettings.PROPERTY_METHODS, out JsonElement methodsElement))
+                        // We do the validation for rest path only if the 'rest' property maps to a json object.
+                        if (restJsonElement.ValueKind is JsonValueKind.Object)
                         {
-                            ValidateRestMethodsForEntity(entityName, methodsElement, entity);
+                            // Since 'path' is an optional property, we skip validation if its absent.
+                            if (restJsonElement.TryGetProperty(RestEntitySettings.PROPERTY_PATH, out JsonElement pathElement))
+                            {
+                                pathForEntity = ValidateAndGetRestPathForEntity(entityName, pathElement);
+                            }
+
+                            // Since 'methods' is an optional property, we skip validation if its absent.
+                            if (restJsonElement.TryGetProperty(RestStoredProcedureEntitySettings.PROPERTY_METHODS, out JsonElement methodsElement))
+                            {
+                                ValidateRestMethodsForEntity(entityName, methodsElement, entity);
+                            }
+                        }
+                        else if (restJsonElement.ValueKind is not JsonValueKind.True && restJsonElement.ValueKind is not JsonValueKind.False)
+                        {
+                            throw new DataApiBuilderException(
+                                message: $"The 'rest' property for entity: {entityName} can only be a boolean value or a json object.",
+                                statusCode: HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
+                            );
                         }
                     }
-                    else if (restJsonElement.ValueKind is not JsonValueKind.True && restJsonElement.ValueKind is not JsonValueKind.False)
+
+                    if (string.IsNullOrEmpty(pathForEntity))
                     {
+                        // The rest 'path' cannot be empty.
                         throw new DataApiBuilderException(
-                            message: $"The 'rest' property for entity: {entityName} can only be a boolean value or a json object.",
+                            message: $"The rest path for entity: {entityName} cannot be empty.",
                             statusCode: HttpStatusCode.ServiceUnavailable,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
-                        );
+                            );
+                    }
+
+                    if (_invalidURIComponentCharsRgx.IsMatch(pathForEntity))
+                    {
+                        throw new DataApiBuilderException(
+                            message: $"The rest path: {pathForEntity} for entity: {entityName} contains one or more reserved characters.",
+                            statusCode: HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
+                            );
+                    }
+
+                    if (!restPathsForEntities.Add(pathForEntity))
+                    {
+                        // Presence of multiple entities having the same rest path configured causes conflict.
+                        throw new DataApiBuilderException(
+                            message: $"The rest path: {pathForEntity} specified for entity: {entityName} is already used by another entity.",
+                            statusCode: HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
+                            );
                     }
                 }
 
-                if (!restPathsForEntities.Add(pathForEntity))
+                // If GraphQL endpoint is disabled globally, we skip the validations related to it.
+                if (!runtimeConfig.GraphQLGlobalSettings.Enabled)
                 {
-                    // Presence of multiple entities having the same rest path configured causes conflict.
-                    throw new DataApiBuilderException(
-                        message: $"The rest path: {pathForEntity} specified for entity: {entityName} is already used by another entity.",
-                        statusCode: HttpStatusCode.ServiceUnavailable,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
-                        );
+                    continue;
                 }
 
                 if (entity.GraphQL is null)
@@ -357,16 +389,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
             }
 
             string path = restPathElement.ToString().TrimStart('/').TrimStart(' ');
-            if (string.IsNullOrEmpty(path))
-            {
-                // The rest 'path' cannot be empty.
-                throw new DataApiBuilderException(
-                    message: $"Entity: {entityName} has an empty rest {RestEntitySettings.PROPERTY_PATH}.",
-                    statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
-                    );
-            }
-
             return path;
         }
 
@@ -573,7 +595,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <exception cref="DataApiBuilderException"></exception>
         public static void DoApiPathInvalidCharCheck(string apiPath, ApiType apiType)
         {
-            if (_invalidApiPathCharsRgx.IsMatch(apiPath))
+            if (_invalidURIComponentCharsRgx.IsMatch(apiPath))
             {
                 string errorMessage = INVALID_GRAPHQL_PATH_WITH_RESERVED_CHAR_ERR_MSG;
                 if (apiType is ApiType.REST)

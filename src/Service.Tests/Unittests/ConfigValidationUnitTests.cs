@@ -1831,14 +1831,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             if (exceptionExpected)
             {
                 DataApiBuilderException ex =
-                    Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig));
+                    Assert.ThrowsException<DataApiBuilderException>(() => ValidateEntityConfiguration(runtimeConfig));
                 Assert.AreEqual(expectedErrorMessage, ex.Message);
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
             }
             else
             {
-                RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig);
+                ValidateEntityConfiguration(runtimeConfig);
             }
         }
 

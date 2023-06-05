@@ -416,6 +416,17 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     );
             }
 
+            if (restMethodsElement.ValueKind is JsonValueKind.Null)
+            {
+                // The rest property 'methods' cannot be null.
+                throw new DataApiBuilderException(
+                    message: $"The rest property '{RestStoredProcedureEntitySettings.PROPERTY_METHODS}' for entity: {entityName} " +
+                    $"cannot be null.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
+                    );
+            }
+
             if (restMethodsElement.ValueKind is not JsonValueKind.Array)
             {
                 // The rest property 'methods' can only hold an array.

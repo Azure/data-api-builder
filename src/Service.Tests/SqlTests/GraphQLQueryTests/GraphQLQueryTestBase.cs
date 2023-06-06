@@ -583,30 +583,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
       },
       {
         ""__typename"": ""GetBooks""
-      },
-      {
-        ""__typename"": ""GetBooks""
-      },
-      {
-        ""__typename"": ""GetBooks""
-      },
-      {
-        ""__typename"": ""GetBooks""
-      },
-      {
-        ""__typename"": ""GetBooks""
-      },
-      {
-        ""__typename"": ""GetBooks""
-      },
-      {
-        ""__typename"": ""GetBooks""
       }
-    ]
-            ";
+    ]";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            System.Console.WriteLine(actual.ToString());
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
 

@@ -389,8 +389,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         {
             string graphQLMutationName = "executeCountBooks";
             string graphQLMutation = @"
-                executeCountBooks{
-                    __typename
+                mutation {
+                    executeCountBooks{
+                        __typename
+                    }
                 }
             ";
 

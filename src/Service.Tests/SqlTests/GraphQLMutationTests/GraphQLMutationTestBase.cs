@@ -405,7 +405,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
               ]
             ";
 
-            System.Console.WriteLine(actual.ToString());
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
 

@@ -396,12 +396,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
             string expected = @"
-              {
-                ""__typename"": ""CountBooks""
-              }
+              [
+                {
+                  ""__typename"": ""CountBooks""
+                }
+              ]
             ";
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("executeCountBooks").ToString());
+            System.Console.WriteLine(actual.ToString());
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
 
         /// <summary>

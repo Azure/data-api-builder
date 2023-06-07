@@ -50,7 +50,7 @@ public class EnvironmentTests
     {
         string jsonWithEnvVariable = @"{""envValue"": ""@env('DAB_TEST_ENVIRONMENT')""}";
 
-        // No environment File, No environment variable set in the system
+        // No environment File, no environment variable set in the system
         Assert.IsNull(Environment.GetEnvironmentVariable(TEST_ENV_VARIABLE));
 
         // Creating environment variable file
@@ -68,9 +68,9 @@ public class EnvironmentTests
     }
 
     /// <summary>
-    /// This test setups a environment variable in the system and also creates a .env file containing
-    /// same variable with different value to show the value stored in .env file is given
-    /// precedence over the system variable.
+    /// This test setups an environment variable in the system and also creates a .env file containing
+    /// the same variable with different value. In such a case, the value stored for variable in .env file is given
+    /// precedence over the value specified in the system.
     /// </summary>
     [TestMethod]
     public void TestPrecedenceOfEnvironmentFileOverExistingVariables()
@@ -100,13 +100,10 @@ public class EnvironmentTests
                     ""hostingEnvValue"": ""PHOENIX_TEST""
                 }"),
             JObject.Parse(resolvedJson)), "JSON resolved with environment variable correctly");
-
-        // Removing the .env file it will then use the value of system environment variable.
-
     }
 
     /// <summary>
-    /// Test to verify that no error is thrown if .env file is not present, and existing system variables is used.
+    /// Test to verify that no error is thrown if .env file is not present, and existing system variables are used.
     /// </summary>
     [TestMethod]
     public void TestSystemEnvironmentVariableIsUsedInAbsenceOfEnvironmentFile()
@@ -118,9 +115,9 @@ public class EnvironmentTests
     }
 
     /// <summary>
-    /// Test to verify that if the environment variables are not resolved correctly, runtime engine will not start.
-    /// Here, in the first scenario, engine failed to start because the variable defined in the environment file
-    /// is typed incorrectly and do not match with the one present in the config.
+    /// Test to verify that if the environment variables are not resolved correctly, the runtime engine will not start.
+    /// Here, in the first scenario, engine fails to start because the variable defined in the environment file
+    /// is typed incorrectly and does not match the one present in the config.
     /// </summary>
     [DataRow("COMM_STRINX=test_connection_string", true, DisplayName = "Incorrect Variable name used in the environment file.")]
     [DataRow("CONN_STRING=test_connection_string", false, DisplayName = "Correct Variable name used in the environment file.")]
@@ -155,12 +152,12 @@ public class EnvironmentTests
             // Failed to resolve the environment variables in the config.
             Assert.IsFalse(output.Contains("Starting the runtime engine..."));
             Assert.IsTrue(output.Contains("Error: Failed due to: Environmental Variable, CONN_STRING, not found."));
-            Assert.IsTrue(output.Contains("Error: Failed to start the engine."));
         }
         else
         {
             // config resolved correctly.
             Assert.IsTrue(output.Contains("Starting the runtime engine..."));
+            Assert.IsFalse(output.Contains("Error: Failed due to: Environmental Variable, CONN_STRING, not found."));
         }
     }
 

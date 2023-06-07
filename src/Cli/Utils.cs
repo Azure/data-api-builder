@@ -628,7 +628,7 @@ namespace Cli
                     out deserializedRuntimeConfig,
                     logger: null))
             {
-                _logger.LogError("Failed to parse the {configFile}", configFile);
+                _logger.LogError("Failed to parse the config file: {configFile}.", configFile);
                 return false;
             }
 

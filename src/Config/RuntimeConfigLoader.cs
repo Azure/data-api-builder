@@ -6,6 +6,7 @@ using System.IO.Abstractions;
 using System.Net;
 using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -124,6 +125,7 @@ public class RuntimeConfigLoader
             PropertyNamingPolicy = new HyphenatedNamingPolicy(),
             ReadCommentHandling = JsonCommentHandling.Skip,
             WriteIndented = true,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         };
         options.Converters.Add(new EnumMemberJsonEnumConverterFactory());
         options.Converters.Add(new RestRuntimeOptionsConverterFactory());

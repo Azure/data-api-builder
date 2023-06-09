@@ -89,7 +89,7 @@ namespace Cli
         /// </summary>
         /// <param name="operations">Array of operations which is of type JsonElement.</param>
         /// <returns>Dictionary of operations</returns>
-        public static IDictionary<EntityActionOperation, EntityAction> ConvertOperationArrayToIEnumerable(EntityAction[] operations, EntitySourceType sourceType)
+        public static IDictionary<EntityActionOperation, EntityAction> ConvertOperationArrayToIEnumerable(EntityAction[] operations, EntitySourceType? sourceType)
         {
             Dictionary<EntityActionOperation, EntityAction> result = new();
             foreach (EntityAction operation in operations)
@@ -301,7 +301,7 @@ namespace Cli
         /// </summary>
         /// <param name="operations">array of string containing operations for permissions</param>
         /// <returns>True if no invalid operation is found.</returns>
-        public static bool VerifyOperations(string[] operations, EntitySourceType sourceType)
+        public static bool VerifyOperations(string[] operations, EntitySourceType? sourceType)
         {
             // Check if there are any duplicate operations
             // Ex: read,read,create
@@ -363,7 +363,7 @@ namespace Cli
         /// It will return true if parsing is successful and add the parsed value
         /// to the out params role and operations.
         /// </summary>
-        public static bool TryGetRoleAndOperationFromPermission(IEnumerable<string> permissions, out string? role, out string? operations)
+        public static bool TryGetRoleAndOperationFromPermission(IEnumerable<string> permissions, [NotNullWhen(true)] out string? role, [NotNullWhen(true)] out string? operations)
         {
             // Split permission to role and operations.
             role = null;
@@ -468,7 +468,7 @@ namespace Cli
         /// <returns>True in case of successful creation of source object.</returns>
         public static bool TryCreateSourceObject(
             string name,
-            EntitySourceType type,
+            EntitySourceType? type,
             Dictionary<string, object>? parameters,
             string[]? keyFields,
             [NotNullWhen(true)] out EntitySource? sourceObject)

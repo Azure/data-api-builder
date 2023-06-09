@@ -32,6 +32,7 @@
       MyEntity: {
         Source: {
           Object: s001.book,
+          Type: Table,
           KeyFields: [
             id,
             name

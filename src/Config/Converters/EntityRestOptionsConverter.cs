@@ -14,7 +14,7 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
     {
         if (reader.TokenType == JsonTokenType.StartObject)
         {
-            EntityRestOptions restOptions = new(Methods: Array.Empty<SupportedHttpVerb>(), Path: null, Enabled: true);
+            EntityRestOptions restOptions = new(Methods: EntityRestOptions.DEFAULT_SUPPORTED_VERBS, Path: null, Enabled: true);
             while (reader.Read())
             {
                 if (reader.TokenType == JsonTokenType.EndObject)

@@ -316,8 +316,7 @@
                   Exclude: [
                     *
                   ]
-                },
-                Policy: {}
+                }
               },
               {
                 Action: Read,
@@ -329,8 +328,7 @@
                     id,
                     type
                   ]
-                },
-                Policy: {}
+                }
               },
               {
                 Action: Create,
@@ -341,8 +339,7 @@
                   Include: [
                     id
                   ]
-                },
-                Policy: {}
+                }
               },
               {
                 Action: Delete,
@@ -400,8 +397,7 @@
                   Include: [
                     *
                   ]
-                },
-                Policy: {}
+                }
               },
               {
                 Action: Create,

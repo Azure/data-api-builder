@@ -89,8 +89,7 @@
                   Include: [
                     *
                   ]
-                },
-                Policy: {}
+                }
               },
               {
                 Action: Create,
@@ -122,8 +121,7 @@
                   Include: [
                     *
                   ]
-                },
-                Policy: {}
+                }
               },
               {
                 Action: Create,
@@ -155,8 +153,7 @@
                   Include: [
                     *
                   ]
-                },
-                Policy: {}
+                }
               },
               {
                 Action: Create,
@@ -188,8 +185,7 @@
                   Include: [
                     *
                   ]
-                },
-                Policy: {}
+                }
               },
               {
                 Action: Create,
@@ -221,8 +217,7 @@
                   Include: [
                     *
                   ]
-                },
-                Policy: {}
+                }
               },
               {
                 Action: Create,
@@ -244,8 +239,7 @@
                 }
               },
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
                 Action: Read,
@@ -401,8 +395,7 @@
                   Include: [
                     *
                   ]
-                },
-                Policy: {}
+                }
               },
               {
                 Action: Create,
@@ -434,8 +427,7 @@
                   Include: [
                     *
                   ]
-                },
-                Policy: {}
+                }
               },
               {
                 Action: Create,
@@ -467,8 +459,7 @@
                   Include: [
                     *
                   ]
-                },
-                Policy: {}
+                }
               },
               {
                 Action: Create,
@@ -500,8 +491,7 @@
                   Include: [
                     *
                   ]
-                },
-                Policy: {}
+                }
               },
               {
                 Action: Create,
@@ -533,8 +523,7 @@
                   Include: [
                     *
                   ]
-                },
-                Policy: {}
+                }
               },
               {
                 Action: Create,
@@ -561,12 +550,10 @@
                 }
               },
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               },
               {
                 Action: Update,
@@ -599,8 +586,7 @@
                   Include: [
                     *
                   ]
-                },
-                Policy: {}
+                }
               },
               {
                 Action: Update,
@@ -628,8 +614,7 @@
                   Include: [
                     *
                   ]
-                },
-                Policy: {}
+                }
               },
               {
                 Action: Delete,
@@ -1628,16 +1613,13 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               },
               {
                 Action: Read,
@@ -1678,8 +1660,7 @@
                   Include: [
                     *
                   ]
-                },
-                Policy: {}
+                }
               },
               {
                 Action: Update,
@@ -1722,8 +1703,7 @@
                   Exclude: [
                     *
                   ]
-                },
-                Policy: {}
+                }
               },
               {
                 Action: Update,

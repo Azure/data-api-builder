@@ -334,8 +334,7 @@
             "exclude": [
               "*"
             ]
-          },
-          "policy": {}
+          }
         },
         {
           "action": "read",
@@ -347,8 +346,7 @@
               "id",
               "type"
             ]
-          },
-          "policy": {}
+          }
         },
         {
           "action": "create",
@@ -359,8 +357,7 @@
             "include": [
               "id"
             ]
-          },
-          "policy": {}
+          }
         },
         {
           "action": "delete",
@@ -421,8 +418,7 @@
             "include": [
               "*"
             ]
-          },
-          "policy": {}
+          }
         },
         {
           "action": "create",

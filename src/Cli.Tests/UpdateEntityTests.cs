@@ -1001,7 +1001,7 @@ namespace Cli.Tests
             EntityAction actionForRole = new(
                 Action: EntityActionOperation.Create,
                 Fields: null,
-                Policy: new(null, null));
+                Policy: null);
 
             EntityPermission permissionForEntity = new(
                 Role: "anonymous",

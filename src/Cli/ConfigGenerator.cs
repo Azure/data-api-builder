@@ -666,7 +666,7 @@ namespace Cli
         {
             Dictionary<EntityActionOperation, EntityAction> updatedOperations = new();
 
-            EntityActionPolicy existingPolicy = new();
+            EntityActionPolicy? existingPolicy = null;
             EntityActionFields? existingFields = null;
 
             // Adding the new operations in the updatedOperationList
@@ -682,7 +682,7 @@ namespace Cli
                     }
 
                     // Checking if Policy and Field update is required
-                    EntityActionPolicy updatedPolicy = newPolicy is null ? existingPolicy : newPolicy;
+                    EntityActionPolicy? updatedPolicy = newPolicy is null ? existingPolicy : newPolicy;
                     EntityActionFields? updatedFields = newFields is null ? existingFields : newFields;
 
                     updatedOperations.Add((EntityActionOperation)op, new EntityAction((EntityActionOperation)op, updatedFields, updatedPolicy));

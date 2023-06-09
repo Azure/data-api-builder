@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Config.AuthenticationConfig;
 using static Azure.DataApiBuilder.Config.MergeJsonProvider;
 using static Azure.DataApiBuilder.Config.RuntimeConfigPath;
+using static Azure.DataApiBuilder.Service.Configurations.RuntimeConfigProvider;
 using static Azure.DataApiBuilder.Service.Configurations.RuntimeConfigValidator;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
@@ -582,6 +583,7 @@ namespace Cli
             else
             {
                 _logger.LogInformation("Config not provided. Trying to get default config based on DAB_ENVIRONMENT...");
+                _logger.LogInformation("Environment variable DAB_ENVIRONMENT is {value}", Environment.GetEnvironmentVariable("DAB_ENVIRONMENT"));
                 /// Need to reset to true explicitly so any that any re-invocations of this function
                 /// get simulated as being called for the first time specifically useful for tests.
                 RuntimeConfigPath.CheckPrecedenceForConfigInEngine = true;
@@ -597,7 +599,7 @@ namespace Cli
         }
 
         /// <summary>
-        /// Checks if config can be correctly parsed by deserializing the
+        /// Checks if config can be correctly resolved and parsed by deserializing the
         /// json config into runtime config object.
         /// Also checks that connection-string is not null or empty whitespace.
         /// If parsing is successful and the config has valid connection-string, it
@@ -608,18 +610,25 @@ namespace Cli
             [NotNullWhen(true)] out RuntimeConfig? deserializedRuntimeConfig)
         {
             deserializedRuntimeConfig = null;
-            if (!TryReadRuntimeConfig(configFile, out string runtimeConfigJson))
+            string? runtimeConfigJson;
+
+            try
             {
-                _logger.LogError($"Failed to read the config file: {configFile}.");
+                // Tries to read the config and resolve environment variables.
+                runtimeConfigJson = GetRuntimeConfigJsonString(configFile);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError("Failed due to: {exceptionMessage}", e.Message);
                 return false;
             }
 
-            if (!RuntimeConfig.TryGetDeserializedRuntimeConfig(
+            if (string.IsNullOrEmpty(runtimeConfigJson) || !RuntimeConfig.TryGetDeserializedRuntimeConfig(
                     runtimeConfigJson,
                     out deserializedRuntimeConfig,
                     logger: null))
             {
-                _logger.LogError($"Failed to parse the config file: {configFile}.");
+                _logger.LogError("Failed to parse the config file: {configFile}.", configFile);
                 return false;
             }
 
@@ -906,6 +915,7 @@ namespace Cli
                         string baseConfigJson = File.ReadAllText(baseConfigFile);
                         string overrideConfigJson = File.ReadAllText(environmentBasedConfigFile);
                         string currentDir = Directory.GetCurrentDirectory();
+                        _logger.LogInformation("Using DAB_ENVIRONMENT = {value}", environmentValue);
                         _logger.LogInformation($"Merging {Path.Combine(currentDir, baseConfigFile)}"
                             + $" and {Path.Combine(currentDir, environmentBasedConfigFile)}");
                         string mergedConfigJson = Merge(baseConfigJson, overrideConfigJson);

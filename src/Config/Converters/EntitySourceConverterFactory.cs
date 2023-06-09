@@ -28,7 +28,7 @@ internal class EntitySourceConverterFactory : JsonConverterFactory
             if (reader.TokenType == JsonTokenType.String)
             {
                 string? obj = reader.DeserializeString();
-                return new EntitySource(obj ?? "", EntitySourceType.Table, new(), Enumerable.Empty<string>().ToArray());
+                return new EntitySource(obj ?? "", EntitySourceType.Table, new(), Array.Empty<string>());
             }
 
             // Remove the converter so we don't recurse.

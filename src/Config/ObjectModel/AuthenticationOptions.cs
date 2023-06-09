@@ -18,8 +18,7 @@ public record AuthenticationOptions(string Provider, JwtOptions? Jwt)
     public bool IsEasyAuthAuthenticationProvider() => Enum.GetNames(typeof(EasyAuthType)).Any(x => x.Equals(Provider, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
-    /// Returns whether the configured Provider value matches
-    /// the AuthenticateDevModeRequests EasyAuth type.
+    /// Returns whether the configured Provider value matches the simulator authentication type.
     /// </summary>
     /// <returns>True when development mode should authenticate all requests.</returns>
     public bool IsAuthenticationSimulatorEnabled() => Provider.Equals(SIMULATOR_AUTHENTICATION, StringComparison.OrdinalIgnoreCase);

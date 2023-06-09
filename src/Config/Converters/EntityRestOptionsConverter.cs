@@ -89,7 +89,12 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
 
         if (reader.TokenType == JsonTokenType.True || reader.TokenType == JsonTokenType.False)
         {
-            return new EntityRestOptions(EntityRestOptions.DEFAULT_SUPPORTED_VERBS, null, reader.GetBoolean());
+            bool enabled = reader.GetBoolean();
+            return new EntityRestOptions(
+                // if enabled, use default methods, otherwise use empty array as all verbs are disabled
+                Methods: enabled ? EntityRestOptions.DEFAULT_SUPPORTED_VERBS : Array.Empty<SupportedHttpVerb>(),
+                Path: null,
+                Enabled: enabled);
         }
 
         throw new JsonException();

@@ -36,13 +36,7 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
                             break;
                         }
 
-                        if (reader.TokenType == JsonTokenType.True || reader.TokenType == JsonTokenType.False)
-                        {
-                            restOptions = restOptions with { Enabled = reader.GetBoolean() };
-                            break;
-                        }
-
-                        break;
+                        throw new JsonException($"The value of {propertyName} must be a string");
                     }
 
                     case "methods":

@@ -23,8 +23,7 @@
         "allow-credentials": false
       },
       "authentication": {
-        "provider": "StaticWebApps",
-        "jwt": {}
+        "provider": "StaticWebApps"
       },
       "mode": "development"
     }
@@ -45,7 +44,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -408,7 +406,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -810,7 +807,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -875,7 +871,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -937,7 +932,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1006,7 +1000,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1124,7 +1117,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1175,7 +1167,6 @@
   },
   "rest": {
     "enabled": false,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1238,7 +1229,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1304,7 +1294,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1369,7 +1358,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1502,7 +1490,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1588,7 +1575,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": [
       "get",
       "post",
@@ -1627,7 +1613,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1664,7 +1649,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": [
       "get",
       "post",
@@ -1704,7 +1688,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": [
       "get",
       "post",
@@ -1743,7 +1726,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": [
       "get",
       "post",
@@ -1779,7 +1761,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1830,7 +1811,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1880,7 +1860,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1987,7 +1966,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -2032,7 +2010,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -2089,7 +2066,8 @@
       "role": "TestNestedFilterOneMany_EntityReadForbidden",
       "actions": [
         {
-          "action": "read"
+          "action": "read",
+          "policy": {}
         }
       ]
     }
@@ -2120,7 +2098,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -2159,7 +2136,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -2202,7 +2178,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -2241,7 +2216,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -2284,7 +2258,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -2377,7 +2350,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -2498,7 +2470,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [

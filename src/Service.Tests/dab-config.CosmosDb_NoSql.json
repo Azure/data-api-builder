@@ -27,8 +27,7 @@
         "allow-credentials": false
       },
       "authentication": {
-        "provider": "StaticWebApps",
-        "jwt": {}
+        "provider": "StaticWebApps"
       },
       "mode": "development"
     }

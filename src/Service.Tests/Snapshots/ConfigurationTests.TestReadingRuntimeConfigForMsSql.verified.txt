@@ -25,8 +25,7 @@
         AllowCredentials: false
       },
       Authentication: {
-        Provider: StaticWebApps,
-        Jwt: {}
+        Provider: StaticWebApps
       }
     }
   },

@@ -25,8 +25,7 @@
         "allow-credentials": false
       },
       "authentication": {
-        "provider": "StaticWebApps",
-        "jwt": {}
+        "provider": "StaticWebApps"
       },
       "mode": "development"
     }
@@ -47,7 +46,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -414,7 +412,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -816,7 +813,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -881,7 +877,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -943,7 +938,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -984,7 +978,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1053,7 +1046,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1171,7 +1163,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1222,7 +1213,6 @@
   },
   "rest": {
     "enabled": false,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1285,7 +1275,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1351,7 +1340,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1416,7 +1404,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1549,7 +1536,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1635,7 +1621,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1689,7 +1674,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1726,7 +1710,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1781,7 +1764,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1817,6 +1799,45 @@
     }
   ]
 },
+    "books_publishers_view_composite_insertable": {
+  "source": {
+    "object": "books_publishers_view_composite_insertable",
+    "type": "view",
+    "key-fields": [
+      "id",
+      "publisher_id"
+    ]
+  },
+  "graphql": {
+    "enabled": true,
+    "operation": null,
+    "type": {
+      "singular": "books_publishers_view_composite_insertable",
+      "plural": "books_publishers_view_composite_insertables"
+    }
+  },
+  "rest": {
+    "enabled": true,
+    "methods": [
+      "get",
+      "post",
+      "put",
+      "patch",
+      "delete"
+    ]
+  },
+  "permissions": [
+    {
+      "role": "anonymous",
+      "actions": [
+        {
+          "action": "*",
+          "policy": {}
+        }
+      ]
+    }
+  ]
+},
     "Empty": {
   "source": {
     "object": "empty_table",
@@ -1832,7 +1853,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1883,7 +1903,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1933,7 +1952,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -2040,7 +2058,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -2085,7 +2102,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -2174,7 +2190,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -2213,7 +2228,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": [
       "get"
     ]
@@ -2254,7 +2268,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": [
       "get"
     ]
@@ -2298,7 +2311,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": [
       "post"
     ]
@@ -2343,7 +2355,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": [
       "post"
     ]
@@ -2384,7 +2395,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": [
       "post"
     ]
@@ -2425,7 +2435,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": [
       "post"
     ]
@@ -2470,7 +2479,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": [
       "post"
     ]
@@ -2514,7 +2522,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": [
       "post"
     ]
@@ -2559,7 +2566,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": [
       "post"
     ]
@@ -2600,7 +2606,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -2643,7 +2648,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -2682,7 +2686,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -2725,7 +2728,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -2818,7 +2820,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -2939,7 +2940,6 @@
   },
   "rest": {
     "enabled": true,
-    "path": null,
     "methods": []
   },
   "permissions": [

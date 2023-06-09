@@ -152,7 +152,9 @@ namespace Cli
                     GraphQL: new(!options.GraphQLDisabled, options.GraphQLPath),
                     Host: new(
                         Cors: new(options.CorsOrigin?.ToArray() ?? Array.Empty<string>()),
-                        Authentication: new(options.AuthenticationProvider, new(options.Audience, options.Issuer)),
+                        Authentication: new(
+                            Provider: options.AuthenticationProvider,
+                            Jwt: (options.Audience is null && options.Issuer is null) ? null : new(options.Audience, options.Issuer)),
                         Mode: options.HostMode)
                 ),
                 Entities: new RuntimeEntities(new Dictionary<string, Entity>()));

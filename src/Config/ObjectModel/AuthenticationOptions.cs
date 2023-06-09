@@ -3,6 +3,14 @@
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
+/// <summary>
+/// Authentication configuration.
+/// </summary>
+/// <param name="Provider">Identity Provider. Default is StaticWebApps.
+/// With EasyAuth and Simulator, no Audience or Issuer are expected.
+/// </param>
+/// <param name="Jwt">Settings enabling validation of the received JWT token.
+/// Required only when Provider is other than EasyAuth.</param>
 public record AuthenticationOptions(string Provider, JwtOptions? Jwt)
 {
     public const string SIMULATOR_AUTHENTICATION = "Simulator";
@@ -23,5 +31,9 @@ public record AuthenticationOptions(string Provider, JwtOptions? Jwt)
     /// <returns>True when development mode should authenticate all requests.</returns>
     public bool IsAuthenticationSimulatorEnabled() => Provider.Equals(SIMULATOR_AUTHENTICATION, StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// A shorthand method to determine whether JWT is configured for the current authentication provider.
+    /// </summary>
+    /// <returns></returns>
     public bool IsJwtConfiguredIdentityProvider() => !IsEasyAuthAuthenticationProvider() && !IsAuthenticationSimulatorEnabled();
 };

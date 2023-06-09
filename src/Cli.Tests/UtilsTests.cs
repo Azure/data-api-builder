@@ -94,7 +94,7 @@ public class UtilsTests
     {
         EntityGraphQLOptions options = ConstructGraphQLTypeDetails("singular", null);
         Assert.AreEqual("singular", options.Singular);
-        Assert.AreEqual("singulars", options.Plural);
+        Assert.AreEqual("", options.Plural);
         Assert.IsTrue(options.Enabled);
     }
 

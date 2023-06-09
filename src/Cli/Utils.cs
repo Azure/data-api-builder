@@ -11,7 +11,6 @@ using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Cli.Commands;
-using Humanizer;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Service.Configurations.RuntimeConfigValidator;
 
@@ -887,7 +886,7 @@ namespace Cli
                 }
                 else
                 {
-                    string singular, plural;
+                    string singular, plural = "";
                     if (graphQL.Contains(SEPARATOR))
                     {
                         string[] arr = graphQL.Split(SEPARATOR);
@@ -903,7 +902,6 @@ namespace Cli
                     else
                     {
                         singular = graphQL;
-                        plural = graphQL.Pluralize(inputIsKnownToBeSingular: false);
                     }
 
                     // If we have singular/plural text we infer that GraphQL is enabled

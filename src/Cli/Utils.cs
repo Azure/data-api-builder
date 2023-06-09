@@ -886,7 +886,7 @@ namespace Cli
                 }
                 else
                 {
-                    string singular, plural = "";
+                    string singular, plural = string.Empty;
                     if (graphQL.Contains(SEPARATOR))
                     {
                         string[] arr = graphQL.Split(SEPARATOR);

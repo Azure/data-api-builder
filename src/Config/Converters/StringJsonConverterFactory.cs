@@ -70,7 +70,7 @@ public class StringJsonConverterFactory : JsonConverterFactory
             // ie: @env('hello@env('goodbye')world') match: 'hello@env('goodbye')world'
             string innerPattern = @"[^@env\(].*(?=\))";
 
-            // strip's first and last characters, ie: '''hello'' --> ''hello'
+            // strips first and last characters, ie: '''hello'' --> ''hello'
             string envName = Regex.Match(match.Value, innerPattern).Value[1..^1];
             string? envValue = Environment.GetEnvironmentVariable(envName);
             return envValue is not null ? envValue :

@@ -52,7 +52,7 @@ internal class EntitySourceConverterFactory : JsonConverterFactory
         {
             return element.ValueKind switch
             {
-                JsonValueKind.String => element.GetString() ?? "",
+                JsonValueKind.String => element.GetString() ?? string.Empty,
                 JsonValueKind.Number => element.GetInt32(),
                 JsonValueKind.True => true,
                 JsonValueKind.False => false,

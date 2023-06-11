@@ -35,7 +35,7 @@ internal class EntityActionConverterFactory : JsonConverterFactory
             {
                 EntityActionOperation op = JsonSerializer.Deserialize<EntityActionOperation>(ref reader, options);
 
-                return new EntityAction(op, null, new EntityActionPolicy(null, null));
+                return new EntityAction(Action: op, Fields: null, Policy: null);
             }
 
             // Remove the converter so we don't recurse.

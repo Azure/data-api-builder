@@ -38,7 +38,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "Publisher",
       "plural": "Publishers"
@@ -53,8 +52,7 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         }
       ]
     },
@@ -62,20 +60,16 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     },
@@ -104,12 +98,10 @@
           }
         },
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     },
@@ -138,12 +130,10 @@
           }
         },
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     },
@@ -172,12 +162,10 @@
           }
         },
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     },
@@ -206,12 +194,10 @@
           }
         },
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     },
@@ -240,12 +226,10 @@
           }
         },
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     },
@@ -291,7 +275,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "Stock",
       "plural": "Stocks"
@@ -307,20 +290,16 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     },
@@ -328,20 +307,16 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     },
@@ -349,8 +324,7 @@
       "role": "TestNestedFilterFieldIsNull_ColumnForbidden",
       "actions": [
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         }
       ]
     },
@@ -358,8 +332,7 @@
       "role": "TestNestedFilterFieldIsNull_EntityReadForbidden",
       "actions": [
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         }
       ]
     },
@@ -399,7 +372,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "book",
       "plural": "books"
@@ -414,20 +386,16 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     },
@@ -435,20 +403,16 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     },
@@ -477,12 +441,10 @@
           }
         },
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     },
@@ -511,12 +473,10 @@
           }
         },
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     },
@@ -545,12 +505,10 @@
           }
         },
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     },
@@ -579,12 +537,10 @@
           }
         },
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     },
@@ -613,12 +569,10 @@
           }
         },
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     },
@@ -650,8 +604,7 @@
             "include": [
               "*"
             ]
-          },
-          "policy": {}
+          }
         }
       ]
     },
@@ -692,8 +645,7 @@
           }
         },
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         }
       ]
     },
@@ -734,8 +686,7 @@
           }
         },
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         }
       ]
     }
@@ -791,7 +742,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "BookWebsitePlacement",
       "plural": "BookWebsitePlacements"
@@ -806,8 +756,7 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         }
       ]
     },
@@ -827,12 +776,10 @@
           }
         },
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         }
       ]
     }
@@ -855,7 +802,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "Author",
       "plural": "Authors"
@@ -870,8 +816,7 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         }
       ]
     },
@@ -879,20 +824,16 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     }
@@ -916,7 +857,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "Revenue",
       "plural": "Revenues"
@@ -931,8 +871,7 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "*",
-          "policy": {}
+          "action": "*"
         }
       ]
     },
@@ -956,7 +895,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "review",
       "plural": "reviews"
@@ -971,16 +909,13 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         }
       ]
     },
@@ -988,20 +923,16 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     }
@@ -1024,7 +955,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "Comic",
       "plural": "Comics"
@@ -1039,16 +969,13 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         }
       ]
     },
@@ -1056,20 +983,16 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     },
@@ -1077,8 +1000,7 @@
       "role": "TestNestedFilterManyOne_ColumnForbidden",
       "actions": [
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         }
       ]
     },
@@ -1086,8 +1008,7 @@
       "role": "TestNestedFilterManyOne_EntityReadForbidden",
       "actions": [
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         }
       ]
     },
@@ -1100,8 +1021,7 @@
             "exclude": [
               "categoryName"
             ]
-          },
-          "policy": {}
+          }
         }
       ]
     },
@@ -1109,16 +1029,13 @@
       "role": "TestNestedFilterOneMany_EntityReadForbidden",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     }
@@ -1141,7 +1058,6 @@
   },
   "graphql": {
     "enabled": false,
-    "operation": null,
     "type": {
       "singular": "Broker",
       "plural": "Brokers"
@@ -1156,8 +1072,7 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         }
       ]
     },
@@ -1165,20 +1080,16 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     }
@@ -1191,7 +1102,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "websiteUser",
       "plural": "websiteUsers"
@@ -1206,20 +1116,16 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         }
       ]
     },
@@ -1227,20 +1133,16 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         }
       ]
     }
@@ -1253,7 +1155,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "SupportedType",
       "plural": "SupportedTypes"
@@ -1268,20 +1169,16 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         }
       ]
     },
@@ -1289,20 +1186,16 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         }
       ]
     }
@@ -1318,7 +1211,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "stocks_price",
       "plural": "stocks_prices"
@@ -1333,20 +1225,16 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     },
@@ -1359,8 +1247,7 @@
             "exclude": [
               "price"
             ]
-          },
-          "policy": {}
+          }
         }
       ]
     },
@@ -1368,8 +1255,7 @@
       "role": "TestNestedFilterFieldIsNull_EntityReadForbidden",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         }
       ]
     }
@@ -1382,7 +1268,6 @@
   },
   "graphql": {
     "enabled": false,
-    "operation": null,
     "type": {
       "singular": "Tree",
       "plural": "Trees"
@@ -1397,20 +1282,16 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     },
@@ -1418,20 +1299,16 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     }
@@ -1448,7 +1325,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "Shrub",
       "plural": "Shrubs"
@@ -1464,20 +1340,16 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     },
@@ -1485,20 +1357,16 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     }
@@ -1514,7 +1382,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "fungus",
       "plural": "fungi"
@@ -1529,20 +1396,16 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     },
@@ -1550,20 +1413,16 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     },
@@ -1599,7 +1458,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "books_view_all",
       "plural": "books_view_alls"
@@ -1614,8 +1472,7 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "*",
-          "policy": {}
+          "action": "*"
         }
       ]
     },
@@ -1623,20 +1480,16 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     }
@@ -1652,7 +1505,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "books_view_with_mapping",
       "plural": "books_view_with_mappings"
@@ -1667,8 +1519,7 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "*",
-          "policy": {}
+          "action": "*"
         }
       ]
     }
@@ -1688,7 +1539,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "stocks_view_selected",
       "plural": "stocks_view_selecteds"
@@ -1703,8 +1553,7 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "*",
-          "policy": {}
+          "action": "*"
         }
       ]
     },
@@ -1712,20 +1561,16 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     }
@@ -1742,7 +1587,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "books_publishers_view_composite",
       "plural": "books_publishers_view_composites"
@@ -1757,8 +1601,7 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "*",
-          "policy": {}
+          "action": "*"
         }
       ]
     },
@@ -1766,20 +1609,16 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     }
@@ -1796,7 +1635,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "books_publishers_view_composite_insertable",
       "plural": "books_publishers_view_composite_insertables"
@@ -1817,8 +1655,7 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "*",
-          "policy": {}
+          "action": "*"
         }
       ]
     }
@@ -1831,7 +1668,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "Empty",
       "plural": "Empties"
@@ -1846,20 +1682,16 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     },
@@ -1867,8 +1699,7 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         }
       ]
     }
@@ -1881,7 +1712,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "Notebook",
       "plural": "Notebooks"
@@ -1927,7 +1757,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "Journal",
       "plural": "Journals"
@@ -1963,12 +1792,10 @@
           }
         },
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     },
@@ -2008,8 +1835,7 @@
           }
         },
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         }
       ]
     },
@@ -2017,8 +1843,7 @@
       "role": "authorizationHandlerTester",
       "actions": [
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         }
       ]
     }
@@ -2031,7 +1856,6 @@
   },
   "graphql": {
     "enabled": false,
-    "operation": null,
     "type": {
       "singular": "ArtOfWar",
       "plural": "ArtOfWars"
@@ -2046,8 +1870,7 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "*",
-          "policy": {}
+          "action": "*"
         }
       ]
     },
@@ -2055,8 +1878,7 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "*",
-          "policy": {}
+          "action": "*"
         }
       ]
     }
@@ -2075,7 +1897,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "series",
       "plural": "series"
@@ -2090,8 +1911,7 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "*",
-          "policy": {}
+          "action": "*"
         }
       ]
     },
@@ -2104,8 +1924,7 @@
             "exclude": [
               "name"
             ]
-          },
-          "policy": {}
+          }
         }
       ]
     },
@@ -2113,16 +1932,13 @@
       "role": "TestNestedFilterManyOne_EntityReadForbidden",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     },
@@ -2130,8 +1946,7 @@
       "role": "TestNestedFilterOneMany_ColumnForbidden",
       "actions": [
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         }
       ]
     },
@@ -2139,8 +1954,7 @@
       "role": "TestNestedFilterOneMany_EntityReadForbidden",
       "actions": [
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         }
       ]
     }
@@ -2163,7 +1977,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "Sales",
       "plural": "Sales"
@@ -2178,8 +1991,7 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "*",
-          "policy": {}
+          "action": "*"
         }
       ]
     },
@@ -2187,8 +1999,7 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "*",
-          "policy": {}
+          "action": "*"
         }
       ]
     }
@@ -2218,8 +2029,7 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "execute",
-          "policy": {}
+          "action": "execute"
         }
       ]
     },
@@ -2227,8 +2037,7 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "execute",
-          "policy": {}
+          "action": "execute"
         }
       ]
     }
@@ -2258,8 +2067,7 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "execute",
-          "policy": {}
+          "action": "execute"
         }
       ]
     },
@@ -2267,8 +2075,7 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "execute",
-          "policy": {}
+          "action": "execute"
         }
       ]
     }
@@ -2301,8 +2108,7 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "execute",
-          "policy": {}
+          "action": "execute"
         }
       ]
     },
@@ -2310,8 +2116,7 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "execute",
-          "policy": {}
+          "action": "execute"
         }
       ]
     }
@@ -2345,8 +2150,7 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "execute",
-          "policy": {}
+          "action": "execute"
         }
       ]
     },
@@ -2354,8 +2158,7 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "execute",
-          "policy": {}
+          "action": "execute"
         }
       ]
     }
@@ -2385,8 +2188,7 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "execute",
-          "policy": {}
+          "action": "execute"
         }
       ]
     },
@@ -2394,8 +2196,7 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "execute",
-          "policy": {}
+          "action": "execute"
         }
       ]
     }
@@ -2425,8 +2226,7 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "execute",
-          "policy": {}
+          "action": "execute"
         }
       ]
     },
@@ -2434,8 +2234,7 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "execute",
-          "policy": {}
+          "action": "execute"
         }
       ]
     }
@@ -2469,8 +2268,7 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "execute",
-          "policy": {}
+          "action": "execute"
         }
       ]
     },
@@ -2478,8 +2276,7 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "execute",
-          "policy": {}
+          "action": "execute"
         }
       ]
     }
@@ -2512,8 +2309,7 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "execute",
-          "policy": {}
+          "action": "execute"
         }
       ]
     },
@@ -2521,8 +2317,7 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "execute",
-          "policy": {}
+          "action": "execute"
         }
       ]
     }
@@ -2556,8 +2351,7 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "execute",
-          "policy": {}
+          "action": "execute"
         }
       ]
     },
@@ -2565,8 +2359,7 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "execute",
-          "policy": {}
+          "action": "execute"
         }
       ]
     }
@@ -2579,7 +2372,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "GQLmappings",
       "plural": "GQLmappings"
@@ -2594,8 +2386,7 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "*",
-          "policy": {}
+          "action": "*"
         }
       ]
     },
@@ -2603,8 +2394,7 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "*",
-          "policy": {}
+          "action": "*"
         }
       ]
     }
@@ -2621,7 +2411,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "Bookmarks",
       "plural": "Bookmarks"
@@ -2636,8 +2425,7 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "*",
-          "policy": {}
+          "action": "*"
         }
       ]
     },
@@ -2645,8 +2433,7 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "*",
-          "policy": {}
+          "action": "*"
         }
       ]
     }
@@ -2659,7 +2446,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "MappedBookmarks",
       "plural": "MappedBookmarks"
@@ -2674,8 +2460,7 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "*",
-          "policy": {}
+          "action": "*"
         }
       ]
     },
@@ -2683,8 +2468,7 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "*",
-          "policy": {}
+          "action": "*"
         }
       ]
     }
@@ -2701,7 +2485,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "PublisherNF",
       "plural": "PublisherNFs"
@@ -2716,20 +2499,16 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     },
@@ -2737,8 +2516,7 @@
       "role": "TestNestedFilter_EntityReadForbidden",
       "actions": [
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         }
       ]
     },
@@ -2746,8 +2524,7 @@
       "role": "TestNestedFilter_ColumnForbidden",
       "actions": [
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         }
       ]
     },
@@ -2755,8 +2532,7 @@
       "role": "TestNestedFilterChained_EntityReadForbidden",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         }
       ]
     },
@@ -2769,8 +2545,7 @@
             "exclude": [
               "name"
             ]
-          },
-          "policy": {}
+          }
         }
       ]
     }
@@ -2793,7 +2568,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "bookNF",
       "plural": "booksNF"
@@ -2808,20 +2582,16 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     },
@@ -2829,8 +2599,7 @@
       "role": "TestNestedFilter_EntityReadForbidden",
       "actions": [
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         }
       ]
     },
@@ -2838,8 +2607,7 @@
       "role": "TestNestedFilter_ColumnForbidden",
       "actions": [
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         }
       ]
     },
@@ -2847,8 +2615,7 @@
       "role": "TestNestedFilterChained_EntityReadForbidden",
       "actions": [
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         }
       ]
     },
@@ -2856,8 +2623,7 @@
       "role": "TestNestedFilterChained_ColumnForbidden",
       "actions": [
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         }
       ]
     }
@@ -2913,7 +2679,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "AuthorNF",
       "plural": "AuthorNFs"
@@ -2931,16 +2696,13 @@
           "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     },
@@ -2953,8 +2715,7 @@
             "exclude": [
               "name"
             ]
-          },
-          "policy": {}
+          }
         }
       ]
     },
@@ -2967,8 +2728,7 @@
             "exclude": [
               "name"
             ]
-          },
-          "policy": {}
+          }
         }
       ]
     },
@@ -2976,8 +2736,7 @@
       "role": "TestNestedFilterChained_EntityReadForbidden",
       "actions": [
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         }
       ]
     },
@@ -2985,8 +2744,7 @@
       "role": "TestNestedFilterChained_ColumnForbidden",
       "actions": [
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         }
       ]
     }

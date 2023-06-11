@@ -40,7 +40,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "Planet",
       "plural": "Planets"
@@ -61,20 +60,16 @@
             "include": [
               "*"
             ]
-          },
-          "policy": {}
+          }
         },
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     },
@@ -82,20 +77,16 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     }
@@ -108,7 +99,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "Character",
       "plural": "Characters"
@@ -123,20 +113,16 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     }
@@ -149,7 +135,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "Star",
       "plural": "Stars"
@@ -164,20 +149,16 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     },
@@ -185,20 +166,16 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     }
@@ -211,7 +188,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "Tag",
       "plural": "Tags"
@@ -226,20 +202,16 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     }
@@ -252,7 +224,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "Moon",
       "plural": "Moons"
@@ -267,20 +238,16 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     },
@@ -288,20 +255,16 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     }
@@ -314,7 +277,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "Earth",
       "plural": "Earths"
@@ -360,8 +322,7 @@
           }
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     },
@@ -369,20 +330,16 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "read",
-          "policy": {}
+          "action": "read"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     }
@@ -395,7 +352,6 @@
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "Sun",
       "plural": "Suns"
@@ -421,16 +377,13 @@
           }
         },
         {
-          "action": "create",
-          "policy": {}
+          "action": "create"
         },
         {
-          "action": "update",
-          "policy": {}
+          "action": "update"
         },
         {
-          "action": "delete",
-          "policy": {}
+          "action": "delete"
         }
       ]
     }

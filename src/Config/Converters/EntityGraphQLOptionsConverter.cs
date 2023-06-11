@@ -113,7 +113,7 @@ internal class EntityGraphQLOptionsConverter : JsonConverter<EntityGraphQLOption
             writer.WritePropertyName("operation");
             JsonSerializer.Serialize(writer, value.Operation, options);
         }
-        
+
         writer.WriteStartObject("type");
         writer.WriteString("singular", value.Singular);
         writer.WriteString("plural", value.Plural);

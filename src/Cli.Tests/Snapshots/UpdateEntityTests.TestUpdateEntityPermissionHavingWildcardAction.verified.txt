@@ -51,8 +51,7 @@
                     type,
                     quantity
                   ]
-                },
-                Policy: {}
+                }
               },
               {
                 Action: Delete,
@@ -62,16 +61,13 @@
                     type,
                     quantity
                   ]
-                },
-                Policy: {}
+                }
               },
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               }
             ]
           }

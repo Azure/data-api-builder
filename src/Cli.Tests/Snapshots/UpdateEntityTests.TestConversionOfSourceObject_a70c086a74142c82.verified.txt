@@ -59,8 +59,7 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Execute,
-                Policy: {}
+                Action: Execute
               }
             ]
           }

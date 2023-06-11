@@ -53,12 +53,10 @@
                     id,
                     rating
                   ]
-                },
-                Policy: {}
+                }
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               }
             ]
           }

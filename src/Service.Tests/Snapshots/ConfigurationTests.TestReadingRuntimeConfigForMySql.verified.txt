@@ -43,8 +43,7 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               }
             ]
           },
@@ -52,20 +51,16 @@
             Role: authenticated,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           },
@@ -92,12 +87,10 @@
                 }
               },
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           },
@@ -124,12 +117,10 @@
                 }
               },
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           },
@@ -156,12 +147,10 @@
                 }
               },
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           },
@@ -188,12 +177,10 @@
                 }
               },
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           },
@@ -220,12 +207,10 @@
                 }
               },
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           },
@@ -277,16 +262,13 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               }
             ]
           },
@@ -294,20 +276,16 @@
             Role: authenticated,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           }
@@ -337,20 +315,16 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           },
@@ -358,20 +332,16 @@
             Role: authenticated,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           },
@@ -398,12 +368,10 @@
                 }
               },
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           },
@@ -430,12 +398,10 @@
                 }
               },
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           },
@@ -462,12 +428,10 @@
                 }
               },
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           },
@@ -494,12 +458,10 @@
                 }
               },
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           },
@@ -526,12 +488,10 @@
                 }
               },
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           },
@@ -561,8 +521,7 @@
                   Include: [
                     *
                   ]
-                },
-                Policy: {}
+                }
               }
             ]
           },
@@ -600,8 +559,7 @@
                 }
               },
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               }
             ]
           },
@@ -639,8 +597,7 @@
                 }
               },
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               }
             ]
           }
@@ -692,8 +649,7 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               }
             ]
           },
@@ -712,12 +668,10 @@
                 }
               },
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               }
             ]
           }
@@ -747,8 +701,7 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               }
             ]
           },
@@ -756,20 +709,16 @@
             Role: authenticated,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           }
@@ -801,16 +750,13 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               }
             ]
           },
@@ -818,20 +764,16 @@
             Role: authenticated,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           }
@@ -861,16 +803,13 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               }
             ]
           },
@@ -878,20 +817,16 @@
             Role: authenticated,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           }
@@ -921,8 +856,7 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               }
             ]
           },
@@ -930,20 +864,16 @@
             Role: authenticated,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           }
@@ -968,20 +898,16 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               }
             ]
           },
@@ -989,20 +915,16 @@
             Role: authenticated,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               }
             ]
           }
@@ -1027,20 +949,16 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               }
             ]
           },
@@ -1048,20 +966,16 @@
             Role: authenticated,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               }
             ]
           }
@@ -1089,8 +1003,7 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               }
             ]
           },
@@ -1098,20 +1011,16 @@
             Role: authenticated,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               }
             ]
           }
@@ -1136,20 +1045,16 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           },
@@ -1157,20 +1062,16 @@
             Role: authenticated,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           }
@@ -1200,20 +1101,16 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           },
@@ -1221,20 +1118,16 @@
             Role: authenticated,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           }
@@ -1262,20 +1155,16 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           },
@@ -1283,20 +1172,16 @@
             Role: authenticated,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           },
@@ -1344,8 +1229,7 @@
             Role: anonymous,
             Actions: [
               {
-                Action: *,
-                Policy: {}
+                Action: *
               }
             ]
           },
@@ -1353,20 +1237,16 @@
             Role: authenticated,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           }
@@ -1395,8 +1275,7 @@
             Role: anonymous,
             Actions: [
               {
-                Action: *,
-                Policy: {}
+                Action: *
               }
             ]
           }
@@ -1429,8 +1308,7 @@
             Role: anonymous,
             Actions: [
               {
-                Action: *,
-                Policy: {}
+                Action: *
               }
             ]
           },
@@ -1438,20 +1316,16 @@
             Role: authenticated,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           }
@@ -1481,8 +1355,7 @@
             Role: anonymous,
             Actions: [
               {
-                Action: *,
-                Policy: {}
+                Action: *
               }
             ]
           },
@@ -1490,20 +1363,16 @@
             Role: authenticated,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           }
@@ -1540,8 +1409,7 @@
             Role: anonymous,
             Actions: [
               {
-                Action: *,
-                Policy: {}
+                Action: *
               }
             ]
           }
@@ -1566,20 +1434,16 @@
             Role: authenticated,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           },
@@ -1587,8 +1451,7 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               }
             ]
           }
@@ -1674,12 +1537,10 @@
                 }
               },
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           },
@@ -1717,8 +1578,7 @@
                 }
               },
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               }
             ]
           },
@@ -1726,8 +1586,7 @@
             Role: authorizationHandlerTester,
             Actions: [
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               }
             ]
           }
@@ -1752,8 +1611,7 @@
             Role: anonymous,
             Actions: [
               {
-                Action: *,
-                Policy: {}
+                Action: *
               }
             ]
           },
@@ -1761,8 +1619,7 @@
             Role: authenticated,
             Actions: [
               {
-                Action: *,
-                Policy: {}
+                Action: *
               }
             ]
           }
@@ -1793,8 +1650,7 @@
             Role: anonymous,
             Actions: [
               {
-                Action: *,
-                Policy: {}
+                Action: *
               }
             ]
           }
@@ -1825,8 +1681,7 @@
             Role: anonymous,
             Actions: [
               {
-                Action: *,
-                Policy: {}
+                Action: *
               }
             ]
           },
@@ -1834,8 +1689,7 @@
             Role: authenticated,
             Actions: [
               {
-                Action: *,
-                Policy: {}
+                Action: *
               }
             ]
           }
@@ -1860,8 +1714,7 @@
             Role: anonymous,
             Actions: [
               {
-                Action: *,
-                Policy: {}
+                Action: *
               }
             ]
           },
@@ -1869,8 +1722,7 @@
             Role: authenticated,
             Actions: [
               {
-                Action: *,
-                Policy: {}
+                Action: *
               }
             ]
           }
@@ -1899,8 +1751,7 @@
             Role: anonymous,
             Actions: [
               {
-                Action: *,
-                Policy: {}
+                Action: *
               }
             ]
           },
@@ -1908,8 +1759,7 @@
             Role: authenticated,
             Actions: [
               {
-                Action: *,
-                Policy: {}
+                Action: *
               }
             ]
           }
@@ -1934,8 +1784,7 @@
             Role: anonymous,
             Actions: [
               {
-                Action: *,
-                Policy: {}
+                Action: *
               }
             ]
           },
@@ -1943,8 +1792,7 @@
             Role: authenticated,
             Actions: [
               {
-                Action: *,
-                Policy: {}
+                Action: *
               }
             ]
           }

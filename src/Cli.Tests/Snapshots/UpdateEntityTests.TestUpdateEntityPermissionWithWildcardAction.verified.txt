@@ -53,8 +53,7 @@
                     id,
                     rating
                   ]
-                },
-                Policy: {}
+                }
               }
             ]
           }

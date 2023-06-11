@@ -49,20 +49,16 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           }

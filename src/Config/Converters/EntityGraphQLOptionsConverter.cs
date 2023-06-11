@@ -108,16 +108,12 @@ internal class EntityGraphQLOptionsConverter : JsonConverter<EntityGraphQLOption
         writer.WriteStartObject();
         writer.WriteBoolean("enabled", value.Enabled);
 
-        if (value.Operation is null)
-        {
-            writer.WriteNull("operation");
-        }
-        else
+        if (value.Operation is not null)
         {
             writer.WritePropertyName("operation");
             JsonSerializer.Serialize(writer, value.Operation, options);
         }
-
+        
         writer.WriteStartObject("type");
         writer.WriteString("singular", value.Singular);
         writer.WriteString("plural", value.Plural);

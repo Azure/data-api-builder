@@ -56,10 +56,7 @@ namespace Azure.DataApiBuilder.Service
                     ILoggerFactory? loggerFactory = GetLoggerFactoryForLogLevel(Startup.MinimumLogLevel);
                     ILogger<Startup>? startupLogger = loggerFactory.CreateLogger<Startup>();
                     DisableHttpsRedirectionIfNeeded(args);
-                    webBuilder.UseStartup(builder =>
-                    {
-                        return new Startup(builder.Configuration, startupLogger);
-                    });
+                    webBuilder.UseStartup(builder => new Startup(builder.Configuration, startupLogger));
                 });
         }
 

@@ -53,11 +53,57 @@ internal class EntitySourceConverterFactory : JsonConverterFactory
             return element.ValueKind switch
             {
                 JsonValueKind.String => element.GetString() ?? string.Empty,
-                JsonValueKind.Number => element.GetInt32(),
+                JsonValueKind.Number => GetNumberValue(element),
                 JsonValueKind.True => true,
                 JsonValueKind.False => false,
                 _ => element.ToString()
             };
+        }
+
+        /// <summary>
+        /// Attempts to get the correct numeric value from the <see cref="JsonElement"/>.
+        /// If all possible numeric values are exhausted, the raw text is returned.
+        /// </summary>
+        /// <param name="element">JSON element to extract the value from.</param>
+        /// <returns>The parsed value as a CLR type.</returns>
+        private static object GetNumberValue(JsonElement element)
+        {
+            if (element.TryGetInt32(out int intValue))
+            {
+                return intValue;
+            }
+
+            if (element.TryGetDecimal(out decimal decimalValue))
+            {
+                return decimalValue;
+            }
+
+            if (element.TryGetDouble(out double doubleValue))
+            {
+                return doubleValue;
+            }
+
+            if (element.TryGetInt64(out long longValue))
+            {
+                return longValue;
+            }
+
+            if (element.TryGetUInt32(out uint uintValue))
+            {
+                return uintValue;
+            }
+
+            if (element.TryGetUInt64(out ulong ulongValue))
+            {
+                return ulongValue;
+            }
+
+            if (element.TryGetSingle(out float floatValue))
+            {
+                return floatValue;
+            }
+
+            return element.GetRawText();
         }
 
         public override void Write(Utf8JsonWriter writer, EntitySource value, JsonSerializerOptions options)

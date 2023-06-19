@@ -365,7 +365,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         }
 
         /// <summary>
-        /// Helper method to get the rest path for the entity if it is correctly configured.
+        /// Helper method to get the rest path/rest enabled properties for the entity if it is correctly configured.
         /// The rest path should not be null/empty and should not conflict with the rest path
         /// configured for any other entity.
         /// </summary>

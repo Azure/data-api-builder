@@ -1852,9 +1852,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataTestMethod]
         [DataRow(true, "", "The rest path for entity: EntityA cannot be empty.",
             DisplayName = "Empty rest path configured for an entity fails config validation.")]
-        [DataRow(true, null, "Entity: EntityA has a null rest path. Accepted data types: string.",
+        [DataRow(true, null, "Entity: EntityA has a null rest path. Accepted data types: string, boolean.",
             DisplayName = "NULL rest path configured for an entity fails config validation.")]
-        [DataRow(true, 1, $"Entity: EntityA has rest path specified with incorrect data type. Accepted data types: string.",
+        [DataRow(true, 1, $"Entity: EntityA has rest path specified with incorrect data type. Accepted data types: string, boolean.",
             DisplayName = "Rest path configured as integer for an entity fails config validation.")]
         [DataRow(false, "entityRestPath", DisplayName = "Rest path correctly configured as string.")]
         public void ValidateRestPathForEntityInConfig(
@@ -1903,6 +1903,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DisplayName = "Duplicate rest paths configures for entities fail config validation.")]
         [DataRow(true, null, "EntityA", "The rest path: EntityA specified for entity: EntityB is already used by another entity.",
             DisplayName = "Rest path for an entity configured as the name of another entity fails config validation.")]
+        [DataRow(false, false, "EntityA", DisplayName = "Rest path for an entity configured as the name of another entity for which rest endpoint is disabled passes config validation.")]
         public void ValidateUniqueRestPathsForEntitiesInConfig(
             bool exceptionExpected,
             object restPathForFirstEntity,

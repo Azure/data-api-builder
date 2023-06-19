@@ -281,7 +281,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             // Since 'path' is an optional property, we skip validation if its absent.
                             if (restJsonElement.TryGetProperty(RestEntitySettings.PROPERTY_PATH, out JsonElement pathElement))
                             {
-                                pathForEntity = ValidateAndGetRestPathForEntity(entityName, pathElement);
+                                (isRestEnabledForEntity, pathForEntity) = ValidateAndGetRestSettingsForEntity(entityName, pathElement);
                             }
 
                             // Since 'methods' is an optional property, we skip validation if its absent.
@@ -372,7 +372,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <param name="entityName">Name of the entity.</param>
         /// <param name="restPathElement">The rest path element for the entity.</param>
         /// <exception cref="DataApiBuilderException">Throws exception when rest path contains an unexpected value.</exception>
-        private static string ValidateAndGetRestPathForEntity(string entityName, JsonElement restPathElement)
+        private static Tuple<bool,string> ValidateAndGetRestSettingsForEntity(string entityName, JsonElement restPathElement)
         {
             if (restPathElement.ValueKind is JsonValueKind.Null)
             {
@@ -398,10 +398,10 @@ namespace Azure.DataApiBuilder.Service.Configurations
 
             if (restPathElement.ValueKind is JsonValueKind.String)
             {
-                return restPathElement.ToString().TrimStart('/').TrimStart(' ');
+                return new(true, restPathElement.ToString().TrimStart('/').TrimStart(' '));
             }
 
-            return entityName;
+            return new(bool.Parse(restPathElement.ToString()), entityName);
         }
 
         /// <summary>

@@ -290,7 +290,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                 ValidateRestMethodsForEntity(entityName, methodsElement, entity);
                             }
                         }
-                        else if (restJsonElement.ValueKind is not JsonValueKind.True || restJsonElement.ValueKind is not JsonValueKind.False)
+                        else if (restJsonElement.ValueKind is JsonValueKind.True || restJsonElement.ValueKind is JsonValueKind.False)
                         {
                             isRestEnabledForEntity = bool.Parse(restJsonElement.ToString());
                         }

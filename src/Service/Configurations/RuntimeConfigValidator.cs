@@ -266,6 +266,9 @@ namespace Azure.DataApiBuilder.Service.Configurations
             {
                 if (runtimeConfig.RestGlobalSettings.Enabled)
                 {
+                    // By default we assume rest endpoint is enabled for the entity.
+                    bool isRestEnabledForEntity = true;
+
                     // If no custom rest path is defined for the entity, we default it to the entityName.
                     string pathForEntity = entityName;
                     if (entity.Rest is not null)
@@ -287,7 +290,11 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                 ValidateRestMethodsForEntity(entityName, methodsElement, entity);
                             }
                         }
-                        else if (restJsonElement.ValueKind is not JsonValueKind.True && restJsonElement.ValueKind is not JsonValueKind.False)
+                        else if (restJsonElement.ValueKind is not JsonValueKind.True || restJsonElement.ValueKind is not JsonValueKind.False)
+                        {
+                            isRestEnabledForEntity = bool.Parse(restJsonElement.ToString());
+                        }
+                        else
                         {
                             throw new DataApiBuilderException(
                                 message: $"The 'rest' property for entity: {entityName} can only be a boolean value or a json object.",
@@ -316,7 +323,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                             );
                     }
 
-                    if (!restPathsForEntities.Add(pathForEntity))
+                    if (isRestEnabledForEntity && !restPathsForEntities.Add(pathForEntity))
                     {
                         // Presence of multiple entities having the same rest path configured causes conflict.
                         throw new DataApiBuilderException(
@@ -371,25 +378,30 @@ namespace Azure.DataApiBuilder.Service.Configurations
             {
                 // The rest path can't be null.
                 throw new DataApiBuilderException(
-                    message: $"Entity: {entityName} has a null rest {RestEntitySettings.PROPERTY_PATH}. Accepted data types: string.",
+                    message: $"Entity: {entityName} has a null rest {RestEntitySettings.PROPERTY_PATH}. Accepted data types: string, boolean.",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
                     );
             }
 
-            if (restPathElement.ValueKind is not JsonValueKind.String)
+            if (restPathElement.ValueKind is not JsonValueKind.String && restPathElement.ValueKind is not JsonValueKind.False
+                && restPathElement.ValueKind is not JsonValueKind.True)
             {
                 // The rest path can only be a string or a boolean value.
                 throw new DataApiBuilderException(
                     message: $"Entity: {entityName} has rest {RestEntitySettings.PROPERTY_PATH} specified with incorrect data type. " +
-                    $"Accepted data types: string.",
+                    $"Accepted data types: string, boolean.",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
                     );
             }
 
-            string path = restPathElement.ToString().TrimStart('/').TrimStart(' ');
-            return path;
+            if (restPathElement.ValueKind is JsonValueKind.String)
+            {
+                return restPathElement.ToString().TrimStart('/').TrimStart(' ');
+            }
+
+            return entityName;
         }
 
         /// <summary>

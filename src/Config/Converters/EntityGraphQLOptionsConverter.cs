@@ -52,6 +52,10 @@ internal class EntityGraphQLOptionsConverter : JsonConverter<EntityGraphQLOption
                                 {
                                     string? property2 = reader.GetString();
                                     reader.Read();
+                                    // it's possible that we won't end up setting the value for singular
+                                    // or plural, but this will then be determined from the entity name
+                                    // when the RuntimeEntities constructor is invoked later in the
+                                    // deserialization process.
                                     switch (property2)
                                     {
                                         case "singular":

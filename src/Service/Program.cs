@@ -165,7 +165,6 @@ namespace Azure.DataApiBuilder.Service
         /// <summary>
         /// Adds the various configuration providers.
         /// </summary>
-        /// <param name="env">The hosting environment.</param>
         /// <param name="configurationBuilder">The configuration builder.</param>
         /// <param name="args">The command line arguments.</param>
         private static void AddConfigurationProviders(

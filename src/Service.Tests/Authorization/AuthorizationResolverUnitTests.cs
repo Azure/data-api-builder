@@ -931,7 +931,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             Mock<HttpContext> context = new();
 
-            //Add identity to the readAction, updateAction.
             ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationOptions.ROLE_CLAIM_TYPE);
             identity.AddClaim(new Claim("user_email", "xyz@microsoft.com", ClaimValueTypes.String));
             identity.AddClaim(new Claim("name", "Aaron", ClaimValueTypes.String));
@@ -992,7 +991,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             Mock<HttpContext> context = new();
 
-            //sAdd identity to the readAction, updateActionext.
+            //Add identity to the request context.
             ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationOptions.ROLE_CLAIM_TYPE);
             identity.AddClaim(new Claim("testClaim", claimValue, claimValueType));
 

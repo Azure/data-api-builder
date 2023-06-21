@@ -233,6 +233,11 @@ namespace Azure.DataApiBuilder.Config
             return $"{fileName}.overrides{CONFIG_EXTENSION}";
         }
 
+        public static string GetEnvironmentFileName(string fileName, string environmentValue)
+        {
+            return $"{fileName}.{environmentValue}{CONFIG_EXTENSION}";
+        }
+
         public static string GetMergedFileNameForEnvironment(string fileName, string environmentValue)
         {
             return $"{fileName}.{environmentValue}.merged{CONFIG_EXTENSION}";

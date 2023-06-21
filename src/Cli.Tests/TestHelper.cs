@@ -1133,5 +1133,22 @@ namespace Cli.Tests
             ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger.Object);
             Utils.SetCliUtilsLogger(utilsLogger.Object);
         }
+
+        public static InitOptions CreateBasicInitOptionsForMsSql(
+          string? config = null
+        )
+        {
+            return new(
+                  databaseType: DatabaseType.mssql,
+                  connectionString: "testconnectionstring",
+                  cosmosNoSqlDatabase: null,
+                  cosmosNoSqlContainer: null,
+                  graphQLSchemaPath: null,
+                  setSessionContext: true,
+                  hostMode: HostModeType.Development,
+                  corsOrigin: new List<string>() { },
+                  authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                  config: config);
+        }
     }
 }

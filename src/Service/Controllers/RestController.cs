@@ -6,12 +6,12 @@ using System.Net;
 using System.Net.Mime;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.Models;
-using Azure.DataApiBuilder.Service.Services;
-using Azure.DataApiBuilder.Service.Services.OpenAPI;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.DataApiBuilderSDK.Models;
+using Microsoft.DataApiBuilderSDK.Services;
+using Microsoft.DataApiBuilderSDK.Services.OpenAPI;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Service.Controllers

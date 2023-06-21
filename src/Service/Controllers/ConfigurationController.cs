@@ -4,8 +4,8 @@
 using System;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Service.Configurations;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.DataApiBuilderSDK.Configurations;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Service.Controllers

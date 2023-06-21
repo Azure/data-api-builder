@@ -474,6 +474,7 @@ namespace Azure.DataApiBuilder.Service
             if (runtimeConfigurationProvider.TryGetConfig(out RuntimeConfig? runtimeConfig) && runtimeConfig.Runtime.Host.Authentication is not null)
             {
                 AuthenticationOptions authOptions = runtimeConfig.Runtime.Host.Authentication;
+                HostMode mode = runtimeConfig.Runtime.Host.Mode;
                 if (!authOptions.IsAuthenticationSimulatorEnabled() && !authOptions.IsEasyAuthAuthenticationProvider())
                 {
                     services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -483,16 +484,16 @@ namespace Azure.DataApiBuilder.Service
                         options.Authority = authOptions.Jwt!.Issuer;
                         options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
                         {
-                            // Instructs the asp.net core middleware to use the data in the "roles" claim for User.IsInrole()
+                            // Instructs the asp.net core middleware to use the data in the "roles" claim for User.IsInRole()
                             // See https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsprincipal.isinrole?view=net-6.0#remarks
                             RoleClaimType = AuthenticationOptions.ROLE_CLAIM_TYPE
                         };
                     });
                 }
-                else if (runtimeConfig.Runtime.Host.Authentication.IsEasyAuthAuthenticationProvider())
+                else if (authOptions.IsEasyAuthAuthenticationProvider())
                 {
                     EasyAuthType easyAuthType = EnumExtensions.Deserialize<EasyAuthType>(runtimeConfig.Runtime.Host.Authentication.Provider);
-                    bool isProductionMode = runtimeConfig.Runtime.Host.Mode != HostMode.Development;
+                    bool isProductionMode = mode != HostMode.Development;
                     bool appServiceEnvironmentDetected = AppServiceAuthenticationInfo.AreExpectedAppServiceEnvVarsPresent();
 
                     if (easyAuthType == EasyAuthType.AppService && !appServiceEnvironmentDetected)
@@ -513,8 +514,7 @@ namespace Azure.DataApiBuilder.Service
                     services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
                         .AddEasyAuthAuthentication(easyAuthAuthenticationProvider: easyAuthType);
                 }
-                else if (runtimeConfig.Runtime.Host.Mode == HostMode.Development &&
-                    runtimeConfig.Runtime.Host.Authentication.IsAuthenticationSimulatorEnabled())
+                else if (mode == HostMode.Development && authOptions.IsEasyAuthAuthenticationProvider())
                 {
                     services.AddAuthentication(SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME)
                         .AddSimulatorAuthentication();

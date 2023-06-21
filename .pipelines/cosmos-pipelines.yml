@@ -32,12 +32,6 @@ variables:
   buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
 steps:
-- task: CmdLine@2
-  displayName: 'Set flag to publish Verify *.received files when tests fail'
-  condition: failed()
-  inputs:
-    script: 'echo ##vso[task.setvariable variable=publishverify]Yes'
-
 - task: NuGetAuthenticate@0
   displayName: 'NuGet Authenticate'
 
@@ -76,6 +70,12 @@ steps:
     command: test
     arguments: '--filter "TestCategory=CosmosDb_NoSql" --no-build --configuration $(buildConfiguration) $(ADDITIONAL_TEST_ARGS)'
     projects: '**/*Tests/*.csproj'
+
+- task: CmdLine@2
+  displayName: 'Set flag to publish Verify *.received files when tests fail'
+  condition: failed()
+  inputs:
+    script: 'echo ##vso[task.setvariable variable=publishverify]Yes'
 
 - task: CopyFiles@2
   condition: eq(variables['publishverify'], 'Yes')

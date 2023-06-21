@@ -96,7 +96,9 @@ namespace Azure.DataApiBuilder.Core.Services
             [typeof(bool?)] = JsonDataType.Boolean,
             [typeof(char?)] = JsonDataType.String,
             [typeof(Guid?)] = JsonDataType.String,
-            [typeof(object)] = JsonDataType.Object
+            [typeof(object)] = JsonDataType.Object,
+            [typeof(DateTime)] = JsonDataType.String,
+            [typeof(DateTimeOffset)] = JsonDataType.String
         };
 
         /// <summary>
@@ -112,6 +114,10 @@ namespace Azure.DataApiBuilder.Core.Services
             if (!_systemTypeToJsonDataTypeMap.TryGetValue(type, out JsonDataType openApiJsonTypeName))
             {
                 openApiJsonTypeName = JsonDataType.Undefined;
+            }
+            else
+            {
+                Console.Out.WriteLine("unknown type");
             }
 
             string formattedOpenApiTypeName = openApiJsonTypeName.ToString().ToLower();

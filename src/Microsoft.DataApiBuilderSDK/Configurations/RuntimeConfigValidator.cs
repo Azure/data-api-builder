@@ -79,7 +79,7 @@ namespace Microsoft.DataApiBuilderSDK.Configurations
                 _fileSystem,
                 _logger);
 
-            //ValidateAuthenticationConfig();
+            ValidateAuthenticationConfig();
             ValidateGlobalEndpointRouteConfig(runtimeConfig);
 
             // Running these graphQL validations only in development mode to ensure

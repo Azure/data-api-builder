@@ -514,7 +514,7 @@ namespace Azure.DataApiBuilder.Service
                     services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
                         .AddEasyAuthAuthentication(easyAuthAuthenticationProvider: easyAuthType);
                 }
-                else if (mode == HostMode.Development && authOptions.IsEasyAuthAuthenticationProvider())
+                else if (mode == HostMode.Development && authOptions.IsAuthenticationSimulatorEnabled())
                 {
                     services.AddAuthentication(SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME)
                         .AddSimulatorAuthentication();

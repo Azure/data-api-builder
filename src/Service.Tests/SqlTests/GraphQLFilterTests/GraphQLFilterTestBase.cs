@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
-using Azure.DataApiBuilder.Service.Services;
+using Microsoft.DataApiBuilderSDK.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests

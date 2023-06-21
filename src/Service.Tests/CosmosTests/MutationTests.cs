@@ -5,8 +5,8 @@ using System;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.Resolvers;
 using Microsoft.Azure.Cosmos;
+using Microsoft.DataApiBuilderSDK.Resolvers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 

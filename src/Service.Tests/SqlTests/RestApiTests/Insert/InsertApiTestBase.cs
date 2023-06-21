@@ -4,7 +4,7 @@
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.Services;
+using Microsoft.DataApiBuilderSDK.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert

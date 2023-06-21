@@ -12,8 +12,8 @@ using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Config.AuthenticationConfig;
 using static Azure.DataApiBuilder.Config.MergeJsonProvider;
 using static Azure.DataApiBuilder.Config.RuntimeConfigPath;
-using static Azure.DataApiBuilder.Service.Configurations.RuntimeConfigProvider;
-using static Azure.DataApiBuilder.Service.Configurations.RuntimeConfigValidator;
+using static Microsoft.DataApiBuilderSDK.Configurations.RuntimeConfigProvider;
+using static Microsoft.DataApiBuilderSDK.Configurations.RuntimeConfigValidator;
 using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
 /// <summary>

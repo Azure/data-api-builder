@@ -5,8 +5,8 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.Services;
 using Microsoft.AspNetCore.Http;
+using Microsoft.DataApiBuilderSDK.Services;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 

@@ -6,16 +6,16 @@ using System.Collections.Generic;
 using System.Net;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.Services;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
 using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers;
 using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql;
+using Microsoft.DataApiBuilderSDK.Configurations;
+using Microsoft.DataApiBuilderSDK.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using static Azure.DataApiBuilder.Service.Configurations.RuntimeConfigValidator;
+using static Microsoft.DataApiBuilderSDK.Configurations.RuntimeConfigValidator;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {

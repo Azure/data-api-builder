@@ -5,7 +5,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
-using Azure.DataApiBuilder.Service.Resolvers;
+using Microsoft.DataApiBuilderSDK.Resolvers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests

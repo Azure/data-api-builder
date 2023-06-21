@@ -7,9 +7,9 @@ using System.Net;
 using System.Text;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.Models;
-using Azure.DataApiBuilder.Service.Parsers;
-using Azure.DataApiBuilder.Service.Services;
+using Microsoft.DataApiBuilderSDK.Models;
+using Microsoft.DataApiBuilderSDK.Parsers;
+using Microsoft.DataApiBuilderSDK.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 

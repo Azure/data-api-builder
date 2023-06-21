@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.IO.Abstractions.TestingHelpers;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Service.Configurations;
+using Microsoft.DataApiBuilderSDK.Configurations;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;

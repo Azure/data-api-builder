@@ -4,12 +4,12 @@
 using System;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.Models;
-using Azure.DataApiBuilder.Service.Parsers;
-using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
+using Microsoft.DataApiBuilderSDK.Authorization;
+using Microsoft.DataApiBuilderSDK.Models;
+using Microsoft.DataApiBuilderSDK.Parsers;
+using Microsoft.DataApiBuilderSDK.Resolvers;
 using Microsoft.Extensions.Logging;
 using Microsoft.OData;
 using Microsoft.OData.Edm;

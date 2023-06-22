@@ -27,11 +27,7 @@
         "allow-credentials": false
       },
       "authentication": {
-        "provider": "StaticWebApps",
-        "jwt": {
-          "audience": null,
-          "issuer": null
-        }
+        "provider": "StaticWebApps"
       },
       "mode": "development"
     }
@@ -39,14 +35,10 @@
   "entities": {
     "Planet": {
   "source": {
-    "object": "graphqldb.planet",
-    "type": "table",
-    "parameters": null,
-    "key-fields": null
+    "object": "graphqldb.planet"
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "Planet",
       "plural": "Planets"
@@ -54,7 +46,6 @@
   },
   "rest": {
     "enabled": false,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -68,35 +59,16 @@
             "include": [
               "*"
             ]
-          },
-          "policy": {
-            "request": null,
-            "database": null
           }
         },
         {
-          "action": "create",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "create"
         },
         {
-          "action": "update",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "update"
         },
         {
-          "action": "delete",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "delete"
         }
       ]
     },
@@ -104,53 +76,27 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "create"
         },
         {
-          "action": "read",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "read"
         },
         {
-          "action": "update",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "update"
         },
         {
-          "action": "delete",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "delete"
         }
       ]
     }
-  ],
-  "mappings": null,
-  "relationships": null
+  ]
 },
     "Character": {
   "source": {
-    "object": "graphqldb.character",
-    "type": "table",
-    "parameters": null,
-    "key-fields": null
+    "object": "graphqldb.character"
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "Character",
       "plural": "Characters"
@@ -158,7 +104,6 @@
   },
   "rest": {
     "enabled": false,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -166,53 +111,27 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "create",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "create"
         },
         {
-          "action": "read",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "read"
         },
         {
-          "action": "update",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "update"
         },
         {
-          "action": "delete",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "delete"
         }
       ]
     }
-  ],
-  "mappings": null,
-  "relationships": null
+  ]
 },
     "StarAlias": {
   "source": {
-    "object": "graphqldb.star",
-    "type": "table",
-    "parameters": null,
-    "key-fields": null
+    "object": "graphqldb.star"
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "Star",
       "plural": "Stars"
@@ -220,7 +139,6 @@
   },
   "rest": {
     "enabled": false,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -228,36 +146,16 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "create",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "create"
         },
         {
-          "action": "read",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "read"
         },
         {
-          "action": "update",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "update"
         },
         {
-          "action": "delete",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "delete"
         }
       ]
     },
@@ -265,53 +163,27 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "create"
         },
         {
-          "action": "read",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "read"
         },
         {
-          "action": "update",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "update"
         },
         {
-          "action": "delete",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "delete"
         }
       ]
     }
-  ],
-  "mappings": null,
-  "relationships": null
+  ]
 },
     "TagAlias": {
   "source": {
-    "object": "graphqldb.tag",
-    "type": "table",
-    "parameters": null,
-    "key-fields": null
+    "object": "graphqldb.tag"
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "Tag",
       "plural": "Tags"
@@ -319,7 +191,6 @@
   },
   "rest": {
     "enabled": false,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -327,53 +198,27 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "create",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "create"
         },
         {
-          "action": "read",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "read"
         },
         {
-          "action": "update",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "update"
         },
         {
-          "action": "delete",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "delete"
         }
       ]
     }
-  ],
-  "mappings": null,
-  "relationships": null
+  ]
 },
     "Moon": {
   "source": {
-    "object": "graphqldb.moon",
-    "type": "table",
-    "parameters": null,
-    "key-fields": null
+    "object": "graphqldb.moon"
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "Moon",
       "plural": "Moons"
@@ -381,7 +226,6 @@
   },
   "rest": {
     "enabled": false,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -389,36 +233,16 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "create",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "create"
         },
         {
-          "action": "read",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "read"
         },
         {
-          "action": "update",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "update"
         },
         {
-          "action": "delete",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "delete"
         }
       ]
     },
@@ -426,53 +250,27 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "create"
         },
         {
-          "action": "read",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "read"
         },
         {
-          "action": "update",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "update"
         },
         {
-          "action": "delete",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "delete"
         }
       ]
     }
-  ],
-  "mappings": null,
-  "relationships": null
+  ]
 },
     "Earth": {
   "source": {
-    "object": "graphqldb.earth",
-    "type": "table",
-    "parameters": null,
-    "key-fields": null
+    "object": "graphqldb.earth"
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "Earth",
       "plural": "Earths"
@@ -480,7 +278,6 @@
   },
   "rest": {
     "enabled": false,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -492,12 +289,7 @@
           "fields": {
             "exclude": [
               "*"
-            ],
-            "include": null
-          },
-          "policy": {
-            "request": null,
-            "database": null
+            ]
           }
         },
         {
@@ -510,10 +302,6 @@
               "id",
               "type"
             ]
-          },
-          "policy": {
-            "request": null,
-            "database": null
           }
         },
         {
@@ -525,19 +313,10 @@
             "include": [
               "id"
             ]
-          },
-          "policy": {
-            "request": null,
-            "database": null
           }
         },
         {
-          "action": "delete",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "delete"
         }
       ]
     },
@@ -545,53 +324,27 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "create"
         },
         {
-          "action": "read",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "read"
         },
         {
-          "action": "update",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "update"
         },
         {
-          "action": "delete",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "delete"
         }
       ]
     }
-  ],
-  "mappings": null,
-  "relationships": null
+  ]
 },
     "Sun": {
   "source": {
-    "object": "graphqldb.sun",
-    "type": "table",
-    "parameters": null,
-    "key-fields": null
+    "object": "graphqldb.sun"
   },
   "graphql": {
     "enabled": true,
-    "operation": null,
     "type": {
       "singular": "Sun",
       "plural": "Suns"
@@ -599,7 +352,6 @@
   },
   "rest": {
     "enabled": false,
-    "path": null,
     "methods": []
   },
   "permissions": [
@@ -615,41 +367,20 @@
             "include": [
               "*"
             ]
-          },
-          "policy": {
-            "request": null,
-            "database": null
           }
         },
         {
-          "action": "create",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "create"
         },
         {
-          "action": "update",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "update"
         },
         {
-          "action": "delete",
-          "fields": null,
-          "policy": {
-            "request": null,
-            "database": null
-          }
+          "action": "delete"
         }
       ]
     }
-  ],
-  "mappings": null,
-  "relationships": null
+  ]
 }
   }
 }

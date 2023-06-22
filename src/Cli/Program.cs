@@ -23,6 +23,9 @@ namespace Cli
         /// <returns>0 on success, -1 on failure.</returns>
         public static int Main(string[] args)
         {
+            // Load environment variables from .env file if present.
+            DotNetEnv.Env.Load();
+
             // Setting up Logger for CLI.
             ILoggerFactory loggerFactory = new LoggerFactory();
             loggerFactory.AddProvider(new CustomLoggerProvider());

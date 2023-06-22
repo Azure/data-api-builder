@@ -6,6 +6,15 @@ using Azure.DataApiBuilder.Config.Converters;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
+/// <summary>
+/// Describes the REST settings specific to an entity.
+/// </summary>
+/// <param name="Path">Instructs the runtime to use this as the path
+/// at which the REST endpoint for this entity is exposed
+/// instead of using the entity-name. Can be a string type.
+/// </param>
+/// <param name="Methods">The HTTP verbs that are supported for this entity.</param>
+/// <param name="Enabled">Whether the entity is enabled for REST.</param>
 [JsonConverter(typeof(EntityRestOptionsConverter))]
 public record EntityRestOptions(SupportedHttpVerb[] Methods, string? Path = null, bool Enabled = true)
 {

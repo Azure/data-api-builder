@@ -30,7 +30,8 @@
     {
       FirstEntity: {
         Source: {
-          Object: MyTable
+          Object: MyTable,
+          Type: Table
         },
         GraphQL: {
           Singular: FirstEntity,
@@ -65,7 +66,8 @@
     {
       FIRSTEntity: {
         Source: {
-          Object: MyTable
+          Object: MyTable,
+          Type: Table
         },
         GraphQL: {
           Singular: FIRSTEntity,

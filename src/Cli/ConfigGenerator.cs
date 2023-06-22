@@ -210,6 +210,7 @@ namespace Cli
             // Try to get the source object as string or DatabaseObjectSource for new Entity
             if (!TryCreateSourceObjectForNewEntity(
                 options,
+                initialRuntimeConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL,
                 out EntitySource? source))
             {
                 _logger.LogError("Unable to create the source object.");
@@ -296,12 +297,13 @@ namespace Cli
         /// </summary>
         public static bool TryCreateSourceObjectForNewEntity(
             AddOptions options,
+            bool isCosmosDbNoSQL,
             [NotNullWhen(true)] out EntitySource? sourceObject)
         {
             sourceObject = null;
 
-            // default entity type will be table
-            EntitySourceType objectType = EntitySourceType.Table;
+            // default entity type will be null if it's CosmosDB_NoSQL otherwise it will be Table
+            EntitySourceType? objectType = isCosmosDbNoSQL ? null : EntitySourceType.Table;
 
             if (options.SourceType is not null)
             {
@@ -366,7 +368,7 @@ namespace Cli
             IEnumerable<string> permissions,
             EntityActionPolicy? policy,
             EntityActionFields? fields,
-            EntitySourceType sourceType)
+            EntitySourceType? sourceType)
         {
             // Getting Role and Operations from permission string
             string? role, operations;
@@ -487,7 +489,7 @@ namespace Cli
                 _logger.LogWarning("Disabling GraphQL for this entity will restrict its usage in relationships");
             }
 
-            EntitySourceType updatedSourceType = updatedSource.Type;
+            EntitySourceType? updatedSourceType = updatedSource.Type;
 
             if (options.Permissions is not null && options.Permissions.Any())
             {
@@ -583,20 +585,19 @@ namespace Cli
                                                                         IEnumerable<string> permissions,
                                                                         EntityActionPolicy? policy,
                                                                         EntityActionFields? fields,
-                                                                        EntitySourceType sourceType)
+                                                                        EntitySourceType? sourceType)
         {
-            string? newRole, newOperations;
 
             // Parse role and operations from the permissions string
             //
-            if (!TryGetRoleAndOperationFromPermission(permissions, out newRole, out newOperations))
+            if (!TryGetRoleAndOperationFromPermission(permissions, out string? newRole, out string? newOperations))
             {
                 _logger.LogError("Failed to fetch the role and operation from the given permission string: {permissions}.", permissions);
                 return null;
             }
 
             List<EntityPermission> updatedPermissionsList = new();
-            string[] newOperationArray = newOperations!.Split(",");
+            string[] newOperationArray = newOperations.Split(",");
 
             // Verifies that the list of operations declared are valid for the specified sourceType.
             // Example: Stored-procedure can only have 1 operation.
@@ -644,7 +645,7 @@ namespace Cli
             // and add it to permissionSettings list.
             if (!role_found)
             {
-                updatedPermissionsList.Add(CreatePermissions(newRole!, newOperations!, policy, fields));
+                updatedPermissionsList.Add(CreatePermissions(newRole, newOperations, policy, fields));
             }
 
             return updatedPermissionsList.ToArray();
@@ -716,7 +717,7 @@ namespace Cli
             updatedSourceObject = null;
             string updatedSourceName = options.Source ?? entity.Source.Object;
             string[]? updatedKeyFields = entity.Source.KeyFields;
-            EntitySourceType updatedSourceType = entity.Source.Type;
+            EntitySourceType? updatedSourceType = entity.Source.Type;
             Dictionary<string, object>? updatedSourceParameters = entity.Source.Parameters;
 
             // If SourceType provided by user is null,
@@ -908,6 +909,13 @@ namespace Cli
             // Validates that config file has data and follows the correct json schema
             if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? deserializedRuntimeConfig))
             {
+                _logger.LogError("Failed to parse the config file: {configFile}.", runtimeConfigFile);
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(deserializedRuntimeConfig.DataSource.ConnectionString))
+            {
+                _logger.LogError($"Invalid connection-string provided in the config.");
                 return false;
             }
 

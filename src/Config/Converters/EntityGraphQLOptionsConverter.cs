@@ -26,59 +26,64 @@ internal class EntityGraphQLOptionsConverter : JsonConverter<EntityGraphQLOption
                     return new EntityGraphQLOptions(singular, plural, enabled, operation);
                 }
 
-                if (reader.TokenType == JsonTokenType.PropertyName)
+                string? property = reader.GetString();
+                reader.Read();
+
+                switch (property)
                 {
-                    string? property = reader.GetString();
-                    reader.Read();
-
-                    switch (property)
-                    {
-                        case "enabled":
-                            enabled = reader.GetBoolean();
-                            break;
-                        case "type":
-                            if (reader.TokenType == JsonTokenType.String)
+                    case "enabled":
+                        enabled = reader.GetBoolean();
+                        break;
+                    case "type":
+                        if (reader.TokenType == JsonTokenType.String)
+                        {
+                            singular = reader.DeserializeString() ?? string.Empty;
+                        }
+                        else if (reader.TokenType == JsonTokenType.StartObject)
+                        {
+                            while (reader.Read())
                             {
-                                singular = reader.DeserializeString() ?? string.Empty;
-                            }
-                            else if (reader.TokenType == JsonTokenType.StartObject)
-                            {
-                                while (reader.Read())
+                                if (reader.TokenType == JsonTokenType.EndObject)
                                 {
-                                    if (reader.TokenType == JsonTokenType.EndObject)
-                                    {
-                                        break;
-                                    }
+                                    break;
+                                }
 
-                                    if (reader.TokenType == JsonTokenType.PropertyName)
+                                if (reader.TokenType == JsonTokenType.PropertyName)
+                                {
+                                    string? property2 = reader.GetString();
+                                    reader.Read();
+                                    // it's possible that we won't end up setting the value for singular
+                                    // or plural, but this will then be determined from the entity name
+                                    // when the RuntimeEntities constructor is invoked later in the
+                                    // deserialization process.
+                                    switch (property2)
                                     {
-                                        string? property2 = reader.GetString();
-                                        reader.Read();
-                                        switch (property2)
-                                        {
-                                            case "singular":
-                                                singular = reader.DeserializeString() ?? string.Empty;
-                                                break;
-                                            case "plural":
-                                                plural = reader.DeserializeString() ?? string.Empty;
-                                                break;
-                                        }
+                                        case "singular":
+                                            singular = reader.DeserializeString() ?? string.Empty;
+                                            break;
+                                        case "plural":
+                                            plural = reader.DeserializeString() ?? string.Empty;
+                                            break;
                                     }
                                 }
                             }
+                        }
+                        else
+                        {
+                            throw new JsonException($"The value for the 'type' property must be a string or an object, but was {reader.TokenType}");
+                        }
 
-                            break;
+                        break;
 
-                        case "operation":
-                            string? op = reader.DeserializeString();
+                    case "operation":
+                        string? op = reader.DeserializeString();
 
-                            if (op is not null)
-                            {
-                                operation = Enum.Parse<GraphQLOperation>(op, ignoreCase: true);
-                            }
+                        if (op is not null)
+                        {
+                            operation = Enum.Parse<GraphQLOperation>(op, ignoreCase: true);
+                        }
 
-                            break;
-                    }
+                        break;
                 }
             }
         }

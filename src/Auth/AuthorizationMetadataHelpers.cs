@@ -42,12 +42,6 @@ namespace Azure.DataApiBuilder.Auth
         /// Set of Http verbs enabled for Stored Procedure entities that have their REST endpoint enabled.
         /// </summary>
         public HashSet<SupportedHttpVerb> StoredProcedureHttpVerbs { get; set; } = new();
-
-        /// <summary>
-        /// Defines the type of database object the entity represents.
-        /// Examples include Table, View, StoredProcedure
-        /// </summary>
-        public EntitySourceType ObjectType { get; set; } = EntitySourceType.Table;
     }
 
     /// <summary>

@@ -5,6 +5,9 @@ using System.Runtime.Serialization;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
+/// <summary>
+/// Supported source types as defined by json schema
+/// </summary>
 public enum EntitySourceType
 {
     Table,

@@ -23,7 +23,11 @@
         "allow-credentials": false
       },
       "authentication": {
-        "provider": "StaticWebApps"
+        "provider": "StaticWebApps",
+        "jwt": {
+          "audience": null,
+          "issuer": null
+        }
       },
       "mode": "development"
     }
@@ -32,10 +36,13 @@
     "Publisher": {
   "source": {
     "object": "publishers",
-    "type": "table"
+    "type": "table",
+    "parameters": null,
+    "key-fields": null
   },
   "graphql": {
     "enabled": true,
+    "operation": null,
     "type": {
       "singular": "Publisher",
       "plural": "Publishers"
@@ -43,6 +50,7 @@
   },
   "rest": {
     "enabled": true,
+    "path": null,
     "methods": []
   },
   "permissions": [
@@ -50,7 +58,12 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -58,16 +71,36 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "update"
+          "action": "update",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -83,6 +116,7 @@
             ]
           },
           "policy": {
+            "request": null,
             "database": "@item.id eq 1940"
           }
         },
@@ -93,13 +127,27 @@
             "include": [
               "*"
             ]
+          },
+          "policy": {
+            "request": null,
+            "database": null
           }
         },
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -115,6 +163,7 @@
             ]
           },
           "policy": {
+            "request": null,
             "database": "@item.id ne 1940"
           }
         },
@@ -125,13 +174,27 @@
             "include": [
               "*"
             ]
+          },
+          "policy": {
+            "request": null,
+            "database": null
           }
         },
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -147,6 +210,7 @@
             ]
           },
           "policy": {
+            "request": null,
             "database": "@item.id ne 1940"
           }
         },
@@ -157,13 +221,27 @@
             "include": [
               "*"
             ]
+          },
+          "policy": {
+            "request": null,
+            "database": null
           }
         },
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -179,6 +257,7 @@
             ]
           },
           "policy": {
+            "request": null,
             "database": "@item.id eq 1940"
           }
         },
@@ -189,13 +268,27 @@
             "include": [
               "*"
             ]
+          },
+          "policy": {
+            "request": null,
+            "database": null
           }
         },
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -211,6 +304,7 @@
             ]
           },
           "policy": {
+            "request": null,
             "database": "@item.id eq 1940"
           }
         },
@@ -221,13 +315,27 @@
             "include": [
               "*"
             ]
+          },
+          "policy": {
+            "request": null,
+            "database": null
           }
         },
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -236,28 +344,39 @@
       "actions": [
         {
           "action": "update",
+          "fields": null,
           "policy": {
+            "request": null,
             "database": "@item.id ne 1234"
           }
         },
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
           "action": "read",
+          "fields": null,
           "policy": {
+            "request": null,
             "database": "@item.id ne 1234 or @item.id gt 1940"
           }
         }
       ]
     }
   ],
+  "mappings": null,
   "relationships": {
     "books": {
       "cardinality": "many",
       "target.entity": "Book",
       "source.fields": [],
       "target.fields": [],
+      "linking.object": null,
       "linking.source.fields": [],
       "linking.target.fields": []
     }
@@ -266,10 +385,13 @@
     "Stock": {
   "source": {
     "object": "stocks",
-    "type": "table"
+    "type": "table",
+    "parameters": null,
+    "key-fields": null
   },
   "graphql": {
     "enabled": true,
+    "operation": null,
     "type": {
       "singular": "Stock",
       "plural": "Stocks"
@@ -285,16 +407,36 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "update"
+          "action": "update",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -302,16 +444,36 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "update"
+          "action": "update",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -320,12 +482,19 @@
       "actions": [
         {
           "action": "update",
+          "fields": null,
           "policy": {
+            "request": null,
             "database": "@item.pieceid ne 1"
           }
         },
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -333,7 +502,12 @@
       "role": "TestNestedFilterFieldIsNull_ColumnForbidden",
       "actions": [
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -341,17 +515,24 @@
       "role": "TestNestedFilterFieldIsNull_EntityReadForbidden",
       "actions": [
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     }
   ],
+  "mappings": null,
   "relationships": {
     "stocks_price": {
       "cardinality": "one",
       "target.entity": "stocks_price",
       "source.fields": [],
       "target.fields": [],
+      "linking.object": null,
       "linking.source.fields": [],
       "linking.target.fields": []
     }
@@ -360,10 +541,13 @@
     "Book": {
   "source": {
     "object": "books",
-    "type": "table"
+    "type": "table",
+    "parameters": null,
+    "key-fields": null
   },
   "graphql": {
     "enabled": true,
+    "operation": null,
     "type": {
       "singular": "book",
       "plural": "books"
@@ -371,6 +555,7 @@
   },
   "rest": {
     "enabled": true,
+    "path": null,
     "methods": []
   },
   "permissions": [
@@ -378,16 +563,36 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "update"
+          "action": "update",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -395,16 +600,36 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "update"
+          "action": "update",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -420,6 +645,7 @@
             ]
           },
           "policy": {
+            "request": null,
             "database": "@item.title eq \u0027Policy-Test-01\u0027"
           }
         },
@@ -430,13 +656,27 @@
             "include": [
               "*"
             ]
+          },
+          "policy": {
+            "request": null,
+            "database": null
           }
         },
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -452,6 +692,7 @@
             ]
           },
           "policy": {
+            "request": null,
             "database": "@item.title ne \u0027Policy-Test-01\u0027"
           }
         },
@@ -462,13 +703,27 @@
             "include": [
               "*"
             ]
+          },
+          "policy": {
+            "request": null,
+            "database": null
           }
         },
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -484,6 +739,7 @@
             ]
           },
           "policy": {
+            "request": null,
             "database": "@item.title eq \u0027Policy-Test-01\u0027"
           }
         },
@@ -494,13 +750,27 @@
             "include": [
               "*"
             ]
+          },
+          "policy": {
+            "request": null,
+            "database": null
           }
         },
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -516,6 +786,7 @@
             ]
           },
           "policy": {
+            "request": null,
             "database": "@item.title ne \u0027Policy-Test-01\u0027"
           }
         },
@@ -526,13 +797,27 @@
             "include": [
               "*"
             ]
+          },
+          "policy": {
+            "request": null,
+            "database": null
           }
         },
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -548,6 +833,7 @@
             ]
           },
           "policy": {
+            "request": null,
             "database": "@item.id ne 9"
           }
         },
@@ -558,13 +844,27 @@
             "include": [
               "*"
             ]
+          },
+          "policy": {
+            "request": null,
+            "database": null
           }
         },
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -580,14 +880,25 @@
             ]
           },
           "policy": {
+            "request": null,
             "database": "@item.id ne 10"
           }
         },
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
           "action": "update",
@@ -596,6 +907,10 @@
             "include": [
               "*"
             ]
+          },
+          "policy": {
+            "request": null,
+            "database": null
           }
         }
       ]
@@ -612,6 +927,7 @@
             ]
           },
           "policy": {
+            "request": null,
             "database": "@item.id ne 9"
           }
         },
@@ -622,6 +938,10 @@
             "include": [
               "*"
             ]
+          },
+          "policy": {
+            "request": null,
+            "database": null
           }
         },
         {
@@ -633,11 +953,17 @@
             ]
           },
           "policy": {
+            "request": null,
             "database": "@item.id ne 9"
           }
         },
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -651,6 +977,10 @@
             "include": [
               "*"
             ]
+          },
+          "policy": {
+            "request": null,
+            "database": null
           }
         },
         {
@@ -662,6 +992,7 @@
             ]
           },
           "policy": {
+            "request": null,
             "database": "@item.id eq 9"
           }
         },
@@ -674,11 +1005,17 @@
             ]
           },
           "policy": {
+            "request": null,
             "database": "@item.id eq 9"
           }
         },
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     }
@@ -693,6 +1030,7 @@
       "target.entity": "Publisher",
       "source.fields": [],
       "target.fields": [],
+      "linking.object": null,
       "linking.source.fields": [],
       "linking.target.fields": []
     },
@@ -701,6 +1039,7 @@
       "target.entity": "BookWebsitePlacement",
       "source.fields": [],
       "target.fields": [],
+      "linking.object": null,
       "linking.source.fields": [],
       "linking.target.fields": []
     },
@@ -709,6 +1048,7 @@
       "target.entity": "Review",
       "source.fields": [],
       "target.fields": [],
+      "linking.object": null,
       "linking.source.fields": [],
       "linking.target.fields": []
     },
@@ -730,10 +1070,13 @@
     "BookWebsitePlacement": {
   "source": {
     "object": "book_website_placements",
-    "type": "table"
+    "type": "table",
+    "parameters": null,
+    "key-fields": null
   },
   "graphql": {
     "enabled": true,
+    "operation": null,
     "type": {
       "singular": "BookWebsitePlacement",
       "plural": "BookWebsitePlacements"
@@ -741,6 +1084,7 @@
   },
   "rest": {
     "enabled": true,
+    "path": null,
     "methods": []
   },
   "permissions": [
@@ -748,7 +1092,12 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -764,24 +1113,37 @@
             ]
           },
           "policy": {
+            "request": null,
             "database": "@claims.userId eq @item.id"
           }
         },
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "update"
+          "action": "update",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     }
   ],
+  "mappings": null,
   "relationships": {
     "books": {
       "cardinality": "one",
       "target.entity": "Book",
       "source.fields": [],
       "target.fields": [],
+      "linking.object": null,
       "linking.source.fields": [],
       "linking.target.fields": []
     }
@@ -790,10 +1152,13 @@
     "Author": {
   "source": {
     "object": "authors",
-    "type": "table"
+    "type": "table",
+    "parameters": null,
+    "key-fields": null
   },
   "graphql": {
     "enabled": true,
+    "operation": null,
     "type": {
       "singular": "Author",
       "plural": "Authors"
@@ -801,6 +1166,7 @@
   },
   "rest": {
     "enabled": true,
+    "path": null,
     "methods": []
   },
   "permissions": [
@@ -808,7 +1174,12 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -816,20 +1187,41 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "update"
+          "action": "update",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     }
   ],
+  "mappings": null,
   "relationships": {
     "books": {
       "cardinality": "many",
@@ -845,10 +1237,13 @@
     "Review": {
   "source": {
     "object": "reviews",
-    "type": "table"
+    "type": "table",
+    "parameters": null,
+    "key-fields": null
   },
   "graphql": {
     "enabled": true,
+    "operation": null,
     "type": {
       "singular": "review",
       "plural": "reviews"
@@ -856,6 +1251,7 @@
   },
   "rest": {
     "enabled": true,
+    "path": null,
     "methods": []
   },
   "permissions": [
@@ -863,13 +1259,28 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "update"
+          "action": "update",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -877,26 +1288,48 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "update"
+          "action": "update",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     }
   ],
+  "mappings": null,
   "relationships": {
     "books": {
       "cardinality": "one",
       "target.entity": "Book",
       "source.fields": [],
       "target.fields": [],
+      "linking.object": null,
       "linking.source.fields": [],
       "linking.target.fields": []
     }
@@ -905,10 +1338,13 @@
     "Comic": {
   "source": {
     "object": "comics",
-    "type": "table"
+    "type": "table",
+    "parameters": null,
+    "key-fields": null
   },
   "graphql": {
     "enabled": true,
+    "operation": null,
     "type": {
       "singular": "Comic",
       "plural": "Comics"
@@ -916,6 +1352,7 @@
   },
   "rest": {
     "enabled": true,
+    "path": null,
     "methods": []
   },
   "permissions": [
@@ -923,13 +1360,28 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "update"
+          "action": "update",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -937,16 +1389,36 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "update"
+          "action": "update",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -954,7 +1426,12 @@
       "role": "TestNestedFilterManyOne_ColumnForbidden",
       "actions": [
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -962,7 +1439,12 @@
       "role": "TestNestedFilterManyOne_EntityReadForbidden",
       "actions": [
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -974,7 +1456,12 @@
           "fields": {
             "exclude": [
               "categoryName"
-            ]
+            ],
+            "include": null
+          },
+          "policy": {
+            "request": null,
+            "database": null
           }
         }
       ]
@@ -983,23 +1470,40 @@
       "role": "TestNestedFilterOneMany_EntityReadForbidden",
       "actions": [
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "update"
+          "action": "update",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     }
   ],
+  "mappings": null,
   "relationships": {
     "myseries": {
       "cardinality": "one",
       "target.entity": "series",
       "source.fields": [],
       "target.fields": [],
+      "linking.object": null,
       "linking.source.fields": [],
       "linking.target.fields": []
     }
@@ -1008,10 +1512,13 @@
     "Broker": {
   "source": {
     "object": "brokers",
-    "type": "table"
+    "type": "table",
+    "parameters": null,
+    "key-fields": null
   },
   "graphql": {
     "enabled": false,
+    "operation": null,
     "type": {
       "singular": "Broker",
       "plural": "Brokers"
@@ -1019,6 +1526,7 @@
   },
   "rest": {
     "enabled": true,
+    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1026,7 +1534,12 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -1034,28 +1547,53 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "update"
+          "action": "update",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     }
-  ]
+  ],
+  "mappings": null,
+  "relationships": null
 },
     "WebsiteUser": {
   "source": {
     "object": "website_users",
-    "type": "table"
+    "type": "table",
+    "parameters": null,
+    "key-fields": null
   },
   "graphql": {
     "enabled": true,
+    "operation": null,
     "type": {
       "singular": "websiteUser",
       "plural": "websiteUsers"
@@ -1063,6 +1601,7 @@
   },
   "rest": {
     "enabled": false,
+    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1070,16 +1609,36 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "update"
+          "action": "update",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -1087,28 +1646,53 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "update"
+          "action": "update",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     }
-  ]
+  ],
+  "mappings": null,
+  "relationships": null
 },
     "SupportedType": {
   "source": {
     "object": "type_table",
-    "type": "table"
+    "type": "table",
+    "parameters": null,
+    "key-fields": null
   },
   "graphql": {
     "enabled": true,
+    "operation": null,
     "type": {
       "singular": "SupportedType",
       "plural": "SupportedTypes"
@@ -1116,6 +1700,7 @@
   },
   "rest": {
     "enabled": true,
+    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1123,16 +1708,36 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "update"
+          "action": "update",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -1140,31 +1745,55 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "update"
+          "action": "update",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     }
   ],
   "mappings": {
     "id": "typeid"
-  }
+  },
+  "relationships": null
 },
     "stocks_price": {
   "source": {
     "object": "stocks_price",
-    "type": "table"
+    "type": "table",
+    "parameters": null,
+    "key-fields": null
   },
   "graphql": {
     "enabled": true,
+    "operation": null,
     "type": {
       "singular": "stocks_price",
       "plural": "stocks_prices"
@@ -1172,6 +1801,7 @@
   },
   "rest": {
     "enabled": true,
+    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1179,16 +1809,36 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "update"
+          "action": "update",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -1200,7 +1850,12 @@
           "fields": {
             "exclude": [
               "price"
-            ]
+            ],
+            "include": null
+          },
+          "policy": {
+            "request": null,
+            "database": null
           }
         }
       ]
@@ -1209,19 +1864,29 @@
       "role": "TestNestedFilterFieldIsNull_EntityReadForbidden",
       "actions": [
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     }
-  ]
+  ],
+  "mappings": null,
+  "relationships": null
 },
     "Tree": {
   "source": {
     "object": "trees",
-    "type": "table"
+    "type": "table",
+    "parameters": null,
+    "key-fields": null
   },
   "graphql": {
     "enabled": false,
+    "operation": null,
     "type": {
       "singular": "Tree",
       "plural": "Trees"
@@ -1229,6 +1894,7 @@
   },
   "rest": {
     "enabled": true,
+    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1236,16 +1902,36 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "update"
+          "action": "update",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -1253,16 +1939,36 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "update"
+          "action": "update",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     }
@@ -1270,15 +1976,19 @@
   "mappings": {
     "species": "Scientific Name",
     "region": "United State\u0027s Region"
-  }
+  },
+  "relationships": null
 },
     "Shrub": {
   "source": {
     "object": "trees",
-    "type": "table"
+    "type": "table",
+    "parameters": null,
+    "key-fields": null
   },
   "graphql": {
     "enabled": true,
+    "operation": null,
     "type": {
       "singular": "Shrub",
       "plural": "Shrubs"
@@ -1294,16 +2004,36 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "update"
+          "action": "update",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -1311,31 +2041,55 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "update"
+          "action": "update",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     }
   ],
   "mappings": {
     "species": "fancyName"
-  }
+  },
+  "relationships": null
 },
     "Fungus": {
   "source": {
     "object": "fungi",
-    "type": "table"
+    "type": "table",
+    "parameters": null,
+    "key-fields": null
   },
   "graphql": {
     "enabled": true,
+    "operation": null,
     "type": {
       "singular": "fungus",
       "plural": "fungi"
@@ -1343,6 +2097,7 @@
   },
   "rest": {
     "enabled": true,
+    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1350,16 +2105,36 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "update"
+          "action": "update",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -1367,16 +2142,36 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "update"
+          "action": "update",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -1392,6 +2187,7 @@
             ]
           },
           "policy": {
+            "request": null,
             "database": "@item.region ne \u0027northeast\u0027"
           }
         }
@@ -1400,18 +2196,21 @@
   ],
   "mappings": {
     "spores": "hazards"
-  }
+  },
+  "relationships": null
 },
     "books_view_all": {
   "source": {
     "object": "books_view_all",
     "type": "view",
+    "parameters": null,
     "key-fields": [
       "id"
     ]
   },
   "graphql": {
     "enabled": true,
+    "operation": null,
     "type": {
       "singular": "books_view_all",
       "plural": "books_view_alls"
@@ -1419,6 +2218,7 @@
   },
   "rest": {
     "enabled": true,
+    "path": null,
     "methods": [
       "get",
       "post",
@@ -1432,22 +2232,31 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "*"
+          "action": "*",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     }
-  ]
+  ],
+  "mappings": null,
+  "relationships": null
 },
     "books_view_with_mapping": {
   "source": {
     "object": "books_view_with_mapping",
     "type": "view",
+    "parameters": null,
     "key-fields": [
       "id"
     ]
   },
   "graphql": {
     "enabled": true,
+    "operation": null,
     "type": {
       "singular": "books_view_with_mapping",
       "plural": "books_view_with_mappings"
@@ -1455,6 +2264,7 @@
   },
   "rest": {
     "enabled": true,
+    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1462,19 +2272,26 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "*"
+          "action": "*",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     }
   ],
   "mappings": {
     "id": "book_id"
-  }
+  },
+  "relationships": null
 },
     "stocks_view_selected": {
   "source": {
     "object": "stocks_view_selected",
     "type": "view",
+    "parameters": null,
     "key-fields": [
       "categoryid",
       "pieceid"
@@ -1482,6 +2299,7 @@
   },
   "graphql": {
     "enabled": true,
+    "operation": null,
     "type": {
       "singular": "stocks_view_selected",
       "plural": "stocks_view_selecteds"
@@ -1489,6 +2307,7 @@
   },
   "rest": {
     "enabled": true,
+    "path": null,
     "methods": [
       "get",
       "post",
@@ -1502,16 +2321,24 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "*"
+          "action": "*",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     }
-  ]
+  ],
+  "mappings": null,
+  "relationships": null
 },
     "books_publishers_view_composite": {
   "source": {
     "object": "books_publishers_view_composite",
     "type": "view",
+    "parameters": null,
     "key-fields": [
       "id",
       "pub_id"
@@ -1519,6 +2346,7 @@
   },
   "graphql": {
     "enabled": true,
+    "operation": null,
     "type": {
       "singular": "books_publishers_view_composite",
       "plural": "books_publishers_view_composites"
@@ -1526,6 +2354,7 @@
   },
   "rest": {
     "enabled": true,
+    "path": null,
     "methods": [
       "get",
       "post",
@@ -1539,22 +2368,31 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "*"
+          "action": "*",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     }
-  ]
+  ],
+  "mappings": null,
+  "relationships": null
 },
     "books_publishers_view_composite_insertable": {
   "source": {
     "object": "books_publishers_view_composite_insertable",
     "type": "view",
+    "parameters": null,
     "key-fields": [
       "id"
     ]
   },
   "graphql": {
     "enabled": true,
+    "operation": null,
     "type": {
       "singular": "books_publishers_view_composite_insertable",
       "plural": "books_publishers_view_composite_insertables"
@@ -1562,6 +2400,7 @@
   },
   "rest": {
     "enabled": true,
+    "path": null,
     "methods": [
       "get",
       "post",
@@ -1575,19 +2414,29 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "*"
+          "action": "*",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     }
-  ]
+  ],
+  "mappings": null,
+  "relationships": null
 },
     "Empty": {
   "source": {
     "object": "empty_table",
-    "type": "table"
+    "type": "table",
+    "parameters": null,
+    "key-fields": null
   },
   "graphql": {
     "enabled": true,
+    "operation": null,
     "type": {
       "singular": "Empty",
       "plural": "Empties"
@@ -1595,6 +2444,7 @@
   },
   "rest": {
     "enabled": true,
+    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1602,16 +2452,36 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "update"
+          "action": "update",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -1619,19 +2489,29 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     }
-  ]
+  ],
+  "mappings": null,
+  "relationships": null
 },
     "Notebook": {
   "source": {
     "object": "notebooks",
-    "type": "table"
+    "type": "table",
+    "parameters": null,
+    "key-fields": null
   },
   "graphql": {
     "enabled": true,
+    "operation": null,
     "type": {
       "singular": "Notebook",
       "plural": "Notebooks"
@@ -1639,6 +2519,7 @@
   },
   "rest": {
     "enabled": true,
+    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1646,13 +2527,28 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "update"
+          "action": "update",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
           "action": "read",
@@ -1663,20 +2559,26 @@
             ]
           },
           "policy": {
+            "request": null,
             "database": "@item ne 1"
           }
         }
       ]
     }
-  ]
+  ],
+  "mappings": null,
+  "relationships": null
 },
     "Journal": {
   "source": {
     "object": "journals",
-    "type": "table"
+    "type": "table",
+    "parameters": null,
+    "key-fields": null
   },
   "graphql": {
     "enabled": true,
+    "operation": null,
     "type": {
       "singular": "Journal",
       "plural": "Journals"
@@ -1684,6 +2586,7 @@
   },
   "rest": {
     "enabled": true,
+    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1697,6 +2600,10 @@
             "include": [
               "*"
             ]
+          },
+          "policy": {
+            "request": null,
+            "database": null
           }
         },
         {
@@ -1708,14 +2615,25 @@
             ]
           },
           "policy": {
+            "request": null,
             "database": "@item.id ne 1"
           }
         },
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -1731,6 +2649,7 @@
             ]
           },
           "policy": {
+            "request": null,
             "database": "@item.id eq 1"
           }
         },
@@ -1739,7 +2658,12 @@
           "fields": {
             "exclude": [
               "*"
-            ]
+            ],
+            "include": null
+          },
+          "policy": {
+            "request": null,
+            "database": null
           }
         },
         {
@@ -1751,11 +2675,17 @@
             ]
           },
           "policy": {
+            "request": null,
             "database": "@item.id eq 1"
           }
         },
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -1763,19 +2693,29 @@
       "role": "authorizationHandlerTester",
       "actions": [
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     }
-  ]
+  ],
+  "mappings": null,
+  "relationships": null
 },
     "ArtOfWar": {
   "source": {
     "object": "aow",
-    "type": "table"
+    "type": "table",
+    "parameters": null,
+    "key-fields": null
   },
   "graphql": {
     "enabled": false,
+    "operation": null,
     "type": {
       "singular": "ArtOfWar",
       "plural": "ArtOfWars"
@@ -1783,6 +2723,7 @@
   },
   "rest": {
     "enabled": true,
+    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1790,7 +2731,12 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "*"
+          "action": "*",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -1798,7 +2744,12 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "*"
+          "action": "*",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     }
@@ -1808,15 +2759,19 @@
     "WagingWar": "\u4F5C\u6230",
     "StrategicAttack": "\u8B00\u653B",
     "NoteNum": "\u252C\u2500\u252C\u30CE( \u00BA _ \u00BA\u30CE)"
-  }
+  },
+  "relationships": null
 },
     "series": {
   "source": {
     "object": "series",
-    "type": "table"
+    "type": "table",
+    "parameters": null,
+    "key-fields": null
   },
   "graphql": {
     "enabled": true,
+    "operation": null,
     "type": {
       "singular": "series",
       "plural": "series"
@@ -1824,6 +2779,7 @@
   },
   "rest": {
     "enabled": true,
+    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1831,7 +2787,12 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "*"
+          "action": "*",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -1843,7 +2804,12 @@
           "fields": {
             "exclude": [
               "name"
-            ]
+            ],
+            "include": null
+          },
+          "policy": {
+            "request": null,
+            "database": null
           }
         }
       ]
@@ -1852,13 +2818,28 @@
       "role": "TestNestedFilterManyOne_EntityReadForbidden",
       "actions": [
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "update"
+          "action": "update",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -1866,7 +2847,12 @@
       "role": "TestNestedFilterOneMany_ColumnForbidden",
       "actions": [
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -1874,17 +2860,24 @@
       "role": "TestNestedFilterOneMany_EntityReadForbidden",
       "actions": [
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     }
   ],
+  "mappings": null,
   "relationships": {
     "comics": {
       "cardinality": "many",
       "target.entity": "Comic",
       "source.fields": [],
       "target.fields": [],
+      "linking.object": null,
       "linking.source.fields": [],
       "linking.target.fields": []
     }
@@ -1893,10 +2886,13 @@
     "Sales": {
   "source": {
     "object": "sales",
-    "type": "table"
+    "type": "table",
+    "parameters": null,
+    "key-fields": null
   },
   "graphql": {
     "enabled": true,
+    "operation": null,
     "type": {
       "singular": "Sales",
       "plural": "Sales"
@@ -1904,6 +2900,7 @@
   },
   "rest": {
     "enabled": true,
+    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1911,7 +2908,12 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "*"
+          "action": "*",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -1919,19 +2921,29 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "*"
+          "action": "*",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     }
-  ]
+  ],
+  "mappings": null,
+  "relationships": null
 },
     "GQLmappings": {
   "source": {
     "object": "gqlmappings",
-    "type": "table"
+    "type": "table",
+    "parameters": null,
+    "key-fields": null
   },
   "graphql": {
     "enabled": true,
+    "operation": null,
     "type": {
       "singular": "GQLmappings",
       "plural": "GQLmappings"
@@ -1939,6 +2951,7 @@
   },
   "rest": {
     "enabled": true,
+    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1946,7 +2959,12 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "*"
+          "action": "*",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -1954,7 +2972,12 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "*"
+          "action": "*",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     }
@@ -1962,15 +2985,19 @@
   "mappings": {
     "__column1": "column1",
     "__column2": "column2"
-  }
+  },
+  "relationships": null
 },
     "Bookmarks": {
   "source": {
     "object": "bookmarks",
-    "type": "table"
+    "type": "table",
+    "parameters": null,
+    "key-fields": null
   },
   "graphql": {
     "enabled": true,
+    "operation": null,
     "type": {
       "singular": "Bookmarks",
       "plural": "Bookmarks"
@@ -1978,6 +3005,7 @@
   },
   "rest": {
     "enabled": true,
+    "path": null,
     "methods": []
   },
   "permissions": [
@@ -1985,7 +3013,12 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "*"
+          "action": "*",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -1993,19 +3026,29 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "*"
+          "action": "*",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     }
-  ]
+  ],
+  "mappings": null,
+  "relationships": null
 },
     "MappedBookmarks": {
   "source": {
     "object": "mappedbookmarks",
-    "type": "table"
+    "type": "table",
+    "parameters": null,
+    "key-fields": null
   },
   "graphql": {
     "enabled": true,
+    "operation": null,
     "type": {
       "singular": "MappedBookmarks",
       "plural": "MappedBookmarks"
@@ -2013,6 +3056,7 @@
   },
   "rest": {
     "enabled": true,
+    "path": null,
     "methods": []
   },
   "permissions": [
@@ -2020,7 +3064,12 @@
       "role": "anonymous",
       "actions": [
         {
-          "action": "*"
+          "action": "*",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -2028,7 +3077,12 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "*"
+          "action": "*",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     }
@@ -2036,15 +3090,19 @@
   "mappings": {
     "id": "bkid",
     "bkname": "name"
-  }
+  },
+  "relationships": null
 },
     "PublisherNF": {
   "source": {
     "object": "publishers",
-    "type": "table"
+    "type": "table",
+    "parameters": null,
+    "key-fields": null
   },
   "graphql": {
     "enabled": true,
+    "operation": null,
     "type": {
       "singular": "PublisherNF",
       "plural": "PublisherNFs"
@@ -2052,6 +3110,7 @@
   },
   "rest": {
     "enabled": true,
+    "path": null,
     "methods": []
   },
   "permissions": [
@@ -2059,16 +3118,36 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "update"
+          "action": "update",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -2076,7 +3155,12 @@
       "role": "TestNestedFilter_EntityReadForbidden",
       "actions": [
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -2084,7 +3168,12 @@
       "role": "TestNestedFilter_ColumnForbidden",
       "actions": [
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -2092,7 +3181,12 @@
       "role": "TestNestedFilterChained_EntityReadForbidden",
       "actions": [
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -2104,18 +3198,25 @@
           "fields": {
             "exclude": [
               "name"
-            ]
+            ],
+            "include": null
+          },
+          "policy": {
+            "request": null,
+            "database": null
           }
         }
       ]
     }
   ],
+  "mappings": null,
   "relationships": {
     "books": {
       "cardinality": "many",
       "target.entity": "BookNF",
       "source.fields": [],
       "target.fields": [],
+      "linking.object": null,
       "linking.source.fields": [],
       "linking.target.fields": []
     }
@@ -2124,10 +3225,13 @@
     "BookNF": {
   "source": {
     "object": "books",
-    "type": "table"
+    "type": "table",
+    "parameters": null,
+    "key-fields": null
   },
   "graphql": {
     "enabled": true,
+    "operation": null,
     "type": {
       "singular": "bookNF",
       "plural": "booksNF"
@@ -2135,6 +3239,7 @@
   },
   "rest": {
     "enabled": true,
+    "path": null,
     "methods": []
   },
   "permissions": [
@@ -2142,16 +3247,36 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "update"
+          "action": "update",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -2159,7 +3284,12 @@
       "role": "TestNestedFilter_EntityReadForbidden",
       "actions": [
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -2167,7 +3297,12 @@
       "role": "TestNestedFilter_ColumnForbidden",
       "actions": [
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -2175,7 +3310,12 @@
       "role": "TestNestedFilterChained_EntityReadForbidden",
       "actions": [
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -2183,7 +3323,12 @@
       "role": "TestNestedFilterChained_ColumnForbidden",
       "actions": [
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     }
@@ -2198,6 +3343,7 @@
       "target.entity": "PublisherNF",
       "source.fields": [],
       "target.fields": [],
+      "linking.object": null,
       "linking.source.fields": [],
       "linking.target.fields": []
     },
@@ -2206,6 +3352,7 @@
       "target.entity": "BookWebsitePlacement",
       "source.fields": [],
       "target.fields": [],
+      "linking.object": null,
       "linking.source.fields": [],
       "linking.target.fields": []
     },
@@ -2214,6 +3361,7 @@
       "target.entity": "Review",
       "source.fields": [],
       "target.fields": [],
+      "linking.object": null,
       "linking.source.fields": [],
       "linking.target.fields": []
     },
@@ -2235,10 +3383,13 @@
     "AuthorNF": {
   "source": {
     "object": "authors",
-    "type": "table"
+    "type": "table",
+    "parameters": null,
+    "key-fields": null
   },
   "graphql": {
     "enabled": true,
+    "operation": null,
     "type": {
       "singular": "AuthorNF",
       "plural": "AuthorNFs"
@@ -2246,6 +3397,7 @@
   },
   "rest": {
     "enabled": true,
+    "path": null,
     "methods": []
   },
   "permissions": [
@@ -2253,16 +3405,36 @@
       "role": "authenticated",
       "actions": [
         {
-          "action": "create"
+          "action": "create",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "update"
+          "action": "update",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         },
         {
-          "action": "delete"
+          "action": "delete",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -2274,7 +3446,12 @@
           "fields": {
             "exclude": [
               "name"
-            ]
+            ],
+            "include": null
+          },
+          "policy": {
+            "request": null,
+            "database": null
           }
         }
       ]
@@ -2287,7 +3464,12 @@
           "fields": {
             "exclude": [
               "name"
-            ]
+            ],
+            "include": null
+          },
+          "policy": {
+            "request": null,
+            "database": null
           }
         }
       ]
@@ -2296,7 +3478,12 @@
       "role": "TestNestedFilterChained_EntityReadForbidden",
       "actions": [
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     },
@@ -2304,11 +3491,17 @@
       "role": "TestNestedFilterChained_ColumnForbidden",
       "actions": [
         {
-          "action": "read"
+          "action": "read",
+          "fields": null,
+          "policy": {
+            "request": null,
+            "database": null
+          }
         }
       ]
     }
   ],
+  "mappings": null,
   "relationships": {
     "books": {
       "cardinality": "many",

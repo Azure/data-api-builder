@@ -7,6 +7,12 @@ using Azure.DataApiBuilder.Config.NamingPolicies;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
+/// <summary>
+/// Contains the information needed to connect to the backend database.
+/// </summary>
+/// <param name="DatabaseType">Type of database to use.</param>
+/// <param name="ConnectionString">Connection string to access the database.</param>
+/// <param name="Options">Custom options for the specific database. If there are no options this will be empty.</param>
 public record DataSource(DatabaseType DatabaseType, string ConnectionString, Dictionary<string, JsonElement> Options)
 {
     /// <summary>
@@ -56,4 +62,7 @@ public interface IDataSourceOptions { }
 /// <param name="GraphQLSchema">Raw contents of the GraphQL schema.</param>
 public record CosmosDbNoSQLDataSourceOptions(string? Database, string? Container, string? Schema, string? GraphQLSchema) : IDataSourceOptions;
 
+/// <summary>
+/// Options for MsSql database.
+/// </summary>
 public record MsSqlOptions(bool SetSessionContext = true) : IDataSourceOptions;

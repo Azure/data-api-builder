@@ -184,6 +184,8 @@ public class RuntimeConfigProvider
 
         ManagedIdentityAccessToken = accessToken;
 
+        IsLateConfigured = true;
+
         if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig))
         {
             _runtimeConfig = runtimeConfig.DataSource.DatabaseType switch

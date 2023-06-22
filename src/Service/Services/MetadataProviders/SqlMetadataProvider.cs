@@ -488,6 +488,8 @@ namespace Azure.DataApiBuilder.Service.Services
             Dictionary<string, DatabaseObject> sourceObjects = new();
             foreach ((string entityName, Entity entity) in _entities)
             {
+                EntitySourceType sourceType = GetEntitySourceType(entityName, entity);
+
                 if (!EntityToDatabaseObject.ContainsKey(entityName))
                 {
                     // Reuse the same Database object for multiple entities if they share the same source.
@@ -500,21 +502,21 @@ namespace Azure.DataApiBuilder.Service.Services
                         // initialize DatabaseObject as DatabaseStoredProcedure,
                         // else with DatabaseTable (for tables) / DatabaseView (for views).
 
-                        if (entity.Source.Type is EntitySourceType.StoredProcedure)
+                        if (sourceType is EntitySourceType.StoredProcedure)
                         {
                             sourceObject = new DatabaseStoredProcedure(schemaName, dbObjectName)
                             {
-                                SourceType = entity.Source.Type,
+                                SourceType = sourceType,
                                 StoredProcedureDefinition = new()
                             };
                         }
-                        else if (entity.Source.Type is EntitySourceType.Table)
+                        else if (sourceType is EntitySourceType.Table)
                         {
                             sourceObject = new DatabaseTable()
                             {
                                 SchemaName = schemaName,
                                 Name = dbObjectName,
-                                SourceType = entity.Source.Type,
+                                SourceType = sourceType,
                                 TableDefinition = new()
                             };
                         }
@@ -524,7 +526,7 @@ namespace Azure.DataApiBuilder.Service.Services
                             {
                                 SchemaName = schemaName,
                                 Name = dbObjectName,
-                                SourceType = entity.Source.Type,
+                                SourceType = sourceType,
                                 ViewDefinition = new()
                             };
                         }
@@ -540,6 +542,22 @@ namespace Azure.DataApiBuilder.Service.Services
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Get the EntitySourceType for the given entity or throw an exception if it is null.
+        /// </summary>
+        /// <param name="entityName">Name of the entity, used to provide info if an error is raised.</param>
+        /// <param name="entity">Entity to get the source type from.</param>
+        /// <returns>The non-nullable EntitySourceType.</returns>
+        /// <exception cref="DataApiBuilderException">If the EntitySourceType is null raise an exception as it is required for a SQL entity.</exception>
+        private static EntitySourceType GetEntitySourceType(string entityName, Entity entity)
+        {
+            return entity.Source.Type ??
+                                throw new DataApiBuilderException(
+                                    $"The entity {entityName} does not have a source type. A null source type is only valid if the database type is CosmosDB_NoSQL.",
+                                    statusCode: HttpStatusCode.ServiceUnavailable,
+                                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
         }
 
         /// <summary>
@@ -763,7 +781,7 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             foreach ((string entityName, Entity entity) in _entities)
             {
-                EntitySourceType entitySourceType = entity.Source.Type;
+                EntitySourceType entitySourceType = GetEntitySourceType(entityName, entity);
                 if (entitySourceType is EntitySourceType.StoredProcedure)
                 {
                     await FillSchemaForStoredProcedureAsync(

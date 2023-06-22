@@ -231,10 +231,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         {
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
-                EntityMetadata entityToRoleMap = new()
-                {
-                    ObjectType = entity.Source.Type,
-                };
+                EntityMetadata entityToRoleMap = new();
 
                 bool isStoredProcedureEntity = entity.Source.Type is EntitySourceType.StoredProcedure;
                 if (isStoredProcedureEntity)
@@ -397,7 +394,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// <param name="operation">operation type.</param>
         /// <param name="sourceType">Type of database object: Table, View, or Stored Procedure.</param>
         /// <returns>IEnumerable of all available operations.</returns>
-        public static IEnumerable<EntityActionOperation> GetAllOperationsForObjectType(EntityActionOperation operation, EntitySourceType sourceType)
+        public static IEnumerable<EntityActionOperation> GetAllOperationsForObjectType(EntityActionOperation operation, EntitySourceType? sourceType)
         {
             if (sourceType is EntitySourceType.StoredProcedure)
             {
@@ -675,7 +672,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// There are only five possible operations
         /// </summary>
         /// <returns>Dictionary: Key - Operation | Value - List of roles.</returns>
-        private static Dictionary<EntityActionOperation, List<string>> CreateOperationToRoleMap(EntitySourceType sourceType)
+        private static Dictionary<EntityActionOperation, List<string>> CreateOperationToRoleMap(EntitySourceType? sourceType)
         {
             if (sourceType is EntitySourceType.StoredProcedure)
             {

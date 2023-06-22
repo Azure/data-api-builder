@@ -3,6 +3,7 @@
 
 global using System.Diagnostics;
 global using Azure.DataApiBuilder.Config;
+global using Azure.DataApiBuilder.Service.Exceptions;
 global using Microsoft.Extensions.Logging;
 global using Microsoft.VisualStudio.TestTools.UnitTesting;
 global using Moq;

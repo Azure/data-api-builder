@@ -14,7 +14,7 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
     {
         if (reader.TokenType == JsonTokenType.StartObject)
         {
-            EntityRestOptions restOptions = new(Methods: Array.Empty<SupportedHttpVerb>(), Path: null, Enabled: true);
+            EntityRestOptions restOptions = new(Methods: EntityRestOptions.DEFAULT_SUPPORTED_VERBS, Path: null, Enabled: true);
             while (reader.Read())
             {
                 if (reader.TokenType == JsonTokenType.EndObject)
@@ -30,19 +30,13 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
                     {
                         reader.Read();
 
-                        if (reader.TokenType == JsonTokenType.String)
+                        if (reader.TokenType == JsonTokenType.String || reader.TokenType == JsonTokenType.Null)
                         {
                             restOptions = restOptions with { Path = reader.DeserializeString() };
                             break;
                         }
 
-                        if (reader.TokenType == JsonTokenType.True || reader.TokenType == JsonTokenType.False)
-                        {
-                            restOptions = restOptions with { Enabled = reader.GetBoolean() };
-                            break;
-                        }
-
-                        break;
+                        throw new JsonException($"The value of {propertyName} must be a string. Found {reader.TokenType}.");
                     }
 
                     case "methods":
@@ -89,7 +83,12 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
 
         if (reader.TokenType == JsonTokenType.True || reader.TokenType == JsonTokenType.False)
         {
-            return new EntityRestOptions(EntityRestOptions.DEFAULT_SUPPORTED_VERBS, null, reader.GetBoolean());
+            bool enabled = reader.GetBoolean();
+            return new EntityRestOptions(
+                // if enabled, use default methods, otherwise use empty array as all verbs are disabled
+                Methods: enabled ? EntityRestOptions.DEFAULT_SUPPORTED_VERBS : Array.Empty<SupportedHttpVerb>(),
+                Path: null,
+                Enabled: enabled);
         }
 
         throw new JsonException();

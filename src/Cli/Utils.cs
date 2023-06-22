@@ -9,7 +9,6 @@ using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Cli.Commands;
-using Humanizer;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Service.Configurations.RuntimeConfigValidator;
 
@@ -88,7 +87,7 @@ namespace Cli
         /// </summary>
         /// <param name="operations">Array of operations which is of type JsonElement.</param>
         /// <returns>Dictionary of operations</returns>
-        public static IDictionary<EntityActionOperation, EntityAction> ConvertOperationArrayToIEnumerable(EntityAction[] operations, EntitySourceType sourceType)
+        public static IDictionary<EntityActionOperation, EntityAction> ConvertOperationArrayToIEnumerable(EntityAction[] operations, EntitySourceType? sourceType)
         {
             Dictionary<EntityActionOperation, EntityAction> result = new();
             foreach (EntityAction operation in operations)
@@ -232,7 +231,7 @@ namespace Cli
         /// </summary>
         /// <param name="operations">array of string containing operations for permissions</param>
         /// <returns>True if no invalid operation is found.</returns>
-        public static bool VerifyOperations(string[] operations, EntitySourceType sourceType)
+        public static bool VerifyOperations(string[] operations, EntitySourceType? sourceType)
         {
             // Check if there are any duplicate operations
             // Ex: read,read,create
@@ -294,7 +293,7 @@ namespace Cli
         /// It will return true if parsing is successful and add the parsed value
         /// to the out params role and operations.
         /// </summary>
-        public static bool TryGetRoleAndOperationFromPermission(IEnumerable<string> permissions, out string? role, out string? operations)
+        public static bool TryGetRoleAndOperationFromPermission(IEnumerable<string> permissions, [NotNullWhen(true)] out string? role, [NotNullWhen(true)] out string? operations)
         {
             // Split permission to role and operations.
             role = null;
@@ -334,6 +333,7 @@ namespace Cli
             else
             {
                 _logger.LogInformation("Config not provided. Trying to get default config based on DAB_ENVIRONMENT...");
+                _logger.LogInformation("Environment variable DAB_ENVIRONMENT is {value}", Environment.GetEnvironmentVariable("DAB_ENVIRONMENT"));
                 /// Need to reset to true explicitly so any that any re-invocations of this function
                 /// get simulated as being called for the first time specifically useful for tests.
                 RuntimeConfigLoader.CheckPrecedenceForConfigInEngine = true;
@@ -399,7 +399,7 @@ namespace Cli
         /// <returns>True in case of successful creation of source object.</returns>
         public static bool TryCreateSourceObject(
             string name,
-            EntitySourceType type,
+            EntitySourceType? type,
             Dictionary<string, object>? parameters,
             string[]? keyFields,
             [NotNullWhen(true)] out EntitySource? sourceObject)
@@ -817,7 +817,7 @@ namespace Cli
                 }
                 else
                 {
-                    string singular, plural;
+                    string singular, plural = string.Empty;
                     if (graphQL.Contains(SEPARATOR))
                     {
                         string[] arr = graphQL.Split(SEPARATOR);
@@ -833,7 +833,6 @@ namespace Cli
                     else
                     {
                         singular = graphQL;
-                        plural = graphQL.Pluralize(inputIsKnownToBeSingular: false);
                     }
 
                     // If we have singular/plural text we infer that GraphQL is enabled

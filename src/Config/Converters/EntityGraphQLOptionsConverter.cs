@@ -68,6 +68,10 @@ internal class EntityGraphQLOptionsConverter : JsonConverter<EntityGraphQLOption
                                 }
                             }
                         }
+                        else
+                        {
+                            throw new JsonException($"The value for the 'type' property must be a string or an object, but was {reader.TokenType}");
+                        }
 
                         break;
 

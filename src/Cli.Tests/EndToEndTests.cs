@@ -5,6 +5,7 @@ using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
 using System.Reflection;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Service;
 
 namespace Cli.Tests;
 
@@ -55,6 +56,7 @@ public class EndToEndTests
         _runtimeConfigLoader = null;
         _cliLogger = null;
     }
+
     /// <summary>
     /// Initializing config for CosmosDB_NoSQL.
     /// </summary>
@@ -292,7 +294,7 @@ public class EndToEndTests
     /// Validate update command for stored procedures by verifying the config json generated
     /// </summary>
     [TestMethod]
-    public void TestConfigGeneratedAfterUpdatingEntityWithSourceAsStoredProcedure()
+    public Task TestConfigGeneratedAfterUpdatingEntityWithSourceAsStoredProcedure()
     {
         string runtimeConfigJson = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
 
@@ -300,18 +302,11 @@ public class EndToEndTests
 
         // args for update command to update the source name from "s001.book" to "dbo.books"
         string[] updateArgs = { "update", "MyEntity", "-c", TEST_RUNTIME_CONFIG_FILE, "--source", "dbo.books" };
-        Program.Execute(updateArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+        _ = Program.Execute(updateArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
-        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
-        Assert.IsNotNull(runtimeConfig);
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig), "Failed to load config.");
         Entity entity = runtimeConfig.Entities["MyEntity"];
-        Assert.AreEqual(EntitySourceType.StoredProcedure, entity.Source.Type);
-        Assert.AreEqual("dbo.books", entity.Source.Object);
-        Assert.IsNotNull(entity.Source.Parameters);
-        Assert.AreEqual(3, entity.Source.Parameters.Count);
-        Assert.AreEqual(123, entity.Source.Parameters["param1"]);
-        Assert.AreEqual("hello", entity.Source.Parameters["param2"]);
-        Assert.AreEqual(true, entity.Source.Parameters["param3"]);
+        return Verify(entity);
     }
 
     /// <summary>
@@ -443,7 +438,7 @@ public class EndToEndTests
         Assert.AreEqual("/todo", entity.Rest.Path);
         Assert.IsNotNull(entity.GraphQL);
         Assert.IsTrue(entity.GraphQL.Enabled);
-        //The value isn entity.GraphQL is true/false, we expect the serialization to be a string.
+        //The value in entity.GraphQL is true/false, we expect the serialization to be a string.
         Assert.AreEqual(true, entity.GraphQL.Enabled);
         Assert.AreEqual(1, entity.Permissions.Length);
         Assert.AreEqual("anonymous", entity.Permissions[0].Role);
@@ -490,6 +485,54 @@ public class EndToEndTests
     }
 
     /// <summary>
+    /// Test to validate that the engine starts successfully when --verbose and --LogLevel
+    /// options are used with the start command
+    /// This test does not validate whether the engine logs messages at the specified log level
+    /// </summary>
+    /// <param name="logLevelOption">Log level options</param>
+    [DataTestMethod]
+    [DataRow("", DisplayName = "No logging from command line.")]
+    [DataRow("--verbose", DisplayName = "Verbose logging from command line.")]
+    [DataRow("--LogLevel 0", DisplayName = "LogLevel 0 from command line.")]
+    [DataRow("--LogLevel 1", DisplayName = "LogLevel 1 from command line.")]
+    [DataRow("--LogLevel 2", DisplayName = "LogLevel 2 from command line.")]
+    [DataRow("--LogLevel 3", DisplayName = "LogLevel 3 from command line.")]
+    [DataRow("--LogLevel 4", DisplayName = "LogLevel 4 from command line.")]
+    [DataRow("--LogLevel 5", DisplayName = "LogLevel 5 from command line.")]
+    [DataRow("--LogLevel 6", DisplayName = "LogLevel 6 from command line.")]
+    [DataRow("--LogLevel Trace", DisplayName = "LogLevel Trace from command line.")]
+    [DataRow("--LogLevel Debug", DisplayName = "LogLevel Debug from command line.")]
+    [DataRow("--LogLevel Information", DisplayName = "LogLevel Information from command line.")]
+    [DataRow("--LogLevel Warning", DisplayName = "LogLevel Warning from command line.")]
+    [DataRow("--LogLevel Error", DisplayName = "LogLevel Error from command line.")]
+    [DataRow("--LogLevel Critical", DisplayName = "LogLevel Critical from command line.")]
+    [DataRow("--LogLevel None", DisplayName = "LogLevel None from command line.")]
+    [DataRow("--LogLevel tRace", DisplayName = "Case sensitivity: LogLevel Trace from command line.")]
+    [DataRow("--LogLevel DebUG", DisplayName = "Case sensitivity: LogLevel Debug from command line.")]
+    [DataRow("--LogLevel information", DisplayName = "Case sensitivity: LogLevel Information from command line.")]
+    [DataRow("--LogLevel waRNing", DisplayName = "Case sensitivity: LogLevel Warning from command line.")]
+    [DataRow("--LogLevel eRROR", DisplayName = "Case sensitivity: LogLevel Error from command line.")]
+    [DataRow("--LogLevel CrItIcal", DisplayName = "Case sensitivity: LogLevel Critical from command line.")]
+    [DataRow("--LogLevel NONE", DisplayName = "Case sensitivity: LogLevel None from command line.")]
+    public void TestEngineStartUpWithVerboseAndLogLevelOptions(string logLevelOption)
+    {
+        _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, INITIAL_CONFIG);
+
+        using Process process = ExecuteDabCommand(
+            command: $"start --config {TEST_RUNTIME_CONFIG_FILE}",
+            logLevelOption
+        );
+
+        string? output = process.StandardOutput.ReadLine();
+        Assert.IsNotNull(output);
+        StringAssert.Contains(output, $"{Program.PRODUCT_NAME} {ProductInfo.GetProductVersion()}", StringComparison.Ordinal);
+        output = process.StandardOutput.ReadLine();
+        process.Kill();
+        Assert.IsNotNull(output);
+        StringAssert.Contains(output, $"User provided config file: {TEST_RUNTIME_CONFIG_FILE}", StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// Test to verify that `--help` and `--version` along with know command/option produce the exit code 0,
     /// while unknown commands/options have exit code -1.
     /// </summary>
@@ -500,7 +543,7 @@ public class EndToEndTests
     [DataRow(new string[] { "initialize" }, -1, DisplayName = "Invalid Command should have exit code -1.")]
     [DataRow(new string[] { "init", "--database-name", "mssql" }, -1, DisplayName = "Invalid Options should have exit code -1.")]
     [DataRow(new string[] { "init", "--database-type", "mssql", "-c", TEST_RUNTIME_CONFIG_FILE }, 0,
-        DisplayName = "Correct command with correct options should have exit code 0.")]
+    DisplayName = "Correct command with correct options should have exit code 0.")]
     public void VerifyExitCodeForCli(string[] cliArguments, int expectedErrorCode)
     {
         Assert.AreEqual(expectedErrorCode, Program.Execute(cliArguments, _cliLogger!, _fileSystem!, _runtimeConfigLoader!));
@@ -534,7 +577,117 @@ public class EndToEndTests
         if (!expectSuccess)
         {
             string output = logger.GetLog();
-            StringAssert.Contains(output, $"Entity name is missing. Usage: dab {command} [entity-name] [{command}-options]");
+            StringAssert.Contains(output, $"Entity name is missing. Usage: dab {command} [entity-name] [{command}-options]", StringComparison.Ordinal);
         }
+    }
+
+    /// <summary>
+    /// Test to verify that help writer window generates output on the console.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow("", "", new string[] { "ERROR" }, DisplayName = "No flags provided.")]
+    [DataRow("initialize", "", new string[] { "ERROR", "Verb 'initialize' is not recognized." }, DisplayName = "Wrong Command provided.")]
+    [DataRow("", "--version", new string[] { "Microsoft.DataApiBuilder 1.0.0" }, DisplayName = "Checking version.")]
+    [DataRow("", "--help", new string[] { "init", "add", "update", "start" }, DisplayName = "Checking output for --help.")]
+    public void TestHelpWriterOutput(string command, string flags, string[] expectedOutputArray)
+    {
+        using Process process = ExecuteDabCommand(
+            command,
+            flags
+        );
+
+        string? output = process.StandardOutput.ReadToEnd();
+        Assert.IsNotNull(output);
+        StringAssert.Contains(output, $"{Program.PRODUCT_NAME} {ProductInfo.GetProductVersion()}", StringComparison.Ordinal);
+
+        foreach (string expectedOutput in expectedOutputArray)
+        {
+            StringAssert.Contains(output, expectedOutput, StringComparison.Ordinal);
+        }
+
+        process.Kill();
+    }
+
+    /// <summary>
+    /// Test to verify that the version info is logged for both correct/incorrect command,
+    /// and that the config name is displayed in the logs.
+    /// </summary>
+    [DataRow("", "--version", false, DisplayName = "Checking dab version with --version.")]
+    [DataRow("", "--help", false, DisplayName = "Checking version through --help option.")]
+    [DataRow("edit", "--new-option", false, DisplayName = "Version printed with invalid command edit.")]
+    [DataRow("init", "--database-type mssql", true, DisplayName = "Version printed with valid command init.")]
+    [DataRow("add", "MyEntity -s my_entity --permissions \"anonymous:*\"", true, DisplayName = "Version printed with valid command add.")]
+    [DataRow("update", "MyEntity -s my_entity", true, DisplayName = "Version printed with valid command update.")]
+    [DataRow("start", "", true, DisplayName = "Version printed with valid command start.")]
+    [DataTestMethod]
+    public void TestVersionInfoAndConfigIsCorrectlyDisplayedWithDifferentCommand(
+        string command,
+        string options,
+        bool isParsableDabCommandName)
+    {
+        _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, INITIAL_CONFIG);
+
+        using Process process = ExecuteDabCommand(
+            command: $"{command} ",
+            flags: $"--config {TEST_RUNTIME_CONFIG_FILE} {options}"
+        );
+
+        string? output = process.StandardOutput.ReadToEnd();
+        Assert.IsNotNull(output);
+
+        // Version Info logged by dab irrespective of commands being parsed correctly.
+        StringAssert.Contains(output, $"{Program.PRODUCT_NAME} {ProductInfo.GetProductVersion()}", StringComparison.Ordinal);
+
+        if (isParsableDabCommandName)
+        {
+            StringAssert.Contains(output, TEST_RUNTIME_CONFIG_FILE, StringComparison.Ordinal);
+        }
+
+        process.Kill();
+    }
+
+    /// <summary>
+    /// Test to verify that any parsing errors in the config
+    /// are caught before starting the engine.
+    /// </summary>
+    [DataRow(INITIAL_CONFIG, BASIC_ENTITY_WITH_ANONYMOUS_ROLE, true, DisplayName = "Correct Config")]
+    [DataRow(INITIAL_CONFIG, SINGLE_ENTITY_WITH_INVALID_GRAPHQL_TYPE, false, DisplayName = "Invalid GraphQL type for entity")]
+    [DataTestMethod]
+    public void TestExitOfRuntimeEngineWithInvalidConfig(
+        string initialConfig,
+        string entityDetails,
+        bool expectSuccess)
+    {
+        string runtimeConfigJson = AddPropertiesToJson(initialConfig, entityDetails);
+        File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, runtimeConfigJson);
+        using Process process = ExecuteDabCommand(
+            command: "start",
+            flags: $"--config {TEST_RUNTIME_CONFIG_FILE}"
+        );
+
+        string? output = process.StandardOutput.ReadLine();
+        Assert.IsNotNull(output);
+        StringAssert.Contains(output, $"{Program.PRODUCT_NAME} {ProductInfo.GetProductVersion()}", StringComparison.Ordinal);
+        output = process.StandardOutput.ReadLine();
+        Assert.IsNotNull(output);
+        StringAssert.Contains(output, $"User provided config file: {TEST_RUNTIME_CONFIG_FILE}", StringComparison.Ordinal);
+        output = process.StandardOutput.ReadLine();
+        Assert.IsNotNull(output);
+        if (expectSuccess)
+        {
+            StringAssert.Contains(output, $"Setting default minimum LogLevel:", StringComparison.Ordinal);
+            output = process.StandardOutput.ReadLine();
+            Assert.IsNotNull(output);
+            StringAssert.Contains(output, "Starting the runtime engine...", StringComparison.Ordinal);
+        }
+        else
+        {
+            StringAssert.Contains(output, $"Failed to parse the config file: {TEST_RUNTIME_CONFIG_FILE}.", StringComparison.Ordinal);
+            output = process.StandardOutput.ReadLine();
+            Assert.IsNotNull(output);
+            StringAssert.Contains(output, $"Failed to start the engine.", StringComparison.Ordinal);
+        }
+
+        process.Kill();
     }
 }

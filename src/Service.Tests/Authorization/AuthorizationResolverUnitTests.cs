@@ -1085,7 +1085,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
             Mock<HttpContext> context = new();
 
-            //sAdd identity to the readAction, updateActionext.
+            //Add identity to the readAction, updateAction.
             ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationOptions.ROLE_CLAIM_TYPE);
             foreach (string claimType in claimTypes)
             {
@@ -1157,7 +1157,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             Mock<HttpContext> context = new();
 
-            // sAdd identity to the readAction, updateActionext.
+            // Add identity to the readAction, updateAction.
             ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationOptions.ROLE_CLAIM_TYPE);
             identity.AddClaim(new Claim("user_email", "xyz@microsoft.com", ClaimValueTypes.String));
             ClaimsPrincipal principal = new(identity);

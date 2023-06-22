@@ -31,7 +31,7 @@ public class ConfigGeneratorTests
         HandleConfigFileCreationAndDeletion(TEST_RUNTIME_CONFIG_FILE, isConfigFilePresentAlready);
         Assert.AreEqual(isConfigFilePresentAlready, File.Exists(TEST_RUNTIME_CONFIG_FILE));
 
-        InitOptions options = CreateBasicInitOptionsForMsSql(config: TEST_RUNTIME_CONFIG_FILE);
+        InitOptions options = CreateBasicInitOptionsForMsSqlWithConfig(config: TEST_RUNTIME_CONFIG_FILE);
 
         Assert.AreEqual(isConfigGenerationSuccessful, ConfigGenerator.TryGenerateConfig(options));
 
@@ -59,7 +59,7 @@ public class ConfigGeneratorTests
         HandleConfigFileCreationAndDeletion(configFileName, isConfigFilePresentAlready);
         Assert.AreEqual(isConfigFilePresentAlready, File.Exists(configFileName));
 
-        InitOptions options = CreateBasicInitOptionsForMsSql();
+        InitOptions options = CreateBasicInitOptionsForMsSqlWithConfig();
 
         Assert.AreEqual(isConfigGenerationSuccessful, ConfigGenerator.TryGenerateConfig(options));
         if (!isConfigFilePresentAlready)

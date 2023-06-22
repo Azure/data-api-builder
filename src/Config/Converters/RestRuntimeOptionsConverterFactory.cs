@@ -32,7 +32,7 @@ internal class RestRuntimeOptionsConverterFactory : JsonConverterFactory
 
             if (reader.TokenType == JsonTokenType.Null || reader.TokenType == JsonTokenType.False)
             {
-                return new RestRuntimeOptions(false);
+                return new RestRuntimeOptions(Enabled: false);
             }
 
             // Remove the converter so we don't recurse.

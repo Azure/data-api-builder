@@ -110,7 +110,6 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// <summary>
         /// Data source property of the config json. This is used for constructing the required config json strings
         /// for unit tests
-        ///
         /// </summary>
         public const string SAMPLE_SCHEMA_DATA_SOURCE = SCHEMA_PROPERTY + "," + @"
             ""data-source"": {

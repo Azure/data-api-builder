@@ -3,9 +3,11 @@
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
+/// <summary>
+/// Authorization types supported in the service.
+/// </summary>
 public enum AuthorizationType
 {
-    NoAccess,
     Anonymous,
     Authenticated
 }

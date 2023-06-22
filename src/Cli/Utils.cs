@@ -403,6 +403,7 @@ namespace Cli
             else
             {
                 _logger.LogInformation("Config not provided. Trying to get default config based on DAB_ENVIRONMENT...");
+                _logger.LogInformation("Environment variable DAB_ENVIRONMENT is {value}", Environment.GetEnvironmentVariable("DAB_ENVIRONMENT"));
                 /// Need to reset to true explicitly so any that any re-invocations of this function
                 /// get simulated as being called for the first time specifically useful for tests.
                 RuntimeConfigLoader.CheckPrecedenceForConfigInEngine = true;
@@ -886,7 +887,7 @@ namespace Cli
                 }
                 else
                 {
-                    string singular, plural = "";
+                    string singular, plural = string.Empty;
                     if (graphQL.Contains(SEPARATOR))
                     {
                         string[] arr = graphQL.Split(SEPARATOR);

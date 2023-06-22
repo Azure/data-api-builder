@@ -103,7 +103,15 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
 
             if (string.IsNullOrEmpty(entitySource))
             {
-                return _cosmosDb.Database!;
+                if (string.IsNullOrEmpty(_cosmosDb.Database))
+                {
+                    throw new DataApiBuilderException(
+                        message: $"No database provided for {entityName}",
+                        statusCode: System.Net.HttpStatusCode.InternalServerError,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                }
+
+                return _cosmosDb.Database;
             }
 
             (string? database, _) = EntitySourceNamesParser.ParseSchemaAndTable(entitySource);

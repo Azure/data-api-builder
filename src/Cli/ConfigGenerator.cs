@@ -907,6 +907,13 @@ namespace Cli
             // Validates that config file has data and follows the correct json schema
             if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? deserializedRuntimeConfig))
             {
+                _logger.LogError("Failed to parse the config file: {configFile}.", runtimeConfigFile);
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(deserializedRuntimeConfig.DataSource.ConnectionString))
+            {
+                _logger.LogError($"Invalid connection-string provided in the config.");
                 return false;
             }
 

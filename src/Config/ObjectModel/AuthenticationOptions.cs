@@ -34,6 +34,6 @@ public record AuthenticationOptions(string Provider, JwtOptions? Jwt)
     /// <summary>
     /// A shorthand method to determine whether JWT is configured for the current authentication provider.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>True if the provider is enabled for JWT, otherwise false.</returns>
     public bool IsJwtConfiguredIdentityProvider() => !IsEasyAuthAuthenticationProvider() && !IsAuthenticationSimulatorEnabled();
 };

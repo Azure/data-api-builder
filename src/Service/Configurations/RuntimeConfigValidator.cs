@@ -17,7 +17,6 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
 using Microsoft.Extensions.Logging;
-using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 
 namespace Azure.DataApiBuilder.Service.Configurations
 {
@@ -67,8 +66,6 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <summary>
         /// The driver for validation of the runtime configuration file.
         /// </summary>
-        /// <exception cref="ArgumentNullException"></exception>
-        /// <exception cref="NotSupportedException"></exception>
         public void ValidateConfig()
         {
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
@@ -127,11 +124,17 @@ namespace Azure.DataApiBuilder.Service.Configurations
             {
                 CosmosDbNoSQLDataSourceOptions? cosmosDbNoSql =
                     runtimeConfig.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>() ??
-                    throw new NotSupportedException("CosmosDB_NoSql is specified but no CosmosDB_NoSql configuration information has been provided.");
+                    throw new DataApiBuilderException(
+                        "CosmosDB_NoSql is specified but no CosmosDB_NoSql configuration information has been provided.",
+                        HttpStatusCode.ServiceUnavailable,
+                        DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
 
                 if (string.IsNullOrEmpty(cosmosDbNoSql.Schema))
                 {
-                    throw new NotSupportedException("No GraphQL schema file has been provided for CosmosDB_NoSql. Ensure you provide a GraphQL schema containing the GraphQL object types to expose.");
+                    throw new DataApiBuilderException(
+                        "No GraphQL schema file has been provided for CosmosDB_NoSql. Ensure you provide a GraphQL schema containing the GraphQL object types to expose.",
+                        HttpStatusCode.ServiceUnavailable,
+                        DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                 }
 
                 if (!fileSystem.File.Exists(cosmosDbNoSql.Schema))
@@ -184,7 +187,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 if (entity.Source.Type is EntitySourceType.StoredProcedure)
                 {
                     // For Stored Procedures a single query/mutation is generated.
-                    string storedProcedureQueryName = GenerateStoredProcedureGraphQLFieldName(entityName, entity);
+                    string storedProcedureQueryName = GraphQLNaming.GenerateStoredProcedureGraphQLFieldName(entityName, entity);
 
                     if (!graphQLOperationNames.Add(storedProcedureQueryName))
                     {
@@ -197,13 +200,13 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     // Primary Key Query: For fetching an item using its primary key.
                     // List Query: To fetch a paginated list of items.
                     // Query names for both these queries are determined.
-                    string pkQueryName = GenerateByPKQueryName(entityName, entity);
-                    string listQueryName = GenerateListQueryName(entityName, entity);
+                    string pkQueryName = GraphQLNaming.GenerateByPKQueryName(entityName, entity);
+                    string listQueryName = GraphQLNaming.GenerateListQueryName(entityName, entity);
 
                     // Mutations names for the exposed entities are determined.
-                    string createMutationName = $"create{GetDefinedSingularName(entityName, entity)}";
-                    string updateMutationName = $"update{GetDefinedSingularName(entityName, entity)}";
-                    string deleteMutationName = $"delete{GetDefinedSingularName(entityName, entity)}";
+                    string createMutationName = $"create{GraphQLNaming.GetDefinedSingularName(entityName, entity)}";
+                    string updateMutationName = $"update{GraphQLNaming.GetDefinedSingularName(entityName, entity)}";
+                    string deleteMutationName = $"delete{GraphQLNaming.GetDefinedSingularName(entityName, entity)}";
 
                     if (!graphQLOperationNames.Add(pkQueryName)
                         || !graphQLOperationNames.Add(listQueryName)
@@ -219,7 +222,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 {
                     throw new DataApiBuilderException(
                         message: $"Entity {entityName} generates queries/mutation that already exist",
-                        statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                        statusCode: HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }
             }
@@ -232,7 +235,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// have GraphQL configuration: when entity.GraphQL == false or null.
         /// </summary>
         /// <seealso cref="https://spec.graphql.org/October2021/#Name"/>
-        /// <param name="runtimeConfig"></param>
+        /// <param name="entityCollection">The runtime entities to process.</param>
         public static void ValidateEntityNamesInConfig(RuntimeEntities entityCollection)
         {
             foreach ((string _, Entity entity) in entityCollection)
@@ -252,7 +255,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             {
                 throw new DataApiBuilderException(
                     message: $"Entity {entityName} contains characters disallowed by GraphQL.",
-                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                    statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
             }
         }
@@ -261,7 +264,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// Ensure the global REST and GraphQL endpoints do not conflict if both
         /// are enabled.
         /// </summary>
-        /// <param name="runtimeConfig"></param>
+        /// <param name="runtimeConfig">The config that will be validated.</param>
         public static void ValidateGlobalEndpointRouteConfig(RuntimeConfig runtimeConfig)
         {
             // Both REST and GraphQL endpoints cannot be disabled at the same time.
@@ -314,7 +317,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// <summary>
         /// Method to validate that the GraphQL path prefix.
         /// </summary>
-        /// <param name="runtimeConfig"></param>
+        /// <param name="runtimeConfig">The config that will be validated</param>
         public static void ValidateGraphQLPath(RuntimeConfig runtimeConfig)
         {
             string graphqlPath = runtimeConfig.Runtime.GraphQL.Path;
@@ -328,7 +331,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// </summary>
         /// <param name="apiPath">path prefix for rest/graphql apis</param>
         /// <param name="apiType">Either REST or GraphQL</param>
-        /// <exception cref="DataApiBuilderException"></exception>
+        /// <exception cref="DataApiBuilderException">Thrown if the path is null/empty or it doesn't start with a preceding /.</exception>
         private static void ValidateApiPath(string apiPath, ApiType apiType)
         {
             if (string.IsNullOrEmpty(apiPath))
@@ -348,7 +351,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
             }
 
-            apiPath = apiPath.Substring(1);
+            apiPath = apiPath[1..];
 
             // API path prefix should not contain any reserved characters.
             DoApiPathInvalidCharCheck(apiPath, apiType);
@@ -545,7 +548,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 {
                     throw new DataApiBuilderException(
                             message: $"Cannot define relationship for entity: {entity}",
-                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                            statusCode: HttpStatusCode.ServiceUnavailable,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }
 
@@ -556,7 +559,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     {
                         throw new DataApiBuilderException(
                             message: $"entity: {relationship.TargetEntity} used for relationship is not defined in the config.",
-                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                            statusCode: HttpStatusCode.ServiceUnavailable,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                     }
 
@@ -566,7 +569,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     {
                         throw new DataApiBuilderException(
                             message: $"entity: {relationship.TargetEntity} is disabled for GraphQL.",
-                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                            statusCode: HttpStatusCode.ServiceUnavailable,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                     }
 
@@ -584,7 +587,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                 throw new DataApiBuilderException(
                                 message: $"Could not find relationship between Linking Object: {relationship.LinkingObject}" +
                                     $" and entity: {entityName}.",
-                                statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                statusCode: HttpStatusCode.ServiceUnavailable,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                             }
                         }
@@ -596,7 +599,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                 throw new DataApiBuilderException(
                                 message: $"Could not find relationship between Linking Object: {relationship.LinkingObject}" +
                                     $" and entity: {relationship.TargetEntity}.",
-                                statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                statusCode: HttpStatusCode.ServiceUnavailable,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                             }
                         }
@@ -634,7 +637,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                         {
                             throw new DataApiBuilderException(
                             message: $"Could not find relationship between entities: {entityName} and {relationship.TargetEntity}.",
-                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                            statusCode: HttpStatusCode.ServiceUnavailable,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                         }
                     }
@@ -721,7 +724,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     // Empty claimType is not allowed
                     throw new DataApiBuilderException(
                         message: $"ClaimType cannot be empty.",
-                        statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                        statusCode: HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
                         );
                 }
@@ -731,7 +734,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     // Not a valid claimType containing allowed characters
                     throw new DataApiBuilderException(
                         message: $"Invalid format for claim type {typeOfClaim} supplied in policy.",
-                        statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                        statusCode: HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
                         );
                 }
@@ -743,7 +746,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     // Not a valid claimType containing allowed characters
                     throw new DataApiBuilderException(
                         message: INVALID_CLAIMS_IN_POLICY_ERR_MSG,
-                        statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                        statusCode: HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
                         );
                 }
@@ -769,7 +772,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 {
                     throw new DataApiBuilderException(
                     message: $"Not all the columns required by policy are accessible.",
-                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                    statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }
             }
@@ -821,7 +824,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
         {
             return new DataApiBuilderException(
                 message: $"action:{actionName} specified for entity:{entityName}, role:{roleName} is not valid.",
-                statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
         }
 

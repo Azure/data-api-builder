@@ -298,7 +298,6 @@ namespace Cli.Tests
         /// <param name="graphQLOperation">Explicitly configured GraphQL operation for stored procedure (Query/Mutation).</param>
         /// <param name="restRoute">Custom REST route</param>
         /// <param name="graphQLType">Whether GraphQL is explicitly enabled/disabled on the entity.</param>
-        /// <param name="testType">Scenario that is tested. It is used for constructing the expected JSON.</param>
         [DataTestMethod]
         [DataRow(null, null, null, null, DisplayName = "Default Case without any customization")]
         [DataRow(null, null, "true", null, DisplayName = "REST enabled without any methods explicitly configured")]

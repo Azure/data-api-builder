@@ -11,6 +11,7 @@
     <PackageVersion Include="HotChocolate.AspNetCore.Authorization" Version="12.18.0" />
     <PackageVersion Include="Humanizer" Version="2.14.1" />
     <PackageVersion Include="Humanizer.Core" Version="2.14.1" />
+    <PackageVersion Include="DotNetEnv" Version="2.5.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authorization" Version="6.0.14" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.14" />
     <PackageVersion Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />

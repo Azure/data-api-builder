@@ -34,7 +34,8 @@
     {
       Publisher: {
         Source: {
-          Object: publishers
+          Object: publishers,
+          Type: Table
         },
         GraphQL: {
           Singular: Publisher,
@@ -275,7 +276,8 @@
     {
       Stock: {
         Source: {
-          Object: stocks
+          Object: stocks,
+          Type: Table
         },
         GraphQL: {
           Singular: Stock,
@@ -375,7 +377,8 @@
     {
       Book: {
         Source: {
-          Object: books
+          Object: books,
+          Type: Table
         },
         GraphQL: {
           Singular: book,
@@ -739,7 +742,8 @@
     {
       BookWebsitePlacement: {
         Source: {
-          Object: book_website_placements
+          Object: book_website_placements,
+          Type: Table
         },
         GraphQL: {
           Singular: BookWebsitePlacement,
@@ -794,7 +798,8 @@
     {
       Author: {
         Source: {
-          Object: authors
+          Object: authors,
+          Type: Table
         },
         GraphQL: {
           Singular: Author,
@@ -848,7 +853,8 @@
     {
       Revenue: {
         Source: {
-          Object: revenues
+          Object: revenues,
+          Type: Table
         },
         GraphQL: {
           Singular: Revenue,
@@ -885,7 +891,8 @@
     {
       Review: {
         Source: {
-          Object: reviews
+          Object: reviews,
+          Type: Table
         },
         GraphQL: {
           Singular: review,
@@ -945,7 +952,8 @@
     {
       Comic: {
         Source: {
-          Object: comics
+          Object: comics,
+          Type: Table
         },
         GraphQL: {
           Singular: Comic,
@@ -1054,7 +1062,8 @@
     {
       Broker: {
         Source: {
-          Object: brokers
+          Object: brokers,
+          Type: Table
         },
         GraphQL: {
           Singular: Broker,
@@ -1101,7 +1110,8 @@
     {
       WebsiteUser: {
         Source: {
-          Object: website_users
+          Object: website_users,
+          Type: Table
         },
         GraphQL: {
           Singular: websiteUser,
@@ -1160,7 +1170,8 @@
     {
       SupportedType: {
         Source: {
-          Object: type_table
+          Object: type_table,
+          Type: Table
         },
         GraphQL: {
           Singular: SupportedType,
@@ -1222,7 +1233,8 @@
     {
       stocks_price: {
         Source: {
-          Object: stocks_price
+          Object: stocks_price,
+          Type: Table
         },
         GraphQL: {
           Singular: stocks_price,
@@ -1283,7 +1295,8 @@
     {
       Tree: {
         Source: {
-          Object: trees
+          Object: trees,
+          Type: Table
         },
         GraphQL: {
           Singular: Tree,
@@ -1346,7 +1359,8 @@
     {
       Shrub: {
         Source: {
-          Object: trees
+          Object: trees,
+          Type: Table
         },
         GraphQL: {
           Singular: Shrub,
@@ -1409,7 +1423,8 @@
     {
       Fungus: {
         Source: {
-          Object: fungi
+          Object: fungi,
+          Type: Table
         },
         GraphQL: {
           Singular: fungus,
@@ -1713,7 +1728,8 @@
     {
       Empty: {
         Source: {
-          Object: empty_table
+          Object: empty_table,
+          Type: Table
         },
         GraphQL: {
           Singular: Empty,
@@ -1760,7 +1776,8 @@
     {
       Notebook: {
         Source: {
-          Object: notebooks
+          Object: notebooks,
+          Type: Table
         },
         GraphQL: {
           Singular: Notebook,
@@ -1805,7 +1822,8 @@
     {
       Journal: {
         Source: {
-          Object: journals
+          Object: journals,
+          Type: Table
         },
         GraphQL: {
           Singular: Journal,
@@ -1904,7 +1922,8 @@
     {
       ArtOfWar: {
         Source: {
-          Object: aow
+          Object: aow,
+          Type: Table
         },
         GraphQL: {
           Singular: ArtOfWar,
@@ -1945,7 +1964,8 @@
     {
       series: {
         Source: {
-          Object: series
+          Object: series,
+          Type: Table
         },
         GraphQL: {
           Singular: series,
@@ -2026,7 +2046,8 @@
     {
       Sales: {
         Source: {
-          Object: sales
+          Object: sales,
+          Type: Table
         },
         GraphQL: {
           Singular: Sales,
@@ -2439,7 +2460,8 @@
     {
       GQLmappings: {
         Source: {
-          Object: GQLmappings
+          Object: GQLmappings,
+          Type: Table
         },
         GraphQL: {
           Singular: GQLmappings,
@@ -2478,7 +2500,8 @@
     {
       Bookmarks: {
         Source: {
-          Object: bookmarks
+          Object: bookmarks,
+          Type: Table
         },
         GraphQL: {
           Singular: Bookmarks,
@@ -2513,7 +2536,8 @@
     {
       MappedBookmarks: {
         Source: {
-          Object: mappedbookmarks
+          Object: mappedbookmarks,
+          Type: Table
         },
         GraphQL: {
           Singular: MappedBookmarks,
@@ -2552,7 +2576,8 @@
     {
       PublisherNF: {
         Source: {
-          Object: publishers
+          Object: publishers,
+          Type: Table
         },
         GraphQL: {
           Singular: PublisherNF,
@@ -2637,7 +2662,8 @@
     {
       BookNF: {
         Source: {
-          Object: books
+          Object: books,
+          Type: Table
         },
         GraphQL: {
           Singular: bookNF,
@@ -2738,7 +2764,8 @@
     {
       AuthorNF: {
         Source: {
-          Object: authors
+          Object: authors,
+          Type: Table
         },
         GraphQL: {
           Singular: AuthorNF,

@@ -29,7 +29,8 @@
     {
       MyEntity: {
         Source: {
-          Object: MyTable
+          Object: MyTable,
+          Type: Table
         },
         GraphQL: {
           Singular: MyEntity,

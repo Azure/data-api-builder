@@ -30,7 +30,8 @@
     {
       FirstEntity: {
         Source: {
-          Object: MyTable
+          Object: MyTable,
+          Type: Table
         },
         GraphQL: {
           Singular: FirstEntity,

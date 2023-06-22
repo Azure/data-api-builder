@@ -11,7 +11,7 @@
   },
   "runtime": {
     "rest": {
-      "enabled": true,
+      "enabled": false,
       "path": "/api"
     },
     "graphql": {
@@ -40,7 +40,7 @@
     "Planet": {
   "source": {
     "object": "graphqldb.planet",
-    "type": "table",
+    "type": null,
     "parameters": null,
     "key-fields": null
   },
@@ -144,7 +144,7 @@
     "Character": {
   "source": {
     "object": "graphqldb.character",
-    "type": "table",
+    "type": null,
     "parameters": null,
     "key-fields": null
   },
@@ -206,7 +206,7 @@
     "StarAlias": {
   "source": {
     "object": "graphqldb.star",
-    "type": "table",
+    "type": null,
     "parameters": null,
     "key-fields": null
   },
@@ -305,7 +305,7 @@
     "TagAlias": {
   "source": {
     "object": "graphqldb.tag",
-    "type": "table",
+    "type": null,
     "parameters": null,
     "key-fields": null
   },
@@ -367,7 +367,7 @@
     "Moon": {
   "source": {
     "object": "graphqldb.moon",
-    "type": "table",
+    "type": null,
     "parameters": null,
     "key-fields": null
   },
@@ -466,7 +466,7 @@
     "Earth": {
   "source": {
     "object": "graphqldb.earth",
-    "type": "table",
+    "type": null,
     "parameters": null,
     "key-fields": null
   },
@@ -585,7 +585,7 @@
     "Sun": {
   "source": {
     "object": "graphqldb.sun",
-    "type": "table",
+    "type": null,
     "parameters": null,
     "key-fields": null
   },

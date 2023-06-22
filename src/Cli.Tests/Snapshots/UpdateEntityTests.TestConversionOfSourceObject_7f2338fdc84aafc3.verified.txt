@@ -30,7 +30,8 @@
     {
       MyEntity: {
         Source: {
-          Object: s001.book
+          Object: s001.book,
+          Type: Table
         },
         GraphQL: {
           Singular: MyEntity,

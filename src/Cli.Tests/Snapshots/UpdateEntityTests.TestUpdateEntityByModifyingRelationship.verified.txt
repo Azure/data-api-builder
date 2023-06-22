@@ -29,7 +29,8 @@
     {
       FirstEntity: {
         Source: {
-          Object: Table1
+          Object: Table1,
+          Type: Table
         },
         GraphQL: {
           Singular: FirstEntity,
@@ -71,7 +72,8 @@
     {
       SecondEntity: {
         Source: {
-          Object: Table2
+          Object: Table2,
+          Type: Table
         },
         GraphQL: {
           Singular: SecondEntity,

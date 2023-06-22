@@ -12,5 +12,5 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// <param name="Object"> The name of the database object. </param>
 /// <param name="Parameters"> If Type is SourceType.StoredProcedure,
 /// Parameters to be passed as defaults to the procedure call </param>
-/// <param name="KeyFields"> The field(s) to be used as primary keys.</param>
-public record EntitySource(string Object, EntitySourceType Type, Dictionary<string, object>? Parameters, string[]? KeyFields);
+/// <param name="KeyFields"> The field(s) to be used as primary keys.
+public record EntitySource(string Object, EntitySourceType? Type, Dictionary<string, object>? Parameters, string[]? KeyFields);

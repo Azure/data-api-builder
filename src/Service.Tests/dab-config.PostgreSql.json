@@ -17,9 +17,7 @@
     },
     "host": {
       "cors": {
-        "origins": [
-          "http://localhost:5000"
-        ],
+        "origins": ["http://localhost:5000"],
         "allow-credentials": false
       },
       "authentication": {
@@ -111,9 +109,7 @@
               "action": "read",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -124,9 +120,7 @@
               "action": "update",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -158,9 +152,7 @@
               "action": "read",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -171,9 +163,7 @@
               "action": "update",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -205,9 +195,7 @@
               "action": "read",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -218,9 +206,7 @@
               "action": "update",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -252,9 +238,7 @@
               "action": "read",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -265,9 +249,7 @@
               "action": "update",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -299,9 +281,7 @@
               "action": "read",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -312,9 +292,7 @@
               "action": "update",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -640,9 +618,7 @@
               "action": "read",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -653,9 +629,7 @@
               "action": "update",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -687,9 +661,7 @@
               "action": "read",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -700,9 +672,7 @@
               "action": "update",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -734,9 +704,7 @@
               "action": "read",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -747,9 +715,7 @@
               "action": "update",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -781,9 +747,7 @@
               "action": "read",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -794,9 +758,7 @@
               "action": "update",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -828,9 +790,7 @@
               "action": "read",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -841,9 +801,7 @@
               "action": "update",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -875,9 +833,7 @@
               "action": "read",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -904,9 +860,7 @@
               "action": "update",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -922,9 +876,7 @@
               "action": "delete",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -935,9 +887,7 @@
               "action": "read",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -948,9 +898,7 @@
               "action": "update",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -974,9 +922,7 @@
               "action": "read",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -987,9 +933,7 @@
               "action": "delete",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -1000,9 +944,7 @@
               "action": "update",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -1058,12 +1000,8 @@
           "source.fields": [],
           "target.fields": [],
           "linking.object": "book_author_link",
-          "linking.source.fields": [
-            "book_id"
-          ],
-          "linking.target.fields": [
-            "author_id"
-          ]
+          "linking.source.fields": ["book_id"],
+          "linking.target.fields": ["author_id"]
         }
       }
     },
@@ -1108,9 +1046,7 @@
               "action": "delete",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -1454,9 +1390,7 @@
             {
               "action": "read",
               "fields": {
-                "exclude": [
-                  "categoryName"
-                ],
+                "exclude": ["categoryName"],
                 "include": null
               },
               "policy": {
@@ -1848,9 +1782,7 @@
             {
               "action": "read",
               "fields": {
-                "exclude": [
-                  "price"
-                ],
+                "exclude": ["price"],
                 "include": null
               },
               "policy": {
@@ -2182,9 +2114,7 @@
               "action": "read",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -2204,9 +2134,7 @@
         "object": "books_view_all",
         "type": "view",
         "parameters": null,
-        "key-fields": [
-          "id"
-        ]
+        "key-fields": ["id"]
       },
       "graphql": {
         "enabled": true,
@@ -2219,13 +2147,7 @@
       "rest": {
         "enabled": true,
         "path": null,
-        "methods": [
-          "get",
-          "post",
-          "put",
-          "patch",
-          "delete"
-        ]
+        "methods": ["get", "post", "put", "patch", "delete"]
       },
       "permissions": [
         {
@@ -2250,9 +2172,7 @@
         "object": "books_view_with_mapping",
         "type": "view",
         "parameters": null,
-        "key-fields": [
-          "id"
-        ]
+        "key-fields": ["id"]
       },
       "graphql": {
         "enabled": true,
@@ -2292,10 +2212,7 @@
         "object": "stocks_view_selected",
         "type": "view",
         "parameters": null,
-        "key-fields": [
-          "categoryid",
-          "pieceid"
-        ]
+        "key-fields": ["categoryid", "pieceid"]
       },
       "graphql": {
         "enabled": true,
@@ -2308,13 +2225,7 @@
       "rest": {
         "enabled": true,
         "path": null,
-        "methods": [
-          "get",
-          "post",
-          "put",
-          "patch",
-          "delete"
-        ]
+        "methods": ["get", "post", "put", "patch", "delete"]
       },
       "permissions": [
         {
@@ -2339,10 +2250,7 @@
         "object": "books_publishers_view_composite",
         "type": "view",
         "parameters": null,
-        "key-fields": [
-          "id",
-          "pub_id"
-        ]
+        "key-fields": ["id", "pub_id"]
       },
       "graphql": {
         "enabled": true,
@@ -2355,13 +2263,7 @@
       "rest": {
         "enabled": true,
         "path": null,
-        "methods": [
-          "get",
-          "post",
-          "put",
-          "patch",
-          "delete"
-        ]
+        "methods": ["get", "post", "put", "patch", "delete"]
       },
       "permissions": [
         {
@@ -2386,9 +2288,7 @@
         "object": "books_publishers_view_composite_insertable",
         "type": "view",
         "parameters": null,
-        "key-fields": [
-          "id"
-        ]
+        "key-fields": ["id"]
       },
       "graphql": {
         "enabled": true,
@@ -2401,13 +2301,7 @@
       "rest": {
         "enabled": true,
         "path": null,
-        "methods": [
-          "get",
-          "post",
-          "put",
-          "patch",
-          "delete"
-        ]
+        "methods": ["get", "post", "put", "patch", "delete"]
       },
       "permissions": [
         {
@@ -2554,9 +2448,7 @@
               "action": "read",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -2597,9 +2489,7 @@
               "action": "read",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -2610,9 +2500,7 @@
               "action": "update",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -2644,9 +2532,7 @@
               "action": "delete",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -2656,9 +2542,7 @@
             {
               "action": "read",
               "fields": {
-                "exclude": [
-                  "*"
-                ],
+                "exclude": ["*"],
                 "include": null
               },
               "policy": {
@@ -2670,9 +2554,7 @@
               "action": "update",
               "fields": {
                 "exclude": [],
-                "include": [
-                  "*"
-                ]
+                "include": ["*"]
               },
               "policy": {
                 "request": null,
@@ -2802,9 +2684,7 @@
             {
               "action": "read",
               "fields": {
-                "exclude": [
-                  "name"
-                ],
+                "exclude": ["name"],
                 "include": null
               },
               "policy": {
@@ -3196,9 +3076,7 @@
             {
               "action": "read",
               "fields": {
-                "exclude": [
-                  "name"
-                ],
+                "exclude": ["name"],
                 "include": null
               },
               "policy": {
@@ -3371,12 +3249,8 @@
           "source.fields": [],
           "target.fields": [],
           "linking.object": "book_author_link",
-          "linking.source.fields": [
-            "book_id"
-          ],
-          "linking.target.fields": [
-            "author_id"
-          ]
+          "linking.source.fields": ["book_id"],
+          "linking.target.fields": ["author_id"]
         }
       }
     },
@@ -3444,9 +3318,7 @@
             {
               "action": "create",
               "fields": {
-                "exclude": [
-                  "name"
-                ],
+                "exclude": ["name"],
                 "include": null
               },
               "policy": {
@@ -3462,9 +3334,7 @@
             {
               "action": "read",
               "fields": {
-                "exclude": [
-                  "name"
-                ],
+                "exclude": ["name"],
                 "include": null
               },
               "policy": {

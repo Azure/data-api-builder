@@ -18,7 +18,12 @@ public class EndToEndTests
     {
         if (!File.Exists(TEST_SCHEMA_FILE))
         {
-            File.Create(TEST_SCHEMA_FILE);
+            File.Create(TEST_SCHEMA_FILE).Dispose();
+        }
+
+        if (File.Exists(TEST_RUNTIME_CONFIG_FILE))
+        {
+            File.Delete(TEST_RUNTIME_CONFIG_FILE);
         }
 
         TestHelper.SetupTestLoggerForCLI();

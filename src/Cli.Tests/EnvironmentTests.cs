@@ -64,7 +64,7 @@ public class EnvironmentTests
     /// directly from the `.env` file.
     /// </summary>
     [TestMethod]
-    public async Task TestEnvironmentFileIsConsumedCorrectly()
+    public Task TestEnvironmentFileIsConsumedCorrectly()
     {
         string jsonWithEnvVariable = @"{""envValue"": ""@env('DAB_TEST_ENVIRONMENT')""}";
 
@@ -79,7 +79,7 @@ public class EnvironmentTests
         // Test environment variable is picked up from the .env file and is correctly resolved in the config file.
         Assert.AreEqual("DEVELOPMENT", Environment.GetEnvironmentVariable(TEST_ENV_VARIABLE));
         TestObject? result = JsonSerializer.Deserialize<TestObject>(jsonWithEnvVariable, _options);
-        await Verify(result);
+        return Verify(result);
     }
 
     /// <summary>
@@ -88,7 +88,7 @@ public class EnvironmentTests
     /// precedence over the value specified in the system.
     /// </summary>
     [TestMethod]
-    public async Task TestPrecedenceOfEnvironmentFileOverExistingVariables()
+    public Task TestPrecedenceOfEnvironmentFileOverExistingVariables()
     {
         // The variable set in the .env file takes precedence over the environment value set in the system.
         Environment.SetEnvironmentVariable(TEST_ENV_VARIABLE, "TEST");
@@ -106,7 +106,7 @@ public class EnvironmentTests
                 ""envValue"": ""@env('DAB_TEST_ENVIRONMENT')"",
                 ""hostingEnvValue"": ""@env('HOSTING_TEST_ENVIRONMENT')""
                 }", options: _options);
-        await Verify(result);
+        return Verify(result);
     }
 
     /// <summary>
@@ -175,5 +175,7 @@ public class EnvironmentTests
         {
             File.Delete(".env");
         }
+
+        Environment.SetEnvironmentVariable(TEST_ENV_VARIABLE, null);
     }
 }

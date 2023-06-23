@@ -154,6 +154,10 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 openApiJsonTypeName = JsonDataType.Undefined;
             }
+            else
+            {
+                Console.Out.WriteLine("unknown type");
+            }
 
             return openApiJsonTypeName;
         }

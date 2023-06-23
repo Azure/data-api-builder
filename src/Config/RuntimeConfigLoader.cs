@@ -28,8 +28,9 @@ namespace Azure.DataApiBuilder.Config;
 /// </remarks>
 public class RuntimeConfigLoader
 {
+    private string _baseConfigFileName;
+
     private readonly IFileSystem _fileSystem;
-    private readonly string _baseConfigFileName;
     private readonly string? _connectionString;
 
     public const string CONFIGFILE_NAME = "dab-config";
@@ -39,8 +40,6 @@ public class RuntimeConfigLoader
     public const string RUNTIME_ENV_CONNECTION_STRING = $"{ENVIRONMENT_PREFIX}CONNSTRING";
     public const string ASP_NET_CORE_ENVIRONMENT_VAR_NAME = "ASPNETCORE_ENVIRONMENT";
     public const string SCHEMA = "dab.draft.schema.json";
-
-    public static bool CheckPrecedenceForConfigInEngine = true;
 
     public string ConfigFileName => GetFileNameForEnvironment(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), false);
 
@@ -139,7 +138,7 @@ public class RuntimeConfigLoader
     /// </summary>
     /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
-    public bool TryLoadKnownConfig(out RuntimeConfig? config)
+    public bool TryLoadKnownConfig([NotNullWhen(true)]out RuntimeConfig? config)
     {
         return TryLoadConfig(ConfigFileName, out config);
     }
@@ -159,12 +158,6 @@ public class RuntimeConfigLoader
     /// <returns></returns>
     public string GetFileNameForEnvironment(string? aspnetEnvironment, bool considerOverrides)
     {
-        // if precedence check is done in cli, no need to do it again after starting the engine.
-        if (!CheckPrecedenceForConfigInEngine)
-        {
-            return string.Empty;
-        }
-
         string configFileNameWithExtension = string.Empty;
         string?[] environmentPrecedence = new[]
         {
@@ -308,6 +301,15 @@ public class RuntimeConfigLoader
     public static string GetMergedFileNameForEnvironment(string fileName, string environmentValue)
     {
         return $"{fileName}.{environmentValue}.merged{CONFIG_EXTENSION}";
+    }
+
+    /// <summary>
+    /// Allows the base config file name to be updated. This is commonly done when the CLI is starting up.
+    /// </summary>
+    /// <param name="fileName"></param>
+    public void UpdateBaseConfigFileName(string fileName)
+    {
+        _baseConfigFileName = fileName;
     }
 }
 

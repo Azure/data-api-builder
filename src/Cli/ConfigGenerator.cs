@@ -904,8 +904,10 @@ namespace Cli
                 return false;
             }
 
+            loader.UpdateBaseConfigFileName(runtimeConfigFile);
+
             // Validates that config file has data and follows the correct json schema
-            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? deserializedRuntimeConfig))
+            if (!loader.TryLoadKnownConfig(out RuntimeConfig? deserializedRuntimeConfig))
             {
                 _logger.LogError("Failed to parse the config file: {configFile}.", runtimeConfigFile);
                 return false;
@@ -919,7 +921,7 @@ namespace Cli
 
             /// This will add arguments to start the runtime engine with the config file.
             List<string> args = new()
-            { "--" + nameof(RuntimeConfigLoader.CONFIGFILE_NAME), runtimeConfigFile };
+            { "--ConfigFileName", runtimeConfigFile };
 
             /// Add arguments for LogLevel. Checks if LogLevel is overridden with option `--LogLevel`.
             /// If not provided, Default minimum LogLevel is Debug for Development mode and Error for Production mode.

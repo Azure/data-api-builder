@@ -121,29 +121,10 @@ public class EnvironmentTests
         Assert.AreEqual("TEST", Environment.GetEnvironmentVariable(TEST_ENV_VARIABLE));
     }
 
-    /// <summary>
-    /// Test to verify that if the environment variables are not resolved correctly, the runtime engine will not start.
-    /// Here, in the first scenario, engine fails to start because the variable defined in the environment file
-    /// is typed incorrectly and does not match the one present in the config.
-    /// </summary>
-    [DataRow("COMM_STRINX=test_connection_string", true, DisplayName = "Incorrect Variable name used in the environment file.")]
-    [DataRow("CONN_STRING=test_connection_string", false, DisplayName = "Correct Variable name used in the environment file.")]
-    [DataTestMethod]
-    public void TestFailureToStartWithUnresolvedJsonConfig(
-        string environmentFileContent,
-        bool isFailure
-    )
+    [TestMethod]
+    public void TestStartWithEnvFileIsSuccessful()
     {
-        // Creating environment variable file
-        File.Create(".env").Close();
-        File.WriteAllText(".env", environmentFileContent);
-        if (File.Exists(TEST_RUNTIME_CONFIG_FILE))
-        {
-            File.Delete(TEST_RUNTIME_CONFIG_FILE);
-        }
-
-        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql", "--connection-string", "@env('CONN_STRING')" };
-        Program.Main(initArgs);
+        BootstrapTestEnvironment("CONN_STRING=test_connection_string");
 
         // Trying to start the runtime engine
         using Process process = ExecuteDabCommand(
@@ -151,21 +132,38 @@ public class EnvironmentTests
             $"-c {TEST_RUNTIME_CONFIG_FILE}"
         );
 
-        string? output = process.StandardOutput.ReadToEnd();
-        Assert.IsNotNull(output);
+        Assert.IsFalse(process.StandardError.BaseStream.CanSeek, "Should not be able to seek stream as there should be no errors.");
+        process.Kill();
+    }
 
-        if (isFailure)
+    [TestMethod]
+    public void FailureToStartEngineWhenEnvVarNamedWrong()
+    {
+        BootstrapTestEnvironment("COMM_STRINX=test_connection_string");
+
+        // Trying to start the runtime engine
+        using Process process = ExecuteDabCommand(
+            "start",
+            $"-c {TEST_RUNTIME_CONFIG_FILE}"
+        );
+
+        string? output = process.StandardError.ReadLine();
+        StringAssert.Contains(output, "Environmental Variable, CONN_STRING, not found.", StringComparison.Ordinal);
+        process.Kill();
+    }
+
+    private static void BootstrapTestEnvironment(string envFileContents)
+    {
+        // Creating environment variable file
+        File.Create(".env").Close();
+        File.WriteAllText(".env", envFileContents);
+        if (File.Exists(TEST_RUNTIME_CONFIG_FILE))
         {
-            // Failed to resolve the environment variables in the config.
-            Assert.IsFalse(output.Contains("Starting the runtime engine..."));
-            Assert.IsTrue(output.Contains("Error: Failed due to: Environmental Variable, CONN_STRING, not found."));
+            File.Delete(TEST_RUNTIME_CONFIG_FILE);
         }
-        else
-        {
-            // config resolved correctly.
-            Assert.IsTrue(output.Contains("Starting the runtime engine..."));
-            Assert.IsFalse(output.Contains("Error: Failed due to: Environmental Variable, CONN_STRING, not found."));
-        }
+
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql", "--connection-string", "@env('CONN_STRING')" };
+        Program.Main(initArgs);
     }
 
     [TestCleanup]

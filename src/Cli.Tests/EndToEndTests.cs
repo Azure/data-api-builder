@@ -632,7 +632,7 @@ public class EndToEndTests
             flags: $"--config {TEST_RUNTIME_CONFIG_FILE} {options}"
         );
 
-        string? output = process.StandardOutput.ReadToEnd();
+        string? output = process.StandardOutput.ReadLine();
         Assert.IsNotNull(output);
 
         // Version Info logged by dab irrespective of commands being parsed correctly.
@@ -640,6 +640,7 @@ public class EndToEndTests
 
         if (isParsableDabCommandName)
         {
+            output = process.StandardOutput.ReadLine();
             StringAssert.Contains(output, TEST_RUNTIME_CONFIG_FILE, StringComparison.Ordinal);
         }
 

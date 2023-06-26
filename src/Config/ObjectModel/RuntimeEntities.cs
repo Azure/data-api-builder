@@ -132,12 +132,12 @@ public record RuntimeEntities : IEnumerable<KeyValuePair<string, Entity>>
         }
         else
         {
-            if(nameCorrectedEntity.Rest.Methods.Length == 0)
+            if (nameCorrectedEntity.Rest.Methods.Length == 0)
             {
                 nameCorrectedEntity = (nameCorrectedEntity.Source.Type is EntitySourceType.StoredProcedure) ?
                                     nameCorrectedEntity
                         with
-                                    { Rest = new EntityRestOptions(Methods: EntityRestOptions.DEFAULT_SUPPORTED_VERBS_FOR_SP, Path: nameCorrectedEntity.Rest.Path, Enabled: nameCorrectedEntity.Rest.Enabled)}
+                                    { Rest = new EntityRestOptions(Methods: EntityRestOptions.DEFAULT_SUPPORTED_VERBS_FOR_SP, Path: nameCorrectedEntity.Rest.Path, Enabled: nameCorrectedEntity.Rest.Enabled) }
                     :
                     nameCorrectedEntity
                         with

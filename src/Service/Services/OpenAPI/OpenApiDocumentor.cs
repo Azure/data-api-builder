@@ -39,7 +39,9 @@ namespace Azure.DataApiBuilder.Service.Services.OpenAPI
         private const string PATCH_DESCRIPTION = "Update or create entity.";
         private const string DELETE_DESCRIPTION = "Delete entity.";
         private const string SP_EXECUTE_DESCRIPTION = "Executes a stored procedure.";
-        private const string RESPONSE_VALUE_PROPERTY = "value";
+        private const string SP_REQUEST_SUFFIX = "_sp_request";
+        private const string SP_RESPONSE_SUFFIX = "_sp_response";
+        private const string SCHEMA_OBJECT_TYPE = "object";
         private const string RESPONSE_ARRAY_PROPERTY = "array";
 
         // Routing constant
@@ -355,6 +357,8 @@ namespace Azure.DataApiBuilder.Service.Services.OpenAPI
             List<OpenApiTag> tags)
         {
             Dictionary<OperationType, OpenApiOperation> openApiPathItemOperations = new();
+            string spRequestObjectSchemaName = entityName + SP_REQUEST_SUFFIX;
+            string spResponseObjectSchemaName = entityName + SP_RESPONSE_SUFFIX;
 
             if (configuredRestOperations[OperationType.Get])
             {
@@ -363,7 +367,7 @@ namespace Azure.DataApiBuilder.Service.Services.OpenAPI
                     HttpStatusCode.OK.ToString("D"),
                     CreateOpenApiResponse(
                         description: nameof(HttpStatusCode.OK),
-                        responseObjectSchemaName: entityName,
+                        responseObjectSchemaName: spResponseObjectSchemaName,
                         includeNextLink: false));
                 openApiPathItemOperations.Add(OperationType.Get, getOperation);
             }
@@ -372,22 +376,22 @@ namespace Azure.DataApiBuilder.Service.Services.OpenAPI
             {
                 // POST requests for stored procedure entities must include primary key(s) in request body.
                 OpenApiOperation postOperation = CreateBaseOperation(description: SP_EXECUTE_DESCRIPTION, tags: tags);
-                postOperation.RequestBody = CreateOpenApiRequestBodyPayload($"{entityName}", IsRequestBodyRequired(sourceDefinition, considerPrimaryKeys: true));
-                postOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
+                postOperation.RequestBody = CreateOpenApiRequestBodyPayload(spRequestObjectSchemaName, IsRequestBodyRequired(sourceDefinition, considerPrimaryKeys: true, isStoredProcedure: true));
+                postOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: spResponseObjectSchemaName));
                 postOperation.Responses.Add(HttpStatusCode.Conflict.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Conflict)));
                 openApiPathItemOperations.Add(OperationType.Post, postOperation);
             }
 
             // PUT and PATCH requests have the same criteria for decided whether a request body is required.
-            bool requestBodyRequired = IsRequestBodyRequired(sourceDefinition, considerPrimaryKeys: false);
+            bool requestBodyRequired = IsRequestBodyRequired(sourceDefinition, considerPrimaryKeys: false, isStoredProcedure: true);
 
             if (configuredRestOperations[OperationType.Put])
             {
                 // PUT requests for stored procedure entities must include primary key(s) in request body.
                 OpenApiOperation putOperation = CreateBaseOperation(description: SP_EXECUTE_DESCRIPTION, tags: tags);
-                putOperation.RequestBody = CreateOpenApiRequestBodyPayload($"{entityName}", requestBodyRequired);
-                putOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
-                putOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
+                putOperation.RequestBody = CreateOpenApiRequestBodyPayload(spRequestObjectSchemaName, requestBodyRequired);
+                putOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: spResponseObjectSchemaName));
+                putOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: spResponseObjectSchemaName));
                 openApiPathItemOperations.Add(OperationType.Put, putOperation);
             }
 
@@ -395,9 +399,9 @@ namespace Azure.DataApiBuilder.Service.Services.OpenAPI
             {
                 // PATCH requests for stored procedure entities must include primary key(s) in request body
                 OpenApiOperation patchOperation = CreateBaseOperation(description: SP_EXECUTE_DESCRIPTION, tags: tags);
-                patchOperation.RequestBody = CreateOpenApiRequestBodyPayload($"{entityName}", requestBodyRequired);
-                patchOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
-                patchOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
+                patchOperation.RequestBody = CreateOpenApiRequestBodyPayload(spRequestObjectSchemaName, requestBodyRequired);
+                patchOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: spResponseObjectSchemaName));
+                patchOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: spResponseObjectSchemaName));
                 openApiPathItemOperations.Add(OperationType.Patch, patchOperation);
             }
 
@@ -620,27 +624,45 @@ namespace Azure.DataApiBuilder.Service.Services.OpenAPI
         /// <param name="sourceDef">Database object's source metadata.</param>
         /// <param name="considerPrimaryKeys">Whether primary keys should be evaluated against the criteria
         /// to require a request body.</param>
+        /// <param name="isStoredProcedure">Whether the SourceDefinition represents a stored procedure.</param>
         /// <returns>True, when a body should be generated. Otherwise, false.</returns>
-        private static bool IsRequestBodyRequired(SourceDefinition sourceDef, bool considerPrimaryKeys)
+        private static bool IsRequestBodyRequired(SourceDefinition sourceDef, bool considerPrimaryKeys, bool isStoredProcedure = false)
         {
             bool requestBodyRequired = false;
 
-            foreach (KeyValuePair<string, ColumnDefinition> columnMetadata in sourceDef.Columns)
+            if (isStoredProcedure)
             {
-                // Whether to consider primary keys when deciding if a body is required
-                // because some request bodies may not include primary keys(PUT, PATCH)
-                // while the (POST) request body does include primary keys (when not autogenerated).
-                if (sourceDef.PrimaryKey.Contains(columnMetadata.Key) && !considerPrimaryKeys)
+                StoredProcedureDefinition spDef = (StoredProcedureDefinition)sourceDef;
+                foreach (KeyValuePair<string, ParameterDefinition> parameterMetadata in spDef.Parameters)
                 {
-                    continue;
+                    // A parameter which does not have any of the following properties
+                    // results in the body being required so that a value can be provided.
+                    if (!parameterMetadata.Value.HasConfigDefault)
+                    {
+                        requestBodyRequired = true;
+                        break;
+                    }
                 }
-
-                // A column which does not have any of the following properties
-                // results in the body being required so that a value can be provided.
-                if (!columnMetadata.Value.HasDefault || !columnMetadata.Value.IsNullable || !columnMetadata.Value.IsAutoGenerated)
+            }
+            else
+            {
+                foreach (KeyValuePair<string, ColumnDefinition> columnMetadata in sourceDef.Columns)
                 {
-                    requestBodyRequired = true;
-                    break;
+                    // Whether to consider primary keys when deciding if a body is required
+                    // because some request bodies may not include primary keys(PUT, PATCH)
+                    // while the (POST) request body does include primary keys (when not autogenerated).
+                    if (sourceDef.PrimaryKey.Contains(columnMetadata.Key) && !considerPrimaryKeys)
+                    {
+                        continue;
+                    }
+
+                    // A column which does not have any of the following properties
+                    // results in the body being required so that a value can be provided.
+                    if (!columnMetadata.Value.HasDefault || !columnMetadata.Value.IsNullable || !columnMetadata.Value.IsAutoGenerated)
+                    {
+                        requestBodyRequired = true;
+                        break;
+                    }
                 }
             }
 
@@ -738,7 +760,7 @@ namespace Azure.DataApiBuilder.Service.Services.OpenAPI
             Dictionary<string, OpenApiSchema> responseBodyProperties = new()
             {
                 {
-                    RESPONSE_VALUE_PROPERTY,
+                    OpenApiConstants.Value,
                     responseRootSchema
                 }
             };
@@ -798,12 +820,22 @@ namespace Azure.DataApiBuilder.Service.Services.OpenAPI
                 HashSet<string> exposedColumnNames = GetExposedColumnNames(entityName, sourceDefinition.Columns.Keys.ToList());
                 HashSet<string> nonAutoGeneratedPKColumnNames = new();
 
-                // Create component schema for FULL entity with all primary key columns (included auto-generated)
-                // which will typically represent the response body of a request or a stored procedure's request body.
-                schemas.Add(entityName, CreateComponentSchema(entityName, fields: exposedColumnNames));
-
-                if (dbObject.SourceType is not SourceType.StoredProcedure)
+                if (dbObject.SourceType is SourceType.StoredProcedure)
                 {
+                    // Request body schema whose properties map to stored procedure parameters
+                    DatabaseStoredProcedure spObject = (DatabaseStoredProcedure)dbObject;
+                    schemas.Add(entityName + SP_REQUEST_SUFFIX, CreateSpRequestComponentSchema(fields: spObject.StoredProcedureDefinition.Parameters));
+
+                    // Response body schema whose properties map to the stored procedure's first result set columns
+                    // as described by sys.dm_exec_describe_first_result_set. 
+                    schemas.Add(entityName + SP_RESPONSE_SUFFIX, CreateComponentSchema(entityName, fields: exposedColumnNames));
+                }
+                else
+                {
+                    // Create component schema for FULL entity with all primary key columns (included auto-generated)
+                    // which will typically represent the response body of a request or a stored procedure's request body.
+                    schemas.Add(entityName, CreateComponentSchema(entityName, fields: exposedColumnNames));
+
                     // Create an entity's request body component schema excluding autogenerated primary keys.
                     // A POST request requires any non-autogenerated primary key references to be in the request body.
                     foreach (string primaryKeyColumn in sourceDefinition.PrimaryKey)
@@ -846,7 +878,45 @@ namespace Azure.DataApiBuilder.Service.Services.OpenAPI
         }
 
         /// <summary>
-        /// Creates the schema object for an entity.
+        /// Creates the schema object for the request body of a stored procedure entity
+        /// by creating a collection of properties which represent the stored procedure's parameters.
+        /// Additionally, the property typeMetadata is sourced by converting the stored procedure
+        /// parameter's SystemType to JsonDataType.
+        /// </summary>
+        /// </summary>
+        /// <param name="fields">Collection of sored procedure parameter metadata.</param>
+        /// <returns>OpenApiSchema object representing a stored procedure's request body.</returns>
+        private static OpenApiSchema CreateSpRequestComponentSchema(Dictionary<string, ParameterDefinition> fields)
+        {
+            Dictionary<string, OpenApiSchema> properties = new();
+
+            foreach (string parameter in fields.Keys)
+            {
+                string typeMetadata = TypeHelper.SystemTypeToJsonDataType(fields[parameter].SystemType).ToString().ToLower();
+
+                properties.Add(parameter, new OpenApiSchema()
+                {
+                    Type = typeMetadata,
+                    Format = string.Empty
+                });
+            }
+
+            OpenApiSchema schema = new()
+            {
+                Type = SCHEMA_OBJECT_TYPE,
+                Properties = properties
+            };
+
+            return schema;
+        }
+
+        /// <summary>
+        /// Creates the schema object for an entity by creating a collection of properties
+        /// which represent the exposed (aliased) column names.
+        /// Additionally, the property typeMetadata is sourced by converting the db column's
+        /// SystemType to a JsonDataType.
+        /// For stored procedure entities, columns are limited to those of the first result set
+        /// which can be described by sys.dm_exec_describe_first_result_set.
         /// </summary>
         /// <param name="entityName">Name of the entity.</param>
         /// <param name="fields">List of mapped (alias) field names.</param>
@@ -864,6 +934,9 @@ namespace Azure.DataApiBuilder.Service.Services.OpenAPI
             }
 
             Dictionary<string, OpenApiSchema> properties = new();
+
+            // Get backing column metadata to resolve the correct system type which is then
+            // used to resolve the correct Json data type. 
             foreach (string field in fields)
             {
                 if (_metadataProvider.TryGetBackingColumn(entityName, field, out string? backingColumnValue) && !string.IsNullOrEmpty(backingColumnValue))
@@ -885,7 +958,7 @@ namespace Azure.DataApiBuilder.Service.Services.OpenAPI
 
             OpenApiSchema schema = new()
             {
-                Type = "object",
+                Type = SCHEMA_OBJECT_TYPE,
                 Properties = properties
             };
 

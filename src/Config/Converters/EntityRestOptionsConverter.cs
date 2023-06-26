@@ -14,7 +14,7 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
     {
         if (reader.TokenType == JsonTokenType.StartObject)
         {
-            EntityRestOptions restOptions = new(Methods: EntityRestOptions.DEFAULT_SUPPORTED_VERBS, Path: null, Enabled: true);
+            EntityRestOptions restOptions = new(Methods: Array.Empty<SupportedHttpVerb>(), Path: null, Enabled: true);
             while (reader.Read())
             {
                 if (reader.TokenType == JsonTokenType.EndObject)
@@ -78,7 +78,7 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
 
         if (reader.TokenType == JsonTokenType.String)
         {
-            return new EntityRestOptions(EntityRestOptions.DEFAULT_SUPPORTED_VERBS, reader.DeserializeString(), true);
+            return new EntityRestOptions(Array.Empty<SupportedHttpVerb>(), reader.DeserializeString(), true);
         }
 
         if (reader.TokenType == JsonTokenType.True || reader.TokenType == JsonTokenType.False)
@@ -86,7 +86,7 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
             bool enabled = reader.GetBoolean();
             return new EntityRestOptions(
                 // if enabled, use default methods, otherwise use empty array as all verbs are disabled
-                Methods: enabled ? EntityRestOptions.DEFAULT_SUPPORTED_VERBS : Array.Empty<SupportedHttpVerb>(),
+                Methods: Array.Empty<SupportedHttpVerb>(),
                 Path: null,
                 Enabled: enabled);
         }

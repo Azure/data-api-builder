@@ -121,9 +121,28 @@ public record RuntimeEntities : IEnumerable<KeyValuePair<string, Entity>>
         // If no Rest node was provided in the config, set it with the default state of enabled for all verbs
         if (nameCorrectedEntity.Rest is null)
         {
-            nameCorrectedEntity = nameCorrectedEntity
-                with
-            { Rest = new EntityRestOptions(EntityRestOptions.DEFAULT_SUPPORTED_VERBS) };
+            nameCorrectedEntity = (nameCorrectedEntity.Source.Type is EntitySourceType.StoredProcedure) ?
+                                    nameCorrectedEntity
+                        with
+                                    { Rest = new EntityRestOptions(EntityRestOptions.DEFAULT_SUPPORTED_VERBS_FOR_SP) }
+                    :
+                    nameCorrectedEntity
+                        with
+                    { Rest = new EntityRestOptions(EntityRestOptions.DEFAULT_SUPPORTED_VERBS) };
+        }
+        else
+        {
+            if(nameCorrectedEntity.Rest.Methods.Length == 0)
+            {
+                nameCorrectedEntity = (nameCorrectedEntity.Source.Type is EntitySourceType.StoredProcedure) ?
+                                    nameCorrectedEntity
+                        with
+                                    { Rest = new EntityRestOptions(Methods: EntityRestOptions.DEFAULT_SUPPORTED_VERBS_FOR_SP, Path: nameCorrectedEntity.Rest.Path, Enabled: nameCorrectedEntity.Rest.Enabled)}
+                    :
+                    nameCorrectedEntity
+                        with
+                    { Rest = new EntityRestOptions(Methods: EntityRestOptions.DEFAULT_SUPPORTED_VERBS, Path: nameCorrectedEntity.Rest.Path, Enabled: nameCorrectedEntity.Rest.Enabled) };
+            }
         }
 
         return nameCorrectedEntity;

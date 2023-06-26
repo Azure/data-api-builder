@@ -43,6 +43,8 @@ namespace Azure.DataApiBuilder.Service.Services
         private readonly Dictionary<string, Entity> _entities;
         private readonly IAuthorizationResolver _authorizationResolver;
 
+        private readonly RuntimeConfig _runtimeConfig;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="GraphQLSchemaCreator"/> class.
         /// </summary>
@@ -58,10 +60,10 @@ namespace Azure.DataApiBuilder.Service.Services
             ISqlMetadataProvider sqlMetadataProvider,
             IAuthorizationResolver authorizationResolver)
         {
-            RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
+            _runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
 
-            _databaseType = runtimeConfig.DatabaseType;
-            _entities = runtimeConfig.Entities;
+            _databaseType = _runtimeConfig.DatabaseType;
+            _entities = _runtimeConfig.Entities;
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
             _sqlMetadataProvider = sqlMetadataProvider;
@@ -114,6 +116,18 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <returns>The <c>ISchemaBuilder</c> for HotChocolate, with the generated GraphQL schema</returns>
         public ISchemaBuilder InitializeSchemaAndResolvers(ISchemaBuilder schemaBuilder)
         {
+            // if (_runtimeConfig.GraphQLGlobalSettings.Enabled)
+            // {
+            //     var schema = SchemaBuilder.New()
+            //                     .AddQueryType<Query>()
+            //                     .AddMutationType<Mutation>()
+            //                     .AddSubscriptionType<Subscription>()
+            //                     .AddType<MyType>()
+            //                     .Create();
+            //         schema.Options.EnableSchemaRequests = false;
+            //         return schema;
+            // }
+
             (DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes) = _databaseType switch
             {
                 DatabaseType.cosmosdb_nosql => GenerateCosmosGraphQLObjects(),

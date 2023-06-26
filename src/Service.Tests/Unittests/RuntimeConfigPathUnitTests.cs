@@ -6,7 +6,7 @@ using System.Data;
 using System.IO;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Microsoft.DataApiBuilderSDK.Configurations;
+using Microsoft.DataApiBuilder.Service.Configurations;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;

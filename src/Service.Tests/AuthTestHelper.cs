@@ -7,8 +7,8 @@ using System.Collections.Generic;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
-using static Microsoft.DataApiBuilderSDK.AuthenticationHelpers.AppServiceAuthentication;
-using static Microsoft.DataApiBuilderSDK.AuthenticationHelpers.StaticWebAppsAuthentication;
+using static Microsoft.DataApiBuilder.Service.AuthenticationHelpers.AppServiceAuthentication;
+using static Microsoft.DataApiBuilder.Service.AuthenticationHelpers.StaticWebAppsAuthentication;
 
 namespace Azure.DataApiBuilder.Service.Tests
 {

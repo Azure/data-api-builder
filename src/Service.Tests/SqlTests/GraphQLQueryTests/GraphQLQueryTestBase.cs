@@ -13,7 +13,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.DataApiBuilderSDK.Authorization;
+using Microsoft.DataApiBuilder.Service.Authorization;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests

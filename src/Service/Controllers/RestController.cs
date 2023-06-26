@@ -9,9 +9,9 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.DataApiBuilderSDK.Models;
-using Microsoft.DataApiBuilderSDK.Services;
-using Microsoft.DataApiBuilderSDK.Services.OpenAPI;
+using Microsoft.DataApiBuilder.Service.Models;
+using Microsoft.DataApiBuilder.Service.Services;
+using Microsoft.DataApiBuilder.Service.Services.OpenAPI;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Service.Controllers

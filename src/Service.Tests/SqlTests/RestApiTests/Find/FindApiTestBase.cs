@@ -7,7 +7,7 @@ using System.Net;
 using System.Threading.Tasks;
 using System.Web;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Microsoft.DataApiBuilderSDK.Resolvers;
+using Microsoft.DataApiBuilder.Service.Resolvers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find

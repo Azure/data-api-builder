@@ -7,8 +7,8 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
-using Microsoft.DataApiBuilderSDK.Authorization;
-using Microsoft.DataApiBuilderSDK.Configurations;
+using Microsoft.DataApiBuilder.Service.Authorization;
+using Microsoft.DataApiBuilder.Service.Configurations;
 
 namespace Azure.DataApiBuilder.Service.Tests
 {

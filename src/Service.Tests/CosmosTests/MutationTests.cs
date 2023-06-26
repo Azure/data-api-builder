@@ -6,7 +6,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Azure.Cosmos;
-using Microsoft.DataApiBuilderSDK.Resolvers;
+using Microsoft.DataApiBuilder.Service.Resolvers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 

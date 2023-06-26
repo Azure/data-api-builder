@@ -10,7 +10,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Microsoft.Azure.Cosmos;
-using Microsoft.DataApiBuilderSDK.Resolvers;
+using Microsoft.DataApiBuilder.Service.Resolvers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 

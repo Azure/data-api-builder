@@ -11,12 +11,12 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Tests.Authentication.Helpers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.DataApiBuilderSDK.AuthenticationHelpers;
-using Microsoft.DataApiBuilderSDK.Authorization;
+using Microsoft.DataApiBuilder.Service.AuthenticationHelpers;
+using Microsoft.DataApiBuilder.Service.Authorization;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using static Microsoft.DataApiBuilderSDK.AuthenticationHelpers.AppServiceAuthentication;
+using static Microsoft.DataApiBuilder.Service.AuthenticationHelpers.AppServiceAuthentication;
 
 namespace Azure.DataApiBuilder.Service.Tests.Authentication
 {

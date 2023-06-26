@@ -10,8 +10,8 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.DataApiBuilderSDK.Authorization;
-using Microsoft.DataApiBuilderSDK.Configurations;
+using Microsoft.DataApiBuilder.Service.Authorization;
+using Microsoft.DataApiBuilder.Service.Configurations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 

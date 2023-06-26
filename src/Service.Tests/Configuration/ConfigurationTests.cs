@@ -89,6 +89,77 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     }
                 ";
 
+        public const string SP_CONFIG_WITH_NO_REST_SETTINGS = @"
+    {
+  ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+  ""data-source"": {
+    ""database-type"": ""mssql"",
+    ""options"": {
+      ""set-session-context"": true
+    }
+  },
+  ""runtime"": {
+    ""rest"": {
+      ""enabled"": true,
+      ""path"": ""/api""
+    },
+    ""graphql"": {
+      ""enabled"": true,
+      ""path"": ""/graphql"",
+      ""allow-introspection"": true
+    },
+    ""host"": {
+      ""cors"": {
+        ""origins"": [""http://localhost:5000""],
+        ""allow-credentials"": false
+      },
+      ""authentication"": {
+        ""provider"": ""StaticWebApps"",
+        ""jwt"": {
+          ""audience"": null,
+          ""issuer"": null
+        }
+      },
+      ""mode"": ""development""
+    }
+  },
+  ""entities"": {
+    ""GetBooks"": {
+      ""source"": {
+        ""object"": ""get_books"",
+        ""type"": ""stored-procedure"",
+        ""parameters"": null,
+        ""key-fields"": null
+      },
+      ""graphql"": {
+        ""enabled"": true,
+        ""operation"": ""query"",
+        ""type"": {
+          ""singular"": ""GetBooks"",
+          ""plural"": ""GetBooks""
+        }
+      },
+      ""permissions"": [
+        {
+          ""role"": ""anonymous"",
+          ""actions"": [
+            {
+              ""action"": ""execute"",
+              ""fields"": null,
+              ""policy"": {
+                ""request"": null,
+                ""database"": null
+              }
+            }
+          ]
+        }
+      ],
+      ""mappings"": null,
+      ""relationships"": null
+    }
+  }
+}";
+
         [TestCleanup]
         public void CleanupAfterEachTest()
         {
@@ -909,6 +980,37 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 string body = await response.Content.ReadAsStringAsync();
                 Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
                 Assert.IsTrue(body.Contains(expectedErrorMessage));
+            }
+        }
+
+        /// <summary>
+        /// Validates the default REST API behavior for Stored Procedures when some of the default
+        /// fields are absent in the config file.
+        /// </summary>
+        [DataTestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        [DataRow(SP_CONFIG_WITH_NO_REST_SETTINGS, SupportedHttpVerb.Post, "/api/GetBooks", HttpStatusCode.OK, DisplayName = "SP REST default when no REST section is present")]   
+        public async Task TestSPRestDefaultsForManuallyConstructedConfigs(
+           string configJson,
+           SupportedHttpVerb requestType,
+           string requestPath,
+           HttpStatusCode expectedResponseStatusCode)
+        {
+            RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig, logger: null, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL));
+            string configFileName = "custom-config.json";
+            File.WriteAllText(configFileName, deserializedConfig.ToJson());
+            string[] args = new[]
+            {
+                    $"--ConfigFileName={configFileName}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                HttpMethod httpMethod = SqlTestHelper.ConvertRestMethodToHttpMethod(requestType);
+                HttpRequestMessage request = new(httpMethod, requestPath);
+                HttpResponseMessage response = await client.SendAsync(request);
+                Assert.AreEqual(expectedResponseStatusCode, response.StatusCode);
             }
         }
 

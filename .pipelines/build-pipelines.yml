@@ -53,7 +53,7 @@ steps:
     fi
     echo dabVersion = $dabVersion
     echo "##vso[task.setvariable variable=dabVersion]$dabVersion"
-    addPropVersion = "https://github.com/Azure/data-api-builder/releases/download/v$dabVersion/dab.draft.schema.json"
+    addPropVersion="https://github.com/Azure/data-api-builder/releases/download/v$dabVersion/dab.draft.schema.json"
     echo addPropVersion = $addPropVersion
     echo "##vso[task.setvariable variable=variables.additionalProperties.version]$addPropVersion"
     echo additionalProperties.version = $(variables.additionalProperties.version)

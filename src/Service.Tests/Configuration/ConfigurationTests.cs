@@ -219,7 +219,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 }
                 },
                 ""rest"":{
-                ""enabled"": true,
                 ""path"": ""get_books""
                 },
                 ""permissions"": [
@@ -247,7 +246,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// A config file with a SP entity with the supported HTTP methods defined in REST section.
         /// This config string is used for validating the REST HTTP methods that are enabled.
         /// </summary>
-        public const string SP_CONFIG_WITH_METHODS_IN_REST_SETTINGS = @"
+        public const string SP_CONFIG_WITH_JUST_METHODS_IN_REST_SETTINGS = @"
             {
               ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
               ""data-source"": {
@@ -298,10 +297,165 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     }
                   },
                   ""rest"":{
-                    ""enabled"": true,
                     ""methods"": [
                       ""get""
                     ]
+                  },
+                  ""permissions"": [
+                    {
+                      ""role"": ""anonymous"",
+                      ""actions"": [
+                        {
+                          ""action"": ""execute"",
+                          ""fields"": null,
+                          ""policy"": {
+                            ""request"": null,
+                            ""database"": null
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  ""mappings"": null,
+                  ""relationships"": null
+                }
+              }
+        }";
+
+        /// <summary>
+        /// A config file with a SP entity for which REST APIs are disabled.
+        /// This config string is used for validating that none of the REST methods are enabled.
+        /// </summary>
+        public const string SP_CONFIG_WITH_REST_DISABLED = @"
+            {
+              ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+              ""data-source"": {
+                ""database-type"": ""mssql"",
+                ""options"": {
+                  ""set-session-context"": true
+                }
+              },
+              ""runtime"": {
+                ""rest"": {
+                  ""enabled"": true,
+                  ""path"": ""/api""
+                },
+                ""graphql"": {
+                  ""enabled"": true,
+                  ""path"": ""/graphql"",
+                  ""allow-introspection"": true
+                },
+                ""host"": {
+                  ""cors"": {
+                    ""origins"": [""http://localhost:5000""],
+                    ""allow-credentials"": false
+                  },
+                  ""authentication"": {
+                    ""provider"": ""StaticWebApps"",
+                    ""jwt"": {
+                      ""audience"": null,
+                      ""issuer"": null
+                    }
+                  },
+                  ""mode"": ""development""
+                }
+              },
+              ""entities"": {
+                ""GetBooks"": {
+                  ""source"": {
+                    ""object"": ""get_books"",
+                    ""type"": ""stored-procedure"",
+                    ""parameters"": null,
+                    ""key-fields"": null
+                  },
+                  ""graphql"": {
+                    ""enabled"": true,
+                    ""operation"": ""query"",
+                    ""type"": {
+                      ""singular"": ""GetBooks"",
+                      ""plural"": ""GetBooks""
+                    }
+                  },
+                  ""rest"":{
+                    ""enabled"": false
+                  },
+                  ""permissions"": [
+                    {
+                      ""role"": ""anonymous"",
+                      ""actions"": [
+                        {
+                          ""action"": ""execute"",
+                          ""fields"": null,
+                          ""policy"": {
+                            ""request"": null,
+                            ""database"": null
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  ""mappings"": null,
+                  ""relationships"": null
+                }
+              }
+        }";
+
+        /// <summary>
+        /// A config file with a SP entity for which REST path and methods are not explicitly configured.
+        /// This config string is used for validating the default REST behavior.
+        /// </summary>
+        public const string SP_CONFIG_WITH_JUST_REST_ENABLED = @"
+            {
+              ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+              ""data-source"": {
+                ""database-type"": ""mssql"",
+                ""options"": {
+                  ""set-session-context"": true
+                }
+              },
+              ""runtime"": {
+                ""rest"": {
+                  ""enabled"": true,
+                  ""path"": ""/api""
+                },
+                ""graphql"": {
+                  ""enabled"": true,
+                  ""path"": ""/graphql"",
+                  ""allow-introspection"": true
+                },
+                ""host"": {
+                  ""cors"": {
+                    ""origins"": [""http://localhost:5000""],
+                    ""allow-credentials"": false
+                  },
+                  ""authentication"": {
+                    ""provider"": ""StaticWebApps"",
+                    ""jwt"": {
+                      ""audience"": null,
+                      ""issuer"": null
+                    }
+                  },
+                  ""mode"": ""development""
+                }
+              },
+              ""entities"": {
+                ""GetBooks"": {
+                  ""source"": {
+                    ""object"": ""get_books"",
+                    ""type"": ""stored-procedure"",
+                    ""parameters"": null,
+                    ""key-fields"": null
+                  },
+                  ""graphql"": {
+                    ""enabled"": true,
+                    ""operation"": ""query"",
+                    ""type"": {
+                      ""singular"": ""GetBooks"",
+                      ""plural"": ""GetBooks""
+                    }
+                  },
+                  ""rest"":{
+                    ""enabled"": true
                   },
                   ""permissions"": [
                     {
@@ -1165,11 +1319,21 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [DataRow(SP_CONFIG_WITH_ONLY_PATH_IN_REST_SETTINGS, SupportedHttpVerb.Patch, "/api/get_books/", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST PATCH disabled when only a custom path is defined")]
         [DataRow(SP_CONFIG_WITH_ONLY_PATH_IN_REST_SETTINGS, SupportedHttpVerb.Delete, "/api/get_books/", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST DELETE disabled when only a custom path is defined")]
         [DataRow(SP_CONFIG_WITH_ONLY_PATH_IN_REST_SETTINGS, SupportedHttpVerb.Put, "/api/get_books/", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST PUT disabled when a custom path is defined")]
-        [DataRow(SP_CONFIG_WITH_METHODS_IN_REST_SETTINGS, SupportedHttpVerb.Post, "/api/GetBooks/", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST POST disabled by not specifying in the methods section")]
-        [DataRow(SP_CONFIG_WITH_METHODS_IN_REST_SETTINGS, SupportedHttpVerb.Get, "/api/GetBooks/", HttpStatusCode.OK, DisplayName = "SP - REST GET enabled by specifying in the methods section")]
-        [DataRow(SP_CONFIG_WITH_METHODS_IN_REST_SETTINGS, SupportedHttpVerb.Patch, "/api/GetBooks/", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST PATCH disabled by not specifying in the methods section")]
-        [DataRow(SP_CONFIG_WITH_METHODS_IN_REST_SETTINGS, SupportedHttpVerb.Put, "/api/GetBooks/", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST PUT disabled by not specifying in the methods section")]
-        [DataRow(SP_CONFIG_WITH_METHODS_IN_REST_SETTINGS, SupportedHttpVerb.Delete, "/api/GetBooks/", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST DELETE disabled by not specifying in the methods section")]
+        [DataRow(SP_CONFIG_WITH_JUST_METHODS_IN_REST_SETTINGS, SupportedHttpVerb.Post, "/api/GetBooks/", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST POST disabled by not specifying in the methods section")]
+        [DataRow(SP_CONFIG_WITH_JUST_METHODS_IN_REST_SETTINGS, SupportedHttpVerb.Get, "/api/GetBooks/", HttpStatusCode.OK, DisplayName = "SP - REST GET enabled by specifying in the methods section")]
+        [DataRow(SP_CONFIG_WITH_JUST_METHODS_IN_REST_SETTINGS, SupportedHttpVerb.Patch, "/api/GetBooks/", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST PATCH disabled by not specifying in the methods section")]
+        [DataRow(SP_CONFIG_WITH_JUST_METHODS_IN_REST_SETTINGS, SupportedHttpVerb.Put, "/api/GetBooks/", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST PUT disabled by not specifying in the methods section")]
+        [DataRow(SP_CONFIG_WITH_JUST_METHODS_IN_REST_SETTINGS, SupportedHttpVerb.Delete, "/api/GetBooks/", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST DELETE disabled by not specifying in the methods section")]
+        [DataRow(SP_CONFIG_WITH_REST_DISABLED, SupportedHttpVerb.Get, "/api/GetBooks", HttpStatusCode.NotFound, DisplayName = "SP - REST GET disabled by configuring enabled as false")]
+        [DataRow(SP_CONFIG_WITH_REST_DISABLED, SupportedHttpVerb.Post, "/api/GetBooks", HttpStatusCode.NotFound, DisplayName = "SP - REST POST disabled by configuring enabled as false")]
+        [DataRow(SP_CONFIG_WITH_REST_DISABLED, SupportedHttpVerb.Patch, "/api/GetBooks", HttpStatusCode.NotFound, DisplayName = "SP - REST PATCH disabled by configuring enabled as false")]
+        [DataRow(SP_CONFIG_WITH_REST_DISABLED, SupportedHttpVerb.Put, "/api/GetBooks", HttpStatusCode.NotFound, DisplayName = "SP - REST PUT disabled by configuring enabled as false")]
+        [DataRow(SP_CONFIG_WITH_REST_DISABLED, SupportedHttpVerb.Delete, "/api/GetBooks", HttpStatusCode.NotFound, DisplayName = "SP - REST DELETE disabled by configuring enabled as false")]
+        [DataRow(SP_CONFIG_WITH_JUST_REST_ENABLED, SupportedHttpVerb.Get, "/api/GetBooks", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST GET is disabled when enabled flag is configured to true")]
+        [DataRow(SP_CONFIG_WITH_JUST_REST_ENABLED, SupportedHttpVerb.Post, "/api/GetBooks", HttpStatusCode.Created, DisplayName = "SP - REST POST is enabled when enabled flag is configured to true")]
+        [DataRow(SP_CONFIG_WITH_JUST_REST_ENABLED, SupportedHttpVerb.Patch, "/api/GetBooks", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST PATCH is disabled when enabled flag is configured to true")]
+        [DataRow(SP_CONFIG_WITH_JUST_REST_ENABLED, SupportedHttpVerb.Put, "/api/GetBooks", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST PUT is disabled when enabled flag is configured to true")]
+        [DataRow(SP_CONFIG_WITH_JUST_REST_ENABLED, SupportedHttpVerb.Delete, "/api/GetBooks", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST DELETE is disabled when enabled flag is configured to true")]
         public async Task TestSPRestDefaultsForManuallyConstructedConfigs(
            string configJson,
            SupportedHttpVerb requestType,

@@ -85,7 +85,6 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
         {
             bool enabled = reader.GetBoolean();
             return new EntityRestOptions(
-                // if enabled, use default methods, otherwise use empty array as all verbs are disabled
                 Methods: Array.Empty<SupportedHttpVerb>(),
                 Path: null,
                 Enabled: enabled);

@@ -5,9 +5,9 @@
 using System.Collections.Generic;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
-using Microsoft.DataApiBuilder.Service.Authorization;
-using Microsoft.DataApiBuilder.Service.Configurations;
-using Microsoft.DataApiBuilder.Service.Services;
+using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;

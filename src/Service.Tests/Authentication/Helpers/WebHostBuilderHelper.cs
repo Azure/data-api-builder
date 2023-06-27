@@ -11,14 +11,15 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.DataApiBuilder.Service.AuthenticationHelpers;
-using Microsoft.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimulator;
-using Microsoft.DataApiBuilder.Service.Authorization;
-using Microsoft.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Core.AuthenticationHelpers;
+using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
+using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Core.Configurations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Microsoft.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimulator;
 
 namespace Azure.DataApiBuilder.Service.Tests.Authentication.Helpers
 {

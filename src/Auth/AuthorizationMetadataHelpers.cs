@@ -60,7 +60,7 @@ namespace Azure.DataApiBuilder.Auth
         /// <summary>
         /// Given the key (operation) returns the associated OperationMetadata object.
         /// </summary>
-        public Dictionary<Operation, OperationMetadata> OperationToColumnMap { get; set; } = new();
+        public Dictionary<Config.Operation, OperationMetadata> OperationToColumnMap { get; set; } = new();
     }
 
     /// <summary>

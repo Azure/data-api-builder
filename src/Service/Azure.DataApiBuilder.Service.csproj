@@ -84,7 +84,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Microsoft.DataApiBuilder.Service\Microsoft.DataApiBuilder.Service.csproj" />
+    <ProjectReference Include="..\Azure.DataApiBuilder.Core\Azure.DataApiBuilder.Core.csproj" />
   </ItemGroup>
 
 </Project>

@@ -4,8 +4,8 @@
 using System.Data.Common;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
-using Microsoft.DataApiBuilder.Service.Configurations;
-using Microsoft.DataApiBuilder.Service.Resolvers;
+using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Resolvers;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;

@@ -11,11 +11,11 @@ using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
 using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers;
 using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql;
-using Microsoft.DataApiBuilder.Service.Configurations;
-using Microsoft.DataApiBuilder.Service.Services;
+using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using static Microsoft.DataApiBuilder.Service.Configurations.RuntimeConfigValidator;
+using static Azure.DataApiBuilder.Core.Configurations.RuntimeConfigValidator;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {

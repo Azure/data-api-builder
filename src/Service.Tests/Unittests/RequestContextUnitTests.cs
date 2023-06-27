@@ -5,7 +5,7 @@ using System.Net;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Microsoft.DataApiBuilder.Service.Models;
+using Azure.DataApiBuilder.Core.Models;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests

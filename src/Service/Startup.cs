@@ -17,20 +17,21 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
-using Microsoft.DataApiBuilder.Service.AuthenticationHelpers;
+using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Microsoft.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimulator;
-using Microsoft.DataApiBuilder.Service.Authorization;
-using Microsoft.DataApiBuilder.Service.Configurations;
-using Microsoft.DataApiBuilder.Service.Models;
-using Microsoft.DataApiBuilder.Service.Parsers;
-using Microsoft.DataApiBuilder.Service.Resolvers;
-using Microsoft.DataApiBuilder.Service.Services;
-using Microsoft.DataApiBuilder.Service.Services.MetadataProviders;
-using Microsoft.DataApiBuilder.Service.Services.OpenAPI;
+using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Parsers;
+using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
 
 namespace Azure.DataApiBuilder.Service
 {

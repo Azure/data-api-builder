@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 using Azure.DataApiBuilder.Service.Exceptions;
-using Microsoft.DataApiBuilder.Service.Parsers;
+using Azure.DataApiBuilder.Core.Parsers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests

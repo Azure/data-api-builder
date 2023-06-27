@@ -56,7 +56,10 @@ steps:
     addPropVersion="https://github.com/Azure/data-api-builder/releases/download/v$dabVersion/dab.draft.schema.json"
     echo addPropVersion = $addPropVersion
     echo "##vso[task.setvariable variable=additionalProperties.version]$addPropVersion"
+    echo "##vso[task.setvariable variable=kuchbhi]$addPropVersion"
     echo additionalProperties.version = $(additionalProperties.version)
+    echo additionalProperties.version = $(variables.additionalProperties.version)
+    echo kuchbhi = $(kuchbhi)
   displayName: Set dab version
 
 # - task: UseDotNet@2

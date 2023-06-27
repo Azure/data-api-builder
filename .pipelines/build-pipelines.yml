@@ -63,10 +63,10 @@ steps:
   displayName: Set dab version
 
 - bash: |
-    echo dabVersion = $dabVersion
+    echo dabVersion = $(dabVersion)
     echo additionalProperties.version = $(additionalProperties.version)
   displayName: Check dab version
-  
+
 # - task: UseDotNet@2
 #   displayName: Setup .NET SDK v6.0.x
 #   inputs:

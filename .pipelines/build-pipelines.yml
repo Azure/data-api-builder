@@ -27,7 +27,6 @@ variables:
   # The counter is reset when the minor version is updated.
   patch: $[counter(format('{0}_{1}', variables['build.reason'], variables['minor']), 0)]
   isReleaseBuild: $(isNugetRelease)
-  isReleaseCandidate: $(isPreReleaseBuild)
   additionalProperties.version: 'https://github.com/Azure/data-api-builder/releases/download/v$(major).$(minor).$(patch)/dab.draft.schema.json'
 
 steps:
@@ -40,10 +39,10 @@ steps:
 # is not available at pipeline compilation time.
 - bash: |
     echo IsNugetRelease = $ISNUGETRELEASE
-    echo IsPreReleaseBuild = $ISPRERELEASEBUILD
+    echo IsReleaseCandidate = $ISRELEASECANDIDATE
     if [ "$ISNUGETRELEASE" = "true" ]
     then
-      if [ "$ISPRERELEASEBUILD" = "true" ]
+      if [ "$ISRELEASECANDIDATE" = "true" ]
       then
         dabVersion=$(major).$(minor).$(patch)-rc
       else
@@ -56,6 +55,7 @@ steps:
     echo "##vso[task.setvariable variable=dabVersion]$dabVersion"
     addPropVersion = https://github.com/Azure/data-api-builder/releases/download/v$(dabVersion)/dab.draft.schema.json
     echo "##vso[task.setvariable variable=additionalProperties.version]$addPropVersion"
+    echo additionalProperties.version = $(additionalProperties.version)
   displayName: Set dab version
 
 # - task: UseDotNet@2

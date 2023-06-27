@@ -41,8 +41,8 @@
         },
         Rest: {
           Methods: [
-+           Post
-+         ],
+            Post
+          ],
           Enabled: false
         },
         Permissions: [

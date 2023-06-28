@@ -1,10 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
 using Microsoft.AspNetCore.Authentication;
 
-namespace Microsoft.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimulator
+namespace Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator
 {
     /// <summary>
     /// Extension methods related to Static Web App/ App Service authentication (Easy Auth).

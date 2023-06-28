@@ -604,7 +604,8 @@ namespace Azure.DataApiBuilder.Core.Configurations
         /// </summary>
         /// <param name="permission"></param>
         /// <returns>True/False</returns>
-        public static bool IsValidDatabasePolicyForAction(PermissionOperation permission)
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Current dab code flow")]
+        public bool IsValidDatabasePolicyForAction(PermissionOperation permission)
         {
             return !(permission.Policy?.Database != null && permission.Name == Config.Operation.Create);
         }
@@ -823,7 +824,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
                         else
                         {
                             PermissionOperation configOperation;
-                            configOperation = JsonSerializer.Deserialize<PermissionOperation>(action.ToString()!)!;
+                            configOperation = JsonSerializer.Deserialize<Config.PermissionOperation>(action.ToString()!)!;
 
                             if (configOperation.Policy is not null && configOperation.Policy.Database is not null)
                             {

@@ -205,7 +205,7 @@ namespace Azure.DataApiBuilder.Core.Authorization
         /// <param name="entityName">Entity from request.</param>
         /// <param name="roleName">Role defined in client role header.</param>
         /// <param name="operation">Operation type: create, read, update, delete.</param>
-        /// <returns>Policy string if a policy exists in </returns>
+        /// <returns>Policy string if a policy exists in config.</returns>
         private string GetDBPolicyForRequest(string entityName, string roleName, Config.Operation operation)
         {
             if (!EntityPermissionsMap[entityName].RoleToOperationMap.TryGetValue(roleName, out RoleMetadata? roleMetadata))

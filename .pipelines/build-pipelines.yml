@@ -39,13 +39,13 @@ steps:
 # is not available at pipeline compilation time.
 # TODO: add a new rc version variable (1/2/3) and use that to generate the version.
 - bash: |
-    echo IsNugetRelease = $ISNUGETRELEASE
+    echo IsNugetRelease = $isNugetRelease
     echo IsReleaseCandidate = $ISRELEASECANDIDATE
     if [ "$ISNUGETRELEASE" = "true" ]
     then
-      if [ "$ISRELEASECANDIDATE" = "true" ]
+      if [ "$IsReleaseCandidate" = "true" ]
       then
-        dabVersion=$(major).$(minor).$(patch)-rc
+        dabVersion=$(major).$(minor).$(patch)-rc$releaseCandidateVersion
       else
         dabVersion=$(major).$(minor).$(patch)
       fi

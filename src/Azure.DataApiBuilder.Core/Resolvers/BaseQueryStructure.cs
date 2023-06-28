@@ -3,11 +3,11 @@
 
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
-using Azure.DataApiBuilder.Core.Models;
-using Azure.DataApiBuilder.Core.Services;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {

@@ -3,10 +3,10 @@
 
 using System.Data.Common;
 using Azure.Core;
-using Azure.Identity;
-using Microsoft.AspNetCore.Http;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
+using Azure.Identity;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 

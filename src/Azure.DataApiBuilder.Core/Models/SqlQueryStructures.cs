@@ -2,8 +2,8 @@
 // Licensed under the MIT License.
 
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 
 namespace Azure.DataApiBuilder.Core.Models
 {

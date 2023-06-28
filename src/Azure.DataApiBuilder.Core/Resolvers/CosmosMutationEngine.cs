@@ -4,6 +4,9 @@
 using System.Net;
 using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
@@ -11,9 +14,6 @@ using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Cosmos;
-using Azure.DataApiBuilder.Core.Authorization;
-using Azure.DataApiBuilder.Core.Models;
-using Azure.DataApiBuilder.Core.Services;
 using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json.Linq;
 

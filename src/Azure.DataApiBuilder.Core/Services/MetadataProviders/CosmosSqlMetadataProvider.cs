@@ -4,11 +4,11 @@
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Service.Exceptions;
-using HotChocolate.Language;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Service.Exceptions;
+using HotChocolate.Language;
 
 namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 {

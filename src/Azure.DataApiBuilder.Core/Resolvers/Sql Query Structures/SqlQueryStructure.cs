@@ -5,6 +5,10 @@ using System.Data;
 using System.Net;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Parsers;
+using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
@@ -12,10 +16,6 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
-using Azure.DataApiBuilder.Core.Configurations;
-using Azure.DataApiBuilder.Core.Models;
-using Azure.DataApiBuilder.Core.Parsers;
-using Azure.DataApiBuilder.Core.Services;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {

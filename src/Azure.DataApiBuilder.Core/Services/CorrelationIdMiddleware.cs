@@ -1,9 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Azure.DataApiBuilder.Core.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Azure.DataApiBuilder.Core.Models;
 using Microsoft.Extensions.Primitives;
 
 namespace Azure.DataApiBuilder.Core.Services

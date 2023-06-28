@@ -3,8 +3,8 @@
 
 using System.Net;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests

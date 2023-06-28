@@ -5,13 +5,13 @@ using System.Data;
 using System.Net;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Parsers;
+using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
-using Azure.DataApiBuilder.Core.Models;
-using Azure.DataApiBuilder.Core.Parsers;
-using Azure.DataApiBuilder.Core.Services;
 using Microsoft.OData.UriParser;
 
 namespace Azure.DataApiBuilder.Core.Resolvers

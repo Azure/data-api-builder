@@ -5,9 +5,9 @@ using System.Collections.Specialized;
 using System.Net;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
-using Azure.DataApiBuilder.Core.Parsers;
 using Microsoft.Extensions.Logging;
 using Microsoft.OData.UriParser;
 

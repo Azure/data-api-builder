@@ -4,9 +4,9 @@
 using System.Net;
 using System.Text;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
-using Azure.DataApiBuilder.Core.Models;
 using static Azure.DataApiBuilder.Service.Exceptions.DataApiBuilderException;
 
 namespace Azure.DataApiBuilder.Core.Resolvers

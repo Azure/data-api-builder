@@ -2,9 +2,9 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
+using Azure.DataApiBuilder.Core.Models;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Mvc;
-using Azure.DataApiBuilder.Core.Models;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {

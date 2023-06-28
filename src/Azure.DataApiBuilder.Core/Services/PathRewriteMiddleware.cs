@@ -4,9 +4,9 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Core.Configurations;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Azure.DataApiBuilder.Core.Configurations;
 
 namespace Azure.DataApiBuilder.Core.Services
 {

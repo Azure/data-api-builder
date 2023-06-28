@@ -1,10 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Azure.DataApiBuilder.Core.Configurations;
 using HotChocolate.AspNetCore;
 using HotChocolate.Execution;
 using Microsoft.AspNetCore.Http;
-using Azure.DataApiBuilder.Core.Configurations;
 
 namespace Azure.DataApiBuilder.Core.Parsers
 {

@@ -2,10 +2,10 @@
 // Licensed under the MIT License.
 
 using System.Net;
-using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Microsoft.OData.UriParser;
 
 namespace Azure.DataApiBuilder.Core.Parsers

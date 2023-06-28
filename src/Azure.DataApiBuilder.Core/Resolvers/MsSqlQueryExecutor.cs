@@ -8,13 +8,13 @@ using System.Security.Claims;
 using System.Text;
 using Azure.Core;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
-using Azure.DataApiBuilder.Core.Authorization;
-using Azure.DataApiBuilder.Core.Configurations;
-using Azure.DataApiBuilder.Core.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 

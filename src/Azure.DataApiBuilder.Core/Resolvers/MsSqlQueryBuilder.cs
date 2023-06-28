@@ -3,8 +3,8 @@
 
 using System.Data.Common;
 using System.Text;
-using Microsoft.Data.SqlClient;
 using Azure.DataApiBuilder.Core.Models;
+using Microsoft.Data.SqlClient;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {

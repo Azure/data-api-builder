@@ -4,9 +4,9 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Service.Exceptions;
 
 namespace Azure.DataApiBuilder.Core.Services
 {

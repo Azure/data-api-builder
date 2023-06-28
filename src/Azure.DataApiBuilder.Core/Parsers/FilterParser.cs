@@ -2,8 +2,8 @@
 // Licensed under the MIT License.
 
 using System.Net;
-using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;

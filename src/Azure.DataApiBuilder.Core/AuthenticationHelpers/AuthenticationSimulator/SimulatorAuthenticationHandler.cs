@@ -3,9 +3,9 @@
 
 using System.Security.Claims;
 using System.Text.Encodings.Web;
-using Microsoft.AspNetCore.Authentication;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;

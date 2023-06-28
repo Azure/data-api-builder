@@ -5,8 +5,8 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
-using Microsoft.AspNetCore.Http;
 using Azure.DataApiBuilder.Core.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 

@@ -3,14 +3,14 @@
 
 using System.Net;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
-using Azure.DataApiBuilder.Core.Resolvers;
-using Azure.DataApiBuilder.Core.Services;
 using static Azure.DataApiBuilder.Core.Authorization.AuthorizationResolver;
 
 namespace Azure.DataApiBuilder.Core.Models

@@ -7,19 +7,19 @@ using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.TestHost;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimulator;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Microsoft.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimulator;
 
 namespace Azure.DataApiBuilder.Service.Tests.Authentication.Helpers
 {

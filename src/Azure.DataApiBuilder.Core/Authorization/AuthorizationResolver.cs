@@ -8,10 +8,10 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Service.Exceptions;
-using Microsoft.AspNetCore.Http;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -260,7 +260,7 @@ namespace Azure.DataApiBuilder.Core.Authorization
                     object[] Operations = permission.Operations;
                     foreach (JsonElement operationElement in Operations)
                     {
-                        Config.Operation operation =  Config.Operation.None;
+                        Config.Operation operation = Config.Operation.None;
                         OperationMetadata operationToColumn = new();
 
                         // Use a HashSet to store all the backing field names

@@ -5,10 +5,10 @@ using System.Data.Common;
 using System.IdentityModel.Tokens.Jwt;
 using Azure.Core;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.Identity;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Fluent;
-using Azure.DataApiBuilder.Core.Configurations;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {

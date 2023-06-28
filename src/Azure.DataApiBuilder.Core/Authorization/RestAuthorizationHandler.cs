@@ -4,10 +4,10 @@
 using System.Net;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
-using Azure.DataApiBuilder.Core.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Core.Authorization

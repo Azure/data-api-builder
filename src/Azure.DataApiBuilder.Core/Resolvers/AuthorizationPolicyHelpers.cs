@@ -2,11 +2,11 @@
 // Licensed under the MIT License.
 
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Service.Exceptions;
-using Microsoft.AspNetCore.Http;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Microsoft.OData.UriParser;
 

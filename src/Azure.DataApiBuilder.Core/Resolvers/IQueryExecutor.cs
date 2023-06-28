@@ -3,8 +3,8 @@
 
 using System.Data.Common;
 using System.Text.Json.Nodes;
-using Microsoft.AspNetCore.Http;
 using Azure.DataApiBuilder.Core.Models;
+using Microsoft.AspNetCore.Http;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {

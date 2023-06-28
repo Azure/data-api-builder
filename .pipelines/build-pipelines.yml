@@ -37,6 +37,7 @@ steps:
 # generate the prerelease nuget version.
 # We cannot set this in variables section above because $(isNugetRelease) 
 # is not available at pipeline compilation time.
+# TODO: add a new rc version variable (1/2/3) and use that to generate the version.
 - bash: |
     echo IsNugetRelease = $ISNUGETRELEASE
     echo IsReleaseCandidate = $ISRELEASECANDIDATE

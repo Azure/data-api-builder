@@ -60,10 +60,6 @@ describe SmokeTest {
     }
 
     it 'Check Generated Config contains the correct path of dab schema' {
-        if ($DabVersion.Contains("-") -and !$dabVersion.Contains("rc"))
-        {
-            $DabVersion = $DabVersion.Substring(0, $DabVersion.IndexOf("-"));
-        }
 
         $expectedSchemaPath = "https://github.com/Azure/data-api-builder/releases/download/v$DabVersion/dab.draft.schema.json";
         $parsedSchema = Get-Content -Raw -Path $configFileName | ConvertFrom-Json

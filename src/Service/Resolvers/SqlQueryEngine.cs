@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
@@ -215,8 +216,9 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // with $after base64 encoded for opaqueness
             string path = UriHelper.GetEncodedUrl(_httpContextAccessor.HttpContext!.Request).Split('?')[0];
 
+            RuntimeConfig runtimeConfig= _runtimeConfigProvider.GetConfig();
             // If the base route is not empty, we need to insert it into the URI before the rest path.
-            string baseRoute = _runtimeConfigProvider.RestBaseRoute;
+            string? baseRoute = runtimeConfig.Runtime.Rest.BaseRoute;
             if (!string.IsNullOrEmpty(baseRoute))
             {
                 _sqlMetadataProvider.TryGetEntityPathFromName(context.EntityName, out string? pathNameForEntity);
@@ -232,7 +234,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     lastIdxOfPathToBeIncluded--;
                 }
 
-                lastIdxOfPathToBeIncluded = lastIdxOfPathToBeIncluded - _runtimeConfigProvider.RestPath.Length;
+                lastIdxOfPathToBeIncluded = lastIdxOfPathToBeIncluded - runtimeConfig.Runtime.Rest.Path.Length;
 
                 // Initialize pathWithBaseRoute by removing restPath and pathNameForEntity from the path.
                 // Finally, it will be of the form: .../baseRoute/restPath/pathNameForEntity.
@@ -241,7 +243,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 // Append base route.
                 pathWithBaseRoute.Append(baseRoute);
                 // Append rest path.
-                pathWithBaseRoute.Append($"{_runtimeConfigProvider.RestPath}");
+                pathWithBaseRoute.Append($"{runtimeConfig.Runtime.Rest.Path}");
                 // Append path name for entity.
                 pathWithBaseRoute.Append($"/{pathNameForEntity}");
                 path = pathWithBaseRoute.ToString();

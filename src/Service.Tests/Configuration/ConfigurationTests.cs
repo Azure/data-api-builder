@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.IO;
+using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
 using System.Net;
 using System.Net.Http;
@@ -15,6 +16,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.AuthenticationHelpers;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
@@ -37,14 +39,15 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using MySqlConnector;
 using Npgsql;
-using static Azure.DataApiBuilder.Config.RuntimeConfigPath;
+using VerifyMSTest;
+using static Azure.DataApiBuilder.Config.RuntimeConfigLoader;
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration
 {
     [TestClass]
     public class ConfigurationTests
+        : VerifyBase
     {
-        private const string ASP_NET_CORE_ENVIRONMENT_VAR_NAME = "ASPNETCORE_ENVIRONMENT";
         private const string COSMOS_ENVIRONMENT = TestCategory.COSMOSDBNOSQL;
         private const string MSSQL_ENVIRONMENT = TestCategory.MSSQL;
         private const string MYSQL_ENVIRONMENT = TestCategory.MYSQL;
@@ -86,46 +89,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     }
                 ";
 
-        public TestContext TestContext { get; set; }
-
-        [TestInitialize]
-        public void Setup()
-        {
-            TestContext.Properties.Add(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, Environment.GetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME));
-            TestContext.Properties.Add(RUNTIME_ENVIRONMENT_VAR_NAME, Environment.GetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME));
-        }
-
-        [ClassCleanup]
-        public static void Cleanup()
-        {
-            if (File.Exists($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}"))
-            {
-                File.Delete($"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}");
-            }
-
-            if (File.Exists($"{CONFIGFILE_NAME}.HostTest{CONFIG_EXTENSION}"))
-            {
-                File.Delete($"{CONFIGFILE_NAME}.HostTest{CONFIG_EXTENSION}");
-            }
-
-            if (File.Exists($"{CONFIGFILE_NAME}.Test.overrides{CONFIG_EXTENSION}"))
-            {
-                File.Delete($"{CONFIGFILE_NAME}.Test.overrides{CONFIG_EXTENSION}");
-            }
-
-            if (File.Exists($"{CONFIGFILE_NAME}.HostTest.overrides{CONFIG_EXTENSION}"))
-            {
-                File.Delete($"{CONFIGFILE_NAME}.HostTest.overrides{CONFIG_EXTENSION}");
-            }
-        }
-
         [TestCleanup]
         public void CleanupAfterEachTest()
         {
-            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, (string)TestContext.Properties[ASP_NET_CORE_ENVIRONMENT_VAR_NAME]);
-            Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, (string)TestContext.Properties[RUNTIME_ENVIRONMENT_VAR_NAME]);
-            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, "");
-            Environment.SetEnvironmentVariable($"{ENVIRONMENT_PREFIX}{nameof(RuntimeConfigPath.CONNSTRING)}", "");
+            TestHelper.UnsetAllDABEnvironmentVariables();
         }
 
         /// <summary>
@@ -165,7 +132,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Assert.IsFalse(isUpdateableRuntimeConfig);
                 Assert.AreEqual(typeof(ApplicationException), e.GetType());
                 Assert.AreEqual(
-                    $"Could not initialize the engine with the runtime config file: {RuntimeConfigPath.DefaultName}",
+                    $"Could not initialize the engine with the runtime config file: {DEFAULT_CONFIG_FILE_NAME}",
                     e.Message);
             }
         }
@@ -183,76 +150,70 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             bool expectedIsHttpsRedirectionDisabled)
         {
             Program.CreateWebHostBuilder(args).Build();
-            Assert.AreEqual(RuntimeConfigProvider.IsHttpsRedirectionDisabled, expectedIsHttpsRedirectionDisabled);
+            Assert.AreEqual(expectedIsHttpsRedirectionDisabled, Program.IsHttpsRedirectionDisabled);
         }
 
         /// <summary>
-        /// Checks correct serialization and deserialization of Source Type from 
+        /// Checks correct serialization and deserialization of Source Type from
         /// Enum to String and vice-versa.
         /// Consider both cases for source as an object and as a string
         /// </summary>
         [DataTestMethod]
-        [DataRow(true, SourceType.StoredProcedure, "stored-procedure", DisplayName = "source is a stored-procedure")]
-        [DataRow(true, SourceType.Table, "table", DisplayName = "source is a table")]
-        [DataRow(true, SourceType.View, "view", DisplayName = "source is a view")]
+        [DataRow(true, EntitySourceType.StoredProcedure, "stored-procedure", DisplayName = "source is a stored-procedure")]
+        [DataRow(true, EntitySourceType.Table, "table", DisplayName = "source is a table")]
+        [DataRow(true, EntitySourceType.View, "view", DisplayName = "source is a view")]
         [DataRow(false, null, null, DisplayName = "source is just string")]
         public void TestCorrectSerializationOfSourceObject(
             bool isDatabaseObjectSource,
-            SourceType sourceObjectType,
+            EntitySourceType sourceObjectType,
             string sourceTypeName)
         {
-            object entitySource;
+            RuntimeConfig runtimeConfig;
             if (isDatabaseObjectSource)
             {
-                entitySource = new DatabaseObjectSource(
+                EntitySource entitySource = new(
                     Type: sourceObjectType,
-                    Name: "sourceName",
+                    Object: "sourceName",
                     Parameters: null,
                     KeyFields: null
+                );
+                runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                    entityName: "MyEntity",
+                    entitySource: entitySource,
+                    roleName: "Anonymous",
+                    operation: EntityActionOperation.All
                 );
             }
             else
             {
-                entitySource = "sourceName";
+                string entitySource = "sourceName";
+                runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                    entityName: "MyEntity",
+                    entitySource: entitySource,
+                    roleName: "Anonymous",
+                    operation: EntityActionOperation.All
+                );
             }
 
-            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
-                entityName: "MyEntity",
-                entitySource: entitySource,
-                roleName: "Anonymous",
-                operation: Config.Operation.All,
-                includedCols: null,
-                excludedCols: null,
-                databasePolicy: null
-                );
-
-            string runtimeConfigJson = JsonSerializer.Serialize<RuntimeConfig>(runtimeConfig);
+            string runtimeConfigJson = runtimeConfig.ToJson();
 
             if (isDatabaseObjectSource)
             {
                 Assert.IsTrue(runtimeConfigJson.Contains(sourceTypeName));
             }
 
-            Mock<ILogger> logger = new();
-            Assert.IsTrue(RuntimeConfig.TryGetDeserializedRuntimeConfig(
-                runtimeConfigJson,
-                out RuntimeConfig deserializedRuntimeConfig,
-                logger.Object));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(runtimeConfigJson, out RuntimeConfig deserializedRuntimeConfig));
 
             Assert.IsTrue(deserializedRuntimeConfig.Entities.ContainsKey("MyEntity"));
-            deserializedRuntimeConfig.Entities["MyEntity"].TryPopulateSourceFields();
-            Assert.AreEqual("sourceName", deserializedRuntimeConfig.Entities["MyEntity"].SourceName);
+            Assert.AreEqual("sourceName", deserializedRuntimeConfig.Entities["MyEntity"].Source.Object);
 
-            JsonElement sourceJson = (JsonElement)deserializedRuntimeConfig.Entities["MyEntity"].Source;
             if (isDatabaseObjectSource)
             {
-                Assert.AreEqual(JsonValueKind.Object, sourceJson.ValueKind);
-                Assert.AreEqual(sourceObjectType, deserializedRuntimeConfig.Entities["MyEntity"].ObjectType);
+                Assert.AreEqual(sourceObjectType, deserializedRuntimeConfig.Entities["MyEntity"].Source.Type);
             }
             else
             {
-                Assert.AreEqual(JsonValueKind.String, sourceJson.ValueKind);
-                Assert.AreEqual("sourceName", deserializedRuntimeConfig.Entities["MyEntity"].Source.ToString());
+                Assert.AreEqual(EntitySourceType.Table, deserializedRuntimeConfig.Entities["MyEntity"].Source.Type);
             }
         }
 
@@ -388,8 +349,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestSqlSettingPostStartupConfigurations(string configurationEndpoint)
         {
-            Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
-
             TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
@@ -397,7 +356,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 entityName: POST_STARTUP_CONFIG_ENTITY,
                 entitySource: POST_STARTUP_CONFIG_ENTITY_SOURCE,
                 roleName: POST_STARTUP_CONFIG_ROLE,
-                operation: Config.Operation.Read,
+                operation: EntityActionOperation.Read,
                 includedCols: new HashSet<string>() { "*" });
 
             JsonContent content = GetPostStartupConfigParams(MSSQL_ENVIRONMENT, configuration, configurationEndpoint);
@@ -407,7 +366,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, preConfigHydrationResult.StatusCode);
 
             HttpResponseMessage preConfigOpenApiDocumentExistence =
-                await httpClient.GetAsync($"{GlobalSettings.REST_DEFAULT_PATH}/{OPENAPI_DOCUMENT_ENDPOINT}");
+                await httpClient.GetAsync($"{RestRuntimeOptions.DEFAULT_PATH}/{OPENAPI_DOCUMENT_ENDPOINT}");
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, preConfigOpenApiDocumentExistence.StatusCode);
 
             // SwaggerUI (OpenAPI user interface) is not made available in production/hosting mode.
@@ -430,7 +389,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             string swaTokenPayload = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(
                 addAuthenticated: true,
                 specificRole: POST_STARTUP_CONFIG_ROLE);
-            message.Headers.Add(AuthenticationConfig.CLIENT_PRINCIPAL_HEADER, swaTokenPayload);
+            message.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, swaTokenPayload);
             message.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, POST_STARTUP_CONFIG_ROLE);
             HttpResponseMessage authorizedResponse = await httpClient.SendAsync(message);
             Assert.AreEqual(expected: HttpStatusCode.OK, actual: authorizedResponse.StatusCode);
@@ -438,7 +397,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             // OpenAPI document is created during config hydration and
             // is made available after config hydration completes.
             HttpResponseMessage postConfigOpenApiDocumentExistence =
-                await httpClient.GetAsync($"{GlobalSettings.REST_DEFAULT_PATH}/{OPENAPI_DOCUMENT_ENDPOINT}");
+                await httpClient.GetAsync($"{RestRuntimeOptions.DEFAULT_PATH}/{OPENAPI_DOCUMENT_ENDPOINT}");
             Assert.AreEqual(HttpStatusCode.OK, postConfigOpenApiDocumentExistence.StatusCode);
 
             // SwaggerUI (OpenAPI user interface) is not made available in production/hosting mode.
@@ -449,7 +408,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual(HttpStatusCode.BadRequest, postConfigOpenApiSwaggerEndpointAvailability.StatusCode);
         }
 
-        [TestMethod("Validates that local cosmosdb_nosql settings can be loaded and the correct classes are in the service provider."), TestCategory(TestCategory.COSMOSDBNOSQL)]
+        [TestMethod("Validates that local CosmosDB_NoSQL settings can be loaded and the correct classes are in the service provider."), TestCategory(TestCategory.COSMOSDBNOSQL)]
         public void TestLoadingLocalCosmosSettings()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
@@ -574,20 +533,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             RuntimeConfigProvider configProvider = server.Services.GetService<RuntimeConfigProvider>();
 
             Assert.IsNotNull(configProvider, "Configuration Provider shouldn't be null after setting the configuration at runtime.");
-            Assert.IsNotNull(configProvider.GetRuntimeConfiguration(), "Runtime Configuration shouldn't be null after setting the configuration at runtime.");
-            RuntimeConfig configuration;
-            bool isConfigSet = configProvider.TryGetRuntimeConfiguration(out configuration);
-            Assert.IsNotNull(configuration, "TryGetRuntimeConfiguration should set the config in the out parameter.");
-            Assert.IsTrue(isConfigSet, "TryGetRuntimeConfiguration should return true when the config is set.");
+            Assert.IsTrue(configProvider.TryGetConfig(out RuntimeConfig configuration), "TryGetConfig should return true when the config is set.");
+            Assert.IsNotNull(configuration, "Config returned should not be null.");
 
             ConfigurationPostParameters expectedParameters = GetCosmosConfigurationParameters();
-            string expectedSchema = expectedParameters.Schema;
-            string expectedConnectionString = expectedParameters.ConnectionString;
+            Assert.AreEqual(DatabaseType.CosmosDB_NoSQL, configuration.DataSource.DatabaseType, "Expected CosmosDB_NoSQL database type after configuring the runtime with CosmosDB_NoSQL settings.");
+            Assert.AreEqual(expectedParameters.Schema, configuration.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>().GraphQLSchema, "Expected the schema in the configuration to match the one sent to the configuration endpoint.");
 
-            Assert.AreEqual(DatabaseType.cosmosdb_nosql, configuration.DatabaseType, "Expected cosmosdb_nosql database type after configuring the runtime with cosmosdb_nosql settings.");
-            Assert.AreEqual(expectedSchema, configuration.DataSource.CosmosDbNoSql.GraphQLSchema, "Expected the schema in the configuration to match the one sent to the configuration endpoint.");
-            Assert.AreEqual(expectedConnectionString, configuration.ConnectionString, "Expected the connection string in the configuration to match the one sent to the configuration endpoint.");
-            string db = configProvider.GetRuntimeConfiguration().DataSource.CosmosDbNoSql.Database;
+            // Don't use Assert.AreEqual, because a failure will print the entire connection string in the error message.
+            Assert.IsTrue(expectedParameters.ConnectionString == configuration.DataSource.ConnectionString, "Expected the connection string in the configuration to match the one sent to the configuration endpoint.");
+            string db = configuration.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>().Database;
             Assert.AreEqual(COSMOS_DATABASE_NAME, db, "Expected the database name in the runtime config to match the one sent to the configuration endpoint.");
         }
 
@@ -614,9 +569,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// deserialization succeeds.
         /// </summary>
         [TestMethod("Validates if deserialization of MsSql config file succeeds."), TestCategory(TestCategory.MSSQL)]
-        public void TestReadingRuntimeConfigForMsSql()
+        public Task TestReadingRuntimeConfigForMsSql()
         {
-            ConfigFileDeserializationValidationHelper(File.ReadAllText($"{RuntimeConfigPath.CONFIGFILE_NAME}.{MSSQL_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"));
+            return ConfigFileDeserializationValidationHelper(File.ReadAllText($"{RuntimeConfigLoader.CONFIGFILE_NAME}.{MSSQL_ENVIRONMENT}{RuntimeConfigLoader.CONFIG_EXTENSION}"));
         }
 
         /// <summary>
@@ -624,9 +579,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// deserialization succeeds.
         /// </summary>
         [TestMethod("Validates if deserialization of MySql config file succeeds."), TestCategory(TestCategory.MYSQL)]
-        public void TestReadingRuntimeConfigForMySql()
+        public Task TestReadingRuntimeConfigForMySql()
         {
-            ConfigFileDeserializationValidationHelper(File.ReadAllText($"{RuntimeConfigPath.CONFIGFILE_NAME}.{MYSQL_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"));
+            return ConfigFileDeserializationValidationHelper(File.ReadAllText($"{RuntimeConfigLoader.CONFIGFILE_NAME}.{MYSQL_ENVIRONMENT}{RuntimeConfigLoader.CONFIG_EXTENSION}"));
         }
 
         /// <summary>
@@ -634,152 +589,35 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// deserialization succeeds.
         /// </summary>
         [TestMethod("Validates if deserialization of PostgreSql config file succeeds."), TestCategory(TestCategory.POSTGRESQL)]
-        public void TestReadingRuntimeConfigForPostgreSql()
+        public Task TestReadingRuntimeConfigForPostgreSql()
         {
-            ConfigFileDeserializationValidationHelper(File.ReadAllText($"{RuntimeConfigPath.CONFIGFILE_NAME}.{POSTGRESQL_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"));
+            return ConfigFileDeserializationValidationHelper(File.ReadAllText($"{RuntimeConfigLoader.CONFIGFILE_NAME}.{POSTGRESQL_ENVIRONMENT}{RuntimeConfigLoader.CONFIG_EXTENSION}"));
         }
 
         /// <summary>
         /// This test reads the dab-config.CosmosDb_NoSql.json file and validates that the
         /// deserialization succeeds.
         /// </summary>
-        [TestMethod("Validates if deserialization of the cosmosdb_nosql config file succeeds."), TestCategory(TestCategory.COSMOSDBNOSQL)]
-        public void TestReadingRuntimeConfigForCosmos()
+        [TestMethod("Validates if deserialization of the CosmosDB_NoSQL config file succeeds."), TestCategory(TestCategory.COSMOSDBNOSQL)]
+        public Task TestReadingRuntimeConfigForCosmos()
         {
-            ConfigFileDeserializationValidationHelper(File.ReadAllText($"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"));
+            return ConfigFileDeserializationValidationHelper(File.ReadAllText($"{RuntimeConfigLoader.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigLoader.CONFIG_EXTENSION}"));
         }
 
         /// <summary>
         /// Helper method to validate the deserialization of the "entities" section of the config file
-        /// This is used in unit tests that validate the deserialiation of the config files
+        /// This is used in unit tests that validate the deserialization of the config files
         /// </summary>
         /// <param name="runtimeConfig"></param>
-        private static void ConfigFileDeserializationValidationHelper(string jsonString)
+        private Task ConfigFileDeserializationValidationHelper(string jsonString)
         {
-            Mock<ILogger> logger = new();
-            RuntimeConfig.TryGetDeserializedRuntimeConfig(jsonString, out RuntimeConfig runtimeConfig, logger.Object);
-            Assert.IsNotNull(runtimeConfig.Schema);
-            Assert.IsInstanceOfType(runtimeConfig.DataSource, typeof(DataSource));
-            Assert.IsTrue(runtimeConfig.DataSource.CosmosDbNoSql == null
-                || runtimeConfig.DataSource.CosmosDbNoSql.GetType() == typeof(CosmosDbNoSqlOptions));
-            Assert.IsTrue(runtimeConfig.DataSource.MsSql == null
-                || runtimeConfig.DataSource.MsSql.GetType() == typeof(MsSqlOptions));
-            Assert.IsTrue(runtimeConfig.DataSource.PostgreSql == null
-                || runtimeConfig.DataSource.PostgreSql.GetType() == typeof(PostgreSqlOptions));
-            Assert.IsTrue(runtimeConfig.DataSource.MySql == null
-                || runtimeConfig.DataSource.MySql.GetType() == typeof(MySqlOptions));
-
-            foreach (Entity entity in runtimeConfig.Entities.Values)
-            {
-                Assert.IsTrue(((JsonElement)entity.Source).ValueKind is JsonValueKind.String
-                    || ((JsonElement)entity.Source).ValueKind is JsonValueKind.Object);
-
-                Assert.IsTrue(entity.Rest is null
-                    || ((JsonElement)entity.Rest).ValueKind is JsonValueKind.True
-                    || ((JsonElement)entity.Rest).ValueKind is JsonValueKind.False
-                    || ((JsonElement)entity.Rest).ValueKind is JsonValueKind.Object);
-                if (entity.Rest != null
-                    && ((JsonElement)entity.Rest).ValueKind is JsonValueKind.Object)
-                {
-                    JsonElement restConfigElement = (JsonElement)entity.Rest;
-                    if (!restConfigElement.TryGetProperty("methods", out JsonElement _))
-                    {
-                        RestEntitySettings rest = JsonSerializer.Deserialize<RestEntitySettings>(restConfigElement, RuntimeConfig.SerializerOptions);
-                        Assert.IsTrue(((JsonElement)rest.Path).ValueKind is JsonValueKind.String
-                                     || ((JsonElement)rest.Path).ValueKind is JsonValueKind.True
-                                     || ((JsonElement)rest.Path).ValueKind is JsonValueKind.False);
-                    }
-                    else
-                    {
-                        if (!restConfigElement.TryGetProperty("path", out JsonElement _))
-                        {
-                            RestStoredProcedureEntitySettings rest = JsonSerializer.Deserialize<RestStoredProcedureEntitySettings>(restConfigElement, RuntimeConfig.SerializerOptions);
-                            Assert.AreEqual(typeof(RestMethod[]), rest.RestMethods.GetType());
-                        }
-                        else
-                        {
-                            RestStoredProcedureEntityVerboseSettings rest = JsonSerializer.Deserialize<RestStoredProcedureEntityVerboseSettings>(restConfigElement, RuntimeConfig.SerializerOptions);
-                            Assert.AreEqual(typeof(RestMethod[]), rest.RestMethods.GetType());
-                            Assert.IsTrue((((JsonElement)rest.Path).ValueKind is JsonValueKind.String)
-                                        || (((JsonElement)rest.Path).ValueKind is JsonValueKind.True)
-                                        || (((JsonElement)rest.Path).ValueKind is JsonValueKind.False));
-                        }
-
-                    }
-
-                }
-
-                Assert.IsTrue(entity.GraphQL is null
-                    || entity.GraphQL.GetType() == typeof(bool)
-                    || entity.GraphQL.GetType() == typeof(GraphQLEntitySettings)
-                    || entity.GraphQL.GetType() == typeof(GraphQLStoredProcedureEntityOperationSettings)
-                    || entity.GraphQL.GetType() == typeof(GraphQLStoredProcedureEntityVerboseSettings));
-
-                if (entity.GraphQL is not null)
-                {
-                    if (entity.GraphQL.GetType() == typeof(GraphQLEntitySettings))
-                    {
-                        GraphQLEntitySettings graphQL = (GraphQLEntitySettings)entity.GraphQL;
-                        Assert.IsTrue(graphQL.Type.GetType() == typeof(string)
-                                     || graphQL.Type.GetType() == typeof(SingularPlural));
-                    }
-                    else if (entity.GraphQL.GetType() == typeof(GraphQLStoredProcedureEntityOperationSettings))
-                    {
-                        GraphQLStoredProcedureEntityOperationSettings graphQL = (GraphQLStoredProcedureEntityOperationSettings)entity.GraphQL;
-                        Assert.AreEqual(typeof(string), graphQL.GraphQLOperation.GetType());
-                    }
-                    else if (entity.GraphQL.GetType() == typeof(GraphQLStoredProcedureEntityVerboseSettings))
-                    {
-                        GraphQLStoredProcedureEntityVerboseSettings graphQL = (GraphQLStoredProcedureEntityVerboseSettings)entity.GraphQL;
-                        Assert.AreEqual(typeof(string), graphQL.GraphQLOperation.GetType());
-                        Assert.IsTrue(graphQL.Type.GetType() == typeof(bool)
-                                    || graphQL.Type.GetType() == typeof(string)
-                                    || graphQL.Type.GetType() == typeof(SingularPlural));
-                    }
-                }
-
-                Assert.IsInstanceOfType(entity.Permissions, typeof(PermissionSetting[]));
-
-                HashSet<Config.Operation> allowedActions =
-                            new() { Config.Operation.All, Config.Operation.Create, Config.Operation.Read,
-                                Config.Operation.Update, Config.Operation.Delete, Config.Operation.Execute };
-                foreach (PermissionSetting permission in entity.Permissions)
-                {
-                    foreach (object operation in permission.Operations)
-                    {
-
-                        Assert.IsTrue(((JsonElement)operation).ValueKind == JsonValueKind.String ||
-                            ((JsonElement)operation).ValueKind == JsonValueKind.Object);
-                        if (((JsonElement)operation).ValueKind == JsonValueKind.Object)
-                        {
-                            Config.PermissionOperation configOperation =
-                                ((JsonElement)operation).Deserialize<Config.PermissionOperation>(RuntimeConfig.SerializerOptions);
-                            Assert.IsTrue(allowedActions.Contains(configOperation.Name));
-                            Assert.IsTrue(configOperation.Policy == null
-                                || configOperation.Policy.GetType() == typeof(Policy));
-                            Assert.IsTrue(configOperation.Fields == null
-                                || configOperation.Fields.GetType() == typeof(Field));
-                        }
-                        else
-                        {
-                            Config.Operation name = AuthorizationResolver.WILDCARD.Equals(operation.ToString()) ? Config.Operation.All : ((JsonElement)operation).Deserialize<Config.Operation>(RuntimeConfig.SerializerOptions);
-                            Assert.IsTrue(allowedActions.Contains(name));
-                        }
-                    }
-                }
-
-                Assert.IsTrue(entity.Relationships == null ||
-                    entity.Relationships.GetType()
-                        == typeof(Dictionary<string, Relationship>));
-                Assert.IsTrue(entity.Mappings == null ||
-                    entity.Mappings.GetType()
-                        == typeof(Dictionary<string, string>));
-            }
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(jsonString, out RuntimeConfig runtimeConfig), "Deserialization of the config file failed.");
+            return Verify(runtimeConfig);
         }
 
         /// <summary>
         /// This function verifies command line configuration provider takes higher
-        /// precendence than default configuration file dab-config.json
+        /// precedence than default configuration file dab-config.json
         /// </summary>
         [TestMethod("Validates command line configuration provider."), TestCategory(TestCategory.COSMOSDBNOSQL)]
         public void TestCommandLineConfigurationProvider()
@@ -787,8 +625,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
             string[] args = new[]
             {
-                $"--ConfigFileName={RuntimeConfigPath.CONFIGFILE_NAME}." +
-                $"{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}"
+                $"--ConfigFileName={RuntimeConfigLoader.CONFIGFILE_NAME}." +
+                $"{COSMOS_ENVIRONMENT}{RuntimeConfigLoader.CONFIG_EXTENSION}"
             };
 
             TestServer server = new(Program.CreateWebHostBuilder(args));
@@ -798,7 +636,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         /// <summary>
         /// This function verifies the environment variable DAB_ENVIRONMENT
-        /// takes precendence than ASPNETCORE_ENVIRONMENT for the configuration file.
+        /// takes precedence than ASPNETCORE_ENVIRONMENT for the configuration file.
         /// </summary>
         [TestMethod("Validates precedence is given to DAB_ENVIRONMENT environment variable name."), TestCategory(TestCategory.COSMOSDBNOSQL)]
         public void TestRuntimeEnvironmentVariable()
@@ -806,7 +644,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Environment.SetEnvironmentVariable(
                 ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
             Environment.SetEnvironmentVariable(
-                RuntimeConfigPath.RUNTIME_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
+                RuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
 
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
@@ -816,8 +654,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestMethod("Validates the runtime configuration file."), TestCategory(TestCategory.MSSQL)]
         public void TestConfigIsValid()
         {
-            RuntimeConfigPath configPath =
-                TestHelper.GetRuntimeConfigPath(MSSQL_ENVIRONMENT);
+            TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
+            RuntimeConfigLoader configPath = TestHelper.GetRuntimeConfigLoader();
             RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(configPath);
 
             Mock<ILogger<RuntimeConfigValidator>> configValidatorLogger = new();
@@ -828,6 +666,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     configValidatorLogger.Object);
 
             configValidator.ValidateConfig();
+            TestHelper.UnsetAllDABEnvironmentVariables();
         }
 
         /// <summary>
@@ -836,26 +675,26 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// has highest precedence irrespective of what the connection string is in the config file.
         /// Verifying the Exception thrown.
         /// </summary>
-        [TestMethod("Validates that environment variable DAB_CONNSTRING has highest precedence."), TestCategory(TestCategory.COSMOSDBNOSQL)]
+        [TestMethod($"Validates that environment variable {RuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING} has highest precedence."), TestCategory(TestCategory.COSMOSDBNOSQL)]
         public void TestConnectionStringEnvVarHasHighestPrecedence()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
             Environment.SetEnvironmentVariable(
-                $"{RuntimeConfigPath.ENVIRONMENT_PREFIX}{nameof(RuntimeConfigPath.CONNSTRING)}",
+                RuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING,
                 "Invalid Connection String");
 
             try
             {
                 TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
                 _ = server.Services.GetService(typeof(CosmosClientProvider)) as CosmosClientProvider;
-                Assert.Fail($"{RuntimeConfigPath.ENVIRONMENT_PREFIX}{nameof(RuntimeConfigPath.CONNSTRING)} is not given highest precedence");
+                Assert.Fail($"{RuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING} is not given highest precedence");
             }
             catch (Exception e)
             {
                 Assert.AreEqual(typeof(ApplicationException), e.GetType());
                 Assert.AreEqual(
                     $"Could not initialize the engine with the runtime config file: " +
-                    $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}",
+                    $"{RuntimeConfigLoader.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigLoader.CONFIG_EXTENSION}",
                     e.Message);
             }
         }
@@ -875,14 +714,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             bool considerOverrides,
             string expectedRuntimeConfigFile)
         {
-            if (!File.Exists(expectedRuntimeConfigFile))
-            {
-                File.Create(expectedRuntimeConfigFile);
-            }
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(expectedRuntimeConfigFile, new MockFileData(string.Empty));
+            RuntimeConfigLoader runtimeConfigLoader = new(fileSystem);
 
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, hostingEnvironmentValue);
             Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
-            string actualRuntimeConfigFile = GetFileNameForEnvironment(hostingEnvironmentValue, considerOverrides);
+            string actualRuntimeConfigFile = runtimeConfigLoader.GetFileNameForEnvironment(hostingEnvironmentValue, considerOverrides);
             Assert.AreEqual(expectedRuntimeConfigFile, actualRuntimeConfigFile);
         }
 
@@ -891,52 +729,52 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// when accessed interactively via browser.
         /// </summary>
         /// <param name="endpoint">The endpoint route</param>
-        /// <param name="hostModeType">The mode in which the service is executing.</param>
+        /// <param name="hostMode">The mode in which the service is executing.</param>
         /// <param name="expectedStatusCode">Expected Status Code.</param>
         /// <param name="expectedContent">The expected phrase in the response body.</param>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow("/graphql/", HostModeType.Development, HttpStatusCode.OK, "Banana Cake Pop",
+        [DataRow("/graphql/", HostMode.Development, HttpStatusCode.OK, "Banana Cake Pop",
             DisplayName = "GraphQL endpoint with no query in development mode.")]
-        [DataRow("/graphql", HostModeType.Production, HttpStatusCode.BadRequest,
+        [DataRow("/graphql", HostMode.Production, HttpStatusCode.BadRequest,
             "Either the parameter query or the parameter id has to be set",
             DisplayName = "GraphQL endpoint with no query in production mode.")]
-        [DataRow("/graphql/ui", HostModeType.Development, HttpStatusCode.NotFound,
+        [DataRow("/graphql/ui", HostMode.Development, HttpStatusCode.NotFound,
             DisplayName = "Default BananaCakePop in development mode.")]
-        [DataRow("/graphql/ui", HostModeType.Production, HttpStatusCode.NotFound,
+        [DataRow("/graphql/ui", HostMode.Production, HttpStatusCode.NotFound,
             DisplayName = "Default BananaCakePop in production mode.")]
         [DataRow("/graphql?query={book_by_pk(id: 1){title}}",
-            HostModeType.Development, HttpStatusCode.Moved,
+            HostMode.Development, HttpStatusCode.Moved,
             DisplayName = "GraphQL endpoint with query in development mode.")]
         [DataRow("/graphql?query={book_by_pk(id: 1){title}}",
-            HostModeType.Production, HttpStatusCode.OK, "data",
+            HostMode.Production, HttpStatusCode.OK, "data",
             DisplayName = "GraphQL endpoint with query in production mode.")]
-        [DataRow(RestController.REDIRECTED_ROUTE, HostModeType.Development, HttpStatusCode.BadRequest,
+        [DataRow(RestController.REDIRECTED_ROUTE, HostMode.Development, HttpStatusCode.BadRequest,
             "GraphQL request redirected to favicon.ico.",
             DisplayName = "Redirected endpoint in development mode.")]
-        [DataRow(RestController.REDIRECTED_ROUTE, HostModeType.Production, HttpStatusCode.BadRequest,
+        [DataRow(RestController.REDIRECTED_ROUTE, HostMode.Production, HttpStatusCode.BadRequest,
             "GraphQL request redirected to favicon.ico.",
             DisplayName = "Redirected endpoint in production mode.")]
         public async Task TestInteractiveGraphQLEndpoints(
             string endpoint,
-            HostModeType hostModeType,
+            HostMode HostMode,
             HttpStatusCode expectedStatusCode,
             string expectedContent = "")
         {
             const string CUSTOM_CONFIG = "custom-config.json";
-            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(MSSQL_ENVIRONMENT);
-            RuntimeConfig config = configProvider.GetRuntimeConfiguration();
-            HostGlobalSettings customHostGlobalSettings = config.HostGlobalSettings with { Mode = hostModeType };
-            JsonElement serializedCustomHostGlobalSettings =
-                JsonSerializer.SerializeToElement(customHostGlobalSettings, RuntimeConfig.SerializerOptions);
-            Dictionary<GlobalSettingsType, object> customRuntimeSettings = new(config.RuntimeSettings);
-            customRuntimeSettings.Remove(GlobalSettingsType.Host);
-            customRuntimeSettings.Add(GlobalSettingsType.Host, serializedCustomHostGlobalSettings);
-            RuntimeConfig configWithCustomHostMode =
-                config with { RuntimeSettings = customRuntimeSettings };
-            File.WriteAllText(
-                CUSTOM_CONFIG,
-                JsonSerializer.Serialize(configWithCustomHostMode, RuntimeConfig.SerializerOptions));
+            TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
+            FileSystem fileSystem = new();
+            RuntimeConfigLoader loader = new(fileSystem);
+            loader.TryLoadKnownConfig(out RuntimeConfig config);
+
+            RuntimeConfig configWithCustomHostMode = config with
+            {
+                Runtime = config.Runtime with
+                {
+                    Host = config.Runtime.Host with { Mode = HostMode }
+                }
+            };
+            File.WriteAllText(CUSTOM_CONFIG, configWithCustomHostMode.ToJson());
             string[] args = new[]
             {
                 $"--ConfigFileName={CUSTOM_CONFIG}"
@@ -955,6 +793,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Assert.AreEqual(expectedStatusCode, response.StatusCode);
                 string actualBody = await response.Content.ReadAsStringAsync();
                 Assert.IsTrue(actualBody.Contains(expectedContent));
+
+                TestHelper.UnsetAllDABEnvironmentVariables();
             }
         }
 
@@ -980,32 +820,19 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             string requestPath,
             HttpStatusCode expectedStatusCode)
         {
-            Dictionary<GlobalSettingsType, object> settings = new()
-            {
-                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){ Path = graphQLConfiguredPath, AllowIntrospection = true }) },
-                { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings()) }
-            };
+            GraphQLRuntimeOptions graphqlOptions = new(Path: graphQLConfiguredPath);
 
-            DataSource dataSource = new(DatabaseType.mssql)
-            {
-                ConnectionString = GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)
-            };
+            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), new());
 
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(globalSettings: settings, dataSource: dataSource);
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, new());
             const string CUSTOM_CONFIG = "custom-config.json";
-            File.WriteAllText(
-                CUSTOM_CONFIG,
-                JsonSerializer.Serialize(configuration, RuntimeConfig.SerializerOptions));
+            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
 
-            string[] args = new[]
-            {
-                    $"--ConfigFileName={CUSTOM_CONFIG}"
-            };
+            string[] args = new[] { $"--ConfigFileName={CUSTOM_CONFIG}" };
 
-            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
-            using (HttpClient client = server.CreateClient())
-            {
-                string query = @"{
+            using TestServer server = new(Program.CreateWebHostBuilder(args));
+            using HttpClient client = server.CreateClient();
+            string query = @"{
                     book_by_pk(id: 1) {
                        id,
                        title,
@@ -1013,18 +840,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     }
                 }";
 
-                object payload = new { query };
+            var payload = new { query };
 
-                HttpRequestMessage request = new(HttpMethod.Post, requestPath)
-                {
-                    Content = JsonContent.Create(payload)
-                };
+            HttpRequestMessage request = new(HttpMethod.Post, requestPath)
+            {
+                Content = JsonContent.Create(payload)
+            };
 
-                HttpResponseMessage response = await client.SendAsync(request);
-                string body = await response.Content.ReadAsStringAsync();
+            HttpResponseMessage response = await client.SendAsync(request);
+            string body = await response.Content.ReadAsStringAsync();
 
-                Assert.AreEqual(expectedStatusCode, response.StatusCode);
-            }
+            Assert.AreEqual(expectedStatusCode, response.StatusCode);
         }
 
         /// <summary>
@@ -1039,24 +865,24 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <param name="expectedErrorMessage">Right error message that should be shown to the end user</param>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow(RestMethod.Get, "/api/Book/id/one", null, "Invalid value provided for field: id", DisplayName = "Validates the error message for a GET request with incorrect primary key parameter type on a table in production mode")]
-        [DataRow(RestMethod.Get, "/api/books_view_all/id/one", null, "Invalid value provided for field: id", DisplayName = "Validates the error message for a GET request with incorrect primary key parameter type on a view in production mode")]
-        [DataRow(RestMethod.Get, "/api/GetBook?id=one", REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validates the error message for a GET request on a stored-procedure with incorrect parameter type in production mode")]
-        [DataRow(RestMethod.Get, "/api/GQLmappings/column1/one", null, "Invalid value provided for field: column1", DisplayName = "Validates the error message for a GET request with incorrect primary key parameter type with alias defined for primary key column on a table in production mode")]
-        [DataRow(RestMethod.Post, "/api/Book", REQUEST_BODY_WITH_INCORRECT_PARAM_TYPES, "Invalid value provided for field: publisher_id", DisplayName = "Validates the error message for a POST request with incorrect parameter type in the request body on a table in production mode")]
-        [DataRow(RestMethod.Put, "/api/Book/id/one", REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validates the error message for a PUT request with incorrect primary key parameter type on a table in production mode")]
-        [DataRow(RestMethod.Put, "/api/Book/id/1", REQUEST_BODY_WITH_INCORRECT_PARAM_TYPES, "Invalid value provided for field: publisher_id", DisplayName = "Validates the error message for a bad PUT request with incorrect parameter type in the request body on a table in production mode")]
-        [DataRow(RestMethod.Patch, "/api/Book/id/one", REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validates the error message for a PATCH request with incorrect primary key parameter type on a table in production mode")]
-        [DataRow(RestMethod.Patch, "/api/Book/id/1", REQUEST_BODY_WITH_INCORRECT_PARAM_TYPES, "Invalid value provided for field: publisher_id", DisplayName = "Validates the error message for a PATCH request with incorrect parameter type in the request body on a table in production mode")]
-        [DataRow(RestMethod.Delete, "/api/Book/id/one", REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validates the error message for a DELETE request with incorrect primary key parameter type on a table in production mode")]
+        [DataRow(SupportedHttpVerb.Get, "/api/Book/id/one", null, "Invalid value provided for field: id", DisplayName = "Validates the error message for a GET request with incorrect primary key parameter type on a table in production mode")]
+        [DataRow(SupportedHttpVerb.Get, "/api/books_view_all/id/one", null, "Invalid value provided for field: id", DisplayName = "Validates the error message for a GET request with incorrect primary key parameter type on a view in production mode")]
+        [DataRow(SupportedHttpVerb.Get, "/api/GetBook?id=one", REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validates the error message for a GET request on a stored-procedure with incorrect parameter type in production mode")]
+        [DataRow(SupportedHttpVerb.Get, "/api/GQLmappings/column1/one", null, "Invalid value provided for field: column1", DisplayName = "Validates the error message for a GET request with incorrect primary key parameter type with alias defined for primary key column on a table in production mode")]
+        [DataRow(SupportedHttpVerb.Post, "/api/Book", REQUEST_BODY_WITH_INCORRECT_PARAM_TYPES, "Invalid value provided for field: publisher_id", DisplayName = "Validates the error message for a POST request with incorrect parameter type in the request body on a table in production mode")]
+        [DataRow(SupportedHttpVerb.Put, "/api/Book/id/one", REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validates the error message for a PUT request with incorrect primary key parameter type on a table in production mode")]
+        [DataRow(SupportedHttpVerb.Put, "/api/Book/id/1", REQUEST_BODY_WITH_INCORRECT_PARAM_TYPES, "Invalid value provided for field: publisher_id", DisplayName = "Validates the error message for a bad PUT request with incorrect parameter type in the request body on a table in production mode")]
+        [DataRow(SupportedHttpVerb.Patch, "/api/Book/id/one", REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validates the error message for a PATCH request with incorrect primary key parameter type on a table in production mode")]
+        [DataRow(SupportedHttpVerb.Patch, "/api/Book/id/1", REQUEST_BODY_WITH_INCORRECT_PARAM_TYPES, "Invalid value provided for field: publisher_id", DisplayName = "Validates the error message for a PATCH request with incorrect parameter type in the request body on a table in production mode")]
+        [DataRow(SupportedHttpVerb.Delete, "/api/Book/id/one", REQUEST_BODY_WITH_CORRECT_PARAM_TYPES, "Invalid value provided for field: id", DisplayName = "Validates the error message for a DELETE request with incorrect primary key parameter type on a table in production mode")]
         public async Task TestGenericErrorMessageForRestApiInProductionMode(
-            RestMethod requestType,
+            SupportedHttpVerb requestType,
             string requestPath,
             string requestBody,
             string expectedErrorMessage)
         {
             const string CUSTOM_CONFIG = "custom-config.json";
-            TestHelper.ConstructNewConfigWithCustomSettings(CUSTOM_CONFIG, TestCategory.MSSQL, HostModeType.Production);
+            TestHelper.ConstructNewConfigWithSpecifiedHostMode(CUSTOM_CONFIG, HostMode.Production, TestCategory.MSSQL);
             string[] args = new[]
             {
                     $"--ConfigFileName={CUSTOM_CONFIG}"
@@ -1067,7 +893,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             {
                 HttpMethod httpMethod = SqlTestHelper.ConvertRestMethodToHttpMethod(requestType);
                 HttpRequestMessage request;
-                if (requestType is RestMethod.Get || requestType is RestMethod.Delete)
+                if (requestType is SupportedHttpVerb.Get || requestType is SupportedHttpVerb.Delete)
                 {
                     request = new(httpMethod, requestPath);
                 }
@@ -1096,7 +922,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             const string CUSTOM_CONFIG = "custom-config.json";
             string restBaseRoute = "/rest-api";
-            TestHelper.ConstructNewConfigWithCustomSettings(CUSTOM_CONFIG, TestCategory.MSSQL, restBaseRoute: restBaseRoute);
+            TestHelper.ConstructNewConfigWithSpecifiedHostMode(CUSTOM_CONFIG, HostMode.Production, TestCategory.MSSQL, restBaseRoute: restBaseRoute);
             string[] args = new[]
             {
                     $"--ConfigFileName={CUSTOM_CONFIG}"
@@ -1106,7 +932,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             using (HttpClient client = server.CreateClient())
             {
                 string requestPath = "/api/MappedBookmarks";
-                HttpMethod httpMethod = SqlTestHelper.ConvertRestMethodToHttpMethod(RestMethod.Get);
+                HttpMethod httpMethod = SqlTestHelper.ConvertRestMethodToHttpMethod(SupportedHttpVerb.Get);
                 HttpRequestMessage request = new(httpMethod, requestPath);
 
                 HttpResponseMessage response = await client.SendAsync(request);
@@ -1149,22 +975,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             HttpStatusCode expectedStatusCodeForGraphQL,
             string configurationEndpoint)
         {
-            Dictionary<GlobalSettingsType, object> settings = new()
-            {
-                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){ Enabled = isGraphQLEnabled }) },
-                { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings(){ Enabled = isRestEnabled }) }
-            };
+            GraphQLRuntimeOptions graphqlOptions = new(Enabled: isGraphQLEnabled);
+            RestRuntimeOptions restRuntimeOptions = new(Enabled: isRestEnabled);
 
-            DataSource dataSource = new(DatabaseType.mssql)
-            {
-                ConnectionString = GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)
-            };
+            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), new());
 
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(globalSettings: settings, dataSource: dataSource);
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions);
             const string CUSTOM_CONFIG = "custom-config.json";
-            File.WriteAllText(
-                CUSTOM_CONFIG,
-                JsonSerializer.Serialize(configuration, RuntimeConfig.SerializerOptions));
+            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
 
             string[] args = new[]
             {
@@ -1228,34 +1046,23 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestMethod, TestCategory(TestCategory.MSSQL)]
         public async Task TestEngineSupportViewsWithoutKeyFieldsInConfigForMsSQL()
         {
-            Dictionary<GlobalSettingsType, object> settings = new()
-            {
-                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){}) },
-                { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings(){}) }
-            };
-
-            DataSource dataSource = new(DatabaseType.mssql)
-            {
-                ConnectionString = GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)
-            };
-
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(globalSettings: settings, dataSource: dataSource);
-
-            const string CUSTOM_CONFIG = "custom-config.json";
+            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), new());
             Entity viewEntity = new(
-                Source: JsonSerializer.SerializeToElement("books_view_all"),
-                Rest: true,
-                GraphQL: true,
-                Permissions: new PermissionSetting[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Source: new("books_view_all", EntitySourceType.Table, null, null),
+                Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
+                GraphQL: new("", ""),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,
                 Mappings: null
             );
 
-            configuration.Entities.Add("books_view_all", viewEntity);
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, new(), new(), viewEntity, "books_view_all");
+
+            const string CUSTOM_CONFIG = "custom-config.json";
 
             File.WriteAllText(
                 CUSTOM_CONFIG,
-                JsonSerializer.Serialize(configuration, RuntimeConfig.SerializerOptions));
+                configuration.ToJson());
 
             string[] args = new[]
             {
@@ -1304,34 +1111,38 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <param name="expectError">Whether an error is expected.</param>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow(HostModeType.Development, EasyAuthType.AppService, false, false, DisplayName = "AppService Dev - No EnvVars - No Error")]
-        [DataRow(HostModeType.Development, EasyAuthType.AppService, true, false, DisplayName = "AppService Dev - EnvVars - No Error")]
-        [DataRow(HostModeType.Production, EasyAuthType.AppService, false, true, DisplayName = "AppService Prod - No EnvVars - Error")]
-        [DataRow(HostModeType.Production, EasyAuthType.AppService, true, false, DisplayName = "AppService Prod - EnvVars - Error")]
-        [DataRow(HostModeType.Development, EasyAuthType.StaticWebApps, false, false, DisplayName = "SWA Dev - No EnvVars - No Error")]
-        [DataRow(HostModeType.Development, EasyAuthType.StaticWebApps, true, false, DisplayName = "SWA Dev - EnvVars - No Error")]
-        [DataRow(HostModeType.Production, EasyAuthType.StaticWebApps, false, false, DisplayName = "SWA Prod - No EnvVars - No Error")]
-        [DataRow(HostModeType.Production, EasyAuthType.StaticWebApps, true, false, DisplayName = "SWA Prod - EnvVars - No Error")]
-        public void TestProductionModeAppServiceEnvironmentCheck(HostModeType hostMode, EasyAuthType authType, bool setEnvVars, bool expectError)
+        [DataRow(HostMode.Development, EasyAuthType.AppService, false, false, DisplayName = "AppService Dev - No EnvVars - No Error")]
+        [DataRow(HostMode.Development, EasyAuthType.AppService, true, false, DisplayName = "AppService Dev - EnvVars - No Error")]
+        [DataRow(HostMode.Production, EasyAuthType.AppService, false, true, DisplayName = "AppService Prod - No EnvVars - Error")]
+        [DataRow(HostMode.Production, EasyAuthType.AppService, true, false, DisplayName = "AppService Prod - EnvVars - Error")]
+        [DataRow(HostMode.Development, EasyAuthType.StaticWebApps, false, false, DisplayName = "SWA Dev - No EnvVars - No Error")]
+        [DataRow(HostMode.Development, EasyAuthType.StaticWebApps, true, false, DisplayName = "SWA Dev - EnvVars - No Error")]
+        [DataRow(HostMode.Production, EasyAuthType.StaticWebApps, false, false, DisplayName = "SWA Prod - No EnvVars - No Error")]
+        [DataRow(HostMode.Production, EasyAuthType.StaticWebApps, true, false, DisplayName = "SWA Prod - EnvVars - No Error")]
+        public void TestProductionModeAppServiceEnvironmentCheck(HostMode hostMode, EasyAuthType authType, bool setEnvVars, bool expectError)
         {
             // Clears or sets App Service Environment Variables based on test input.
             Environment.SetEnvironmentVariable(AppServiceAuthenticationInfo.APPSERVICESAUTH_ENABLED_ENVVAR, setEnvVars ? "true" : null);
             Environment.SetEnvironmentVariable(AppServiceAuthenticationInfo.APPSERVICESAUTH_IDENTITYPROVIDER_ENVVAR, setEnvVars ? "AzureActiveDirectory" : null);
+            TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
 
-            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(MSSQL_ENVIRONMENT);
-            RuntimeConfig config = configProvider.GetRuntimeConfiguration();
+            FileSystem fileSystem = new();
+            RuntimeConfigLoader loader = new(fileSystem);
+
+            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(loader);
+            RuntimeConfig config = configProvider.GetConfig();
 
             // Setup configuration
-            AuthenticationConfig authenticationConfig = new(Provider: authType.ToString());
-            HostGlobalSettings customHostGlobalSettings = config.HostGlobalSettings with { Mode = hostMode, Authentication = authenticationConfig };
-            JsonElement serializedCustomHostGlobalSettings = JsonSerializer.SerializeToElement(customHostGlobalSettings, RuntimeConfig.SerializerOptions);
-            Dictionary<GlobalSettingsType, object> customRuntimeSettings = new(config.RuntimeSettings);
-            customRuntimeSettings.Remove(GlobalSettingsType.Host);
-            customRuntimeSettings.Add(GlobalSettingsType.Host, serializedCustomHostGlobalSettings);
-            RuntimeConfig configWithCustomHostMode = config with { RuntimeSettings = customRuntimeSettings };
+            AuthenticationOptions AuthenticationOptions = new(Provider: authType.ToString(), null);
+            RuntimeOptions runtimeOptions = new(
+                Rest: new(),
+                GraphQL: new(),
+                Host: new(null, AuthenticationOptions, hostMode)
+            );
+            RuntimeConfig configWithCustomHostMode = config with { Runtime = runtimeOptions };
 
             const string CUSTOM_CONFIG = "custom-config.json";
-            File.WriteAllText(path: CUSTOM_CONFIG, contents: JsonSerializer.Serialize(configWithCustomHostMode, RuntimeConfig.SerializerOptions));
+            File.WriteAllText(CUSTOM_CONFIG, configWithCustomHostMode.ToJson());
             string[] args = new[]
             {
                 $"--ConfigFileName={CUSTOM_CONFIG}"
@@ -1364,26 +1175,18 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [DataRow(true, false, null, CONFIGURATION_ENDPOINT_V2, DisplayName = "Enabled introspection does not return introspection forbidden error.")]
         public async Task TestSchemaIntrospectionQuery(bool enableIntrospection, bool expectError, string errorMessage, string configurationEndpoint)
         {
-            Dictionary<GlobalSettingsType, object> settings = new()
-            {
-                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){ AllowIntrospection = enableIntrospection }) },
-                { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings()) }
-            };
+            GraphQLRuntimeOptions graphqlOptions = new(AllowIntrospection: enableIntrospection);
+            RestRuntimeOptions restRuntimeOptions = new();
 
-            DataSource dataSource = new(DatabaseType.mssql)
-            {
-                ConnectionString = GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)
-            };
+            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), new());
 
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(globalSettings: settings, dataSource: dataSource);
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions);
             const string CUSTOM_CONFIG = "custom-config.json";
-            File.WriteAllText(
-                CUSTOM_CONFIG,
-                JsonSerializer.Serialize(configuration, RuntimeConfig.SerializerOptions));
+            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
 
             string[] args = new[]
             {
-                    $"--ConfigFileName={CUSTOM_CONFIG}"
+                $"--ConfigFileName={CUSTOM_CONFIG}"
             };
 
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
@@ -1424,16 +1227,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             string columnMapping,
             bool expectError)
         {
-            Dictionary<GlobalSettingsType, object> settings = new()
-            {
-                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){ Enabled = globalGraphQLEnabled }) },
-                { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings()) }
-            };
+            GraphQLRuntimeOptions graphqlOptions = new(Enabled: globalGraphQLEnabled);
+            RestRuntimeOptions restRuntimeOptions = new(Enabled: true);
 
-            DataSource dataSource = new(DatabaseType.mssql)
-            {
-                ConnectionString = GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)
-            };
+            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), new());
 
             // Configure Entity for testing
             Dictionary<string, string> mappings = new()
@@ -1447,24 +1244,21 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
 
             Entity entity = new(
-                Source: JsonSerializer.SerializeToElement("graphql_incompatible"),
-                Rest: null,
-                GraphQL: JsonSerializer.SerializeToElement(entityGraphQLEnabled),
-                Permissions: new PermissionSetting[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Source: new("graphql_incompatible", EntitySourceType.Table, null, null),
+                Rest: new(Array.Empty<SupportedHttpVerb>(), Enabled: false),
+                GraphQL: new("graphql_incompatible", "graphql_incompatibles", entityGraphQLEnabled),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,
                 Mappings: mappings
-                );
+            );
 
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(globalSettings: settings, dataSource: dataSource, entity: entity, entityName: "graphqlNameCompat");
-
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, entity, "graphqlNameCompat");
             const string CUSTOM_CONFIG = "custom-config.json";
-            File.WriteAllText(
-                CUSTOM_CONFIG,
-                JsonSerializer.Serialize(configuration, RuntimeConfig.SerializerOptions));
+            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
 
             string[] args = new[]
             {
-                    $"--ConfigFileName={CUSTOM_CONFIG}"
+                $"--ConfigFileName={CUSTOM_CONFIG}"
             };
 
             try
@@ -1497,35 +1291,36 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// This should note the openapi route that Swagger will use to retrieve the OpenAPI document.</param>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow("/api", HostModeType.Development, false, HttpStatusCode.OK, "{\"urls\":[{\"url\":\"/api/openapi\"", DisplayName = "SwaggerUI enabled in development mode.")]
-        [DataRow("/custompath", HostModeType.Development, false, HttpStatusCode.OK, "{\"urls\":[{\"url\":\"/custompath/openapi\"", DisplayName = "SwaggerUI enabled with custom REST path in development mode.")]
-        [DataRow("/api", HostModeType.Production, true, HttpStatusCode.BadRequest, "", DisplayName = "SwaggerUI disabled in production mode.")]
-        [DataRow("/custompath", HostModeType.Production, true, HttpStatusCode.BadRequest, "", DisplayName = "SwaggerUI disabled in production mode with custom REST path.")]
+        [DataRow("/api", HostMode.Development, false, HttpStatusCode.OK, "{\"urls\":[{\"url\":\"/api/openapi\"", DisplayName = "SwaggerUI enabled in development mode.")]
+        [DataRow("/custompath", HostMode.Development, false, HttpStatusCode.OK, "{\"urls\":[{\"url\":\"/custompath/openapi\"", DisplayName = "SwaggerUI enabled with custom REST path in development mode.")]
+        [DataRow("/api", HostMode.Production, true, HttpStatusCode.BadRequest, "", DisplayName = "SwaggerUI disabled in production mode.")]
+        [DataRow("/custompath", HostMode.Production, true, HttpStatusCode.BadRequest, "", DisplayName = "SwaggerUI disabled in production mode with custom REST path.")]
         public async Task OpenApi_InteractiveSwaggerUI(
             string customRestPath,
-            HostModeType hostModeType,
+            HostMode hostModeType,
             bool expectsError,
             HttpStatusCode expectedStatusCode,
             string expectedOpenApiTargetContent)
         {
             string swaggerEndpoint = "/swagger";
-            Dictionary<GlobalSettingsType, object> settings = new()
-            {
-                { GlobalSettingsType.Host, JsonSerializer.SerializeToElement(new HostGlobalSettings(){ Mode = hostModeType}) },
-                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){ Enabled = true }) },
-                { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings(){ Enabled = true, Path = customRestPath }) }
-            };
+            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), new());
 
-            DataSource dataSource = new(DatabaseType.mssql)
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource: dataSource, new(), new(Path: customRestPath));
+            configuration = configuration
+                with
             {
-                ConnectionString = GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)
+                Runtime = configuration.Runtime
+                with
+                {
+                    Host = configuration.Runtime.Host
+                with
+                    { Mode = hostModeType }
+                }
             };
-
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(globalSettings: settings, dataSource: dataSource);
             const string CUSTOM_CONFIG = "custom-config.json";
             File.WriteAllText(
                 CUSTOM_CONFIG,
-                JsonSerializer.Serialize(configuration, RuntimeConfig.SerializerOptions));
+                configuration.ToJson());
 
             string[] args = new[]
             {
@@ -1583,10 +1378,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             // Even though this entity is not under test, it must be supplied to the config
             // file creation function.
             Entity requiredEntity = new(
-                Source: JsonSerializer.SerializeToElement("books"),
-                Rest: JsonSerializer.SerializeToElement(false),
-                GraphQL: JsonSerializer.SerializeToElement(true),
-                Permissions: new PermissionSetting[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Source: new("books", EntitySourceType.Table, null, null),
+                Rest: new(Array.Empty<SupportedHttpVerb>(), Enabled: false),
+                GraphQL: new("book", "books"),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,
                 Mappings: null);
 
@@ -1602,28 +1397,26 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}"
             };
 
-            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
-            using (HttpClient client = server.CreateClient())
+            using TestServer server = new(Program.CreateWebHostBuilder(args));
+            using HttpClient client = server.CreateClient();
+            // Setup and send GET request
+            HttpRequestMessage readOpenApiDocumentRequest = new(HttpMethod.Get, $"{RestRuntimeOptions.DEFAULT_PATH}/{OPENAPI_DOCUMENT_ENDPOINT}");
+            HttpResponseMessage response = await client.SendAsync(readOpenApiDocumentRequest);
+
+            // Validate response
+            if (expectsError)
             {
-                // Setup and send GET request
-                HttpRequestMessage readOpenApiDocumentRequest = new(HttpMethod.Get, $"{GlobalSettings.REST_DEFAULT_PATH}/{OPENAPI_DOCUMENT_ENDPOINT}");
-                HttpResponseMessage response = await client.SendAsync(readOpenApiDocumentRequest);
+                Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
+            }
+            else
+            {
+                // Process response body
+                string responseBody = await response.Content.ReadAsStringAsync();
+                Dictionary<string, JsonElement> responseProperties = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(responseBody);
 
-                // Validate response
-                if (expectsError)
-                {
-                    Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
-                }
-                else
-                {
-                    // Process response body
-                    string responseBody = await response.Content.ReadAsStringAsync();
-                    Dictionary<string, JsonElement> responseProperties = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(responseBody);
-
-                    // Validate response body
-                    Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-                    ValidateOpenApiDocTopLevelPropertiesExist(responseProperties);
-                }
+                // Validate response body
+                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+                ValidateOpenApiDocTopLevelPropertiesExist(responseProperties);
             }
         }
 
@@ -1639,18 +1432,18 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             // Create the entities under test.
             Entity restEnabledEntity = new(
-                Source: JsonSerializer.SerializeToElement("books"),
-                Rest: JsonSerializer.SerializeToElement(true),
-                GraphQL: JsonSerializer.SerializeToElement(false),
-                Permissions: new PermissionSetting[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Source: new("books", EntitySourceType.Table, null, null),
+                Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
+                GraphQL: new("", "", false),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,
                 Mappings: null);
 
             Entity restDisabledEntity = new(
-                Source: JsonSerializer.SerializeToElement("publishers"),
-                Rest: JsonSerializer.SerializeToElement(false),
-                GraphQL: JsonSerializer.SerializeToElement(true),
-                Permissions: new PermissionSetting[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Source: new("publishers", EntitySourceType.Table, null, null),
+                Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS, Enabled: false),
+                GraphQL: new("publisher", "publishers", true),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,
                 Mappings: null);
 
@@ -1667,39 +1460,37 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}"
             };
 
-            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
-            using (HttpClient client = server.CreateClient())
-            {
-                // Setup and send GET request
-                HttpRequestMessage readOpenApiDocumentRequest = new(HttpMethod.Get, $"{GlobalSettings.REST_DEFAULT_PATH}/{OpenApiDocumentor.OPENAPI_ROUTE}");
-                HttpResponseMessage response = await client.SendAsync(readOpenApiDocumentRequest);
+            using TestServer server = new(Program.CreateWebHostBuilder(args));
+            using HttpClient client = server.CreateClient();
+            // Setup and send GET request
+            HttpRequestMessage readOpenApiDocumentRequest = new(HttpMethod.Get, $"{RestRuntimeOptions.DEFAULT_PATH}/{OpenApiDocumentor.OPENAPI_ROUTE}");
+            HttpResponseMessage response = await client.SendAsync(readOpenApiDocumentRequest);
 
-                // Parse response metadata
-                string responseBody = await response.Content.ReadAsStringAsync();
-                Dictionary<string, JsonElement> responseProperties = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(responseBody);
+            // Parse response metadata
+            string responseBody = await response.Content.ReadAsStringAsync();
+            Dictionary<string, JsonElement> responseProperties = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(responseBody);
 
-                // Validate response metadata
-                ValidateOpenApiDocTopLevelPropertiesExist(responseProperties);
-                JsonElement pathsElement = responseProperties[OpenApiDocumentorConstants.TOPLEVELPROPERTY_PATHS];
+            // Validate response metadata
+            ValidateOpenApiDocTopLevelPropertiesExist(responseProperties);
+            JsonElement pathsElement = responseProperties[OpenApiDocumentorConstants.TOPLEVELPROPERTY_PATHS];
 
-                // Validate that paths were created for the entity with REST enabled.
-                Assert.IsTrue(pathsElement.TryGetProperty("/Book", out _));
-                Assert.IsTrue(pathsElement.TryGetProperty("/Book/id/{id}", out _));
+            // Validate that paths were created for the entity with REST enabled.
+            Assert.IsTrue(pathsElement.TryGetProperty("/Book", out _));
+            Assert.IsTrue(pathsElement.TryGetProperty("/Book/id/{id}", out _));
 
-                // Validate that paths were not created for the entity with REST disabled.
-                Assert.IsFalse(pathsElement.TryGetProperty("/Publisher", out _));
-                Assert.IsFalse(pathsElement.TryGetProperty("/Publisher/id/{id}", out _));
+            // Validate that paths were not created for the entity with REST disabled.
+            Assert.IsFalse(pathsElement.TryGetProperty("/Publisher", out _));
+            Assert.IsFalse(pathsElement.TryGetProperty("/Publisher/id/{id}", out _));
 
-                JsonElement componentsElement = responseProperties[OpenApiDocumentorConstants.TOPLEVELPROPERTY_COMPONENTS];
-                Assert.IsTrue(componentsElement.TryGetProperty(OpenApiDocumentorConstants.PROPERTY_SCHEMAS, out JsonElement componentSchemasElement));
-                // Validate that components were created for the entity with REST enabled.
-                Assert.IsTrue(componentSchemasElement.TryGetProperty("Book_NoPK", out _));
-                Assert.IsTrue(componentSchemasElement.TryGetProperty("Book", out _));
+            JsonElement componentsElement = responseProperties[OpenApiDocumentorConstants.TOPLEVELPROPERTY_COMPONENTS];
+            Assert.IsTrue(componentsElement.TryGetProperty(OpenApiDocumentorConstants.PROPERTY_SCHEMAS, out JsonElement componentSchemasElement));
+            // Validate that components were created for the entity with REST enabled.
+            Assert.IsTrue(componentSchemasElement.TryGetProperty("Book_NoPK", out _));
+            Assert.IsTrue(componentSchemasElement.TryGetProperty("Book", out _));
 
-                // Validate that components were not created for the entity with REST disabled.
-                Assert.IsFalse(componentSchemasElement.TryGetProperty("Publisher_NoPK", out _));
-                Assert.IsFalse(componentSchemasElement.TryGetProperty("Publisher", out _));
-            }
+            // Validate that components were not created for the entity with REST disabled.
+            Assert.IsFalse(componentSchemasElement.TryGetProperty("Publisher_NoPK", out _));
+            Assert.IsFalse(componentSchemasElement.TryGetProperty("Publisher", out _));
         }
 
         /// <summary>
@@ -1710,28 +1501,21 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <param name="entityMap">Collection of entityName -> Entity object.</param>
         private static void CreateCustomConfigFile(bool globalRestEnabled, Dictionary<string, Entity> entityMap)
         {
-            Dictionary<GlobalSettingsType, object> globalSettings = new()
-            {
-                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){ Enabled = true }) },
-                { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings(){ Enabled = globalRestEnabled }) }
-            };
-
-            DataSource dataSource = new(DatabaseType.mssql)
-            {
-                ConnectionString = GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)
-            };
+            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), new());
 
             RuntimeConfig runtimeConfig = new(
                 Schema: string.Empty,
                 DataSource: dataSource,
-                RuntimeSettings: globalSettings,
-                Entities: entityMap);
-
-            runtimeConfig.DetermineGlobalSettings();
+                Runtime: new(
+                    Rest: new(Enabled: globalRestEnabled),
+                    GraphQL: new(),
+                    Host: new(null, null)
+                ),
+                Entities: new(entityMap));
 
             File.WriteAllText(
                 path: CUSTOM_CONFIG_FILENAME,
-                contents: JsonSerializer.Serialize(runtimeConfig, RuntimeConfig.SerializerOptions));
+                contents: runtimeConfig.ToJson());
         }
 
         /// <summary>
@@ -1831,14 +1615,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     // exception. To prevent this, CosmosClientProvider parses the token and retrieves the "exp" property
                     // from the token, if it's not valid, then we will throw an exception from our code before it
                     // initiating a client. Uses a valid fake JWT access token for testing purposes.
-                    RuntimeConfig overrides = new(null, new DataSource(DatabaseType.cosmosdb_nosql), null, null)
-                    {
-                        ConnectionString = "AccountEndpoint=https://localhost:8081/;"
-                    };
+                    RuntimeConfig overrides = new(null, new DataSource(DatabaseType.CosmosDB_NoSQL, "AccountEndpoint=https://localhost:8081/;", new()), null, null);
 
                     configParams = configParams with
                     {
-                        ConfigurationOverrides = JsonSerializer.Serialize(overrides),
+                        ConfigurationOverrides = overrides.ToJson(),
                         AccessToken = GenerateMockJwtToken()
                     };
                 }
@@ -1872,7 +1653,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         private static ConfigurationPostParameters GetCosmosConfigurationParameters()
         {
-            string cosmosFile = $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}";
+            string cosmosFile = $"{RuntimeConfigLoader.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigLoader.CONFIG_EXTENSION}";
             return new(
                 File.ReadAllText(cosmosFile),
                 File.ReadAllText("schema.gql"),
@@ -1882,15 +1663,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         private static ConfigurationPostParametersV2 GetCosmosConfigurationParametersV2()
         {
-            string cosmosFile = $"{RuntimeConfigPath.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigPath.CONFIG_EXTENSION}";
-            RuntimeConfig overrides = new(null, new DataSource(DatabaseType.cosmosdb_nosql), null, null)
-            {
-                ConnectionString = $"AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==;Database={COSMOS_DATABASE_NAME}"
-            };
+            string cosmosFile = $"{RuntimeConfigLoader.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigLoader.CONFIG_EXTENSION}";
+            RuntimeConfig overrides = new(
+                null,
+                new DataSource(DatabaseType.CosmosDB_NoSQL, $"AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==;Database={COSMOS_DATABASE_NAME}", new()),
+                null,
+                null);
 
             return new(
                 File.ReadAllText(cosmosFile),
-                JsonSerializer.Serialize(overrides),
+                overrides.ToJson(),
                 File.ReadAllText("schema.gql"),
                 AccessToken: null);
         }
@@ -1905,7 +1687,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             string connectionString = GetConnectionStringFromEnvironmentConfig(environment);
 
-            string serializedConfiguration = JsonSerializer.Serialize(runtimeConfig);
+            string serializedConfiguration = runtimeConfig.ToJson();
 
             if (configurationEndpoint == CONFIGURATION_ENDPOINT)
             {
@@ -1918,14 +1700,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
             else if (configurationEndpoint == CONFIGURATION_ENDPOINT_V2)
             {
-                RuntimeConfig overrides = new(null, new DataSource(DatabaseType.mssql), null, null)
-                {
-                    ConnectionString = connectionString
-                };
+                RuntimeConfig overrides = new(null, new DataSource(DatabaseType.MSSQL, connectionString, new()), null, null);
 
                 ConfigurationPostParametersV2 returnParams = new(
                     Configuration: serializedConfiguration,
-                    ConfigurationOverrides: JsonSerializer.Serialize(overrides),
+                    ConfigurationOverrides: overrides.ToJson(),
                     Schema: null,
                     AccessToken: null);
 
@@ -2034,46 +1813,37 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <summary>
         /// Instantiate minimal runtime config with custom global settings.
         /// </summary>
-        /// <param name="globalSettings">Globla settings config.</param>
-        /// <param name="dataSource">DataSource to pull connectionstring required for engine start.</param>
+        /// <param name="dataSource">DataSource to pull connection string required for engine start.</param>
         /// <returns></returns>
         public static RuntimeConfig InitMinimalRuntimeConfig(
-            Dictionary<GlobalSettingsType, object> globalSettings,
             DataSource dataSource,
+            GraphQLRuntimeOptions graphqlOptions,
+            RestRuntimeOptions restOptions,
             Entity entity = null,
             string entityName = null)
         {
-            if (entity is null)
-            {
-                entity = new(
-                    Source: JsonSerializer.SerializeToElement("books"),
-                    Rest: null,
-                    GraphQL: JsonSerializer.SerializeToElement(new GraphQLEntitySettings(Type: new SingularPlural(Singular: "book", Plural: "books"))),
-                    Permissions: new PermissionSetting[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
-                    Relationships: null,
-                    Mappings: null
+            entity ??= new(
+                Source: new("books", EntitySourceType.Table, null, null),
+                Rest: null,
+                GraphQL: new(Singular: "book", Plural: "books"),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: null,
+                Mappings: null
                 );
-            }
 
-            if (entityName is null)
-            {
-                entityName = "Book";
-            }
+            entityName ??= "Book";
 
             Dictionary<string, Entity> entityMap = new()
             {
                 { entityName, entity }
             };
 
-            RuntimeConfig runtimeConfig = new(
+            return new(
                 Schema: "IntegrationTestMinimalSchema",
                 DataSource: dataSource,
-                RuntimeSettings: globalSettings,
-                Entities: entityMap
-                );
-
-            runtimeConfig.DetermineGlobalSettings();
-            return runtimeConfig;
+                Runtime: new(restOptions, graphqlOptions, new(null, null)),
+                Entities: new(entityMap)
+            );
         }
 
         /// <summary>
@@ -2081,18 +1851,18 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// </summary>
         /// <param name="roleName">Name of role to assign to permission</param>
         /// <returns>PermissionSetting</returns>
-        public static PermissionSetting GetMinimalPermissionConfig(string roleName)
+        public static EntityPermission GetMinimalPermissionConfig(string roleName)
         {
-            PermissionOperation actionForRole = new(
-                Name: Config.Operation.All,
+            EntityAction actionForRole = new(
+                Action: EntityActionOperation.All,
                 Fields: null,
-                Policy: new(request: null, database: null)
-                );
+                Policy: new()
+            );
 
-            return new PermissionSetting(
-                role: roleName,
-                operations: new object[] { JsonSerializer.SerializeToElement(actionForRole) }
-                );
+            return new EntityPermission(
+                Role: roleName,
+                Actions: new[] { actionForRole }
+            );
         }
 
         /// <summary>
@@ -2103,13 +1873,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <returns>Connection string</returns>
         public static string GetConnectionStringFromEnvironmentConfig(string environment)
         {
-            string sqlFile = GetFileNameForEnvironment(environment, considerOverrides: true);
+            FileSystem fileSystem = new();
+            string sqlFile = new RuntimeConfigLoader(fileSystem).GetFileNameForEnvironment(environment, considerOverrides: true);
             string configPayload = File.ReadAllText(sqlFile);
 
-            Mock<ILogger> logger = new();
-            RuntimeConfig.TryGetDeserializedRuntimeConfig(configPayload, out RuntimeConfig runtimeConfig, logger.Object);
+            RuntimeConfigLoader.TryParseConfig(configPayload, out RuntimeConfig runtimeConfig);
 
-            return runtimeConfig.ConnectionString;
+            return runtimeConfig.DataSource.ConnectionString;
         }
 
         private static void ValidateCosmosDbSetup(TestServer server)

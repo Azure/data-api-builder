@@ -1,11 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Authorization;
+using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Services;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
@@ -54,10 +56,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public async Task CheckNoExceptionForNoForeignKey()
         {
             DatabaseEngine = TestCategory.POSTGRESQL;
-            _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(DatabaseEngine);
-            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
-            SqlTestHelper.RemoveAllRelationshipBetweenEntities(_runtimeConfig);
-            SetUpSQLMetadataProvider();
+            TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
+            RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
+            SqlTestHelper.RemoveAllRelationshipBetweenEntities(runtimeConfig);
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
+            SetUpSQLMetadataProvider(runtimeConfigProvider);
             await ResetDbStateAsync();
             await _sqlMetadataProvider.InitializeAsync();
         }
@@ -125,39 +128,25 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <returns></returns>
         private static async Task CheckExceptionForBadConnectionStringHelperAsync(string databaseType, string connectionString)
         {
-            _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(databaseType);
-            _runtimeConfig.ConnectionString = connectionString;
-            _sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
-            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
+            TestHelper.SetupDatabaseEnvironment(databaseType);
+            RuntimeConfig baseConfigFromDisk = SqlTestHelper.SetupRuntimeConfig();
 
-            switch (databaseType)
+            RuntimeConfig runtimeConfig = baseConfigFromDisk with { DataSource = baseConfigFromDisk.DataSource with { ConnectionString = connectionString } };
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
+
+            ILogger<ISqlMetadataProvider> sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
+
+            ISqlMetadataProvider sqlMetadataProvider = databaseType switch
             {
-                case TestCategory.MSSQL:
-                    _sqlMetadataProvider =
-                       new MsSqlMetadataProvider(_runtimeConfigProvider,
-                           _queryExecutor,
-                           _queryBuilder,
-                           _sqlMetadataLogger);
-                    break;
-                case TestCategory.MYSQL:
-                    _sqlMetadataProvider =
-                       new MySqlMetadataProvider(_runtimeConfigProvider,
-                           _queryExecutor,
-                           _queryBuilder,
-                           _sqlMetadataLogger);
-                    break;
-                case TestCategory.POSTGRESQL:
-                    _sqlMetadataProvider =
-                       new PostgreSqlMetadataProvider(_runtimeConfigProvider,
-                           _queryExecutor,
-                           _queryBuilder,
-                           _sqlMetadataLogger);
-                    break;
-            }
+                TestCategory.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
+                TestCategory.MYSQL => new MySqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
+                TestCategory.POSTGRESQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
+                _ => throw new ArgumentException($"Invalid database type: {databaseType}")
+            };
 
             try
             {
-                await _sqlMetadataProvider.InitializeAsync();
+                await sqlMetadataProvider.InitializeAsync();
             }
             catch (DataApiBuilderException ex)
             {
@@ -166,6 +155,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
             }
+
+            TestHelper.UnsetAllDABEnvironmentVariables();
         }
 
         /// <summary>
@@ -176,15 +167,18 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public async Task CheckCorrectParsingForStoredProcedure()
         {
             DatabaseEngine = TestCategory.MSSQL;
-            _runtimeConfig = SqlTestHelper.SetupRuntimeConfig(DatabaseEngine);
-            _runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(_runtimeConfig);
-            SetUpSQLMetadataProvider();
+            TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
+            RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
+            SetUpSQLMetadataProvider(runtimeConfigProvider);
 
             await _sqlMetadataProvider.InitializeAsync();
 
-            Entity entity = _runtimeConfig.Entities["GetBooks"];
-            Assert.AreEqual("get_books", entity.SourceName);
-            Assert.AreEqual(SourceType.StoredProcedure, entity.ObjectType);
+            Entity entity = runtimeConfig.Entities["GetBooks"];
+            Assert.AreEqual("get_books", entity.Source.Object);
+            Assert.AreEqual(EntitySourceType.StoredProcedure, entity.Source.Type);
+
+            TestHelper.UnsetAllDABEnvironmentVariables();
         }
 
         [DataTestMethod, TestCategory(TestCategory.MSSQL)]
@@ -243,10 +237,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             columnNameMappings.Add(key: dbColumnName, value: mappedName);
 
             Entity sampleEntity = new(
-                Source: "sampleElement",
-                Rest: null,
-                GraphQL: true,
-                Permissions: new PermissionSetting[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Source: new("sampleElement", EntitySourceType.Table, null, null),
+                Rest: new(Array.Empty<SupportedHttpVerb>(), Enabled: false),
+                GraphQL: new("", ""),
+                Permissions: new EntityPermission[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,
                 Mappings: columnNameMappings
                 );
@@ -255,7 +249,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(
                 expected: expectsError,
                 actual: actualIsNameViolation,
-                message: "Unexpectd failure. fieldName: " + dbColumnName + " | fieldMapping:" + mappedName);
+                message: "Unexpected failure. fieldName: " + dbColumnName + " | fieldMapping:" + mappedName);
 
             bool isViolationWithGraphQLGloballyDisabled = MsSqlMetadataProvider.IsGraphQLReservedName(sampleEntity, dbColumnName, graphQLEnabledGlobally: false);
             Assert.AreEqual(

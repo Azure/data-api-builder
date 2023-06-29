@@ -7,9 +7,11 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
 using System.Linq;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Resolvers;
 using HotChocolate.Language;
@@ -20,14 +22,9 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
     {
         private readonly IFileSystem _fileSystem;
         private readonly DatabaseType _databaseType;
-        private readonly Dictionary<string, Entity> _entities;
-        private CosmosDbNoSqlOptions _cosmosDb;
+        private CosmosDbNoSQLDataSourceOptions _cosmosDb;
         private readonly RuntimeConfig _runtimeConfig;
         private Dictionary<string, string> _partitionKeyPaths = new();
-        private Dictionary<string, string> _graphQLSingularTypeToEntityNameMap = new();
-        private Dictionary<string, List<FieldDefinitionNode>> _graphQLTypeToFieldsMap = new();
-        private readonly RuntimeConfigProvider _runtimeConfigProvider;
-        public DocumentNode GraphQLSchemaRoot;
 
         /// <inheritdoc />
         public Dictionary<string, string> GraphQLStoredProcedureExposedNameToEntityNameMap { get; set; } = new();
@@ -37,16 +34,18 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
 
         public Dictionary<RelationShipPair, ForeignKeyDefinition>? PairToFkDefinition => throw new NotImplementedException();
 
+        private Dictionary<string, List<FieldDefinitionNode>> _graphQLTypeToFieldsMap = new();
+
+        public DocumentNode GraphQLSchemaRoot { get; set; }
+
         public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, IFileSystem fileSystem)
         {
             _fileSystem = fileSystem;
-            _runtimeConfigProvider = runtimeConfigProvider;
-            _runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
+            _runtimeConfig = runtimeConfigProvider.GetConfig();
 
-            _entities = _runtimeConfig.Entities;
-            _databaseType = _runtimeConfig.DatabaseType;
-            _graphQLSingularTypeToEntityNameMap = _runtimeConfig.GraphQLSingularTypeToEntityNameMap;
-            CosmosDbNoSqlOptions? cosmosDb = _runtimeConfig.DataSource.CosmosDbNoSql;
+            _databaseType = _runtimeConfig.DataSource.DatabaseType;
+
+            CosmosDbNoSQLDataSourceOptions? cosmosDb = _runtimeConfig.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>();
 
             if (cosmosDb is null)
             {
@@ -73,9 +72,9 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         /// <inheritdoc />
         public string GetDatabaseObjectName(string entityName)
         {
-            Entity entity = _entities[entityName];
+            Entity entity = _runtimeConfig.Entities[entityName];
 
-            string entitySource = entity.GetSourceName();
+            string entitySource = entity.Source.Object;
 
             return entitySource switch
             {
@@ -98,12 +97,20 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         /// <inheritdoc />
         public string GetSchemaName(string entityName)
         {
-            Entity entity = _entities[entityName];
+            Entity entity = _runtimeConfig.Entities[entityName];
 
-            string entitySource = entity.GetSourceName();
+            string entitySource = entity.Source.Object;
 
             if (string.IsNullOrEmpty(entitySource))
             {
+                if (string.IsNullOrEmpty(_cosmosDb.Database))
+                {
+                    throw new DataApiBuilderException(
+                        message: $"No database provided for {entityName}",
+                        statusCode: System.Net.HttpStatusCode.InternalServerError,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                }
+
                 return _cosmosDb.Database;
             }
 
@@ -142,22 +149,14 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
             return Task.CompletedTask;
         }
 
-        public string GraphQLSchema()
+        private string GraphQLSchema()
         {
-            if (_cosmosDb.GraphQLSchema is null && _fileSystem.File.Exists(_cosmosDb.GraphQLSchemaPath))
+            if (_cosmosDb.GraphQLSchema is not null)
             {
-                _cosmosDb = _cosmosDb with { GraphQLSchema = _fileSystem.File.ReadAllText(_cosmosDb.GraphQLSchemaPath) };
+                return _cosmosDb.GraphQLSchema;
             }
 
-            if (_cosmosDb.GraphQLSchema is null)
-            {
-                throw new DataApiBuilderException(
-                    "GraphQL Schema isn't set.",
-                    System.Net.HttpStatusCode.InternalServerError,
-                    DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-            }
-
-            return _cosmosDb.GraphQLSchema;
+            return _fileSystem.File.ReadAllText(_cosmosDb.Schema!);
         }
 
         public void ParseSchemaGraphQLDocument()
@@ -196,19 +195,23 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
                 {
                     _graphQLTypeToFieldsMap[typeName].Add(field);
                 }
+
+                string modelName = GraphQLNaming.ObjectTypeToEntityName(node);
+                // If the modelName doesn't match, such as they've overridden what's in the config with the directive
+                // add a mapping for the model name as well, since sometimes we lookup via modelName (which is the config name),
+                // sometimes via the GraphQL type name.
+                if (modelName != typeName)
+                {
+                    _graphQLTypeToFieldsMap.TryAdd(modelName, _graphQLTypeToFieldsMap[typeName]);
+                }
             }
         }
 
         public List<string> GetSchemaGraphQLFieldNamesForEntityName(string entityName)
         {
-            List<FieldDefinitionNode>? fields;
-            // Check if entity name has a GraphQL object type name alias. If so, fetch GraphQL object type fields with the alias name
-            foreach (string typeName in _graphQLSingularTypeToEntityNameMap.Keys)
+            if (_graphQLTypeToFieldsMap.TryGetValue(entityName, out List<FieldDefinitionNode>? fields))
             {
-                if (_graphQLSingularTypeToEntityNameMap[typeName] == entityName && _graphQLTypeToFieldsMap.TryGetValue(typeName, out fields))
-                {
-                    return fields is null ? new List<string>() : fields.Select(x => x.Name.Value).ToList();
-                }
+                return fields is null ? new List<string>() : fields.Select(x => x.Name.Value).ToList();
             }
 
             // Otherwise, entity name is not found
@@ -216,7 +219,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         }
 
         /// <summary>
-        /// Give an entity name and its field name, 
+        /// Give an entity name and its field name,
         /// this method is to first look up the GraphQL field type using the entity name,
         /// then find the field type with the entity name and its field name.
         /// </summary>
@@ -225,15 +228,9 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         /// <returns></returns>
         public string? GetSchemaGraphQLFieldTypeFromFieldName(string entityName, string fieldName)
         {
-            List<FieldDefinitionNode>? fields;
-
-            // Check if entity name is using alias name, if so, fetch graph type name with the entity alias name
-            foreach (string graphQLType in _graphQLSingularTypeToEntityNameMap.Keys)
+            if (_graphQLTypeToFieldsMap.TryGetValue(entityName, out List<FieldDefinitionNode>? fields))
             {
-                if (_graphQLSingularTypeToEntityNameMap[graphQLType] == entityName && _graphQLTypeToFieldsMap.TryGetValue(graphQLType, out fields))
-                {
-                    return fields is null ? null : fields.Where(x => x.Name.Value == fieldName).FirstOrDefault()?.Type.ToString();
-                }
+                return fields?.Where(x => x.Name.Value == fieldName).FirstOrDefault()?.Type.ToString();
             }
 
             return null;
@@ -315,20 +312,40 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
         /// <inheritdoc />
         public string GetEntityName(string graphQLType)
         {
-            if (_entities.ContainsKey(graphQLType))
+            if (_runtimeConfig.Entities.ContainsKey(graphQLType))
             {
                 return graphQLType;
             }
 
-            if (!_graphQLSingularTypeToEntityNameMap.TryGetValue(graphQLType, out string? entityName))
+            // Cosmos allows you to have a different GraphQL type name than the entity name in the config
+            // and we use the `model` directive to map between the two. So if the name originally provided
+            // doesn't match any entity name, we try to find the entity name by looking at the GraphQL type
+            // and reading the `model` directive, then call this function again with the value from the directive.
+            foreach (IDefinitionNode graphQLObject in GraphQLSchemaRoot.Definitions)
             {
-                throw new DataApiBuilderException(
-                    "GraphQL type doesn't match any entity name or singular type in the runtime config.",
-                    System.Net.HttpStatusCode.BadRequest,
-                    DataApiBuilderException.SubStatusCodes.BadRequest);
+                if (graphQLObject is ObjectTypeDefinitionNode objectNode &&
+                    GraphQLUtils.IsModelType(objectNode) &&
+                    objectNode.Name.Value == graphQLType)
+                {
+                    string modelName = GraphQLNaming.ObjectTypeToEntityName(objectNode);
+
+                    return GetEntityName(modelName);
+                }
             }
 
-            return entityName!;
+            // Fallback to looking at the singular name of the entity.
+            foreach ((string _, Entity entity) in _runtimeConfig.Entities)
+            {
+                if (entity.GraphQL.Singular == graphQLType)
+                {
+                    return graphQLType;
+                }
+            }
+
+            throw new DataApiBuilderException(
+                "GraphQL type doesn't match any entity name or singular type in the runtime config.",
+                System.Net.HttpStatusCode.BadRequest,
+                DataApiBuilderException.SubStatusCodes.BadRequest);
         }
 
         /// <inheritdoc />
@@ -339,7 +356,7 @@ namespace Azure.DataApiBuilder.Service.Services.MetadataProviders
 
         public bool IsDevelopmentMode()
         {
-            return _runtimeConfigProvider.IsDeveloperMode();
+            return _runtimeConfig.Runtime.Host.Mode is HostMode.Development;
         }
     }
 }

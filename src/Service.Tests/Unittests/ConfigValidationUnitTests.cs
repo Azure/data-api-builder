@@ -1962,7 +1962,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 source: "TEST_SOURCEA",
                 relationshipMap: null,
                 graphQLDetails: null,
-                restDetails: new(new SupportedHttpVerb[] {}, restPathForEntity, true)
+                restDetails: new(new SupportedHttpVerb[] { }, restPathForEntity, true)
             );
             entityMap.Add("EntityA", sampleEntity);
 
@@ -2022,7 +2022,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 source: "TEST_SOURCEB",
                 relationshipMap: null,
                 graphQLDetails: null,
-                restDetails: new(new SupportedHttpVerb[] {}, restPathForSecondEntity, true)
+                restDetails: new(new SupportedHttpVerb[] { }, restPathForSecondEntity, true)
             );
 
             entityMap.Add("EntityA", sampleEntityA);

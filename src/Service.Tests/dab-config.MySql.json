@@ -8,8 +8,7 @@
   "runtime": {
     "rest": {
       "enabled": true,
-      "path": "/api",
-      "base-route": ""
+      "path": "/api"
     },
     "graphql": {
       "enabled": true,

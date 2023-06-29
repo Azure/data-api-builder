@@ -216,7 +216,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // with $after base64 encoded for opaqueness
             string path = UriHelper.GetEncodedUrl(_httpContextAccessor.HttpContext!.Request).Split('?')[0];
 
-            RuntimeConfig runtimeConfig= _runtimeConfigProvider.GetConfig();
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
             // If the base route is not empty, we need to insert it into the URI before the rest path.
             string? baseRoute = runtimeConfig.Runtime.Rest.BaseRoute;
             if (!string.IsNullOrEmpty(baseRoute))

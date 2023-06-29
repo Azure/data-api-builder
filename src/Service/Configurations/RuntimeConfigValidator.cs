@@ -255,14 +255,14 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     string pathForEntity = entityName;
                     if (entity.Rest is not null)
                     {
-                        pathForEntity = entity.Rest.Path is not null ? entity.Rest.Path : entityName;
+                        pathForEntity = entity.Rest.Path is not null ? entity.Rest.Path.TrimStart('/') : entityName;
                         isRestEnabledForEntity = entity.Rest.Enabled;
                         SupportedHttpVerb[] supportedOperations = entity.Rest.Methods;
 
                         // Since 'path' is an optional property, we skip validation if its absent.
                         ValidateAndGetRestSettingsForEntity(entityName, pathForEntity);
 
-                        if (entity.Source.Type is not EntitySourceType.StoredProcedure && supportedOperations.Length > 0)
+                        /*if (entity.Source.Type is not EntitySourceType.StoredProcedure && supportedOperations.Length > 0)
                         {
                             // The rest property 'methods' can only be present for stored procedures.
                             throw new DataApiBuilderException(
@@ -271,7 +271,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                                 statusCode: HttpStatusCode.ServiceUnavailable,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
                                 );
-                        }
+                        }*/
                     }
 
                     if (isRestEnabledForEntity && !restPathsForEntities.Add(pathForEntity))

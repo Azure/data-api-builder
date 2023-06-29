@@ -1865,9 +1865,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="exceptionExpected">Boolean value representing whether an exception is expected or not.</param>
         /// <param name="expectedErrorMessage">Expected error message when an exception is expected for the test run.</param>
         [DataTestMethod]
-        [DataRow(EntitySourceType.Table, "[\"get\"]", true,
+        /*[DataRow(EntitySourceType.Table, "[\"get\"]", true,
             $"The rest property '{Entity.PROPERTY_METHODS}' is present for entity: HybridEntity of type: Table, but is only valid for type: StoredProcedure.",
-            DisplayName = "Rest methods specified for non-storedprocedure entity fail config validation.")]
+            DisplayName = "Rest methods specified for non-storedprocedure entity fail config validation.")]*/
         [DataRow(EntitySourceType.StoredProcedure, "[\"Get\", \"post\", \"PUT\", \"paTch\", \"delete\"]", false,
             DisplayName = "Valid rest operations specified in rest methods for stored procedure pass config validation.")]
         public void ValidateRestMethodsForEntityInConfig(

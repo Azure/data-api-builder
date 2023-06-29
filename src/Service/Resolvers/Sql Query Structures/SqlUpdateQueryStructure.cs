@@ -5,7 +5,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
 using Azure.DataApiBuilder.Service.Models;
@@ -44,7 +45,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
               gQLFilterParser: gQLFilterParser,
               entityName: entityName,
               httpContext: httpContext,
-              operationType: Config.Operation.Update)
+              operationType: EntityActionOperation.Update)
         {
             UpdateOperations = new();
             OutputColumns = GenerateOutputColumns();
@@ -103,7 +104,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                   gQLFilterParser: gQLFilterParser,
                   entityName: entityName,
                   httpContext: httpContext,
-                  operationType: Config.Operation.Update)
+                  operationType: EntityActionOperation.Update)
         {
             UpdateOperations = new();
             SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();

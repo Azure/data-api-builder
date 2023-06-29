@@ -1,0 +1,8 @@
+﻿{
+  Cors: {
+    AllowCredentials: false
+  },
+  Authentication: {
+    Provider: StaticWebApps
+  }
+}

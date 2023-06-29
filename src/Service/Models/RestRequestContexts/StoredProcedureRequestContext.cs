@@ -4,7 +4,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 
 namespace Azure.DataApiBuilder.Service.Models
 {
@@ -27,7 +28,7 @@ namespace Azure.DataApiBuilder.Service.Models
             string entityName,
             DatabaseObject dbo,
             JsonElement? requestPayloadRoot,
-            Config.Operation operationType)
+            EntityActionOperation operationType)
             : base(entityName, dbo)
         {
             FieldsToBeReturned = new();
@@ -43,7 +44,7 @@ namespace Azure.DataApiBuilder.Service.Models
         /// </summary>
         public void PopulateResolvedParameters()
         {
-            if (OperationType is Config.Operation.Read)
+            if (OperationType is EntityActionOperation.Read)
             {
                 // Query string may have malformed/null keys, if so just ignore them
                 ResolvedParameters = ParsedQueryString.Cast<string>()

@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Models;
@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using AuthenticationOptions = Azure.DataApiBuilder.Config.ObjectModel.AuthenticationOptions;
 
 namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
 {
@@ -123,14 +124,14 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
             // role name as a role claim to the ClaimsIdentity.
             if (!httpContext.User.IsInRole(clientDefinedRole) && IsSystemRole(clientDefinedRole))
             {
-                Claim claim = new(AuthenticationConfig.ROLE_CLAIM_TYPE, clientDefinedRole, ClaimValueTypes.String);
+                Claim claim = new(AuthenticationOptions.ROLE_CLAIM_TYPE, clientDefinedRole, ClaimValueTypes.String);
                 string authenticationType = isAuthenticatedRequest ? INTERNAL_DAB_IDENTITY_PROVIDER : string.Empty;
 
                 // Add identity with the same value of IsAuthenticated flag as the original identity.
                 ClaimsIdentity identity = new(
                     authenticationType: authenticationType,
-                    nameType: AuthenticationConfig.NAME_CLAIM_TYPE,
-                    roleType: AuthenticationConfig.ROLE_CLAIM_TYPE);
+                    nameType: AuthenticationOptions.NAME_CLAIM_TYPE,
+                    roleType: AuthenticationOptions.ROLE_CLAIM_TYPE);
                 identity.AddClaim(claim);
                 httpContext.User.AddIdentity(identity);
             }

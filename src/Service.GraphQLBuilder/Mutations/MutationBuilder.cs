@@ -3,7 +3,8 @@
 
 using System.Net;
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using HotChocolate.Language;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
@@ -33,7 +34,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         public static DocumentNode Build(
             DocumentNode root,
             DatabaseType databaseType,
-            IDictionary<string, Entity> entities,
+            RuntimeEntities entities,
             Dictionary<string, EntityMetadata>? entityPermissionsMap = null,
             Dictionary<string, DatabaseObject>? dbObjects = null)
         {
@@ -48,13 +49,13 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     string dbEntityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
 
                     // For stored procedures, only one mutation is created in the schema
-                    // unlike table/views where we create one for each create, update, and/or delete operation.
-                    if (entities[dbEntityName].ObjectType is SourceType.StoredProcedure)
+                    // unlike table/views where we create one for each CUD operation.
+                    if (entities[dbEntityName].Source.Type is EntitySourceType.StoredProcedure)
                     {
                         // check graphql sp config
                         string entityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
                         Entity entity = entities[entityName];
-                        bool isSPDefinedAsMutation = entity.FetchConfiguredGraphQLOperation() is GraphQLOperation.Mutation;
+                        bool isSPDefinedAsMutation = (entity.GraphQL.Operation ?? GraphQLOperation.Mutation) is GraphQLOperation.Mutation;
 
                         if (isSPDefinedAsMutation)
                         {
@@ -73,9 +74,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     }
                     else
                     {
-                        AddMutations(dbEntityName, operation: Operation.Create, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
-                        AddMutations(dbEntityName, operation: Operation.Update, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
-                        AddMutations(dbEntityName, operation: Operation.Delete, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
+                        AddMutations(dbEntityName, operation: EntityActionOperation.Create, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
+                        AddMutations(dbEntityName, operation: EntityActionOperation.Update, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
+                        AddMutations(dbEntityName, operation: EntityActionOperation.Delete, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
                     }
                 }
             }
@@ -110,14 +111,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         private static void AddMutations(
             string dbEntityName,
-            Operation operation,
+            EntityActionOperation operation,
             Dictionary<string, EntityMetadata>? entityPermissionsMap,
             NameNode name,
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs,
             ObjectTypeDefinitionNode objectTypeDefinitionNode,
             DocumentNode root,
             DatabaseType databaseType,
-            IDictionary<string, Entity> entities,
+            RuntimeEntities entities,
             List<FieldDefinitionNode> mutationFields
             )
         {
@@ -126,13 +127,13 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             {
                 switch (operation)
                 {
-                    case Operation.Create:
+                    case EntityActionOperation.Create:
                         mutationFields.Add(CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, databaseType, entities, dbEntityName, rolesAllowedForMutation));
                         break;
-                    case Operation.Update:
+                    case EntityActionOperation.Update:
                         mutationFields.Add(UpdateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, entities, dbEntityName, databaseType, rolesAllowedForMutation));
                         break;
-                    case Operation.Delete:
+                    case EntityActionOperation.Delete:
                         mutationFields.Add(DeleteMutationBuilder.Build(name, objectTypeDefinitionNode, entities[dbEntityName], databaseType, rolesAllowedForMutation));
                         break;
                     default:
@@ -149,13 +150,13 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             string dbEntityName,
             Dictionary<string, EntityMetadata>? entityPermissionsMap,
             NameNode name,
-            IDictionary<string, Entity> entities,
+            RuntimeEntities entities,
             List<FieldDefinitionNode> mutationFields,
             DatabaseObject dbObject
             )
         {
-            IEnumerable<string> rolesAllowedForMutation = IAuthorizationResolver.GetRolesForOperation(dbEntityName, operation: Operation.Execute, entityPermissionsMap);
-            if (rolesAllowedForMutation.Count() > 0)
+            IEnumerable<string> rolesAllowedForMutation = IAuthorizationResolver.GetRolesForOperation(dbEntityName, operation: EntityActionOperation.Execute, entityPermissionsMap);
+            if (rolesAllowedForMutation.Any())
             {
                 mutationFields.Add(GraphQLStoredProcedureBuilder.GenerateStoredProcedureSchema(name, entities[dbEntityName], dbObject, rolesAllowedForMutation));
             }
@@ -167,14 +168,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// </summary>
         /// <param name="inputTypeName">Mutation name</param>
         /// <returns>Operation</returns>
-        public static Operation DetermineMutationOperationTypeBasedOnInputType(string inputTypeName)
+        public static EntityActionOperation DetermineMutationOperationTypeBasedOnInputType(string inputTypeName)
         {
             return inputTypeName switch
             {
-                string s when s.StartsWith(Operation.Execute.ToString(), StringComparison.OrdinalIgnoreCase) => Operation.Execute,
-                string s when s.StartsWith(Operation.Create.ToString(), StringComparison.OrdinalIgnoreCase) => Operation.Create,
-                string s when s.StartsWith(Operation.Update.ToString(), StringComparison.OrdinalIgnoreCase) => Operation.UpdateGraphQL,
-                _ => Operation.Delete
+                string s when s.StartsWith(EntityActionOperation.Execute.ToString(), StringComparison.OrdinalIgnoreCase) => EntityActionOperation.Execute,
+                string s when s.StartsWith(EntityActionOperation.Create.ToString(), StringComparison.OrdinalIgnoreCase) => EntityActionOperation.Create,
+                string s when s.StartsWith(EntityActionOperation.Update.ToString(), StringComparison.OrdinalIgnoreCase) => EntityActionOperation.UpdateGraphQL,
+                _ => EntityActionOperation.Delete
             };
         }
     }

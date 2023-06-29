@@ -110,7 +110,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             string orderByField = $"{orderByType.ToLowerInvariant()}_types";
             string graphQLQueryName = "supportedTypes";
             string gqlQuery = @"{
-                supportedTypes(first: 1 orderBy: { " + orderByField + @": ASC } ) {
+                supportedTypes(first: 100 orderBy: { " + orderByField + @": ASC } ) {
                     items {
                         " + field + @"
                         " + orderByField + @"
@@ -118,7 +118,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 }
             }";
 
-            string dbQuery = MakeQueryOnTypeTable(new List<string> { field, orderByField }, orderBy: orderByField, limit: "1");
+            string dbQuery = MakeQueryOnTypeTable(new List<string> { field, orderByField }, orderBy: orderByField, limit: "100");
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
             string expected = await GetDatabaseResultAsync(dbQuery);

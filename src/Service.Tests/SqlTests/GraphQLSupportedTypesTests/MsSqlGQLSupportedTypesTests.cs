@@ -34,13 +34,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             string orderBy = "id",
             string limit = "1")
         {
+            string arrayWrapper = limit.Equals("1") ? "WITHOUT_ARRAY_WRAPPER," : "";
             return @"
                 SELECT TOP " + limit + "" + string.Join(", ", queriedColumns) + @"
                 FROM type_table AS [table0]
                 WHERE " + filterField + " " + filterOperator + " " + filterValue + @"
                 ORDER BY " + orderBy + @" asc
                 FOR JSON PATH,
-                    WITHOUT_ARRAY_WRAPPER,
+                    " + arrayWrapper + @"
                     INCLUDE_NULL_VALUES
             ";
         }

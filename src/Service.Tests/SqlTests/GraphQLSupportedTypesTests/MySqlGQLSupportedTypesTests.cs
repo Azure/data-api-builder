@@ -42,7 +42,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                     SELECT " + string.Join(", ", queriedColumns) + @"
                     FROM type_table AS `table0`
                     WHERE " + filterField + " " + filterOperator + " " + filterValue + @"
-                    ORDER BY "" + orderBy + @"" asc
+                    ORDER BY " + orderBy + @" asc
                     LIMIT " + limit + @"
                     ) AS `subq3`
             ";

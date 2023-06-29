@@ -87,6 +87,196 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         }
 
         [DataTestMethod]
+        [DataRow(BYTE_TYPE, SHORT_TYPE)]
+        [DataRow(SHORT_TYPE, INT_TYPE)]
+        [DataRow(INT_TYPE, LONG_TYPE)]
+        [DataRow(LONG_TYPE, SINGLE_TYPE)]
+        [DataRow(SINGLE_TYPE, FLOAT_TYPE)]
+        [DataRow(FLOAT_TYPE, DECIMAL_TYPE)]
+        [DataRow(DECIMAL_TYPE, STRING_TYPE)]
+        [DataRow(STRING_TYPE, BOOLEAN_TYPE)]
+        [DataRow(BOOLEAN_TYPE, DATETIME_TYPE)]
+        [DataRow(DATETIME_TYPE, BYTEARRAY_TYPE)]
+        [DataRow(BYTEARRAY_TYPE, GUID_TYPE)]
+        [DataRow(GUID_TYPE, BYTE_TYPE)]
+        public async Task QueryTypeColumnOrderBy(string type, string orderByType)
+        {
+            if (!IsSupportedType(type))
+            {
+                Assert.Inconclusive("Type not supported");
+            }
+
+            string field = $"{type.ToLowerInvariant()}_types";
+            string orderByField = $"{orderByType.ToLowerInvariant()}_types";
+            string graphQLQueryName = "supportedTypes";
+            string gqlQuery = @"{
+                supportedTypes(first: 100 orderBy: { " + orderByField + @": ASC } ) {
+                    items {
+                        " + field + @"
+                        " + orderByField + @"
+                    }
+                }
+            }";
+
+            string dbQuery = MakeQueryOnTypeTable(new List<string> { field, orderByField }, orderBy: orderByField, limit: "100");
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            PerformTestEqualsForExtendedTypes(type, expected, actual.GetProperty("items").ToString());
+        }
+        
+        [DataTestMethod]
+        [DataRow(BYTE_TYPE, "gt", "0", ">")]
+        [DataRow(BYTE_TYPE, "gte", "0", ">=")]
+        [DataRow(BYTE_TYPE, "lt", "1", "<")]
+        [DataRow(BYTE_TYPE, "lte", "1", "<=")]
+        [DataRow(BYTE_TYPE, "neq", "NULL", "!=")]
+        [DataRow(BYTE_TYPE, "eq", "NULL", "=")]
+        [DataRow(SHORT_TYPE, "gt", "-1", ">")]
+        [DataRow(SHORT_TYPE, "gte", "-1", ">=")]
+        [DataRow(SHORT_TYPE, "lt", "1", "<")]
+        [DataRow(SHORT_TYPE, "lte", "1", "<=")]
+        [DataRow(SHORT_TYPE, "neq", "NULL", "!=")]
+        [DataRow(SHORT_TYPE, "eq", "NULL", "=")]
+        [DataRow(INT_TYPE, "gt", "-1", ">")]
+        [DataRow(INT_TYPE, "gte", "2147483647", " >= ")]
+        [DataRow(INT_TYPE, "lt", "1", "<")]
+        [DataRow(INT_TYPE, "lte", "-2147483648", " <= ")]
+        [DataRow(INT_TYPE, "neq", "NULL", "!=")]
+        [DataRow(INT_TYPE, "eq", "NULL", "=")]
+        [DataRow(LONG_TYPE, "gt", "-1", ">")]
+        [DataRow(LONG_TYPE, "gte", "9223372036854775808", " >= ")]
+        [DataRow(LONG_TYPE, "lt", "1", "<")]
+        [DataRow(LONG_TYPE, "lte", "-9223372036854775808", " <= ")]
+        [DataRow(LONG_TYPE, "neq", "NULL", "!=")]
+        [DataRow(LONG_TYPE, "eq", "NULL", "=")]
+        [DataRow(STRING_TYPE, "gt", "\'null\'", ">")]
+        [DataRow(STRING_TYPE, "gte", "\'null\'", ">=")]
+        [DataRow(STRING_TYPE, "lt", "\'lksa;jdflasdf;alsdflksdfkldj\'", "<")]
+        [DataRow(STRING_TYPE, "lte", "\'lksa;jdflasdf;alsdflksdfkldj\'", "<=")]
+        [DataRow(STRING_TYPE, "neq", "NULL", "!=")]
+        [DataRow(STRING_TYPE, "eq", "NULL", "=")]
+        [DataRow(SINGLE_TYPE, "gt", "-9.2", ">")]
+        [DataRow(SINGLE_TYPE, "gte", "-9.2", ">=")]
+        [DataRow(SINGLE_TYPE, "lt", ".33", "<")]
+        [DataRow(SINGLE_TYPE, "lte", ".33", "<=")]
+        [DataRow(SINGLE_TYPE, "neq", "NULL", "!=")]
+        [DataRow(SINGLE_TYPE, "eq", "NULL", "=")]
+        [DataRow(FLOAT_TYPE, "gt", "-9.2", ">")]
+        [DataRow(FLOAT_TYPE, "gte", "-9.2", ">=")]
+        [DataRow(FLOAT_TYPE, "lt", ".33", "<")]
+        [DataRow(FLOAT_TYPE, "lte", ".33", "<=")]
+        [DataRow(FLOAT_TYPE, "neq", "NULL", "!=")]
+        [DataRow(FLOAT_TYPE, "eq", "NULL", "=")]
+        [DataRow(DECIMAL_TYPE, "gt", "-9.292929", " > ")]
+        [DataRow(DECIMAL_TYPE, "gte", "-9.292929", " >= ")]
+        [DataRow(DECIMAL_TYPE, "lt", "0.333333", "<")]
+        [DataRow(DECIMAL_TYPE, "lte", "0.333333", " <= ")]
+        [DataRow(DECIMAL_TYPE, "neq", "NULL", "!=")]
+        [DataRow(DECIMAL_TYPE, "eq", "NULL", "=")]
+        [DataRow(BOOLEAN_TYPE, "gt", "1", ">")]
+        [DataRow(BOOLEAN_TYPE, "gte", "1", ">=")]
+        [DataRow(BOOLEAN_TYPE, "lt", "0", "<")]
+        [DataRow(BOOLEAN_TYPE, "lte", "0", "<=")]
+        [DataRow(BOOLEAN_TYPE, "neq", "NULL", "!=")]
+        [DataRow(BOOLEAN_TYPE, "eq", "NULL", "=")]
+        [DataRow(DATETIME_TYPE, "gt", "1999-01-08", " > ")]
+        [DataRow(DATETIME_TYPE, "gte", "1999-01-08", " >= ")]
+        [DataRow(DATETIME_TYPE, "lt", "0001-01-01", " < ")]
+        [DataRow(DATETIME_TYPE, "lte", "0001-01-01", " <= ")]
+        [DataRow(DATETIME_TYPE, "neq", "NULL", "!=")]
+        [DataRow(DATETIME_TYPE, "eq", "NULL", "=")]
+        [DataRow(DATETIME_TYPE, "gt", "1999-01-08 10:23:00", " > ")]
+        [DataRow(DATETIME_TYPE, "gte", "1999-01-08 10:23:00", " >= ")]
+        [DataRow(DATETIME_TYPE, "lt", "9999-12-31 23:59:59", " < ")]
+        [DataRow(DATETIME_TYPE, "lte", "9999-12-31 23:59:59", " <= ")]
+        [DataRow(DATETIME_TYPE, "neq", "NULL", "!=")]
+        [DataRow(DATETIME_TYPE, "eq", "NULL", "=")]
+        [DataRow(DATETIME_TYPE, "gt", "1999-01-08 10:23:00.9999999", " > ")]
+        [DataRow(DATETIME_TYPE, "gte", "1999-01-08 10:23:00.9999999", " >= ")]
+        [DataRow(DATETIME_TYPE, "lt", "9999-12-31 23:59:59.9999999", " < ")]
+        [DataRow(DATETIME_TYPE, "lte", "9999-12-31 23:59:59.9999999", " <= ")]
+        [DataRow(DATETIME_TYPE, "neq", "NULL", "!=")]
+        [DataRow(DATETIME_TYPE, "eq", "NULL", "=")]
+        [DataRow(DATETIME_NONUTC_TYPE, "gt", "1999-01-08 10:23:54.9999999-14:00", " > ")]
+        [DataRow(DATETIME_NONUTC_TYPE, "gte", "1999-01-08 10:23:54.9999999-14:00", " >= ")]
+        [DataRow(DATETIME_NONUTC_TYPE, "lt", "9999-12-31 23:59:59.9999999+14:00", " < ")]
+        [DataRow(DATETIME_NONUTC_TYPE, "lte", "9999-12-31 23:59:59.9999999+14:00", " <= ")]
+        [DataRow(DATETIME_TYPE, "neq", "NULL", "!=")]
+        [DataRow(DATETIME_TYPE, "eq", "NULL", "=")]
+        [DataRow(DATETIME_TYPE, "gt", "1999-01-08 10:23:54", " > ")]
+        [DataRow(DATETIME_TYPE, "gte", "1999-01-08 10:23:54", " >= ")]
+        [DataRow(DATETIME_TYPE, "lt", "2079-06-06", " < ")]
+        [DataRow(DATETIME_TYPE, "lte", "2079-06-06", " <= ")]
+        [DataRow(DATETIME_TYPE, "neq", "NULL", "!=")]
+        [DataRow(DATETIME_TYPE, "eq", "NULL", "=")]
+        [DataRow(BYTEARRAY_TYPE, "gt", "0xABCDEF0123", " > ")]
+        [DataRow(BYTEARRAY_TYPE, "gte", "0xABCDEF0123", " >= ")]
+        [DataRow(BYTEARRAY_TYPE, "lt", "0xFFFFFFFF", " < ")]
+        [DataRow(BYTEARRAY_TYPE, "lte", "0xFFFFFFFF", " <= ")]
+        [DataRow(BYTEARRAY_TYPE, "neq", "NULL", "!=")]
+        [DataRow(BYTEARRAY_TYPE, "eq", "NULL", "=")]
+        /*
+         * 
+         * INSERT INTO type_table(id,
+        byte_types,
+        short_types,
+        int_types,
+        long_types,
+        string_types,
+        single_types,
+        float_types,
+        decimal_types,
+        boolean_types,
+        date_types,
+        datetime_types,
+        datetime2_types,
+        datetimeoffset_types,
+        smalldatetime_types,
+        bytearray_types)
+VALUES
+    (1, 1, 1, 1, 1, '', 0.33, 0.33, 0.333333, 1,
+    '1999-01-08', '1999-01-08 10:23:54', '1999-01-08 10:23:54.9999999', '1999-01-08 10:23:54.9999999-14:00', '1999-01-08 10:23:54',
+    0xABCDEF0123),
+    (2, 0, -1, -1, -1, 'lksa;jdflasdf;alsdflksdfkldj', -9.2, -9.2, -9.292929, 0,
+    '1999-01-08', '1999-01-08 10:23:00', '1999-01-08 10:23:00.9999999', '1999-01-08 10:23:00.9999999+13:00', '1999-01-08 10:23:00',
+    0x98AB7511AABB1234),
+    (3, 0, -32768, -2147483648, -9223372036854775808, 'null', -3.4E38, -1.7E308, 2.929292E-19, 1,
+    '0001-01-01', '1753-01-01 00:00:00.000', '0001-01-01 00:00:00.0000000', '0001-01-01 00:00:00.0000000+0:00', '1900-01-01 00:00:00',
+    0x00000000),
+    (4, 255, 32767, 2147483647, 9223372036854775807, 'null', 3.4E38, 1.7E308, 2.929292E-14, 1,
+    '9999-12-31', '9999-12-31 23:59:59', '9999-12-31 23:59:59.9999999', '9999-12-31 23:59:59.9999999+14:00', '2079-06-06',
+    0xFFFFFFFF),
+    (5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+         *
+         */
+        public async Task QueryTypeColumnFilter(string type, string filterOperator, string value, string queryOperator)
+        {
+            if (!IsSupportedType(type))
+            {
+                Assert.Inconclusive("Type not supported");
+            }
+
+            string field = $"{type.ToLowerInvariant()}_types";
+            string graphQLQueryName = "supportedTypes";
+            string gqlQuery = @"{
+                supportedTypes(first: 100 filter: { " + field + ": {" + filterOperator + ": "+ value +@"} }) {
+                    items {
+                        " + field + @"
+                    }
+                }
+            }";
+
+            string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, filterValue: value, filterField: field, orderBy: field, limit: "100");
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            PerformTestEqualsForExtendedTypes(type, expected, actual.GetProperty("items").ToString());
+        }
+
+        [DataTestMethod]
         [DataRow(BYTE_TYPE, "255")]
         [DataRow(BYTE_TYPE, "0")]
         [DataRow(BYTE_TYPE, "null")]
@@ -403,6 +593,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             return typeName;
         }
 
+        protected abstract string MakeQueryOnTypeTable(
+            List<string> queriedColumns,
+            string filterValue = "1",
+            string filterOperator = "=",
+            string filterField = "1",
+            string orderBy = "id",
+            string limit = "1");
         protected abstract string MakeQueryOnTypeTable(List<string> columnsToQuery, int id);
         protected virtual bool IsSupportedType(string type)
         {

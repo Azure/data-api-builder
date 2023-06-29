@@ -227,7 +227,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             string field = $"{type.ToLowerInvariant()}_types";
             string graphQLQueryName = "supportedTypes";
             string gqlQuery = @"{
-                supportedTypes(first: 100 filter: { " + field + ": {" + filterOperator + ": "+ value +@"} }) {
+                supportedTypes(first: 100 filter: { " + field + ": {" + filterOperator + ": " + value + @"} }) {
                     items {
                         " + field + @"
                     }

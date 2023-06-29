@@ -30,7 +30,7 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
                     {
                         reader.Read();
 
-                        if (reader.TokenType == JsonTokenType.String)
+                        if (reader.TokenType == JsonTokenType.String || reader.TokenType == JsonTokenType.Null)
                         {
                             restOptions = restOptions with { Path = reader.DeserializeString() };
                             break;

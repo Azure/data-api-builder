@@ -40,11 +40,11 @@ steps:
 # TODO: add a new rc version variable (1/2/3) and use that to generate the version.
 - bash: |
     echo IsNugetRelease = $ISNUGETRELEASE
-    echo IsReleaseCandidate = $IS_RELEASE_CANDIDATE
+    echo IsReleaseCandidate = $ISRELEASECANDIDATE
     echo RELEASE_CANDIDATE_VERSION = $RELEASE_CANDIDATE_VERSION
     if [ "$ISNUGETRELEASE" = "true" ]
     then
-      if [ "$IsReleaseCandidate" = "true" ]
+      if [ "$ISRELEASECANDIDATE" = "true" ]
       then
         dabVersion=$(major).$(minor).$(patch)-rc$RELEASE_CANDIDATE_VERSION
       else

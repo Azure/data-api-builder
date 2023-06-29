@@ -47,7 +47,11 @@ internal class RestRuntimeOptionsConverterFactory : JsonConverterFactory
             writer.WriteStartObject();
             writer.WriteBoolean("enabled", value.Enabled);
             writer.WriteString("path", value.Path);
-            writer.WriteString("base-route", value.BaseRoute);
+            if (value.BaseRoute is not null)
+            {
+                writer.WriteString("base-route", value.BaseRoute);
+            }
+            
             writer.WriteEndObject();
         }
     }

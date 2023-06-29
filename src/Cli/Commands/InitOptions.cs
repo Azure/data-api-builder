@@ -30,7 +30,7 @@ namespace Cli.Commands
             string? audience = null,
             string? issuer = null,
             string restPath = RestRuntimeOptions.DEFAULT_PATH,
-            string restBaseRoute = "",
+            string? restBaseRoute = null,
             bool restDisabled = false,
             string graphQLPath = GraphQLRuntimeOptions.DEFAULT_PATH,
             bool graphqlDisabled = false,
@@ -91,8 +91,8 @@ namespace Cli.Commands
         [Option("rest.path", Default = RestRuntimeOptions.DEFAULT_PATH, Required = false, HelpText = "Specify the REST endpoint's default prefix.")]
         public string RestPath { get; }
 
-        [Option("rest.base-route", Default = "", Required = false, HelpText = "Specifies the base route for REST requests.")]
-        public string RestBaseRoute { get; }
+        [Option("rest.base-route", Default = null, Required = false, HelpText = "Specifies the base route for REST requests.")]
+        public string? RestBaseRoute { get; }
 
         [Option("rest.disabled", Default = false, Required = false, HelpText = "Disables REST endpoint for all entities.")]
         public bool RestDisabled { get; }

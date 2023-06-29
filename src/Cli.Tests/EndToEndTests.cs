@@ -119,7 +119,7 @@ public class EndToEndTests
     public void TestInitializingRestAndGraphQLGlobalSettings()
     {
         string[] args = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql", "--rest.path", "/rest-api",
-                          "--rest.base-route", "rest-route", "--rest.disabled", "--graphql.path", "/graphql-api" };
+                          "--rest.base-route", "/rest-route", "--rest.disabled", "--graphql.path", "/graphql-api" };
         Program.Execute(args, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
@@ -256,7 +256,7 @@ public class EndToEndTests
     public Task TestConfigGeneratedAfterAddingEntityWithoutIEnumerables()
     {
         string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql", "--connection-string", "localhost:5000",
-            "--set-session-context", "true", "--rest.base-route", "rest-route" };
+            "--set-session-context", "true", "--rest.base-route", "/rest-route" };
         Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));

@@ -5,10 +5,13 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.IO.Abstractions;
+using System.IO.Abstractions.TestingHelpers;
 using System.Net;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.Core;
+using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Models;
@@ -64,12 +67,25 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             bool expectManagedIdentityAccessToken,
             bool isDefaultAzureCredential)
         {
-            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestCategory.MSSQL);
-            runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString = connectionString;
-            Mock<DbExceptionParser> dbExceptionParser = new(runtimeConfigProvider);
+            RuntimeConfig mockConfig = new(
+               Schema: "",
+               DataSource: new(DatabaseType.MSSQL, connectionString, new()),
+               Runtime: new(
+                   Rest: new(),
+                   GraphQL: new(),
+                   Host: new(null, null)
+               ),
+               Entities: new(new Dictionary<string, Entity>())
+           );
+
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            Mock<DbExceptionParser> dbExceptionParser = new(provider);
             Mock<ILogger<MsSqlQueryExecutor>> queryExecutorLogger = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
-            MsSqlQueryExecutor msSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
+            MsSqlQueryExecutor msSqlQueryExecutor = new(provider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
 
             const string DEFAULT_TOKEN = "Default access token";
             const string CONFIG_TOKEN = "Configuration controller access token";
@@ -87,12 +103,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 }
                 else
                 {
-                    await runtimeConfigProvider.Initialize(
-                        JsonSerializer.Serialize(runtimeConfigProvider.GetRuntimeConfiguration()),
-                        schema: null,
+                    await provider.Initialize(
+                        provider.GetConfig().ToJson(),
+                        graphQLSchema: null,
                         connectionString: connectionString,
                         accessToken: CONFIG_TOKEN);
-                    msSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
+                    msSqlQueryExecutor = new(provider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
                 }
             }
 
@@ -125,15 +141,33 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             int maxRetries = 5;
             int maxAttempts = maxRetries + 1; // 1 represents the original attempt to execute the query in addition to retries.
-            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestCategory.MSSQL);
+            RuntimeConfig mockConfig = new(
+               Schema: "",
+               DataSource: new(DatabaseType.MSSQL, "", new()),
+               Runtime: new(
+                   Rest: new(),
+                   GraphQL: new(),
+                   Host: new(null, null)
+               ),
+               Entities: new(new Dictionary<string, Entity>())
+           );
+
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader)
+            {
+                IsLateConfigured = true
+            };
+
             Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
-            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
+            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
             Mock<MsSqlQueryExecutor> queryExecutor
-                = new(runtimeConfigProvider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
+                = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
 
             queryExecutor.Setup(x => x.ConnectionStringBuilder).Returns(
-                new SqlConnectionStringBuilder(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString));
+                new SqlConnectionStringBuilder(provider.GetConfig().DataSource.ConnectionString));
 
             // Mock the ExecuteQueryAgainstDbAsync to throw a transient exception.
             queryExecutor.Setup(x => x.ExecuteQueryAgainstDbAsync(
@@ -171,21 +205,24 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Test to validate that when a query succcessfully executes within allowed number of retries, we get back the result
+        /// Test to validate that when a query successfully executes within allowed number of retries, we get back the result
         /// without giving anymore retries.
         /// </summary>
         [TestMethod, TestCategory(TestCategory.MSSQL)]
         public async Task TestRetryPolicySuccessfullyExecutingQueryAfterNAttempts()
         {
-            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestCategory.MSSQL);
+            TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
+            FileSystem fileSystem = new();
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader) { IsLateConfigured = true };
             Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
-            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
+            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
             Mock<MsSqlQueryExecutor> queryExecutor
-                = new(runtimeConfigProvider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
+                = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
 
             queryExecutor.Setup(x => x.ConnectionStringBuilder).Returns(
-                new SqlConnectionStringBuilder(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString));
+                new SqlConnectionStringBuilder(provider.GetConfig().DataSource.ConnectionString));
 
             // Mock the ExecuteQueryAgainstDbAsync to throw a transient exception.
             queryExecutor.SetupSequence(x => x.ExecuteQueryAgainstDbAsync(
@@ -218,6 +255,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // For each attempt logger is invoked twice. The query executes successfully in in 1st retry .i.e. 2nd attempt of execution.
             // An additional information log is added when the query executes successfully in a retry attempt.
             Assert.AreEqual(2 * 2 + 1, queryExecutorLogger.Invocations.Count);
+        }
+
+        [TestCleanup]
+        public void CleanupAfterEachTest()
+        {
+            TestHelper.UnsetAllDABEnvironmentVariables();
         }
     }
 }

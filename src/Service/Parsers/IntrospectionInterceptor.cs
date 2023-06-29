@@ -53,7 +53,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
             IQueryRequestBuilder requestBuilder,
             CancellationToken cancellationToken)
         {
-            if (_runtimeConfigProvider.IsIntrospectionAllowed())
+            if (_runtimeConfigProvider.GetConfig().Runtime.GraphQL.AllowIntrospection)
             {
                 requestBuilder.AllowIntrospection();
             }

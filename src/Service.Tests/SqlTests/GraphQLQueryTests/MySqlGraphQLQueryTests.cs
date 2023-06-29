@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
@@ -487,7 +487,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 targetFields,
                 club_id,
                 club_name,
-                DatabaseType.mysql,
+                DatabaseType.MySQL,
                 TestCategory.MYSQL);
         }
 

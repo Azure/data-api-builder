@@ -2,7 +2,8 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using HotChocolate.Language;
 using HotChocolate.Types;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
@@ -36,18 +37,17 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             // which are needed because parameter and column names can differ.
             StoredProcedureDefinition spdef = (StoredProcedureDefinition)dbObject.SourceDefinition;
 
-            // Create input value definitions from parameters defined in runtime config. 
-            if (entity.Parameters is not null)
+            // Create input value definitions from parameters defined in runtime config.
+            if (entity.Source.Parameters is not null)
             {
-                foreach (string param in entity.Parameters.Keys)
+                foreach (string param in entity.Source.Parameters.Keys)
                 {
                     // Input parameters defined in the runtime config may denote values that may not cast
                     // to the exact value type defined in the database schema.
                     // e.g. Runtime config parameter value set as 1, while database schema denotes value type decimal.
                     // Without database metadata, there is no way to know to cast 1 to a decimal versus an integer.
-                    string defaultValueFromConfig = ((JsonElement)entity.Parameters[param]).ToString();
+                    string defaultValueFromConfig = entity.Source.Parameters[param].ToString()!;
                     Tuple<string, IValueNode> defaultGraphQLValue = ConvertValueToGraphQLType(defaultValueFromConfig, parameterDefinition: spdef.Parameters[param]);
-
                     inputValues.Add(
                         new(
                             location: null,
@@ -81,7 +81,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// Takes the result from DB as JsonDocument and formats it in a way that can be filtered by column
         /// name. It parses the Json document into a list of Dictionary with key as result_column_name
         /// with it's corresponding value.
-        /// returns an empty list in case of no result 
+        /// returns an empty list in case of no result
         /// or stored-procedure is trying to read from DB without READ permission.
         /// </summary>
         public static List<JsonDocument> FormatStoredProcedureResultAsJsonList(JsonDocument? jsonDocument)

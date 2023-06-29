@@ -4,9 +4,14 @@
 #nullable disable
 using System.Collections.Generic;
 using System.Data;
+using System.IO.Abstractions.TestingHelpers;
+using System.Linq;
 using System.Net;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.Converters;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Services;
@@ -14,15 +19,15 @@ using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
 using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers;
 using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using static Azure.DataApiBuilder.Service.Configurations.RuntimeConfigValidator;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
     /// <summary>
     /// Test class to perform semantic validations on the runtime config object. At this point,
-    /// the tests focus on the permissions portion of the entities property within the runtimeconfig object.
+    /// the tests focus on the permissions portion of the entities property within the RuntimeConfig object.
     /// </summary>
     [TestClass]
     public class ConfigValidationUnitTests
@@ -40,12 +45,15 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
                 roleName: AuthorizationHelpers.TEST_ROLE,
-                operation: Config.Operation.Create,
+                operation: EntityActionOperation.Create,
                 includedCols: new HashSet<string> { "*" },
                 excludedCols: new HashSet<string> { "id", "email" },
                 databasePolicy: dbPolicy
-                );
-            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+            );
+            MockFileSystem fileSystem = new();
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
 
             // Assert that expected exception is thrown.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
@@ -59,65 +67,70 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// and every role has that same single operation.
         /// </summary>
         [DataTestMethod]
-        [DataRow("anonymous", new object[] { "execute" }, null, null, true, false, DisplayName = "Stored-procedure with valid execute permission only")]
-        [DataRow("anonymous", new object[] { "*" }, null, null, true, false, DisplayName = "Stored-procedure with valid wildcard permission only, which resolves to execute")]
-        [DataRow("anonymous", new object[] { "execute", "read" }, null, null, false, false, DisplayName = "Invalidly define operation in excess of execute")]
-        [DataRow("anonymous", new object[] { "create", "read" }, null, null, false, false, DisplayName = "Stored-procedure with create-read permission")]
-        [DataRow("anonymous", new object[] { "update", "read" }, null, null, false, false, DisplayName = "Stored-procedure with update-read permission")]
-        [DataRow("anonymous", new object[] { "delete", "read" }, null, null, false, false, DisplayName = "Stored-procedure with delete-read permission")]
-        [DataRow("anonymous", new object[] { "create" }, null, null, false, false, DisplayName = "Stored-procedure with invalid create permission")]
-        [DataRow("anonymous", new object[] { "read" }, null, null, false, false, DisplayName = "Stored-procedure with invalid read permission")]
-        [DataRow("anonymous", new object[] { "update" }, null, null, false, false, DisplayName = "Stored-procedure with invalid update permission")]
-        [DataRow("anonymous", new object[] { "delete" }, null, null, false, false, DisplayName = "Stored-procedure with invalid delete permission")]
-        [DataRow("anonymous", new object[] { "update", "create" }, null, null, false, false, DisplayName = "Stored-procedure with update-create permission")]
-        [DataRow("anonymous", new object[] { "delete", "read", "update" }, null, null, false, false, DisplayName = "Stored-procedure with delete-read-update permission")]
-        [DataRow("anonymous", new object[] { "execute" }, "authenticated", new object[] { "execute" }, true, false, DisplayName = "Stored-procedure with valid execute permission on all roles")]
-        [DataRow("anonymous", new object[] { "*" }, "authenticated", new object[] { "*" }, true, false, DisplayName = "Stored-procedure with valid wildcard permission on all roles, which resolves to execute")]
-        [DataRow("anonymous", new object[] { "execute" }, "authenticated", new object[] { "create" }, false, true, DisplayName = "Stored-procedure with valid execute and invalid create permission")]
+        [DataRow("anonymous", new string[] { "execute" }, null, null, true, false, DisplayName = "Stored-procedure with valid execute permission only")]
+        [DataRow("anonymous", new string[] { "*" }, null, null, true, false, DisplayName = "Stored-procedure with valid wildcard permission only, which resolves to execute")]
+        [DataRow("anonymous", new string[] { "execute", "read" }, null, null, false, false, DisplayName = "Invalidly define operation in excess of execute")]
+        [DataRow("anonymous", new string[] { "create", "read" }, null, null, false, false, DisplayName = "Stored-procedure with create-read permission")]
+        [DataRow("anonymous", new string[] { "update", "read" }, null, null, false, false, DisplayName = "Stored-procedure with update-read permission")]
+        [DataRow("anonymous", new string[] { "delete", "read" }, null, null, false, false, DisplayName = "Stored-procedure with delete-read permission")]
+        [DataRow("anonymous", new string[] { "create" }, null, null, false, false, DisplayName = "Stored-procedure with invalid create permission")]
+        [DataRow("anonymous", new string[] { "read" }, null, null, false, false, DisplayName = "Stored-procedure with invalid read permission")]
+        [DataRow("anonymous", new string[] { "update" }, null, null, false, false, DisplayName = "Stored-procedure with invalid update permission")]
+        [DataRow("anonymous", new string[] { "delete" }, null, null, false, false, DisplayName = "Stored-procedure with invalid delete permission")]
+        [DataRow("anonymous", new string[] { "update", "create" }, null, null, false, false, DisplayName = "Stored-procedure with update-create permission")]
+        [DataRow("anonymous", new string[] { "delete", "read", "update" }, null, null, false, false, DisplayName = "Stored-procedure with delete-read-update permission")]
+        [DataRow("anonymous", new string[] { "execute" }, "authenticated", new string[] { "execute" }, true, false, DisplayName = "Stored-procedure with valid execute permission on all roles")]
+        [DataRow("anonymous", new string[] { "*" }, "authenticated", new string[] { "*" }, true, false, DisplayName = "Stored-procedure with valid wildcard permission on all roles, which resolves to execute")]
+        [DataRow("anonymous", new string[] { "execute" }, "authenticated", new string[] { "create" }, false, true, DisplayName = "Stored-procedure with valid execute and invalid create permission")]
         public void InvalidCRUDForStoredProcedure(
             string role1,
-            object[] operationsRole1,
+            string[] operationsRole1,
             string role2,
-            object[] operationsRole2,
+            string[] operationsRole2,
             bool isValid,
             bool differentOperationDifferentRoleFailure)
         {
-            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
-                entityName: AuthorizationHelpers.TEST_ENTITY,
-                roleName: AuthorizationHelpers.TEST_ROLE
-            );
-
-            List<PermissionSetting> permissionSettings = new();
-
-            permissionSettings.Add(new(
-                role: role1,
-                operations: operationsRole1));
+            List<EntityPermission> permissionSettings = new()
+            {
+                new(
+                Role: role1,
+                Actions: operationsRole1.Select(a => new EntityAction(EnumExtensions.Deserialize<EntityActionOperation>(a), null, new())).ToArray())
+            };
 
             // Adding another role for the entity.
             if (role2 is not null && operationsRole2 is not null)
             {
                 permissionSettings.Add(new(
-                    role: role2,
-                    operations: operationsRole2));
+                    Role: role2,
+                    Actions: operationsRole2.Select(a => new EntityAction(EnumExtensions.Deserialize<EntityActionOperation>(a), null, new())).ToArray()));
             }
 
-            object entitySource = new DatabaseObjectSource(
-                    Type: SourceType.StoredProcedure,
-                    Name: "sourceName",
+            EntitySource entitySource = new(
+                    Type: EntitySourceType.StoredProcedure,
+                    Object: "sourceName",
                     Parameters: null,
                     KeyFields: null
                 );
 
             Entity testEntity = new(
                 Source: entitySource,
-                Rest: true,
-                GraphQL: true,
+                Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
+                GraphQL: new(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ENTITY + "s"),
                 Permissions: permissionSettings.ToArray(),
                 Relationships: null,
                 Mappings: null
             );
-            runtimeConfig.Entities[AuthorizationHelpers.TEST_ENTITY] = testEntity;
-            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                entityName: AuthorizationHelpers.TEST_ENTITY,
+                roleName: AuthorizationHelpers.TEST_ROLE
+            ) with
+            { Entities = new(new Dictionary<string, Entity>() { { AuthorizationHelpers.TEST_ENTITY, testEntity } }) };
+
+            MockFileSystem fileSystem = new();
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
 
             try
             {
@@ -136,15 +149,15 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         /// <summary>
         /// Test method to validate that an appropriate exception is thrown when there is an invalid action
-        /// supplied in the runtimeconfig.
+        /// supplied in the RuntimeConfig.
         /// </summary>
         /// <param name="dbPolicy">Database policy.</param>
         /// <param name="action">The action to be validated.</param>
         [DataTestMethod]
-        [DataRow("@claims.id eq @item.col1", Config.Operation.Insert, DisplayName = "Invalid action Insert specified in config")]
-        [DataRow("@claims.id eq @item.col2", Config.Operation.Upsert, DisplayName = "Invalid action Upsert specified in config")]
-        [DataRow("@claims.id eq @item.col3", Config.Operation.UpsertIncremental, DisplayName = "Invalid action UpsertIncremental specified in config")]
-        public void InvalidActionSpecifiedForARole(string dbPolicy, Config.Operation action)
+        [DataRow("@claims.id eq @item.col1", EntityActionOperation.Insert, DisplayName = "Invalid action Insert specified in config")]
+        [DataRow("@claims.id eq @item.col2", EntityActionOperation.Upsert, DisplayName = "Invalid action Upsert specified in config")]
+        [DataRow("@claims.id eq @item.col3", EntityActionOperation.UpsertIncremental, DisplayName = "Invalid action UpsertIncremental specified in config")]
+        public void InvalidActionSpecifiedForARole(string dbPolicy, EntityActionOperation action)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
@@ -153,11 +166,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: dbPolicy
                 );
-            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+            MockFileSystem fileSystem = new();
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
 
             // Assert that expected exception is thrown.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
-            Assert.AreEqual($"action:{action.ToString()} specified for entity:{AuthorizationHelpers.TEST_ENTITY}," +
+            Assert.AreEqual($"action:{action} specified for entity:{AuthorizationHelpers.TEST_ENTITY}," +
                     $" role:{AuthorizationHelpers.TEST_ROLE} is not valid.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
@@ -168,15 +184,20 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// is defined for the Create operation for mysql/postgresql and passes for mssql.
         /// </summary>
         /// <param name="dbPolicy">Database policy.</param>
-        /// <param name="action">The action to be validated.</param>
         /// <param name="errorExpected">Whether an error is expected.</param>
         [DataTestMethod]
-        [DataRow(DatabaseType.postgresql, "1 eq @item.col1", Config.Operation.Create, true, DisplayName = "Database Policy defined for Create fails for postgregsql")]
-        [DataRow(DatabaseType.postgresql, null, Config.Operation.Create, false, DisplayName = "Database Policy set as null for Create passes.")]
-        [DataRow(DatabaseType.mysql, "", Config.Operation.Create, true, DisplayName = "Database Policy left empty for Create fails for mysql")]
-        [DataRow(DatabaseType.mssql, "2 eq @item.col3", Config.Operation.Create, false, DisplayName = "Database Policy defined for Create passes for mssql")]
-        public void AddDatabasePolicyToCreateOperation(DatabaseType dbType, string dbPolicy, Config.Operation action, bool errorExpected)
+        [DataRow(DatabaseType.PostgreSQL, "1 eq @item.col1", true, DisplayName = "Database Policy defined for Create fails for PostgreSQL")]
+        [DataRow(DatabaseType.PostgreSQL, null, false, DisplayName = "Database Policy set as null for Create passes on PostgreSQL.")]
+        [DataRow(DatabaseType.PostgreSQL, "", false, DisplayName = "Database Policy left empty for Create passes for PostgreSQL.")]
+        [DataRow(DatabaseType.PostgreSQL, " ", false, DisplayName = "Database Policy only whitespace for Create passes for PostgreSQL.")]
+        [DataRow(DatabaseType.MySQL, "1 eq @item.col1", true, DisplayName = "Database Policy defined for Create fails for MySQL")]
+        [DataRow(DatabaseType.MySQL, null, false, DisplayName = "Database Policy set as for Create passes for MySQL")]
+        [DataRow(DatabaseType.MySQL, "", false, DisplayName = "Database Policy left empty for Create passes for MySQL")]
+        [DataRow(DatabaseType.MySQL, " ", false, DisplayName = "Database Policy only whitespace for Create passes for MySQL")]
+        [DataRow(DatabaseType.MSSQL, "2 eq @item.col3", false, DisplayName = "Database Policy defined for Create passes for MSSQL")]
+        public void AddDatabasePolicyToCreateOperation(DatabaseType dbType, string dbPolicy, bool errorExpected)
         {
+            EntityActionOperation action = EntityActionOperation.Create;
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
                 roleName: AuthorizationHelpers.TEST_ROLE,
@@ -184,8 +205,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: dbPolicy,
                 dbType: dbType
-                );
-            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+            );
+            MockFileSystem fileSystem = new();
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
 
             try
             {
@@ -206,10 +230,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [TestMethod]
         public void TestAddingRelationshipWithInvalidTargetEntity()
         {
-            Dictionary<string, Relationship> relationshipMap = new();
+            Dictionary<string, EntityRelationship> relationshipMap = new();
 
             // Creating relationship with an Invalid entity in relationship
-            Relationship sampleRelationship = new(
+            EntityRelationship sampleRelationship = new(
                 Cardinality: Cardinality.One,
                 TargetEntity: "INVALID_ENTITY",
                 SourceFields: null,
@@ -224,20 +248,29 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Entity sampleEntity1 = GetSampleEntityUsingSourceAndRelationshipMap(
                 source: "TEST_SOURCE1",
                 relationshipMap: relationshipMap,
-                graphQLdetails: true
+                graphQLDetails: new("SampleEntity1", "rname1s", true)
             );
 
-            Dictionary<string, Entity> entityMap = new();
-            entityMap.Add("SampleEntity1", sampleEntity1);
+            Dictionary<string, Entity> entityMap = new()
+            {
+                { "SampleEntity1", sampleEntity1 }
+            };
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
-                RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
-                Entities: entityMap
-                );
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", new()),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(null, null)
+                ),
+                Entities: new(entityMap)
+            );
 
-            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+            MockFileSystem fileSystem = new();
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
             Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
 
             // Assert that expected exception is thrown. Entity used in relationship is Invalid
@@ -257,12 +290,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Entity sampleEntity1 = GetSampleEntityUsingSourceAndRelationshipMap(
                 source: "TEST_SOURCE1",
                 relationshipMap: null,
-                graphQLdetails: false
+                graphQLDetails: new("", "", false)
             );
 
-            Dictionary<string, Relationship> relationshipMap = new();
+            Dictionary<string, EntityRelationship> relationshipMap = new();
 
-            Relationship sampleRelationship = new(
+            EntityRelationship sampleRelationship = new(
                 Cardinality: Cardinality.One,
                 TargetEntity: "SampleEntity1",
                 SourceFields: null,
@@ -278,21 +311,30 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Entity sampleEntity2 = GetSampleEntityUsingSourceAndRelationshipMap(
                 source: "TEST_SOURCE2",
                 relationshipMap: relationshipMap,
-                graphQLdetails: true
+                graphQLDetails: new("", "", true)
             );
 
-            Dictionary<string, Entity> entityMap = new();
-            entityMap.Add("SampleEntity1", sampleEntity1);
-            entityMap.Add("SampleEntity2", sampleEntity2);
+            Dictionary<string, Entity> entityMap = new()
+            {
+                { "SampleEntity1", sampleEntity1 },
+                { "SampleEntity2", sampleEntity2 }
+            };
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
-                RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
-                Entities: entityMap
-                );
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", new()),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(null, null)
+                ),
+                Entities: new(entityMap)
+            );
 
-            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+            MockFileSystem fileSystem = new();
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
             Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
 
             // Exception should be thrown as we cannot use an entity (with graphQL disabled) in a relationship.
@@ -334,31 +376,39 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
-                RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
-                Entities: entityMap
-                );
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", new()),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(null, null)
+                ),
+                Entities: new(entityMap)
+            );
 
             // Mocking EntityToDatabaseObject
-            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+            MockFileSystem fileSystem = new();
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader) { IsLateConfigured = true };
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
             Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
 
-            Dictionary<string, DatabaseObject> mockDictionaryForEntityDatabaseObject = new();
-            mockDictionaryForEntityDatabaseObject.Add(
-                "SampleEntity1",
-                new DatabaseTable("dbo", "TEST_SOURCE1")
-            );
+            Dictionary<string, DatabaseObject> mockDictionaryForEntityDatabaseObject = new()
+            {
+                {
+                    "SampleEntity1",
+                    new DatabaseTable("dbo", "TEST_SOURCE1")
+                },
 
-            mockDictionaryForEntityDatabaseObject.Add(
-                "SampleEntity2",
-                new DatabaseTable("dbo", "TEST_SOURCE2")
-            );
+                {
+                    "SampleEntity2",
+                    new DatabaseTable("dbo", "TEST_SOURCE2")
+                }
+            };
 
-            _sqlMetadataProvider.Setup<Dictionary<string, DatabaseObject>>(x =>
-                x.EntityToDatabaseObject).Returns(mockDictionaryForEntityDatabaseObject);
+            _sqlMetadataProvider.Setup(x => x.EntityToDatabaseObject).Returns(mockDictionaryForEntityDatabaseObject);
 
             // To mock the schema name and dbObjectName for linkingObject
-            _sqlMetadataProvider.Setup<(string, string)>(x =>
+            _sqlMetadataProvider.Setup(x =>
                 x.ParseSchemaAndDbTableName("TEST_SOURCE_LINK")).Returns(("dbo", "TEST_SOURCE_LINK"));
 
             // Exception thrown as foreignKeyPair not found in the DB.
@@ -369,12 +419,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
 
             // Mocking ForeignKeyPair to be defined In DB
-            _sqlMetadataProvider.Setup<bool>(x =>
+            _sqlMetadataProvider.Setup(x =>
                 x.VerifyForeignKeyExistsInDB(
                     new DatabaseTable("dbo", "TEST_SOURCE_LINK"), new DatabaseTable("dbo", "TEST_SOURCE1")
                 )).Returns(true);
 
-            _sqlMetadataProvider.Setup<bool>(x =>
+            _sqlMetadataProvider.Setup(x =>
                 x.VerifyForeignKeyExistsInDB(
                     new DatabaseTable("dbo", "TEST_SOURCE_LINK"), new DatabaseTable("dbo", "TEST_SOURCE2")
                 )).Returns(true);
@@ -433,25 +483,33 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
-                RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
-                Entities: entityMap
-                );
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", new()),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(null, null)
+                ),
+                Entities: new(entityMap));
 
             // Mocking EntityToDatabaseObject
-            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+            MockFileSystem fileSystem = new();
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader) { IsLateConfigured = true };
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
             Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
 
-            Dictionary<string, DatabaseObject> mockDictionaryForEntityDatabaseObject = new();
-            mockDictionaryForEntityDatabaseObject.Add(
-                "SampleEntity1",
-                new DatabaseTable("dbo", "TEST_SOURCE1")
-            );
+            Dictionary<string, DatabaseObject> mockDictionaryForEntityDatabaseObject = new()
+            {
+                {
+                    "SampleEntity1",
+                    new DatabaseTable("dbo", "TEST_SOURCE1")
+                },
 
-            mockDictionaryForEntityDatabaseObject.Add(
-                "SampleEntity2",
-                new DatabaseTable("dbo", "TEST_SOURCE2")
-            );
+                {
+                    "SampleEntity2",
+                    new DatabaseTable("dbo", "TEST_SOURCE2")
+                }
+            };
 
             _sqlMetadataProvider.Setup<Dictionary<string, DatabaseObject>>(x =>
                 x.EntityToDatabaseObject).Returns(mockDictionaryForEntityDatabaseObject);
@@ -516,24 +574,32 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
-                RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
-                Entities: entityMap
-                );
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", new()),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(null, null)
+                ),
+                Entities: new(entityMap));
 
-            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+            MockFileSystem fileSystem = new();
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader) { IsLateConfigured = true };
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
             Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
 
-            Dictionary<string, DatabaseObject> mockDictionaryForEntityDatabaseObject = new();
-            mockDictionaryForEntityDatabaseObject.Add(
-                "SampleEntity1",
-                new DatabaseTable("dbo", "TEST_SOURCE1")
-            );
+            Dictionary<string, DatabaseObject> mockDictionaryForEntityDatabaseObject = new()
+            {
+                {
+                    "SampleEntity1",
+                    new DatabaseTable("dbo", "TEST_SOURCE1")
+                },
 
-            mockDictionaryForEntityDatabaseObject.Add(
-                "SampleEntity2",
-                new DatabaseTable("dbo", "TEST_SOURCE2")
-            );
+                {
+                    "SampleEntity2",
+                    new DatabaseTable("dbo", "TEST_SOURCE2")
+                }
+            };
 
             _sqlMetadataProvider.Setup<Dictionary<string, DatabaseObject>>(x =>
                 x.EntityToDatabaseObject).Returns(mockDictionaryForEntityDatabaseObject);
@@ -575,16 +641,19 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
                 roleName: AuthorizationHelpers.TEST_ROLE,
-                operation: Config.Operation.Create,
+                operation: EntityActionOperation.Create,
                 includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: dbPolicy
                 );
-            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+            MockFileSystem fileSystem = new();
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
 
             // Assert that expected exception is thrown.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
                 configValidator.ValidatePermissionsInConfig(runtimeConfig));
-            Assert.AreEqual("Claimtype cannot be empty.", ex.Message);
+            Assert.AreEqual("ClaimType cannot be empty.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
         }
@@ -607,11 +676,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
                 roleName: AuthorizationHelpers.TEST_ROLE,
-                operation: Config.Operation.Create,
+                operation: EntityActionOperation.Create,
                 includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: policy
                 );
-            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+            MockFileSystem fileSystem = new();
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
 
             // Assert that expected exception is thrown.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
@@ -630,11 +702,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="action">The action for which database policy is defined.</param>
         /// <param name="errorExpected">Boolean value indicating whether an exception is expected or not.</param>
         [DataTestMethod]
-        [DataRow("StaticWebApps", "@claims.userId eq @item.col2", Config.Operation.Read, false, DisplayName = "SWA- Database Policy defined for Read passes")]
-        [DataRow("staticwebapps", "@claims.userDetails eq @item.col3", Config.Operation.Update, false, DisplayName = "SWA- Database Policy defined for Update passes")]
-        [DataRow("StaticWebAPPs", "@claims.email eq @item.col3", Config.Operation.Delete, true, DisplayName = "SWA- Database Policy defined for Delete fails")]
-        [DataRow("appService", "@claims.email eq @item.col3", Config.Operation.Delete, false, DisplayName = "AppService- Database Policy defined for Delete passes")]
-        public void TestInvalidClaimsForStaticWebApps(string authProvider, string dbPolicy, Config.Operation action, bool errorExpected)
+        [DataRow("StaticWebApps", "@claims.userId eq @item.col2", EntityActionOperation.Read, false, DisplayName = "SWA- Database Policy defined for Read passes")]
+        [DataRow("staticwebapps", "@claims.userDetails eq @item.col3", EntityActionOperation.Update, false, DisplayName = "SWA- Database Policy defined for Update passes")]
+        [DataRow("StaticWebAPPs", "@claims.email eq @item.col3", EntityActionOperation.Delete, true, DisplayName = "SWA- Database Policy defined for Delete fails")]
+        [DataRow("appService", "@claims.email eq @item.col3", EntityActionOperation.Delete, false, DisplayName = "AppService- Database Policy defined for Delete passes")]
+        public void TestInvalidClaimsForStaticWebApps(string authProvider, string dbPolicy, EntityActionOperation action, bool errorExpected)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
@@ -644,7 +716,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 databasePolicy: dbPolicy,
                 authProvider: authProvider.ToString()
                 );
-            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+            MockFileSystem fileSystem = new();
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
             try
             {
                 configValidator.ValidatePermissionsInConfig(runtimeConfig);
@@ -668,10 +743,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
                 roleName: AuthorizationHelpers.TEST_ROLE,
-                operation: Config.Operation.All,
+                operation: EntityActionOperation.All,
                 includedCols: new HashSet<string> { "col1", "col2", "col3" }
                 );
-            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+            MockFileSystem fileSystem = new();
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
 
             // All the validations would pass, and no exception would be thrown.
             configValidator.ValidatePermissionsInConfig(runtimeConfig);
@@ -682,9 +760,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// in it.
         /// </summary>
         [DataTestMethod]
-        [DataRow(Config.Operation.Create, DisplayName = "Wildcard Field with another field in included set and create action")]
-        [DataRow(Config.Operation.Update, DisplayName = "Wildcard Field with another field in included set and update action")]
-        public void WildCardAndOtherFieldsPresentInIncludeSet(Config.Operation actionOp)
+        [DataRow(EntityActionOperation.Create, DisplayName = "Wildcard Field with another field in included set and create action")]
+        [DataRow(EntityActionOperation.Update, DisplayName = "Wildcard Field with another field in included set and update action")]
+        public void WildCardAndOtherFieldsPresentInIncludeSet(EntityActionOperation actionOp)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
@@ -692,7 +770,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 operation: actionOp,
                 includedCols: new HashSet<string> { "*", "col2" }
                 );
-            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+            MockFileSystem fileSystem = new();
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
 
             // Assert that expected exception is thrown.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
@@ -705,9 +786,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [DataTestMethod]
-        [DataRow(Config.Operation.Create, DisplayName = "Wildcard Field with another field in excluded set and create action")]
-        [DataRow(Config.Operation.Update, DisplayName = "Wildcard Field with another field in excluded set and update action")]
-        public void WildCardAndOtherFieldsPresentInExcludeSet(Config.Operation actionOp)
+        [DataRow(EntityActionOperation.Create, DisplayName = "Wildcard Field with another field in excluded set and create action")]
+        [DataRow(EntityActionOperation.Update, DisplayName = "Wildcard Field with another field in excluded set and update action")]
+        public void WildCardAndOtherFieldsPresentInExcludeSet(EntityActionOperation actionOp)
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
@@ -715,7 +796,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 operation: actionOp,
                 excludedCols: new HashSet<string> { "*", "col1" }
                 );
-            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+            MockFileSystem fileSystem = new();
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
 
             // Assert that expected exception is thrown.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
@@ -739,7 +823,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("rEAd", false, DisplayName = "Valid operation name rEAd specified for action")]
         [DataRow("UPDate", false, DisplayName = "Valid operation name UPDate specified for action")]
         [DataRow("DelETe", false, DisplayName = "Valid operation name DelETe specified for action")]
-        [DataRow("remove", true, DisplayName = "Invalid operation name remove specified for action")]
         [DataRow("inseRt", true, DisplayName = "Invalid operation name inseRt specified for action")]
         public void TestOperationValidityAndCasing(string operationName, bool exceptionExpected)
         {
@@ -754,30 +837,43 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                                   }";
             object actionForRole = JsonSerializer.Deserialize<object>(actionJson);
 
-            PermissionSetting permissionForEntity = new(
-                role: AuthorizationHelpers.TEST_ROLE,
-                operations: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
+            EntityPermission permissionForEntity = new(
+                Role: AuthorizationHelpers.TEST_ROLE,
+                Actions: new[] {
+                    new EntityAction(
+                        EnumExtensions.Deserialize<EntityActionOperation>(operationName),
+                        new(Exclude: new(), Include: new() { "*" }),
+                        new())
+                });
 
             Entity sampleEntity = new(
-                Source: AuthorizationHelpers.TEST_ENTITY,
+                Source: new(AuthorizationHelpers.TEST_ENTITY, EntitySourceType.Table, null, null),
                 Rest: null,
                 GraphQL: null,
-                Permissions: new PermissionSetting[] { permissionForEntity },
+                Permissions: new[] { permissionForEntity },
                 Relationships: null,
                 Mappings: null
                 );
 
-            Dictionary<string, Entity> entityMap = new();
-            entityMap.Add(AuthorizationHelpers.TEST_ENTITY, sampleEntity);
+            Dictionary<string, Entity> entityMap = new()
+            {
+                { AuthorizationHelpers.TEST_ENTITY, sampleEntity }
+            };
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
-                RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
-                Entities: entityMap
-                );
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", new()),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(null, null)
+                ),
+                Entities: new(entityMap));
 
-            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+            MockFileSystem fileSystem = new();
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
             if (!exceptionExpected)
             {
                 configValidator.ValidatePermissionsInConfig(runtimeConfig);
@@ -790,9 +886,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 // Assert that the exception returned is the one we expected.
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
-                Assert.AreEqual($"action:{operationName} specified for entity:{AuthorizationHelpers.TEST_ENTITY}," +
-                    $" role:{AuthorizationHelpers.TEST_ROLE} is not valid.",
-                    ex.Message);
+                Assert.AreEqual(
+                    $"action:{operationName} specified for entity:{AuthorizationHelpers.TEST_ENTITY}, role:{AuthorizationHelpers.TEST_ROLE} is not valid.",
+                    ex.Message,
+                    ignoreCase: true);
             }
         }
 
@@ -817,42 +914,37 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("__introspectionField", true, DisplayName = "Invalid double underscore reserved for introspection fields.")]
         public void ValidateGraphQLTypeNamesFromConfig(string entityNameFromConfig, bool expectsException)
         {
-            Dictionary<string, Entity> entityCollection = new();
+            Dictionary<string, Entity> entityMap = new();
 
             // Sets only the top level name and enables GraphQL for entity
-            Entity entity = SchemaConverterTests.GenerateEmptyEntity();
-            entity.GraphQL = true;
-            entityCollection.Add(entityNameFromConfig, entity);
+            Entity entity = SchemaConverterTests.GenerateEmptyEntity("");
+            entity = entity with { GraphQL = entity.GraphQL with { Enabled = true } };
+            entityMap.Add(entityNameFromConfig, entity);
 
             // Sets the top level name to an arbitrary value since it is not used in this check
             // and enables GraphQL for entity by setting the GraphQLSettings.Type to a string.
-            entity = SchemaConverterTests.GenerateEmptyEntity();
-            entity.GraphQL = new GraphQLEntitySettings(Type: entityNameFromConfig);
-            entityCollection.Add("EntityA", entity);
-
-            // Sets the top level name to an arbitrary value since it is not used in this check
-            // and enables GraphQL for entity by setting the GraphQLSettings.Type to
-            // a SingularPlural object where only Singular is defined.
-            entity = SchemaConverterTests.GenerateEmptyEntity();
-            SingularPlural singularPlural = new(Singular: entityNameFromConfig, Plural: null);
-            entity.GraphQL = new GraphQLEntitySettings(Type: singularPlural);
-            entityCollection.Add("EntityB", entity);
+            entity = SchemaConverterTests.GenerateEmptyEntity("");
+            entity = entity with { GraphQL = new(Singular: entityNameFromConfig, Plural: "") };
+            entityMap.Add("EntityA", entity);
 
             // Sets the top level name to an arbitrary value since it is not used in this check
             // and enables GraphQL for entity by setting the GraphQLSettings.Type to
             // a SingularPlural object where both Singular and Plural are defined.
-            entity = SchemaConverterTests.GenerateEmptyEntity();
-            singularPlural = new(Singular: entityNameFromConfig, Plural: entityNameFromConfig);
-            entity.GraphQL = new GraphQLEntitySettings(Type: singularPlural);
-            entityCollection.Add("EntityC", entity);
+            entity = SchemaConverterTests.GenerateEmptyEntity("");
+            entity = entity with { GraphQL = new(entityNameFromConfig, entityNameFromConfig) };
+            entityMap.Add("EntityC", entity);
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
-                RuntimeSettings: AuthorizationHelpers.CreateRuntimeSettings(),
-                Entities: entityCollection
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, string.Empty, new()),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(null, null)
+                ),
+                Entities: new(entityMap)
                 );
-            runtimeConfig.DetermineGlobalSettings();
+
             if (expectsException)
             {
                 DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
@@ -887,18 +979,18 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Entity Name: Book
             // pk_query: book_by_pk
             // List Query: books
-            Entity bookWithUpperCase = GraphQLTestHelpers.GenerateEmptyEntity();
-            bookWithUpperCase.GraphQL = new GraphQLEntitySettings(true);
+            Entity bookWithUpperCase = GraphQLTestHelpers.GenerateEmptyEntity() with { GraphQL = new("book", "books") };
 
             // Entity Name: book
             // pk_query: book_by_pk
             // List Query: books
-            Entity book = GraphQLTestHelpers.GenerateEmptyEntity();
-            book.GraphQL = new GraphQLEntitySettings(true);
+            Entity book = GraphQLTestHelpers.GenerateEmptyEntity() with { GraphQL = new("Book", "Books") };
 
-            SortedDictionary<string, Entity> entityCollection = new();
-            entityCollection.Add("book", book);
-            entityCollection.Add("Book", bookWithUpperCase);
+            SortedDictionary<string, Entity> entityCollection = new()
+            {
+                { "book", book },
+                { "Book", bookWithUpperCase }
+            };
             ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "Book");
         }
 
@@ -928,18 +1020,18 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Entity Type: table
             // pk_query: executebook_by_pk
             // List Query: executebooks
-            Entity bookTable = GraphQLTestHelpers.GenerateEmptyEntity(sourceType: SourceType.Table);
-            bookTable.GraphQL = new GraphQLEntitySettings(true);
+            Entity bookTable = GraphQLTestHelpers.GenerateEmptyEntity(sourceType: EntitySourceType.Table);
 
             // Entity Name: book_by_pk
             // Entity Type: Stored Procedure
             // StoredProcedure Query: executebook_by_pk
-            Entity bookByPkStoredProcedure = GraphQLTestHelpers.GenerateEmptyEntity(sourceType: SourceType.StoredProcedure);
-            bookByPkStoredProcedure.GraphQL = new GraphQLEntitySettings(true);
+            Entity bookByPkStoredProcedure = GraphQLTestHelpers.GenerateEmptyEntity(sourceType: EntitySourceType.StoredProcedure);
 
-            SortedDictionary<string, Entity> entityCollection = new();
-            entityCollection.Add("executeBook", bookTable);
-            entityCollection.Add("Book_by_pk", bookByPkStoredProcedure);
+            SortedDictionary<string, Entity> entityCollection = new()
+            {
+                { "executeBook", bookTable },
+                { "Book_by_pk", bookByPkStoredProcedure }
+            };
             ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "executeBook");
         }
 
@@ -970,19 +1062,18 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Entity Name: Book
             // Entity Type: table
             // mutation generated: createBook, updateBook, deleteBook
-            Entity bookTable = GraphQLTestHelpers.GenerateEmptyEntity(sourceType: SourceType.Table);
-            bookTable.GraphQL = new GraphQLEntitySettings(true);
+            Entity bookTable = GraphQLTestHelpers.GenerateEmptyEntity(sourceType: EntitySourceType.Table);
 
             // Entity Name: AddBook
             // Entity Type: Stored Procedure
             // StoredProcedure mutation: createBook
-            Entity addBookStoredProcedure = GraphQLTestHelpers.GenerateEntityWithStringType(
-                                                type: "Books",
-                                                sourceType: SourceType.StoredProcedure);
+            Entity addBookStoredProcedure = GraphQLTestHelpers.GenerateEntityWithStringType("Books", EntitySourceType.StoredProcedure);
 
-            SortedDictionary<string, Entity> entityCollection = new();
-            entityCollection.Add("ExecuteBooks", bookTable);
-            entityCollection.Add("AddBook", addBookStoredProcedure);
+            SortedDictionary<string, Entity> entityCollection = new()
+            {
+                { "ExecuteBooks", bookTable },
+                { "AddBook", addBookStoredProcedure }
+            };
             ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "ExecuteBooks");
         }
 
@@ -1008,16 +1099,17 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // pk_query: book_by_pk
             // List Query: books
             Entity book = GraphQLTestHelpers.GenerateEmptyEntity();
-            book.GraphQL = new GraphQLEntitySettings(true);
 
             // Entity Name: book_alt
             // pk_query: book_by_pk
             // List Query: books
             Entity book_alt = GraphQLTestHelpers.GenerateEntityWithStringType("book");
 
-            SortedDictionary<string, Entity> entityCollection = new();
-            entityCollection.Add("book", book);
-            entityCollection.Add("book_alt", book_alt);
+            SortedDictionary<string, Entity> entityCollection = new()
+            {
+                { "book", book },
+                { "book_alt", book_alt }
+            };
             ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt");
         }
 
@@ -1054,9 +1146,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // List Query: books
             Entity book_alt = GraphQLTestHelpers.GenerateEntityWithStringType("book");
 
-            SortedDictionary<string, Entity> entityCollection = new();
-            entityCollection.Add("book", book);
-            entityCollection.Add("book_alt", book_alt);
+            SortedDictionary<string, Entity> entityCollection = new()
+            {
+                { "book", book },
+                { "book_alt", book_alt }
+            };
             ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt");
         }
 
@@ -1077,7 +1171,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// }
         /// </summary>
         [TestMethod]
-        public void ValidateEntitesWithNameCollisionInSingularPluralTypeGeneratesDuplicateQueries()
+        public void ValidateEntitiesWithNameCollisionInSingularPluralTypeGeneratesDuplicateQueries()
         {
             SortedDictionary<string, Entity> entityCollection = new();
 
@@ -1090,7 +1184,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // pk_query: book_by_pk
             // List Query: books
             Entity book = GraphQLTestHelpers.GenerateEmptyEntity();
-            book.GraphQL = new GraphQLEntitySettings(true);
 
             entityCollection.Add("book_alt", book_alt);
             entityCollection.Add("book", book);
@@ -1140,17 +1233,15 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [TestMethod]
         public void ValidateValidEntityDefinitionsDoesNotGenerateDuplicateQueries()
         {
-            SortedDictionary<string, Entity> entityCollection = new();
 
             // Entity Name: Book
             // GraphQL is not exposed for this entity
-            Entity bookWithUpperCase = GraphQLTestHelpers.GenerateEmptyEntity();
+            Entity bookWithUpperCase = GraphQLTestHelpers.GenerateEmptyEntity() with { GraphQL = new("", "", false) };
 
             // Entity Name: book
             // pk query: book_by_pk
             // List query: books
             Entity book = GraphQLTestHelpers.GenerateEmptyEntity();
-            book.GraphQL = new GraphQLEntitySettings(true);
 
             // Entity Name: book_alt
             // pk_query: book_alt_by_pk
@@ -1172,13 +1263,16 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // List query: bOOKS
             Entity bookWithAllUpperCase = GraphQLTestHelpers.GenerateEntityWithSingularPlural("BOOK", "BOOKS");
 
-            entityCollection.Add("book", book);
-            entityCollection.Add("Book", bookWithUpperCase);
-            entityCollection.Add("book_alt", book_alt);
-            entityCollection.Add("BooK", bookWithDifferentCase);
-            entityCollection.Add("BOOK", bookWithAllUpperCase);
-            entityCollection.Add("Book_alt", book_alt_upperCase);
-            RuntimeConfigValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(entityCollection);
+            SortedDictionary<string, Entity> entityCollection = new()
+            {
+                { "book", book },
+                { "Book", bookWithUpperCase },
+                { "book_alt", book_alt },
+                { "BooK", bookWithDifferentCase },
+                { "BOOK", bookWithAllUpperCase },
+                { "Book_alt", book_alt_upperCase }
+            };
+            RuntimeConfigValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(new(entityCollection));
         }
 
         /// <summary>
@@ -1193,14 +1287,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("/graphql", "/api", false)]
         public void TestGlobalRouteValidation(string graphQLConfiguredPath, string restConfiguredPath, bool expectError)
         {
-            Dictionary<GlobalSettingsType, object> settings = new()
-            {
-                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){ Path = graphQLConfiguredPath, AllowIntrospection = true }) },
-                { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings(){ Path = restConfiguredPath }) }
+            GraphQLRuntimeOptions graphQL = new(Path: graphQLConfiguredPath);
+            RestRuntimeOptions rest = new(Path: restConfiguredPath);
 
-            };
-
-            RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(globalSettings: settings, dataSource: new(DatabaseType.mssql));
+            RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(
+                new(DatabaseType.MSSQL, "", new()),
+                graphQL,
+                rest);
             string expectedErrorMessage = "Conflicting GraphQL and REST path configuration.";
 
             try
@@ -1235,7 +1328,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         private static void ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(SortedDictionary<string, Entity> entityCollection, string entityName)
         {
             DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
-               action: () => RuntimeConfigValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(entityCollection));
+               action: () => RuntimeConfigValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(new(entityCollection)));
 
             Assert.AreEqual(expected: $"Entity {entityName} generates queries/mutation that already exist", actual: dabException.Message);
             Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
@@ -1245,29 +1338,31 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <summary>
         /// Method to create a sample entity with GraphQL enabled,
         /// with given source and relationship Info.
+        /// Rest is disabled by default, unless specified otherwise.
         /// </summary>
         /// <param name="source">Database name of entity.</param>
         /// <param name="relationshipMap">Dictionary containing {relationshipName, Relationship}</param>
         private static Entity GetSampleEntityUsingSourceAndRelationshipMap(
             string source,
-            Dictionary<string, Relationship> relationshipMap,
-            object graphQLdetails
+            Dictionary<string, EntityRelationship> relationshipMap,
+            EntityGraphQLOptions graphQLDetails,
+            EntityRestOptions restDetails = null
             )
         {
-            PermissionOperation actionForRole = new(
-                Name: Config.Operation.Create,
+            EntityAction actionForRole = new(
+                Action: EntityActionOperation.Create,
                 Fields: null,
                 Policy: null);
 
-            PermissionSetting permissionForEntity = new(
-                role: "anonymous",
-                operations: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
+            EntityPermission permissionForEntity = new(
+                Role: "anonymous",
+                Actions: new[] { actionForRole });
 
             Entity sampleEntity = new(
-                Source: JsonSerializer.SerializeToElement(source),
-                Rest: null,
-                GraphQL: graphQLdetails,
-                Permissions: new PermissionSetting[] { permissionForEntity },
+                Source: new(source, EntitySourceType.Table, null, null),
+                Rest: restDetails ?? new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS, Enabled: false),
+                GraphQL: graphQLDetails,
+                Permissions: new[] { permissionForEntity },
                 Relationships: relationshipMap,
                 Mappings: null
                 );
@@ -1291,10 +1386,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             string[] linkingTargetFields
         )
         {
-            Dictionary<string, Relationship> relationshipMap = new();
+            Dictionary<string, EntityRelationship> relationshipMap = new();
 
             // Creating relationship between source and target entity.
-            Relationship sampleRelationship = new(
+            EntityRelationship sampleRelationship = new(
                 Cardinality: Cardinality.One,
                 TargetEntity: targetEntity,
                 SourceFields: sourceFields,
@@ -1309,7 +1404,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Entity sampleEntity1 = GetSampleEntityUsingSourceAndRelationshipMap(
                 source: "TEST_SOURCE1",
                 relationshipMap: relationshipMap,
-                graphQLdetails: true
+                graphQLDetails: new("rname1", "rname1s", true)
             );
 
             sampleRelationship = new(
@@ -1322,18 +1417,22 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 LinkingTargetFields: linkingSourceFields
             );
 
-            relationshipMap = new();
-            relationshipMap.Add("rname2", sampleRelationship);
+            relationshipMap = new()
+            {
+                { "rname2", sampleRelationship }
+            };
 
             Entity sampleEntity2 = GetSampleEntityUsingSourceAndRelationshipMap(
                 source: "TEST_SOURCE2",
                 relationshipMap: relationshipMap,
-                graphQLdetails: true
+                graphQLDetails: new("rname2", "rname2s", true)
             );
 
-            Dictionary<string, Entity> entityMap = new();
-            entityMap.Add(sourceEntity, sampleEntity1);
-            entityMap.Add(targetEntity, sampleEntity2);
+            Dictionary<string, Entity> entityMap = new()
+            {
+                { sourceEntity, sampleEntity1 },
+                { targetEntity, sampleEntity2 }
+            };
 
             return entityMap;
         }
@@ -1397,7 +1496,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DisplayName = "API path prefix containing space at the start")]
         [DataRow("/ api_path", null, false, ApiType.GraphQL, false,
             DisplayName = "API path prefix containing space at the start and underscore in between.")]
-        [DataRow("/", null, false, ApiType.REST, false,
+        [DataRow("/", null, false, ApiType.GraphQL, false,
             DisplayName = "API path containing only a forward slash.")]
         public void ValidateApiPathIsWellFormed(
             string apiPathPrefix,
@@ -1431,8 +1530,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             ApiType apiType,
             bool expectError)
         {
-            string graphQLPathPrefix = GlobalSettings.GRAPHQL_DEFAULT_PATH;
-            string restPathPrefix = GlobalSettings.REST_DEFAULT_PATH;
+            string graphQLPathPrefix = GraphQLRuntimeOptions.DEFAULT_PATH;
+            string restPathPrefix = RestRuntimeOptions.DEFAULT_PATH;
 
             if (apiType is ApiType.REST)
             {
@@ -1443,15 +1542,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 graphQLPathPrefix = apiPathPrefix;
             }
 
-            Dictionary<GlobalSettingsType, object> settings = new()
-            {
-                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(Path: graphQLPathPrefix)) },
-                { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings(){ Path = restPathPrefix }) }
+            GraphQLRuntimeOptions graphQL = new(Path: graphQLPathPrefix);
+            RestRuntimeOptions rest = new(Path: restPathPrefix);
 
-            };
-
-            RuntimeConfig configuration =
-                ConfigurationTests.InitMinimalRuntimeConfig(globalSettings: settings, dataSource: new(DatabaseType.mssql));
+            RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(
+                new(DatabaseType.MSSQL, "", new()),
+                graphQL,
+                rest);
 
             if (expectError)
             {
@@ -1463,7 +1560,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
                     if (pathContainsReservedCharacters)
                     {
-                        expectedErrorMessage = INVALID_REST_PATH_WITH_RESERVED_CHAR_ERR_MSG;
+                        expectedErrorMessage = RuntimeConfigValidator.INVALID_REST_PATH_WITH_RESERVED_CHAR_ERR_MSG;
                     }
                     else
                     {
@@ -1477,7 +1574,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
                     if (pathContainsReservedCharacters)
                     {
-                        expectedErrorMessage = INVALID_GRAPHQL_PATH_WITH_RESERVED_CHAR_ERR_MSG;
+                        expectedErrorMessage = RuntimeConfigValidator.INVALID_GRAPHQL_PATH_WITH_RESERVED_CHAR_ERR_MSG;
                     }
                     else
                     {
@@ -1518,14 +1615,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             bool graphqlEnabled,
             bool expectError)
         {
-            Dictionary<GlobalSettingsType, object> settings = new()
-            {
-                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){ Enabled =  restEnabled}) },
-                { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings(){ Enabled = graphqlEnabled }) }
+            GraphQLRuntimeOptions graphQL = new(Enabled: graphqlEnabled);
+            RestRuntimeOptions rest = new(Enabled: restEnabled);
 
-            };
-
-            RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(globalSettings: settings, dataSource: new(DatabaseType.mssql));
+            RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(
+                new(DatabaseType.MSSQL, "", new()),
+                graphQL,
+                rest);
             string expectedErrorMessage = "Both GraphQL and REST endpoints are disabled.";
 
             try
@@ -1642,9 +1738,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     }
                 }";
 
-            RuntimeConfig runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(runtimeConfigString, RuntimeConfig.SerializerOptions);
-            runtimeConfig!.DetermineGlobalSettings();
-            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+            RuntimeConfigLoader.TryParseConfig(runtimeConfigString, out RuntimeConfig runtimeConfig);
+            MockFileSystem fileSystem = new();
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
 
             // Perform validation on the permissions in the config and assert the expected results.
             if (exceptionExpected)
@@ -1736,9 +1834,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     }
                 }";
 
-            RuntimeConfig runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(runtimeConfigString, RuntimeConfig.SerializerOptions);
-            runtimeConfig!.DetermineGlobalSettings();
-            RuntimeConfigValidator configValidator = AuthenticationConfigValidatorUnitTests.GetMockConfigValidator(ref runtimeConfig);
+            RuntimeConfigLoader.TryParseConfig(runtimeConfigString, out RuntimeConfig runtimeConfig);
+            MockFileSystem fileSystem = new();
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
 
             // Perform validation on the permissions in the config and assert the expected results.
             if (exceptionExpected)
@@ -1765,22 +1865,22 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="exceptionExpected">Boolean value representing whether an exception is expected or not.</param>
         /// <param name="expectedErrorMessage">Expected error message when an exception is expected for the test run.</param>
         [DataTestMethod]
-        [DataRow(SourceType.Table, "[\"get\"]", true,
-            $"The rest property '{RestStoredProcedureEntitySettings.PROPERTY_METHODS}' is present for entity: HybridEntity of type: Table, but is only valid for type: StoredProcedure.",
+        [DataRow(EntitySourceType.Table, "[\"get\"]", true,
+            $"The rest property '{Entity.PROPERTY_METHODS}' is present for entity: HybridEntity of type: Table, but is only valid for type: StoredProcedure.",
             DisplayName = "Rest methods specified for non-storedprocedure entity fail config validation.")]
-        [DataRow(SourceType.StoredProcedure, "\"get\"", true,
-            $"The rest property '{RestStoredProcedureEntitySettings.PROPERTY_METHODS}' for entity: HybridEntity is expected to be an array.",
+        [DataRow(EntitySourceType.StoredProcedure, "\"get\"", true,
+            $"The rest property '{Entity.PROPERTY_METHODS}' for entity: HybridEntity is expected to be an array.",
             DisplayName = "Rest methods specified as a non-array element fail config validation.")]
-        [DataRow(SourceType.StoredProcedure, "[\"post\", 1]", true,
-            $"The rest property '{RestStoredProcedureEntitySettings.PROPERTY_METHODS}' for entity: HybridEntity can only contain string as a valid array element.",
+        [DataRow(EntitySourceType.StoredProcedure, "[\"post\", 1]", true,
+            $"The rest property '{Entity.PROPERTY_METHODS}' for entity: HybridEntity can only contain string as a valid array element.",
             DisplayName = "Rest methods containing non-string element fail config validation.")]
-        [DataRow(SourceType.StoredProcedure, "[\"set\"]", true,
-            $"The rest property '{RestStoredProcedureEntitySettings.PROPERTY_METHODS}' for entity: HybridEntity contains an invalid REST operation: 'set'.",
+        [DataRow(EntitySourceType.StoredProcedure, "[\"set\"]", true,
+            $"The rest property '{Entity.PROPERTY_METHODS}' for entity: HybridEntity contains an invalid REST operation: 'set'.",
             DisplayName = "Invalid rest operation specified in rest methods fail config validation.")]
-        [DataRow(SourceType.StoredProcedure, "[\"Get\", \"post\", \"PUT\", \"paTch\", \"delete\"]", false,
+        [DataRow(EntitySourceType.StoredProcedure, "[\"Get\", \"post\", \"PUT\", \"paTch\", \"delete\"]", false,
             DisplayName = "Valid rest operations specified in rest methods for stored procedure pass config validation.")]
         public void ValidateRestMethodsForEntityInConfig(
-            SourceType sourceType,
+            EntitySourceType sourceType,
             string methods,
             bool exceptionExpected,
             string expectedErrorMessage = "")
@@ -1824,21 +1924,20 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     }
                 }";
 
-            RuntimeConfig runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(runtimeConfigString, RuntimeConfig.SerializerOptions);
-            runtimeConfig.DetermineGlobalSettings();
+            RuntimeConfigLoader.TryParseConfig(runtimeConfigString, out RuntimeConfig runtimeConfig);
 
             // Perform validation on the entity in the config and assert the expected results.
             if (exceptionExpected)
             {
                 DataApiBuilderException ex =
-                    Assert.ThrowsException<DataApiBuilderException>(() => ValidateEntityConfiguration(runtimeConfig));
+                    Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig));
                 Assert.AreEqual(expectedErrorMessage, ex.Message);
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
             }
             else
             {
-                ValidateEntityConfiguration(runtimeConfig);
+                RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig);
             }
         }
 
@@ -1854,28 +1953,32 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DisplayName = "Empty rest path configured for an entity fails config validation.")]
         [DataRow(true, null, "Entity: EntityA has a null rest path. Accepted data types: string, boolean.",
             DisplayName = "NULL rest path configured for an entity fails config validation.")]
-        [DataRow(true, 1, $"Entity: EntityA has rest path specified with incorrect data type. Accepted data types: string, boolean.",
-            DisplayName = "Rest path configured as integer for an entity fails config validation.")]
         [DataRow(false, "entityRestPath", DisplayName = "Rest path correctly configured as string.")]
         public void ValidateRestPathForEntityInConfig(
             bool exceptionExpected,
-            object restPathForEntity,
+            string restPathForEntity,
             string expectedExceptionMessage = "")
         {
-            Dictionary<string, Entity> entityCollection = new();
-
-            // Create first entity with REST settings.
-            Entity entity = SchemaConverterTests.GenerateEmptyEntity();
-            entity.Rest = new RestEntitySettings(Path: restPathForEntity);
-            entityCollection.Add("EntityA", entity);
+            Dictionary<string, Entity> entityMap = new();
+            Entity sampleEntity = GetSampleEntityUsingSourceAndRelationshipMap(
+                source: "TEST_SOURCEA",
+                relationshipMap: null,
+                graphQLDetails: null,
+                restDetails: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS, restPathForEntity, true)
+            );
+            entityMap.Add("EntityA", sampleEntity);
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
-                RuntimeSettings: AuthorizationHelpers.CreateRuntimeSettings(),
-                Entities: entityCollection
-                );
-            runtimeConfig.DetermineGlobalSettings();
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", new()),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(null, null)
+                ),
+                Entities: new(entityMap)
+            );
+
             if (exceptionExpected)
             {
                 DataApiBuilderException dabException =
@@ -1903,43 +2006,52 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DisplayName = "Duplicate rest paths configures for entities fail config validation.")]
         [DataRow(true, null, "EntityA", "The rest path: EntityA specified for entity: EntityB is already used by another entity.",
             DisplayName = "Rest path for an entity configured as the name of another entity fails config validation.")]
-        [DataRow(false, false, "EntityA", DisplayName = "Rest path for an entity configured as the name of another entity for which rest endpoint is disabled passes config validation.")]
         public void ValidateUniqueRestPathsForEntitiesInConfig(
             bool exceptionExpected,
-            object restPathForFirstEntity,
-            object restPathForSecondEntity,
+            string restPathForFirstEntity,
+            string restPathForSecondEntity,
             string expectedExceptionMessage = "")
         {
-            Dictionary<string, Entity> entityCollection = new();
+            Dictionary<string, Entity> entityMap = new();
+            Entity sampleEntityA = GetSampleEntityUsingSourceAndRelationshipMap(
+                source: "TEST_SOURCEA",
+                relationshipMap: null,
+                graphQLDetails: null,
+                restDetails: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS, restPathForFirstEntity, true)
+            );
 
-            // Create first entity with REST settings.
-            Entity entity = SchemaConverterTests.GenerateEmptyEntity();
-            entity.Rest = restPathForFirstEntity is null ? null : new RestEntitySettings(Path: restPathForFirstEntity);
-            entityCollection.Add("EntityA", entity);
+            Entity sampleEntityB = GetSampleEntityUsingSourceAndRelationshipMap(
+                source: "TEST_SOURCEB",
+                relationshipMap: null,
+                graphQLDetails: null,
+                restDetails: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS, restPathForSecondEntity, true)
+            );
 
-            // Create second entity with REST settings.
-            entity = SchemaConverterTests.GenerateEmptyEntity();
-            entity.Rest = restPathForSecondEntity is null ? null : new RestEntitySettings(Path: restPathForSecondEntity);
-            entityCollection.Add("EntityB", entity);
+            entityMap.Add("EntityA", sampleEntityA);
+            entityMap.Add("EntityB", sampleEntityB);
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.mssql),
-                RuntimeSettings: AuthorizationHelpers.CreateRuntimeSettings(),
-                Entities: entityCollection
-                );
-            runtimeConfig.DetermineGlobalSettings();
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", new()),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(null, null)
+                ),
+                Entities: new(entityMap)
+            );
+
             if (exceptionExpected)
             {
                 DataApiBuilderException dabException =
-                    Assert.ThrowsException<DataApiBuilderException>(() => ValidateEntityConfiguration(runtimeConfig));
+                    Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig));
                 Assert.AreEqual(expectedExceptionMessage, dabException.Message);
                 Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
                 Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
             }
             else
             {
-                ValidateEntityConfiguration(runtimeConfig);
+                RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig);
             }
         }
     }

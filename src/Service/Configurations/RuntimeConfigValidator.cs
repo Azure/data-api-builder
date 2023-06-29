@@ -248,61 +248,30 @@ namespace Azure.DataApiBuilder.Service.Configurations
             {
                 if (runtimeConfig.Runtime.Rest.Enabled)
                 {
-                    // By default we assume rest endpoint is enabled for the entity.
+                    // By default we assume Rest is enabled for the entity.
                     bool isRestEnabledForEntity = true;
 
                     // If no custom rest path is defined for the entity, we default it to the entityName.
                     string pathForEntity = entityName;
                     if (entity.Rest is not null)
                     {
-                        JsonElement restJsonElement = JsonSerializer.SerializeToElement(entity.Rest);
+                        pathForEntity = entity.Rest.Path is not null ? entity.Rest.Path : entityName;
+                        isRestEnabledForEntity = entity.Rest.Enabled;
+                        SupportedHttpVerb[] supportedOperations = entity.Rest.Methods;
 
-                        // We do the validation for rest path only if the 'rest' property maps to a json object.
-                        if (restJsonElement.ValueKind is JsonValueKind.Object)
-                        {
-                            // Since 'path' is an optional property, we skip validation if its absent.
-                            if (restJsonElement.TryGetProperty(Entity.PROPERTY_PATH, out JsonElement pathElement))
-                            {
-                                (isRestEnabledForEntity, pathForEntity) = ValidateAndGetRestSettingsForEntity(entityName, pathElement);
-                            }
+                        // Since 'path' is an optional property, we skip validation if its absent.
+                        ValidateAndGetRestSettingsForEntity(entityName, pathForEntity);
 
-                            // Since 'methods' is an optional property, we skip validation if its absent.
-                            if (restJsonElement.TryGetProperty(Entity.PROPERTY_METHODS, out JsonElement methodsElement))
-                            {
-                                ValidateRestMethodsForEntity(entityName, methodsElement, entity);
-                            }
-                        }
-                        else if (restJsonElement.ValueKind is JsonValueKind.True || restJsonElement.ValueKind is JsonValueKind.False)
+                        if (entity.Source.Type is not EntitySourceType.StoredProcedure && supportedOperations.Length > 0)
                         {
-                            isRestEnabledForEntity = bool.Parse(restJsonElement.ToString());
-                        }
-                        else
-                        {
+                            // The rest property 'methods' can only be present for stored procedures.
                             throw new DataApiBuilderException(
-                                message: $"The 'rest' property for entity: {entityName} can only be a boolean value or a json object.",
+                                message: $"The rest property '{Entity.PROPERTY_METHODS}' is present for entity: {entityName} " +
+                                $"of type: {entity.Source.Type}, but is only valid for type: {EntitySourceType.StoredProcedure}.",
                                 statusCode: HttpStatusCode.ServiceUnavailable,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
-                            );
+                                );
                         }
-                    }
-
-                    if (string.IsNullOrEmpty(pathForEntity))
-                    {
-                        // The rest 'path' cannot be empty.
-                        throw new DataApiBuilderException(
-                            message: $"The rest path for entity: {entityName} cannot be empty.",
-                            statusCode: HttpStatusCode.ServiceUnavailable,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
-                            );
-                    }
-
-                    if (_invalidURIComponentCharsRgx.IsMatch(pathForEntity))
-                    {
-                        throw new DataApiBuilderException(
-                            message: $"The rest path: {pathForEntity} for entity: {entityName} contains one or more reserved characters.",
-                            statusCode: HttpStatusCode.ServiceUnavailable,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
-                            );
                     }
 
                     if (isRestEnabledForEntity && !restPathsForEntities.Add(pathForEntity))
@@ -340,110 +309,27 @@ namespace Azure.DataApiBuilder.Service.Configurations
         /// configured for any other entity.
         /// </summary>
         /// <param name="entityName">Name of the entity.</param>
-        /// <param name="restPathElement">The rest path element for the entity.</param>
+        /// <param name="pathForEntity">The rest path for the entity.</param>
         /// <exception cref="DataApiBuilderException">Throws exception when rest path contains an unexpected value.</exception>
-        private static Tuple<bool,string> ValidateAndGetRestSettingsForEntity(string entityName, JsonElement restPathElement)
+        private static void ValidateAndGetRestSettingsForEntity(string entityName, string pathForEntity)
         {
-            if (restPathElement.ValueKind is JsonValueKind.Null)
+            if (string.IsNullOrEmpty(pathForEntity))
             {
-                // The rest path can't be null.
+                // The rest 'path' cannot be empty.
                 throw new DataApiBuilderException(
-                    message: $"Entity: {entityName} has a null rest {Entity.PROPERTY_PATH}. Accepted data types: string, boolean.",
+                    message: $"The rest path for entity: {entityName} cannot be empty.",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
                     );
             }
 
-            if (restPathElement.ValueKind is not JsonValueKind.String && restPathElement.ValueKind is not JsonValueKind.False
-                && restPathElement.ValueKind is not JsonValueKind.True)
+            if (_invalidURIComponentCharsRgx.IsMatch(pathForEntity))
             {
-                // The rest path can only be a string or a boolean value.
                 throw new DataApiBuilderException(
-                    message: $"Entity: {entityName} has rest {Entity.PROPERTY_PATH} specified with incorrect data type. " +
-                    $"Accepted data types: string, boolean.",
+                    message: $"The rest path: {pathForEntity} for entity: {entityName} contains one or more reserved characters.",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
                     );
-            }
-
-            if (restPathElement.ValueKind is JsonValueKind.String)
-            {
-                return new(true, restPathElement.ToString().TrimStart('/').TrimStart(' '));
-            }
-
-            return new(bool.Parse(restPathElement.ToString()), entityName);
-        }
-
-        /// <summary>
-        /// Helper method to validate that the Rest methods are correctly configured for the entity.
-        /// Rest methods can only be configured for stored procedures as an array of valid REST operations.
-        /// </summary>
-        /// <param name="entityName">Name of the entity.</param>
-        /// <param name="restMethodsElement">Rest methods element configured for the entity.</param>
-        /// <param name="entity">Entity object.</param>
-        /// <exception cref="DataApiBuilderException">Throws exception whenever the rest methods are configured for a non-stored procedure entity or
-        /// contain an unexpected value.</exception>
-        private static void ValidateRestMethodsForEntity(string entityName, JsonElement restMethodsElement, Entity entity)
-        {
-            // This is needed to correctly populate the source type for the entity.
-            //entity.TryPopulateSourceFields();
-            if (entity.Source.Type is not EntitySourceType.StoredProcedure)
-            {
-                // The rest property 'methods' can only be present for stored procedures.
-                throw new DataApiBuilderException(
-                    message: $"The rest property '{Entity.PROPERTY_METHODS}' is present for entity: {entityName} " +
-                    $"of type: {entity.Source.Type}, but is only valid for type: {EntitySourceType.StoredProcedure}.",
-                    statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
-                    );
-            }
-
-            if (restMethodsElement.ValueKind is JsonValueKind.Null)
-            {
-                // The rest property 'methods' cannot be null.
-                throw new DataApiBuilderException(
-                    message: $"The rest property '{Entity.PROPERTY_METHODS}' for entity: {entityName} " +
-                    $"cannot be null.",
-                    statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
-                    );
-            }
-
-            if (restMethodsElement.ValueKind is not JsonValueKind.Array)
-            {
-                // The rest property 'methods' can only hold an array.
-                throw new DataApiBuilderException(
-                    message: $"The rest property '{Entity.PROPERTY_METHODS}' for entity: {entityName} " +
-                    $"is expected to be an array.",
-                    statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
-                    );
-            }
-
-            foreach (JsonElement restVerbElement in restMethodsElement.EnumerateArray())
-            {
-                if (restVerbElement.ValueKind is not JsonValueKind.String)
-                {
-                    // Every element in the rest 'methods' property should be a string.
-                    throw new DataApiBuilderException(
-                        message: $"The rest property '{Entity.PROPERTY_METHODS}' for entity: {entityName} " +
-                        $"can only contain string as a valid array element.",
-                        statusCode: HttpStatusCode.ServiceUnavailable,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
-                    );
-                }
-
-                string restVerb = restVerbElement.ToString();
-                if (!Enum.TryParse(restVerb, ignoreCase: true, out SupportedHttpVerb httpVerb))
-                {
-                    // Every element in the 'methods' array should be a valid REST operation.
-                    throw new DataApiBuilderException(
-                        message: $"The rest property '{Entity.PROPERTY_METHODS}' for entity: {entityName} " +
-                        $"contains an invalid REST operation: '{restVerb}'.",
-                        statusCode: HttpStatusCode.ServiceUnavailable,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
-                    );
-                }
             }
         }
 

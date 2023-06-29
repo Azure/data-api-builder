@@ -741,7 +741,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         {
             return new Entity(
                 Source: new($"{SCHEMA_NAME}.{TABLE_NAME}", EntitySourceType.Table, null, null),
-                Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
+                Rest: new(new SupportedHttpVerb[] {}),
                 GraphQL: new(entityName, ""),
                 Permissions: Array.Empty<EntityPermission>(),
                 Relationships: new(),

@@ -1868,15 +1868,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(EntitySourceType.Table, "[\"get\"]", true,
             $"The rest property '{Entity.PROPERTY_METHODS}' is present for entity: HybridEntity of type: Table, but is only valid for type: StoredProcedure.",
             DisplayName = "Rest methods specified for non-storedprocedure entity fail config validation.")]
-        [DataRow(EntitySourceType.StoredProcedure, "\"get\"", true,
-            $"The rest property '{Entity.PROPERTY_METHODS}' for entity: HybridEntity is expected to be an array.",
-            DisplayName = "Rest methods specified as a non-array element fail config validation.")]
-        [DataRow(EntitySourceType.StoredProcedure, "[\"post\", 1]", true,
-            $"The rest property '{Entity.PROPERTY_METHODS}' for entity: HybridEntity can only contain string as a valid array element.",
-            DisplayName = "Rest methods containing non-string element fail config validation.")]
-        [DataRow(EntitySourceType.StoredProcedure, "[\"set\"]", true,
-            $"The rest property '{Entity.PROPERTY_METHODS}' for entity: HybridEntity contains an invalid REST operation: 'set'.",
-            DisplayName = "Invalid rest operation specified in rest methods fail config validation.")]
         [DataRow(EntitySourceType.StoredProcedure, "[\"Get\", \"post\", \"PUT\", \"paTch\", \"delete\"]", false,
             DisplayName = "Valid rest operations specified in rest methods for stored procedure pass config validation.")]
         public void ValidateRestMethodsForEntityInConfig(
@@ -1901,7 +1892,16 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     ""authentication"": {
                         ""provider"": ""StaticWebApps""
                     }
-                  }
+                  },
+                  ""rest"": {
+                    ""enabled"": true,
+                    ""path"": ""/api""
+                    },
+                  ""graphql"": {
+                       ""enabled"": true,
+                       ""path"": ""/graphql"",
+                       ""allow-introspection"": true
+                    }
                 },
                 ""entities"": {
                     ""HybridEntity"":{
@@ -1951,8 +1951,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataTestMethod]
         [DataRow(true, "", "The rest path for entity: EntityA cannot be empty.",
             DisplayName = "Empty rest path configured for an entity fails config validation.")]
-        [DataRow(true, null, "Entity: EntityA has a null rest path. Accepted data types: string, boolean.",
-            DisplayName = "NULL rest path configured for an entity fails config validation.")]
         [DataRow(false, "entityRestPath", DisplayName = "Rest path correctly configured as string.")]
         public void ValidateRestPathForEntityInConfig(
             bool exceptionExpected,
@@ -1964,7 +1962,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 source: "TEST_SOURCEA",
                 relationshipMap: null,
                 graphQLDetails: null,
-                restDetails: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS, restPathForEntity, true)
+                restDetails: new(new SupportedHttpVerb[] {}, restPathForEntity, true)
             );
             entityMap.Add("EntityA", sampleEntity);
 
@@ -2017,14 +2015,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 source: "TEST_SOURCEA",
                 relationshipMap: null,
                 graphQLDetails: null,
-                restDetails: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS, restPathForFirstEntity, true)
+                restDetails: new(new SupportedHttpVerb[] { }, restPathForFirstEntity, true)
             );
 
             Entity sampleEntityB = GetSampleEntityUsingSourceAndRelationshipMap(
                 source: "TEST_SOURCEB",
                 relationshipMap: null,
                 graphQLDetails: null,
-                restDetails: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS, restPathForSecondEntity, true)
+                restDetails: new(new SupportedHttpVerb[] {}, restPathForSecondEntity, true)
             );
 
             entityMap.Add("EntityA", sampleEntityA);

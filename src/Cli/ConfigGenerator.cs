@@ -113,8 +113,8 @@ namespace Cli
                             "it does not support REST yet.");
                     }
 
+                    restBaseRoute = null;
                     restPath = null;
-                    restBaseRoute = null; 
                     dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), JsonSerializer.SerializeToElement(cosmosDatabase));
                     dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), JsonSerializer.SerializeToElement(cosmosContainer));
                     dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), JsonSerializer.SerializeToElement(graphQLSchemaPath));

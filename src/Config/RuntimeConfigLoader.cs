@@ -138,7 +138,7 @@ public class RuntimeConfigLoader
     /// </summary>
     /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
-    public bool TryLoadKnownConfig([NotNullWhen(true)]out RuntimeConfig? config)
+    public bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config)
     {
         return TryLoadConfig(ConfigFileName, out config);
     }

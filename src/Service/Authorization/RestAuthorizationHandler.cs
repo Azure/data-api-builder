@@ -7,7 +7,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -105,9 +105,9 @@ namespace Azure.DataApiBuilder.Service.Authorization
                     }
 
                     string roleName = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
-                    IEnumerable<Config.Operation> operations = HttpVerbToOperations(httpContext.Request.Method);
+                    IEnumerable<EntityActionOperation> operations = HttpVerbToOperations(httpContext.Request.Method);
 
-                    foreach (Config.Operation operation in operations)
+                    foreach (EntityActionOperation operation in operations)
                     {
                         bool isAuthorized = _authorizationResolver.AreRoleAndOperationDefinedForEntity(entityName, roleName, operation);
                         if (!isAuthorized)
@@ -145,12 +145,12 @@ namespace Azure.DataApiBuilder.Service.Authorization
 
                     string entityName = restContext.EntityName;
                     string roleName = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
-                    IEnumerable<Config.Operation> operations = HttpVerbToOperations(httpContext.Request.Method);
+                    IEnumerable<EntityActionOperation> operations = HttpVerbToOperations(httpContext.Request.Method);
 
                     // Delete operations do not have column level restrictions.
                     // If the operation is allowed for the role, the column requirement is implicitly successful,
                     // and the authorization check can be short circuited here.
-                    if (operations.Count() == 1 && operations.Contains(Config.Operation.Delete))
+                    if (operations.Count() == 1 && operations.Contains(EntityActionOperation.Delete))
                     {
                         context.Succeed(requirement);
                         return Task.CompletedTask;
@@ -163,7 +163,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                     // otherwise, just one operation is checked.
                     // PUT and PATCH resolve to operations 'Create' and 'Update'.
                     // A user must fulfill all operations' permissions requirements to proceed.
-                    foreach (Config.Operation operation in operations)
+                    foreach (EntityActionOperation operation in operations)
                     {
                         // Get a list of all columns present in a request that need to be authorized.
                         IEnumerable<string> columnsToCheck = restContext.CumulativeColumns;
@@ -178,14 +178,14 @@ namespace Azure.DataApiBuilder.Service.Authorization
                             // Find operations with no column filter in the query string will have FieldsToBeReturned == 0.
                             // Then, the "allowed columns" resolved, will be set on FieldsToBeReturned.
                             // When FieldsToBeReturned is originally >=1 column, the field is NOT modified here.
-                            if (restContext.FieldsToBeReturned.Count == 0 && restContext.OperationType == Config.Operation.Read)
+                            if (restContext.FieldsToBeReturned.Count == 0 && restContext.OperationType == EntityActionOperation.Read)
                             {
                                 // Union performed to avoid duplicate field names in FieldsToBeReturned.
                                 IEnumerable<string> fieldsReturnedForFind = _authorizationResolver.GetAllowedExposedColumns(entityName, roleName, operation);
                                 restContext.UpdateReturnFields(fieldsReturnedForFind);
                             }
                         }
-                        else if (columnsToCheck.Count() == 0 && restContext.OperationType is Config.Operation.Read)
+                        else if (columnsToCheck.Count() == 0 && restContext.OperationType is EntityActionOperation.Read)
                         {
                             // - Find operations typically return all metadata of a database record.
                             // This check resolves all 'included' columns defined in permissions
@@ -229,7 +229,7 @@ namespace Azure.DataApiBuilder.Service.Authorization
                     }
 
                     string roleName = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
-                    Enum.TryParse<RestMethod>(httpContext.Request.Method, ignoreCase: true, out RestMethod httpVerb);
+                    Enum.TryParse<SupportedHttpVerb>(httpContext.Request.Method, ignoreCase: true, out SupportedHttpVerb httpVerb);
                     bool isAuthorized = _authorizationResolver.IsStoredProcedureExecutionPermitted(entityName, roleName, httpVerb);
                     if (!isAuthorized)
                     {
@@ -255,19 +255,19 @@ namespace Azure.DataApiBuilder.Service.Authorization
         /// </summary>
         /// <param name="httpVerb"></param>
         /// <returns>A collection of Operation types resolved from the http verb type of the request.</returns>
-        private static IEnumerable<Config.Operation> HttpVerbToOperations(string httpVerb)
+        private static IEnumerable<EntityActionOperation> HttpVerbToOperations(string httpVerb)
         {
             switch (httpVerb)
             {
                 case HttpConstants.POST:
-                    return new List<Config.Operation>(new Config.Operation[] { Config.Operation.Create });
+                    return new List<EntityActionOperation>(new EntityActionOperation[] { EntityActionOperation.Create });
                 case HttpConstants.PUT:
                 case HttpConstants.PATCH:
-                    return new List<Config.Operation>(new Config.Operation[] { Config.Operation.Create, Config.Operation.Update });
+                    return new List<EntityActionOperation>(new EntityActionOperation[] { EntityActionOperation.Create, EntityActionOperation.Update });
                 case HttpConstants.DELETE:
-                    return new List<Config.Operation>(new Config.Operation[] { Config.Operation.Delete });
+                    return new List<EntityActionOperation>(new EntityActionOperation[] { EntityActionOperation.Delete });
                 case HttpConstants.GET:
-                    return new List<Config.Operation>(new Config.Operation[] { Config.Operation.Read });
+                    return new List<EntityActionOperation>(new EntityActionOperation[] { EntityActionOperation.Read });
                 default:
                     throw new DataApiBuilderException(
                         message: "Unsupported operation type.",

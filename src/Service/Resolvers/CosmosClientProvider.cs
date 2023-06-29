@@ -7,7 +7,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Core;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.Identity;
 using Microsoft.Azure.Cosmos;
@@ -22,7 +22,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         private string? _accountKey;
         private readonly string? _accessToken;
         public const string DAB_APP_NAME_ENV = "DAB_APP_NAME_ENV";
-        public static readonly string DEFAULT_APP_NAME = $"dab_oss_{Utils.GetProductVersion()}";
+        public static readonly string DEFAULT_APP_NAME = $"dab_oss_{ProductInfo.GetProductVersion()}";
 
         public CosmosClient? Client { get; private set; }
         public CosmosClientProvider(RuntimeConfigProvider runtimeConfigProvider)
@@ -31,7 +31,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             // On engine first start-up, access token will be null since ConfigurationController hasn't been called at that time.
             _accessToken = runtimeConfigProvider.ManagedIdentityAccessToken;
 
-            if (runtimeConfigProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
+            if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
                 InitializeClient(runtimeConfig);
             }
@@ -53,12 +53,12 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     "Cannot initialize a CosmosClientProvider without the runtime config.");
             }
 
-            if (configuration.DatabaseType is not DatabaseType.cosmosdb_nosql)
+            if (configuration.DataSource.DatabaseType is not DatabaseType.CosmosDB_NoSQL)
             {
                 throw new InvalidOperationException("We shouldn't need a CosmosClientProvider if we're not accessing a CosmosDb");
             }
 
-            if (string.IsNullOrEmpty(_connectionString) || configuration.ConnectionString != _connectionString)
+            if (string.IsNullOrEmpty(_connectionString) || configuration.DataSource.ConnectionString != _connectionString)
             {
                 string userAgent = GetCosmosUserAgent();
                 CosmosClientOptions options = new()
@@ -66,7 +66,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                     ApplicationName = userAgent
                 };
 
-                _connectionString = configuration.ConnectionString;
+                _connectionString = configuration.DataSource.ConnectionString;
                 ParseCosmosConnectionString();
 
                 if (!string.IsNullOrEmpty(_accountKey))

@@ -2,7 +2,8 @@
 // Licensed under the MIT License.
 
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
 using HotChocolate.Types;
@@ -37,7 +38,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         public static DocumentNode Build(
             DocumentNode root,
             DatabaseType databaseType,
-            IDictionary<string, Entity> entities,
+            RuntimeEntities entities,
             Dictionary<string, InputObjectTypeDefinitionNode> inputTypes,
             Dictionary<string, EntityMetadata>? entityPermissionsMap = null,
             Dictionary<string, DatabaseObject>? dbObjects = null
@@ -54,12 +55,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     string entityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
                     Entity entity = entities[entityName];
 
-                    if (entity.ObjectType is SourceType.StoredProcedure)
+                    if (entity.Source.Type is EntitySourceType.StoredProcedure)
                     {
                         // Check runtime configuration of the stored procedure entity to check that the GraphQL operation type was overridden to 'query' from the default 'mutation.'
-                        bool isSPDefinedAsQuery = entity.FetchConfiguredGraphQLOperation() is GraphQLOperation.Query;
+                        bool isSPDefinedAsQuery = entity.GraphQL.Operation is GraphQLOperation.Query;
 
-                        IEnumerable<string> rolesAllowedForExecute = IAuthorizationResolver.GetRolesForOperation(entityName, operation: Operation.Execute, entityPermissionsMap);
+                        IEnumerable<string> rolesAllowedForExecute = IAuthorizationResolver.GetRolesForOperation(entityName, operation: EntityActionOperation.Execute, entityPermissionsMap);
 
                         if (isSPDefinedAsQuery && rolesAllowedForExecute.Any())
                         {
@@ -71,10 +72,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     }
                     else
                     {
-                        IEnumerable<string> rolesAllowedForRead = IAuthorizationResolver.GetRolesForOperation(entityName, operation: Operation.Read, entityPermissionsMap);
+                        IEnumerable<string> rolesAllowedForRead = IAuthorizationResolver.GetRolesForOperation(entityName, operation: EntityActionOperation.Read, entityPermissionsMap);
                         ObjectTypeDefinitionNode paginationReturnType = GenerateReturnType(name);
 
-                        if (rolesAllowedForRead.Count() > 0)
+                        if (rolesAllowedForRead.Any())
                         {
                             queryFields.Add(GenerateGetAllQuery(objectTypeDefinitionNode, name, paginationReturnType, inputTypes, entity, rolesAllowedForRead));
                             queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name, databaseType, entity, rolesAllowedForRead));

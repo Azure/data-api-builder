@@ -6,10 +6,11 @@ using System.Collections.Generic;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using AuthenticationOptions = Azure.DataApiBuilder.Config.ObjectModel.AuthenticationOptions;
 
 namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
 {
@@ -49,7 +50,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
         /// <returns>AuthenticatedResult (Fail, NoResult, Success).</returns>
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
-            if (Context.Request.Headers[AuthenticationConfig.CLIENT_PRINCIPAL_HEADER].Count > 0)
+            if (Context.Request.Headers[AuthenticationOptions.CLIENT_PRINCIPAL_HEADER].Count > 0)
             {
                 ClaimsIdentity? identity = Options.EasyAuthProvider switch
                 {
@@ -101,7 +102,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
             bool isUserAnonymousOnly = false;
             foreach (Claim claim in claims)
             {
-                if (claim.Type is AuthenticationConfig.ROLE_CLAIM_TYPE)
+                if (claim.Type is AuthenticationOptions.ROLE_CLAIM_TYPE)
                 {
                     if (claim.Value.Equals(AuthorizationType.Anonymous.ToString(),
                         StringComparison.OrdinalIgnoreCase))

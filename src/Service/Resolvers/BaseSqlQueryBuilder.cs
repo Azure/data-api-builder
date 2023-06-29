@@ -6,7 +6,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.Models;
@@ -37,7 +38,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public virtual string Build(BaseSqlQueryStructure structure)
         {
             string predicates = new(JoinPredicateStrings(
-                       structure.GetDbPolicyForOperation(Config.Operation.Read),
+                       structure.GetDbPolicyForOperation(EntityActionOperation.Read),
                        Build(structure.Predicates)));
 
             string query = $"SELECT 1 " +

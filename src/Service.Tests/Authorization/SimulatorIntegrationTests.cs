@@ -1,13 +1,12 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
@@ -20,8 +19,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
     [TestClass]
     public class SimulatorIntegrationTests
     {
-        private const string MSSQL_ENVIRONMENT = TestCategory.MSSQL;
-        private const string SIMULATOR_CONFIG = "simulator-config.json";
+        private const string SIMULATOR_CONFIG = $"simulator-config.{TestCategory.MSSQL}.json";
         private static TestServer _server;
         private static HttpClient _client;
 
@@ -42,6 +40,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             _server = new(Program.CreateWebHostBuilder(args));
             _client = _server.CreateClient();
+        }
+
+        [TestCleanup]
+        public void CleanupAfterEachTest()
+        {
+            TestHelper.UnsetAllDABEnvironmentVariables();
         }
 
         /// <summary>
@@ -106,24 +110,26 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
         private static void SetupCustomRuntimeConfiguration()
         {
-            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(MSSQL_ENVIRONMENT);
-            RuntimeConfig config = configProvider.GetRuntimeConfiguration();
+            TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
+            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(TestHelper.GetRuntimeConfigLoader());
+            RuntimeConfig config = configProvider.GetConfig();
 
-            AuthenticationConfig authenticationConfig = new(Provider: AuthenticationConfig.SIMULATOR_AUTHENTICATION);
-            HostGlobalSettings customHostGlobalSettings = config.HostGlobalSettings with { Authentication = authenticationConfig };
-            JsonElement serializedCustomHostGlobalSettings =
-                JsonSerializer.SerializeToElement(customHostGlobalSettings, RuntimeConfig.SerializerOptions);
-
-            Dictionary<GlobalSettingsType, object> customRuntimeSettings = new(config.RuntimeSettings);
-            customRuntimeSettings.Remove(GlobalSettingsType.Host);
-            customRuntimeSettings.Add(GlobalSettingsType.Host, serializedCustomHostGlobalSettings);
-
-            RuntimeConfig configWithCustomHostMode =
-                config with { RuntimeSettings = customRuntimeSettings };
+            AuthenticationOptions AuthenticationOptions = new(Provider: AuthenticationOptions.SIMULATOR_AUTHENTICATION, null);
+            RuntimeConfig configWithCustomHostMode = config
+                with
+            {
+                Runtime = config.Runtime
+                with
+                {
+                    Host = config.Runtime.Host
+                with
+                    { Authentication = AuthenticationOptions }
+                }
+            };
 
             File.WriteAllText(
                 SIMULATOR_CONFIG,
-                JsonSerializer.Serialize(configWithCustomHostMode, RuntimeConfig.SerializerOptions));
+                configWithCustomHostMode.ToJson());
         }
     }
 }

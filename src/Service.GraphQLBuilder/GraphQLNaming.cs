@@ -1,12 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
-using Humanizer;
 
 namespace Azure.DataApiBuilder.Service.GraphQLBuilder
 {
@@ -96,86 +94,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// Attempts to deserialize and get the SingularPlural GraphQL naming config
         /// of an Entity from the Runtime Configuration.
         /// </summary>
-        public static string GetDefinedSingularName(string name, Entity configEntity)
+        public static string GetDefinedSingularName(string entityName, Entity configEntity)
         {
-            if (TryGetConfiguredGraphQLName(configEntity, out string? graphQLName) &&
-                !string.IsNullOrEmpty(graphQLName))
+            if (string.IsNullOrEmpty(configEntity.GraphQL.Singular))
             {
-                name = graphQLName;
-            }
-            else if (TryGetSingularPluralConfiguration(configEntity, out SingularPlural? singularPluralConfig) &&
-                !string.IsNullOrEmpty(singularPluralConfig.Singular))
-            {
-                name = singularPluralConfig.Singular;
+                throw new ArgumentException($"The entity '{entityName}' does not have a singular name defined in config, nor has one been extrapolated from the entity name.");
             }
 
-            return name;
-        }
-
-        /// <summary>
-        /// Attempts to deserialize and get the SingularPlural GraphQL naming config
-        /// of an Entity from the Runtime Configuration.
-        /// </summary>
-        /// <param name="configEntity">Entity to fetch GraphQL naming, if set.</param>
-        /// <param name="singularPluralConfig">Entity's configured GraphQL singular/plural naming.</param>
-        /// <returns>True if configuration found, false otherwise.</returns>
-        public static bool TryGetSingularPluralConfiguration(Entity configEntity, [NotNullWhen(true)] out SingularPlural? singularPluralConfig)
-        {
-            if (configEntity.GraphQL is not null && configEntity.GraphQL is GraphQLEntitySettings graphQLEntitySettings)
-            {
-                if (graphQLEntitySettings is not null && graphQLEntitySettings.Type is SingularPlural singularPlural)
-                {
-                    if (singularPlural is not null)
-                    {
-                        singularPluralConfig = singularPlural;
-                        return true;
-                    }
-                }
-            }
-            else if (configEntity.GraphQL is not null && configEntity.GraphQL is GraphQLStoredProcedureEntityVerboseSettings graphQLStoredProcedureEntityVerboseSettings)
-            {
-                if (graphQLStoredProcedureEntityVerboseSettings is not null && graphQLStoredProcedureEntityVerboseSettings.Type is SingularPlural singularPlural)
-                {
-                    if (singularPlural is not null)
-                    {
-                        singularPluralConfig = singularPlural;
-                        return true;
-                    }
-                }
-            }
-
-            singularPluralConfig = null;
-            return false;
-        }
-
-        /// <summary>
-        /// Gets the GraphQL type name from an entity's GraphQL configuration that exists as
-        /// GraphQLEntitySettings or GraphQLStoredProcedureEntityVerboseSettings.
-        /// </summary>
-        /// <param name="configEntity"></param>
-        /// <param name="graphQLName">Resolved GraphQL name</param>
-        /// <returns>True if an entity's GraphQL settings are populated and a GraphQL name was resolved. Otherwise, false.</returns>
-        public static bool TryGetConfiguredGraphQLName(Entity configEntity, [NotNullWhen(true)] out string? graphQLName)
-        {
-            if (configEntity.GraphQL is not null && configEntity.GraphQL is GraphQLEntitySettings graphQLEntitySettings)
-            {
-                if (graphQLEntitySettings is not null && graphQLEntitySettings.Type is string graphQLTypeName)
-                {
-                    graphQLName = graphQLTypeName;
-                    return true;
-                }
-            }
-            else if (configEntity.GraphQL is not null && configEntity.GraphQL is GraphQLStoredProcedureEntityVerboseSettings graphQLSpEntityVerboseSettings)
-            {
-                if (graphQLSpEntityVerboseSettings is not null && graphQLSpEntityVerboseSettings.Type is string graphQLTypeName)
-                {
-                    graphQLName = graphQLTypeName;
-                    return true;
-                }
-            }
-
-            graphQLName = null;
-            return false;
+            return configEntity.GraphQL.Singular;
         }
 
         /// <summary>
@@ -203,18 +129,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <returns></returns>
         public static NameNode Pluralize(string name, Entity configEntity)
         {
-            if (TryGetConfiguredGraphQLName(configEntity, out string? graphQLName) &&
-                !string.IsNullOrEmpty(graphQLName))
-            {
-                return new NameNode(graphQLName.Pluralize());
-            }
-            else if (TryGetSingularPluralConfiguration(configEntity, out SingularPlural? namingRules) &&
-                !string.IsNullOrEmpty(namingRules.Plural))
-            {
-                return new NameNode(namingRules.Plural);
-            }
-
-            return new NameNode(name.Pluralize(inputIsKnownToBeSingular: false));
+            return new NameNode(configEntity.GraphQL.Plural);
         }
 
         /// <summary>
@@ -226,7 +141,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <returns>string representing the top-level entity name defined in runtime configuration.</returns>
         public static string ObjectTypeToEntityName(ObjectTypeDefinitionNode node)
         {
-            DirectiveNode modelDirective = node.Directives.First(d => d.Name.Value == ModelDirectiveType.DirectiveName);
+            DirectiveNode? modelDirective = node.Directives.FirstOrDefault(d => d.Name.Value == ModelDirectiveType.DirectiveName);
+
+            if (modelDirective is null)
+            {
+                return node.Name.Value;
+            }
 
             return modelDirective.Arguments.Count == 1 ? (string)(modelDirective.Arguments[0].Value.Value ?? node.Name.Value) : node.Name.Value;
         }
@@ -236,7 +156,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// </summary>
         /// <param name="entityName">Name of the entity</param>
         /// <param name="entity">Entity definition</param>
-        /// <returns>Name of the primay key query</returns>
+        /// <returns>Name of the primary key query.</returns>
         public static string GenerateByPKQueryName(string entityName, Entity entity)
         {
             return $"{FormatNameForField(GetDefinedSingularName(entityName, entity))}_by_pk";

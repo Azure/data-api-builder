@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
 using System.Text;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Models;
 using Npgsql;
 
@@ -36,7 +37,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             fromSql += string.Join("", structure.JoinQueries.Select(x => $" LEFT OUTER JOIN LATERAL ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)} ON TRUE"));
 
             string predicates = JoinPredicateStrings(
-                                    structure.GetDbPolicyForOperation(Config.Operation.Read),
+                                    structure.GetDbPolicyForOperation(EntityActionOperation.Read),
                                     structure.FilterPredicates,
                                     Build(structure.Predicates),
                                     Build(structure.PaginationMetadata.PaginationPredicate));
@@ -78,7 +79,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public string Build(SqlUpdateStructure structure)
         {
             string predicates = JoinPredicateStrings(
-                                   structure.GetDbPolicyForOperation(Config.Operation.Update),
+                                   structure.GetDbPolicyForOperation(EntityActionOperation.Update),
                                    Build(structure.Predicates));
 
             return $"UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
@@ -91,7 +92,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         public string Build(SqlDeleteStructure structure)
         {
             string predicates = JoinPredicateStrings(
-                       structure.GetDbPolicyForOperation(Config.Operation.Delete),
+                       structure.GetDbPolicyForOperation(EntityActionOperation.Delete),
                        Build(structure.Predicates));
 
             return $"DELETE FROM {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
@@ -110,7 +111,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         {
             // https://stackoverflow.com/questions/42668720/check-if-postgres-query-inserted-or-updated-via-upsert
             // relying on xmax to detect insert vs update breaks for views
-            string updatePredicates = JoinPredicateStrings(Build(structure.Predicates), structure.GetDbPolicyForOperation(Config.Operation.Update));
+            string updatePredicates = JoinPredicateStrings(Build(structure.Predicates), structure.GetDbPolicyForOperation(EntityActionOperation.Update));
             string updateQuery = $"UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
                 $"SET {Build(structure.UpdateOperations, ", ")} " +
                 $"WHERE {updatePredicates} " +

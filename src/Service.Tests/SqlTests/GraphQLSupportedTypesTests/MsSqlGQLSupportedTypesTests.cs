@@ -37,7 +37,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             return @"
                 SELECT TOP " + limit + "" + string.Join(", ", queriedColumns) + @"
                 FROM type_table AS [table0]
-                WHERE " + filterField + " "+ filterOperator +" " + filterValue + @"
+                WHERE " + filterField + " " + filterOperator + " " + filterValue + @"
                 ORDER BY " + orderBy + @" asc
                 FOR JSON PATH,
                     WITHOUT_ARRAY_WRAPPER,

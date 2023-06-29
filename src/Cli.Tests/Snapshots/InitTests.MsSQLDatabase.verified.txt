@@ -10,7 +10,7 @@
   Runtime: {
     Rest: {
       Enabled: true,
-      Path: rest-api
+      Path: /rest-api
     },
     GraphQL: {
       Enabled: true,

@@ -41,6 +41,7 @@ steps:
 - bash: |
     echo IsNugetRelease = $ISNUGETRELEASE
     echo IsReleaseCandidate = $IS_RELEASE_CANDIDATE
+    echo RELEASE_CANDIDATE_VERSION = $RELEASE_CANDIDATE_VERSION
     if [ "$ISNUGETRELEASE" = "true" ]
     then
       if [ "$IsReleaseCandidate" = "true" ]

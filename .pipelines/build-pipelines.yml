@@ -37,16 +37,15 @@ steps:
 # generate the prerelease nuget version.
 # We cannot set this in variables section above because $(isNugetRelease) 
 # is not available at pipeline compilation time.
-# TODO: add a new rc version variable (1/2/3) and use that to generate the version.
 - bash: |
     echo IsNugetRelease = $ISNUGETRELEASE
     echo IsReleaseCandidate = $ISRELEASECANDIDATE
-    echo RELEASE_CANDIDATE_VERSION = $RELEASE_CANDIDATE_VERSION
+    echo RELEASE_CANDIDATE_NUMBER = $RELEASE_CANDIDATE_NUMBER
     if [ "$ISNUGETRELEASE" = "true" ]
     then
       if [ "$ISRELEASECANDIDATE" = "true" ]
       then
-        dabVersion=$(major).$(minor).$(patch)-rc$RELEASE_CANDIDATE_VERSION
+        dabVersion=$(major).$(minor).$(patch)-rc$RELEASE_CANDIDATE_NUMBER
       else
         dabVersion=$(major).$(minor).$(patch)
       fi

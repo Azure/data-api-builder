@@ -29,6 +29,8 @@ namespace Azure.DataApiBuilder.Config;
 /// </remarks>
 public class RuntimeConfigLoader
 {
+    private string _baseConfigFileName;
+
     private readonly IFileSystem _fileSystem;
     private readonly string _baseConfigFileName;
     private readonly string? _connectionString;
@@ -141,7 +143,7 @@ public class RuntimeConfigLoader
     /// </summary>
     /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
-    public bool TryLoadKnownConfig(out RuntimeConfig? config)
+    public bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config)
     {
         return TryLoadConfig(ConfigFileName, out config);
     }
@@ -310,6 +312,15 @@ public class RuntimeConfigLoader
     public static string GetMergedFileNameForEnvironment(string fileName, string environmentValue)
     {
         return $"{fileName}.{environmentValue}.merged{CONFIG_EXTENSION}";
+    }
+
+    /// <summary>
+    /// Allows the base config file name to be updated. This is commonly done when the CLI is starting up.
+    /// </summary>
+    /// <param name="fileName"></param>
+    public void UpdateBaseConfigFileName(string fileName)
+    {
+        _baseConfigFileName = fileName;
     }
 }
 

@@ -49,6 +49,11 @@ internal class EntityActionConverterFactory : JsonConverterFactory
                 return null;
             }
 
+            if (action.Policy is null)
+            {
+                return action with { Policy = new EntityActionPolicy(Request: null, Database: null) };
+            }
+
             // While Fields.Exclude is non-nullable, if the property was not in the JSON
             // it will be set to `null` by the deserializer, so we'll do a cleanup here.
             if (action.Fields is not null && action.Fields.Exclude is null)

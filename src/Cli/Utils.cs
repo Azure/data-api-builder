@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
@@ -132,6 +133,30 @@ namespace Cli
         }
 
         /// <summary>
+        /// Returns the Serialization option used to convert objects into JSON.
+        /// Not escaping any special unicode characters.
+        /// Ignoring properties with null values.
+        /// Keeping all the keys in lowercase.
+        /// </summary>
+        public static JsonSerializerOptions GetSerializationOptions()
+        {
+            JsonSerializerOptions? options = new()
+            {
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+                WriteIndented = true,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                PropertyNamingPolicy = new LowerCaseNamingPolicy(),
+                // As of .NET Core 7, JsonDocument and JsonSerializer only support skipping or disallowing
+                // of comments; they do not support loading them. If we set JsonCommentHandling.Allow for either,
+                // it will throw an exception.
+                ReadCommentHandling = JsonCommentHandling.Skip
+            };
+
+            options.Converters.Add(new JsonStringEnumConverter(namingPolicy: new LowerCaseNamingPolicy()));
+            return options;
+        }
+
+        /// <summary>
         /// Returns true on successful parsing of mappings Dictionary from IEnumerable list.
         /// Returns false in case the format of the input is not correct.
         /// </summary>
@@ -187,6 +212,50 @@ namespace Cli
                 _logger.LogError(ex.Message);
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Returns the default host Global Settings
+        /// If the user doesn't specify host mode. Default value to be used is Production.
+        /// Sample:
+        // "host": {
+        //     "mode": "production",
+        //     "cors": {
+        //         "origins": [],
+        //         "allow-credentials": true
+        //     },
+        //     "authentication": {
+        //         "provider": "StaticWebApps"
+        //     }
+        // }
+        /// </summary>
+        public static HostOptions GetDefaultHostOptions(
+            HostMode hostMode,
+            IEnumerable<string>? corsOrigin,
+            string authenticationProvider,
+            string? audience,
+            string? issuer)
+        {
+            string[]? corsOriginArray = corsOrigin is null ? new string[] { } : corsOrigin.ToArray();
+            CorsOptions cors = new(Origins: corsOriginArray);
+            AuthenticationOptions AuthenticationOptions;
+            if (Enum.TryParse<EasyAuthType>(authenticationProvider, ignoreCase: true, out _)
+                || AuthenticationOptions.SIMULATOR_AUTHENTICATION.Equals(authenticationProvider))
+            {
+                AuthenticationOptions = new(Provider: authenticationProvider, null);
+            }
+            else
+            {
+                AuthenticationOptions = new(
+                    Provider: authenticationProvider,
+                    Jwt: new(audience, issuer)
+                );
+            }
+
+            return new(
+                Mode: hostMode,
+                Cors: cors,
+                Authentication: AuthenticationOptions);
         }
 
         /// <summary>

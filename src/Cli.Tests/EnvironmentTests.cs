@@ -136,15 +136,21 @@ public class EnvironmentTests
         process.Kill();
     }
 
-    // This test has been disabled as it is causing the build server to hang indefinitely.
-    // There is something problematic with reading from stderr and stdout in this test
-    // that is causing the issue. It's possible that the stream is not being flushed
-    // by the process so when the test tries to read it, it hangs waiting for the stream
-    // to be readable, but it will require more investigation to determine the root cause.
-    // I feel confident that the overarching scenario is covered through other testing
-    // so disabling temporarily while we investigate should be acceptable.
+    /// <summary>
+    /// Validates that engine startup fails when the CONN_STRING environment
+    /// variable is not found. This test simulates this by defining the
+    /// environment variable COMM_STRINGX and not setting the expected
+    /// variable CONN_STRING.
+    /// This test has been disabled as it is causing the build server to hang indefinitely.
+    /// There is something problematic with reading from stderr and stdout in this test
+    /// that is causing the issue. It's possible that the stream is not being flushed
+    /// by the process so when the test tries to read it, it hangs waiting for the stream
+    /// to be readable, but it will require more investigation to determine the root cause.
+    /// I feel confident that the overarching scenario is covered through other testing
+    /// so disabling temporarily while we investigate should be acceptable.
+    /// </summary>
     [TestMethod, Ignore]
-    public void FailureToStartEngineWhenEnvVarNamedWrong()
+    public async Task FailureToStartEngineWhenEnvVarNamedWrong()
     {
         BootstrapTestEnvironment("COMM_STRINX=test_connection_string");
 
@@ -154,7 +160,7 @@ public class EnvironmentTests
             $"-c {TEST_RUNTIME_CONFIG_FILE}"
         );
 
-        string? output = process.StandardError.ReadLine();
+        string? output = await process.StandardError.ReadLineAsync();
         StringAssert.Contains(output, "Environmental Variable, CONN_STRING, not found.", StringComparison.Ordinal);
         process.Kill();
     }

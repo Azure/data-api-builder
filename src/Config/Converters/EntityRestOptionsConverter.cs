@@ -102,7 +102,7 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
 
         if (value.Path is not null)
         {
-        writer.WriteString("path", value.Path);
+            writer.WriteString("path", value.Path);
         }
         else if (value.Path is null && options.DefaultIgnoreCondition != JsonIgnoreCondition.WhenWritingNull)
         {

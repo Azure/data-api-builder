@@ -71,6 +71,7 @@ namespace Cli
 
             DatabaseType dbType = options.DatabaseType;
             string? restPath = options.RestPath;
+            string graphQLPath = options.GraphQLPath;
             string? restBaseRoute = options.RestBaseRoute;
             Dictionary<string, JsonElement> dbOptions = new();
 
@@ -157,12 +158,24 @@ namespace Cli
 
             string dabSchemaLink = loader.GetPublishedDraftSchemaLink();
 
+            // Prefix REST path with '/', if not already present.
+            if (restPath is not null && !restPath.StartsWith('/'))
+            {
+                restPath = "/" + restPath;
+            }
+
+            // Prefix GraphQL path with '/', if not already present.
+            if (!graphQLPath.StartsWith('/'))
+            {
+                graphQLPath = "/" + graphQLPath;
+            }
+
             runtimeConfig = new(
                 Schema: dabSchemaLink,
                 DataSource: dataSource,
                 Runtime: new(
                     Rest: new(!restDisabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH, BaseRoute: restBaseRoute),
-                    GraphQL: new(!options.GraphQLDisabled, options.GraphQLPath),
+                    GraphQL: new(!options.GraphQLDisabled, graphQLPath),
                     Host: new(
                         Cors: new(options.CorsOrigin?.ToArray() ?? Array.Empty<string>()),
                         Authentication: new(options.AuthenticationProvider, new(options.Audience, options.Issuer)),

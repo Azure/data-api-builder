@@ -167,6 +167,7 @@ public class UtilsTests
     [DataRow(new string[] { "*" }, EntitySourceType.View, true, DisplayName = "PASS: View with wildcard CRUD operation.")]
     [DataRow(new string[] { "create" }, EntitySourceType.View, true, DisplayName = "PASS: View with 1 CRUD operation.")]
     [DataRow(new string[] { "create", "read" }, EntitySourceType.View, true, DisplayName = "PASS: View with more than 1 CRUD operation.")]
+
     public void TestStoredProcedurePermissions(
         string[] operations,
         EntitySourceType entitySourceType,

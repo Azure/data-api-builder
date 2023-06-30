@@ -32,7 +32,6 @@ public class RuntimeConfigLoader
     private string _baseConfigFileName;
 
     private readonly IFileSystem _fileSystem;
-    private readonly string _baseConfigFileName;
     private readonly string? _connectionString;
 
     public const string CONFIGFILE_NAME = "dab-config";

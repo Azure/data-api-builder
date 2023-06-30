@@ -673,12 +673,12 @@ public class EndToEndTests
         Assert.IsNotNull(output);
         StringAssert.Contains(output, $"User provided config file: {TEST_RUNTIME_CONFIG_FILE}", StringComparison.Ordinal);
 
-        output = await process.StandardOutput.ReadLineAsync();
-        Assert.IsNotNull(output);
-        StringAssert.Contains(output, $"Found config file: {TEST_RUNTIME_CONFIG_FILE}", StringComparison.Ordinal);
-
         if (expectSuccess)
         {
+            output = await process.StandardOutput.ReadLineAsync();
+            Assert.IsNotNull(output);
+            StringAssert.Contains(output, $"Found config file: {TEST_RUNTIME_CONFIG_FILE}", StringComparison.Ordinal);
+
             output = await process.StandardOutput.ReadLineAsync();
             Assert.IsNotNull(output);
             StringAssert.Contains(output, $"Setting default minimum LogLevel:", StringComparison.Ordinal);

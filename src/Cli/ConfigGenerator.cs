@@ -922,7 +922,7 @@ namespace Cli
             loader.UpdateBaseConfigFileName(runtimeConfigFile);
 
             // Validates that config file has data and follows the correct json schema
-            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? deserializedRuntimeConfig))
+            if (!loader.TryLoadKnownConfig(out RuntimeConfig? deserializedRuntimeConfig))
             {
                 _logger.LogError("Failed to parse the config file: {configFile}.", runtimeConfigFile);
                 return false;

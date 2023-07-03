@@ -10,8 +10,7 @@
   Runtime: {
     Rest: {
       Enabled: true,
-      Path: /api,
-      BaseRoute: /rest-route
+      Path: /api
     },
     GraphQL: {
       Enabled: true,
@@ -27,7 +26,8 @@
         Jwt: {}
       },
       Mode: Production
-    }
+    },
+    BaseRoute: /base-route
   },
   Entities: [
     {

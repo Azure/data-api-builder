@@ -382,6 +382,44 @@ namespace Cli.Tests
                 actual: TryGenerateConfig(initOptionsWithAllUpperCaseFileName, _runtimeConfigLoader!, _fileSystem!));
         }
 
+        [TestMethod]
+        public Task RestPathWithoutStartingSlashWillHaveItAdded()
+        {
+            InitOptions options = new(
+                databaseType: DatabaseType.MSSQL,
+                connectionString: "testconnectionstring",
+                cosmosNoSqlDatabase: null,
+                cosmosNoSqlContainer: null,
+                graphQLSchemaPath: null,
+                setSessionContext: false,
+                hostMode: HostMode.Production,
+                corsOrigin: null,
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                restPath: "abc",
+                config: TEST_RUNTIME_CONFIG_FILE);
+
+            return ExecuteVerifyTest(options);
+        }
+
+        [TestMethod]
+        public Task GraphQLPathWithoutStartingSlashWillHaveItAdded()
+        {
+            InitOptions options = new(
+                databaseType: DatabaseType.MSSQL,
+                connectionString: "testconnectionstring",
+                cosmosNoSqlDatabase: null,
+                cosmosNoSqlContainer: null,
+                graphQLSchemaPath: null,
+                setSessionContext: false,
+                hostMode: HostMode.Production,
+                corsOrigin: null,
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                graphQLPath: "abc",
+                config: TEST_RUNTIME_CONFIG_FILE);
+
+            return ExecuteVerifyTest(options);
+        }
+
         private Task ExecuteVerifyTest(InitOptions options, VerifySettings? settings = null)
         {
             Assert.IsTrue(TryCreateRuntimeConfig(options, _runtimeConfigLoader!, _fileSystem!, out RuntimeConfig? runtimeConfig));

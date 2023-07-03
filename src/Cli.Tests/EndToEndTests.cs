@@ -682,7 +682,7 @@ public class EndToEndTests
     [DataRow(INITIAL_CONFIG, BASIC_ENTITY_WITH_ANONYMOUS_ROLE, true, DisplayName = "Correct Config")]
     [DataRow(INITIAL_CONFIG, SINGLE_ENTITY_WITH_INVALID_GRAPHQL_TYPE, false, DisplayName = "Invalid GraphQL type for entity")]
     [DataTestMethod]
-    public void TestExitOfRuntimeEngineWithInvalidConfig(
+    public async Task TestExitOfRuntimeEngineWithInvalidConfig(
         string initialConfig,
         string entityDetails,
         bool expectSuccess)
@@ -693,26 +693,39 @@ public class EndToEndTests
             command: "start",
             flags: $"--config {TEST_RUNTIME_CONFIG_FILE}"
         );
-
-        string? output = process.StandardOutput.ReadLine();
+        string? output = await process.StandardOutput.ReadLineAsync();
         Assert.IsNotNull(output);
         StringAssert.Contains(output, $"{Program.PRODUCT_NAME} {ProductInfo.GetProductVersion()}", StringComparison.Ordinal);
-        output = process.StandardOutput.ReadLine();
+
+        output = await process.StandardOutput.ReadLineAsync();
         Assert.IsNotNull(output);
         StringAssert.Contains(output, $"User provided config file: {TEST_RUNTIME_CONFIG_FILE}", StringComparison.Ordinal);
-        output = process.StandardOutput.ReadLine();
+
+        output = await process.StandardOutput.ReadLineAsync();
         Assert.IsNotNull(output);
+        StringAssert.Contains(output, $"Found config file: {TEST_RUNTIME_CONFIG_FILE}", StringComparison.Ordinal);
+
         if (expectSuccess)
         {
+            output = await process.StandardOutput.ReadLineAsync();
+            Assert.IsNotNull(output);
             StringAssert.Contains(output, $"Setting default minimum LogLevel:", StringComparison.Ordinal);
-            output = process.StandardOutput.ReadLine();
+
+            output = await process.StandardOutput.ReadLineAsync();
             Assert.IsNotNull(output);
             StringAssert.Contains(output, "Starting the runtime engine...", StringComparison.Ordinal);
         }
         else
         {
-            StringAssert.Contains(output, $"Failed to parse the config file: {TEST_RUNTIME_CONFIG_FILE}.", StringComparison.Ordinal);
-            output = process.StandardOutput.ReadLine();
+            output = await process.StandardError.ReadLineAsync();
+            Assert.IsNotNull(output);
+            StringAssert.Contains(output, $"Deserialization of the configuration file failed.", StringComparison.Ordinal);
+
+            output = await process.StandardOutput.ReadLineAsync();
+            Assert.IsNotNull(output);
+            StringAssert.Contains(output, $"Error: Failed to parse the config file: {TEST_RUNTIME_CONFIG_FILE}.", StringComparison.Ordinal);
+
+            output = await process.StandardOutput.ReadLineAsync();
             Assert.IsNotNull(output);
             StringAssert.Contains(output, $"Failed to start the engine.", StringComparison.Ordinal);
         }

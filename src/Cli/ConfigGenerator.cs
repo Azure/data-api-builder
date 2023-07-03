@@ -71,6 +71,7 @@ namespace Cli
 
             DatabaseType dbType = options.DatabaseType;
             string? restPath = options.RestPath;
+            string graphQLPath = options.GraphQLPath;
             Dictionary<string, JsonElement> dbOptions = new();
 
             HyphenatedNamingPolicy namingPolicy = new();
@@ -144,12 +145,24 @@ namespace Cli
 
             string dabSchemaLink = loader.GetPublishedDraftSchemaLink();
 
+            // Prefix REST path with '/', if not already present.
+            if (restPath is not null && !restPath.StartsWith('/'))
+            {
+                restPath = "/" + restPath;
+            }
+
+            // Prefix GraphQL path with '/', if not already present.
+            if (!graphQLPath.StartsWith('/'))
+            {
+                graphQLPath = "/" + graphQLPath;
+            }
+
             runtimeConfig = new(
                 Schema: dabSchemaLink,
                 DataSource: dataSource,
                 Runtime: new(
                     Rest: new(!restDisabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH),
-                    GraphQL: new(!options.GraphQLDisabled, options.GraphQLPath),
+                    GraphQL: new(!options.GraphQLDisabled, graphQLPath),
                     Host: new(
                         Cors: new(options.CorsOrigin?.ToArray() ?? Array.Empty<string>()),
                         Authentication: new(options.AuthenticationProvider, new(options.Audience, options.Issuer)),
@@ -1131,11 +1144,9 @@ namespace Cli
 
             if (IsEntityBeingConvertedToStoredProcedure(entity, options) && graphQLOperation is null)
             {
-                _logger.LogInformation("entity begin converted to sp for some reason");
                 graphQLOperation = GraphQLOperation.Mutation;
             }
 
-            _logger.LogInformation("eventual value set in graphql operation :" + graphQLOperation.ToString());
             return graphQLType with { Operation = graphQLOperation };
         }
     }

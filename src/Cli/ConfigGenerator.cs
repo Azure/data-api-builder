@@ -936,7 +936,7 @@ namespace Cli
 
             /// This will add arguments to start the runtime engine with the config file.
             List<string> args = new()
-            { "--" + nameof(RuntimeConfigLoader.CONFIGFILE_NAME), runtimeConfigFile };
+            { "--ConfigFileName", runtimeConfigFile };
 
             /// Add arguments for LogLevel. Checks if LogLevel is overridden with option `--LogLevel`.
             /// If not provided, Default minimum LogLevel is Debug for Development mode and Error for Production mode.

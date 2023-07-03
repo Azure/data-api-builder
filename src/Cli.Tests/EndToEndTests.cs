@@ -39,10 +39,7 @@ public class EndToEndTests
 
         _runtimeConfigLoader = new RuntimeConfigLoader(_fileSystem);
 
-        ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
-        {
-            builder.AddConsole();
-        });
+        ILoggerFactory loggerFactory = TestLoggerSupport.ProvisionLoggerFactory();
 
         _cliLogger = loggerFactory.CreateLogger<Program>();
         SetLoggerForCliConfigGenerator(loggerFactory.CreateLogger<ConfigGenerator>());

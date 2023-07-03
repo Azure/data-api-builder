@@ -1,0 +1,66 @@
+﻿{
+  DataSource: {
+    DatabaseType: MSSQL,
+    Options: {
+      set-session-context: {
+        ValueKind: True
+      }
+    }
+  },
+  Runtime: {
+    Rest: {
+      Enabled: true,
+      Path: /api
+    },
+    GraphQL: {
+      Enabled: true,
+      Path: /graphql,
+      AllowIntrospection: true
+    },
+    Host: {
+      Cors: {
+        AllowCredentials: false
+      },
+      Authentication: {
+        Provider: StaticWebApps
+      }
+    }
+  },
+  Entities: [
+    {
+      MyEntity: {
+        Source: {
+          Object: s001.book,
+          Type: stored-procedure
+        },
+        GraphQL: {
+          Singular: MyEntity,
+          Plural: MyEntities,
+          Enabled: true,
+          Operation: Mutation
+        },
+        Rest: {
+          Methods: [
+            Get,
+            Post,
+            Put,
+            Patch,
+            Delete
+          ],
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *,
+                Policy: {}
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -7,7 +7,8 @@ using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
 using System.Text.Json;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Parsers;
 using Microsoft.AspNetCore.Http;
@@ -100,7 +101,7 @@ namespace Azure.DataApiBuilder.Service.Models
         /// <summary>
         /// The database engine operation type this request is.
         /// </summary>
-        public Config.Operation OperationType { get; set; }
+        public EntityActionOperation OperationType { get; set; }
 
         /// <summary>
         /// A collection of all unique column names present in the request.

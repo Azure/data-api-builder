@@ -77,7 +77,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Auth\Azure.DataApiBuilder.Auth.csproj" />
     <ProjectReference Include="..\Config\Azure.DataApiBuilder.Config.csproj" />
-    <ProjectReference Include="..\Core\Azure.DataApiBuilder.Core.csproj" />
     <ProjectReference Include="..\Service\Azure.DataApiBuilder.Service.csproj" />
   </ItemGroup>
 

@@ -141,7 +141,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <returns>string representing the top-level entity name defined in runtime configuration.</returns>
         public static string ObjectTypeToEntityName(ObjectTypeDefinitionNode node)
         {
-            DirectiveNode modelDirective = node.Directives.First(d => d.Name.Value == ModelDirectiveType.DirectiveName);
+            DirectiveNode? modelDirective = node.Directives.FirstOrDefault(d => d.Name.Value == ModelDirectiveType.DirectiveName);
+
+            if (modelDirective is null)
+            {
+                return node.Name.Value;
+            }
 
             return modelDirective.Arguments.Count == 1 ? (string)(modelDirective.Arguments[0].Value.Value ?? node.Name.Value) : node.Name.Value;
         }

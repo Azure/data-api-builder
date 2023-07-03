@@ -40,9 +40,6 @@
           Operation: Mutation
         },
         Rest: {
-          Methods: [
-            Post
-          ],
           Enabled: false
         },
         Permissions: [

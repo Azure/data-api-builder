@@ -1085,7 +1085,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
             Mock<HttpContext> context = new();
 
-            //Add identity to the readAction, updateAction.
+            // Add identity to the readAction, updateAction.
             ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationOptions.ROLE_CLAIM_TYPE);
             foreach (string claimType in claimTypes)
             {

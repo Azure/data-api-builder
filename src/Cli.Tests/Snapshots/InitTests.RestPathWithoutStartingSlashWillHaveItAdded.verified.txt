@@ -3,14 +3,14 @@
     DatabaseType: MSSQL,
     Options: {
       set-session-context: {
-        ValueKind: True
+        ValueKind: False
       }
     }
   },
   Runtime: {
     Rest: {
       Enabled: true,
-      Path: /rest-api
+      Path: /abc
     },
     GraphQL: {
       Enabled: true,
@@ -19,16 +19,13 @@
     },
     Host: {
       Cors: {
-        Origins: [
-          http://localhost:3000,
-          http://nolocalhost:80
-        ],
         AllowCredentials: false
       },
       Authentication: {
         Provider: StaticWebApps,
         Jwt: {}
-      }
+      },
+      Mode: Production
     }
   },
   Entities: []

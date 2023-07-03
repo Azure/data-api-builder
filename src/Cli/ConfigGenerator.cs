@@ -71,6 +71,7 @@ namespace Cli
 
             DatabaseType dbType = options.DatabaseType;
             string? restPath = options.RestPath;
+            string graphQLPath = options.GraphQLPath;
             Dictionary<string, JsonElement> dbOptions = new();
 
             HyphenatedNamingPolicy namingPolicy = new();
@@ -144,12 +145,24 @@ namespace Cli
 
             string dabSchemaLink = loader.GetPublishedDraftSchemaLink();
 
+            // Prefix REST path with '/', if not already present.
+            if (restPath is not null && !restPath.StartsWith('/'))
+            {
+                restPath = "/" + restPath;
+            }
+
+            // Prefix GraphQL path with '/', if not already present.
+            if (!graphQLPath.StartsWith('/'))
+            {
+                graphQLPath = "/" + graphQLPath;
+            }
+
             runtimeConfig = new(
                 Schema: dabSchemaLink,
                 DataSource: dataSource,
                 Runtime: new(
                     Rest: new(!restDisabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH),
-                    GraphQL: new(!options.GraphQLDisabled, options.GraphQLPath),
+                    GraphQL: new(!options.GraphQLDisabled, graphQLPath),
                     Host: new(
                         Cors: new(options.CorsOrigin?.ToArray() ?? Array.Empty<string>()),
                         Authentication: new(options.AuthenticationProvider, new(options.Audience, options.Issuer)),
@@ -904,8 +917,10 @@ namespace Cli
                 return false;
             }
 
+            loader.UpdateBaseConfigFileName(runtimeConfigFile);
+
             // Validates that config file has data and follows the correct json schema
-            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? deserializedRuntimeConfig))
+            if (!loader.TryLoadKnownConfig(out RuntimeConfig? deserializedRuntimeConfig))
             {
                 _logger.LogError("Failed to parse the config file: {configFile}.", runtimeConfigFile);
                 return false;
@@ -919,7 +934,7 @@ namespace Cli
 
             /// This will add arguments to start the runtime engine with the config file.
             List<string> args = new()
-            { "--" + nameof(RuntimeConfigLoader.CONFIGFILE_NAME), runtimeConfigFile };
+            { "--ConfigFileName", runtimeConfigFile };
 
             /// Add arguments for LogLevel. Checks if LogLevel is overridden with option `--LogLevel`.
             /// If not provided, Default minimum LogLevel is Debug for Development mode and Error for Production mode.

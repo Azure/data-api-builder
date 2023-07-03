@@ -3,7 +3,6 @@
 
 using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
-using System.Reflection;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service;
 
@@ -23,14 +22,7 @@ public class EndToEndTests
     [TestInitialize]
     public void TestInitialize()
     {
-        MockFileSystem fileSystem = new();
-
-        fileSystem.AddFile(
-            fileSystem.Path.Combine(
-                fileSystem.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "",
-                "dab.draft.schema.json"),
-            new MockFileData("{ \"additionalProperties\": {\"version\": \"https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json\"} }"));
-
+        MockFileSystem fileSystem = FileSystemUtils.ProvisionMockFileSystem();
         fileSystem.AddFile(
             TEST_SCHEMA_FILE,
             new MockFileData(""));

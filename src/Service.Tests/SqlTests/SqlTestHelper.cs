@@ -311,7 +311,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// </summary>
         /// <param name="typename">A json string of the format { __typename : entity_typename }  </param>
         /// <param name="times">Number of times to repeat typename in the response</param>
-        /// <returns>An string representation of an array of typename json strings</returns>
+        /// <returns>A string representation of an array of typename json strings</returns>
         public static string ConstructGQLTypenameResponseNTimes(string typename, int times)
         {
             StringBuilder typenameResponseBuilder = new("[");

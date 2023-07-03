@@ -388,38 +388,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
-        /// Validates that a list query with only __typename field in the items section returns the right types
-        /// </summary>
-        [TestMethod]
-        public async Task ListQueryWithOnlyTypenameInSelectionSet()
-        {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"{
-                books(first: 3) {
-                    items {
-                        __typename
-                    }
-                }
-            }";
-
-            string expected = @"
-            [
-                {
-                    ""__typename"": ""book""
-                },
-                {
-                    ""__typename"": ""book""
-                },
-                {
-                    ""__typename"": ""book""
-                }
-            ]";
-
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
-        }
-
-        /// <summary>
         /// Validates that a list query with only __typename in the selection set
         /// returns the right types
         /// </summary>
@@ -492,6 +460,35 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
+        /// Validates that a list query with only __typename field in the items section returns the right types
+        /// </summary>
+        [TestMethod]
+        public async Task ListQueryWithOnlyTypenameInSelectionSet()
+        {
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"{
+                books(first: 3) {
+                    items {
+                        __typename
+                    }
+                }
+            }";
+
+            string typename = @"
+                {
+                    ""__typename"": ""book""
+                }
+            ";
+
+            // Since the first 3 elements are fetched, we expect the response to contain 3 items
+            // with just the __typename field.
+            string expected = SqlTestHelper.ConstructGQLTypenameResponseNTimes(typename: typename, times: 3);
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
+        /// <summary>
         /// Validates that a nested point query with only __typename field in each selection set
         /// returns the right types
         /// </summary>
@@ -531,7 +528,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// Validates that querying a SP with only __typename field in the selection set
         /// returns the right type(s)
         /// </summary>
-        public virtual async Task QueryAgainstSPWithOnlyTypenameInSelectionSet()
+        public async Task QueryAgainstSPWithOnlyTypenameInSelectionSet(string dbQuery)
         {
             string graphQLQueryName = "executeGetBooks";
             string graphQLQuery = @"{
@@ -540,52 +537,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }     
             }";
 
-            string expected = @"
-                [
-      {
-        ""__typename"": ""GetBooks""
-      },
-      {
-        ""__typename"": ""GetBooks""
-      },
-      {
-        ""__typename"": ""GetBooks""
-      },
-      {
-        ""__typename"": ""GetBooks""
-      },
-      {
-        ""__typename"": ""GetBooks""
-      },
-      {
-        ""__typename"": ""GetBooks""
-      },
-      {
-        ""__typename"": ""GetBooks""
-      },
-      {
-        ""__typename"": ""GetBooks""
-      },
-      {
-        ""__typename"": ""GetBooks""
-      },
-      {
-        ""__typename"": ""GetBooks""
-      },
-      {
-        ""__typename"": ""GetBooks""
-      },
-      {
-        ""__typename"": ""GetBooks""
-      },
-      {
-        ""__typename"": ""GetBooks""
-      },
-      {
-        ""__typename"": ""GetBooks""
-      }
-    ]";
+            string typename = @"
+                {
+                    ""__typename"": ""GetBooks""
+                }";
 
+            string bookCountFromDB = await GetDatabaseResultAsync(dbQuery, expectJson: false);
+            int expectedCount = JsonSerializer.Deserialize<List<Dictionary<string, int>>>(bookCountFromDB)[0]["count"];
+            string expected = SqlTestHelper.ConstructGQLTypenameResponseNTimes(typename: typename, times: expectedCount);
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }

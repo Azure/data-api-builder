@@ -368,9 +368,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
 
         /// <inheritdoc/>>
         [TestMethod]
-        public override async Task QueryAgainstSPWithOnlyTypenameInSelectionSet()
+        public async Task QueryAgainstSPWithOnlyTypenameInSelectionSet()
         {
-            await base.QueryAgainstSPWithOnlyTypenameInSelectionSet();
+            string dbQuery = "select count(*) as count from books";
+            await base.QueryAgainstSPWithOnlyTypenameInSelectionSet(dbQuery);
         }
 
         #endregion

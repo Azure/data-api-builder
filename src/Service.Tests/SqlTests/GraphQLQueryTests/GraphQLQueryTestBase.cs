@@ -8,7 +8,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
@@ -1678,22 +1678,20 @@ query {
             RuntimeConfig configuration = SqlTestHelper.InitBasicRuntimeConfigWithNoEntity(dbType, testEnvironment);
 
             Entity clubEntity = new(
-                Source: JsonSerializer.SerializeToElement("clubs"),
-                Rest: true,
-                GraphQL: true,
-                Permissions: new PermissionSetting[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Source: new("clubs", EntitySourceType.Table, null, null),
+                Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
+                GraphQL: new("club", "clubs"),
+                Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,
                 Mappings: null
             );
 
-            configuration.Entities.Add("Club", clubEntity);
-
             Entity playerEntity = new(
-                Source: JsonSerializer.SerializeToElement("players"),
-                Rest: true,
-                GraphQL: true,
-                Permissions: new PermissionSetting[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
-                Relationships: new Dictionary<string, Relationship>() { {"clubs", new (
+                Source: new("players", EntitySourceType.Table, null, null),
+                Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
+                GraphQL: new("player", "players"),
+                Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: new Dictionary<string, EntityRelationship>() { {"clubs", new (
                     Cardinality: Cardinality.One,
                     TargetEntity: "Club",
                     SourceFields: sourceFields,
@@ -1705,12 +1703,17 @@ query {
                 Mappings: null
             );
 
-            configuration.Entities.Add("Player", playerEntity);
+            Dictionary<string, Entity> entities = new(configuration.Entities) {
+                { "Club", clubEntity },
+                { "Player", playerEntity }
+            };
+
+            RuntimeConfig updatedConfig = configuration
+                with
+            { Entities = new(entities) };
 
             const string CUSTOM_CONFIG = "custom-config.json";
-            File.WriteAllText(
-                CUSTOM_CONFIG,
-                JsonSerializer.Serialize(configuration, RuntimeConfig.SerializerOptions));
+            File.WriteAllText(CUSTOM_CONFIG, updatedConfig.ToJson());
 
             string[] args = new[]
             {

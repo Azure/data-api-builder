@@ -3,7 +3,7 @@
 
 using System;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
@@ -366,7 +366,7 @@ FROM
                 targetFields,
                 club_id,
                 club_name,
-                DatabaseType.postgresql,
+                DatabaseType.PostgreSQL,
                 TestCategory.POSTGRESQL);
         }
 

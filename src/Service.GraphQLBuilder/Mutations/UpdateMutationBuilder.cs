@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
@@ -36,7 +36,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             HotChocolate.Language.IHasName? definition = definitions.FirstOrDefault(d => d.Name.Value == field.Type.NamedType().Name.Value);
             // When updating, you don't need to provide the data for nested models, but you will for other nested types
             // For cosmos, allow updating nested objects
-            if (definition is not null && definition is ObjectTypeDefinitionNode objectType && IsModelType(objectType) && databaseType is not DatabaseType.cosmosdb_nosql)
+            if (definition is not null && definition is ObjectTypeDefinitionNode objectType && IsModelType(objectType) && databaseType is not DatabaseType.CosmosDB_NoSQL)
             {
                 return false;
             }
@@ -49,7 +49,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             ObjectTypeDefinitionNode objectTypeDefinitionNode,
             NameNode name,
             IEnumerable<HotChocolate.Language.IHasName> definitions,
-            IDictionary<string, Entity> entities,
+            RuntimeEntities entities,
             DatabaseType databaseType)
         {
             NameNode inputName = GenerateInputTypeName(name.Value);
@@ -99,7 +99,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 /// There is a difference between CosmosDb for NoSql and relational databases on generating required simple field types for update mutations.
                 /// Cosmos is calling replace item whereas for sql is doing incremental update.
                 /// That's why sql allows nullable update input fields even for non-nullable simple fields. 
-                (databaseType == DatabaseType.cosmosdb_nosql) ? f.Type : f.Type.NullableType(),
+                (databaseType == DatabaseType.CosmosDB_NoSQL) ? f.Type : f.Type.NullableType(),
                 defaultValue: null,
                 new List<DirectiveNode>()
             );
@@ -111,7 +111,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             FieldDefinitionNode f,
             string typeName,
             ObjectTypeDefinitionNode otdn,
-            IDictionary<string, Entity> entities,
+            RuntimeEntities entities,
             DatabaseType databaseType)
         {
             InputObjectTypeDefinitionNode node;
@@ -173,7 +173,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <returns>InputTypeName</returns>
         private static NameNode GenerateInputTypeName(string typeName)
         {
-            return new($"{Operation.Update}{typeName}Input");
+            return new($"{EntityActionOperation.Update}{typeName}Input");
         }
 
         /// <summary>
@@ -191,7 +191,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs,
             ObjectTypeDefinitionNode objectTypeDefinitionNode,
             DocumentNode root,
-            IDictionary<string, Entity> entities,
+            RuntimeEntities entities,
             string dbEntityName,
             DatabaseType databaseType,
             IEnumerable<string>? rolesAllowedForMutation = null)

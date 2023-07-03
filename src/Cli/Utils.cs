@@ -2,18 +2,17 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.IO.Abstractions;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.Converters;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Humanizer;
+using Cli.Commands;
 using Microsoft.Extensions.Logging;
-using static Azure.DataApiBuilder.Config.AuthenticationConfig;
-using static Azure.DataApiBuilder.Config.MergeJsonProvider;
-using static Azure.DataApiBuilder.Config.RuntimeConfigPath;
 using static Azure.DataApiBuilder.Service.Configurations.RuntimeConfigValidator;
-using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
 /// <summary>
 /// Contains the methods for transforming objects, serialization options.
@@ -22,6 +21,8 @@ namespace Cli
 {
     public class Utils
     {
+        public const string PRODUCT_NAME = "Microsoft.DataApiBuilder";
+
         public const string WILDCARD = "*";
         public static readonly string SEPARATOR = ":";
 
@@ -34,128 +35,35 @@ namespace Cli
             _logger = cliUtilsLogger;
         }
 
-        /// <summary>
-        /// Creates the REST object which can be either a boolean value
-        /// or a RestEntitySettings object containing api route based on the input.
-        /// Returns null when no REST configuration is provided.
-        /// </summary>
-        public static object? GetRestDetails(object? restDetail = null, RestMethod[]? restMethods = null)
-        {
-            if (restDetail is null && restMethods is null)
-            {
-                return null;
-            }
-            // Tables, Views and Stored Procedures that are enabled for REST without custom
-            // path or methods.
-            else if (restDetail is not null && restMethods is null)
-            {
-                if (restDetail is true || restDetail is false)
-                {
-                    return restDetail;
-                }
-                else
-                {
-                    return new RestEntitySettings(Path: restDetail);
-                }
-            }
-            //Stored Procedures that have REST methods defined without a custom REST path definition
-            else if (restMethods is not null && restDetail is null)
-            {
-                return new RestStoredProcedureEntitySettings(RestMethods: restMethods);
-            }
-
-            //Stored Procedures that have custom REST path and methods defined 
-            return new RestStoredProcedureEntityVerboseSettings(Path: restDetail, RestMethods: restMethods!);
-        }
-
-        /// <summary>
-        /// Creates the graphql object which can be either a boolean value
-        /// or a GraphQLEntitySettings object containing graphql type {singular, plural} based on the input
-        /// </summary>
-        public static object? GetGraphQLDetails(object? graphQLDetail, GraphQLOperation? graphQLOperation = null)
-        {
-
-            if (graphQLDetail is null && graphQLOperation is null)
-            {
-                return null;
-            }
-            // Tables, view or stored procedures that are either enabled for graphQL without custom operation
-            // definitions and with/without a custom graphQL type definition.
-            else if (graphQLDetail is not null && graphQLOperation is null)
-            {
-                if (graphQLDetail is bool graphQLEnabled)
-                {
-                    return graphQLEnabled;
-                }
-                else
-                {
-                    return new GraphQLEntitySettings(Type: graphQLDetail);
-                }
-            }
-            // Stored procedures that are defined with custom graphQL operations but without
-            // custom type definitions.
-            else if (graphQLDetail is null && graphQLOperation is not null)
-            {
-                return new GraphQLStoredProcedureEntityOperationSettings(GraphQLOperation: graphQLOperation.ToString()!.ToLower());
-            }
-
-            // Stored procedures that are defined with custom graphQL type definition and
-            // custom a graphQL operation.
-            return new GraphQLStoredProcedureEntityVerboseSettings(Type: graphQLDetail, GraphQLOperation: graphQLOperation.ToString()!.ToLower());
-
-        }
-
-        /// <summary>
-        /// Try convert operation string to Operation Enum.
-        /// </summary>
-        /// <param name="operationName">operation string.</param>
-        /// <param name="operation">Operation Enum output.</param>
-        /// <returns>True if convert is successful. False otherwise.</returns>
-        public static bool TryConvertOperationNameToOperation(string? operationName, out Operation operation)
-        {
-            if (!Enum.TryParse(operationName, ignoreCase: true, out operation))
-            {
-                if (operationName is not null && operationName.Equals(WILDCARD, StringComparison.OrdinalIgnoreCase))
-                {
-                    operation = Operation.All;
-                }
-                else
-                {
-                    _logger.LogError($"Invalid operation Name: {operationName}.");
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        /// <summary>
         /// Creates an array of Operation element which contains one of the CRUD operation and
         /// fields to which this operation is allowed as permission setting based on the given input.
         /// </summary>
-        public static object[] CreateOperations(string operations, Policy? policy, Field? fields)
+        public static EntityAction[] CreateOperations(string operations, EntityActionPolicy? policy, EntityActionFields? fields)
         {
-            object[] operation_items;
+            EntityAction[] operation_items;
             if (policy is null && fields is null)
             {
-                return operations.Split(",");
+                return operations.Split(",")
+                    .Select(op => EnumExtensions.Deserialize<EntityActionOperation>(op))
+                    .Select(op => new EntityAction(op, null, new EntityActionPolicy()))
+                    .ToArray();
             }
 
             if (operations is WILDCARD)
             {
-                operation_items = new object[] { new PermissionOperation(Operation.All, policy, fields) };
+                operation_items = new[] { new EntityAction(EntityActionOperation.All, fields, policy ?? new()) };
             }
             else
             {
                 string[]? operation_elements = operations.Split(",");
                 if (policy is not null || fields is not null)
                 {
-                    List<object>? operation_list = new();
+                    List<EntityAction>? operation_list = new();
                     foreach (string? operation_element in operation_elements)
                     {
-                        if (TryConvertOperationNameToOperation(operation_element, out Operation op))
+                        if (EnumExtensions.TryDeserialize(operation_element, out EntityActionOperation? op))
                         {
-                            PermissionOperation? operation_item = new(op, policy, fields);
+                            EntityAction operation_item = new((EntityActionOperation)op, fields, policy ?? new());
                             operation_list.Add(operation_item);
                         }
                     }
@@ -164,7 +72,10 @@ namespace Cli
                 }
                 else
                 {
-                    operation_items = operation_elements;
+                    return operation_elements
+                        .Select(op => EnumExtensions.Deserialize<EntityActionOperation>(op))
+                        .Select(op => new EntityAction(op, null, new EntityActionPolicy()))
+                        .ToArray();
                 }
             }
 
@@ -178,48 +89,26 @@ namespace Cli
         /// </summary>
         /// <param name="operations">Array of operations which is of type JsonElement.</param>
         /// <returns>Dictionary of operations</returns>
-        public static IDictionary<Operation, PermissionOperation> ConvertOperationArrayToIEnumerable(object[] operations, SourceType sourceType)
+        public static IDictionary<EntityActionOperation, EntityAction> ConvertOperationArrayToIEnumerable(EntityAction[] operations, EntitySourceType? sourceType)
         {
-            Dictionary<Operation, PermissionOperation> result = new();
-            foreach (object operation in operations)
+            Dictionary<EntityActionOperation, EntityAction> result = new();
+            foreach (EntityAction operation in operations)
             {
-                JsonElement operationJson = (JsonElement)operation;
-                if (operationJson.ValueKind is JsonValueKind.String)
+                EntityActionOperation op = operation.Action;
+                if (op is EntityActionOperation.All)
                 {
-                    if (TryConvertOperationNameToOperation(operationJson.GetString(), out Operation op))
+                    HashSet<EntityActionOperation> resolvedOperations = sourceType is EntitySourceType.StoredProcedure ?
+                        EntityAction.ValidStoredProcedurePermissionOperations :
+                        EntityAction.ValidPermissionOperations;
+                    // Expand wildcard to all valid operations (except execute)
+                    foreach (EntityActionOperation validOp in resolvedOperations)
                     {
-                        if (op is Operation.All)
-                        {
-                            HashSet<Operation> resolvedOperations = sourceType is SourceType.StoredProcedure ? PermissionOperation.ValidStoredProcedurePermissionOperations : PermissionOperation.ValidPermissionOperations;
-                            // Expand wildcard to all valid operations (except execute)
-                            foreach (Operation validOp in resolvedOperations)
-                            {
-                                result.Add(validOp, new PermissionOperation(validOp, null, null));
-                            }
-                        }
-                        else
-                        {
-                            result.Add(op, new PermissionOperation(op, null, null));
-                        }
+                        result.Add(validOp, new EntityAction(validOp, null, new EntityActionPolicy()));
                     }
                 }
                 else
                 {
-                    PermissionOperation ac = operationJson.Deserialize<PermissionOperation>(GetSerializationOptions())!;
-
-                    if (ac.Name is Operation.All)
-                    {
-                        // Expand wildcard to all valid operations except execute.
-                        HashSet<Operation> resolvedOperations = sourceType is SourceType.StoredProcedure ? PermissionOperation.ValidStoredProcedurePermissionOperations : PermissionOperation.ValidPermissionOperations;
-                        foreach (Operation validOp in resolvedOperations)
-                        {
-                            result.Add(validOp, new PermissionOperation(validOp, Policy: ac.Policy, Fields: ac.Fields));
-                        }
-                    }
-                    else
-                    {
-                        result.Add(ac.Name, ac);
-                    }
+                    result.Add(op, operation);
                 }
             }
 
@@ -229,9 +118,9 @@ namespace Cli
         /// <summary>
         /// Creates a single PermissionSetting Object based on role, operations, fieldsToInclude, and fieldsToExclude.
         /// </summary>
-        public static PermissionSetting CreatePermissions(string role, string operations, Policy? policy, Field? fields)
+        public static EntityPermission CreatePermissions(string role, string operations, EntityActionPolicy? policy, EntityActionFields? fields)
         {
-            return new PermissionSetting(role, CreateOperations(operations, policy, fields));
+            return new(role, CreateOperations(operations, policy, fields));
         }
 
         /// <summary>
@@ -258,7 +147,7 @@ namespace Cli
                 WriteIndented = true,
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
                 PropertyNamingPolicy = new LowerCaseNamingPolicy(),
-                // As of .NET Core 7, JsonDocument and JsonSerializer only support skipping or disallowing 
+                // As of .NET Core 7, JsonDocument and JsonSerializer only support skipping or disallowing
                 // of comments; they do not support loading them. If we set JsonCommentHandling.Allow for either,
                 // it will throw an exception.
                 ReadCommentHandling = JsonCommentHandling.Skip
@@ -292,52 +181,6 @@ namespace Cli
             }
 
             return true;
-        }
-
-        /// <summary>
-        /// Returns the default global settings.
-        /// </summary>
-        public static Dictionary<GlobalSettingsType, object> GetDefaultGlobalSettings(HostModeType hostMode,
-                                                                                      IEnumerable<string>? corsOrigin,
-                                                                                      string authenticationProvider,
-                                                                                      string? audience = null,
-                                                                                      string? issuer = null,
-                                                                                      string? restPath = GlobalSettings.REST_DEFAULT_PATH,
-                                                                                      bool restEnabled = true,
-                                                                                      string graphqlPath = GlobalSettings.GRAPHQL_DEFAULT_PATH,
-                                                                                      bool graphqlEnabled = true)
-        {
-            // Prefix rest path with '/', if not already present.
-            if (restPath is not null && !restPath.StartsWith('/'))
-            {
-                restPath = "/" + restPath;
-            }
-
-            // Prefix graphql path with '/', if not already present.
-            if (!graphqlPath.StartsWith('/'))
-            {
-                graphqlPath = "/" + graphqlPath;
-            }
-
-            Dictionary<GlobalSettingsType, object> defaultGlobalSettings = new();
-
-            // If restPath is null, it implies we are dealing with cosmosdb_nosql,
-            // which only supports graphql.
-            if (restPath is not null)
-            {
-                defaultGlobalSettings.Add(GlobalSettingsType.Rest, new RestGlobalSettings(Enabled: restEnabled, Path: restPath));
-            }
-
-            defaultGlobalSettings.Add(GlobalSettingsType.GraphQL, new GraphQLGlobalSettings(Enabled: graphqlEnabled, Path: graphqlPath));
-            defaultGlobalSettings.Add(
-                GlobalSettingsType.Host,
-                GetDefaultHostGlobalSettings(
-                    hostMode,
-                    corsOrigin,
-                    authenticationProvider,
-                    audience,
-                    issuer));
-            return defaultGlobalSettings;
         }
 
         /// <summary>
@@ -387,86 +230,63 @@ namespace Cli
         //     }
         // }
         /// </summary>
-        public static HostGlobalSettings GetDefaultHostGlobalSettings(
-            HostModeType hostMode,
+        public static HostOptions GetDefaultHostOptions(
+            HostMode hostMode,
             IEnumerable<string>? corsOrigin,
             string authenticationProvider,
             string? audience,
             string? issuer)
         {
             string[]? corsOriginArray = corsOrigin is null ? new string[] { } : corsOrigin.ToArray();
-            Cors cors = new(Origins: corsOriginArray);
-            AuthenticationConfig authenticationConfig;
+            CorsOptions cors = new(Origins: corsOriginArray);
+            AuthenticationOptions AuthenticationOptions;
             if (Enum.TryParse<EasyAuthType>(authenticationProvider, ignoreCase: true, out _)
-                || SIMULATOR_AUTHENTICATION.Equals(authenticationProvider))
+                || AuthenticationOptions.SIMULATOR_AUTHENTICATION.Equals(authenticationProvider))
             {
-                authenticationConfig = new(Provider: authenticationProvider);
+                AuthenticationOptions = new(Provider: authenticationProvider, null);
             }
             else
             {
-                authenticationConfig = new(
+                AuthenticationOptions = new(
                     Provider: authenticationProvider,
                     Jwt: new(audience, issuer)
                 );
             }
 
-            return new HostGlobalSettings(
+            return new(
                 Mode: hostMode,
                 Cors: cors,
-                Authentication: authenticationConfig);
+                Authentication: AuthenticationOptions);
         }
 
         /// <summary>
         /// Returns an object of type Policy
         /// If policyRequest or policyDatabase is provided. Otherwise, returns null.
         /// </summary>
-        public static Policy? GetPolicyForOperation(string? policyRequest, string? policyDatabase)
+        public static EntityActionPolicy? GetPolicyForOperation(string? policyRequest, string? policyDatabase)
         {
-            if (policyRequest is not null || policyDatabase is not null)
+            if (policyDatabase is null && policyRequest is null)
             {
-                return new Policy(policyRequest, policyDatabase);
+                return null;
             }
 
-            return null;
+            return new EntityActionPolicy(policyRequest, policyDatabase);
         }
 
         /// <summary>
         /// Returns an object of type Field
         /// If fieldsToInclude or fieldsToExclude is provided. Otherwise, returns null.
         /// </summary>
-        public static Field? GetFieldsForOperation(IEnumerable<string>? fieldsToInclude, IEnumerable<string>? fieldsToExclude)
+        public static EntityActionFields? GetFieldsForOperation(IEnumerable<string>? fieldsToInclude, IEnumerable<string>? fieldsToExclude)
         {
             if (fieldsToInclude is not null && fieldsToInclude.Any() || fieldsToExclude is not null && fieldsToExclude.Any())
             {
                 HashSet<string>? fieldsToIncludeSet = fieldsToInclude is not null && fieldsToInclude.Any() ? new HashSet<string>(fieldsToInclude) : null;
-                HashSet<string>? fieldsToExcludeSet = fieldsToExclude is not null && fieldsToExclude.Any() ? new HashSet<string>(fieldsToExclude) : null;
-                return new Field(fieldsToIncludeSet, fieldsToExcludeSet);
+                HashSet<string>? fieldsToExcludeSet = fieldsToExclude is not null && fieldsToExclude.Any() ? new HashSet<string>(fieldsToExclude) : new();
+                return new EntityActionFields(Include: fieldsToIncludeSet, Exclude: fieldsToExcludeSet);
             }
 
             return null;
-        }
-
-        /// <summary>
-        /// Try to read and deserialize runtime config from a file.
-        /// </summary>
-        /// <param name="file">File path.</param>
-        /// <param name="runtimeConfigJson">Runtime config output. On failure, this will be null.</param>
-        /// <returns>True on success. On failure, return false and runtimeConfig will be set to null.</returns>
-        public static bool TryReadRuntimeConfig(string file, out string runtimeConfigJson)
-        {
-            runtimeConfigJson = string.Empty;
-
-            if (!File.Exists(file))
-            {
-                _logger.LogError($"Couldn't find config  file: {file}. " +
-                    "Please run: dab init <options> to create a new config file.");
-                return false;
-            }
-
-            // Read existing config file content.
-            //
-            runtimeConfigJson = File.ReadAllText(file);
-            return true;
         }
 
         /// <summary>
@@ -481,7 +301,7 @@ namespace Cli
         /// </summary>
         /// <param name="operations">array of string containing operations for permissions</param>
         /// <returns>True if no invalid operation is found.</returns>
-        public static bool VerifyOperations(string[] operations, SourceType sourceType)
+        public static bool VerifyOperations(string[] operations, EntitySourceType? sourceType)
         {
             // Check if there are any duplicate operations
             // Ex: read,read,create
@@ -493,7 +313,7 @@ namespace Cli
             }
 
             // Currently, Stored Procedures can be configured with only Execute Operation.
-            bool isStoredProcedure = sourceType is SourceType.StoredProcedure;
+            bool isStoredProcedure = sourceType is EntitySourceType.StoredProcedure;
             if (isStoredProcedure && !VerifyExecuteOperationForStoredProcedure(operations))
             {
                 return false;
@@ -502,18 +322,18 @@ namespace Cli
             bool containsWildcardOperation = false;
             foreach (string operation in uniqueOperations)
             {
-                if (TryConvertOperationNameToOperation(operation, out Operation op))
+                if (EnumExtensions.TryDeserialize(operation, out EntityActionOperation? op))
                 {
-                    if (op is Operation.All)
+                    if (op is EntityActionOperation.All)
                     {
                         containsWildcardOperation = true;
                     }
-                    else if (!isStoredProcedure && !PermissionOperation.ValidPermissionOperations.Contains(op))
+                    else if (!isStoredProcedure && !EntityAction.ValidPermissionOperations.Contains((EntityActionOperation)op))
                     {
                         _logger.LogError("Invalid actions found in --permissions");
                         return false;
                     }
-                    else if (isStoredProcedure && !PermissionOperation.ValidStoredProcedurePermissionOperations.Contains(op))
+                    else if (isStoredProcedure && !EntityAction.ValidStoredProcedurePermissionOperations.Contains((EntityActionOperation)op))
                     {
                         _logger.LogError("Invalid stored procedure action(s) found in --permissions");
                         return false;
@@ -528,7 +348,7 @@ namespace Cli
             }
 
             // Check for WILDCARD operation with CRUD operations.
-            if (containsWildcardOperation && uniqueOperations.Count() > 1)
+            if (containsWildcardOperation && uniqueOperations.Count > 1)
             {
                 _logger.LogError("WILDCARD(*) along with other CRUD operations in a single operation is not allowed.");
                 return false;
@@ -543,7 +363,7 @@ namespace Cli
         /// It will return true if parsing is successful and add the parsed value
         /// to the out params role and operations.
         /// </summary>
-        public static bool TryGetRoleAndOperationFromPermission(IEnumerable<string> permissions, out string? role, out string? operations)
+        public static bool TryGetRoleAndOperationFromPermission(IEnumerable<string> permissions, [NotNullWhen(true)] out string? role, [NotNullWhen(true)] out string? operations)
         {
             // Split permission to role and operations.
             role = null;
@@ -568,6 +388,7 @@ namespace Cli
         /// In case of false, the runtimeConfigFile will be set to string.Empty.
         /// </summary>
         public static bool TryGetConfigFileBasedOnCliPrecedence(
+            RuntimeConfigLoader loader,
             string? userProvidedConfigFile,
             out string runtimeConfigFile)
         {
@@ -575,66 +396,22 @@ namespace Cli
             {
                 /// The existence of user provided config file is not checked here.
                 _logger.LogInformation($"User provided config file: {userProvidedConfigFile}");
-                RuntimeConfigPath.CheckPrecedenceForConfigInEngine = false;
                 runtimeConfigFile = userProvidedConfigFile;
                 return true;
             }
             else
             {
                 _logger.LogInformation("Config not provided. Trying to get default config based on DAB_ENVIRONMENT...");
-                /// Need to reset to true explicitly so any that any re-invocations of this function
-                /// get simulated as being called for the first time specifically useful for tests.
-                RuntimeConfigPath.CheckPrecedenceForConfigInEngine = true;
-                runtimeConfigFile = RuntimeConfigPath.GetFileNameForEnvironment(
-                        hostingEnvironmentName: null,
-                        considerOverrides: false);
-
-                /// So that the check doesn't run again when starting engine
-                RuntimeConfigPath.CheckPrecedenceForConfigInEngine = false;
+                _logger.LogInformation("Environment variable DAB_ENVIRONMENT is {value}", Environment.GetEnvironmentVariable("DAB_ENVIRONMENT"));
+                runtimeConfigFile = loader.GetFileNameForEnvironment(null, considerOverrides: false);
             }
 
             return !string.IsNullOrEmpty(runtimeConfigFile);
         }
 
         /// <summary>
-        /// Checks if config can be correctly parsed by deserializing the
-        /// json config into runtime config object.
-        /// Also checks that connection-string is not null or empty whitespace.
-        /// If parsing is successful and the config has valid connection-string, it
-        /// returns true with out as deserializedConfig, else returns false.
-        /// </summary>
-        public static bool CanParseConfigCorrectly(
-            string configFile,
-            [NotNullWhen(true)] out RuntimeConfig? deserializedRuntimeConfig)
-        {
-            deserializedRuntimeConfig = null;
-            if (!TryReadRuntimeConfig(configFile, out string runtimeConfigJson))
-            {
-                _logger.LogError($"Failed to read the config file: {configFile}.");
-                return false;
-            }
-
-            if (!RuntimeConfig.TryGetDeserializedRuntimeConfig(
-                    runtimeConfigJson,
-                    out deserializedRuntimeConfig,
-                    logger: null))
-            {
-                _logger.LogError($"Failed to parse the config file: {configFile}.");
-                return false;
-            }
-
-            if (string.IsNullOrWhiteSpace(deserializedRuntimeConfig.ConnectionString))
-            {
-                _logger.LogError($"Invalid connection-string provided in the config.");
-                return false;
-            }
-
-            return true;
-        }
-
-        /// <summary>
         /// This method checks that parameter is only used with Stored Procedure, while
-        /// key-fields only with table/views. Also ensures that key-fields are always 
+        /// key-fields only with table/views. Also ensures that key-fields are always
         /// provided for views.
         /// </summary>
         /// <param name="sourceType">type of the source object.</param>
@@ -642,15 +419,15 @@ namespace Cli
         /// <param name="keyFields">IEnumerable string containing key columns for table/view.</param>
         /// <returns> Returns true when successful else on failure, returns false.</returns>
         public static bool VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
-            SourceType sourceType,
+            EntitySourceType? sourceType,
             IEnumerable<string>? parameters,
             IEnumerable<string>? keyFields)
         {
-            if (sourceType is SourceType.StoredProcedure)
+            if (sourceType is EntitySourceType.StoredProcedure)
             {
                 if (keyFields is not null && keyFields.Any())
                 {
-                    _logger.LogError("Stored Procedures don't support keyfields.");
+                    _logger.LogError("Stored Procedures don't support KeyFields.");
                     return false;
                 }
             }
@@ -663,8 +440,7 @@ namespace Cli
                     return false;
                 }
 
-                // For Views
-                if (sourceType is SourceType.View && (keyFields is null || !keyFields.Any()))
+                if (sourceType is EntitySourceType.View && (keyFields is null || !keyFields.Any()))
                 {
                     _logger.LogError("Key-fields are mandatory for views, but not provided.");
                     return false;
@@ -686,22 +462,14 @@ namespace Cli
         /// <returns>True in case of successful creation of source object.</returns>
         public static bool TryCreateSourceObject(
             string name,
-            SourceType type,
+            EntitySourceType? type,
             Dictionary<string, object>? parameters,
             string[]? keyFields,
-            [NotNullWhen(true)] out object? sourceObject)
+            [NotNullWhen(true)] out EntitySource? sourceObject)
         {
-
-            // If type is Table along with that parameter and keyfields is null then return the source as string.
-            if (SourceType.Table.Equals(type) && parameters is null && keyFields is null)
-            {
-                sourceObject = name;
-                return true;
-            }
-
-            sourceObject = new DatabaseObjectSource(
+            sourceObject = new EntitySource(
                 Type: type,
-                Name: name,
+                Object: name,
                 Parameters: parameters,
                 KeyFields: keyFields
             );
@@ -759,11 +527,11 @@ namespace Cli
         ///  and checks if it has only one CRUD operation.
         /// </summary>
         public static bool VerifyPermissionOperationsForStoredProcedures(
-            PermissionSetting[] permissionSettings)
+            EntityPermission[] permissionSettings)
         {
-            foreach (PermissionSetting permissionSetting in permissionSettings)
+            foreach (EntityPermission permissionSetting in permissionSettings)
             {
-                if (!VerifyExecuteOperationForStoredProcedure(permissionSetting.Operations))
+                if (!VerifyExecuteOperationForStoredProcedure(permissionSetting.Actions))
                 {
                     return false;
                 }
@@ -776,11 +544,10 @@ namespace Cli
         /// This method checks that stored-procedure entity
         /// is configured only with execute action
         /// </summary>
-        private static bool VerifyExecuteOperationForStoredProcedure(object[] operations)
+        private static bool VerifyExecuteOperationForStoredProcedure(EntityAction[] operations)
         {
             if (operations.Length > 1
-                || !TryGetOperationName(operations.First(), out Operation operationName)
-                || (operationName is not Operation.Execute && operationName is not Operation.All))
+                || (operations.First().Action is not EntityActionOperation.Execute && operations.First().Action is not EntityActionOperation.All))
             {
                 _logger.LogError("Stored Procedure supports only execute operation.");
                 return false;
@@ -790,27 +557,19 @@ namespace Cli
         }
 
         /// <summary>
-        /// Checks if the operation is string or PermissionOperation object
-        /// and tries to parse the operation name accordingly.
-        /// Returns true on successful parsing.
+        /// This method checks that stored-procedure entity
+        /// is configured only with execute action
         /// </summary>
-        public static bool TryGetOperationName(object operation, out Operation operationName)
+        private static bool VerifyExecuteOperationForStoredProcedure(string[] operations)
         {
-            JsonElement operationJson = JsonSerializer.SerializeToElement(operation);
-            if (operationJson.ValueKind is JsonValueKind.String)
+            if (operations.Length > 1
+                || !EnumExtensions.TryDeserialize(operations.First(), out EntityActionOperation? operation)
+                || (operation is not EntityActionOperation.Execute && operation is not EntityActionOperation.All))
             {
-                return TryConvertOperationNameToOperation(operationJson.GetString(), out operationName);
-            }
-
-            PermissionOperation? action = JsonSerializer.Deserialize<PermissionOperation>(operationJson);
-            if (action is null)
-            {
-                _logger.LogError($"Failed to parse the operation: {operation}.");
-                operationName = Operation.None;
+                _logger.LogError("Stored Procedure supports only execute operation.");
                 return false;
             }
 
-            operationName = action.Name;
             return true;
         }
 
@@ -824,7 +583,7 @@ namespace Cli
             string? issuer)
         {
             if (Enum.TryParse<EasyAuthType>(authenticationProvider, ignoreCase: true, out _)
-                || SIMULATOR_AUTHENTICATION.Equals(authenticationProvider))
+                || AuthenticationOptions.SIMULATOR_AUTHENTICATION == authenticationProvider)
             {
                 if (!(string.IsNullOrWhiteSpace(audience)) || !(string.IsNullOrWhiteSpace(issuer)))
                 {
@@ -869,11 +628,25 @@ namespace Cli
         /// <summary>
         /// This method will write all the json string in the given file.
         /// </summary>
-        public static bool WriteJsonContentToFile(string file, string jsonContent)
+        public static bool WriteRuntimeConfigToFile(string file, RuntimeConfig runtimeConfig, IFileSystem fileSystem)
         {
             try
             {
-                File.WriteAllText(file, jsonContent);
+                string jsonContent = runtimeConfig.ToJson();
+                return WriteJsonToFile(file, jsonContent, fileSystem);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Failed to generate the config file, operation failed with exception:{e}.");
+                return false;
+            }
+        }
+
+        public static bool WriteJsonToFile(string file, string jsonContent, IFileSystem fileSystem)
+        {
+            try
+            {
+                fileSystem.File.WriteAllText(file, jsonContent);
             }
             catch (Exception e)
             {
@@ -885,59 +658,17 @@ namespace Cli
         }
 
         /// <summary>
-        /// This method will check if DAB_ENVIRONMENT value is set.
-        /// If yes, it will try to merge dab-config.json with dab-config.{DAB_ENVIRONMENT}.json
-        /// and create a merged file called dab-config.{DAB_ENVIRONMENT}.merged.json
-        /// </summary>
-        /// <returns>Returns the name of the merged config if successful.</returns>
-        public static bool TryMergeConfigsIfAvailable([NotNullWhen(true)] out string? mergedConfigFile)
-        {
-            string? environmentValue = Environment.GetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME);
-            mergedConfigFile = null;
-            if (!string.IsNullOrEmpty(environmentValue))
-            {
-                string baseConfigFile = RuntimeConfigPath.DefaultName;
-                string environmentBasedConfigFile = RuntimeConfigPath.GetFileName(environmentValue, considerOverrides: false);
-
-                if (DoesFileExistInCurrentDirectory(baseConfigFile) && !string.IsNullOrEmpty(environmentBasedConfigFile))
-                {
-                    try
-                    {
-                        string baseConfigJson = File.ReadAllText(baseConfigFile);
-                        string overrideConfigJson = File.ReadAllText(environmentBasedConfigFile);
-                        string currentDir = Directory.GetCurrentDirectory();
-                        _logger.LogInformation($"Merging {Path.Combine(currentDir, baseConfigFile)}"
-                            + $" and {Path.Combine(currentDir, environmentBasedConfigFile)}");
-                        string mergedConfigJson = Merge(baseConfigJson, overrideConfigJson);
-                        mergedConfigFile = RuntimeConfigPath.GetMergedFileNameForEnvironment(CONFIGFILE_NAME, environmentValue);
-                        File.WriteAllText(mergedConfigFile, mergedConfigJson);
-                        _logger.LogInformation($"Generated merged config file: {Path.Combine(currentDir, mergedConfigFile)}");
-                        return true;
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, $"Failed to merge the config files.");
-                        mergedConfigFile = null;
-                        return false;
-                    }
-                }
-            }
-
-            return false;
-        }
-
-        /// <summary>
         /// Utility method that converts REST HTTP verb string input to RestMethod Enum.
         /// The method returns true/false corresponding to successful/unsuccessful conversion.
         /// </summary>
         /// <param name="method">String input entered by the user</param>
         /// <param name="restMethod">RestMethod Enum type</param>
         /// <returns></returns>
-        public static bool TryConvertRestMethodNameToRestMethod(string? method, out RestMethod restMethod)
+        public static bool TryConvertRestMethodNameToRestMethod(string? method, out SupportedHttpVerb restMethod)
         {
             if (!Enum.TryParse(method, ignoreCase: true, out restMethod))
             {
-                _logger.LogError($"Invalid REST Method. Supported methods are {RestMethod.Get.ToString()}, {RestMethod.Post.ToString()} , {RestMethod.Put.ToString()}, {RestMethod.Patch.ToString()} and {RestMethod.Delete.ToString()}.");
+                _logger.LogError("Invalid REST Method. Supported methods are {restMethods}.", string.Join(", ", Enum.GetNames<SupportedHttpVerb>()));
                 return false;
             }
 
@@ -951,13 +682,13 @@ namespace Cli
         /// </summary>
         /// <param name="methods">Collection of REST HTTP verbs configured for the stored procedure</param>
         /// <returns>REST methods as an array of RestMethod Enum type.</returns>
-        public static RestMethod[] CreateRestMethods(IEnumerable<string> methods)
+        public static SupportedHttpVerb[] CreateRestMethods(IEnumerable<string> methods)
         {
-            List<RestMethod> restMethods = new();
+            List<SupportedHttpVerb> restMethods = new();
 
             foreach (string method in methods)
             {
-                RestMethod restMethod;
+                SupportedHttpVerb restMethod;
                 if (TryConvertRestMethodNameToRestMethod(method, out restMethod))
                 {
                     restMethods.Add(restMethod);
@@ -976,7 +707,7 @@ namespace Cli
         /// <summary>
         /// Utility method that converts the graphQL operation configured for the stored procedure to
         /// GraphQLOperation Enum type.
-        /// The metod returns true/false corresponding to successful/unsuccessful conversion.
+        /// The method returns true/false corresponding to successful/unsuccessful conversion.
         /// </summary>
         /// <param name="operation">GraphQL operation configured for the stored procedure</param>
         /// <param name="graphQLOperation">GraphQL Operation as an Enum type</param>
@@ -993,14 +724,18 @@ namespace Cli
         }
 
         /// <summary>
-        /// Method to check if the options for an entity represent a stored procedure  
+        /// Method to check if the options for an entity represent a stored procedure
         /// </summary>
         /// <param name="options"></param>
         /// <returns></returns>
         public static bool IsStoredProcedure(EntityOptions options)
         {
-            SourceTypeEnumConverter.TryGetSourceType(options.SourceType, out SourceType sourceObjectType);
-            return sourceObjectType is SourceType.StoredProcedure;
+            if (options.SourceType is not null && EnumExtensions.TryDeserialize(options.SourceType, out EntitySourceType? sourceObjectType))
+            {
+                return sourceObjectType is EntitySourceType.StoredProcedure;
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -1011,12 +746,12 @@ namespace Cli
         /// <returns></returns>
         public static bool IsStoredProcedure(Entity entity)
         {
-            return entity.ObjectType is SourceType.StoredProcedure;
+            return entity.Source.Type is EntitySourceType.StoredProcedure;
         }
 
         /// <summary>
         /// Method to determine if the type of the entity is being converted from
-        /// stored-procedure to table/view.  
+        /// stored-procedure to table/view.
         /// </summary>
         /// <param name="entity">Entity for which the source type conversion is being determined</param>
         /// <param name="options">Options from the CLI commands</param>
@@ -1083,61 +818,76 @@ namespace Cli
         }
 
         /// <summary>
-        /// Constructs the REST Path using the add/update command --rest option  
+        /// Constructs the REST Path using the add/update command --rest option
         /// </summary>
         /// <param name="restRoute">Input entered using --rest option</param>
-        /// <returns>Constructed REST Path</returns>
-        public static object? ConstructRestPathDetails(string? restRoute)
+        /// <param name="supportedHttpVerbs">Supported HTTP verbs for the entity.</param>
+        /// <param name="isCosmosDbNoSql">True when the entity is a CosmosDB NoSQL entity, and if it is true, REST is disabled.</param>
+        /// <returns>Constructed REST options for the entity.</returns>
+        public static EntityRestOptions ConstructRestOptions(string? restRoute, SupportedHttpVerb[] supportedHttpVerbs, bool isCosmosDbNoSql)
         {
-            object? restPath;
+            // REST is not supported for CosmosDB NoSQL, so we'll forcibly disable it.
+            if (isCosmosDbNoSql)
+            {
+                return new(Array.Empty<SupportedHttpVerb>(), Enabled: false);
+            }
+
+            EntityRestOptions restOptions = new(supportedHttpVerbs);
+
+            // Default state for REST is enabled, so if no value is provided, we enable it
             if (restRoute is null)
             {
-                restPath = null;
+                return restOptions with { Enabled = true, Methods = supportedHttpVerbs };
             }
             else
             {
                 if (bool.TryParse(restRoute, out bool restEnabled))
                 {
-                    restPath = restEnabled;
+                    restOptions = restOptions with { Enabled = restEnabled };
                 }
                 else
                 {
-                    restPath = "/" + restRoute;
+                    restOptions = restOptions with { Enabled = true, Path = "/" + restRoute };
                 }
             }
 
-            return restPath;
+            return restOptions;
         }
 
         /// <summary>
         /// Constructs the graphQL Type from add/update command --graphql option
         /// </summary>
         /// <param name="graphQL">GraphQL type input from the CLI commands</param>
+        /// <param name="graphQLOperationsForStoredProcedures">GraphQL operation input from the CLI commands.</param>
         /// <returns>Constructed GraphQL Type</returns>
-        public static object? ConstructGraphQLTypeDetails(string? graphQL)
+        public static EntityGraphQLOptions ConstructGraphQLTypeDetails(string? graphQL, GraphQLOperation? graphQLOperationsForStoredProcedures)
         {
-            object? graphQLType;
+            EntityGraphQLOptions graphQLType = new(
+                Singular: string.Empty,
+                Plural: string.Empty,
+                Operation: graphQLOperationsForStoredProcedures);
+
+            // Default state for GraphQL is enabled, so if no value is provided, we enable it
             if (graphQL is null)
             {
-                graphQLType = null;
+                return graphQLType with { Enabled = true };
             }
             else
             {
                 if (bool.TryParse(graphQL, out bool graphQLEnabled))
                 {
-                    graphQLType = graphQLEnabled;
+                    graphQLType = graphQLType with { Enabled = graphQLEnabled };
                 }
                 else
                 {
-                    string singular, plural;
+                    string singular, plural = string.Empty;
                     if (graphQL.Contains(SEPARATOR))
                     {
                         string[] arr = graphQL.Split(SEPARATOR);
                         if (arr.Length != 2)
                         {
-                            _logger.LogError($"Invalid format for --graphql. Accepted values are true/false," +
-                                                    "a string, or a pair of string in the format <singular>:<plural>");
-                            return null;
+                            _logger.LogError("Invalid format for --graphql. Accepted values are true/false, a string, or a pair of string in the format <singular>:<plural>");
+                            return graphQLType;
                         }
 
                         singular = arr[0];
@@ -1145,15 +895,29 @@ namespace Cli
                     }
                     else
                     {
-                        singular = graphQL.Singularize(inputIsKnownToBePlural: false);
-                        plural = graphQL.Pluralize(inputIsKnownToBeSingular: false);
+                        singular = graphQL;
                     }
 
-                    graphQLType = new SingularPlural(singular, plural);
+                    // If we have singular/plural text we infer that GraphQL is enabled
+                    graphQLType = graphQLType with { Enabled = true, Singular = singular, Plural = plural };
                 }
             }
 
             return graphQLType;
+        }
+
+        /// <summary>
+        /// Check if add/update command has Entity provided. Return false otherwise.
+        /// </summary>
+        public static bool IsEntityProvided(string? entity, ILogger cliLogger, string command)
+        {
+            if (string.IsNullOrWhiteSpace(entity))
+            {
+                cliLogger.LogError($"Entity name is missing. Usage: dab {command} [entity-name] [{command}-options]");
+                return false;
+            }
+
+            return true;
         }
     }
 }

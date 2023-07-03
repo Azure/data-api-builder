@@ -71,6 +71,30 @@ steps:
     arguments: '--filter "TestCategory=CosmosDb_NoSql" --no-build --configuration $(buildConfiguration) $(ADDITIONAL_TEST_ARGS)'
     projects: '**/*Tests/*.csproj'
 
+- task: CmdLine@2
+  displayName: 'Set flag to publish Verify *.received files when tests fail'
+  condition: failed()
+  inputs:
+    script: 'echo ##vso[task.setvariable variable=publishverify]Yes'
+
+- task: CopyFiles@2
+  condition: eq(variables['publishverify'], 'Yes')
+  displayName: 'Copy received files to Artifact Staging'
+  inputs:
+    contents: '**\*.received.*' 
+    targetFolder: '$(Build.ArtifactStagingDirectory)\Verify'
+    cleanTargetFolder: true
+    overWrite: true
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish received files as Artifacts'
+  name: 'verifypublish'
+  condition: eq(variables['publishverify'], 'Yes')
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)\Verify'
+    ArtifactName: 'Verify'
+    publishLocation: 'Container'
+
 # '/XPlat Code coverage --results-directory /home/vsts/work/1/s/TestResults/'
 - task: PublishCodeCoverageResults@1
   displayName: 'Publish code coverage'

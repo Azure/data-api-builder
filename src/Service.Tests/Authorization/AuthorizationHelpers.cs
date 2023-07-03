@@ -2,16 +2,19 @@
 // Licensed under the MIT License.
 
 #nullable enable
+using System;
 using System.Collections.Generic;
-using System.Text.Json;
+using System.IO.Abstractions.TestingHelpers;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Configurations;
 using Azure.DataApiBuilder.Service.Services;
+using Humanizer;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using PermissionOperation = Azure.DataApiBuilder.Config.PermissionOperation;
 
 namespace Azure.DataApiBuilder.Service.Tests.Authorization
 {
@@ -31,12 +34,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// <returns>AuthorizationResolver object</returns>
         public static AuthorizationResolver InitAuthorizationResolver(RuntimeConfig runtimeConfig)
         {
-            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(runtimeConfig);
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new(runtimeConfig.ToJson()));
+            RuntimeConfigLoader loader = new(fileSystem);
+
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(loader);
             Mock<ISqlMetadataProvider> metadataProvider = new();
             Mock<ILogger<AuthorizationResolver>> logger = new();
             SourceDefinition sampleTable = CreateSampleTable();
             metadataProvider.Setup(x => x.GetSourceDefinition(TEST_ENTITY)).Returns(sampleTable);
-            metadataProvider.Setup(x => x.GetDatabaseType()).Returns(DatabaseType.mssql);
+            metadataProvider.Setup(x => x.GetDatabaseType()).Returns(DatabaseType.MSSQL);
 
             string? outParam;
             Dictionary<string, Dictionary<string, string>> _exposedNameToBackingColumnMapping = CreateColumnMappingTable();
@@ -44,7 +51,86 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                               .Callback(new metaDataCallback((string entity, string exposedField, out string? backingColumn) => _ = _exposedNameToBackingColumnMapping[entity].TryGetValue(exposedField, out backingColumn)))
                               .Returns((string entity, string exposedField, string? backingColumn) => _exposedNameToBackingColumnMapping[entity].TryGetValue(exposedField, out backingColumn));
 
-            return new AuthorizationResolver(runtimeConfigProvider, metadataProvider.Object, logger.Object);
+            metadataProvider.Setup(x => x.GetEntityName(It.IsAny<string>()))
+                .Returns((string entity) => entity);
+
+            return new AuthorizationResolver(runtimeConfigProvider, metadataProvider.Object);
+        }
+
+        /// <summary>
+        /// Creates a stub RuntimeConfig object with user/test defined values
+        /// that set AuthorizationMetadata.
+        /// </summary>
+        /// <param name="entityName">Top level entity name</param>
+        /// <param name="entitySource">Database source for entity</param>
+        /// <param name="roleName">Role permitted to access entity</param>
+        /// <param name="operation">Operation permitted for role</param>
+        /// <param name="includedCols">columns allowed for operation</param>
+        /// <param name="excludedCols">columns NOT allowed for operation</param>
+        /// <param name="databasePolicy">database policy for operation</param>
+        /// <param name="requestPolicy">request policy for operation</param>
+        /// <param name="authProvider">Authentication provider</param>
+        /// <param name="dbType">Database type configured.</param>
+        /// <returns></returns>
+        public static RuntimeConfig InitRuntimeConfig(
+            EntitySource entitySource,
+            string entityName = TEST_ENTITY,
+            string roleName = "Reader",
+            EntityActionOperation operation = EntityActionOperation.Create,
+            HashSet<string>? includedCols = null,
+            HashSet<string>? excludedCols = null,
+            string? databasePolicy = null,
+            string? requestPolicy = null,
+            string authProvider = "AppService",
+            DatabaseType dbType = DatabaseType.MSSQL
+            )
+        {
+            EntityActionFields? fieldsForRole = null;
+
+            if (includedCols is not null || excludedCols is not null)
+            {
+                // Only create object for Fields if inc/exc cols is not null.
+                fieldsForRole = new(
+                    Include: includedCols,
+                    Exclude: excludedCols ?? new());
+            }
+
+            EntityActionPolicy policy = new(requestPolicy, databasePolicy);
+
+            EntityAction actionForRole = new(
+                Action: operation,
+                Fields: fieldsForRole,
+                Policy: policy);
+
+            EntityPermission permissionForEntity = new(
+                Role: roleName,
+                Actions: new EntityAction[] { actionForRole });
+
+            Entity sampleEntity = new(
+                Source: entitySource,
+                Rest: new(Array.Empty<SupportedHttpVerb>()),
+                GraphQL: new(entityName.Singularize(), entityName.Pluralize()),
+                Permissions: new EntityPermission[] { permissionForEntity },
+                Relationships: null,
+                Mappings: null
+            );
+
+            // Create runtime settings for the config.
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(dbType, "", new()),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(
+                        Cors: null,
+                        Authentication: new(authProvider, null)
+                    )
+                ),
+                Entities: new(new Dictionary<string, Entity> { { entityName, sampleEntity } })
+            );
+
+            return runtimeConfig;
         }
 
         /// <summary>
@@ -64,77 +150,29 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// <returns></returns>
         public static RuntimeConfig InitRuntimeConfig(
             string entityName = TEST_ENTITY,
-            object? entitySource = null,
+            string? entitySource = null,
             string roleName = "Reader",
-            Config.Operation operation = Config.Operation.Create,
+            EntityActionOperation operation = EntityActionOperation.Create,
             HashSet<string>? includedCols = null,
             HashSet<string>? excludedCols = null,
             string? databasePolicy = null,
             string? requestPolicy = null,
             string authProvider = "AppService",
-            DatabaseType dbType = DatabaseType.mssql
+            DatabaseType dbType = DatabaseType.MSSQL
             )
         {
-            Field? fieldsForRole = null;
-
-            if (entitySource is null)
-            {
-                entitySource = TEST_ENTITY;
-            }
-
-            if (includedCols is not null || excludedCols is not null)
-            {
-                // Only create object for Fields if inc/exc cols is not null.
-                fieldsForRole = new(
-                    include: includedCols,
-                    exclude: excludedCols);
-            }
-
-            Policy policy = new(requestPolicy, databasePolicy);
-
-            PermissionOperation actionForRole = new(
-                Name: operation,
-                Fields: fieldsForRole,
-                Policy: policy);
-
-            PermissionSetting permissionForEntity = new(
-                role: roleName,
-                operations: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
-
-            Entity sampleEntity = new(
-                Source: entitySource,
-                Rest: null,
-                GraphQL: null,
-                Permissions: new PermissionSetting[] { permissionForEntity },
-                Relationships: null,
-                Mappings: null
-                );
-
-            Dictionary<string, Entity> entityMap = new()
-            {
-                { entityName, sampleEntity }
-            };
-
-            // Create runtime settings for the config.
-            Dictionary<GlobalSettingsType, object> runtimeSettings = new();
-            AuthenticationConfig authenticationConfig = new(Provider: authProvider);
-            HostGlobalSettings hostGlobal = new(Authentication: authenticationConfig);
-            JsonElement hostGlobalJson = JsonSerializer.SerializeToElement(hostGlobal);
-            RestGlobalSettings restGlobalSettings = new();
-            JsonElement restGlobalJson = JsonSerializer.SerializeToElement(restGlobalSettings);
-            runtimeSettings.Add(GlobalSettingsType.Host, hostGlobalJson);
-            runtimeSettings.Add(GlobalSettingsType.Rest, restGlobalJson);
-
-            RuntimeConfig runtimeConfig = new(
-                Schema: "UnitTestSchema",
-                DataSource: new DataSource(DatabaseType: dbType),
-                RuntimeSettings: runtimeSettings,
-                Entities: entityMap
-                );
-
-            runtimeConfig.DetermineGlobalSettings();
-
-            return runtimeConfig;
+            return InitRuntimeConfig(
+                entitySource: new EntitySource(entitySource ?? TEST_ENTITY, EntitySourceType.Table, null, null),
+                entityName: entityName,
+                roleName: roleName,
+                operation: operation,
+                includedCols: includedCols,
+                excludedCols: excludedCols,
+                databasePolicy: databasePolicy,
+                requestPolicy: requestPolicy,
+                authProvider: authProvider,
+                dbType: dbType
+            );
         }
 
         /// <summary>

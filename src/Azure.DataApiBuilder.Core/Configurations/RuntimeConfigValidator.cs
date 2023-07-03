@@ -9,10 +9,10 @@ using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Authorization;
-using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Core.Configurations

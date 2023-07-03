@@ -3,8 +3,8 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
-using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service.Exceptions;

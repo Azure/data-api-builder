@@ -41,17 +41,15 @@ steps:
 - bash: |
     echo IsNugetRelease = $ISNUGETRELEASE
     echo IsReleaseCandidate = $ISRELEASECANDIDATE
-    echo releaseCandidateNumber = $RELEASECANDIDATENUMBER
+    dabVersion=$(major).$(minor).$(patch)
     if [ "$ISNUGETRELEASE" = "true" ]
     then
       if [ "$ISRELEASECANDIDATE" = "true" ]
       then
-        dabVersion=$(major).$(minor).$(patch)-rc$RELEASECANDIDATENUMBER
-      else
-        dabVersion=$(major).$(minor).$(patch)
+        dabVersion=$(dabVersion)-rc
       fi
     else
-      dabVersion=$(major).$(minor).$(patch)-$(Build.BuildId)
+      dabVersion=$(dabVersion)-$(Build.BuildId)
     fi
     echo dabVersion = $dabVersion
     echo "##vso[task.setvariable variable=dabVersion]$dabVersion"
@@ -267,26 +265,26 @@ steps:
 #     codeCoverageTool: Cobertura
 #     summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
 
-# # Create a draft release with Assets
-# - task: GitHubRelease@1
-#   displayName: "Draft Github Release"
-#   condition: and(succeeded(), eq(variables.isReleaseBuild, 'true'))
-#   inputs:
-#     gitHubConnection: 'DataApiBuilder'
-#     repositoryName: '$(Build.Repository.Name)'
-#     action: 'create'
-#     target: '$(Build.SourceVersion)'
-#     tagSource: 'userSpecifiedTag'
-#     tag: 'v$(dabVersion)'
-#     title: 'New Release: Data API Builder for Azure Databases'
-#     assets: |
-#       $(Build.ArtifactStagingDirectory)/**/*.nupkg
-#       $(Build.ArtifactStagingDirectory)/**/*.zip
-#       $(Build.ArtifactStagingDirectory)/**/dab-manifest.json
-#       $(Build.ArtifactStagingDirectory)/**/dab.draft.schema.json
-#     isDraft: true
-#     isPreRelease: true
-#     addChangeLog: false
+# Create a draft release with Assets
+- task: GitHubRelease@1
+  displayName: "Draft Github Release"
+  condition: and(succeeded(), eq(variables.isReleaseBuild, 'true'))
+  inputs:
+    gitHubConnection: 'DataApiBuilder'
+    repositoryName: '$(Build.Repository.Name)'
+    action: 'create'
+    target: '$(Build.SourceVersion)'
+    tagSource: 'userSpecifiedTag'
+    tag: 'v$(dabVersion)'
+    title: 'New Release: Data API Builder for Azure Databases'
+    assets: |
+      $(Build.ArtifactStagingDirectory)/**/*.nupkg
+      $(Build.ArtifactStagingDirectory)/**/*.zip
+      $(Build.ArtifactStagingDirectory)/**/dab-manifest.json
+      $(Build.ArtifactStagingDirectory)/**/dab.draft.schema.json
+    isDraft: true
+    isPreRelease: $(isReleaseCandidate)
+    addChangeLog: true
 
 # # This task gets the current date and saves it to a variable so the docker task can use the build's
 # # date and time as a tag.

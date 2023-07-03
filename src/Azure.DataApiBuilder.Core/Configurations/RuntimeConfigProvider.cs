@@ -4,403 +4,251 @@
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Text.Json;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.NamingPolicies;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Microsoft.Extensions.Logging;
 
-namespace Azure.DataApiBuilder.Core.Configurations
+namespace Azure.DataApiBuilder.Core.Configurations;
+
+/// <summary>
+/// This class is responsible for exposing the runtime config to the rest of the service.
+/// The <c>RuntimeConfigProvider</c> won't directly load the config, but will instead rely on the <see cref="RuntimeConfigLoader"/> to do so.
+/// </summary>
+/// <remarks>
+/// The <c>RuntimeConfigProvider</c> will maintain internal state of the config, and will only load it once.
+///
+/// This class should be treated as the owner of the config that is available within the service, and other classes
+/// should not load the config directly, or maintain a reference to it, so that we can do hot-reloading by replacing
+/// the config that is available from this type.
+/// </remarks>
+public class RuntimeConfigProvider
 {
+    public delegate Task<bool> RuntimeConfigLoadedHandler(RuntimeConfigProvider sender, RuntimeConfig config);
+
+    public List<RuntimeConfigLoadedHandler> RuntimeConfigLoadedHandlers { get; } = new List<RuntimeConfigLoadedHandler>();
+
     /// <summary>
-    /// This class provides access to the runtime configuration and provides a change notification
-    /// in the case where the runtime is started without the configuration so it can be set later.
+    /// Indicates whether the config was loaded after the runtime was initialized.
     /// </summary>
-    public class RuntimeConfigProvider
+    /// <remarks>This is most commonly used when DAB's config is provided via the <c>ConfigurationController</c>, such as when it's a hosted service.</remarks>
+    public bool IsLateConfigured { get; set; }
+
+    /// <summary>
+    /// The access token representing a Managed Identity to connect to the database.
+    /// </summary>
+    public string? ManagedIdentityAccessToken { get; private set; }
+
+    private readonly RuntimeConfigLoader _runtimeConfigLoader;
+    private RuntimeConfig? _runtimeConfig;
+
+    public string RuntimeConfigFileName => _runtimeConfigLoader.ConfigFileName;
+
+    public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader)
     {
-        public delegate Task<bool> RuntimeConfigLoadedHandler(RuntimeConfigProvider sender, RuntimeConfig config);
+        _runtimeConfigLoader = runtimeConfigLoader;
+    }
 
-        public List<RuntimeConfigLoadedHandler> RuntimeConfigLoadedHandlers { get; } = new List<RuntimeConfigLoadedHandler>();
-
-        /// <summary>
-        /// The config provider logger is a static member because we use it in static methods
-        /// like LoadRuntimeConfigValue, GetRuntimeConfigJsonString which themselves are static
-        /// to be used by tests.
-        /// </summary>
-        public static ILogger<RuntimeConfigProvider>? ConfigProviderLogger;
-
-        /// <summary>
-        /// The IsHttpsRedirectionDisabled is a static member because we use it in static methods
-        /// like StartEngine.
-        /// By Default automatic https redirection is enabled, can be disabled with cli using option `--no-https-redirect`.
-        /// </summary>
-        /// <defaultValue>false</defaultValue>
-        public static bool IsHttpsRedirectionDisabled;
-
-        /// <summary>
-        /// Represents the path to the runtime configuration file.
-        /// </summary>
-        public RuntimeConfigPath? RuntimeConfigPath { get; private set; }
-
-        /// <summary>
-        /// Represents the loaded and deserialized runtime configuration.
-        /// </summary>
-        protected virtual RuntimeConfig? RuntimeConfiguration { get; private set; }
-
-        /// <summary>
-        /// The rest path prefix for relation dbs like MsSql, PgSql, MySql.
-        /// </summary>
-        public virtual string RestPath
+    /// <summary>
+    /// Return the previous loaded config, or it will attempt to load the config that
+    /// is known by the loader.
+    /// </summary>
+    /// <returns>The RuntimeConfig instance.</returns>
+    /// <exception cref="DataApiBuilderException">Thrown when the loader is unable to load an instance of the config from its known location.</exception>
+    public RuntimeConfig GetConfig()
+    {
+        if (_runtimeConfig is not null)
         {
-            get { return RuntimeConfiguration is not null ? RuntimeConfiguration.RestGlobalSettings.Path : string.Empty; }
+            return _runtimeConfig;
         }
 
-        /// <summary>
-        /// The access token representing a Managed Identity to connect to the database.
-        /// </summary>
-        public string? ManagedIdentityAccessToken { get; private set; }
-
-        /// <summary>
-        /// Specifies whether configuration was provided late.
-        /// </summary>
-        public virtual bool IsLateConfigured { get; set; }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RuntimeConfigProvider"/> class.
-        /// </summary>
-        /// <param name="runtimeConfigPath"></param>
-        /// <param name="logger"></param>
-        public RuntimeConfigProvider(
-            RuntimeConfigPath runtimeConfigPath,
-            ILogger<RuntimeConfigProvider> logger)
+        if (_runtimeConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config))
         {
-            RuntimeConfigPath = runtimeConfigPath;
+            _runtimeConfig = config;
+        }
 
-            if (ConfigProviderLogger is null)
-            {
-                ConfigProviderLogger = logger;
-            }
+        if (_runtimeConfig is null)
+        {
+            throw new DataApiBuilderException(
+                message: "Runtime config isn't setup.",
+                statusCode: HttpStatusCode.InternalServerError,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+        }
 
-            if (TryLoadRuntimeConfigValue())
+        return _runtimeConfig;
+    }
+
+    /// <summary>
+    /// Attempt to acquire runtime configuration metadata.
+    /// </summary>
+    /// <param name="runtimeConfig">Populated runtime configuration, if present.</param>
+    /// <returns>True when runtime config is provided, otherwise false.</returns>
+    public bool TryGetConfig([NotNullWhen(true)] out RuntimeConfig? runtimeConfig)
+    {
+        if (_runtimeConfig is null)
+        {
+            if (_runtimeConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config))
             {
-                ConfigProviderLogger.LogInformation("Runtime config loaded from file.");
-            }
-            else
-            {
-                ConfigProviderLogger.LogInformation("Runtime config provided didn't load config at construction.");
+                _runtimeConfig = config;
             }
         }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RuntimeConfigProvider"/> class.
-        /// </summary>
-        /// <param name="runtimeConfig"></param>
-        /// <param name="logger"></param>
-        public RuntimeConfigProvider(
-            RuntimeConfig runtimeConfig,
-            ILogger<RuntimeConfigProvider> logger)
+        runtimeConfig = _runtimeConfig;
+        return _runtimeConfig is not null;
+    }
+
+    /// <summary>
+    /// Attempt to acquire runtime configuration metadata from a previously loaded one.
+    /// This method will not load the config if it hasn't been loaded yet.
+    /// </summary>
+    /// <param name="runtimeConfig">Populated runtime configuration, if present.</param>
+    /// <returns>True when runtime config is provided, otherwise false.</returns>
+    public bool TryGetLoadedConfig([NotNullWhen(true)] out RuntimeConfig? runtimeConfig)
+    {
+        runtimeConfig = _runtimeConfig;
+        return _runtimeConfig is not null;
+    }
+
+    /// <summary>
+    /// Initialize the runtime configuration provider with the specified configurations.
+    /// This initialization method is used when the configuration is sent to the ConfigurationController
+    /// in the form of a string instead of reading the configuration from a configuration file.
+    /// This method assumes the connection string is provided as part of the configuration.
+    /// </summary>
+    /// <param name="configuration">The engine configuration.</param>
+    /// <param name="schema">The GraphQL Schema. Can be left null for SQL configurations.</param>
+    /// <param name="accessToken">The string representation of a managed identity access token</param>
+    /// <returns>true if the initialization succeeded, false otherwise.</returns>
+    public async Task<bool> Initialize(
+        string configuration,
+        string? schema,
+        string? accessToken)
+    {
+        if (string.IsNullOrEmpty(configuration))
         {
-            RuntimeConfiguration = runtimeConfig;
-
-            if (ConfigProviderLogger is null)
-            {
-                ConfigProviderLogger = logger;
-            }
-
-            ConfigProviderLogger.LogInformation("Using the provided runtime configuration object.");
+            throw new ArgumentException($"'{nameof(configuration)}' cannot be null or empty.", nameof(configuration));
         }
 
-        /// <summary>
-        /// If the RuntimeConfiguration is not already loaded, tries to load it.
-        /// Returns a true in case of already loaded or a successful load, otherwise false.
-        /// Catches any exceptions that arise while loading.
-        /// </summary>
-        public virtual bool TryLoadRuntimeConfigValue()
+        if (RuntimeConfigLoader.TryParseConfig(
+                configuration,
+                out RuntimeConfig? runtimeConfig))
         {
-            try
-            {
-                if (RuntimeConfiguration is null &&
-                   LoadRuntimeConfigValue(RuntimeConfigPath, out RuntimeConfig? runtimeConfig))
-                {
-                    RuntimeConfiguration = runtimeConfig;
-                }
+            _runtimeConfig = runtimeConfig;
 
-                return RuntimeConfiguration is not null;
-            }
-            catch (Exception ex)
+            if (string.IsNullOrEmpty(runtimeConfig.DataSource.ConnectionString))
             {
-                ConfigProviderLogger!.LogError($"Failed to load the runtime" +
-                    $" configuration file due to: \n{ex}");
+                throw new ArgumentException($"'{nameof(runtimeConfig.DataSource.ConnectionString)}' cannot be null or empty.", nameof(runtimeConfig.DataSource.ConnectionString));
             }
 
-            return false;
+            if (_runtimeConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL)
+            {
+                _runtimeConfig = HandleCosmosNoSqlConfiguration(schema, _runtimeConfig, _runtimeConfig.DataSource.ConnectionString);
+            }
         }
 
-        /// <summary>
-        /// Reads the contents of the json config file if it exists,
-        /// and sets the deserialized RuntimeConfig object.
-        /// </summary>
-        public static bool LoadRuntimeConfigValue(
-            RuntimeConfigPath? configPath,
-            out RuntimeConfig? runtimeConfig)
+        ManagedIdentityAccessToken = accessToken;
+
+        bool configLoadSucceeded = await InvokeConfigLoadedHandlersAsync();
+
+        IsLateConfigured = true;
+
+        return configLoadSucceeded;
+    }
+
+    /// <summary>
+    /// Initialize the runtime configuration provider with the specified configurations.
+    /// This initialization method is used when the configuration is sent to the ConfigurationController
+    /// in the form of a string instead of reading the configuration from a configuration file.
+    /// </summary>
+    /// <param name="configuration">The engine configuration.</param>
+    /// <param name="schema">The GraphQL Schema. Can be left null for SQL configurations.</param>
+    /// <param name="connectionString">The connection string to the database.</param>
+    /// <param name="accessToken">The string representation of a managed identity access token</param>
+    /// <returns>true if the initialization succeeded, false otherwise.</returns>
+    public async Task<bool> Initialize(string jsonConfig, string? graphQLSchema, string connectionString, string? accessToken)
+    {
+        if (string.IsNullOrEmpty(connectionString))
         {
-            string? configFileName = configPath?.ConfigFileName;
-            string? runtimeConfigJson = GetRuntimeConfigJsonString(configFileName);
-            if (!string.IsNullOrEmpty(runtimeConfigJson) &&
-                RuntimeConfig.TryGetDeserializedRuntimeConfig(
-                    runtimeConfigJson,
-                    out runtimeConfig,
-                    ConfigProviderLogger))
-            {
-                runtimeConfig!.MapGraphQLSingularTypeToEntityName(ConfigProviderLogger);
-                if (!string.IsNullOrWhiteSpace(configPath?.CONNSTRING))
-                {
-                    runtimeConfig!.ConnectionString = configPath.CONNSTRING;
-                }
-
-                if (ConfigProviderLogger is not null)
-                {
-                    ConfigProviderLogger.LogInformation($"Runtime configuration has been successfully loaded.");
-                    if (runtimeConfig.GraphQLGlobalSettings.Enabled)
-                    {
-                        ConfigProviderLogger.LogInformation($"GraphQL path: {runtimeConfig.GraphQLGlobalSettings.Path}");
-                    }
-                    else
-                    {
-                        ConfigProviderLogger.LogInformation($"GraphQL is disabled.");
-                    }
-
-                    if (runtimeConfig.AuthNConfig is not null)
-                    {
-                        ConfigProviderLogger.LogInformation($"{runtimeConfig.AuthNConfig.Provider}");
-                    }
-                }
-
-                return true;
-            }
-
-            runtimeConfig = null;
-            return false;
+            throw new ArgumentException($"'{nameof(connectionString)}' cannot be null or empty.", nameof(connectionString));
         }
 
-        /// <summary>
-        /// Reads the string from the given file name, replaces any environment variables
-        /// and returns the parsed string.
-        /// </summary>
-        /// <param name="configFileName"></param>
-        /// <returns></returns>
-        /// <exception cref="FileNotFoundException"></exception>
-        /// <exception cref="ArgumentNullException"></exception>
-        public static string? GetRuntimeConfigJsonString(string? configFileName)
+        if (string.IsNullOrEmpty(jsonConfig))
         {
-            string? runtimeConfigJson;
-            if (!string.IsNullOrEmpty(configFileName))
-            {
-                if (File.Exists(configFileName))
-                {
-                    if (ConfigProviderLogger is not null)
-                    {
-                        ConfigProviderLogger.LogInformation($"Using file {configFileName} to configure the runtime.");
-                    }
-
-                    runtimeConfigJson = RuntimeConfigPath.ParseConfigJsonAndReplaceEnvVariables(File.ReadAllText(configFileName));
-                }
-                else
-                {
-                    // This is the case when config file name provided as a commandLine argument
-                    // does not exist.
-                    throw new FileNotFoundException($"Requested configuration file '{configFileName}' does not exist.");
-                }
-            }
-            else
-            {
-                // This is the case when GetFileNameForEnvironment() is unable to
-                // find a configuration file name after attempting all the possibilities
-                // and checking for their existence in the current directory
-                // eventually setting it to an empty string.
-                throw new ArgumentNullException("Configuration file name",
-                    $"Could not determine a configuration file name that exists.");
-            }
-
-            return runtimeConfigJson;
+            throw new ArgumentException($"'{nameof(jsonConfig)}' cannot be null or empty.", nameof(jsonConfig));
         }
 
-        /// <summary>
-        /// Initialize the runtime configuration provider with the specified configurations.
-        /// This initialization method is used when the configuration is sent to the ConfigurationController
-        /// in the form of a string instead of reading the configuration from a configuration file.
-        /// This method assumes the connection string is provided as part of the configuration.
-        /// </summary>
-        /// <param name="configuration">The engine configuration.</param>
-        /// <param name="schema">The GraphQL Schema. Can be left null for SQL configurations.</param>
-        /// <param name="accessToken">The string representation of a managed identity access token</param>
-        /// <returns>true if the initialization succeeded, false otherwise.</returns>
-        public async Task<bool> Initialize(
-            string configuration,
-            string? schema,
-            string? accessToken)
+        ManagedIdentityAccessToken = accessToken;
+
+        IsLateConfigured = true;
+
+        if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig))
         {
-            if (string.IsNullOrEmpty(configuration))
+            _runtimeConfig = runtimeConfig.DataSource.DatabaseType switch
             {
-                throw new ArgumentException($"'{nameof(configuration)}' cannot be null or empty.", nameof(configuration));
-            }
-
-            if (RuntimeConfig.TryGetDeserializedRuntimeConfig(
-                    configuration,
-                    out RuntimeConfig? runtimeConfig,
-                    ConfigProviderLogger!))
-            {
-                RuntimeConfiguration = runtimeConfig;
-                RuntimeConfiguration!.MapGraphQLSingularTypeToEntityName(ConfigProviderLogger);
-
-                if (string.IsNullOrEmpty(runtimeConfig.ConnectionString))
-                {
-                    throw new ArgumentException($"'{nameof(runtimeConfig.ConnectionString)}' cannot be null or empty.", nameof(runtimeConfig.ConnectionString));
-                }
-
-                if (RuntimeConfiguration!.DatabaseType == DatabaseType.cosmosdb_nosql)
-                {
-                    HandleCosmosNoSqlConfiguration(schema);
-                }
-            }
-
-            ManagedIdentityAccessToken = accessToken;
-
-            bool configLoadSucceeded = await InvokeConfigLoadedHandlersAsync();
-
-            IsLateConfigured = true;
-
-            return configLoadSucceeded;
-        }
-
-        /// <summary>
-        /// Initialize the runtime configuration provider with the specified configurations.
-        /// This initialization method is used when the configuration is sent to the ConfigurationController
-        /// in the form of a string instead of reading the configuration from a configuration file.
-        /// </summary>
-        /// <param name="configuration">The engine configuration.</param>
-        /// <param name="schema">The GraphQL Schema. Can be left null for SQL configurations.</param>
-        /// <param name="connectionString">The connection string to the database.</param>
-        /// <param name="accessToken">The string representation of a managed identity access token</param>
-        /// <returns>true if the initialization succeeded, false otherwise.</returns>
-        public async Task<bool> Initialize(
-            string configuration,
-            string? schema,
-            string connectionString,
-            string? accessToken)
-        {
-            if (string.IsNullOrEmpty(connectionString))
-            {
-                throw new ArgumentException($"'{nameof(connectionString)}' cannot be null or empty.", nameof(connectionString));
-            }
-
-            if (string.IsNullOrEmpty(configuration))
-            {
-                throw new ArgumentException($"'{nameof(configuration)}' cannot be null or empty.", nameof(configuration));
-            }
-
-            if (RuntimeConfig.TryGetDeserializedRuntimeConfig(
-                    configuration,
-                    out RuntimeConfig? runtimeConfig,
-                    ConfigProviderLogger!))
-            {
-                RuntimeConfiguration = runtimeConfig;
-                RuntimeConfiguration!.MapGraphQLSingularTypeToEntityName(ConfigProviderLogger);
-                RuntimeConfiguration!.ConnectionString = connectionString;
-
-                if (RuntimeConfiguration!.DatabaseType == DatabaseType.cosmosdb_nosql)
-                {
-                    HandleCosmosNoSqlConfiguration(schema);
-                }
-            }
-
-            ManagedIdentityAccessToken = accessToken;
-
-            bool configLoadSucceeded = await InvokeConfigLoadedHandlersAsync();
-
-            IsLateConfigured = true;
-
-            // Verify that all tasks succeeded. 
-            return configLoadSucceeded;
-        }
-
-        public virtual RuntimeConfig GetRuntimeConfiguration()
-        {
-            if (RuntimeConfiguration is null)
-            {
-                throw new DataApiBuilderException(
-                    message: "Runtime config isn't setup.",
-                    statusCode: HttpStatusCode.InternalServerError,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-            }
-
-            return RuntimeConfiguration;
-        }
-
-        /// <summary>
-        /// Attempt to acquire runtime configuration metadata.
-        /// </summary>
-        /// <param name="runtimeConfig">Populated runtime configuartion, if present.</param>
-        /// <returns>True when runtime config is provided, otherwise false.</returns>
-        public virtual bool TryGetRuntimeConfiguration([NotNullWhen(true)] out RuntimeConfig? runtimeConfig)
-        {
-            runtimeConfig = RuntimeConfiguration;
-            return RuntimeConfiguration is not null;
-        }
-
-        public virtual bool IsDeveloperMode()
-        {
-            return RuntimeConfiguration?.HostGlobalSettings.Mode is HostModeType.Development;
-        }
-
-        /// <summary>
-        /// Return whether to allow GraphQL introspection using runtime configuration metadata.
-        /// </summary>
-        /// <returns>True if introspection is allowed, otherwise false.</returns>
-        public virtual bool IsIntrospectionAllowed()
-        {
-            return RuntimeConfiguration is not null && RuntimeConfiguration.GraphQLGlobalSettings.AllowIntrospection;
-        }
-
-        private async Task<bool> InvokeConfigLoadedHandlersAsync()
-        {
-            List<Task<bool>> configLoadedTasks = new();
-            if (RuntimeConfiguration is not null)
-            {
-                foreach (RuntimeConfigLoadedHandler configLoadedHandler in RuntimeConfigLoadedHandlers)
-                {
-                    configLoadedTasks.Add(configLoadedHandler(this, RuntimeConfiguration));
-                }
-            }
-
-            await Task.WhenAll(configLoadedTasks);
-
-            // Verify that all tasks succeeded. 
-            return configLoadedTasks.All(x => x.Result);
-        }
-
-        private void HandleCosmosNoSqlConfiguration(string? schema)
-        {
-            string connectionString = RuntimeConfiguration!.ConnectionString;
-            DbConnectionStringBuilder dbConnectionStringBuilder = new()
-            {
-                ConnectionString = connectionString
+                DatabaseType.CosmosDB_NoSQL => HandleCosmosNoSqlConfiguration(graphQLSchema, runtimeConfig, connectionString),
+                _ => runtimeConfig with { DataSource = runtimeConfig.DataSource with { ConnectionString = connectionString } }
             };
 
-            // SWA may provide cosmosdb database name in connectionString 
-            string? database = dbConnectionStringBuilder.ContainsKey("Database") ? (string)dbConnectionStringBuilder["Database"] : null;
-            if (string.IsNullOrEmpty(schema))
-            {
-                throw new ArgumentException($"'{nameof(schema)}' cannot be null or empty.", nameof(schema));
-            }
-
-            CosmosDbNoSqlOptions? cosmosDb = RuntimeConfiguration.DataSource.CosmosDbNoSql! with { GraphQLSchema = schema };
-
-            if (!string.IsNullOrEmpty(database))
-            {
-                cosmosDb = cosmosDb with { Database = database };
-            }
-
-            DataSource dataSource = RuntimeConfiguration.DataSource with { CosmosDbNoSql = cosmosDb };
-            RuntimeConfiguration = RuntimeConfiguration with { DataSource = dataSource };
+            return await InvokeConfigLoadedHandlersAsync();
         }
+
+        return false;
+    }
+
+    private async Task<bool> InvokeConfigLoadedHandlersAsync()
+    {
+        List<Task<bool>> configLoadedTasks = new();
+        if (_runtimeConfig is not null)
+        {
+            foreach (RuntimeConfigLoadedHandler configLoadedHandler in RuntimeConfigLoadedHandlers)
+            {
+                configLoadedTasks.Add(configLoadedHandler(this, _runtimeConfig));
+            }
+        }
+
+        bool[] results = await Task.WhenAll(configLoadedTasks);
+
+        // Verify that all tasks succeeded.
+        return results.All(x => x);
+    }
+
+    private static RuntimeConfig HandleCosmosNoSqlConfiguration(string? schema, RuntimeConfig runtimeConfig, string connectionString)
+    {
+        DbConnectionStringBuilder dbConnectionStringBuilder = new()
+        {
+            ConnectionString = connectionString
+        };
+
+        if (string.IsNullOrEmpty(schema))
+        {
+            throw new ArgumentException($"'{nameof(schema)}' cannot be null or empty.", nameof(schema));
+        }
+
+        HyphenatedNamingPolicy namingPolicy = new();
+
+        Dictionary<string, JsonElement> options = new(runtimeConfig.DataSource.Options)
+        {
+            // push the "raw" GraphQL schema into the options to pull out later when requested
+            { namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.GraphQLSchema)), JsonSerializer.SerializeToElement(schema) }
+        };
+
+        // SWA may provide CosmosDB database name in connectionString
+        string? database = dbConnectionStringBuilder.ContainsKey("Database") ? (string)dbConnectionStringBuilder["Database"] : null;
+
+        if (database is not null)
+        {
+            // Add or update the options to contain the parsed database
+            options[namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database))] = JsonSerializer.SerializeToElement(database);
+        }
+
+        // Update the connection string in the parsed config with the one that was provided to the controller
+        return runtimeConfig
+            with
+        {
+            DataSource = runtimeConfig.DataSource
+            with
+            { Options = options, ConnectionString = connectionString }
+        };
     }
 }

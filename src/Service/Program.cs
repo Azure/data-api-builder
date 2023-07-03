@@ -2,11 +2,9 @@
 // Licensed under the MIT License.
 
 using System;
-using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Parsing;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
@@ -18,6 +16,8 @@ namespace Azure.DataApiBuilder.Service
 {
     public class Program
     {
+        public static bool IsHttpsRedirectionDisabled { get; private set; }
+
         public static void Main(string[] args)
         {
             if (!StartEngine(args))
@@ -43,25 +43,22 @@ namespace Azure.DataApiBuilder.Service
             }
         }
 
-        public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
-                .ConfigureAppConfiguration((hostingContext, configurationBuilder) =>
+        public static IHostBuilder CreateHostBuilder(string[] args)
+        {
+            return Host.CreateDefaultBuilder(args)
+                .ConfigureAppConfiguration(builder =>
                 {
-                    IHostEnvironment env = hostingContext.HostingEnvironment;
-                    AddConfigurationProviders(env, configurationBuilder, args);
+                    AddConfigurationProviders(builder, args);
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     Startup.MinimumLogLevel = GetLogLevelFromCommandLineArgs(args, out Startup.IsLogLevelOverriddenByCli);
                     ILoggerFactory? loggerFactory = GetLoggerFactoryForLogLevel(Startup.MinimumLogLevel);
                     ILogger<Startup>? startupLogger = loggerFactory.CreateLogger<Startup>();
-                    ILogger<RuntimeConfigProvider>? configProviderLogger = loggerFactory.CreateLogger<RuntimeConfigProvider>();
                     DisableHttpsRedirectionIfNeeded(args);
-                    webBuilder.UseStartup(builder =>
-                    {
-                        return new Startup(builder.Configuration, startupLogger, configProviderLogger);
-                    });
+                    webBuilder.UseStartup(builder => new Startup(builder.Configuration, startupLogger));
                 });
+        }
 
         /// <summary>
         /// Using System.CommandLine Parser to parse args and return
@@ -141,26 +138,26 @@ namespace Azure.DataApiBuilder.Service
             if (result.Tokens.Count - result.UnmatchedTokens.Count - result.UnparsedTokens.Count > 0)
             {
                 Console.WriteLine("Redirecting to https is disabled.");
-                RuntimeConfigProvider.IsHttpsRedirectionDisabled = true;
+                IsHttpsRedirectionDisabled = true;
                 return;
             }
 
-            RuntimeConfigProvider.IsHttpsRedirectionDisabled = false;
+            IsHttpsRedirectionDisabled = false;
         }
 
         // This is used for testing purposes only. The test web server takes in a
-        // IWebHostbuilder, instead of a IHostBuilder.
+        // IWebHostBuilder, instead of a IHostBuilder.
         public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
             .ConfigureAppConfiguration((hostingContext, builder) =>
             {
-                IHostEnvironment env = hostingContext.HostingEnvironment;
-                AddConfigurationProviders(env, builder, args);
+                AddConfigurationProviders(builder, args);
                 DisableHttpsRedirectionIfNeeded(args);
-            }).UseStartup<Startup>();
+            })
+            .UseStartup<Startup>();
 
         // This is used for testing purposes only. The test web server takes in a
-        // IWebHostbuilder, instead of a IHostBuilder.
+        // IWebHostBuilder, instead of a IHostBuilder.
         public static IWebHostBuilder CreateWebHostFromInMemoryUpdateableConfBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
             .UseStartup<Startup>();
@@ -168,27 +165,14 @@ namespace Azure.DataApiBuilder.Service
         /// <summary>
         /// Adds the various configuration providers.
         /// </summary>
-        /// <param name="env">The hosting environment.</param>
         /// <param name="configurationBuilder">The configuration builder.</param>
         /// <param name="args">The command line arguments.</param>
         private static void AddConfigurationProviders(
-            IHostEnvironment env,
             IConfigurationBuilder configurationBuilder,
             string[] args)
         {
-            string configFileName
-                = RuntimeConfigPath.GetFileNameForEnvironment(env.EnvironmentName, considerOverrides: true);
-            Dictionary<string, string> configFileNameMap = new()
-            {
-                {
-                    nameof(RuntimeConfigPath.ConfigFileName),
-                    configFileName
-                }
-            };
-
             configurationBuilder
-                .AddInMemoryCollection(configFileNameMap)
-                .AddEnvironmentVariables(prefix: RuntimeConfigPath.ENVIRONMENT_PREFIX)
+                .AddEnvironmentVariables(prefix: RuntimeConfigLoader.ENVIRONMENT_PREFIX)
                 .AddCommandLine(args);
         }
     }

@@ -6,7 +6,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 
@@ -31,7 +31,7 @@ namespace Azure.DataApiBuilder.Service.Tests
                     variables
                 };
 
-            string graphQLEndpoint = configProvider.GetRuntimeConfiguration().GraphQLGlobalSettings.Path;
+            string graphQLEndpoint = configProvider.GetConfig().Runtime.GraphQL.Path;
 
             HttpRequestMessage request = new(HttpMethod.Post, graphQLEndpoint)
             {
@@ -40,7 +40,7 @@ namespace Azure.DataApiBuilder.Service.Tests
 
             if (!string.IsNullOrEmpty(authToken))
             {
-                request.Headers.Add(AuthenticationConfig.CLIENT_PRINCIPAL_HEADER, authToken);
+                request.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, authToken);
             }
 
             if (!string.IsNullOrEmpty(clientRoleHeader))

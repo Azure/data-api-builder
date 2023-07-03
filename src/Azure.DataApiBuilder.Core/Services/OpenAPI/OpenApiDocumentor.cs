@@ -6,12 +6,12 @@ using System.Globalization;
 using System.Net;
 using System.Net.Mime;
 using System.Text;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.OpenApi.Models;
 using Microsoft.OpenApi.Writers;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Core.Services.OpenAPI
 {
@@ -54,7 +54,7 @@ namespace Azure.DataApiBuilder.Core.Services.OpenAPI
         public OpenApiDocumentor(ISqlMetadataProvider sqlMetadataProvider, RuntimeConfigProvider runtimeConfigProvider)
         {
             _metadataProvider = sqlMetadataProvider;
-            _runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
+            _runtimeConfig = runtimeConfigProvider.GetConfig();
             _defaultOpenApiResponses = CreateDefaultOpenApiResponses();
         }
 
@@ -100,7 +100,7 @@ namespace Azure.DataApiBuilder.Core.Services.OpenAPI
                     subStatusCode: DataApiBuilderException.SubStatusCodes.OpenApiDocumentAlreadyExists);
             }
 
-            if (!_runtimeConfig.RestGlobalSettings.Enabled)
+            if (!_runtimeConfig.Runtime.Rest.Enabled)
             {
                 throw new DataApiBuilderException(
                     message: DOCUMENT_CREATION_UNSUPPORTED_ERROR,
@@ -110,7 +110,7 @@ namespace Azure.DataApiBuilder.Core.Services.OpenAPI
 
             try
             {
-                string restEndpointPath = _runtimeConfig.RestGlobalSettings.Path;
+                string restEndpointPath = _runtimeConfig.Runtime.Rest.Path;
                 OpenApiComponents components = new()
                 {
                     Schemas = CreateComponentSchemas()
@@ -176,12 +176,9 @@ namespace Azure.DataApiBuilder.Core.Services.OpenAPI
                 // the OpenAPI description document.
                 if (_runtimeConfig.Entities.TryGetValue(entityName, out Entity? entity) && entity is not null)
                 {
-                    if (entity.GetRestEnabledOrPathSettings() is bool restEnabled)
+                    if (!entity.Rest.Enabled)
                     {
-                        if (!restEnabled)
-                        {
-                            continue;
-                        }
+                        continue;
                     }
                 }
 
@@ -200,7 +197,7 @@ namespace Azure.DataApiBuilder.Core.Services.OpenAPI
 
                 Dictionary<OperationType, bool> configuredRestOperations = GetConfiguredRestOperations(entityName, dbObject);
 
-                if (dbObject.SourceType is SourceType.StoredProcedure)
+                if (dbObject.SourceType is EntitySourceType.StoredProcedure)
                 {
                     Dictionary<OperationType, OpenApiOperation> operations = CreateStoredProcedureOperations(
                         entityName: entityName,
@@ -446,33 +443,33 @@ namespace Azure.DataApiBuilder.Core.Services.OpenAPI
                 [OperationType.Delete] = false
             };
 
-            if (dbObject.SourceType == SourceType.StoredProcedure)
+            if (dbObject.SourceType == EntitySourceType.StoredProcedure)
             {
                 Entity entityTest = _runtimeConfig.Entities[entityName];
-                List<RestMethod>? spRestMethods = entityTest.GetRestMethodsConfiguredForStoredProcedure()?.ToList();
+                List<SupportedHttpVerb>? spRestMethods = entityTest.Rest.Methods.ToList();
 
                 if (spRestMethods is null)
                 {
                     return configuredOperations;
                 }
 
-                foreach (RestMethod restMethod in spRestMethods)
+                foreach (SupportedHttpVerb restMethod in spRestMethods)
                 {
                     switch (restMethod)
                     {
-                        case RestMethod.Get:
+                        case SupportedHttpVerb.Get:
                             configuredOperations[OperationType.Get] = true;
                             break;
-                        case RestMethod.Post:
+                        case SupportedHttpVerb.Post:
                             configuredOperations[OperationType.Post] = true;
                             break;
-                        case RestMethod.Put:
+                        case SupportedHttpVerb.Put:
                             configuredOperations[OperationType.Put] = true;
                             break;
-                        case RestMethod.Patch:
+                        case SupportedHttpVerb.Patch:
                             configuredOperations[OperationType.Patch] = true;
                             break;
-                        case RestMethod.Delete:
+                        case SupportedHttpVerb.Delete:
                             configuredOperations[OperationType.Delete] = true;
                             break;
                         default:
@@ -652,19 +649,14 @@ namespace Azure.DataApiBuilder.Core.Services.OpenAPI
         private string GetEntityRestPath(string entityName)
         {
             string entityRestPath = entityName;
-            object? entityRestSettings = _runtimeConfig.Entities[entityName].GetRestEnabledOrPathSettings();
+            EntityRestOptions entityRestSettings = _runtimeConfig.Entities[entityName].Rest;
 
-            if (entityRestSettings is not null && entityRestSettings is string)
+            if (!string.IsNullOrEmpty(entityRestSettings.Path) && entityRestSettings.Path.StartsWith('/'))
             {
-                entityRestPath = (string)entityRestSettings;
-                if (!string.IsNullOrEmpty(entityRestPath) && entityRestPath.StartsWith('/'))
-                {
-                    // Remove slash from start of rest path.
-                    entityRestPath = entityRestPath.Substring(1);
-                }
+                // Remove slash from start of rest path.
+                entityRestPath = entityRestPath.Substring(1);
             }
 
-            Assert.IsFalse(Equals('/', entityRestPath));
             return entityRestPath;
         }
 
@@ -781,12 +773,9 @@ namespace Azure.DataApiBuilder.Core.Services.OpenAPI
 
                 if (_runtimeConfig.Entities.TryGetValue(entityName, out Entity? entity) && entity is not null)
                 {
-                    if (entity.GetRestEnabledOrPathSettings() is bool restEnabled)
+                    if (!entity.Rest.Enabled)
                     {
-                        if (!restEnabled)
-                        {
-                            continue;
-                        }
+                        continue;
                     }
                 }
 
@@ -798,7 +787,7 @@ namespace Azure.DataApiBuilder.Core.Services.OpenAPI
                 // which will typically represent the response body of a request or a stored procedure's request body.
                 schemas.Add(entityName, CreateComponentSchema(entityName, fields: exposedColumnNames));
 
-                if (dbObject.SourceType is not SourceType.StoredProcedure)
+                if (dbObject.SourceType is not EntitySourceType.StoredProcedure)
                 {
                     // Create an entity's request body component schema excluding autogenerated primary keys.
                     // A POST request requires any non-autogenerated primary key references to be in the request body.

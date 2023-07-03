@@ -2,7 +2,8 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 
 namespace Azure.DataApiBuilder.Core.Models
 {
@@ -19,7 +20,7 @@ namespace Azure.DataApiBuilder.Core.Models
             string entityName,
             DatabaseObject dbo,
             JsonElement insertPayloadRoot,
-            Config.Operation operationType)
+            EntityActionOperation operationType)
             : base(entityName, dbo)
         {
             FieldsToBeReturned = new();

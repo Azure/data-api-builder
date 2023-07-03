@@ -3,7 +3,8 @@
 
 using System.Net;
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -42,7 +43,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
               gQLFilterParser: gQLFilterParser,
               entityName: entityName,
               httpContext: httpContext,
-              operationType: Config.Operation.Update)
+              operationType: EntityActionOperation.Update)
         {
             UpdateOperations = new();
             OutputColumns = GenerateOutputColumns();
@@ -101,7 +102,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                   gQLFilterParser: gQLFilterParser,
                   entityName: entityName,
                   httpContext: httpContext,
-                  operationType: Config.Operation.Update)
+                  operationType: EntityActionOperation.Update)
         {
             UpdateOperations = new();
             SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();

@@ -4,7 +4,7 @@
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -69,7 +69,7 @@ namespace Azure.DataApiBuilder.Core.AuthenticationHelpers
         {
             ClaimsIdentity? identity = null;
 
-            if (context.Request.Headers.TryGetValue(AuthenticationConfig.CLIENT_PRINCIPAL_HEADER, out StringValues header))
+            if (context.Request.Headers.TryGetValue(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, out StringValues header))
             {
                 try
                 {

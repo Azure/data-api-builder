@@ -3,14 +3,14 @@
 
 using System;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
-using Microsoft.Extensions.Logging;
 using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
@@ -336,15 +336,15 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Name = tableName
             };
             FindRequestContext context = new(entityName, dbo, isList);
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestHelper.GetRuntimeConfigLoader());
             AuthorizationResolver authorizationResolver = new(
-                _runtimeConfigProvider,
-                _sqlMetadataProvider,
-                new Mock<ILogger<AuthorizationResolver>>().Object);
+                runtimeConfigProvider,
+                _sqlMetadataProvider);
             Mock<SqlQueryStructure> structure = new(
                 context,
                 _sqlMetadataProvider,
                 authorizationResolver,
-                _runtimeConfigProvider,
+                runtimeConfigProvider,
                 new GQLFilterParser(_sqlMetadataProvider),
                 null) // setting httpContext as null for the tests.
             { CallBase = true }; // setting CallBase = true enables calling the actual method on the mocked object without needing to mock the method behavior.

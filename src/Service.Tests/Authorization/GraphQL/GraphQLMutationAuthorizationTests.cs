@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
@@ -44,13 +45,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
         /// <param name="columnsRequested"></param>
         /// <param name="operation"></param>
         [DataTestMethod]
-        [DataRow(true, new string[] { "col1", "col2", "col3" }, new string[] { "col1" }, Config.Operation.Create, DisplayName = "Create Mutation Field Authorization - Success, Columns Allowed")]
-        [DataRow(false, new string[] { "col1", "col2", "col3" }, new string[] { "col1" }, Config.Operation.Create, DisplayName = "Create Mutation Field Authorization - Failure, Columns Forbidden")]
-        [DataRow(true, new string[] { "col1", "col2", "col3" }, new string[] { "col1" }, Config.Operation.UpdateGraphQL, DisplayName = "Update Mutation Field Authorization - Success, Columns Allowed")]
-        [DataRow(false, new string[] { "col1", "col2", "col3" }, new string[] { "col4" }, Config.Operation.UpdateGraphQL, DisplayName = "Update Mutation Field Authorization - Failure, Columns Forbidden")]
-        [DataRow(true, new string[] { "col1", "col2", "col3" }, new string[] { "col1" }, Config.Operation.Delete, DisplayName = "Delete Mutation Field Authorization - Success, since authorization to perform the" +
+        [DataRow(true, new string[] { "col1", "col2", "col3" }, new string[] { "col1" }, EntityActionOperation.Create, DisplayName = "Create Mutation Field Authorization - Success, Columns Allowed")]
+        [DataRow(false, new string[] { "col1", "col2", "col3" }, new string[] { "col1" }, EntityActionOperation.Create, DisplayName = "Create Mutation Field Authorization - Failure, Columns Forbidden")]
+        [DataRow(true, new string[] { "col1", "col2", "col3" }, new string[] { "col1" }, EntityActionOperation.UpdateGraphQL, DisplayName = "Update Mutation Field Authorization - Success, Columns Allowed")]
+        [DataRow(false, new string[] { "col1", "col2", "col3" }, new string[] { "col4" }, EntityActionOperation.UpdateGraphQL, DisplayName = "Update Mutation Field Authorization - Failure, Columns Forbidden")]
+        [DataRow(true, new string[] { "col1", "col2", "col3" }, new string[] { "col1" }, EntityActionOperation.Delete, DisplayName = "Delete Mutation Field Authorization - Success, since authorization to perform the" +
             "delete mutation operation occurs prior to column evaluation in the request pipeline.")]
-        public void MutationFields_AuthorizationEvaluation(bool isAuthorized, string[] columnsAllowed, string[] columnsRequested, Config.Operation operation)
+        public void MutationFields_AuthorizationEvaluation(bool isAuthorized, string[] columnsAllowed, string[] columnsRequested, EntityActionOperation operation)
         {
             SqlMutationEngine engine = SetupTestFixture(isAuthorized);
 
@@ -118,7 +119,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             _authorizationResolver.Setup(x => x.AreColumnsAllowedForOperation(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<Config.Operation>(),
+                It.IsAny<EntityActionOperation>(),
                 It.IsAny<IEnumerable<string>>()
                 )).Returns(isAuthorized);
 

@@ -33,7 +33,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
         [HttpPost("v2")]
         public async Task<ActionResult> Index([FromBody] ConfigurationPostParametersV2 configuration)
         {
-            if (_configurationProvider.TryGetRuntimeConfiguration(out _))
+            if (_configurationProvider.TryGetConfig(out _))
             {
                 return new ConflictResult();
             }
@@ -47,7 +47,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
                     configuration.Schema,
                     configuration.AccessToken);
 
-                if (initResult && _configurationProvider.TryGetRuntimeConfiguration(out _))
+                if (initResult && _configurationProvider.TryGetConfig(out _))
                 {
                     return Ok();
                 }
@@ -73,7 +73,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
         /// or Conflict if the runtime is already configured </returns>
         public async Task<ActionResult> Index([FromBody] ConfigurationPostParameters configuration)
         {
-            if (_configurationProvider.TryGetRuntimeConfiguration(out _))
+            if (_configurationProvider.TryGetConfig(out _))
             {
                 return new ConflictResult();
             }
@@ -86,7 +86,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
                     configuration.ConnectionString,
                     configuration.AccessToken);
 
-                if (initResult && _configurationProvider.TryGetRuntimeConfiguration(out _))
+                if (initResult && _configurationProvider.TryGetConfig(out _))
                 {
                     return Ok();
                 }

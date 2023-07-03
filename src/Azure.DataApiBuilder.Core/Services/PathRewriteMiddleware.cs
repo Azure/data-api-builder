@@ -3,7 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -97,10 +97,10 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <returns>True when graphQLRoute is defined, otherwise false.</returns>
         private bool TryGetGraphQLRouteFromConfig([NotNullWhen(true)] out string? graphQLRoute)
         {
-            if (_runtimeConfigurationProvider.TryGetRuntimeConfiguration(out RuntimeConfig? config) &&
-                config.GraphQLGlobalSettings.Enabled)
+            if (_runtimeConfigurationProvider.TryGetLoadedConfig(out RuntimeConfig? config) &&
+                config.Runtime.GraphQL.Enabled)
             {
-                graphQLRoute = config.GraphQLGlobalSettings.Path;
+                graphQLRoute = config.Runtime.GraphQL.Path;
                 return true;
             }
 
@@ -118,15 +118,15 @@ namespace Azure.DataApiBuilder.Core.Services
         private bool IsEndPointDisabledGlobally(HttpContext httpContext)
         {
             PathString requestPath = httpContext.Request.Path;
-            if (_runtimeConfigurationProvider.TryGetRuntimeConfiguration(out RuntimeConfig? config))
+            if (_runtimeConfigurationProvider.TryGetLoadedConfig(out RuntimeConfig? config))
             {
-                string restPath = config.RestGlobalSettings.Path;
-                string graphQLPath = config.GraphQLGlobalSettings.Path;
+                string restPath = config.Runtime.Rest.Path;
+                string graphQLPath = config.Runtime.GraphQL.Path;
                 bool isRestRequest = requestPath.StartsWithSegments(restPath, comparisonType: StringComparison.OrdinalIgnoreCase);
                 bool isGraphQLRequest = requestPath.StartsWithSegments(graphQLPath, comparisonType: StringComparison.OrdinalIgnoreCase);
 
-                if ((isRestRequest && !config.RestGlobalSettings.Enabled)
-                    || (isGraphQLRequest && !config.GraphQLGlobalSettings.Enabled))
+                if ((isRestRequest && !config.Runtime.Rest.Enabled)
+                    || (isGraphQLRequest && !config.Runtime.GraphQL.Enabled))
                 {
                     httpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                     return true;

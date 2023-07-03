@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -40,7 +41,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                   entityName,
                   counter,
                   httpContext,
-                  Config.Operation.Read)
+                  EntityActionOperation.Read)
         {
             SourceAlias = CreateTableAlias();
         }

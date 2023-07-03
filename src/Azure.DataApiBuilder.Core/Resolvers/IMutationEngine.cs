@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Mvc;
@@ -47,6 +48,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IMiddlewareContext context,
             IDictionary<string, object?> parameters,
             string entityName,
-            Config.Operation mutationOperation);
+            EntityActionOperation mutationOperation);
     }
 }

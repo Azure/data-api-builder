@@ -1,7 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Services;
 using Microsoft.OData.Edm;
 
@@ -50,7 +51,7 @@ namespace Azure.DataApiBuilder.Core.Parsers
             {
                 // Do not add stored procedures, which do not have table definitions or conventional columns, to edm model
                 // As of now, no ODataFilterParsing will be supported for stored procedure result sets
-                if (entityAndDbObject.Value.SourceType is not SourceType.StoredProcedure)
+                if (entityAndDbObject.Value.SourceType is not EntitySourceType.StoredProcedure)
                 {
                     // given an entity Publisher with schema.table of dbo.publishers
                     // entitySourceName = dbo.publishers
@@ -74,49 +75,22 @@ namespace Azure.DataApiBuilder.Core.Parsers
                             columnSystemType = columnSystemType.GetElementType()!;
                         }
 
-                        switch (columnSystemType.Name)
+                        type = columnSystemType.Name switch
                         {
-                            case "String":
-                                type = EdmPrimitiveTypeKind.String;
-                                break;
-                            case "Guid":
-                                type = EdmPrimitiveTypeKind.Guid;
-                                break;
-                            case "Byte":
-                                type = EdmPrimitiveTypeKind.Byte;
-                                break;
-                            case "Int16":
-                                type = EdmPrimitiveTypeKind.Int16;
-                                break;
-                            case "Int32":
-                                type = EdmPrimitiveTypeKind.Int32;
-                                break;
-                            case "Int64":
-                                type = EdmPrimitiveTypeKind.Int64;
-                                break;
-                            case "Single":
-                                type = EdmPrimitiveTypeKind.Single;
-                                break;
-                            case "Double":
-                                type = EdmPrimitiveTypeKind.Double;
-                                break;
-                            case "Decimal":
-                                type = EdmPrimitiveTypeKind.Decimal;
-                                break;
-                            case "Boolean":
-                                type = EdmPrimitiveTypeKind.Boolean;
-                                break;
-                            case "DateTime":
-                            case "DateTimeOffset":
-                                type = EdmPrimitiveTypeKind.DateTimeOffset;
-                                break;
-                            case "Date":
-                                type = EdmPrimitiveTypeKind.Date;
-                                break;
-                            default:
-                                throw new ArgumentException($"Column type" +
-                                    $" {columnSystemType.Name} not yet supported.");
-                        }
+                            "String" => EdmPrimitiveTypeKind.String,
+                            "Guid" => EdmPrimitiveTypeKind.Guid,
+                            "Byte" => EdmPrimitiveTypeKind.Byte,
+                            "Int16" => EdmPrimitiveTypeKind.Int16,
+                            "Int32" => EdmPrimitiveTypeKind.Int32,
+                            "Int64" => EdmPrimitiveTypeKind.Int64,
+                            "Single" => EdmPrimitiveTypeKind.Single,
+                            "Double" => EdmPrimitiveTypeKind.Double,
+                            "Decimal" => EdmPrimitiveTypeKind.Decimal,
+                            "Boolean" => EdmPrimitiveTypeKind.Boolean,
+                            "DateTime" or "DateTimeOffset" => EdmPrimitiveTypeKind.DateTimeOffset,
+                            "Date" => EdmPrimitiveTypeKind.Date,
+                            _ => throw new ArgumentException($"Column type {columnSystemType.Name} not yet supported."),
+                        };
 
                         // The mapped (aliased) field name defined in the runtime config is used to create a representative
                         // OData StructuralProperty. The created property is then added to the EdmEntityType.
@@ -158,7 +132,7 @@ namespace Azure.DataApiBuilder.Core.Parsers
             // that has a key, then an entity set can be thought of as a table made up of those rows.
             foreach (KeyValuePair<string, DatabaseObject> entityAndDbObject in sqlMetadataProvider.GetEntityNamesAndDbObjects())
             {
-                if (entityAndDbObject.Value.SourceType != SourceType.StoredProcedure)
+                if (entityAndDbObject.Value.SourceType != EntitySourceType.StoredProcedure)
                 {
                     string entityName = $"{entityAndDbObject.Value.FullName}";
                     container.AddEntitySet(name: $"{entityAndDbObject.Key}.{entityName}", _entities[$"{entityAndDbObject.Key}.{entityName}"]);

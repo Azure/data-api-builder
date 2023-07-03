@@ -2,7 +2,8 @@
 // Licensed under the MIT License.
 
 using System.Net;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -142,12 +143,12 @@ namespace Azure.DataApiBuilder.Core.Models
                     // check only occurs when access to the column's owner entity is confirmed.
                     if (!relationshipField)
                     {
-                        string targetEntity = queryStructure.EntityName;
+                        string graphQLTypeName = queryStructure.EntityName;
 
                         bool columnAccessPermitted = queryStructure.AuthorizationResolver.AreColumnsAllowedForOperation(
-                            entityName: targetEntity,
+                            entityIdentifier: graphQLTypeName,
                             roleName: GetHttpContextFromMiddlewareContext(ctx).Request.Headers[CLIENT_ROLE_HEADER],
-                            operation: Config.Operation.Read,
+                            operation: EntityActionOperation.Read,
                             columns: new[] { name });
 
                         if (!columnAccessPermitted)
@@ -257,9 +258,9 @@ namespace Azure.DataApiBuilder.Core.Models
 
             // Validate that the field referenced in the nested input filter can be accessed.
             bool entityAccessPermitted = queryStructure.AuthorizationResolver.AreRoleAndOperationDefinedForEntity(
-                entityName: nestedFilterEntityName,
+                entityIdentifier: nestedFilterEntityName,
                 roleName: GetHttpContextFromMiddlewareContext(ctx).Request.Headers[CLIENT_ROLE_HEADER],
-                operation: Config.Operation.Read);
+                operation: EntityActionOperation.Read);
 
             if (!entityAccessPermitted)
             {

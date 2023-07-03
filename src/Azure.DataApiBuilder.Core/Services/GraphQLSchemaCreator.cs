@@ -4,7 +4,8 @@
 using System.Collections.Immutable;
 using System.Net;
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
@@ -35,7 +36,7 @@ namespace Azure.DataApiBuilder.Core.Services
         private readonly IMutationEngine _mutationEngine;
         private readonly ISqlMetadataProvider _sqlMetadataProvider;
         private readonly DatabaseType _databaseType;
-        private readonly Dictionary<string, Entity> _entities;
+        private readonly RuntimeEntities _entities;
         private readonly IAuthorizationResolver _authorizationResolver;
 
         /// <summary>
@@ -53,9 +54,9 @@ namespace Azure.DataApiBuilder.Core.Services
             ISqlMetadataProvider sqlMetadataProvider,
             IAuthorizationResolver authorizationResolver)
         {
-            RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
+            RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
 
-            _databaseType = runtimeConfig.DatabaseType;
+            _databaseType = runtimeConfig.DataSource.DatabaseType;
             _entities = runtimeConfig.Entities;
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
@@ -111,10 +112,10 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             (DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes) = _databaseType switch
             {
-                DatabaseType.cosmosdb_nosql => GenerateCosmosGraphQLObjects(),
-                DatabaseType.mssql or
-                DatabaseType.postgresql or
-                DatabaseType.mysql => GenerateSqlGraphQLObjects(_entities),
+                DatabaseType.CosmosDB_NoSQL => GenerateCosmosGraphQLObjects(),
+                DatabaseType.MSSQL or
+                DatabaseType.PostgreSQL or
+                DatabaseType.MySQL => GenerateSqlGraphQLObjects(_entities),
                 _ => throw new NotImplementedException($"This database type {_databaseType} is not yet implemented.")
             };
 
@@ -128,7 +129,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="entities">Key/Value Collection {entityName -> Entity object}</param>
         /// <returns>Root GraphQLSchema DocumentNode and inputNodes to be processed by downstream schema generation helpers.</returns>
         /// <exception cref="DataApiBuilderException"></exception>
-        private (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) GenerateSqlGraphQLObjects(Dictionary<string, Entity> entities)
+        private (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) GenerateSqlGraphQLObjects(RuntimeEntities entities)
         {
             Dictionary<string, ObjectTypeDefinitionNode> objectTypes = new();
             Dictionary<string, InputObjectTypeDefinitionNode> inputObjects = new();
@@ -138,7 +139,7 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 // Skip creating the GraphQL object for the current entity due to configuration
                 // explicitly excluding the entity from the GraphQL endpoint.
-                if (entity.GraphQL is not null && entity.GraphQL is bool graphql && graphql == false)
+                if (!entity.GraphQL.Enabled)
                 {
                     continue;
                 }
@@ -150,10 +151,10 @@ namespace Azure.DataApiBuilder.Core.Services
                     IEnumerable<string> rolesAllowedForEntity = _authorizationResolver.GetRolesForEntity(entityName);
                     Dictionary<string, IEnumerable<string>> rolesAllowedForFields = new();
                     SourceDefinition sourceDefinition = _sqlMetadataProvider.GetSourceDefinition(entityName);
-                    bool isStoredProcedure = entity.ObjectType is SourceType.StoredProcedure;
+                    bool isStoredProcedure = entity.Source.Type is EntitySourceType.StoredProcedure;
                     foreach (string column in sourceDefinition.Columns.Keys)
                     {
-                        Config.Operation operation = isStoredProcedure ? Config.Operation.Execute : Config.Operation.Read;
+                        EntityActionOperation operation = isStoredProcedure ? EntityActionOperation.Execute : EntityActionOperation.Read;
                         IEnumerable<string> roles = _authorizationResolver.GetRolesForField(entityName, field: column, operation: operation);
                         if (!rolesAllowedForFields.TryAdd(key: column, value: roles))
                         {
@@ -178,7 +179,7 @@ namespace Azure.DataApiBuilder.Core.Services
                             rolesAllowedForFields
                         );
 
-                        if (databaseObject.SourceType is not SourceType.StoredProcedure)
+                        if (databaseObject.SourceType is not EntitySourceType.StoredProcedure)
                         {
                             InputTypeBuilder.GenerateInputTypesForObjectType(node, inputObjects);
                         }

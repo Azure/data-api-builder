@@ -3,7 +3,6 @@
 
 using System.Diagnostics.CodeAnalysis;
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
@@ -118,7 +117,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             else
             {
                 Columns.AddRange(GenerateQueryColumns(selection.SyntaxNode.SelectionSet!, _context.Document, SourceAlias));
-                string entityName = MetadataProvider.GetEntityName(underlyingType.Name);
+                string typeName = GraphQLUtils.TryExtractGraphQLFieldModelName(underlyingType.Directives, out string? modelName) ?
+                    modelName :
+                    underlyingType.Name;
+                string entityName = MetadataProvider.GetEntityName(typeName);
                 EntityName = entityName;
                 Database = MetadataProvider.GetSchemaName(entityName);
                 Container = MetadataProvider.GetDatabaseObjectName(entityName);

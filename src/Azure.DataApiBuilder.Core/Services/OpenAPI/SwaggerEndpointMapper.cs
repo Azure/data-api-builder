@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Collections;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Swashbuckle.AspNetCore.SwaggerUI;
 
@@ -37,7 +37,8 @@ namespace Azure.DataApiBuilder.Core.Services.OpenAPI
         /// <returns>Returns a new instance of IEnumerator that iterates over the URIs in the collection.</returns>
         public IEnumerator<UrlDescriptor> GetEnumerator()
         {
-            string configuredRestPath = _runtimeConfigProvider?.RestPath ?? GlobalSettings.REST_DEFAULT_PATH;
+            RuntimeConfig? config = _runtimeConfigProvider?.GetConfig();
+            string configuredRestPath = config?.Runtime.Rest.Path ?? RestRuntimeOptions.DEFAULT_PATH;
             yield return new UrlDescriptor { Name = "DataApibuilder-OpenAPI-PREVIEW", Url = $"{configuredRestPath}/{OpenApiDocumentor.OPENAPI_ROUTE}" };
         }
 

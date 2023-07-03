@@ -3,7 +3,8 @@
 
 using System.Net;
 using System.Text.Json;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -11,7 +12,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
     /// <summary>
-    /// Unit Tests for targetting code paths in Request
+    /// Unit Tests for targeting code paths in Request
     /// Context classes that are not easily tested through
     /// integration testing.
     /// </summary>
@@ -42,7 +43,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 InsertRequestContext context = new(entityName: string.Empty,
                                                     dbo: _defaultDbObject,
                                                     insertPayloadRoot: payload,
-                                                    operationType: Config.Operation.Insert);
+                                                    operationType: EntityActionOperation.Insert);
                 Assert.Fail();
             }
             catch (DataApiBuilderException e)
@@ -67,7 +68,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             InsertRequestContext context = new(entityName: string.Empty,
                                                 dbo: _defaultDbObject,
                                                 insertPayloadRoot: payload,
-                                                operationType: Config.Operation.Insert);
+                                                operationType: EntityActionOperation.Insert);
             Assert.AreEqual(0, context.FieldValuePairsInBody.Count);
         }
     }

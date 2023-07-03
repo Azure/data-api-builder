@@ -3,6 +3,7 @@
 
 using System.Data.Common;
 using System.Text;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using Microsoft.Data.SqlClient;
 
@@ -40,7 +41,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         x => $" OUTER APPLY ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)}({dataIdent})"));
 
             string predicates = JoinPredicateStrings(
-                                    structure.GetDbPolicyForOperation(Config.Operation.Read),
+                                    structure.GetDbPolicyForOperation(EntityActionOperation.Read),
                                     structure.FilterPredicates,
                                     Build(structure.Predicates),
                                     Build(structure.PaginationMetadata.PaginationPredicate));
@@ -62,7 +63,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <inheritdoc />
         public string Build(SqlInsertStructure structure)
         {
-            string predicates = JoinPredicateStrings(structure.GetDbPolicyForOperation(Config.Operation.Create));
+            string predicates = JoinPredicateStrings(structure.GetDbPolicyForOperation(EntityActionOperation.Create));
             string insertColumns = Build(structure.InsertColumns);
             string insertIntoStatementPrefix = $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} ({insertColumns}) " +
                 $"OUTPUT {MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted)} ";
@@ -76,7 +77,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public string Build(SqlUpdateStructure structure)
         {
             string predicates = JoinPredicateStrings(
-                                   structure.GetDbPolicyForOperation(Config.Operation.Update),
+                                   structure.GetDbPolicyForOperation(EntityActionOperation.Update),
                                    Build(structure.Predicates));
 
             return $"UPDATE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
@@ -89,7 +90,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public string Build(SqlDeleteStructure structure)
         {
             string predicates = JoinPredicateStrings(
-                       structure.GetDbPolicyForOperation(Config.Operation.Delete),
+                       structure.GetDbPolicyForOperation(EntityActionOperation.Delete),
                        Build(structure.Predicates));
 
             return $"DELETE FROM {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
@@ -112,7 +113,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string pkPredicates = JoinPredicateStrings(Build(structure.Predicates));
 
             // Predicates by virtue of PK + database policy.
-            string updatePredicates = JoinPredicateStrings(pkPredicates, structure.GetDbPolicyForOperation(Config.Operation.Update));
+            string updatePredicates = JoinPredicateStrings(pkPredicates, structure.GetDbPolicyForOperation(EntityActionOperation.Update));
 
             string updateOperations = Build(structure.UpdateOperations, ", ");
             string outputColumns = MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted);
@@ -147,7 +148,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 string insertColumns = Build(structure.InsertColumns);
 
                 // Predicates added by virtue of database policy for create operation.
-                string createPredicates = JoinPredicateStrings(structure.GetDbPolicyForOperation(Config.Operation.Create));
+                string createPredicates = JoinPredicateStrings(structure.GetDbPolicyForOperation(EntityActionOperation.Create));
 
                 // Query to insert record (if there exists none for given PK).
                 StringBuilder insertQuery = new($"INSERT INTO {tableName} ({insertColumns}) OUTPUT {outputColumns}");

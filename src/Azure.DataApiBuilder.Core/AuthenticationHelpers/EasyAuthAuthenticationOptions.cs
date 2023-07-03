@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.AspNetCore.Authentication;
 
 namespace Azure.DataApiBuilder.Core.AuthenticationHelpers

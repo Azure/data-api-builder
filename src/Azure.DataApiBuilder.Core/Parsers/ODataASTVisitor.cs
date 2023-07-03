@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services;
 using Microsoft.OData.Edm;
@@ -14,11 +15,11 @@ namespace Azure.DataApiBuilder.Core.Parsers
     /// </summary>
     public class ODataASTVisitor : QueryNodeVisitor<string>
     {
-        private BaseSqlQueryStructure _struct;
-        private ISqlMetadataProvider _metadataProvider;
-        private Config.Operation _operation;
+        private readonly BaseSqlQueryStructure _struct;
+        private readonly ISqlMetadataProvider _metadataProvider;
+        private readonly EntityActionOperation _operation;
 
-        public ODataASTVisitor(BaseSqlQueryStructure structure, ISqlMetadataProvider metadataProvider, Config.Operation operation = Config.Operation.None)
+        public ODataASTVisitor(BaseSqlQueryStructure structure, ISqlMetadataProvider metadataProvider, EntityActionOperation operation = EntityActionOperation.None)
         {
             _struct = structure;
             _metadataProvider = metadataProvider;
@@ -71,7 +72,7 @@ namespace Azure.DataApiBuilder.Core.Parsers
         public override string Visit(SingleValuePropertyAccessNode nodeIn)
         {
             _metadataProvider.TryGetBackingColumn(_struct.EntityName, nodeIn.Property.Name, out string? backingColumnName);
-            if (_operation is Config.Operation.Create)
+            if (_operation is EntityActionOperation.Create)
             {
                 _struct.FieldsReferencedInDbPolicyForCreateAction.Add(backingColumnName!);
             }

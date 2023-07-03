@@ -9,7 +9,8 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Transactions;
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
@@ -87,7 +88,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             Tuple<JsonDocument?, IMetadata?>? result = null;
-            Config.Operation mutationOperation = MutationBuilder.DetermineMutationOperationTypeBasedOnInputType(graphqlMutationName);
+            EntityActionOperation mutationOperation = MutationBuilder.DetermineMutationOperationTypeBasedOnInputType(graphqlMutationName);
 
             // If authorization fails, an exception will be thrown and request execution halts.
             AuthorizeMutationFields(context, parameters, entityName, mutationOperation);
@@ -97,7 +98,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // Creating an implicit transaction
                 using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType())
                 {
-                    if (mutationOperation is Config.Operation.Delete)
+                    if (mutationOperation is EntityActionOperation.Delete)
                     {
                         // compute the mutation result before removing the element,
                         // since typical GraphQL delete mutations return the metadata of the deleted item.
@@ -242,10 +243,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // to each action, with data always from the first result set, as there may be arbitrarily many.
             switch (context.OperationType)
             {
-                case Config.Operation.Delete:
+                case EntityActionOperation.Delete:
                     // Returns a 204 No Content so long as the stored procedure executes without error
                     return new NoContentResult();
-                case Config.Operation.Insert:
+                case EntityActionOperation.Insert:
                     // Returns a 201 Created with whatever the first result set is returned from the procedure
                     // A "correctly" configured stored procedure would INSERT INTO ... OUTPUT ... VALUES as the result set
                     if (resultArray is not null && resultArray.Count > 0)
@@ -265,10 +266,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             }
                         );
                     }
-                case Config.Operation.Update:
-                case Config.Operation.UpdateIncremental:
-                case Config.Operation.Upsert:
-                case Config.Operation.UpsertIncremental:
+                case EntityActionOperation.Update:
+                case EntityActionOperation.UpdateIncremental:
+                case EntityActionOperation.Upsert:
+                case EntityActionOperation.UpsertIncremental:
                     // Since we cannot check if anything was created, just return a 200 Ok response with first result set output
                     // A "correctly" configured stored procedure would UPDATE ... SET ... OUTPUT as the result set
                     if (resultArray is not null && resultArray.Count > 0)
@@ -306,7 +307,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             Dictionary<string, object?> parameters = PrepareParameters(context);
 
-            if (context.OperationType is Config.Operation.Delete)
+            if (context.OperationType is EntityActionOperation.Delete)
             {
                 Dictionary<string, object>? resultProperties = null;
 
@@ -340,7 +341,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     return new NoContentResult();
                 }
             }
-            else if (context.OperationType is Config.Operation.Upsert || context.OperationType is Config.Operation.UpsertIncremental)
+            else if (context.OperationType is EntityActionOperation.Upsert || context.OperationType is EntityActionOperation.UpsertIncremental)
             {
                 DbResultSet? upsertOperationResult = null;
 
@@ -382,7 +383,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     // For MsSql, MySql, if it's not the first result, the upsert resulted in an INSERT operation.
                     // Even if its first result, postgresql may still be an insert op here, if so, return CreatedResult
                     if (!isUpdateResultSet ||
-                        (_sqlMetadataProvider.GetDatabaseType() is DatabaseType.postgresql &&
+                        (_sqlMetadataProvider.GetDatabaseType() is DatabaseType.PostgreSQL &&
                         PostgresQueryBuilder.IsInsert(resultRow)))
                     {
                         string primaryKeyRoute = ConstructPrimaryKeyRoute(context, resultRow);
@@ -400,7 +401,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 try
                 {
-                    // Creating an implicit transaction                    
+                    // Creating an implicit transaction
                     using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType())
                     {
                         mutationResultRow =
@@ -421,7 +422,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     throw _dabExceptionWithTransactionErrorMessage;
                 }
 
-                if (context.OperationType is Config.Operation.Insert)
+                if (context.OperationType is EntityActionOperation.Insert)
                 {
                     if (mutationResultRow is null)
                     {
@@ -448,7 +449,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(mutationResultRow.Columns).Value);
                 }
 
-                if (context.OperationType is Config.Operation.Update || context.OperationType is Config.Operation.UpdateIncremental)
+                if (context.OperationType is EntityActionOperation.Update || context.OperationType is EntityActionOperation.UpdateIncremental)
                 {
                     // Nothing to update means we throw Exception
                     if (mutationResultRow is null || mutationResultRow.Columns.Count == 0)
@@ -522,7 +523,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private async Task<DbResultSetRow?>
             PerformMutationOperation(
                 string entityName,
-                Config.Operation operationType,
+                EntityActionOperation operationType,
                 IDictionary<string, object?> parameters,
                 IMiddlewareContext? context = null)
         {
@@ -530,8 +531,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             Dictionary<string, DbConnectionParam> queryParameters;
             switch (operationType)
             {
-                case Config.Operation.Insert:
-                case Config.Operation.Create:
+                case EntityActionOperation.Insert:
+                case EntityActionOperation.Create:
                     SqlInsertStructure insertQueryStruct = context is null
                         ? new(
                             entityName,
@@ -551,7 +552,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     queryString = _queryBuilder.Build(insertQueryStruct);
                     queryParameters = insertQueryStruct.Parameters;
                     break;
-                case Config.Operation.Update:
+                case EntityActionOperation.Update:
                     SqlUpdateStructure updateStructure = new(
                         entityName,
                         _sqlMetadataProvider,
@@ -563,7 +564,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     queryString = _queryBuilder.Build(updateStructure);
                     queryParameters = updateStructure.Parameters;
                     break;
-                case Config.Operation.UpdateIncremental:
+                case EntityActionOperation.UpdateIncremental:
                     SqlUpdateStructure updateIncrementalStructure = new(
                         entityName,
                         _sqlMetadataProvider,
@@ -575,7 +576,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     queryString = _queryBuilder.Build(updateIncrementalStructure);
                     queryParameters = updateIncrementalStructure.Parameters;
                     break;
-                case Config.Operation.UpdateGraphQL:
+                case EntityActionOperation.UpdateGraphQL:
                     if (context is null)
                     {
                         throw new ArgumentNullException("Context should not be null for a GraphQL operation.");
@@ -634,7 +635,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (dbResultSetRow is not null && dbResultSetRow.Columns.Count == 0)
                 {
                     // For GraphQL, insert operation corresponds to Create action.
-                    if (operationType is Config.Operation.Create)
+                    if (operationType is EntityActionOperation.Create)
                     {
                         throw new DataApiBuilderException(
                             message: "Could not insert row with given values.",
@@ -725,10 +726,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             string queryString;
             Dictionary<string, DbConnectionParam> queryParameters;
-            Config.Operation operationType = context.OperationType;
+            EntityActionOperation operationType = context.OperationType;
             string entityName = context.EntityName;
 
-            if (operationType is Config.Operation.Upsert)
+            if (operationType is EntityActionOperation.Upsert)
             {
                 SqlUpsertQueryStructure upsertStructure = new(
                     entityName,
@@ -779,7 +780,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <returns>the primary key route e.g. /id/1/partition/2 where id and partition are primary keys.</returns>
         public string ConstructPrimaryKeyRoute(RestRequestContext context, Dictionary<string, object?> entity)
         {
-            if (context.DatabaseObject.SourceType is SourceType.View)
+            if (context.DatabaseObject.SourceType is EntitySourceType.View)
             {
                 return string.Empty;
             }
@@ -810,14 +811,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             switch (context.OperationType)
             {
-                case Config.Operation.Delete:
+                case EntityActionOperation.Delete:
                     // DeleteOne based off primary key in request.
                     parameters = new(context.PrimaryKeyValuePairs!);
                     break;
-                case Config.Operation.Upsert:
-                case Config.Operation.UpsertIncremental:
-                case Config.Operation.Update:
-                case Config.Operation.UpdateIncremental:
+                case EntityActionOperation.Upsert:
+                case EntityActionOperation.UpsertIncremental:
+                case EntityActionOperation.Update:
+                case EntityActionOperation.UpdateIncremental:
                     // Combine both PrimaryKey/Field ValuePairs
                     // because we create an update statement.
                     parameters = new(context.PrimaryKeyValuePairs!);
@@ -847,7 +848,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IMiddlewareContext context,
             IDictionary<string, object?> parameters,
             string entityName,
-            Config.Operation mutationOperation)
+            EntityActionOperation mutationOperation)
         {
             string role = string.Empty;
             if (context.ContextData.TryGetValue(key: AuthorizationResolver.CLIENT_ROLE_HEADER, out object? value) && value is StringValues stringVals)
@@ -864,7 +865,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             List<string> inputArgumentKeys;
-            if (mutationOperation != Config.Operation.Delete)
+            if (mutationOperation != EntityActionOperation.Delete)
             {
                 inputArgumentKeys = BaseSqlQueryStructure.GetSubArgumentNamesFromGQLMutArguments(MutationBuilder.INPUT_ARGUMENT_NAME, parameters);
             }
@@ -877,14 +878,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             switch (mutationOperation)
             {
-                case Config.Operation.UpdateGraphQL:
-                    isAuthorized = _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: role, operation: Config.Operation.Update, inputArgumentKeys);
+                case EntityActionOperation.UpdateGraphQL:
+                    isAuthorized = _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: role, operation: EntityActionOperation.Update, inputArgumentKeys);
                     break;
-                case Config.Operation.Create:
+                case EntityActionOperation.Create:
                     isAuthorized = _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: role, operation: mutationOperation, inputArgumentKeys);
                     break;
-                case Config.Operation.Execute:
-                case Config.Operation.Delete:
+                case EntityActionOperation.Execute:
+                case EntityActionOperation.Delete:
                     // Authorization is not performed for the 'execute' operation because stored procedure
                     // backed entities do not support column level authorization.
                     // Field level authorization is not supported for delete mutations. A requestor must be authorized
@@ -919,13 +920,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// For MySql database type, the isolation level is set at Repeatable Read as it is the default isolation level. Likeweise, for MsSql and PostgreSql
+        /// For MySql database type, the isolation level is set at Repeatable Read as it is the default isolation level. Likewise, for MsSql and PostgreSql
         /// database types, the isolation level is set at Read Committed as it is the default.
         /// </summary>
         /// <returns>TransactionScope object with the appropriate isolation level based on the database type</returns>
         private TransactionScope ConstructTransactionScopeBasedOnDbType()
         {
-            return _sqlMetadataProvider.GetDatabaseType() is DatabaseType.mysql ? ConstructTransactionScopeWithSpecifiedIsolationLevel(isolationLevel: System.Transactions.IsolationLevel.RepeatableRead)
+            return _sqlMetadataProvider.GetDatabaseType() is DatabaseType.MySQL ? ConstructTransactionScopeWithSpecifiedIsolationLevel(isolationLevel: System.Transactions.IsolationLevel.RepeatableRead)
                                                                                 : ConstructTransactionScopeWithSpecifiedIsolationLevel(isolationLevel: System.Transactions.IsolationLevel.ReadCommitted);
         }
 

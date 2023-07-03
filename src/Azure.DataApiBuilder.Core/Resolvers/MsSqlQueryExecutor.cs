@@ -7,7 +7,7 @@ using System.Net;
 using System.Security.Claims;
 using System.Text;
 using Azure.Core;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
@@ -16,7 +16,6 @@ using Azure.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -62,12 +61,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IHttpContextAccessor httpContextAccessor)
             : base(dbExceptionParser,
                   logger,
-                  new SqlConnectionStringBuilder(
-                      runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString),
+                  new SqlConnectionStringBuilder(runtimeConfigProvider.GetConfig().DataSource.ConnectionString),
                   runtimeConfigProvider,
                   httpContextAccessor)
         {
-            RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
+            RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
 
             if (runtimeConfigProvider.IsLateConfigured)
             {
@@ -75,7 +73,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 ConnectionStringBuilder.TrustServerCertificate = false;
             }
 
-            MsSqlOptions? msSqlOptions = runtimeConfig.DataSource.MsSql;
+            MsSqlOptions? msSqlOptions = runtimeConfig.DataSource.GetTypedOptions<MsSqlOptions>();
             _isSessionContextEnabled = msSqlOptions is null ? false : msSqlOptions.SetSessionContext;
             _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
             _attemptToSetAccessToken = ShouldManagedIdentityAccessBeAttempted();
@@ -230,9 +228,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // We would only attempt an update , and that too when a record exists for given PK.
                 // However since the dbResultSet is null here, it indicates we didn't perform an update either.
                 // This happens when count of rows with given PK = 0.
-
-                // Assert that there are no records for the given PK.
-                Assert.AreEqual(0, numOfRecordsWithGivenPK);
 
                 if (args is not null && args.Count > 1)
                 {

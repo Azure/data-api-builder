@@ -1,7 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 
 namespace Azure.DataApiBuilder.Core.Models
 {
@@ -22,7 +23,7 @@ namespace Azure.DataApiBuilder.Core.Models
             PrimaryKeyValuePairs = new();
             FieldValuePairsInBody = new();
             IsMany = isList;
-            OperationType = Config.Operation.Read;
+            OperationType = EntityActionOperation.Read;
         }
 
     }

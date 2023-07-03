@@ -4,6 +4,7 @@
 using System.Net;
 using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
@@ -65,9 +66,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             ItemResponse<JObject>? response = resolver.OperationType switch
             {
-                Config.Operation.UpdateGraphQL => await HandleUpdateAsync(queryArgs, container),
-                Config.Operation.Create => await HandleCreateAsync(queryArgs, container),
-                Config.Operation.Delete => await HandleDeleteAsync(queryArgs, container),
+                EntityActionOperation.UpdateGraphQL => await HandleUpdateAsync(queryArgs, container),
+                EntityActionOperation.Create => await HandleCreateAsync(queryArgs, container),
+                EntityActionOperation.Delete => await HandleDeleteAsync(queryArgs, container),
                 _ => throw new NotSupportedException($"unsupported operation type: {resolver.OperationType}")
             };
 
@@ -79,7 +80,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IMiddlewareContext context,
             IDictionary<string, object?> parameters,
             string entityName,
-            Config.Operation mutationOperation)
+            EntityActionOperation mutationOperation)
         {
             string role = string.Empty;
             if (context.ContextData.TryGetValue(key: AuthorizationResolver.CLIENT_ROLE_HEADER, out object? value) && value is StringValues stringVals)
@@ -96,7 +97,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             List<string> inputArgumentKeys;
-            if (mutationOperation != Config.Operation.Delete)
+            if (mutationOperation != EntityActionOperation.Delete)
             {
                 inputArgumentKeys = BaseSqlQueryStructure.GetSubArgumentNamesFromGQLMutArguments(MutationBuilder.INPUT_ARGUMENT_NAME, parameters);
             }
@@ -105,29 +106,20 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 inputArgumentKeys = parameters.Keys.ToList();
             }
 
-            bool isAuthorized; // False by default.
-
-            switch (mutationOperation)
+            bool isAuthorized = mutationOperation switch
             {
-                case Config.Operation.UpdateGraphQL:
-                    isAuthorized = _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: role, operation: Config.Operation.Update, inputArgumentKeys);
-                    break;
-                case Config.Operation.Create:
-                    isAuthorized = _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: role, operation: mutationOperation, inputArgumentKeys);
-                    break;
-                case Config.Operation.Delete:
-                    // Field level authorization is not supported for delete mutations. A requestor must be authorized
-                    // to perform the delete operation on the entity to reach this point.
-                    isAuthorized = true;
-                    break;
-                default:
-                    throw new DataApiBuilderException(
-                        message: "Invalid operation for GraphQL Mutation, must be Create, UpdateGraphQL, or Delete",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
-                        );
-            }
-
+                EntityActionOperation.UpdateGraphQL =>
+                    _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: role, operation: EntityActionOperation.Update, inputArgumentKeys),
+                EntityActionOperation.Create =>
+                    _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: role, operation: mutationOperation, inputArgumentKeys),
+                EntityActionOperation.Delete => true,// Field level authorization is not supported for delete mutations. A requestor must be authorized
+                                                     // to perform the delete operation on the entity to reach this point.
+                _ => throw new DataApiBuilderException(
+                                        message: "Invalid operation for GraphQL Mutation, must be Create, UpdateGraphQL, or Delete",
+                                        statusCode: HttpStatusCode.BadRequest,
+                                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
+                                        ),
+            };
             if (!isAuthorized)
             {
                 throw new DataApiBuilderException(
@@ -320,7 +312,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string containerName = _metadataProvider.GetDatabaseObjectName(entityName);
 
             string graphqlMutationName = context.Selection.Field.Name.Value;
-            Config.Operation mutationOperation =
+            EntityActionOperation mutationOperation =
                 MutationBuilder.DetermineMutationOperationTypeBasedOnInputType(graphqlMutationName);
 
             CosmosOperationMetadata mutation = new(databaseName, containerName, mutationOperation);

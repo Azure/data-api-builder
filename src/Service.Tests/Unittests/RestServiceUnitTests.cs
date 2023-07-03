@@ -2,8 +2,10 @@
 // Licensed under the MIT License.
 
 using System.Collections.Generic;
+using System.IO.Abstractions.TestingHelpers;
 using System.Net;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
@@ -97,32 +99,43 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         #region Helper Functions
 
         /// <summary>
-        /// Mock and instantitate required components
+        /// Mock and instantiates required components
         /// for the REST Service.
         /// </summary>
-        /// <param name="path">path to return from mocked
-        /// runtimeconfigprovider.</param>
-        public static void InitializeTest(string path, string entityName)
+        /// <param name="restRoutePrefix">path to return from mocked config.</param>
+        public static void InitializeTest(string restRoutePrefix, string entityName)
         {
-            RuntimeConfigPath runtimeConfigPath = TestHelper.GetRuntimeConfigPath(TestCategory.MSSQL);
-            RuntimeConfigProvider runtimeConfigProvider =
-                TestHelper.GetMockRuntimeConfigProvider(runtimeConfigPath, path);
+            RuntimeConfig mockConfig = new(
+               Schema: "",
+               DataSource: new(DatabaseType.PostgreSQL, "", new()),
+               Runtime: new(
+                   Rest: new(Path: restRoutePrefix),
+                   GraphQL: new(),
+                   Host: new(null, null)
+               ),
+               Entities: new(new Dictionary<string, Entity>())
+           );
+
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
             MsSqlQueryBuilder queryBuilder = new();
-            Mock<DbExceptionParser> dbExceptionParser = new(runtimeConfigProvider);
+            Mock<DbExceptionParser> dbExceptionParser = new(provider);
             Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
             Mock<ILogger<ISqlMetadataProvider>> sqlMetadataLogger = new();
             Mock<ILogger<IQueryEngine>> queryEngineLogger = new();
-            Mock<ILogger<SqlMutationEngine>> mutationEngingLogger = new();
+            Mock<ILogger<SqlMutationEngine>> mutationEngineLogger = new();
             Mock<ILogger<AuthorizationResolver>> authLogger = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
 
             MsSqlQueryExecutor queryExecutor = new(
-                runtimeConfigProvider,
+                provider,
                 dbExceptionParser.Object,
                 queryExecutorLogger.Object,
                 httpContextAccessor.Object);
             Mock<MsSqlMetadataProvider> sqlMetadataProvider = new(
-                runtimeConfigProvider,
+                provider,
                 queryExecutor,
                 queryBuilder,
                 sqlMetadataLogger.Object);
@@ -135,7 +148,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<IAuthorizationService> authorizationService = new();
             DefaultHttpContext context = new();
             httpContextAccessor.Setup(_ => _.HttpContext).Returns(context);
-            AuthorizationResolver authorizationResolver = new(runtimeConfigProvider, sqlMetadataProvider.Object, authLogger.Object);
+            AuthorizationResolver authorizationResolver = new(provider, sqlMetadataProvider.Object);
             GQLFilterParser gQLFilterParser = new(sqlMetadataProvider.Object);
             SqlQueryEngine queryEngine = new(
                 queryExecutor,
@@ -145,7 +158,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 authorizationResolver,
                 gQLFilterParser,
                 queryEngineLogger.Object,
-                runtimeConfigProvider);
+                provider);
 
             SqlMutationEngine mutationEngine =
                 new(
@@ -164,7 +177,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 sqlMetadataProvider.Object,
                 httpContextAccessor.Object,
                 authorizationService.Object,
-                runtimeConfigProvider);
+                provider);
         }
 
         /// <summary>

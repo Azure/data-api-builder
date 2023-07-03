@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Azure.DataApiBuilder.Config.ObjectModel;
+
 namespace Azure.DataApiBuilder.Core.Models
 {
     /// <summary>
@@ -9,5 +11,5 @@ namespace Azure.DataApiBuilder.Core.Models
     /// <param name="DatabaseName">Name of the database</param>
     /// <param name="ContainerName">Name of the container</param>
     /// <param name="OperationType">Type of operation to perform</param>
-    record CosmosOperationMetadata(string DatabaseName, string ContainerName, Config.Operation OperationType);
+    record CosmosOperationMetadata(string DatabaseName, string ContainerName, EntityActionOperation OperationType);
 }

@@ -3,7 +3,8 @@
 
 using System.Net;
 using System.Text.Json;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Service.Exceptions;
 
@@ -223,14 +224,14 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="primaryKeyRoute">URL route e.g. "Entity/id/1"</param>
         /// <param name="queryString">queryString e.g. "$?filter="</param>
         /// <exception cref="DataApiBuilderException">Raised when primaryKeyRoute/queryString fail the validations for the operation.</exception>
-        public static void ValidatePrimaryKeyRouteAndQueryStringInURL(Config.Operation operationType, string? primaryKeyRoute = null, string? queryString = null)
+        public static void ValidatePrimaryKeyRouteAndQueryStringInURL(EntityActionOperation operationType, string? primaryKeyRoute = null, string? queryString = null)
         {
             bool isPrimaryKeyRouteEmpty = string.IsNullOrEmpty(primaryKeyRoute);
             bool isQueryStringEmpty = string.IsNullOrEmpty(queryString);
 
             switch (operationType)
             {
-                case Config.Operation.Insert:
+                case EntityActionOperation.Insert:
                     if (!isPrimaryKeyRouteEmpty)
                     {
                         throw new DataApiBuilderException(
@@ -248,11 +249,11 @@ namespace Azure.DataApiBuilder.Core.Services
                     }
 
                     break;
-                case Config.Operation.Delete:
-                case Config.Operation.Update:
-                case Config.Operation.UpdateIncremental:
-                case Config.Operation.Upsert:
-                case Config.Operation.UpsertIncremental:
+                case EntityActionOperation.Delete:
+                case EntityActionOperation.Update:
+                case EntityActionOperation.UpdateIncremental:
+                case EntityActionOperation.Upsert:
+                case EntityActionOperation.UpsertIncremental:
                     /// Validate that the primarykeyroute is populated for these operations.
                     if (isPrimaryKeyRouteEmpty)
                     {
@@ -389,7 +390,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     }
                 }
 
-                bool isReplacementUpdate = (upsertRequestCtx.OperationType == Config.Operation.Upsert) ? true : false;
+                bool isReplacementUpdate = (upsertRequestCtx.OperationType == EntityActionOperation.Upsert) ? true : false;
                 if (ValidateColumn(column.Value, exposedName!, fieldsInRequestBody, isReplacementUpdate))
                 {
                     unValidatedFields.Remove(exposedName!);

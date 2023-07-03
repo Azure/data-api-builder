@@ -1,146 +1,63 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using System.IO.Abstractions;
+using System.IO.Abstractions.TestingHelpers;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
+using Humanizer;
 
 namespace Azure.DataApiBuilder.Service.Tests
 {
-    public class TestHelper
+    static class TestHelper
     {
+        public static void SetupDatabaseEnvironment(string database)
+        {
+            Environment.SetEnvironmentVariable(RuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, database);
+        }
+
+        public static void UnsetAllDABEnvironmentVariables()
+        {
+            Environment.SetEnvironmentVariable(RuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, null);
+            Environment.SetEnvironmentVariable(RuntimeConfigLoader.ASP_NET_CORE_ENVIRONMENT_VAR_NAME, null);
+            Environment.SetEnvironmentVariable(RuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING, null);
+        }
+
         /// <summary>
         /// Given the testing environment, retrieve the config path.
         /// </summary>
         /// <param name="environment"></param>
         /// <returns></returns>
-        public static RuntimeConfigPath GetRuntimeConfigPath(string environment)
+        public static RuntimeConfigLoader GetRuntimeConfigLoader()
         {
-            string configFileName = RuntimeConfigPath.GetFileNameForEnvironment(
-                                                        hostingEnvironmentName: environment,
-                                                        considerOverrides: true);
-
-            Dictionary<string, string> configFileNameMap = new()
-            {
-                {
-                    nameof(RuntimeConfigPath.ConfigFileName),
-                    configFileName
-                }
-            };
-
-            IConfigurationRoot config = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddInMemoryCollection(configFileNameMap)
-                .Build();
-
-            return config.Get<RuntimeConfigPath>();
+            FileSystem fileSystem = new();
+            RuntimeConfigLoader runtimeConfigLoader = new(fileSystem);
+            return runtimeConfigLoader;
         }
 
         /// <summary>
         /// Given the configuration path, generate the runtime configuration provider
         /// using a mock logger.
         /// </summary>
-        /// <param name="configPath"></param>
+        /// <param name="loader"></param>
         /// <returns></returns>
-        public static RuntimeConfigProvider GetRuntimeConfigProvider(
-            RuntimeConfigPath configPath)
+        public static RuntimeConfigProvider GetRuntimeConfigProvider(RuntimeConfigLoader loader)
         {
-            Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
-            RuntimeConfigProvider runtimeConfigProvider
-                = new(configPath,
-                      configProviderLogger.Object);
+            RuntimeConfigProvider runtimeConfigProvider = new(loader);
 
             // Only set IsLateConfigured for MsSQL for now to do certificate validation.
             // For Pg/MySQL databases, set this after SSL connections are enabled for testing.
-            if (runtimeConfigProvider.TryGetRuntimeConfiguration(out RuntimeConfig runtimeConfig)
-                && runtimeConfig.DatabaseType is DatabaseType.mssql)
+            if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig runtimeConfig)
+                && runtimeConfig.DataSource.DatabaseType is DatabaseType.MSSQL)
             {
                 runtimeConfigProvider.IsLateConfigured = true;
             }
 
             return runtimeConfigProvider;
-        }
-
-        /// <summary>
-        /// Gets the runtime config provider such that the given config is set as the
-        /// desired RuntimeConfiguration.
-        /// </summary>
-        /// <param name="config"></param>
-        /// <returns></returns>
-        public static RuntimeConfigProvider GetRuntimeConfigProvider(
-            RuntimeConfig config)
-        {
-            Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
-            RuntimeConfigProvider runtimeConfigProvider
-                = new(config,
-                      configProviderLogger.Object);
-
-            // Only set IsLateConfigured for MsSQL for now to do certificate validation.
-            // For Pg/MySQL databases, set this after SSL connections are enabled for testing.
-            if (config is not null && config.DatabaseType is DatabaseType.mssql)
-            {
-                runtimeConfigProvider.IsLateConfigured = true;
-            }
-
-            return runtimeConfigProvider;
-        }
-
-        /// <summary>
-        /// Given the configuration path, generate a mock runtime configuration provider
-        /// using a mock logger.
-        /// The mock provider returns a mock RestPath set to the input param path.
-        /// </summary>
-        /// <param name="configPath"></param>
-        /// <param name="path"></param>
-        /// <returns></returns>
-        public static RuntimeConfigProvider GetMockRuntimeConfigProvider(
-            RuntimeConfigPath configPath,
-            string path)
-        {
-            Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
-            Mock<RuntimeConfigProvider> mockRuntimeConfigProvider
-                = new(configPath,
-                      configProviderLogger.Object);
-            mockRuntimeConfigProvider.Setup(x => x.RestPath).Returns(path);
-            mockRuntimeConfigProvider.Setup(x => x.TryLoadRuntimeConfigValue()).Returns(true);
-            string configJson = RuntimeConfigProvider.GetRuntimeConfigJsonString(configPath.ConfigFileName);
-            RuntimeConfig.TryGetDeserializedRuntimeConfig(configJson, out RuntimeConfig runtimeConfig, configProviderLogger.Object);
-            mockRuntimeConfigProvider.Setup(x => x.GetRuntimeConfiguration()).Returns(runtimeConfig);
-            mockRuntimeConfigProvider.Setup(x => x.IsLateConfigured).Returns(true);
-            return mockRuntimeConfigProvider.Object;
-        }
-
-        /// <summary>
-        /// Given the environment, return the runtime config provider.
-        /// </summary>
-        /// <param name="environment">The environment for which the test is being run. (e.g. TestCategory.COSMOS)</param>
-        /// <returns></returns>
-        public static RuntimeConfigProvider GetRuntimeConfigProvider(string environment)
-        {
-            RuntimeConfigPath configPath = GetRuntimeConfigPath(environment);
-            return GetRuntimeConfigProvider(configPath);
-        }
-
-        /// <summary>
-        /// Given the configurationProvider, try to load and get the runtime config object.
-        /// </summary>
-        /// <param name="configProvider"></param>
-        /// <returns></returns>
-        public static RuntimeConfig GetRuntimeConfig(RuntimeConfigProvider configProvider)
-        {
-            if (!configProvider.TryLoadRuntimeConfigValue())
-            {
-                Assert.Fail($"Failed to load runtime configuration file in test setup");
-            }
-
-            return configProvider.GetRuntimeConfiguration();
         }
 
         /// <summary>
@@ -148,47 +65,39 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// that can have a custom schema. Ultimately this will be replaced with a JSON string
         /// in the tests that can be fully customized for testing purposes.
         /// </summary>
-        /// <param name="config">Runtimeconfig object</param>
+        /// <param name="config">RuntimeConfig object</param>
         /// <param name="entityKey">The key with which the entity is to be added.</param>
         /// <param name="entityName">The source name of the entity.</param>
-        public static void AddMissingEntitiesToConfig(RuntimeConfig config, string entityKey, string entityName)
+        public static RuntimeConfig AddMissingEntitiesToConfig(RuntimeConfig config, string entityKey, string entityName)
         {
-            string source = "\"" + entityName + "\"";
-            string entityJsonString =
-              @"{
-                    ""source"":  " + source + @",
-                    ""graphql"": true,
-                    ""permissions"": [
-                      {
-                        ""role"": ""anonymous"",
-                        ""actions"": [" +
-                        $" \"{Config.Operation.Create.ToString().ToLower()}\"," +
-                        $" \"{Config.Operation.Read.ToString().ToLower()}\"," +
-                        $" \"{Config.Operation.Delete.ToString().ToLower()}\"," +
-                        $" \"{Config.Operation.Update.ToString().ToLower()}\" ]" +
-                      @"},
-                      {
-                        ""role"": ""authenticated"",
-                        ""actions"": [" +
-                        $" \"{Config.Operation.Create.ToString().ToLower()}\"," +
-                        $" \"{Config.Operation.Read.ToString().ToLower()}\"," +
-                        $" \"{Config.Operation.Delete.ToString().ToLower()}\"," +
-                        $" \"{Config.Operation.Update.ToString().ToLower()}\" ]" +
-                      @"}
-                    ]
-                }";
-
-            JsonSerializerOptions options = new()
-            {
-                PropertyNameCaseInsensitive = true,
-                Converters =
+            Entity entity = new(
+                Source: new(entityName, EntitySourceType.Table, null, null),
+                GraphQL: new(entityKey, entityKey.Pluralize()),
+                Rest: new(Array.Empty<SupportedHttpVerb>()),
+                Permissions: new[]
                 {
-                    new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
-                }
+                    new EntityPermission("anonymous", new EntityAction[] {
+                        new(EntityActionOperation.Create, null, new()),
+                        new(EntityActionOperation.Read, null, new()),
+                        new(EntityActionOperation.Delete, null, new()),
+                        new(EntityActionOperation.Update, null, new())
+                    }),
+                    new EntityPermission("authenticated", new EntityAction[] {
+                        new(EntityActionOperation.Create, null, new()),
+                        new(EntityActionOperation.Read, null, new()),
+                        new(EntityActionOperation.Delete, null, new()),
+                        new(EntityActionOperation.Update, null, new())
+                    })
+                },
+                Mappings: null,
+                Relationships: null);
+
+            Dictionary<string, Entity> entities = new(config.Entities)
+            {
+                { entityKey, entity }
             };
 
-            Entity entity = JsonSerializer.Deserialize<Entity>(entityJsonString, options);
-            config.Entities.Add(entityKey, entity);
+            return config with { Entities = new(entities) };
         }
 
         /// <summary>
@@ -196,11 +105,11 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// for unit tests
         /// </summary>
         public const string SCHEMA_PROPERTY = @"
-          ""$schema"": """ + Azure.DataApiBuilder.Config.RuntimeConfig.SCHEMA + @"""";
+          ""$schema"": """ + RuntimeConfigLoader.SCHEMA + @"""";
 
         /// <summary>
         /// Data source property of the config json. This is used for constructing the required config json strings
-        /// for unit tests 
+        /// for unit tests
         /// </summary>
         public const string SAMPLE_SCHEMA_DATA_SOURCE = SCHEMA_PROPERTY + "," + @"
             ""data-source"": {
@@ -238,6 +147,15 @@ namespace Azure.DataApiBuilder.Service.Tests
             ""entities"": {}" +
           "}";
 
+        public static RuntimeConfigProvider GenerateInMemoryRuntimeConfigProvider(RuntimeConfig runtimeConfig)
+        {
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, runtimeConfig.ToJson());
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider runtimeConfigProvider = new(loader);
+            return runtimeConfigProvider;
+        }
+
         /// <summary>
         /// Utility method that reads the config file for a given database type and constructs a
         /// new config file with changes just in the host mode section.
@@ -245,21 +163,25 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// <param name="configFileName">Name of the new config file to be constructed</param>
         /// <param name="hostModeType">HostMode for the engine</param>
         /// <param name="databaseType">Database type</param>
-        public static void ConstructNewConfigWithSpecifiedHostMode(string configFileName, HostModeType hostModeType, string databaseType)
+        public static void ConstructNewConfigWithSpecifiedHostMode(string configFileName, HostMode hostModeType, string databaseType)
         {
-            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(databaseType);
-            RuntimeConfig config = configProvider.GetRuntimeConfiguration();
-            HostGlobalSettings customHostGlobalSettings = config.HostGlobalSettings with { Mode = hostModeType };
-            JsonElement serializedCustomHostGlobalSettings =
-                JsonSerializer.SerializeToElement(customHostGlobalSettings, RuntimeConfig.SerializerOptions);
-            Dictionary<GlobalSettingsType, object> customRuntimeSettings = new(config.RuntimeSettings);
-            customRuntimeSettings.Remove(GlobalSettingsType.Host);
-            customRuntimeSettings.Add(GlobalSettingsType.Host, serializedCustomHostGlobalSettings);
+            TestHelper.SetupDatabaseEnvironment(databaseType);
+            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(TestHelper.GetRuntimeConfigLoader());
+            RuntimeConfig config = configProvider.GetConfig();
+
             RuntimeConfig configWithCustomHostMode =
-                config with { RuntimeSettings = customRuntimeSettings };
-            File.WriteAllText(
-                configFileName,
-                JsonSerializer.Serialize(configWithCustomHostMode, RuntimeConfig.SerializerOptions));
+                config
+                with
+                {
+                    Runtime = config.Runtime
+                with
+                    {
+                        Host = config.Runtime.Host
+                with
+                        { Mode = hostModeType }
+                    }
+                };
+            File.WriteAllText(configFileName, configWithCustomHostMode.ToJson());
 
         }
     }

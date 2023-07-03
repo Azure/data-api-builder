@@ -312,6 +312,5 @@ public class UtilsTests
 
         Environment.SetEnvironmentVariable(RuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, null);
     }
-
 }
 

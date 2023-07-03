@@ -59,7 +59,6 @@
         <PackageReference Include="Microsoft.OData.Edm" />
         <PackageReference Include="Microsoft.OData.Core" />
         <PackageReference Include="Microsoft.OpenApi" />
-        <PackageReference Include="MSTest.TestFramework" />
         <PackageReference Include="MySqlConnector" />
         <PackageReference Include="Newtonsoft.Json" />
         <PackageReference Include="Npgsql" />

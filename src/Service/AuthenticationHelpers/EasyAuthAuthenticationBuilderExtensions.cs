@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.AspNetCore.Authentication;
 
 namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
@@ -9,7 +9,7 @@ namespace Azure.DataApiBuilder.Service.AuthenticationHelpers
     /// <summary>
     /// Extension methods related to Static Web App/ App Service authentication (Easy Auth).
     /// This class allows setting up Easy Auth authentication in the startup class with
-    /// a single call to .AddAuthentiction(scheme).AddStaticWebAppAuthentication()
+    /// a single call to .AddAuthentication(scheme).AddStaticWebAppAuthentication()
     /// </summary>
     public static class EasyAuthAuthenticationBuilderExtensions
     {

@@ -1,0 +1,103 @@
+﻿{
+  DataSource: {
+    DatabaseType: MSSQL,
+    Options: {
+      set-session-context: {
+        ValueKind: True
+      }
+    }
+  },
+  Runtime: {
+    Rest: {
+      Enabled: true,
+      Path: /api
+    },
+    GraphQL: {
+      Enabled: true,
+      Path: /graphql,
+      AllowIntrospection: true
+    },
+    Host: {
+      Cors: {
+        AllowCredentials: false
+      },
+      Authentication: {
+        Provider: StaticWebApps
+      }
+    }
+  },
+  Entities: [
+    {
+      FirstEntity: {
+        Source: {
+          Object: MyTable,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: FirstEntity,
+          Plural: FirstEntities,
+          Enabled: true
+        },
+        Rest: {
+          Methods: [
+            Get,
+            Post,
+            Put,
+            Patch,
+            Delete
+          ],
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Read,
+                Policy: {}
+              },
+              {
+                Action: Update,
+                Policy: {}
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      SecondEntity: {
+        Source: {
+          Object: MyTable,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: SecondEntity,
+          Plural: SecondEntities,
+          Enabled: true
+        },
+        Rest: {
+          Methods: [
+            Get,
+            Post,
+            Put,
+            Patch,
+            Delete
+          ],
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *,
+                Policy: {}
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

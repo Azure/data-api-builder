@@ -396,7 +396,6 @@ namespace Cli
             {
                 /// The existence of user provided config file is not checked here.
                 _logger.LogInformation($"User provided config file: {userProvidedConfigFile}");
-                RuntimeConfigLoader.CheckPrecedenceForConfigInEngine = false;
                 runtimeConfigFile = userProvidedConfigFile;
                 return true;
             }
@@ -404,13 +403,7 @@ namespace Cli
             {
                 _logger.LogInformation("Config not provided. Trying to get default config based on DAB_ENVIRONMENT...");
                 _logger.LogInformation("Environment variable DAB_ENVIRONMENT is {value}", Environment.GetEnvironmentVariable("DAB_ENVIRONMENT"));
-                /// Need to reset to true explicitly so any that any re-invocations of this function
-                /// get simulated as being called for the first time specifically useful for tests.
-                RuntimeConfigLoader.CheckPrecedenceForConfigInEngine = true;
                 runtimeConfigFile = loader.GetFileNameForEnvironment(null, considerOverrides: false);
-
-                /// So that the check doesn't run again when starting engine
-                RuntimeConfigLoader.CheckPrecedenceForConfigInEngine = false;
             }
 
             return !string.IsNullOrEmpty(runtimeConfigFile);

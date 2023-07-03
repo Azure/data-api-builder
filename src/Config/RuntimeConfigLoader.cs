@@ -42,8 +42,6 @@ public class RuntimeConfigLoader
     public const string ASP_NET_CORE_ENVIRONMENT_VAR_NAME = "ASPNETCORE_ENVIRONMENT";
     public const string SCHEMA = "dab.draft.schema.json";
 
-    public static bool CheckPrecedenceForConfigInEngine = true;
-
     public string ConfigFileName => GetFileNameForEnvironment(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), false);
 
     public RuntimeConfigLoader(IFileSystem fileSystem, string baseConfigFileName = DEFAULT_CONFIG_FILE_NAME, string? connectionString = null)
@@ -162,12 +160,6 @@ public class RuntimeConfigLoader
     /// <returns></returns>
     public string GetFileNameForEnvironment(string? aspnetEnvironment, bool considerOverrides)
     {
-        // if precedence check is done in cli, no need to do it again after starting the engine.
-        if (!CheckPrecedenceForConfigInEngine)
-        {
-            return string.Empty;
-        }
-
         string configFileNameWithExtension = string.Empty;
         string?[] environmentPrecedence = new[]
         {

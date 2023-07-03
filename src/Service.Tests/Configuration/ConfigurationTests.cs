@@ -918,11 +918,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// by the upstream before the request lands at DAB.
         /// </summary>
         [TestMethod]
-        public async Task TestRestBaseRouteInNextLinkForPaginatedRestResponse()
+        public async Task TestRuntimeBaseRouteInNextLinkForPaginatedRestResponse()
         {
             const string CUSTOM_CONFIG = "custom-config.json";
-            string restBaseRoute = "/rest-api";
-            TestHelper.ConstructNewConfigWithSpecifiedHostMode(CUSTOM_CONFIG, HostMode.Production, TestCategory.MSSQL, restBaseRoute: restBaseRoute);
+            string runtimeBaseRoute = "/base-route";
+            TestHelper.ConstructNewConfigWithSpecifiedHostMode(CUSTOM_CONFIG, HostMode.Production, TestCategory.MSSQL, runtimeBaseRoute: runtimeBaseRoute);
             string[] args = new[]
             {
                     $"--ConfigFileName={CUSTOM_CONFIG}"
@@ -948,7 +948,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Assert.IsTrue(responseValue.GetArrayLength() == 100);
 
                 // Assert that the nextLink contains the rest base-route just before the request path.
-                Assert.IsTrue(nextLink.Contains(restBaseRoute + requestPath));
+                Assert.IsTrue(nextLink.Contains(runtimeBaseRoute + requestPath));
             }
         }
 

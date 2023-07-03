@@ -72,7 +72,7 @@ namespace Cli
             DatabaseType dbType = options.DatabaseType;
             string? restPath = options.RestPath;
             string graphQLPath = options.GraphQLPath;
-            string? restBaseRoute = options.RestBaseRoute;
+            string? runtimeBaseRoute = options.RuntimeBaseRoute;
             Dictionary<string, JsonElement> dbOptions = new();
 
             HyphenatedNamingPolicy namingPolicy = new();
@@ -106,15 +106,6 @@ namespace Cli
                         _logger.LogWarning("Configuration option --rest.path is not honored for cosmosdb_nosql since it does not support REST yet.");
                     }
 
-                    // If the option --rest.base-route is specified for cosmosdb_nosql, log a warning because
-                    // rest is not supported for cosmosdb_nosql yet.
-                    if (!string.Empty.Equals(restBaseRoute))
-                    {
-                        _logger.LogWarning("Configuration option --rest.base-route is not honored for cosmosdb_nosql since " +
-                            "it does not support REST yet.");
-                    }
-
-                    restBaseRoute = null;
                     restPath = null;
                     dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), JsonSerializer.SerializeToElement(cosmosDatabase));
                     dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), JsonSerializer.SerializeToElement(cosmosContainer));
@@ -144,7 +135,7 @@ namespace Cli
 
             if (!IsURIComponentValid(restPath, ApiType.REST, RuntimeOptions.PROPERTY_NAME_PATH) ||
                 !IsURIComponentValid(options.GraphQLPath, ApiType.GraphQL, RuntimeOptions.PROPERTY_NAME_PATH) ||
-                !IsURIComponentValid(restBaseRoute, ApiType.REST, RestRuntimeOptions.PROPERTY_NAME_BASE_ROUTE))
+                !IsURIComponentValid(runtimeBaseRoute, ApiType.REST, RuntimeOptions.PROPERTY_NAME_BASE_ROUTE))
 
             {
                 return false;
@@ -164,6 +155,12 @@ namespace Cli
                 restPath = "/" + restPath;
             }
 
+            // Prefix base-route with '/', if not already present.
+            if (runtimeBaseRoute is not null && !runtimeBaseRoute.StartsWith('/'))
+            {
+                runtimeBaseRoute = "/" + runtimeBaseRoute;
+            }
+
             // Prefix GraphQL path with '/', if not already present.
             if (!graphQLPath.StartsWith('/'))
             {
@@ -174,12 +171,13 @@ namespace Cli
                 Schema: dabSchemaLink,
                 DataSource: dataSource,
                 Runtime: new(
-                    Rest: new(!restDisabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH, BaseRoute: restBaseRoute),
+                    Rest: new(!restDisabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH),
                     GraphQL: new(!options.GraphQLDisabled, graphQLPath),
                     Host: new(
                         Cors: new(options.CorsOrigin?.ToArray() ?? Array.Empty<string>()),
                         Authentication: new(options.AuthenticationProvider, new(options.Audience, options.Issuer)),
-                        Mode: options.HostMode)
+                        Mode: options.HostMode),
+                    BaseRoute: runtimeBaseRoute
                 ),
                 Entities: new RuntimeEntities(new Dictionary<string, Entity>()));
 

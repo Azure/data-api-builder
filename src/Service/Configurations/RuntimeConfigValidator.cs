@@ -274,6 +274,9 @@ namespace Azure.DataApiBuilder.Service.Configurations
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
             }
 
+            string? runtimeBaseRoute = runtimeConfig.Runtime.BaseRoute;
+            ValidateURIComponent(runtimeBaseRoute, RuntimeOptions.PROPERTY_NAME_BASE_ROUTE, ApiType.Both);
+
             ValidateRestURI(runtimeConfig);
             ValidateGraphQLURI(runtimeConfig);
             // Do not check for conflicts if GraphQL or REST endpoints are disabled.
@@ -308,10 +311,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
             }
 
             string restPath = runtimeConfig.Runtime.Rest.Path;
-            string? restBaseRoute = runtimeConfig.Runtime.Rest.BaseRoute;
-
-            ValidateURIComponent(restPath, ApiType.REST, RuntimeOptions.PROPERTY_NAME_PATH);
-            ValidateURIComponent(restBaseRoute, ApiType.REST, RestRuntimeOptions.PROPERTY_NAME_BASE_ROUTE);
+            ValidateURIComponent(restPath, RuntimeOptions.PROPERTY_NAME_PATH, ApiType.REST);
         }
 
         /// <summary>
@@ -321,19 +321,19 @@ namespace Azure.DataApiBuilder.Service.Configurations
         public static void ValidateGraphQLURI(RuntimeConfig runtimeConfig)
         {
             string graphqlPath = runtimeConfig.Runtime.GraphQL.Path;
-            ValidateURIComponent(graphqlPath, ApiType.GraphQL, RuntimeOptions.PROPERTY_NAME_PATH);
+            ValidateURIComponent(graphqlPath, RuntimeOptions.PROPERTY_NAME_PATH, ApiType.GraphQL);
         }
 
         /// <summary>
         /// Method to validate that the REST/GraphQL URI component is well formed and does not contain
         /// any forbidden characters.
         /// </summary>
-        /// <param name="uriComponent">path prefix for rest/graphql apis</param>
+        /// <param name="uriComponent">path prefix/base route for rest/graphql apis</param>
         /// <param name="apiType">Either REST or GraphQL</param>
         /// <exception cref="DataApiBuilderException"></exception>
-        private static void ValidateURIComponent(string? uriComponent, ApiType apiType, string apiProperty)
+        private static void ValidateURIComponent(string? uriComponent, string apiProperty, ApiType apiType)
         {
-            if (string.IsNullOrEmpty(uriComponent) && apiProperty.Equals(RestRuntimeOptions.PROPERTY_NAME_BASE_ROUTE))
+            if (string.IsNullOrEmpty(uriComponent) && apiProperty.Equals(RuntimeOptions.PROPERTY_NAME_BASE_ROUTE))
             {
                 return;
             }

@@ -218,7 +218,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
 
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
             // If the base route is not empty, we need to insert it into the URI before the rest path.
-            string? baseRoute = runtimeConfig.Runtime.Rest.BaseRoute;
+            string? baseRoute = runtimeConfig.Runtime.BaseRoute;
             if (!string.IsNullOrEmpty(baseRoute))
             {
                 _sqlMetadataProvider.TryGetEntityPathFromName(context.EntityName, out string? pathNameForEntity);

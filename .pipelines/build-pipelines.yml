@@ -46,10 +46,10 @@ steps:
     then
       if [ "$ISRELEASECANDIDATE" = "true" ]
       then
-        dabVersion=$(dabVersion)-rc
+        dabVersion=$dabVersion-rc
       fi
     else
-      dabVersion=$(dabVersion)-$(Build.BuildId)
+      dabVersion=$dabVersion-$(Build.BuildId)
     fi
     echo dabVersion = $dabVersion
     echo "##vso[task.setvariable variable=dabVersion]$dabVersion"

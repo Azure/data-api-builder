@@ -61,7 +61,7 @@ query ($id: ID, $partitionKeyValue: String) {
         private const int TOTAL_ITEM_COUNT = 10;
 
         [TestInitialize]
-        public async void TestFixtureSetup()
+        public async Task TestFixtureSetup()
         {
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
             await DeleteDatabase(cosmosClient);

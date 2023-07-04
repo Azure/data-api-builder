@@ -24,7 +24,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         private List<string> _idList;
 
         [TestInitialize]
-        public async void TestFixtureSetup()
+        public async Task TestFixtureSetup()
         {
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
             await DeleteDatabase(cosmosClient);

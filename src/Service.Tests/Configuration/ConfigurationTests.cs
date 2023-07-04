@@ -918,6 +918,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// by the upstream before the request lands at DAB.
         /// </summary>
         [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
         public async Task TestRuntimeBaseRouteInNextLinkForPaginatedRestResponse()
         {
             const string CUSTOM_CONFIG = "custom-config.json";
@@ -944,8 +945,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 string nextLink = responseElement.GetProperty("nextLink").ToString();
 
                 // Assert that we got an array response with length equal to the maximum allowed records in a paginated response.
-                Assert.IsTrue(responseValue.ValueKind is JsonValueKind.Array);
-                Assert.IsTrue(responseValue.GetArrayLength() == 100);
+                Assert.AreEqual(JsonValueKind.Array, responseValue.ValueKind);
+                Assert.AreEqual(100, responseValue.GetArrayLength());
 
                 // Assert that the nextLink contains the rest base-route just before the request path.
                 Assert.IsTrue(nextLink.Contains(runtimeBaseRoute + requestPath));

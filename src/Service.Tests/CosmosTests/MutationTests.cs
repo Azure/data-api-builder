@@ -35,9 +35,10 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// </summary>
         /// <param name="context"></param>
         [TestInitialize]
-        public void TestFixtureSetup()
+        public async void TestFixtureSetup()
         {
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
+            await DeleteDatabase(cosmosClient);
             cosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
             cosmosClient.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
             CreateItems(DATABASE_NAME, _containerName, 10);

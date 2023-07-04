@@ -200,4 +200,44 @@ type Sun @model(name:""Sun"") {
 
         return JsonDocument.Parse(jsonArray.ToString().Trim());
     }
+
+    /// <summary>
+    /// Returns if the cosmos database exists.
+    /// </summary>
+    /// <param name="databaseName">Name of the database to check.</param>
+    /// <returns>True, if the database exists, otherwise false.</returns>
+    public static async Task<bool> DatabaseExistsAsync(CosmosClient cosmosClient, string databaseName)
+    {
+        List<string> databaseNames = new();
+        using (FeedIterator<DatabaseProperties> iterator = cosmosClient.GetDatabaseQueryIterator<DatabaseProperties>())
+        {
+            while (iterator.HasMoreResults)
+            {
+                foreach (DatabaseProperties databaseProperties in await iterator.ReadNextAsync())
+                {
+                    databaseNames.Add(databaseProperties.Id);
+                }
+            }
+        }
+
+        return databaseNames.Contains(databaseName);
+    }
+
+    /// <summary>
+    /// Helper method to delete the cosmos database. This is run as part of integration
+    /// test setup.
+    /// </summary>
+    /// <param name="cosmosClient">Cosmos Client</param>
+    public static async Task DeleteDatabase(CosmosClient cosmosClient)
+    {
+        // Adding this method to delete existing database and all its collections
+        // to free up storage
+        bool databaseExists = await DatabaseExistsAsync(cosmosClient, DATABASE_NAME);
+        if (databaseExists)
+        {
+            Database database = await cosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME);
+            database.DeleteAsync().Wait();
+        }
+    }
+
 }

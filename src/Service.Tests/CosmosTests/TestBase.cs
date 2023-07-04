@@ -240,4 +240,21 @@ type Sun @model(name:""Sun"") {
         }
     }
 
+    /// <summary>
+    /// </summary>
+    public static async Task DeleteStaleContainers(CosmosClient cosmosClient)
+    {
+        using (FeedIterator<ContainerProperties> iterator = cosmosClient.GetDatabaseQueryIterator<ContainerProperties>())
+        {
+            while (iterator.HasMoreResults)
+            {
+                foreach (ContainerProperties containerProperty in await iterator.ReadNextAsync())
+                {
+                    string containerId = containerProperty.Id;
+                    cosmosClient.GetContainer(DATABASE_NAME, containerId).DeleteContainerAsync().Wait();
+                }
+            }
+        }
+    }
+
 }

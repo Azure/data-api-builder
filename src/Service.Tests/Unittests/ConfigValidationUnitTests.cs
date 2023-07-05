@@ -49,10 +49,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 excludedCols: new HashSet<string> { "id", "email" },
                 databasePolicy: dbPolicy
             );
-            MockFileSystem fileSystem = new();
-            RuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
 
             // Assert that expected exception is thrown.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig));

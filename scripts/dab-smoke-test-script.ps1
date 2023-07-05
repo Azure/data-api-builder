@@ -60,14 +60,11 @@ describe SmokeTest {
     }
 
     it 'Check Generated Config contains the correct path of dab schema' {
-        if ($dabVersion.Contains("-"))
-        {
-            $dabVersion = $dabVersion.Substring(0, $dabVersion.IndexOf("-"));
-        }
 
-        $expectedSchemaPath = "https://github.com/Azure/data-api-builder/releases/download/v$dabVersion/dab.draft.schema.json";
+        $expectedSchemaPath = "https://github.com/Azure/data-api-builder/releases/download/v$DabVersion/dab.draft.schema.json";
         $parsedSchema = Get-Content -Raw -Path $configFileName | ConvertFrom-Json
         $genratedSchemaPath = $parsedSchema.'$schema'
+        Write-Host("genrated-schema-path: {$genratedSchemaPath}")
         $genratedSchemaPath.Equals($expectedSchemaPath) | Should -Be True
     }
 }

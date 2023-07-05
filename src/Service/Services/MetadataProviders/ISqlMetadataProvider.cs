@@ -5,7 +5,8 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Resolvers;
@@ -37,6 +38,16 @@ namespace Azure.DataApiBuilder.Service.Services
         string GetDatabaseObjectName(string entityName);
 
         (string, string) ParseSchemaAndDbTableName(string source);
+
+        /// <summary>
+        /// Obtains all the underlying column names for each entity.
+        /// </summary>
+        List<string> GetSchemaGraphQLFieldNamesForEntityName(string entityName);
+
+        /// <summary>
+        /// Obtains the underlying GraphQL object type for an entity field.
+        /// </summary>
+        string? GetSchemaGraphQLFieldTypeFromFieldName(string entityName, string fieldName);
 
         /// <summary>
         /// Obtains the underlying SourceDefinition for the given entity name.

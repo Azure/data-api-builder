@@ -5,7 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
@@ -141,18 +142,17 @@ namespace Azure.DataApiBuilder.Service.Models
                         relationshipField = false;
                     }
 
-                    // Only perform field (column) authorization when the field is not a relationship field and when the database type is not Cosmos DB.
-                    // Currently Cosmos DB doesn't support field level authorization.
+                    // Only perform field (column) authorization when the field is not a relationship field.
                     // Due to the recursive behavior of SqlExistsQueryStructure compilation, the column authorization
                     // check only occurs when access to the column's owner entity is confirmed.
-                    if (!relationshipField && _metadataProvider.GetDatabaseType() is not DatabaseType.cosmosdb_nosql)
+                    if (!relationshipField)
                     {
-                        string targetEntity = queryStructure.EntityName;
+                        string graphQLTypeName = queryStructure.EntityName;
 
                         bool columnAccessPermitted = queryStructure.AuthorizationResolver.AreColumnsAllowedForOperation(
-                            entityName: targetEntity,
+                            entityIdentifier: graphQLTypeName,
                             roleName: GetHttpContextFromMiddlewareContext(ctx).Request.Headers[CLIENT_ROLE_HEADER],
-                            operation: Config.Operation.Read,
+                            operation: EntityActionOperation.Read,
                             columns: new[] { name });
 
                         if (!columnAccessPermitted)
@@ -182,8 +182,21 @@ namespace Azure.DataApiBuilder.Service.Models
                         }
                         else
                         {
+                            // This path will never get called for sql since the primary key will always required
+                            // This path will only be exercised for CosmosDb_NoSql
                             queryStructure.DatabaseObject.Name = sourceName + "." + backingColumnName;
                             queryStructure.SourceAlias = sourceName + "." + backingColumnName;
+                            string? nestedFieldType = _metadataProvider.GetSchemaGraphQLFieldTypeFromFieldName(queryStructure.EntityName, name);
+
+                            if (nestedFieldType is null)
+                            {
+                                throw new DataApiBuilderException(
+                                    message: "Invalid filter object used as a nested field input value type.",
+                                    statusCode: HttpStatusCode.BadRequest,
+                                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                            }
+
+                            queryStructure.EntityName = _metadataProvider.GetEntityName(nestedFieldType);
                             predicates.Push(new PredicateOperand(Parse(ctx,
                                 filterArgumentObject.Fields[name],
                                 subfields,
@@ -249,9 +262,9 @@ namespace Azure.DataApiBuilder.Service.Models
 
             // Validate that the field referenced in the nested input filter can be accessed.
             bool entityAccessPermitted = queryStructure.AuthorizationResolver.AreRoleAndOperationDefinedForEntity(
-                entityName: nestedFilterEntityName,
+                entityIdentifier: nestedFilterEntityName,
                 roleName: GetHttpContextFromMiddlewareContext(ctx).Request.Headers[CLIENT_ROLE_HEADER],
-                operation: Config.Operation.Read);
+                operation: EntityActionOperation.Read);
 
             if (!entityAccessPermitted)
             {

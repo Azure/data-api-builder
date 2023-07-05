@@ -3,7 +3,7 @@
 
 using System.Collections.Generic;
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.Models;
@@ -18,7 +18,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <summary>
         /// The Entity name associated with this query as appears in the config file.
         /// </summary>
-        public string EntityName { get; protected set; }
+        public string EntityName { get; set; }
 
         /// <summary>
         /// The alias of the entity as used in the generated query.
@@ -87,10 +87,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             GraphQLFilterParser = gQLFilterParser;
             AuthorizationResolver = authorizationResolver;
 
-            // Default the alias to the empty string since this base construtor
+            // Default the alias to the empty string since this base constructor
             // is called for requests other than Find operations. We only use
             // SourceAlias for Find, so we leave empty here and then populate
-            // in the Find specific contructor.
+            // in the Find specific contractor.
             SourceAlias = string.Empty;
 
             if (!string.IsNullOrEmpty(entityName))

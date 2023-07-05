@@ -4,9 +4,13 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Service.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
@@ -17,6 +21,7 @@ using HotChocolate.Resolvers;
 using HotChocolate.Types;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Service.Resolvers
@@ -25,16 +30,19 @@ namespace Azure.DataApiBuilder.Service.Resolvers
     {
         private readonly CosmosClientProvider _clientProvider;
         private readonly ISqlMetadataProvider _metadataProvider;
+        private readonly IAuthorizationResolver _authorizationResolver;
 
         public CosmosMutationEngine(
             CosmosClientProvider clientProvider,
-            ISqlMetadataProvider metadataProvider)
+            ISqlMetadataProvider metadataProvider,
+            IAuthorizationResolver authorizationResolver)
         {
             _clientProvider = clientProvider;
             _metadataProvider = metadataProvider;
+            _authorizationResolver = authorizationResolver;
         }
 
-        private async Task<JObject> ExecuteAsync(IDictionary<string, object?> queryArgs, CosmosOperationMetadata resolver)
+        private async Task<JObject> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> queryArgs, CosmosOperationMetadata resolver)
         {
             // TODO: add support for all mutation types
             // we only support CreateOrUpdate (Upsert) for now
@@ -57,15 +65,75 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             Container container = client.GetDatabase(resolver.DatabaseName)
                                         .GetContainer(resolver.ContainerName);
 
+            // If authorization fails, an exception will be thrown and request execution halts.
+            string graphQLType = context.Selection.Field.Type.NamedType().Name.Value;
+            string entityName = _metadataProvider.GetEntityName(graphQLType);
+            AuthorizeMutationFields(context, queryArgs, entityName, resolver.OperationType);
+
             ItemResponse<JObject>? response = resolver.OperationType switch
             {
-                Config.Operation.UpdateGraphQL => await HandleUpdateAsync(queryArgs, container),
-                Config.Operation.Create => await HandleCreateAsync(queryArgs, container),
-                Config.Operation.Delete => await HandleDeleteAsync(queryArgs, container),
+                EntityActionOperation.UpdateGraphQL => await HandleUpdateAsync(queryArgs, container),
+                EntityActionOperation.Create => await HandleCreateAsync(queryArgs, container),
+                EntityActionOperation.Delete => await HandleDeleteAsync(queryArgs, container),
                 _ => throw new NotSupportedException($"unsupported operation type: {resolver.OperationType}")
             };
 
             return response.Resource;
+        }
+
+        /// <inheritdoc/>
+        public void AuthorizeMutationFields(
+            IMiddlewareContext context,
+            IDictionary<string, object?> parameters,
+            string entityName,
+            EntityActionOperation mutationOperation)
+        {
+            string role = string.Empty;
+            if (context.ContextData.TryGetValue(key: AuthorizationResolver.CLIENT_ROLE_HEADER, out object? value) && value is StringValues stringVals)
+            {
+                role = stringVals.ToString();
+            }
+
+            if (string.IsNullOrEmpty(role))
+            {
+                throw new DataApiBuilderException(
+                    message: "No ClientRoleHeader available to perform authorization.",
+                    statusCode: HttpStatusCode.Unauthorized,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
+            }
+
+            List<string> inputArgumentKeys;
+            if (mutationOperation != EntityActionOperation.Delete)
+            {
+                inputArgumentKeys = BaseSqlQueryStructure.GetSubArgumentNamesFromGQLMutArguments(MutationBuilder.INPUT_ARGUMENT_NAME, parameters);
+            }
+            else
+            {
+                inputArgumentKeys = parameters.Keys.ToList();
+            }
+
+            bool isAuthorized = mutationOperation switch
+            {
+                EntityActionOperation.UpdateGraphQL =>
+                    _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: role, operation: EntityActionOperation.Update, inputArgumentKeys),
+                EntityActionOperation.Create =>
+                    _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: role, operation: mutationOperation, inputArgumentKeys),
+                EntityActionOperation.Delete => true,// Field level authorization is not supported for delete mutations. A requestor must be authorized
+                                                     // to perform the delete operation on the entity to reach this point.
+                _ => throw new DataApiBuilderException(
+                                        message: "Invalid operation for GraphQL Mutation, must be Create, UpdateGraphQL, or Delete",
+                                        statusCode: HttpStatusCode.BadRequest,
+                                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
+                                        ),
+            };
+            if (!isAuthorized)
+            {
+                throw new DataApiBuilderException(
+                    message: DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE,
+                    statusCode: HttpStatusCode.Forbidden,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
+                );
+            }
         }
 
         private static async Task<ItemResponse<JObject>> HandleDeleteAsync(IDictionary<string, object?> queryArgs, Container container)
@@ -250,13 +318,13 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string containerName = _metadataProvider.GetDatabaseObjectName(entityName);
 
             string graphqlMutationName = context.Selection.Field.Name.Value;
-            Config.Operation mutationOperation =
+            EntityActionOperation mutationOperation =
                 MutationBuilder.DetermineMutationOperationTypeBasedOnInputType(graphqlMutationName);
 
             CosmosOperationMetadata mutation = new(databaseName, containerName, mutationOperation);
             // TODO: we are doing multiple round of serialization/deserialization
             // fixme
-            JObject jObject = await ExecuteAsync(parameters, mutation);
+            JObject jObject = await ExecuteAsync(context, parameters, mutation);
 #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
             return new Tuple<JsonDocument?, IMetadata?>((jObject is null) ? null! : JsonDocument.Parse(jObject.ToString()), null);
 #pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.

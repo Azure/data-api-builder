@@ -4,6 +4,7 @@
 using System;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,7 +15,6 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
     [TestClass, TestCategory(TestCategory.COSMOSDBNOSQL)]
     public class MutationTests : TestBase
     {
-        private static readonly string _containerName = Guid.NewGuid().ToString();
         private static readonly string _createPlanetMutation = @"
                                                 mutation ($item: CreatePlanetInput!) {
                                                     createPlanet (item: $item) {
@@ -31,17 +31,16 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                                                 }";
 
         /// <summary>
-        /// Executes once for the test class.
+        /// Executes once for the test.
         /// </summary>
         /// <param name="context"></param>
-        [ClassInitialize]
-        public static void TestFixtureSetup(TestContext context)
+        [TestInitialize]
+        public void TestFixtureSetup()
         {
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
             cosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
             cosmosClient.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
             CreateItems(DATABASE_NAME, _containerName, 10);
-            OverrideEntityContainer("Planet", _containerName);
         }
 
         [TestMethod]
@@ -243,10 +242,87 @@ mutation {{
         }
 
         /// <summary>
+        /// Mutation can be performed on the authorized fields because the
+        /// field `id` is an included field for the create operation on the anonymous role defined
+        /// for entity 'earth'
+        /// </summary>
+        [TestMethod]
+        public async Task CanCreateItemWithAuthorizedFields()
+        {
+            // Run mutation Add Earth;
+            string id = Guid.NewGuid().ToString();
+            string mutation = $@"
+mutation {{
+    createEarth (item: {{ id: ""{id}"" }}) {{
+        id
+    }}
+}}";
+            JsonElement response = await ExecuteGraphQLRequestAsync("createEarth", mutation, variables: new());
+
+            // Validate results
+            Assert.AreEqual(id, response.GetProperty("id").GetString());
+        }
+
+        /// <summary>
+        /// Mutation performed on the unauthorized fields throws permission denied error because the
+        /// field `name` is an excluded field for the create operation on the anonymous role defined
+        /// for entity 'earth'
+        /// </summary>
+        [TestMethod]
+        public async Task CreateItemWithUnauthorizedFieldsReturnsError()
+        {
+            // Run mutation Add Earth;
+            string id = Guid.NewGuid().ToString();
+            const string name = "test_name";
+            string mutation = $@"
+mutation {{
+    createEarth (item: {{ id: ""{id}"", name: ""{name}"" }}) {{
+        id
+        name
+    }}
+}}";
+            JsonElement response = await ExecuteGraphQLRequestAsync("createEarth", mutation, variables: new());
+
+            // Validate the result contains the GraphQL authorization error code.
+            string errorMessage = response.ToString();
+            Assert.IsTrue(errorMessage.Contains(DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE));
+        }
+
+        /// <summary>
+        /// Mutation performed on the unauthorized fields throws permission denied error because the
+        /// wildcard is used in the excluded field for the update operation on the anonymous role defined
+        /// for entity 'earth'
+        /// </summary>
+        [TestMethod]
+        public async Task UpdateItemWithUnauthorizedWildCardReturnsError()
+        {
+            // Run mutation Update Earth;
+            string id = Guid.NewGuid().ToString();
+            string mutation = @"
+mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdateEarthInput!) {
+    updateEarth (id: $id, _partitionKeyValue: $partitionKeyValue, item: $item) {
+        id
+        name
+     }
+}";
+            var update = new
+            {
+                id = id,
+                name = "new_name"
+            };
+
+            JsonElement response = await ExecuteGraphQLRequestAsync("updateEarth", mutation, variables: new() { { "id", id }, { "partitionKeyValue", id }, { "item", update } });
+
+            // Validate the result contains the GraphQL authorization error code.
+            string errorMessage = response.ToString();
+            Assert.IsTrue(errorMessage.Contains(DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE));
+        }
+
+        /// <summary>
         /// Runs once after all tests in this class are executed
         /// </summary>
-        [ClassCleanup]
-        public static void TestFixtureTearDown()
+        [TestCleanup]
+        public void TestFixtureTearDown()
         {
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
             cosmosClient.GetDatabase(DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();

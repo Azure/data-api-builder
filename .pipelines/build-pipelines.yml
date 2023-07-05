@@ -22,12 +22,13 @@ variables:
   buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
   major: 0
-  minor: 7
+  minor: 8
   # Maintain a separate patch value between CI and PR runs.
   # The counter is reset when the minor version is updated.
   patch: $[counter(format('{0}_{1}', variables['build.reason'], variables['minor']), 0)]
   isReleaseBuild: $(isNugetRelease)
   additionalProperties.version: 'https://github.com/Azure/data-api-builder/releases/download/v$(major).$(minor).$(patch)/dab.draft.schema.json'
+  SNAPSHOOTER_STRICT_MODE: true
 
 steps:
 - task: NuGetAuthenticate@1
@@ -38,15 +39,23 @@ steps:
 # We cannot set this in variables section above because $(isNugetRelease) 
 # is not available at pipeline compilation time.
 - bash: |
-    echo ISNUGETRELEASE = $ISNUGETRELEASE
+    echo IsNugetRelease = $ISNUGETRELEASE
+    echo IsReleaseCandidate = $ISRELEASECANDIDATE
+    dabVersion=$(major).$(minor).$(patch)
     if [ "$ISNUGETRELEASE" = "true" ]
     then
-      dabVersion=$(major).$(minor).$(patch)
+      if [ "$ISRELEASECANDIDATE" = "true" ]
+      then
+        dabVersion=$dabVersion-rc
+      fi
     else
-      dabVersion=$(major).$(minor).$(patch)-$(Build.BuildId)
+      dabVersion=$dabVersion-$(Build.BuildId)
     fi
     echo dabVersion = $dabVersion
     echo "##vso[task.setvariable variable=dabVersion]$dabVersion"
+    addPropVersion="https://github.com/Azure/data-api-builder/releases/download/v$dabVersion/dab.draft.schema.json"
+    echo addPropVersion = $addPropVersion
+    echo "##vso[task.setvariable variable=additionalProperties.version]$addPropVersion"
   displayName: Set dab version
 
 - task: UseDotNet@2
@@ -89,6 +98,30 @@ steps:
     command: test
     projects: '**/*Tests*.csproj'
     arguments: '--filter "TestCategory!=CosmosDb_NoSql&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
+
+- task: CmdLine@2
+  displayName: 'Set flag to publish Verify *.received files when tests fail'
+  condition: failed()
+  inputs:
+    script: 'echo ##vso[task.setvariable variable=publishverify]Yes'
+
+- task: CopyFiles@2
+  condition: eq(variables['publishverify'], 'Yes')
+  displayName: 'Copy received files to Artifact Staging'
+  inputs:
+    contents: '**\*.received.*' 
+    targetFolder: '$(Build.ArtifactStagingDirectory)\Verify'
+    cleanTargetFolder: true
+    overWrite: true
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish received files as Artifacts'
+  name: 'verifypublish'
+  condition: eq(variables['publishverify'], 'Yes')
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)\Verify'
+    ArtifactName: 'Verify'
+    publishLocation: 'Container'
 
 - task: FileTransform@1.206.0
   displayName: 'Version stamp dab.draft.schema.json'
@@ -250,8 +283,8 @@ steps:
       $(Build.ArtifactStagingDirectory)/**/dab-manifest.json
       $(Build.ArtifactStagingDirectory)/**/dab.draft.schema.json
     isDraft: true
-    isPreRelease: true
-    addChangeLog: false
+    isPreRelease: $(isReleaseCandidate)
+    addChangeLog: true
 
 # This task gets the current date and saves it to a variable so the docker task can use the build's
 # date and time as a tag.

@@ -4,7 +4,8 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Net;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
@@ -69,7 +70,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         {
             List<FieldDefinitionNode> fieldDefinitionNodes = new();
 
-            if (databaseType is DatabaseType.cosmosdb_nosql)
+            if (databaseType is DatabaseType.CosmosDB_NoSQL)
             {
                 fieldDefinitionNodes.Add(
                     new FieldDefinitionNode(

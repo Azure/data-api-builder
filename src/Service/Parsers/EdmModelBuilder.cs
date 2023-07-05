@@ -3,7 +3,8 @@
 
 using System;
 using System.Collections.Generic;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Services;
 using Microsoft.OData.Edm;
 
@@ -39,11 +40,10 @@ namespace Azure.DataApiBuilder.Service.Parsers
         }
 
         /// <summary>
-        /// Add the entity types found in the schema to the model
+        /// Build EdmEntityType objects for runtime config defined entities and add the created objects to the EdmModel.
         /// </summary>
-        /// <param name="sqlMetadataProvider">The MetadataProvider holds the objects needed
-        /// to build the correct model.</param>
-        /// <returns>this model builder</returns>
+        /// <param name="sqlMetadataProvider">Reference to entity names and associated database object metadata.</param>
+        /// <returns>A reference to EdmModelBuilder after the operation has completed.</returns>
         private EdmModelBuilder BuildEntityTypes(ISqlMetadataProvider sqlMetadataProvider)
         {
             // since we allow for aliases to be used in place of the names of the actual
@@ -53,7 +53,7 @@ namespace Azure.DataApiBuilder.Service.Parsers
             {
                 // Do not add stored procedures, which do not have table definitions or conventional columns, to edm model
                 // As of now, no ODataFilterParsing will be supported for stored procedure result sets
-                if (entityAndDbObject.Value.SourceType is not SourceType.StoredProcedure)
+                if (entityAndDbObject.Value.SourceType is not EntitySourceType.StoredProcedure)
                 {
                     // given an entity Publisher with schema.table of dbo.publishers
                     // entitySourceName = dbo.publishers
@@ -73,28 +73,24 @@ namespace Azure.DataApiBuilder.Service.Parsers
                         // need to convert our column system type to an Edm type
                         EdmPrimitiveTypeKind type = GetEdmPrimitiveTypeFromSystemType(columnSystemType);
 
-                        // here we must use the correct aliasing for the column name
-                        // which is on a per entity basis.
-                        // if column is in our list of keys we add as a key to entity
+                        // The mapped (aliased) field name defined in the runtime config is used to create a representative
+                        // OData StructuralProperty. The created property is then added to the EdmEntityType.
+                        // StructuralProperty objects representing database primary keys are added as a 'keyProperties' to the EdmEntityType.
+                        // Otherwise, the StructuralProperty object is added as a generic StructuralProperty of the EdmEntityType.
                         string exposedColumnName;
                         if (sourceDefinition.PrimaryKey.Contains(column))
                         {
                             sqlMetadataProvider.TryGetExposedColumnName(entityAndDbObject.Key, column, out exposedColumnName!);
-                            newEntity.AddKeys(newEntity.AddStructuralProperty(name: exposedColumnName,
-                                                                                type,
-                                                                                isNullable: false));
+                            newEntity.AddKeys(newEntity.AddStructuralProperty(name: exposedColumnName, type, isNullable: false));
                         }
                         else
                         {
-                            // not a key just add the property
                             sqlMetadataProvider.TryGetExposedColumnName(entityAndDbObject.Key, column, out exposedColumnName!);
-                            newEntity.AddStructuralProperty(name: exposedColumnName,
-                                                            type,
-                                                            isNullable: true);
+                            newEntity.AddStructuralProperty(name: exposedColumnName, type, isNullable: true);
                         }
                     }
 
-                    // add this entity to our model
+                    // Add the created EdmEntityType to the EdmModel
                     _model.AddElement(newEntity);
                 }
             }
@@ -153,12 +149,11 @@ namespace Azure.DataApiBuilder.Service.Parsers
             // that has a key, then an entity set can be thought of as a table made up of those rows.
             foreach (KeyValuePair<string, DatabaseObject> entityAndDbObject in sqlMetadataProvider.GetEntityNamesAndDbObjects())
             {
-                if (entityAndDbObject.Value.SourceType != SourceType.StoredProcedure)
+                if (entityAndDbObject.Value.SourceType != EntitySourceType.StoredProcedure)
                 {
                     string entityName = $"{entityAndDbObject.Value.FullName}";
                     container.AddEntitySet(name: $"{entityAndDbObject.Key}.{entityName}", _entities[$"{entityAndDbObject.Key}.{entityName}"]);
                 }
-
             }
 
             return this;

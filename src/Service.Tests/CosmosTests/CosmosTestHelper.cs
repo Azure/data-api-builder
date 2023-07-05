@@ -1,24 +1,11 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
-using Azure.DataApiBuilder.Config;
-
 namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 {
     public static class CosmosTestHelper
     {
         public static readonly string DB_NAME = "graphqlTestDb";
-        private static Lazy<RuntimeConfigPath>
-            _runtimeConfigPath = new(() => TestHelper.GetRuntimeConfigPath(TestCategory.COSMOSDBNOSQL));
-
-        public static RuntimeConfigPath ConfigPath
-        {
-            get
-            {
-                return _runtimeConfigPath.Value;
-            }
-        }
 
         public static object GetItem(string id, string name = null, int numericVal = 4)
         {
@@ -57,6 +44,11 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                     id = id,
                     name = "first moon",
                     details = "12 Craters"
+                },
+                earth = new
+                {
+                    id = id,
+                    name = "blue earth"
                 },
                 tags = new[] { "tag1", "tag2" }
             };

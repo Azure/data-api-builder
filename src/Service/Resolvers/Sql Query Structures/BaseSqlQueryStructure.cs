@@ -9,7 +9,8 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Parsers;
@@ -49,7 +50,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// DbPolicyPredicates is a string that represents the filter portion of our query
         /// in the WHERE Clause added by virtue of the database policy.
         /// </summary>
-        public Dictionary<Config.Operation, string?> DbPolicyPredicatesForOperations { get; set; } = new();
+        public Dictionary<EntityActionOperation, string?> DbPolicyPredicatesForOperations { get; set; } = new();
 
         /// <summary>
         /// Collection of all the fields referenced in the database policy for create action.
@@ -67,7 +68,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             string entityName = "",
             IncrementingInteger? counter = null,
             HttpContext? httpContext = null,
-            Config.Operation operationType = Config.Operation.None
+            EntityActionOperation operationType = EntityActionOperation.None
             )
             : base(metadataProvider, authorizationResolver, gQLFilterParser, predicates, entityName, counter)
         {
@@ -125,7 +126,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         }
 
         /// <summary>
-        /// Get column type from table underlying the query strucutre
+        /// Get column type from table underlying the query structure
         /// </summary>
         public Type GetColumnSystemType(string columnName)
         {
@@ -478,7 +479,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// <param name="dbPolicyClause">FilterClause from processed runtime configuration permissions Policy:Database</param>
         /// <param name="operation">CRUD operation for which the database policy predicates are to be evaluated.</param>
         /// <exception cref="DataApiBuilderException">Thrown when the OData visitor traversal fails. Possibly due to malformed clause.</exception>
-        public void ProcessOdataClause(FilterClause? dbPolicyClause, Config.Operation operation)
+        public void ProcessOdataClause(FilterClause? dbPolicyClause, EntityActionOperation operation)
         {
             if (dbPolicyClause is null)
             {
@@ -511,7 +512,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
         /// </summary>
         /// <param name="operation">Operation for which the database policy is to be determined.</param>
         /// <returns>Database policy for the operation.</returns>
-        public string? GetDbPolicyForOperation(Config.Operation operation)
+        public string? GetDbPolicyForOperation(EntityActionOperation operation)
         {
             if (!DbPolicyPredicatesForOperations.TryGetValue(operation, out string? policy))
             {
@@ -540,10 +541,10 @@ namespace Azure.DataApiBuilder.Service.Resolvers
             {
 
                 string errorMessage;
-                SourceType sourceTypeOfDbObject = MetadataProvider.EntityToDatabaseObject[EntityName].SourceType;
+                EntitySourceType sourceTypeOfDbObject = MetadataProvider.EntityToDatabaseObject[EntityName].SourceType;
                 if (MetadataProvider.IsDevelopmentMode())
                 {
-                    if (sourceTypeOfDbObject is SourceType.StoredProcedure)
+                    if (sourceTypeOfDbObject is EntitySourceType.StoredProcedure)
                     {
                         errorMessage = $@"Parameter ""{fieldValue}"" cannot be resolved as stored procedure parameter ""{fieldName}"" " +
                                 $@"with type ""{systemType.Name}"".";
@@ -557,7 +558,7 @@ namespace Azure.DataApiBuilder.Service.Resolvers
                 else
                 {
                     string fieldNameToBeDisplayedInErrorMessage = fieldName;
-                    if (sourceTypeOfDbObject is SourceType.Table || sourceTypeOfDbObject is SourceType.View)
+                    if (sourceTypeOfDbObject is EntitySourceType.Table || sourceTypeOfDbObject is EntitySourceType.View)
                     {
                         if (MetadataProvider.TryGetExposedColumnName(EntityName, fieldName, out string? exposedName))
                         {

@@ -3,10 +3,13 @@
 
 using System;
 using System.Net;
+using System.Net.Mime;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
+using Azure.DataApiBuilder.Service.Services.OpenAPI;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
@@ -27,6 +30,11 @@ namespace Azure.DataApiBuilder.Service.Controllers
         /// Service providing REST Api executions.
         /// </summary>
         private readonly RestService _restService;
+
+        /// <summary>
+        /// OpenAPI description document creation service.
+        /// </summary>
+        private readonly IOpenApiDocumentor _openApiDocumentor;
         /// <summary>
         /// String representing the value associated with "code" for a server error
         /// </summary>
@@ -44,9 +52,10 @@ namespace Azure.DataApiBuilder.Service.Controllers
         /// <summary>
         /// Constructor.
         /// </summary>
-        public RestController(RestService restService, ILogger<RestController> logger)
+        public RestController(RestService restService, IOpenApiDocumentor openApiDocumentor, ILogger<RestController> logger)
         {
             _restService = restService;
+            _openApiDocumentor = openApiDocumentor;
             _logger = logger;
         }
 
@@ -88,7 +97,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
         {
             return await HandleOperation(
                 route,
-                Config.Operation.Read);
+                EntityActionOperation.Read);
         }
 
         /// <summary>
@@ -106,7 +115,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
         {
             return await HandleOperation(
                 route,
-                Config.Operation.Insert);
+                EntityActionOperation.Insert);
         }
 
         /// <summary>
@@ -126,7 +135,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
         {
             return await HandleOperation(
                 route,
-                Config.Operation.Delete);
+                EntityActionOperation.Delete);
         }
 
         /// <summary>
@@ -146,7 +155,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
         {
             return await HandleOperation(
                 route,
-                DeterminePatchPutSemantics(Config.Operation.Upsert));
+                DeterminePatchPutSemantics(EntityActionOperation.Upsert));
         }
 
         /// <summary>
@@ -166,7 +175,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
         {
             return await HandleOperation(
                 route,
-                DeterminePatchPutSemantics(Config.Operation.UpsertIncremental));
+                DeterminePatchPutSemantics(EntityActionOperation.UpsertIncremental));
         }
 
         /// <summary>
@@ -176,7 +185,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
         /// <param name="operationType">The kind of operation to handle.</param>
         private async Task<IActionResult> HandleOperation(
             string route,
-            Config.Operation operationType)
+            EntityActionOperation operationType)
         {
             try
             {
@@ -188,7 +197,21 @@ namespace Azure.DataApiBuilder.Service.Controllers
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
 
-                (string entityName, string primaryKeyRoute) = _restService.GetEntityNameAndPrimaryKeyRouteFromRoute(route);
+                // Validate the PathBase matches the configured REST path.
+                string routeAfterPathBase = _restService.GetRouteAfterPathBase(route);
+
+                // Explicitly handle OpenAPI description document retrieval requests.
+                if (string.Equals(routeAfterPathBase, OpenApiDocumentor.OPENAPI_ROUTE, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (_openApiDocumentor.TryGetDocument(out string? document))
+                    {
+                        return Content(document, MediaTypeNames.Application.Json);
+                    }
+
+                    return NotFound();
+                }
+
+                (string entityName, string primaryKeyRoute) = _restService.GetEntityNameAndPrimaryKeyRouteFromRoute(routeAfterPathBase);
 
                 IActionResult? result = await _restService.ExecuteAsync(entityName, operationType, primaryKeyRoute);
 
@@ -243,7 +266,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
         /// </summary>
         /// <param name="operation">opertion to be used.</param>
         /// <returns>correct opertion based on headers.</returns>
-        private Config.Operation DeterminePatchPutSemantics(Config.Operation operation)
+        private EntityActionOperation DeterminePatchPutSemantics(EntityActionOperation operation)
         {
 
             if (HttpContext.Request.Headers.ContainsKey("If-Match"))
@@ -257,11 +280,11 @@ namespace Azure.DataApiBuilder.Service.Controllers
 
                 switch (operation)
                 {
-                    case Config.Operation.Upsert:
-                        operation = Config.Operation.Update;
+                    case EntityActionOperation.Upsert:
+                        operation = EntityActionOperation.Update;
                         break;
-                    case Config.Operation.UpsertIncremental:
-                        operation = Config.Operation.UpdateIncremental;
+                    case EntityActionOperation.UpsertIncremental:
+                        operation = EntityActionOperation.UpdateIncremental;
                         break;
                 }
             }

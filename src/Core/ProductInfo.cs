@@ -6,7 +6,7 @@ using System.Reflection;
 
 namespace Azure.DataApiBuilder.Core;
 
-public class ProductInfo
+public static class ProductInfo
 {
     public const string DEFAULT_VERSION = "1.0.0";
 

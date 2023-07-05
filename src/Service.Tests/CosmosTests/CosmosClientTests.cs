@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
-using Azure.DataApiBuilder.Service.Resolvers;
+using Azure.DataApiBuilder.Core.Resolvers;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;

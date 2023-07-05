@@ -5,8 +5,8 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimulator;
-using Azure.DataApiBuilder.Service.Authorization;
+using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
+using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Service.Tests.Authentication.Helpers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;

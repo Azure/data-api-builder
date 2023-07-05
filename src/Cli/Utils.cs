@@ -12,7 +12,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Cli.Commands;
 using Microsoft.Extensions.Logging;
-using static Azure.DataApiBuilder.Service.Configurations.RuntimeConfigValidator;
+using static Azure.DataApiBuilder.Core.Configurations.RuntimeConfigValidator;
 
 /// <summary>
 /// Contains the methods for transforming objects, serialization options.

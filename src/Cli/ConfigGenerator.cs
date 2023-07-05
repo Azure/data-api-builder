@@ -1096,7 +1096,7 @@ namespace Cli
         {
             //Updated GraphQL Type
             EntityGraphQLOptions graphQLType = (options.GraphQLType is not null) ? ConstructGraphQLTypeDetails(options.GraphQLType, null) : entity.GraphQL;
-            GraphQLOperation? graphQLOperation = null;
+            GraphQLOperation? graphQLOperation;
 
             if (!IsStoredProcedureConvertedToOtherTypes(entity, options)
                 && (IsStoredProcedure(entity) || IsStoredProcedure(options)))
@@ -1112,6 +1112,12 @@ namespace Cli
                     {
                         graphQLOperation = null;
                     }
+                }
+                else
+                {
+                    // When the GraphQL operation for a SP entity has not been specified in the update command,
+                    // assign the existing GraphQL operation.
+                    graphQLOperation = entity.GraphQL.Operation;
                 }
             }
             else

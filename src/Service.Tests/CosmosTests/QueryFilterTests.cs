@@ -27,8 +27,8 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestFixtureSetup()
         {
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
+            await DeleteDatabase(cosmosClient);
             cosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
-            await DeleteStaleContainers(cosmosClient);
             cosmosClient.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
             _idList = CreateItems(DATABASE_NAME, _containerName, 10);
         }

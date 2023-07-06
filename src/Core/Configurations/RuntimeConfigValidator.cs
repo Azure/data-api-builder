@@ -272,7 +272,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
             }
 
             string? runtimeBaseRoute = runtimeConfig.Runtime.BaseRoute;
-            ValidateURIComponent(runtimeBaseRoute, RuntimeOptions.PROPERTY_NAME_BASE_ROUTE, ApiType.Both);
+            ValidateURIComponent(runtimeBaseRoute, RuntimeOptions.PROPERTY_NAME_BASE_ROUTE, ApiType.All);
 
             ValidateRestURI(runtimeConfig);
             ValidateGraphQLURI(runtimeConfig);

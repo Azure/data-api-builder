@@ -10,6 +10,6 @@ public enum ApiType
 {
     REST,
     GraphQL,
-    // This is required to indicate features common between REST/GraphQL APIs.
-    Both
+    // This is required to indicate features common between all APIs.
+    All
 }

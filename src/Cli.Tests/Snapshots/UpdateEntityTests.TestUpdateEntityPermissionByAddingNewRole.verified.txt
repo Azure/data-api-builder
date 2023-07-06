@@ -45,12 +45,10 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               }
             ]
           },
@@ -67,8 +65,7 @@
                     id,
                     rating
                   ]
-                },
-                Policy: {}
+                }
               }
             ]
           }

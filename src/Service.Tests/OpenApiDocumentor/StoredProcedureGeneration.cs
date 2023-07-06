@@ -22,6 +22,7 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiDocumentorTests
     /// Integration tests validating correct OpenAPI schema metadata
     /// for stored procedures is generated.
     /// </summary>
+    [TestCategory(TestCategory.MSSQL)]
     [TestClass]
     public class StoredProcedureGeneration
     {

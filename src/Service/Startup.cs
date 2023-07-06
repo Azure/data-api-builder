@@ -10,18 +10,18 @@ using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Service.AuthenticationHelpers;
-using Azure.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimulator;
-using Azure.DataApiBuilder.Service.Authorization;
-using Azure.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Core.AuthenticationHelpers;
+using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
+using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Parsers;
+using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.Models;
-using Azure.DataApiBuilder.Service.Parsers;
-using Azure.DataApiBuilder.Service.Resolvers;
-using Azure.DataApiBuilder.Service.Services;
-using Azure.DataApiBuilder.Service.Services.MetadataProviders;
-using Azure.DataApiBuilder.Service.Services.OpenAPI;
 using HotChocolate.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -568,7 +568,7 @@ namespace Azure.DataApiBuilder.Service
                 if (runtimeConfig.Runtime.Host.Mode == HostMode.Development)
                 {
                     // Running only in developer mode to ensure fast and smooth startup in production.
-                    runtimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
+                    RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
                 }
 
                 ISqlMetadataProvider sqlMetadataProvider =

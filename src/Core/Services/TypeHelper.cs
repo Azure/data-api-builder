@@ -2,7 +2,9 @@
 // Licensed under the MIT License.
 
 using System.Data;
+using System.Net;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
+using Azure.DataApiBuilder.Service.Exceptions;
 
 namespace Azure.DataApiBuilder.Core.Services
 {

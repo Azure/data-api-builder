@@ -4,10 +4,10 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Models;
-using Azure.DataApiBuilder.Service.Services;
-using Azure.DataApiBuilder.Service.Services.OpenAPI;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.OpenApiDocumentor

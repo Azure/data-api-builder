@@ -1,10 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Net;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers;
-using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 

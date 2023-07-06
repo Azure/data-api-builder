@@ -1951,6 +1951,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataTestMethod]
         [DataRow(true, "", "The rest path for entity: EntityA cannot be empty.",
             DisplayName = "Empty rest path configured for an entity fails config validation.")]
+        [DataRow(true, "entity?RestPath", "The rest path: entity?RestPath for entity: EntityA contains one or more reserved characters.",
+            DisplayName = "Rest path for an entity containing reserved character ? fails config validation.")]
+        [DataRow(true, "entity#RestPath", "The rest path: entity#RestPath for entity: EntityA contains one or more reserved characters.",
+            DisplayName = "Rest path for an entity containing reserved character ? fails config validation.")]
+        [DataRow(true, "entity[]RestPath", "The rest path: entity[]RestPath for entity: EntityA contains one or more reserved characters.",
+            DisplayName = "Rest path for an entity containing reserved character ? fails config validation.")]
+        [DataRow(true, "entity+Rest*Path", "The rest path: entity+Rest*Path for entity: EntityA contains one or more reserved characters.",
+            DisplayName = "Rest path for an entity containing reserved character ? fails config validation.")]
         [DataRow(false, "entityRestPath", DisplayName = "Rest path correctly configured as a non-empty string without any reserved characters.")]
         public void ValidateRestPathForEntityInConfig(
             bool exceptionExpected,

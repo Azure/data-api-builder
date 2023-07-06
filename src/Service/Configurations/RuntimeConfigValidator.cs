@@ -274,7 +274,7 @@ namespace Azure.DataApiBuilder.Service.Configurations
                 }
 
                 // If GraphQL endpoint is enabled globally and at entity level, then only we perform the validations related to it.
-                if (!runtimeConfig.Runtime.GraphQL.Enabled && entity.GraphQL is not null && entity.GraphQL.Enabled)
+                if (runtimeConfig.Runtime.GraphQL.Enabled && entity.GraphQL is not null && entity.GraphQL.Enabled)
                 {
                     ValidateNameRequirements(entity.GraphQL.Singular);
                     ValidateNameRequirements(entity.GraphQL.Plural);

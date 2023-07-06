@@ -23,7 +23,6 @@
       },
       Authentication: {
         Provider: StaticWebApps,
-        Jwt: {}
       }
     }
   },
@@ -57,7 +56,6 @@
             Actions: [
               {
                 Action: Execute,
-                Policy: {}
               }
             ]
           }

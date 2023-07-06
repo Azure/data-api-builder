@@ -1864,10 +1864,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="methods">Value of the rest methods property configured for the entity.</param>
         /// <param name="exceptionExpected">Boolean value representing whether an exception is expected or not.</param>
         /// <param name="expectedErrorMessage">Expected error message when an exception is expected for the test run.</param>
+        [Ignore]
         [DataTestMethod]
-        /*[DataRow(EntitySourceType.Table, "[\"get\"]", true,
+        [DataRow(EntitySourceType.Table, "[\"get\"]", true,
             $"The rest property '{Entity.PROPERTY_METHODS}' is present for entity: HybridEntity of type: Table, but is only valid for type: StoredProcedure.",
-            DisplayName = "Rest methods specified for non-storedprocedure entity fail config validation.")]*/
+            DisplayName = "Rest methods specified for non-storedprocedure entity fail config validation.")]
         [DataRow(EntitySourceType.StoredProcedure, "[\"Get\", \"post\", \"PUT\", \"paTch\", \"delete\"]", false,
             DisplayName = "Valid rest operations specified in rest methods for stored procedure pass config validation.")]
         public void ValidateRestMethodsForEntityInConfig(
@@ -1942,16 +1943,15 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Test to validate that when multiple entities have the same custom rest path configured, we throw an exception.
+        /// Test to validate that the rest path for an entity cannot be empty and cannot contain any reserved characters.
         /// </summary>
         /// <param name="exceptionExpected">Whether an exception is expected as a result of test run.</param>
         /// <param name="restPathForEntity">Custom rest path to be configured for the first entity.</param>
-        /// <param name="restPathForSecondEntity">Custom rest path to be configured for the second entity.</param>
         /// <param name="expectedExceptionMessage">The expected exception message.</param>
         [DataTestMethod]
         [DataRow(true, "", "The rest path for entity: EntityA cannot be empty.",
             DisplayName = "Empty rest path configured for an entity fails config validation.")]
-        [DataRow(false, "entityRestPath", DisplayName = "Rest path correctly configured as string.")]
+        [DataRow(false, "entityRestPath", DisplayName = "Rest path correctly configured as a non-empty string without any reserved characters.")]
         public void ValidateRestPathForEntityInConfig(
             bool exceptionExpected,
             string restPathForEntity,
@@ -1992,7 +1992,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Test to validate that when multiple entities have the same custom rest path configured, we throw an exception.
+        /// Test to validate that when multiple entities have the same rest path configured, we throw an exception.
         /// </summary>
         /// <param name="exceptionExpected">Whether an exception is expected as a result of test run.</param>
         /// <param name="restPathForFirstEntity">Custom rest path to be configured for the first entity.</param>

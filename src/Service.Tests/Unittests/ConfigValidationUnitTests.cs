@@ -12,9 +12,9 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.Services;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
 using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers;
@@ -50,13 +50,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 excludedCols: new HashSet<string> { "id", "email" },
                 databasePolicy: dbPolicy
             );
-            MockFileSystem fileSystem = new();
-            RuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
 
             // Assert that expected exception is thrown.
-            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig));
             Assert.AreEqual("Not all the columns required by policy are accessible.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
@@ -134,7 +130,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             try
             {
-                configValidator.ValidatePermissionsInConfig(runtimeConfig);
+                RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
                 Assert.AreEqual(true, isValid);
             }
             catch (DataApiBuilderException ex)
@@ -172,7 +168,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
 
             // Assert that expected exception is thrown.
-            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig));
             Assert.AreEqual($"action:{action} specified for entity:{AuthorizationHelpers.TEST_ENTITY}," +
                     $" role:{AuthorizationHelpers.TEST_ROLE} is not valid.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
@@ -206,14 +202,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 databasePolicy: dbPolicy,
                 dbType: dbType
             );
-            MockFileSystem fileSystem = new();
-            RuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
 
             try
             {
-                configValidator.ValidatePermissionsInConfig(runtimeConfig);
+                RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
                 Assert.IsFalse(errorExpected, message: "Validation expected to have failed.");
             }
             catch (DataApiBuilderException ex)
@@ -652,7 +644,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Assert that expected exception is thrown.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                configValidator.ValidatePermissionsInConfig(runtimeConfig));
+                RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig));
             Assert.AreEqual("ClaimType cannot be empty.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
@@ -687,7 +679,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Assert that expected exception is thrown.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                configValidator.ValidatePermissionsInConfig(runtimeConfig));
+                RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig));
             Assert.IsTrue(ex.Message.StartsWith("Invalid format for claim type"));
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
@@ -716,13 +708,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 databasePolicy: dbPolicy,
                 authProvider: authProvider.ToString()
                 );
-            MockFileSystem fileSystem = new();
-            RuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
             try
             {
-                configValidator.ValidatePermissionsInConfig(runtimeConfig);
+                RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
                 Assert.IsFalse(errorExpected);
             }
             catch (DataApiBuilderException ex)
@@ -746,13 +734,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 operation: EntityActionOperation.All,
                 includedCols: new HashSet<string> { "col1", "col2", "col3" }
                 );
-            MockFileSystem fileSystem = new();
-            RuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
 
             // All the validations would pass, and no exception would be thrown.
-            configValidator.ValidatePermissionsInConfig(runtimeConfig);
+            RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
         }
 
         /// <summary>
@@ -777,7 +761,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Assert that expected exception is thrown.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                configValidator.ValidatePermissionsInConfig(runtimeConfig));
+                RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig));
             string actionName = actionOp.ToString();
             Assert.AreEqual($"No other field can be present with wildcard in the included set for: entity:{AuthorizationHelpers.TEST_ENTITY}," +
                 $" role:{AuthorizationHelpers.TEST_ROLE}, action:{actionName}", ex.Message);
@@ -803,7 +787,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Assert that expected exception is thrown.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                configValidator.ValidatePermissionsInConfig(runtimeConfig));
+                RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig));
             string actionName = actionOp.ToString();
             Assert.AreEqual($"No other field can be present with wildcard in the excluded set for: entity:{AuthorizationHelpers.TEST_ENTITY}," +
                 $" role:{AuthorizationHelpers.TEST_ROLE}, action:{actionName}", ex.Message);
@@ -876,12 +860,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
             if (!exceptionExpected)
             {
-                configValidator.ValidatePermissionsInConfig(runtimeConfig);
+                RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
             }
             else
             {
                 DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                configValidator.ValidatePermissionsInConfig(runtimeConfig));
+                RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig));
 
                 // Assert that the exception returned is the one we expected.
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
@@ -1748,14 +1732,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             if (exceptionExpected)
             {
                 DataApiBuilderException ex =
-                    Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
+                    Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig));
                 Assert.AreEqual("Not all the columns required by policy are accessible.", ex.Message);
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
             }
             else
             {
-                configValidator.ValidatePermissionsInConfig(runtimeConfig);
+                RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
             }
         }
 
@@ -1844,7 +1828,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             if (exceptionExpected)
             {
                 DataApiBuilderException ex =
-                    Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
+                    Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig));
                 Assert.AreEqual($"No other field can be present with wildcard in the {misconfiguredColumnSet} " +
                     $"set for: entity:Publisher, role:anonymous, action:Read", ex.Message);
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
@@ -1852,7 +1836,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
             else
             {
-                configValidator.ValidatePermissionsInConfig(runtimeConfig);
+                RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
             }
         }
 

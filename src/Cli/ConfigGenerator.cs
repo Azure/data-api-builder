@@ -165,7 +165,9 @@ namespace Cli
                     GraphQL: new(!options.GraphQLDisabled, graphQLPath),
                     Host: new(
                         Cors: new(options.CorsOrigin?.ToArray() ?? Array.Empty<string>()),
-                        Authentication: new(options.AuthenticationProvider, new(options.Audience, options.Issuer)),
+                        Authentication: new(
+                            Provider: options.AuthenticationProvider,
+                            Jwt: (options.Audience is null && options.Issuer is null) ? null : new(options.Audience, options.Issuer)),
                         Mode: options.HostMode)
                 ),
                 Entities: new RuntimeEntities(new Dictionary<string, Entity>()));
@@ -678,7 +680,7 @@ namespace Cli
         {
             Dictionary<EntityActionOperation, EntityAction> updatedOperations = new();
 
-            EntityActionPolicy existingPolicy = new();
+            EntityActionPolicy? existingPolicy = null;
             EntityActionFields? existingFields = null;
 
             // Adding the new operations in the updatedOperationList
@@ -694,7 +696,7 @@ namespace Cli
                     }
 
                     // Checking if Policy and Field update is required
-                    EntityActionPolicy updatedPolicy = newPolicy is null ? existingPolicy : newPolicy;
+                    EntityActionPolicy? updatedPolicy = newPolicy is null ? existingPolicy : newPolicy;
                     EntityActionFields? updatedFields = newFields is null ? existingFields : newFields;
 
                     updatedOperations.Add((EntityActionOperation)op, new EntityAction((EntityActionOperation)op, updatedFields, updatedPolicy));
@@ -1094,7 +1096,7 @@ namespace Cli
         {
             //Updated GraphQL Type
             EntityGraphQLOptions graphQLType = (options.GraphQLType is not null) ? ConstructGraphQLTypeDetails(options.GraphQLType, null) : entity.GraphQL;
-            GraphQLOperation? graphQLOperation = null;
+            GraphQLOperation? graphQLOperation;
 
             if (!IsStoredProcedureConvertedToOtherTypes(entity, options)
                 && (IsStoredProcedure(entity) || IsStoredProcedure(options)))
@@ -1110,6 +1112,12 @@ namespace Cli
                     {
                         graphQLOperation = null;
                     }
+                }
+                else
+                {
+                    // When the GraphQL operation for a SP entity has not been specified in the update command,
+                    // assign the existing GraphQL operation.
+                    graphQLOperation = entity.GraphQL.Operation;
                 }
             }
             else

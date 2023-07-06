@@ -485,6 +485,34 @@ public class EndToEndTests
     }
 
     /// <summary>
+    /// Validates the updation of REST Methods for a stored procedure entity
+    /// </summary>
+    [TestMethod]
+    public Task TestUpdatingStoredProcedureWithRestMethods()
+    {
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql",
+            "--host-mode", "Development", "--connection-string", "testconnectionstring", "--set-session-context", "true" };
+        Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+        Assert.IsNotNull(runtimeConfig);
+        Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
+
+        string[] addArgs = { "add", "MyEntity", "-c", TEST_RUNTIME_CONFIG_FILE, "--source", "s001.book", "--permissions", "anonymous:execute", "--source.type", "stored-procedure", "--source.params", "param1:123,param2:hello,param3:true", "--rest.methods", "post,put,patch", "--graphql.operation", "query" };
+        Program.Execute(addArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? updatedRuntimeConfig));
+        Assert.AreNotSame(runtimeConfig, updatedRuntimeConfig);
+
+        string[] updateArgs = { "update", "MyEntity", "-c", TEST_RUNTIME_CONFIG_FILE, "--rest.methods", "get" };
+        Program.Execute(updateArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? updatedRuntimeConfig2));
+        Assert.AreNotSame(updatedRuntimeConfig, updatedRuntimeConfig2);
+        return Verify(updatedRuntimeConfig2);
+    }
+
+    /// <summary>
     /// Test to validate that the engine starts successfully when --verbose and --LogLevel
     /// options are used with the start command
     /// This test does not validate whether the engine logs messages at the specified log level
@@ -650,10 +678,12 @@ public class EndToEndTests
     /// <summary>
     /// Test to verify that any parsing errors in the config
     /// are caught before starting the engine.
+    /// Ignoring due to deadlocks when attempting to read Standard.Output
+    /// and Standard.Error. A fix will come in a follow-up PR.
     /// </summary>
     [DataRow(INITIAL_CONFIG, BASIC_ENTITY_WITH_ANONYMOUS_ROLE, true, DisplayName = "Correct Config")]
     [DataRow(INITIAL_CONFIG, SINGLE_ENTITY_WITH_INVALID_GRAPHQL_TYPE, false, DisplayName = "Invalid GraphQL type for entity")]
-    [DataTestMethod]
+    [DataTestMethod, Ignore]
     public async Task TestExitOfRuntimeEngineWithInvalidConfig(
         string initialConfig,
         string entityDetails,
@@ -673,12 +703,12 @@ public class EndToEndTests
         Assert.IsNotNull(output);
         StringAssert.Contains(output, $"User provided config file: {TEST_RUNTIME_CONFIG_FILE}", StringComparison.Ordinal);
 
-        output = await process.StandardOutput.ReadLineAsync();
-        Assert.IsNotNull(output);
-        StringAssert.Contains(output, $"Found config file: {TEST_RUNTIME_CONFIG_FILE}", StringComparison.Ordinal);
-
         if (expectSuccess)
         {
+            output = await process.StandardOutput.ReadLineAsync();
+            Assert.IsNotNull(output);
+            StringAssert.Contains(output, $"Found config file: {TEST_RUNTIME_CONFIG_FILE}", StringComparison.Ordinal);
+
             output = await process.StandardOutput.ReadLineAsync();
             Assert.IsNotNull(output);
             StringAssert.Contains(output, $"Setting default minimum LogLevel:", StringComparison.Ordinal);

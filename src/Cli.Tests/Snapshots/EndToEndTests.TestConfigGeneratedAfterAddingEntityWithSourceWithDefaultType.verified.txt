@@ -22,8 +22,7 @@
         AllowCredentials: false
       },
       Authentication: {
-        Provider: StaticWebApps,
-        Jwt: {}
+        Provider: StaticWebApps
       }
     }
   },
@@ -58,8 +57,7 @@
             Role: anonymous,
             Actions: [
               {
-                Action: *,
-                Policy: {}
+                Action: *
               }
             ]
           }

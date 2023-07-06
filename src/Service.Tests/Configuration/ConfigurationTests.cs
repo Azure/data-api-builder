@@ -26,7 +26,6 @@ using Azure.DataApiBuilder.Service.Parsers;
 using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Services;
 using Azure.DataApiBuilder.Service.Services.MetadataProviders;
-using Azure.DataApiBuilder.Service.Services.OpenAPI;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using HotChocolate;

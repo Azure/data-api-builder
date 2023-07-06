@@ -9,7 +9,6 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Models;
 using Azure.DataApiBuilder.Service.Services;
-using Azure.DataApiBuilder.Service.Services.OpenAPI;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;

@@ -3,7 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 
-namespace Azure.DataApiBuilder.Service.Services.OpenAPI
+namespace Azure.DataApiBuilder.Service.Services
 {
     /// <summary>
     /// Interface for the service which generates and provides the OpenAPI description document

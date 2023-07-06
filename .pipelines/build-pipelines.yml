@@ -39,15 +39,23 @@ steps:
 # We cannot set this in variables section above because $(isNugetRelease) 
 # is not available at pipeline compilation time.
 - bash: |
-    echo ISNUGETRELEASE = $ISNUGETRELEASE
+    echo IsNugetRelease = $ISNUGETRELEASE
+    echo IsReleaseCandidate = $ISRELEASECANDIDATE
+    dabVersion=$(major).$(minor).$(patch)
     if [ "$ISNUGETRELEASE" = "true" ]
     then
-      dabVersion=$(major).$(minor).$(patch)
+      if [ "$ISRELEASECANDIDATE" = "true" ]
+      then
+        dabVersion=$dabVersion-rc
+      fi
     else
-      dabVersion=$(major).$(minor).$(patch)-$(Build.BuildId)
+      dabVersion=$dabVersion-$(Build.BuildId)
     fi
     echo dabVersion = $dabVersion
     echo "##vso[task.setvariable variable=dabVersion]$dabVersion"
+    addPropVersion="https://github.com/Azure/data-api-builder/releases/download/v$dabVersion/dab.draft.schema.json"
+    echo addPropVersion = $addPropVersion
+    echo "##vso[task.setvariable variable=additionalProperties.version]$addPropVersion"
   displayName: Set dab version
 
 - task: UseDotNet@2
@@ -275,8 +283,8 @@ steps:
       $(Build.ArtifactStagingDirectory)/**/dab-manifest.json
       $(Build.ArtifactStagingDirectory)/**/dab.draft.schema.json
     isDraft: true
-    isPreRelease: true
-    addChangeLog: false
+    isPreRelease: $(isReleaseCandidate)
+    addChangeLog: true
 
 # This task gets the current date and saves it to a variable so the docker task can use the build's
 # date and time as a tag.

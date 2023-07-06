@@ -99,7 +99,16 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
     {
         writer.WriteStartObject();
         writer.WriteBoolean("enabled", value.Enabled);
-        writer.WriteString("path", value.Path);
+
+        if (value.Path is not null)
+        {
+            writer.WriteString("path", value.Path);
+        }
+        else if (value.Path is null && options.DefaultIgnoreCondition != JsonIgnoreCondition.WhenWritingNull)
+        {
+            writer.WriteNull("path");
+        }
+
         writer.WriteStartArray("methods");
         foreach (SupportedHttpVerb method in value.Methods)
         {

@@ -52,12 +52,10 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               }
             ]
           }
@@ -88,12 +86,10 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               }
             ]
           }

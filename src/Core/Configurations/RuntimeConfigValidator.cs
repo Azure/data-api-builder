@@ -323,7 +323,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
 
         /// <summary>
         /// Method to validate that the REST/GraphQL URI component is well formed and does not contain
-        /// any forbidden characters.
+        /// any reserved characters.
         /// </summary>
         /// <param name="uriComponent">path prefix/base route for rest/graphql apis</param>
         /// <param name="apiType">Either REST or GraphQL</param>
@@ -343,7 +343,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
             }
 
-            // A valid api path prefix should start with a forward slash '/'.
+            // A valid URI component should start with a forward slash '/'.
             if (!uriComponent.StartsWith("/"))
             {
                 throw new DataApiBuilderException(
@@ -354,13 +354,13 @@ namespace Azure.DataApiBuilder.Core.Configurations
 
             uriComponent = uriComponent.Substring(1);
 
-            // API path prefix should not contain any reserved characters.
+            // URI component should not contain any reserved characters.
             DoURIComponentInvalidCharCheck(uriComponent, apiType, apiProperty);
         }
 
         /// <summary>
-        /// Method to validate that the REST/GraphQL path prefix does not contain
-        /// any forbidden characters.
+        /// Method to validate that the REST/GraphQL API's URI component does not contain
+        /// any reserved characters.
         /// </summary>
         /// <param name="uriComponent">path prefix for rest/graphql apis</param>
         /// <param name="apiType">Either REST or GraphQL</param>

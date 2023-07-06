@@ -12,10 +12,7 @@ public class UtilsTests
     [TestInitialize]
     public void TestInitialize()
     {
-        ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
-        {
-            builder.AddConsole();
-        });
+        ILoggerFactory loggerFactory = TestLoggerSupport.ProvisionLoggerFactory();
 
         SetLoggerForCliConfigGenerator(loggerFactory.CreateLogger<ConfigGenerator>());
         SetCliUtilsLogger(loggerFactory.CreateLogger<Utils>());

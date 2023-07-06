@@ -12,6 +12,9 @@ internal static class FileSystemUtils
     {
         MockFileSystem fileSystem = new();
 
+        // We need to have this file in the file system so that the schema can be resolved when we are
+        // generating a new config file using the CLI. Since we're not using a "real" file system, we
+        // need to add it here. See: https://github.com/Azure/data-api-builder/pull/1564#discussion_r1253806984
         fileSystem.AddFile(
             fileSystem.Path.Combine(
                 fileSystem.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "",

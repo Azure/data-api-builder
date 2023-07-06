@@ -53,12 +53,10 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               }
             ]
           }
@@ -91,8 +89,7 @@
             Role: anonymous,
             Actions: [
               {
-                Action: *,
-                Policy: {}
+                Action: *
               }
             ]
           }

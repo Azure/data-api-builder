@@ -1933,19 +1933,24 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="restPathForEntity">Custom rest path to be configured for the first entity.</param>
         /// <param name="expectedExceptionMessage">The expected exception message.</param>
         [DataTestMethod]
-        [DataRow(true, "", "The rest path for entity: EntityA cannot be empty.",
+        [DataRow(true, "EntityA", "", "The rest path for entity: EntityA cannot be empty.",
             DisplayName = "Empty rest path configured for an entity fails config validation.")]
-        [DataRow(true, "entity?RestPath", "The rest path: entity?RestPath for entity: EntityA contains one or more reserved characters.",
+        [DataRow(true, "EntityA", "entity?RestPath", "The rest path: entity?RestPath for entity: EntityA contains one or more reserved characters.",
             DisplayName = "Rest path for an entity containing reserved character ? fails config validation.")]
-        [DataRow(true, "entity#RestPath", "The rest path: entity#RestPath for entity: EntityA contains one or more reserved characters.",
+        [DataRow(true, "EntityA", "entity#RestPath", "The rest path: entity#RestPath for entity: EntityA contains one or more reserved characters.",
             DisplayName = "Rest path for an entity containing reserved character ? fails config validation.")]
-        [DataRow(true, "entity[]RestPath", "The rest path: entity[]RestPath for entity: EntityA contains one or more reserved characters.",
+        [DataRow(true, "EntityA", "entity[]RestPath", "The rest path: entity[]RestPath for entity: EntityA contains one or more reserved characters.",
             DisplayName = "Rest path for an entity containing reserved character ? fails config validation.")]
-        [DataRow(true, "entity+Rest*Path", "The rest path: entity+Rest*Path for entity: EntityA contains one or more reserved characters.",
+        [DataRow(true, "EntityA", "entity+Rest*Path", "The rest path: entity+Rest*Path for entity: EntityA contains one or more reserved characters.",
             DisplayName = "Rest path for an entity containing reserved character ? fails config validation.")]
-        [DataRow(false, "entityRestPath", DisplayName = "Rest path correctly configured as a non-empty string without any reserved characters.")]
+        [DataRow(true, "Entity?A", null, "The rest path: Entity?A for entity: Entity?A contains one or more reserved characters.",
+            DisplayName = "Entity name for an entity containing reserved character ? fails config validation.")]
+        [DataRow(true, "Entity&*[]A", null, "The rest path: Entity&*[]A for entity: Entity&*[]A contains one or more reserved characters.",
+            DisplayName = "Entity name for an entity containing reserved character ? fails config validation.")]
+        [DataRow(false, "EntityA", "entityRestPath", DisplayName = "Rest path correctly configured as a non-empty string without any reserved characters.")]
         public void ValidateRestPathForEntityInConfig(
             bool exceptionExpected,
+            string entityName,
             string restPathForEntity,
             string expectedExceptionMessage = "")
         {
@@ -1956,7 +1961,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 graphQLDetails: null,
                 restDetails: new(new SupportedHttpVerb[] { }, restPathForEntity, true)
             );
-            entityMap.Add("EntityA", sampleEntity);
+            entityMap.Add(entityName, sampleEntity);
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",

@@ -388,6 +388,168 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
+        /// Validates that a list query with only __typename in the selection set
+        /// returns the right types
+        /// </summary>
+        [TestMethod]
+        public async Task ListQueryWithoutItemSelectionButWithTypename()
+        {
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"{
+                books{
+                    __typename
+                }
+            }";
+
+            string expected = @"
+                {
+                  ""__typename"": ""bookConnection""
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Validates that a list query against a table with composite Pk
+        /// with only __typename in the selection set returns the right types
+        /// </summary>
+        [TestMethod]
+        public async Task ListQueryWithoutItemSelectionButOnlyTypenameAgainstTableWithCompositePK()
+        {
+            string graphQLQueryName = "stocks";
+            string graphQLQuery = @"{
+                stocks{
+                    __typename
+                }
+            }";
+
+            string expected = @"
+                {
+                  ""__typename"": ""StockConnection""
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: true);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Validates that a point query with only __typename field in the selection set
+        /// returns the right type
+        /// </summary>
+        [TestMethod]
+        public async Task PointQueryWithTypenameInSelectionSet()
+        {
+            string graphQLQueryName = "book_by_pk";
+            string graphQLQuery = @"{
+                book_by_pk(id: 3) {
+                    __typename
+                }
+            }";
+
+            string expected = @"
+                {
+                    ""__typename"": ""book""
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Validates that a list query with only __typename field in the items section returns the right types
+        /// </summary>
+        [TestMethod]
+        public async Task ListQueryWithOnlyTypenameInSelectionSet()
+        {
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"{
+                books(first: 3) {
+                    items {
+                        __typename
+                    }
+                }
+            }";
+
+            string typename = @"
+                {
+                    ""__typename"": ""book""
+                }
+            ";
+
+            // Since the first 3 elements are fetched, we expect the response to contain 3 items
+            // with just the __typename field.
+            string expected = SqlTestHelper.ConstructGQLTypenameResponseNTimes(typename: typename, times: 3);
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
+        /// <summary>
+        /// Validates that a nested point query with only __typename field in each selection set
+        /// returns the right types
+        /// </summary>
+        [TestMethod]
+        public async Task NestedPointQueryWithOnlyTypenameInEachSelectionSet()
+        {
+            string graphQLQueryName = "book_by_pk";
+            string graphQLQuery = @"{
+                book_by_pk(id: 3) {
+                    __typename
+                    publishers {
+                      __typename
+                      books {
+                        __typename
+                      }
+                    }
+                }     
+            }";
+
+            string expected = @"
+                {
+                  ""__typename"": ""book"",
+                  ""publishers"": {
+                    ""__typename"": ""Publisher"",
+                    ""books"": {
+                      ""__typename"": ""bookConnection""
+                    }
+                  }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Validates that querying a SP with only __typename field in the selection set
+        /// returns the right type(s)
+        /// </summary>
+        public async Task QueryAgainstSPWithOnlyTypenameInSelectionSet(string dbQuery)
+        {
+            string graphQLQueryName = "executeGetBooks";
+            string graphQLQuery = @"{
+                executeGetBooks{
+                    __typename
+                }     
+            }";
+
+            string typename = @"
+                {
+                    ""__typename"": ""GetBooks""
+                }";
+
+            string bookCountFromDB = await GetDatabaseResultAsync(dbQuery, expectJson: false);
+            int expectedCount = JsonSerializer.Deserialize<List<Dictionary<string, int>>>(bookCountFromDB)[0]["count"];
+            string expected = SqlTestHelper.ConstructGQLTypenameResponseNTimes(typename: typename, times: expectedCount);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
         /// Test One-To-One relationship both directions
         /// (book -> website placement, website placememnt -> book)
         /// <summary>

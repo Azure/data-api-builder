@@ -35,7 +35,7 @@ internal class EntityActionConverterFactory : JsonConverterFactory
             {
                 EntityActionOperation op = JsonSerializer.Deserialize<EntityActionOperation>(ref reader, options);
 
-                return new EntityAction(Action: op, Fields: null, Policy: new(Request: null, Database: null));
+                return new EntityAction(Action: op, Fields: null, Policy: null);
             }
 
             // Remove the converter so we don't recurse.
@@ -47,11 +47,6 @@ internal class EntityActionConverterFactory : JsonConverterFactory
             if (action is null)
             {
                 return null;
-            }
-
-            if (action.Policy is null)
-            {
-                return action with { Policy = new EntityActionPolicy(Request: null, Database: null) };
             }
 
             // While Fields.Exclude is non-nullable, if the property was not in the JSON

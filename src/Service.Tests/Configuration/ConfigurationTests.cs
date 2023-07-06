@@ -949,7 +949,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Assert.AreEqual(100, responseValue.GetArrayLength());
 
                 // Assert that the nextLink contains the rest base-route just before the request path.
-                Assert.IsTrue(nextLink.Contains(runtimeBaseRoute + requestPath));
+                StringAssert.Contains(nextLink, runtimeBaseRoute + requestPath);
             }
         }
 

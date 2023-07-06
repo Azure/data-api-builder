@@ -114,7 +114,8 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="entityName">Name of the associated entity.</param>
         /// <param name="entityPathName">Entity's path as seen in a request.</param>
         /// <returns>True if exists, otherwise false.</returns>
-        bool TryGetEntityPathFromName(string entityName, [NotNullWhen(true)] out string? entityPathName);
+        bool TryGetEntityPathFromName(string entityName, [NotNullWhen(true)] out string? entityPathName)
+            => throw new NotImplementedException();
 
         /// <summary>
         /// Obtains the underlying database type.

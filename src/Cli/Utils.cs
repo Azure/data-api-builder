@@ -12,7 +12,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Cli.Commands;
 using Microsoft.Extensions.Logging;
-using static Azure.DataApiBuilder.Service.Configurations.RuntimeConfigValidator;
+using static Azure.DataApiBuilder.Core.Configurations.RuntimeConfigValidator;
 
 /// <summary>
 /// Contains the methods for transforming objects, serialization options.
@@ -45,13 +45,13 @@ namespace Cli
             {
                 return operations.Split(",")
                     .Select(op => EnumExtensions.Deserialize<EntityActionOperation>(op))
-                    .Select(op => new EntityAction(op, null, new EntityActionPolicy()))
+                    .Select(op => new EntityAction(Action: op, Fields: null, Policy: null))
                     .ToArray();
             }
 
             if (operations is WILDCARD)
             {
-                operation_items = new[] { new EntityAction(EntityActionOperation.All, fields, policy ?? new()) };
+                operation_items = new[] { new EntityAction(EntityActionOperation.All, fields, policy) };
             }
             else
             {
@@ -63,7 +63,7 @@ namespace Cli
                     {
                         if (EnumExtensions.TryDeserialize(operation_element, out EntityActionOperation? op))
                         {
-                            EntityAction operation_item = new((EntityActionOperation)op, fields, policy ?? new());
+                            EntityAction operation_item = new((EntityActionOperation)op, fields, policy);
                             operation_list.Add(operation_item);
                         }
                     }
@@ -74,7 +74,7 @@ namespace Cli
                 {
                     return operation_elements
                         .Select(op => EnumExtensions.Deserialize<EntityActionOperation>(op))
-                        .Select(op => new EntityAction(op, null, new EntityActionPolicy()))
+                        .Select(op => new EntityAction(Action: op, Fields: null, Policy: null))
                         .ToArray();
                 }
             }
@@ -103,7 +103,7 @@ namespace Cli
                     // Expand wildcard to all valid operations (except execute)
                     foreach (EntityActionOperation validOp in resolvedOperations)
                     {
-                        result.Add(validOp, new EntityAction(validOp, null, new EntityActionPolicy()));
+                        result.Add(validOp, new EntityAction(Action: validOp, Fields: null, Policy: null));
                     }
                 }
                 else

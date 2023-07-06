@@ -31,6 +31,7 @@ namespace Azure.DataApiBuilder.Service.Services
             [typeof(char)] = DbType.StringFixedLength,
             [typeof(Guid)] = DbType.Guid,
             [typeof(byte[])] = DbType.Binary,
+            [typeof(TimeSpan)] = DbType.Time,
             [typeof(byte?)] = DbType.Byte,
             [typeof(sbyte?)] = DbType.SByte,
             [typeof(short?)] = DbType.Int16,
@@ -45,6 +46,7 @@ namespace Azure.DataApiBuilder.Service.Services
             [typeof(bool?)] = DbType.Boolean,
             [typeof(char?)] = DbType.StringFixedLength,
             [typeof(Guid?)] = DbType.Guid,
+            [typeof(TimeSpan?)] = DbType.Time,
             [typeof(object)] = DbType.Object
         };
 

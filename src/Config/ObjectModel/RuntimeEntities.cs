@@ -130,16 +130,12 @@ public record RuntimeEntities : IEnumerable<KeyValuePair<string, Entity>>
                         with
                     { Rest = new EntityRestOptions(EntityRestOptions.DEFAULT_SUPPORTED_VERBS) };
         }
-        else
+        else if (nameCorrectedEntity.Source.Type is EntitySourceType.StoredProcedure && nameCorrectedEntity.Rest.Methods.Length == 0)
         {
             // REST Method field is relevant only for stored procedures. For entities backed by tables and views, all the methods are supported.
             // When the Methods property is configured in the config file, the parser correctly parses and populates the methods configured.
-            // However, when absent in the config file, the REST methods supported by default needs to be populated.    
-            if (nameCorrectedEntity.Source.Type is EntitySourceType.StoredProcedure && nameCorrectedEntity.Rest.Methods.Length == 0)
-            {
-                nameCorrectedEntity = nameCorrectedEntity with
-                { Rest = new EntityRestOptions(Methods: EntityRestOptions.DEFAULT_SUPPORTED_VERBS_FOR_SP, Path: nameCorrectedEntity.Rest.Path, Enabled: nameCorrectedEntity.Rest.Enabled) };
-            }
+            // However, when absent in the config file, the REST methods supported by default needs to be populated.
+            nameCorrectedEntity = nameCorrectedEntity with { Rest = new EntityRestOptions(Methods: EntityRestOptions.DEFAULT_SUPPORTED_VERBS_FOR_SP, Path: nameCorrectedEntity.Rest.Path, Enabled: nameCorrectedEntity.Rest.Enabled) };
         }
 
         return nameCorrectedEntity;

@@ -10,7 +10,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Service.Services;
+using Azure.DataApiBuilder.Core.Services;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.OpenApi.Models;
 using Microsoft.OpenApi.Readers;

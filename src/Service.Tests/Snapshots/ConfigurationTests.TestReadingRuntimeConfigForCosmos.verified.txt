@@ -30,8 +30,7 @@
         AllowCredentials: false
       },
       Authentication: {
-        Provider: StaticWebApps,
-        Jwt: {}
+        Provider: StaticWebApps
       }
     }
   },
@@ -59,20 +58,16 @@
                   Include: [
                     *
                   ]
-                },
-                Policy: {}
+                }
               },
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           },
@@ -80,20 +75,16 @@
             Role: authenticated,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           }
@@ -118,20 +109,16 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           }
@@ -156,20 +143,16 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           },
@@ -177,20 +160,16 @@
             Role: authenticated,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           }
@@ -215,20 +194,16 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           }
@@ -253,20 +228,16 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           },
@@ -274,20 +245,16 @@
             Role: authenticated,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           }
@@ -317,8 +284,7 @@
                   Exclude: [
                     *
                   ]
-                },
-                Policy: {}
+                }
               },
               {
                 Action: Read,
@@ -330,8 +296,7 @@
                     id,
                     type
                   ]
-                },
-                Policy: {}
+                }
               },
               {
                 Action: Create,
@@ -342,12 +307,10 @@
                   Include: [
                     id
                   ]
-                },
-                Policy: {}
+                }
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           },
@@ -355,20 +318,16 @@
             Role: authenticated,
             Actions: [
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Read,
-                Policy: {}
+                Action: Read
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           }
@@ -401,20 +360,16 @@
                   Include: [
                     *
                   ]
-                },
-                Policy: {}
+                }
               },
               {
-                Action: Create,
-                Policy: {}
+                Action: Create
               },
               {
-                Action: Update,
-                Policy: {}
+                Action: Update
               },
               {
-                Action: Delete,
-                Policy: {}
+                Action: Delete
               }
             ]
           }

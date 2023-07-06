@@ -121,6 +121,26 @@ query ($id: ID, $partitionKeyValue: String) {
             CollectionAssert.AreEqual(new[] { "tag1", "tag2" }, tags);
         }
 
+        /// <summary>
+        /// Validates that a query with only __typename in the selection set
+        /// returns the right type
+        /// </summary>
+        [TestMethod]
+        public async Task QueryWithOnlyTypenameInSelectionSet()
+        {
+            string id = _idList[0];
+            JsonElement response = await ExecuteGraphQLRequestAsync("planet_by_pk", @"
+                query ($id: ID, $partitionKeyValue: String) {
+                    planet_by_pk (id: $id, _partitionKeyValue: $partitionKeyValue) {
+                        __typename
+                    }
+                }", new() { { "id", id }, { "partitionKeyValue", id } });
+
+            string expected = @"Planet";
+            string actual = response.GetProperty("__typename").Deserialize<string>();
+            Assert.AreEqual(expected, actual);
+        }
+
         [TestMethod]
         public async Task GetPaginatedWithVariables()
         {

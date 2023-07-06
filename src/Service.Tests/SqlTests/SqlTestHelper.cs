@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -303,6 +304,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     null)
                 as SqlException;
             return e;
+        }
+
+        /// <summary>
+        /// Helper method to construct GraphQL responses when only __typename is queried
+        /// </summary>
+        /// <param name="typename">A json string of the format { __typename : entity_typename }  </param>
+        /// <param name="times">Number of times to repeat typename in the response</param>
+        /// <returns>A string representation of an array of typename json strings</returns>
+        public static string ConstructGQLTypenameResponseNTimes(string typename, int times)
+        {
+            StringBuilder typenameResponseBuilder = new("[");
+            for (int i = 0; i < times; i++)
+            {
+                typenameResponseBuilder.Append(typename);
+                if (i != times - 1)
+                {
+                    typenameResponseBuilder.Append(",");
+                }
+
+            }
+
+            typenameResponseBuilder.Append("]");
+            return typenameResponseBuilder.ToString();
         }
 
         /// <summary>

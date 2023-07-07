@@ -54,8 +54,7 @@
             Role: anonymous,
             Actions: [
               {
-                Action: *,
-                Policy: {}
+                Action: *
               }
             ]
           }

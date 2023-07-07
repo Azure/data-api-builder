@@ -365,7 +365,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
         /// <param name="uriComponent">path prefix for rest/graphql apis</param>
         /// <param name="apiType">Either REST or GraphQL</param>
         /// <exception cref="DataApiBuilderException"></exception>
-        public static void DoURIComponentInvalidCharCheck(string uriComponent, ApiType apiType, string apiProperty = "")
+        public static void DoURIComponentInvalidCharCheck(string uriComponent, ApiType apiType, string apiProperty)
         {
             if (_invalidApiPathCharsRgx.IsMatch(uriComponent))
             {

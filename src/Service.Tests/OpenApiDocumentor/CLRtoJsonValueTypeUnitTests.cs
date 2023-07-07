@@ -17,15 +17,22 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiDocumentor;
 [TestClass]
 public class CLRtoJsonValueTypeUnitTests
 {
+    private const string STRING_PARSE_ERROR_PREFIX = "The input string value ";
     private const string ERROR_PREFIX = "The SqlDbType ";
     private const string SQLDBTYPE_RESOLUTION_ERROR = "failed to resolve to SqlDbType.";
+    private const string SQLDBTYPE_UNEXPECTED_RESOLUTION_ERROR = "should have resolved to a SqlDbType.";
     private const string JSONDATATYPE_RESOLUTION_ERROR = "(when supported) should map to a system type and associated JsonDataType.";
     private const string DBTYPE_RESOLUTION_ERROR = "(when supported) should map to a system type and associated DbType.";
 
     /// <summary>
-    /// Validates that all DAB supported CLR types (system types) map to a defined JSON value type.
+    /// Validates that:
+    /// 1. String representations of SqlDbType provided by SQL Server/Azure SQL DB resolve to a SqlDbType enum
+    /// and CLR/system type.
+    /// 2. The resolved CLR/system types map to a defined JsonDataType.
     /// A DAB supported CLR type is a CLR type mapped from a database value type.
     /// </summary>
+    /// <param name="sqlDataTypeLiteral">Raw string provided by database e.g. 'bigint'</param>
+    /// <param name="isSupportedSqlDataType">Whether DAB supports the resolved SqlDbType value.</param>
     [TestMethod]
     [DynamicData(nameof(GetTestData_SupportedSystemTypesMapToJsonValueType), DynamicDataSourceType.Method)]
     public void SupportedSystemTypesMapToJsonValueType(string sqlDataTypeLiteral, bool isSupportedSqlDataType)
@@ -33,14 +40,14 @@ public class CLRtoJsonValueTypeUnitTests
         try
         {
             Type resolvedType = TypeHelper.GetSystemTypeFromSqlDbType(sqlDataTypeLiteral);
-            Assert.AreEqual(true, isSupportedSqlDataType, ERROR_PREFIX + $"{{{sqlDataTypeLiteral}}} " + SQLDBTYPE_RESOLUTION_ERROR);
+            Assert.AreEqual(true, isSupportedSqlDataType, STRING_PARSE_ERROR_PREFIX + $"{{{sqlDataTypeLiteral}}} " + SQLDBTYPE_RESOLUTION_ERROR);
 
             JsonDataType resolvedJsonType = TypeHelper.GetJsonDataTypeFromSystemType(resolvedType);
             Assert.AreEqual(isSupportedSqlDataType, resolvedJsonType != JsonDataType.Undefined, ERROR_PREFIX + $"{{{sqlDataTypeLiteral}}} " + JSONDATATYPE_RESOLUTION_ERROR);
         }
         catch (DataApiBuilderException)
         {
-            Assert.AreEqual(false, isSupportedSqlDataType, ERROR_PREFIX + $"{{{sqlDataTypeLiteral}}} " + SQLDBTYPE_RESOLUTION_ERROR);
+            Assert.AreEqual(false, isSupportedSqlDataType, ERROR_PREFIX + $"{{{sqlDataTypeLiteral}}} " + SQLDBTYPE_UNEXPECTED_RESOLUTION_ERROR);
         }
     }
 

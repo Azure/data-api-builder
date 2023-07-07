@@ -48,7 +48,7 @@ public class ConfigGeneratorTests
         InitOptions options = CreateBasicInitOptionsForMsSqlWithConfig(config: TEST_RUNTIME_CONFIG_FILE);
 
         // Mocking logger to assert on logs
-        Mock<ILogger<ConfigGenerator>> loggerMock = new Mock<ILogger<ConfigGenerator>>();
+        Mock<ILogger<ConfigGenerator>> loggerMock = new();
         ConfigGenerator.SetLoggerForCliConfigGenerator(loggerMock.Object);
 
         Assert.AreEqual(isConfigGenerationSuccessful, ConfigGenerator.TryGenerateConfig(options, _runtimeConfigLoader!, _fileSystem!));
@@ -65,8 +65,8 @@ public class ConfigGeneratorTests
                 LogLevel.Error,
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains($"{TEST_RUNTIME_CONFIG_FILE} already exists.")),
-                It.IsAny<Exception>(),
-                (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()
+                It.IsAny<Exception?>(),
+                (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()
                 ),
                 Times.Once
             );
@@ -95,7 +95,7 @@ public class ConfigGeneratorTests
         InitOptions options = CreateBasicInitOptionsForMsSqlWithConfig();
 
         // Mocking logger to assert on logs
-        Mock<ILogger<ConfigGenerator>> loggerMock = new Mock<ILogger<ConfigGenerator>>();
+        Mock<ILogger<ConfigGenerator>> loggerMock = new();
         ConfigGenerator.SetLoggerForCliConfigGenerator(loggerMock.Object);
 
         Assert.AreEqual(isConfigGenerationSuccessful, ConfigGenerator.TryGenerateConfig(options, _runtimeConfigLoader!, _fileSystem!));
@@ -111,8 +111,8 @@ public class ConfigGeneratorTests
                 LogLevel.Error,
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains($"{configFileName} already exists.")),
-                It.IsAny<Exception>(),
-                (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()
+                It.IsAny<Exception?>(),
+                (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()
                 ),
                 Times.Once
             );

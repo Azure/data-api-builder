@@ -35,7 +35,6 @@ namespace Azure.DataApiBuilder.Core.Services
             [typeof(char)] = DbType.StringFixedLength,
             [typeof(Guid)] = DbType.Guid,
             [typeof(byte[])] = DbType.Binary,
-            [typeof(DateTimeOffset)] = DbType.DateTimeOffset,
             [typeof(byte?)] = DbType.Byte,
             [typeof(sbyte?)] = DbType.SByte,
             [typeof(short?)] = DbType.Int16,

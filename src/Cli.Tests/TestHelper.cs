@@ -1096,62 +1096,24 @@ namespace Cli.Tests
         }
       }";
 
-        // /// <summary>
-        // /// Helper method to create json string for runtime settings
-        // /// for json comparison in tests.
-        // /// </summary>
-        // public static string GetDefaultTestRuntimeSettingString(
-        //     HostMode hostModeType = HostMode.Production,
-        //     IEnumerable<string>? corsOrigins = null,
-        //     string authenticationProvider = "StaticWebApps",
-        //     string? audience = null,
-        //     string? issuer = null,
-        //     string? restPath = RestRuntimeOptions.DEFAULT_PATH)
-        // {
-        //     Dictionary<string, object> runtimeSettingDict = new();
-        //     Dictionary<GlobalSettingsType, object> defaultGlobalSetting = GetDefaultGlobalSettings(
-        //         hostMode: hostModeType,
-        //         corsOrigin: corsOrigins,
-        //         authenticationProvider: authenticationProvider,
-        //         audience: audience,
-        //         issuer: issuer,
-        //         restPath: restPath);
-
-        //     runtimeSettingDict.Add("runtime", defaultGlobalSetting);
-
-        //     return JsonSerializer.Serialize(runtimeSettingDict, Utils.GetSerializationOptions());
-        // }
-
-        // /// <summary>
-        // /// Helper method to setup Logger factory
-        // /// for CLI related classes.
-        // /// </summary>
-        // public static void SetupTestLoggerForCLI()
-        // {
-        //     Mock<ILogger<ConfigGenerator>> configGeneratorLogger = new();
-        //     Mock<ILogger<Utils>> utilsLogger = new();
-        //     ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger.Object);
-        //     Utils.SetCliUtilsLogger(utilsLogger.Object);
-        // }
-
-        /// <summary>
-        /// Creates basic initialization options for MS SQL config.
-        /// </summary>
-        /// <param name="config">Optional config file name.</param>
-        /// <returns>InitOptions</returns>
-        public static InitOptions CreateBasicInitOptionsForMsSqlWithConfig(string? config = null)
-        {
-            return new(
-                databaseType: DatabaseType.MSSQL,
-                connectionString: "testconnectionstring",
-                cosmosNoSqlDatabase: null,
-                cosmosNoSqlContainer: null,
-                graphQLSchemaPath: null,
-                setSessionContext: true,
-                hostMode: HostMode.Development,
-                corsOrigin: new List<string>(),
-                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                config: config);
-        }
+      /// <summary>
+      /// Creates basic initialization options for MS SQL config.
+      /// </summary>
+      /// <param name="config">Optional config file name.</param>
+      /// <returns>InitOptions</returns>
+      public static InitOptions CreateBasicInitOptionsForMsSqlWithConfig(string? config = null)
+      {
+          return new(
+              databaseType: DatabaseType.MSSQL,
+              connectionString: "testconnectionstring",
+              cosmosNoSqlDatabase: null,
+              cosmosNoSqlContainer: null,
+              graphQLSchemaPath: null,
+              setSessionContext: true,
+              hostMode: HostMode.Development,
+              corsOrigin: new List<string>(),
+              authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+              config: config);
+      }
     }
 }

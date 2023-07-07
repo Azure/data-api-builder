@@ -1851,7 +1851,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [Ignore]
         [DataTestMethod]
         [DataRow(EntitySourceType.Table, "[\"get\"]", true,
-            $"The rest property '{Entity.PROPERTY_METHODS}' is present for entity: HybridEntity of type: Table, but is only valid for type: StoredProcedure.",
+            $"The rest property '{EntityRestOptions.PROPERTY_METHODS}' is present for entity: HybridEntity of type: Table, but is only valid for type: StoredProcedure.",
             DisplayName = "Rest methods specified for non-storedprocedure entity fail config validation.")]
         [DataRow(EntitySourceType.StoredProcedure, "[\"Get\", \"post\", \"PUT\", \"paTch\", \"delete\"]", false,
             DisplayName = "Valid rest operations specified in rest methods for stored procedure pass config validation.")]

@@ -26,7 +26,7 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
 
                 switch (propertyName)
                 {
-                    case "path":
+                    case EntityRestOptions.PROPERTY_PATH:
                     {
                         reader.Read();
 
@@ -39,7 +39,7 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
                         throw new JsonException($"The value of {propertyName} must be a string. Found {reader.TokenType}.");
                     }
 
-                    case "methods":
+                    case EntityRestOptions.PROPERTY_METHODS:
                     {
                         List<SupportedHttpVerb> methods = new();
                         while (reader.Read())
@@ -61,7 +61,7 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
                         break;
                     }
 
-                    case "enabled":
+                    case EntityRestOptions.PROPERTY_ENABLED:
                     {
                         reader.Read();
                         restOptions = restOptions with { Enabled = reader.GetBoolean() };
@@ -98,18 +98,18 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
     public override void Write(Utf8JsonWriter writer, EntityRestOptions value, JsonSerializerOptions options)
     {
         writer.WriteStartObject();
-        writer.WriteBoolean("enabled", value.Enabled);
+        writer.WriteBoolean(EntityRestOptions.PROPERTY_ENABLED, value.Enabled);
 
         if (value.Path is not null)
         {
-            writer.WriteString("path", value.Path);
+            writer.WriteString(EntityRestOptions.PROPERTY_PATH, value.Path);
         }
         else if (value.Path is null && options.DefaultIgnoreCondition != JsonIgnoreCondition.WhenWritingNull)
         {
-            writer.WriteNull("path");
+            writer.WriteNull(EntityRestOptions.PROPERTY_PATH);
         }
 
-        writer.WriteStartArray("methods");
+        writer.WriteStartArray(EntityRestOptions.PROPERTY_METHODS);
         foreach (SupportedHttpVerb method in value.Methods)
         {
             writer.WriteStringValue(JsonSerializer.SerializeToElement(method, options).GetString());

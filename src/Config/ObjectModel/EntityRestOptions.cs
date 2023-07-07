@@ -18,5 +18,8 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 [JsonConverter(typeof(EntityRestOptionsConverter))]
 public record EntityRestOptions(SupportedHttpVerb[] Methods, string? Path = null, bool Enabled = true)
 {
+    public const string PROPERTY_PATH = "path";
+    public const string PROPERTY_METHODS = "methods";
+    public const string PROPERTY_ENABLED = "enabled";
     public static readonly SupportedHttpVerb[] DEFAULT_SUPPORTED_VERBS = new[] { SupportedHttpVerb.Get, SupportedHttpVerb.Post, SupportedHttpVerb.Put, SupportedHttpVerb.Patch, SupportedHttpVerb.Delete };
 }

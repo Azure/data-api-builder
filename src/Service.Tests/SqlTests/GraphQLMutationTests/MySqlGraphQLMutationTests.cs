@@ -588,6 +588,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             await InsertIntoInsertableComplexView(mySqlQuery);
         }
 
+        /// <inheritdoc/>
+        [TestMethod]
+        [Ignore]
+        public override Task ExecuteMutationWithOnlyTypenameInSelectionSet()
+        {
+            throw new NotImplementedException();
+        }
+
         #endregion
 
         #region Negative Tests

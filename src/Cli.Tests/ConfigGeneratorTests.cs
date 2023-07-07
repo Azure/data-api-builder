@@ -9,13 +9,27 @@ namespace Cli.Tests;
 [TestClass]
 public class ConfigGeneratorTests
 {
-    /// <summary>
-    /// Setup the logger for CLI
-    /// </summary>
-    [ClassInitialize]
-    public static void Setup(TestContext context)
+    private IFileSystem? _fileSystem;
+    private RuntimeConfigLoader? _runtimeConfigLoader;
+
+    [TestInitialize]
+    public void TestInitialize()
     {
-        TestHelper.SetupTestLoggerForCLI();
+        _fileSystem = FileSystemUtils.ProvisionMockFileSystem();
+
+        _runtimeConfigLoader = new RuntimeConfigLoader(_fileSystem);
+
+        ILoggerFactory loggerFactory = TestLoggerSupport.ProvisionLoggerFactory();
+
+        SetLoggerForCliConfigGenerator(loggerFactory.CreateLogger<ConfigGenerator>());
+        SetCliUtilsLogger(loggerFactory.CreateLogger<Utils>());
+    }
+
+    [TestCleanup]
+    public void TestCleanup()
+    {
+        _fileSystem = null;
+        _runtimeConfigLoader = null;
     }
 
     /// <summary>
@@ -29,15 +43,15 @@ public class ConfigGeneratorTests
         bool isConfigGenerationSuccessful)
     {
         HandleConfigFileCreationAndDeletion(TEST_RUNTIME_CONFIG_FILE, isConfigFilePresentAlready);
-        Assert.AreEqual(isConfigFilePresentAlready, File.Exists(TEST_RUNTIME_CONFIG_FILE));
+        Assert.AreEqual(isConfigFilePresentAlready, _fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
 
         InitOptions options = CreateBasicInitOptionsForMsSqlWithConfig(config: TEST_RUNTIME_CONFIG_FILE);
 
-        Assert.AreEqual(isConfigGenerationSuccessful, ConfigGenerator.TryGenerateConfig(options));
+        Assert.AreEqual(isConfigGenerationSuccessful, ConfigGenerator.TryGenerateConfig(options, _runtimeConfigLoader!, _fileSystem!));
 
         if (!isConfigFilePresentAlready)
         {
-            Assert.AreEqual(isConfigGenerationSuccessful, File.Exists(TEST_RUNTIME_CONFIG_FILE));
+            Assert.AreEqual(isConfigGenerationSuccessful, _fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
         }
     }
 
@@ -57,47 +71,30 @@ public class ConfigGeneratorTests
     {
         Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
         HandleConfigFileCreationAndDeletion(configFileName, isConfigFilePresentAlready);
-        Assert.AreEqual(isConfigFilePresentAlready, File.Exists(configFileName));
+        Assert.AreEqual(isConfigFilePresentAlready, _fileSystem!.File.Exists(configFileName));
 
         InitOptions options = CreateBasicInitOptionsForMsSqlWithConfig();
 
-        Assert.AreEqual(isConfigGenerationSuccessful, ConfigGenerator.TryGenerateConfig(options));
+        Assert.AreEqual(isConfigGenerationSuccessful, ConfigGenerator.TryGenerateConfig(options, _runtimeConfigLoader!, _fileSystem!));
         if (!isConfigFilePresentAlready)
         {
-            Assert.AreEqual(isConfigGenerationSuccessful, File.Exists(configFileName));
+            Assert.AreEqual(isConfigGenerationSuccessful, _fileSystem!.File.Exists(configFileName));
         }
     }
 
     /// <summary>
     /// This method handles the creation and deletion of a configuration file.
     /// </summary>
-    private static void HandleConfigFileCreationAndDeletion(string configFilePath, bool configFilePresent)
+    private void HandleConfigFileCreationAndDeletion(string configFilePath, bool configFilePresent)
     {
-        if (File.Exists(configFilePath) && !configFilePresent)
+        if (!configFilePresent)
         {
-            File.Delete(configFilePath);
+            _fileSystem!.File.Delete(configFilePath);
+            // File.Delete(configFilePath);
         }
-        else if (!File.Exists(configFilePath) && configFilePresent)
+        else if (configFilePresent)
         {
-            File.Create(configFilePath).Dispose();
-        }
-    }
-
-    /// <summary>
-    /// Removes the generated configuration test files
-    /// to avoid affecting the results of future tests.
-    /// </summary>
-    [ClassCleanup]
-    public static void CleanUp()
-    {
-        if (File.Exists("dab-config.Test.json"))
-        {
-            File.Delete("dab-config.Test.json");
-        }
-
-        if (File.Exists("dab-config.json"))
-        {
-            File.Delete("dab-config.json");
+            _fileSystem!.File.Create(configFilePath).Dispose();
         }
     }
 }

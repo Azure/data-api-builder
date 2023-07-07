@@ -65,7 +65,7 @@ namespace Cli.Tests
 
         /// <summary>
         /// Data source property of the config json. This is used for constructing the required config json strings
-        /// for unit tests 
+        /// for unit tests
         /// </summary>
         public const string SAMPLE_SCHEMA_DATA_SOURCE = SCHEMA_PROPERTY + "," + @"
             ""data-source"": {
@@ -275,11 +275,11 @@ namespace Cli.Tests
                   }
                 ],
                 ""rest"": {
-                  ""methods"": [	
+                  ""methods"": [
                       ""post""
-                    ]	
-                },	
-                ""graphql"": {	
+                    ]
+                },
+                ""graphql"": {
                     ""operation"": ""mutation""
                       }
                     }
@@ -302,10 +302,10 @@ namespace Cli.Tests
                   }
                 ],
                 ""rest"": {
-                  ""methods"": [	
+                  ""methods"": [
                       ""post""
-                    ]	
-                },	
+                    ]
+                },
                 ""graphql"": {
                     ""type"": true,
                     ""operation"": ""mutation""
@@ -330,10 +330,10 @@ namespace Cli.Tests
                   }
                 ],
                 ""rest"": {
-                  ""methods"": [	
+                  ""methods"": [
                       ""post""
-                    ]	
-                },	
+                    ]
+                },
                 ""graphql"": {
                     ""type"": {
                         ""singular"": ""book"",
@@ -361,10 +361,10 @@ namespace Cli.Tests
                   }
                 ],
                 ""rest"": {
-                  ""methods"": [	
+                  ""methods"": [
                       ""post""
-                    ]	
-                },	
+                    ]
+                },
                 ""graphql"": {
                     ""type"": true,
                      ""operation"": ""query""
@@ -389,10 +389,10 @@ namespace Cli.Tests
                   }
                 ],
                 ""rest"": {
-                  ""methods"": [	
+                  ""methods"": [
                       ""post""
-                    ]	
-                },	
+                    ]
+                },
                 ""graphql"": {
                     ""type"": {
                       ""singular"": ""book"",
@@ -421,10 +421,10 @@ namespace Cli.Tests
                 ],
                 ""rest"": {
                   ""path"":true,
-                  ""methods"": [	
+                  ""methods"": [
                       ""post""
-                    ]	
-                },	
+                    ]
+                },
                 ""graphql"": {
                     ""type"": true,
                      ""operation"": ""mutation""
@@ -448,7 +448,7 @@ namespace Cli.Tests
                     ]
                   }
                 ],
-                ""rest"": false,	
+                ""rest"": false,
                 ""graphql"": false
                 }
               }
@@ -471,10 +471,10 @@ namespace Cli.Tests
                 ],
                 ""rest"": {
                   ""path"":true,
-                  ""methods"": [	
+                  ""methods"": [
                       ""get""
-                    ]	
-                },	
+                    ]
+                },
                 ""graphql"": {
                     ""type"": true,
                      ""operation"": ""query""
@@ -500,12 +500,12 @@ namespace Cli.Tests
                 ],
                 ""rest"": {
                   ""path"":""/book"",
-                  ""methods"": [	
+                  ""methods"": [
                       ""post"",
                       ""patch"",
                       ""put""
-                    ]	
-                },	
+                    ]
+                },
                 ""graphql"": {
                     ""type"": {
                       ""singular"":""book"",
@@ -534,11 +534,11 @@ namespace Cli.Tests
                 ],
                 ""rest"": {
                   ""path"": true,
-                  ""methods"": [	
+                  ""methods"": [
                       ""post""
-                    ]	
-                },	
-                ""graphql"": {	
+                    ]
+                },
+                ""graphql"": {
                     ""operation"": ""mutation""
                       }
                     }
@@ -562,11 +562,11 @@ namespace Cli.Tests
                 ],
                 ""rest"": {
                   ""path"": ""/book"",
-                  ""methods"": [	
+                  ""methods"": [
                       ""post""
-                    ]	
-                },	
-                ""graphql"": {	
+                    ]
+                },
+                ""graphql"": {
                     ""operation"": ""mutation""
                       }
                     }
@@ -589,13 +589,13 @@ namespace Cli.Tests
                   }
                 ],
                 ""rest"": {
-                  ""methods"": [	
+                  ""methods"": [
                       ""get"",
                       ""post"",
                       ""patch""
-                    ]	
-                },	
-                ""graphql"": {	
+                    ]
+                },
+                ""graphql"": {
                     ""operation"": ""mutation""
                       }
                     }
@@ -619,13 +619,13 @@ namespace Cli.Tests
                 ],
                 ""rest"": {
                   ""path"": true,
-                  ""methods"": [	
+                  ""methods"": [
                       ""get"",
                       ""post"",
                       ""patch""
-                    ]	
-                },	
-                ""graphql"": {	
+                    ]
+                },
+                ""graphql"": {
                     ""operation"": ""mutation""
                       }
                     }
@@ -649,13 +649,13 @@ namespace Cli.Tests
                 ],
                 ""rest"": {
                   ""path"": ""/book"",
-                  ""methods"": [	
+                  ""methods"": [
                       ""get"",
                       ""post"",
                       ""patch""
-                    ]	
-                },	
-                ""graphql"": {	
+                    ]
+                },
+                ""graphql"": {
                     ""operation"": ""mutation""
                       }
                     }
@@ -683,14 +683,14 @@ namespace Cli.Tests
                     ]
                   }
                 ],
-                ""rest"": {	
-                    ""methods"": [	
+                ""rest"": {
+                    ""methods"": [
                       ""post"",
                       ""put"",
-                      ""patch""	
-                    ]	
-                  },	
-                  ""graphql"": {	
+                      ""patch""
+                    ]
+                  },
+                  ""graphql"": {
                     ""operation"": ""query""
                       }
                     }
@@ -718,11 +718,11 @@ namespace Cli.Tests
                     ]
                   }
                 ],
-                ""rest"": {	
-                    ""methods"": [	
+                ""rest"": {
+                    ""methods"": [
                       ""get""
-                    ]	
-                  },	
+                    ]
+                  },
                   ""graphql"": false
                     }
                   }
@@ -1096,43 +1096,43 @@ namespace Cli.Tests
         }
       }";
 
-        /// <summary>
-        /// Helper method to create json string for runtime settings
-        /// for json comparison in tests.
-        /// </summary>
-        public static string GetDefaultTestRuntimeSettingString(
-            HostModeType hostModeType = HostModeType.Production,
-            IEnumerable<string>? corsOrigins = null,
-            string authenticationProvider = "StaticWebApps",
-            string? audience = null,
-            string? issuer = null,
-            string? restPath = GlobalSettings.REST_DEFAULT_PATH)
-        {
-            Dictionary<string, object> runtimeSettingDict = new();
-            Dictionary<GlobalSettingsType, object> defaultGlobalSetting = GetDefaultGlobalSettings(
-                hostMode: hostModeType,
-                corsOrigin: corsOrigins,
-                authenticationProvider: authenticationProvider,
-                audience: audience,
-                issuer: issuer,
-                restPath: restPath);
+        // /// <summary>
+        // /// Helper method to create json string for runtime settings
+        // /// for json comparison in tests.
+        // /// </summary>
+        // public static string GetDefaultTestRuntimeSettingString(
+        //     HostMode hostModeType = HostMode.Production,
+        //     IEnumerable<string>? corsOrigins = null,
+        //     string authenticationProvider = "StaticWebApps",
+        //     string? audience = null,
+        //     string? issuer = null,
+        //     string? restPath = RestRuntimeOptions.DEFAULT_PATH)
+        // {
+        //     Dictionary<string, object> runtimeSettingDict = new();
+        //     Dictionary<GlobalSettingsType, object> defaultGlobalSetting = GetDefaultGlobalSettings(
+        //         hostMode: hostModeType,
+        //         corsOrigin: corsOrigins,
+        //         authenticationProvider: authenticationProvider,
+        //         audience: audience,
+        //         issuer: issuer,
+        //         restPath: restPath);
 
-            runtimeSettingDict.Add("runtime", defaultGlobalSetting);
+        //     runtimeSettingDict.Add("runtime", defaultGlobalSetting);
 
-            return JsonSerializer.Serialize(runtimeSettingDict, GetSerializationOptions());
-        }
+        //     return JsonSerializer.Serialize(runtimeSettingDict, Utils.GetSerializationOptions());
+        // }
 
-        /// <summary>
-        /// Helper method to setup Logger factory
-        /// for CLI related classes.
-        /// </summary>
-        public static void SetupTestLoggerForCLI()
-        {
-            Mock<ILogger<ConfigGenerator>> configGeneratorLogger = new();
-            Mock<ILogger<Utils>> utilsLogger = new();
-            ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger.Object);
-            Utils.SetCliUtilsLogger(utilsLogger.Object);
-        }
+        // /// <summary>
+        // /// Helper method to setup Logger factory
+        // /// for CLI related classes.
+        // /// </summary>
+        // public static void SetupTestLoggerForCLI()
+        // {
+        //     Mock<ILogger<ConfigGenerator>> configGeneratorLogger = new();
+        //     Mock<ILogger<Utils>> utilsLogger = new();
+        //     ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger.Object);
+        //     Utils.SetCliUtilsLogger(utilsLogger.Object);
+        // }
 
         /// <summary>
         /// Creates basic initialization options for MS SQL config.
@@ -1142,13 +1142,13 @@ namespace Cli.Tests
         public static InitOptions CreateBasicInitOptionsForMsSqlWithConfig(string? config = null)
         {
             return new(
-                databaseType: DatabaseType.mssql,
+                databaseType: DatabaseType.MSSQL,
                 connectionString: "testconnectionstring",
                 cosmosNoSqlDatabase: null,
                 cosmosNoSqlContainer: null,
                 graphQLSchemaPath: null,
                 setSessionContext: true,
-                hostMode: HostModeType.Development,
+                hostMode: HostMode.Development,
                 corsOrigin: new List<string>(),
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
                 config: config);

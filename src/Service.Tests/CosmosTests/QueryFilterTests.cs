@@ -1,13 +1,12 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.Resolvers;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -20,23 +19,17 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
     [TestClass, TestCategory(TestCategory.COSMOSDBNOSQL)]
     public class QueryFilterTests : TestBase
     {
-        private static readonly string _containerName = Guid.NewGuid().ToString();
         private static int _pageSize = 10;
         private static readonly string _graphQLQueryName = "planets";
-        private static List<string> _idList;
+        private List<string> _idList;
 
-        [ClassInitialize]
-        public static void TestFixtureSetup(TestContext context)
+        [TestInitialize]
+        public void TestFixtureSetup()
         {
-            Init(context);
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
             cosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
             cosmosClient.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
             _idList = CreateItems(DATABASE_NAME, _containerName, 10);
-            OverrideEntityContainer("Planet", _containerName);
-            OverrideEntityContainer("Earth", _containerName);
-            OverrideEntityContainer("StarAlias", _containerName);
-            OverrideEntityContainer("Sun", _containerName);
         }
 
         /// <summary>
@@ -61,7 +54,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
         }
 
-        private static async Task ExecuteAndValidateResult(string graphQLQueryName, string gqlQuery, string dbQuery)
+        private async Task ExecuteAndValidateResult(string graphQLQueryName, string gqlQuery, string dbQuery)
         {
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQueryName, query: gqlQuery);
             JsonDocument expected = await ExecuteCosmosRequestAsync(dbQuery, _pageSize, null, _containerName);
@@ -356,7 +349,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// - the final predicate is:
         ///   ((<AND-ed non and/or predicates>) AND (<AND-ed predicates in and filed>) OR <OR-ed predicates in or field>)
         /// </summart>
-        /// 
+        ///
         [TestMethod]
         public async Task TestComplicatedFilter()
         {
@@ -518,7 +511,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// Passes null to nullable fields and makes sure they are ignored
         /// </summary>
         ///
-        [Ignore] //Todo: This test fails on linux/mac due to some string comparisoin issues. 
+        [Ignore] //Todo: This test fails on linux/mac due to some string comparisoin issues.
         [TestMethod]
         public async Task TestExplicitNullFieldsAreIgnored()
         {
@@ -566,7 +559,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         {
             string gqlQuery = @"{
                 planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {character : {name : {eq : ""planet character""}}})
-                { 
+                {
                     items {
                         id
                         name
@@ -597,7 +590,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             string gqlQuery = @"{
                 planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {character : {name : {eq : ""planet character""}}
                     and: [{name: {eq: ""Endor""}} ]  })
-                { 
+                {
                     items {
                         id
                         name
@@ -627,7 +620,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         {
             string gqlQuery = @"{
                 planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {character : {star : {name : {eq : ""Endor_star""}}}})
-                { 
+                {
                     items {
                         id
                         name
@@ -660,7 +653,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         {
             string gqlQuery = @"{
                 stars(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {tag : {name : {eq : ""test name""}}})
-                { 
+                {
                     items {
                         tag {
                             id
@@ -683,7 +676,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         {
             string gqlQuery = @"{
                 earths(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {id : {eq : """ + _idList[0] + @"""}})
-                { 
+                {
                     items {
                         id
                     }
@@ -705,7 +698,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             // Run query
             string gqlQuery = @"{
                 earths(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {name : {eq : ""test name""}})
-                { 
+                {
                     items {
                         name
                     }
@@ -733,7 +726,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             // Run query
             string gqlQuery = @"{
                 planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {name : {eq : ""Earth""}})
-                { 
+                {
                     items {
                         name
                     }
@@ -752,7 +745,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
         /// <summary>
         /// Tests that the nested field level query filter passes authorization when nested filter fields are authorized
-        /// because the field 'id' on object type 'earth' is an included field of the read operation 
+        /// because the field 'id' on object type 'earth' is an included field of the read operation
         /// permissions defined for the anonymous role.
         /// </summary>
         [TestMethod]
@@ -760,7 +753,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         {
             string gqlQuery = @"{
                 planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {earth : {id : {eq : """ + _idList[0] + @"""}}})
-                { 
+                {
                     items {
                         earth {
                                 id
@@ -774,7 +767,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         }
 
         /// <summary>
-        /// Tests that the nested field level query filter fails authorization when nested filter fields are 
+        /// Tests that the nested field level query filter fails authorization when nested filter fields are
         /// unauthorized because the field 'name' on object type 'earth' is an excluded field of the read
         /// operation permissions defined for the anonymous role.
         /// </summary>
@@ -784,7 +777,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             // Run query
             string gqlQuery = @"{
                 planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {earth : {name : {eq : ""test name""}}})
-                { 
+                {
                     items {
                         id
                         name
@@ -820,7 +813,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             // Run query
             string gqlQuery = @"{
                 earths(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {id : {eq : """ + _idList[0] + @"""}})
-                { 
+                {
                     items {
                         id
                         type
@@ -839,14 +832,14 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// Tests that the field level query filter succeeds requests
         /// when GraphQL is set to true without setting singular type in runtime config and
         /// when include fields are WILDCARD,
-        /// all the columns are able to be retrieved for authorization validation. 
+        /// all the columns are able to be retrieved for authorization validation.
         /// </summary>
         [TestMethod]
         public async Task TestQueryFilterFieldAuthWithoutSingularType()
         {
             string gqlQuery = @"{
                 suns(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {id : {eq : """ + _idList[0] + @"""}})
-                { 
+                {
                     items {
                         id
                         name
@@ -861,14 +854,14 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// <summary>
         /// Tests that the field level query filter failed authorization validation
         /// when include fields are WILDCARD and exclude fields specifies fields,
-        /// exclude fields takes precedence over include fields. 
+        /// exclude fields takes precedence over include fields.
         /// </summary>
         [TestMethod]
         public async Task TestQueryFilterFieldAuth_ExcludeTakesPredecence()
         {
             string gqlQuery = @"{
                 suns(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {name : {eq : ""test name""}})
-                { 
+                {
                     items {
                         id
                         name
@@ -891,8 +884,8 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         }
         #endregion
 
-        [ClassCleanup]
-        public static void TestFixtureTearDown()
+        [TestCleanup]
+        public void TestFixtureTearDown()
         {
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
             cosmosClient.GetDatabase(DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();

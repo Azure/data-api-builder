@@ -40,31 +40,31 @@ namespace Cli
             string? environmentValue = Environment.GetEnvironmentVariable(RuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME);
             if (!string.IsNullOrWhiteSpace(options.Config))
             {
-                _logger.LogInformation("Generating user provided config file: {configFileName}", options.Config);
+                _logger.LogInformation("Generating user provided config file with name: {configFileName}", options.Config);
                 runtimeConfigFile = options.Config;
             }
             else if (!string.IsNullOrWhiteSpace(environmentValue))
             {
                 _logger.LogInformation("The environment variable {variableName} has a value of {variableValue}", RuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
                 runtimeConfigFile = RuntimeConfigLoader.GetEnvironmentFileName(RuntimeConfigLoader.CONFIGFILE_NAME, environmentValue);
-                _logger.LogInformation("Generating environment config file: {config}", runtimeConfigFile);
+                _logger.LogInformation("Generating environment config file: {configPath}", Path.GetFullPath(runtimeConfigFile));
             }
             else
             {
-                _logger.LogInformation("Generating default config file: {config}", runtimeConfigFile);
+                _logger.LogInformation("Generating default config file: {config}", Path.GetFullPath(runtimeConfigFile));
             }
 
             // File existence checked to avoid overwriting the existing configuration.
             if (fileSystem.File.Exists(runtimeConfigFile))
             {
-                _logger.LogError("Config file: {runtimeConfigFile} already exists. Please provide a different name or remove the existing config file.", runtimeConfigFile);
+                _logger.LogError("Config file: {runtimeConfigFile} already exists. Please provide a different name or remove the existing config file.",
+                    Path.GetFullPath(runtimeConfigFile));
                 return false;
             }
 
             // Creating a new json file with runtime configuration
             if (!TryCreateRuntimeConfig(options, loader, fileSystem, out RuntimeConfig? runtimeConfig))
             {
-                _logger.LogError("Failed to create the runtime config file.");
                 return false;
             }
 

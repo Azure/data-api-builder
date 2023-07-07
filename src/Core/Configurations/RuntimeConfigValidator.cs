@@ -254,8 +254,6 @@ namespace Azure.DataApiBuilder.Core.Configurations
                     {
                         pathForEntity = entity.Rest.Path is not null ? entity.Rest.Path.TrimStart('/') : entityName;
                         isRestEnabledForEntity = entity.Rest.Enabled;
-
-                        // Since 'path' is an optional property, we skip validation if its absent.
                         ValidateRestPathSettingsForEntity(entityName, pathForEntity);
                     }
 

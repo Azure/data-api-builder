@@ -191,12 +191,6 @@ namespace Azure.DataApiBuilder.Core.Services
             return EntityPathToEntityName.TryGetValue(entityPathName, out entityName);
         }
 
-        /// <inheritdoc/>
-        public virtual bool TryGetEntityPathFromName(string entityName, [NotNullWhen(true)] out string? entityPathName)
-        {
-            return EntityNameToEntityPath.TryGetValue(entityName, out entityPathName);
-        }
-
         /// <inheritdoc />
         public IDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects()
         {
@@ -373,7 +367,6 @@ namespace Azure.DataApiBuilder.Core.Services
                 if (!string.IsNullOrEmpty(path))
                 {
                     EntityPathToEntityName[path] = entityName;
-                    EntityNameToEntityPath[entityName] = path;
                 }
             }
         }

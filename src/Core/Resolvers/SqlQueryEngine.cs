@@ -216,32 +216,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string? baseRoute = runtimeConfig.Runtime.BaseRoute;
             if (!string.IsNullOrEmpty(baseRoute))
             {
-                _sqlMetadataProvider.TryGetEntityPathFromName(context.EntityName, out string? pathNameForEntity);
+                HttpRequest request = _httpContextAccessor.HttpContext!.Request;
 
-                // Path is of the form ....restPath/pathNameForEntity. We want to insert the base route before the restPath,
-                // hence we remove pathNameForEntity and restPath from the path and append them back after appending the base route to the path.
-                // Initialize lastIdxOfPathToBeIncluded by removing the pathNameForEntity from the path.
-                int lastIdxOfPathToBeIncluded = path.Length - pathNameForEntity!.Length - 1;
-
-                // Trim any forward slashes present at the end.
-                while (path[lastIdxOfPathToBeIncluded] == '/')
-                {
-                    lastIdxOfPathToBeIncluded--;
-                }
-
-                lastIdxOfPathToBeIncluded = lastIdxOfPathToBeIncluded - runtimeConfig.Runtime.Rest.Path.Length;
-
-                // Initialize pathWithBaseRoute by removing restPath and pathNameForEntity from the path.
+                // Path is of the form ....restPath/pathNameForEntity. We want to insert the base route before the restPath.
                 // Finally, it will be of the form: .../baseRoute/restPath/pathNameForEntity.
-                StringBuilder pathWithBaseRoute = new(path.Substring(0, lastIdxOfPathToBeIncluded + 1));
-
-                // Append base route.
-                pathWithBaseRoute.Append(baseRoute);
-                // Append rest path.
-                pathWithBaseRoute.Append($"{runtimeConfig.Runtime.Rest.Path}");
-                // Append path name for entity.
-                pathWithBaseRoute.Append($"/{pathNameForEntity}");
-                path = pathWithBaseRoute.ToString();
+                path = UriHelper.BuildAbsolute(
+                    scheme: request.Scheme,
+                    host: request.Host,
+                    pathBase: baseRoute,
+                    path: request.Path,
+                    query: request.QueryString).Split('?')[0];
             }
 
             JsonElement nextLink = SqlPaginationUtil.CreateNextLink(

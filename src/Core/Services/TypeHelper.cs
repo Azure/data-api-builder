@@ -161,12 +161,12 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// Converts the string representation of a SQL Server data type to the corrsponding .NET Framework/CLR type as documented
-        /// by the SQL Server data type mappings article.
+        /// Converts the string representation of a SQL Server data type that can be parsed into SqlDbType enum
+        /// to the corrsponding .NET Framework/CLR type as documented by the SQL Server data type mappings article.
         /// The SQL Server database engine type and SqlDbType enum map 1:1 when character casing is ignored.
         /// e.g. SQL DB type 'bigint' maps to SqlDbType enum 'BigInt' in a case-insensitive match.
         /// There are some mappings in the SQL Server data type mappings table which do not map after ignoring casing, however
-        /// those mappings are outdated and don't accommodate newly added SqlDbType enum values added.
+        /// those mappings are outdated and don't accommodate newly added SqlDbType enum values.
         /// e.g. The documentation table shows SQL server type 'binary' maps to SqlDbType enum 'VarBinary',
         /// however SqlDbType.Binary now exists.
         /// </summary>

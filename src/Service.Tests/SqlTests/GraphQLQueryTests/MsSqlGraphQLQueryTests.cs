@@ -366,6 +366,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 TestCategory.MSSQL);
         }
 
+        /// <inheritdoc/>>
+        [TestMethod]
+        public async Task QueryAgainstSPWithOnlyTypenameInSelectionSet()
+        {
+            string dbQuery = "select count(*) as count from books";
+            await base.QueryAgainstSPWithOnlyTypenameInSelectionSet(dbQuery);
+        }
+
         #endregion
     }
 }

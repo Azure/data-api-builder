@@ -319,6 +319,77 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdateEarthInput!) {
         }
 
         /// <summary>
+        /// Validates that a create mutation with only __typename in the selection set returns the
+        /// right type
+        /// </summary>
+        [TestMethod]
+        public async Task CreateMutationWithOnlyTypenameInSelectionSet()
+        {
+            string graphQLMutation = @"
+                mutation ($item: CreatePlanetInput!) {
+                    createPlanet (item: $item) {
+                        __typename
+                    }
+                }";
+
+            // Construct the inputs required for the mutation
+            string id = Guid.NewGuid().ToString();
+            var input = new
+            {
+                id,
+                name = "test_name",
+                stars = new[] { new { id = "TestStar" } }
+            };
+            JsonElement response = await ExecuteGraphQLRequestAsync("createPlanet", graphQLMutation, new() { { "item", input } });
+
+            // Validate results
+            string expected = @"Planet";
+            string actual = response.GetProperty("__typename").Deserialize<string>();
+            Assert.AreEqual(expected, actual);
+        }
+
+        /// <summary>
+        /// Validates that an update mutation with only __typename in the selection set returns the
+        /// right type
+        /// </summary>
+        [TestMethod]
+        public async Task UpdateMutationWithOnlyTypenameInSelectionSet()
+        {
+            // Create the item with a known id to execute an update mutation against it
+            string id = Guid.NewGuid().ToString();
+            var input = new
+            {
+                id,
+                name = "test_name"
+            };
+
+            _ = await ExecuteGraphQLRequestAsync("createPlanet", _createPlanetMutation, new() { { "item", input } });
+
+            string mutation = @"
+                mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdatePlanetInput!) {
+                    updatePlanet (id: $id, _partitionKeyValue: $partitionKeyValue, item: $item) {
+                        __typename
+                    }
+                }";
+
+            // Construct the inputs required for the update mutation
+            var update = new
+            {
+                id,
+                name = "new_name",
+                stars = new[] { new { id = "TestStar" } }
+            };
+
+            // Execute the update mutation
+            JsonElement response = await ExecuteGraphQLRequestAsync("updatePlanet", mutation, variables: new() { { "id", id }, { "partitionKeyValue", id }, { "item", update } });
+
+            // Validate results
+            string expected = @"Planet";
+            string actual = response.GetProperty("__typename").Deserialize<string>();
+            Assert.AreEqual(expected, actual);
+        }
+
+        /// <summary>
         /// Runs once after all tests in this class are executed
         /// </summary>
         [TestCleanup]

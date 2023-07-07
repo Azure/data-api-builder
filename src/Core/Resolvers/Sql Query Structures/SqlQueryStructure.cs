@@ -391,17 +391,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     AddColumnsForEndCursor();
                 }
 
-                // if the user does a paginated query only requesting hasNextPage
-                // there will be no elements in Columns
-                if (!Columns.Any())
-                {
-                    AddColumn(PrimaryKey()[0]);
-                }
-
                 if (PaginationMetadata.RequestedHasNextPage)
                 {
                     _limit++;
                 }
+            }
+
+            // If there are no columns, add the primary key column
+            // to prevent failures when executing the database query.
+            if (!Columns.Any())
+            {
+                AddColumn(PrimaryKey()[0]);
             }
 
             ParametrizeColumns();

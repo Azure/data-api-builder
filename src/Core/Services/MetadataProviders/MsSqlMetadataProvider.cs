@@ -32,7 +32,8 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// Takes a string version of an SQL Server data type and returns its .NET common language runtime (CLR) counterpart
+        /// Takes a string version of an SQL Server data type (also applies to Azure SQL DB)
+        /// and returns its .NET common language runtime (CLR) counterpart
         /// As per https://docs.microsoft.com/dotnet/framework/data/adonet/sql-server-data-type-mappings
         /// </summary>
         public override Type SqlToCLRType(string sqlType)

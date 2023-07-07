@@ -16,7 +16,6 @@ public static class TypeHelper
 {
     /// <summary>
     /// Maps .NET Framework types to DbType enum
-    /// Unnecessary to add nullable types because
     /// </summary>
     private static Dictionary<Type, DbType> _systemTypeToDbTypeMap = new()
     {
@@ -56,6 +55,9 @@ public static class TypeHelper
 
     /// <summary>
     /// Maps .NET Framework type (System/CLR type) to JsonDataType.
+        /// Unnecessary to add nullable types because GetJsonDataTypeFromSystemType()
+        /// (the helper used to access key/values in this dictionary)
+        /// resolves the underlying type when a nullable type is used for lookup.
     /// </summary>
     private static Dictionary<Type, JsonDataType> _systemTypeToJsonDataTypeMap = new()
     {
@@ -76,20 +78,6 @@ public static class TypeHelper
         [typeof(Guid)] = JsonDataType.String,
         [typeof(byte[])] = JsonDataType.String,
         [typeof(TimeSpan)] = JsonDataType.String,
-        [typeof(byte?)] = JsonDataType.String,
-        [typeof(sbyte?)] = JsonDataType.String,
-        [typeof(short?)] = JsonDataType.Number,
-        [typeof(ushort?)] = JsonDataType.Number,
-        [typeof(int?)] = JsonDataType.Number,
-        [typeof(uint?)] = JsonDataType.Number,
-        [typeof(long?)] = JsonDataType.Number,
-        [typeof(ulong?)] = JsonDataType.Number,
-        [typeof(float?)] = JsonDataType.Number,
-        [typeof(double?)] = JsonDataType.Number,
-        [typeof(decimal?)] = JsonDataType.Number,
-        [typeof(bool?)] = JsonDataType.Boolean,
-        [typeof(char?)] = JsonDataType.String,
-        [typeof(Guid?)] = JsonDataType.String,
         [typeof(object)] = JsonDataType.Object,
         [typeof(DateTime)] = JsonDataType.String,
         [typeof(DateTimeOffset)] = JsonDataType.String
@@ -142,6 +130,8 @@ public static class TypeHelper
     {
         // Get the underlying type argument if the 'type' argument is a nullable type.
         Type? nullableUnderlyingType = Nullable.GetUnderlyingType(type);
+
+            // Will not be null when the input argument 'type' is a closed generic nullable type.
         if (nullableUnderlyingType is not null)
         {
             type = nullableUnderlyingType;

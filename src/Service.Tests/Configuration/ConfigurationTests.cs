@@ -95,38 +95,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// </summary>
         public const string SP_CONFIG_WITH_NO_REST_SETTINGS = @"
         {
-          ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
-          ""data-source"": {
-            ""database-type"": ""mssql"",
-            ""options"": {
-              ""set-session-context"": true
-            }
-          },
-          ""runtime"": {
-            ""rest"": {
-              ""enabled"": true,
-              ""path"": ""/api""
-            },
-            ""graphql"": {
-              ""enabled"": true,
-              ""path"": ""/graphql"",
-              ""allow-introspection"": true
-            },
-            ""host"": {
-              ""cors"": {
-                ""origins"": [""http://localhost:5000""],
-                ""allow-credentials"": false
-              },
-              ""authentication"": {
-                ""provider"": ""StaticWebApps"",
-                ""jwt"": {
-                  ""audience"": null,
-                  ""issuer"": null
-                }
-              },
-              ""mode"": ""development""
-            }
-          },
           ""entities"": {
             ""GetBooks"": {
               ""source"": {
@@ -170,75 +138,43 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// </summary>
         public const string SP_CONFIG_WITH_ONLY_PATH_IN_REST_SETTINGS = @"
         {
-            ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
-            ""data-source"": {
-            ""database-type"": ""mssql"",
-            ""options"": {
-                ""set-session-context"": true
-            }
-            },
-            ""runtime"": {
-            ""rest"": {
-                ""enabled"": true,
-                ""path"": ""/api""
-            },
-            ""graphql"": {
-                ""enabled"": true,
-                ""path"": ""/graphql"",
-                ""allow-introspection"": true
-            },
-            ""host"": {
-                ""cors"": {
-                ""origins"": [""http://localhost:5000""],
-                ""allow-credentials"": false
-                },
-                ""authentication"": {
-                ""provider"": ""StaticWebApps"",
-                ""jwt"": {
-                    ""audience"": null,
-                    ""issuer"": null
-                }
-                },
-                ""mode"": ""development""
-            }
-            },
             ""entities"": {
-            ""GetBooks"": {
-                ""source"": {
-                ""object"": ""get_books"",
-                ""type"": ""stored-procedure"",
-                ""parameters"": null,
-                ""key-fields"": null
-                },
-                ""graphql"": {
-                ""enabled"": true,
-                ""operation"": ""query"",
-                ""type"": {
-                    ""singular"": ""GetBooks"",
-                    ""plural"": ""GetBooks""
-                }
-                },
-                ""rest"":{
-                ""path"": ""get_books""
-                },
-                ""permissions"": [
-                {
-                    ""role"": ""anonymous"",
-                    ""actions"": [
-                    {
-                        ""action"": ""execute"",
-                        ""fields"": null,
-                        ""policy"": {
-                        ""request"": null,
-                        ""database"": null
-                        }
+                ""GetBooks"": {
+                    ""source"": {
+                    ""object"": ""get_books"",
+                    ""type"": ""stored-procedure"",
+                    ""parameters"": null,
+                    ""key-fields"": null
+                    },
+                    ""graphql"": {
+                    ""enabled"": true,
+                    ""operation"": ""query"",
+                    ""type"": {
+                        ""singular"": ""GetBooks"",
+                        ""plural"": ""GetBooks""
                     }
-                    ]
+                    },
+                    ""rest"":{
+                    ""path"": ""get_books""
+                    },
+                    ""permissions"": [
+                    {
+                        ""role"": ""anonymous"",
+                        ""actions"": [
+                        {
+                            ""action"": ""execute"",
+                            ""fields"": null,
+                            ""policy"": {
+                            ""request"": null,
+                            ""database"": null
+                            }
+                        }
+                        ]
+                    }
+                    ],
+                    ""mappings"": null,
+                    ""relationships"": null
                 }
-                ],
-                ""mappings"": null,
-                ""relationships"": null
-            }
             }
         }";
 
@@ -248,79 +184,47 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// </summary>
         public const string SP_CONFIG_WITH_JUST_METHODS_IN_REST_SETTINGS = @"
             {
-              ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
-              ""data-source"": {
-                ""database-type"": ""mssql"",
-                ""options"": {
-                  ""set-session-context"": true
-                }
-              },
-              ""runtime"": {
-                ""rest"": {
-                  ""enabled"": true,
-                  ""path"": ""/api""
-                },
-                ""graphql"": {
-                  ""enabled"": true,
-                  ""path"": ""/graphql"",
-                  ""allow-introspection"": true
-                },
-                ""host"": {
-                  ""cors"": {
-                    ""origins"": [""http://localhost:5000""],
-                    ""allow-credentials"": false
-                  },
-                  ""authentication"": {
-                    ""provider"": ""StaticWebApps"",
-                    ""jwt"": {
-                      ""audience"": null,
-                      ""issuer"": null
-                    }
-                  },
-                  ""mode"": ""development""
-                }
-              },
               ""entities"": {
-                ""GetBooks"": {
-                  ""source"": {
-                    ""object"": ""get_books"",
-                    ""type"": ""stored-procedure"",
-                    ""parameters"": null,
-                    ""key-fields"": null
-                  },
-                  ""graphql"": {
-                    ""enabled"": true,
-                    ""operation"": ""query"",
-                    ""type"": {
-                      ""singular"": ""GetBooks"",
-                      ""plural"": ""GetBooks""
-                    }
-                  },
-                  ""rest"":{
-                    ""methods"": [
-                      ""get""
-                    ]
-                  },
-                  ""permissions"": [
-                    {
-                      ""role"": ""anonymous"",
-                      ""actions"": [
-                        {
-                          ""action"": ""execute"",
-                          ""fields"": null,
-                          ""policy"": {
-                            ""request"": null,
-                            ""database"": null
-                          }
+                    ""GetBooks"": {
+                    ""source"": {
+                        ""object"": ""get_books"",
+                        ""type"": ""stored-procedure"",
+                        ""parameters"": null,
+                        ""key-fields"": null
+                    },
+                    ""graphql"": {
+                        ""enabled"": true,
+                        ""operation"": ""query"",
+                        ""type"": {
+                        ""singular"": ""GetBooks"",
+                        ""plural"": ""GetBooks""
                         }
-                      ]
+                    },
+                    ""rest"":{
+                        ""methods"": [
+                        ""get""
+                        ]
+                    },
+                    ""permissions"": [
+                        {
+                        ""role"": ""anonymous"",
+                        ""actions"": [
+                            {
+                            ""action"": ""execute"",
+                            ""fields"": null,
+                            ""policy"": {
+                                ""request"": null,
+                                ""database"": null
+                            }
+                            }
+                        ]
+                        }
+                    ],
+                    ""mappings"": null,
+                    ""relationships"": null
                     }
-                  ],
-                  ""mappings"": null,
-                  ""relationships"": null
                 }
-              }
-        }";
+            }";
 
         /// <summary>
         /// A config file with a SP entity for which REST APIs are disabled.
@@ -328,77 +232,45 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// </summary>
         public const string SP_CONFIG_WITH_REST_DISABLED = @"
             {
-              ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
-              ""data-source"": {
-                ""database-type"": ""mssql"",
-                ""options"": {
-                  ""set-session-context"": true
-                }
-              },
-              ""runtime"": {
-                ""rest"": {
-                  ""enabled"": true,
-                  ""path"": ""/api""
-                },
-                ""graphql"": {
-                  ""enabled"": true,
-                  ""path"": ""/graphql"",
-                  ""allow-introspection"": true
-                },
-                ""host"": {
-                  ""cors"": {
-                    ""origins"": [""http://localhost:5000""],
-                    ""allow-credentials"": false
-                  },
-                  ""authentication"": {
-                    ""provider"": ""StaticWebApps"",
-                    ""jwt"": {
-                      ""audience"": null,
-                      ""issuer"": null
-                    }
-                  },
-                  ""mode"": ""development""
-                }
-              },
               ""entities"": {
-                ""GetBooks"": {
-                  ""source"": {
-                    ""object"": ""get_books"",
-                    ""type"": ""stored-procedure"",
-                    ""parameters"": null,
-                    ""key-fields"": null
-                  },
-                  ""graphql"": {
-                    ""enabled"": true,
-                    ""operation"": ""query"",
-                    ""type"": {
-                      ""singular"": ""GetBooks"",
-                      ""plural"": ""GetBooks""
-                    }
-                  },
-                  ""rest"":{
-                    ""enabled"": false
-                  },
-                  ""permissions"": [
-                    {
-                      ""role"": ""anonymous"",
-                      ""actions"": [
-                        {
-                          ""action"": ""execute"",
-                          ""fields"": null,
-                          ""policy"": {
-                            ""request"": null,
-                            ""database"": null
-                          }
+                    ""GetBooks"": {
+                    ""source"": {
+                        ""object"": ""get_books"",
+                        ""type"": ""stored-procedure"",
+                        ""parameters"": null,
+                        ""key-fields"": null
+                    },
+                    ""graphql"": {
+                        ""enabled"": true,
+                        ""operation"": ""query"",
+                        ""type"": {
+                        ""singular"": ""GetBooks"",
+                        ""plural"": ""GetBooks""
                         }
-                      ]
+                    },
+                    ""rest"":{
+                        ""enabled"": false
+                    },
+                    ""permissions"": [
+                        {
+                        ""role"": ""anonymous"",
+                        ""actions"": [
+                            {
+                            ""action"": ""execute"",
+                            ""fields"": null,
+                            ""policy"": {
+                                ""request"": null,
+                                ""database"": null
+                            }
+                            }
+                        ]
+                        }
+                    ],
+                    ""mappings"": null,
+                    ""relationships"": null
                     }
-                  ],
-                  ""mappings"": null,
-                  ""relationships"": null
                 }
-              }
-        }";
+            }";
 
         /// <summary>
         /// A config file with a SP entity for which REST path and methods are not explicitly configured.
@@ -406,77 +278,45 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// </summary>
         public const string SP_CONFIG_WITH_JUST_REST_ENABLED = @"
             {
-              ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
-              ""data-source"": {
-                ""database-type"": ""mssql"",
-                ""options"": {
-                  ""set-session-context"": true
-                }
-              },
-              ""runtime"": {
-                ""rest"": {
-                  ""enabled"": true,
-                  ""path"": ""/api""
-                },
-                ""graphql"": {
-                  ""enabled"": true,
-                  ""path"": ""/graphql"",
-                  ""allow-introspection"": true
-                },
-                ""host"": {
-                  ""cors"": {
-                    ""origins"": [""http://localhost:5000""],
-                    ""allow-credentials"": false
-                  },
-                  ""authentication"": {
-                    ""provider"": ""StaticWebApps"",
-                    ""jwt"": {
-                      ""audience"": null,
-                      ""issuer"": null
-                    }
-                  },
-                  ""mode"": ""development""
-                }
-              },
               ""entities"": {
-                ""GetBooks"": {
-                  ""source"": {
-                    ""object"": ""get_books"",
-                    ""type"": ""stored-procedure"",
-                    ""parameters"": null,
-                    ""key-fields"": null
-                  },
-                  ""graphql"": {
-                    ""enabled"": true,
-                    ""operation"": ""query"",
-                    ""type"": {
-                      ""singular"": ""GetBooks"",
-                      ""plural"": ""GetBooks""
-                    }
-                  },
-                  ""rest"":{
-                    ""enabled"": true
-                  },
-                  ""permissions"": [
-                    {
-                      ""role"": ""anonymous"",
-                      ""actions"": [
-                        {
-                          ""action"": ""execute"",
-                          ""fields"": null,
-                          ""policy"": {
-                            ""request"": null,
-                            ""database"": null
-                          }
+                    ""GetBooks"": {
+                    ""source"": {
+                        ""object"": ""get_books"",
+                        ""type"": ""stored-procedure"",
+                        ""parameters"": null,
+                        ""key-fields"": null
+                    },
+                    ""graphql"": {
+                        ""enabled"": true,
+                        ""operation"": ""query"",
+                        ""type"": {
+                        ""singular"": ""GetBooks"",
+                        ""plural"": ""GetBooks""
                         }
-                      ]
+                    },
+                    ""rest"":{
+                        ""enabled"": true
+                    },
+                    ""permissions"": [
+                        {
+                        ""role"": ""anonymous"",
+                        ""actions"": [
+                            {
+                            ""action"": ""execute"",
+                            ""fields"": null,
+                            ""policy"": {
+                                ""request"": null,
+                                ""database"": null
+                            }
+                            }
+                        ]
+                        }
+                    ],
+                    ""mappings"": null,
+                    ""relationships"": null
                     }
-                  ],
-                  ""mappings"": null,
-                  ""relationships"": null
                 }
-              }
-        }";
+            }";
 
         [TestCleanup]
         public void CleanupAfterEachTest()
@@ -1335,11 +1175,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [DataRow(SP_CONFIG_WITH_JUST_REST_ENABLED, SupportedHttpVerb.Put, "/api/GetBooks", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST PUT is disabled when enabled flag is configured to true")]
         [DataRow(SP_CONFIG_WITH_JUST_REST_ENABLED, SupportedHttpVerb.Delete, "/api/GetBooks", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST DELETE is disabled when enabled flag is configured to true")]
         public async Task TestSPRestDefaultsForManuallyConstructedConfigs(
-           string configJson,
+           string entityJson,
            SupportedHttpVerb requestType,
            string requestPath,
            HttpStatusCode expectedResponseStatusCode)
         {
+            string configJson = TestHelper.AddPropertiesToJson(TestHelper.BASE_CONFIG, entityJson);
             RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig, logger: null, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL));
             string configFileName = "custom-config.json";
             File.WriteAllText(configFileName, deserializedConfig.ToJson());

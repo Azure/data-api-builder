@@ -40,14 +40,19 @@ public class RuntimeConfigProvider
     /// </summary>
     public string? ManagedIdentityAccessToken { get; private set; }
 
-    private readonly RuntimeConfigLoader _runtimeConfigLoader;
+    private readonly RuntimeConfigLoader? _runtimeConfigLoader;
     private RuntimeConfig? _runtimeConfig;
 
-    public string RuntimeConfigFileName => _runtimeConfigLoader.ConfigFileName;
+    public string RuntimeConfigFileName => _runtimeConfigLoader == null ? string.Empty : _runtimeConfigLoader.ConfigFileName;
 
     public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader)
     {
         _runtimeConfigLoader = runtimeConfigLoader;
+    }
+
+    public RuntimeConfigProvider(RuntimeConfig config)
+    {
+       _runtimeConfig = config;
     }
 
     /// <summary>
@@ -58,9 +63,19 @@ public class RuntimeConfigProvider
     /// <exception cref="DataApiBuilderException">Thrown when the loader is unable to load an instance of the config from its known location.</exception>
     public RuntimeConfig GetConfig()
     {
+        // runtime config already loaded or passed in through constructor
         if (_runtimeConfig is not null)
         {
             return _runtimeConfig;
+        }
+
+        // if no runtimeconfig, appropriate loader must be provided.
+        if (_runtimeConfigLoader is null)
+        {
+            throw new DataApiBuilderException(
+                message: "Runtime config loader isn't setup.",
+                statusCode: HttpStatusCode.InternalServerError,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
         }
 
         if (_runtimeConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config))

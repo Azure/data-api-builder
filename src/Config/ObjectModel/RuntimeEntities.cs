@@ -124,7 +124,7 @@ public record RuntimeEntities : IEnumerable<KeyValuePair<string, Entity>>
             nameCorrectedEntity = (nameCorrectedEntity.Source.Type is EntitySourceType.StoredProcedure) ?
                                     nameCorrectedEntity
                         with
-                                    { Rest = new EntityRestOptions(EntityRestOptions.DEFAULT_SUPPORTED_VERBS_FOR_SP) }
+                                    { Rest = new EntityRestOptions(EntityRestOptions.DEFAULT_HTTP_VERBS_ENABLED_FOR_SP) }
                     :
                     nameCorrectedEntity
                         with
@@ -132,10 +132,12 @@ public record RuntimeEntities : IEnumerable<KeyValuePair<string, Entity>>
         }
         else if (nameCorrectedEntity.Source.Type is EntitySourceType.StoredProcedure && nameCorrectedEntity.Rest.Methods.Length == 0)
         {
-            // REST Method field is relevant only for stored procedures. For entities backed by tables and views, all the methods are supported.
+            // REST Method field is relevant only for stored procedures. For an entity backed by a table/view, all HTTP verbs are enabled by design
+            // unless configured otherwise through the config file. An entity backed by a stored procedure also supports all HTTP verbs but only POST is 
+            // enabled by default unless otherwise specified.
             // When the Methods property is configured in the config file, the parser correctly parses and populates the methods configured.
-            // However, when absent in the config file, the REST methods supported by default needs to be populated.
-            nameCorrectedEntity = nameCorrectedEntity with { Rest = new EntityRestOptions(Methods: EntityRestOptions.DEFAULT_SUPPORTED_VERBS_FOR_SP, Path: nameCorrectedEntity.Rest.Path, Enabled: nameCorrectedEntity.Rest.Enabled) };
+            // However, when absent in the config file, REST methods that are enabled by default needs to be populated.
+            nameCorrectedEntity = nameCorrectedEntity with { Rest = new EntityRestOptions(Methods: EntityRestOptions.DEFAULT_HTTP_VERBS_ENABLED_FOR_SP, Path: nameCorrectedEntity.Rest.Path, Enabled: nameCorrectedEntity.Rest.Enabled) };
         }
 
         return nameCorrectedEntity;

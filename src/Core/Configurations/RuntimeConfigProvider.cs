@@ -52,7 +52,7 @@ public class RuntimeConfigProvider
 
     public RuntimeConfigProvider(RuntimeConfig config)
     {
-       _runtimeConfig = config;
+        _runtimeConfig = config;
     }
 
     /// <summary>
@@ -103,6 +103,15 @@ public class RuntimeConfigProvider
     {
         if (_runtimeConfig is null)
         {
+            // if no runtimeconfig, appropriate loader must be provided.
+            if (_runtimeConfigLoader is null)
+            {
+                throw new DataApiBuilderException(
+                    message: "Runtime config loader isn't setup.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+
             if (_runtimeConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config))
             {
                 _runtimeConfig = config;

@@ -37,21 +37,24 @@ namespace Cli
         public static bool TryGenerateConfig(InitOptions options, RuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             string runtimeConfigFile = RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME;
-            string? environmentValue = Environment.GetEnvironmentVariable(RuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME);
             if (!string.IsNullOrWhiteSpace(options.Config))
             {
                 _logger.LogInformation("Generating user provided config file with name: {configFileName}", options.Config);
                 runtimeConfigFile = options.Config;
             }
-            else if (!string.IsNullOrWhiteSpace(environmentValue))
-            {
-                _logger.LogInformation("The environment variable {variableName} has a value of {variableValue}", RuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
-                runtimeConfigFile = RuntimeConfigLoader.GetEnvironmentFileName(RuntimeConfigLoader.CONFIGFILE_NAME, environmentValue);
-                _logger.LogInformation("Generating environment config file: {configPath}", Path.GetFullPath(runtimeConfigFile));
-            }
             else
             {
-                _logger.LogInformation("Generating default config file: {config}", Path.GetFullPath(runtimeConfigFile));
+                string? environmentValue = Environment.GetEnvironmentVariable(RuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME);
+                if (!string.IsNullOrWhiteSpace(environmentValue))
+                {
+                    _logger.LogInformation("The environment variable {variableName} has a value of {variableValue}", RuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
+                    runtimeConfigFile = RuntimeConfigLoader.GetEnvironmentFileName(RuntimeConfigLoader.CONFIGFILE_NAME, environmentValue);
+                    _logger.LogInformation("Generating environment config file: {configPath}", Path.GetFullPath(runtimeConfigFile));
+                }
+                else
+                {
+                    _logger.LogInformation("Generating default config file: {config}", Path.GetFullPath(runtimeConfigFile));
+                }
             }
 
             // File existence checked to avoid overwriting the existing configuration.

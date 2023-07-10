@@ -39,7 +39,7 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiDocumentorTests
 
         /// <summary>
         /// Bootstraps test server once using a single runtime config file so
-        /// each test need not boot the entire server to generate an  description doc.
+        /// each test need not boot the entire server to generate a description doc.
         /// Each test validates the OpenAPI description generated for a distinct entity.
         /// </summary>
         /// <param name="context">Test context required by MSTest for class init method.</param>

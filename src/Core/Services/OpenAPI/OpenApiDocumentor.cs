@@ -870,7 +870,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// parameter's SystemType to JsonDataType.
         /// </summary>
         /// </summary>
-        /// <param name="fields">Collection of sored procedure parameter metadata.</param>
+        /// <param name="fields">Collection of stored procedure parameter metadata.</param>
         /// <returns>OpenApiSchema object representing a stored procedure's request body.</returns>
         private static OpenApiSchema CreateSpRequestComponentSchema(Dictionary<string, ParameterDefinition> fields)
         {
@@ -882,8 +882,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
                 properties.Add(parameter, new OpenApiSchema()
                 {
-                    Type = typeMetadata,
-                    Format = string.Empty
+                    Type = typeMetadata
                 });
             }
 

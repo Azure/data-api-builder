@@ -36,9 +36,10 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiDocumentorTests
         private const string SCHEMA_REF_ID_ERROR = "Unexpected schema reference id.";
         private static OpenApiDocument _openApiDocument;
         private static RuntimeEntities _runtimeEntities;
+
         /// <summary>
         /// Bootstraps test server once using a single runtime config file so
-        /// each test need not boot the entire server to generate an openapi description doc.
+        /// each test need not boot the entire server to generate an  description doc.
         /// Each test validates the OpenAPI description generated for a distinct entity.
         /// </summary>
         /// <param name="context">Test context required by MSTest for class init method.</param>
@@ -136,8 +137,8 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiDocumentorTests
         }
 
         /// <summary>
-        /// Validates that the generated request body references stored procedure
-        /// parameters and not result set columns.
+        /// Validates that the generated request body references stored procedure parameters
+        /// and not result set columns.
         /// </summary>
         /// <param name="entityName">Entity name</param>
         /// <param name="expectedParameters">Expected parameters in request body</param>
@@ -163,28 +164,9 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiDocumentorTests
 
                 OpenApiRequestBody requestBody = GetOperationRequestBody(entityName, opType);
                 OpenApiReference schemaComponentReference = GetRequestBodyReference(requestBody);
-                Assert.AreEqual($"{entityName}{OpenApiDocumentor.SP_REQUEST_SUFFIX}", schemaComponentReference.Id, message: SCHEMA_REF_ID_ERROR);
-                Assert.AreEqual($"{SCHEMA_REF_PREFIX}{entityName}{OpenApiDocumentor.SP_REQUEST_SUFFIX}", schemaComponentReference.ReferenceV3);
+                string expectedSchemaReferenceId = $"{entityName}{OpenApiDocumentor.SP_REQUEST_SUFFIX}";
 
-                // It is possible to get the schema component from a OpenApiResponse object because OpenAPI.NET functionality
-                // auto-resolves the reference to a concrete OpenApiSchema object. However, to avoid testing OpenAPI.NET functionality,
-                // this test looks directly at the OpenAPI document's "components" property to validate presence
-                // and composition of the generated schema component.
-                Assert.IsTrue(_openApiDocument.Components.Schemas.ContainsKey($"{entityName}{OpenApiDocumentor.SP_REQUEST_SUFFIX}"), message: "Unexpected absence of schema component definition.");
-                Dictionary<string, OpenApiSchema> schemaComponentProperties = new(GetSchemaComponentProperties($"{entityName}{OpenApiDocumentor.SP_REQUEST_SUFFIX}"));
-
-                // Validate that the generated properties do not outnumber the count of expected columns.
-                Assert.AreEqual(expectedParameters.Length, schemaComponentProperties.Count, message: "The number of generated parameters is not expected.");
-
-                // Validate column presence and accurate column JSON type.
-                // Test input expectedColumns and expectedColumnJsonTypes are always expected to have the same length.
-                for (int colIdx = 0; colIdx < expectedParameters.Length; colIdx++)
-                {
-                    string columnName = expectedParameters[colIdx];
-                    string columnType = expectedParametersJsonTypes[colIdx];
-                    Assert.IsTrue(schemaComponentProperties.ContainsKey(columnName), message: "Unexpected parameter absence in request schema component.");
-                    Assert.AreEqual(schemaComponentProperties[columnName].Type, columnType, message: "Unexpected parameter value type in request schema component.");
-                }
+                ValidateOpenApiReferenceContents(schemaComponentReference, expectedSchemaReferenceId, expectedParameters, expectedParametersJsonTypes);
             }
         }
 
@@ -202,7 +184,7 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiDocumentorTests
         {
             // With the responses, we can validate the Properties and their types
             // can also validate Reference.Id 'sp1_sp_reponse' to ensure correct mapping.
-            // Though, the fact that Properties is populated correctly, means the OpenApi.Net mechanisms
+            // Though, the fact that Properties is populated correctly, means the OpenAPI.NET mechanisms
             // populated Properties with the contents of the referenced schema component.
             OpenApiResponses responses = GetOperationResponses(entityName, OperationType.Get);
 
@@ -210,28 +192,51 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiDocumentorTests
             // The OpenApiResponses dictionary key represents the integer value of the HttpStatusCode,
             // which is returned when using Enum.ToString("D").
             // The "D" format specified "displays the enumeration entry as an integer value in the shortest representation possible."
-            OpenApiReference reference = GetResponseBodyReference(responses[HttpStatusCode.OK.ToString("D")]);
-            Assert.AreEqual(expected: $"{entityName}{OpenApiDocumentor.SP_RESPONSE_SUFFIX}", actual: reference.Id, message: SCHEMA_REF_ID_ERROR);
-            Assert.AreEqual(expected: $"{SCHEMA_REF_PREFIX}{entityName}{OpenApiDocumentor.SP_RESPONSE_SUFFIX}", actual: reference.ReferenceV3);
+            OpenApiReference schemaComponentReference = GetResponseBodyReference(responses[HttpStatusCode.OK.ToString("D")]);
+            string expectedSchemaReferenceId = $"{entityName}{OpenApiDocumentor.SP_RESPONSE_SUFFIX}";
 
-            // It is possible to get the schema component from a OpenApiResponse object because OpenAPI.NET functionality
-            // auto-resolves the reference to a concrete OpenApiSchema object. However, to avoid testing OpenAPI.NET functionality,
-            // this test looks directly at the OpenAPI document's "components" property to validate presence
-            // and composition of the generated schema component.
-            Assert.IsTrue(_openApiDocument.Components.Schemas.ContainsKey($"{entityName}{OpenApiDocumentor.SP_RESPONSE_SUFFIX}"), message: "Unexpected absence of schema component definition.");
-            Dictionary<string, OpenApiSchema> schemaComponentProperties = new(GetSchemaComponentProperties($"{entityName}{OpenApiDocumentor.SP_RESPONSE_SUFFIX}"));
+            ValidateOpenApiReferenceContents(schemaComponentReference, expectedSchemaReferenceId, expectedColumns, expectedColumnJsonTypes);
+        }
+
+        /// <summary>
+        /// Validates that the provided OpenApiReference object has the expected schema reference id
+        /// and that that id is present in the list of component schema in the OpenApi document.
+        /// Additionally, validates that the references object contains the expected properties and JSON data types:
+        /// - Parameters when evaluating the schema reference object for a request body.
+        /// - Output result set columns when evaluating the schema reference object for a response body.
+        /// </summary>
+        /// <param name="reference">OpenApiReference object for request body or response body to validate.</param>
+        /// <param name="expectedSchemaReferenceId">Schema reference id with format: {entityname}_sp_{response/request}</param>
+        /// <param name="expectedProperties">List of expected property names</param>
+        /// <param name="expectedPropertyJsonTypes">List of expected property JSON data types.</param>
+        private static void ValidateOpenApiReferenceContents(
+            OpenApiReference reference,
+            string expectedSchemaReferenceId,
+            string[] expectedProperties,
+            string[] expectedPropertyJsonTypes)
+        {
+            Assert.AreEqual(expected: expectedSchemaReferenceId, actual: reference.Id, message: SCHEMA_REF_ID_ERROR);
+            Assert.AreEqual(expected: $"{SCHEMA_REF_PREFIX}{expectedSchemaReferenceId}", actual: reference.ReferenceV3);
+
+            // It is possible to get the schema component from an OpenApiResponse object because OpenAPI.NET functionality
+            // auto-resolves the reference to a concrete OpenApiSchema object.  (If the reference were not auto-resolved,
+            // the property value would look like '"$ref": "#/components/schemas/<entity_name>_sp_<request/response>"'
+            // However, to avoid testing OpenAPI.NET functionality,this test looks directly at the OpenAPI document's
+            // "components" property to validate presence and composition of the generated schema component.
+            Assert.IsTrue(_openApiDocument.Components.Schemas.ContainsKey(expectedSchemaReferenceId), message: "Unexpected absence of schema component definition.");
+            Dictionary<string, OpenApiSchema> schemaComponentProperties = new(GetSchemaComponentProperties(expectedSchemaReferenceId));
 
             // Validate that the generated properties do not outnumber the count of expected columns.
-            Assert.AreEqual(expectedColumns.Length, schemaComponentProperties.Count, message: "The number of generated columns is not expected.");
+            Assert.AreEqual(expectedProperties.Length, schemaComponentProperties.Count, message: "The number of generated properties is not expected.");
 
-            // Validate column presence and accurate column JSON type.
-            // Test input expectedColumns and expectedColumnJsonTypes are always expected to have the same length.
-            for (int colIdx = 0; colIdx < expectedColumns.Length; colIdx++)
+            // Validate property presence and accurate property JSON type.
+            // Test input expectedProperties and expectedPropertyJsonTypes are always expected to have the same length.
+            for (int propertyIdx = 0; propertyIdx < expectedProperties.Length; propertyIdx++)
             {
-                string columnName = expectedColumns[colIdx];
-                string columnType = expectedColumnJsonTypes[colIdx];
-                Assert.IsTrue(schemaComponentProperties.ContainsKey(columnName), message: "Unexpected column absence in result schema component.");
-                Assert.AreEqual(schemaComponentProperties[columnName].Type, columnType, message: "Unexpected column type in result schema component.");
+                string propertyName = expectedProperties[propertyIdx];
+                string propertyType = expectedPropertyJsonTypes[propertyIdx];
+                Assert.IsTrue(schemaComponentProperties.ContainsKey(propertyName), message: "Unexpected property absence in result schema component.");
+                Assert.AreEqual(schemaComponentProperties[propertyName].Type, propertyType, message: "Unexpected property JSON type in result schema component.");
             }
         }
 

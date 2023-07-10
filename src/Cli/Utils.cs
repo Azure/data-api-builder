@@ -9,7 +9,6 @@ using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Service.Exceptions;
 using Cli.Commands;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Core.Configurations.RuntimeConfigValidator;
@@ -203,7 +202,7 @@ namespace Cli
                 uriComponent = uriComponent.Substring(1);
             }
 
-            return DoesURIComponentContainInvalidChars(uriComponent);
+            return !DoesURIComponentContainInvalidChars(uriComponent);
         }
 
         /// <summary>

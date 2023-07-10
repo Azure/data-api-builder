@@ -89,16 +89,8 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiDocumentorTests
         /// </summary>
         public static void CreateEntities()
         {
-            Entity entity = new(
-                Source: new(Object: "openapi_sp_inParam_outColumn", EntitySourceType.StoredProcedure, null, null),
-                GraphQL: new(Singular: null, Plural: null, Enabled: false),
-                Rest: new(Methods: EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
-                Permissions: CreateBasicPermissions(),
-                Mappings: null,
-                Relationships: null);
-
-            Entity entity2 = new(
-                Source: new(Object: "openapi_sp_inParam_outColumn_sameNames", EntitySourceType.StoredProcedure, null, null),
+            Entity entity1 = new(
+                Source: new(Object: "insert_and_display_all_books_for_given_publisher", EntitySourceType.StoredProcedure, null, null),
                 GraphQL: new(Singular: null, Plural: null, Enabled: false),
                 Rest: new(Methods: EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
                 Permissions: CreateBasicPermissions(),
@@ -107,8 +99,7 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiDocumentorTests
 
             Dictionary<string, Entity> entities = new()
             {
-                { "sp1", entity },
-                { "sp2", entity2 }
+                { "sp1", entity1 }
             };
 
             _runtimeEntities = new(entities);
@@ -143,8 +134,7 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiDocumentorTests
         /// <param name="entityName">Entity name</param>
         /// <param name="expectedParameters">Expected parameters in request body</param>
         /// <param name="expectedParametersJsonTypes">Expected parameter value types in request body.</param>
-        [DataRow("sp1", new string[] { "inputName" }, new string[] { "string" }, DisplayName = "Validate parameter and parameter value type in request body.")]
-        [DataRow("sp2", new string[] { "age" }, new string[] { "number" }, DisplayName = "Validate that a parameter is resolved separately from an equivalently named output result set column.")]
+        [DataRow("sp1", new string[] { "title", "publisher_name" }, new string[] { "string", "string" }, DisplayName = "Validate request body parameters and parameter Json data types.")]
         [DataTestMethod]
         public void ValidateRequestBodyContents(string entityName, string[] expectedParameters, string[] expectedParametersJsonTypes)
         {
@@ -177,8 +167,7 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiDocumentorTests
         /// <param name="entityName">Entity to test, requires updating the CreateEntities() helper.</param>
         /// <param name="expectedColumns">Expected first result set columns</param>
         /// <param name="expectedColumnJsonTypes">Expected first result set column types (JSON)</param>
-        [DataRow("sp1", new string[] { "outputName" }, new string[] { "string" }, DisplayName = "Validate column and column type in first result set.")]
-        [DataRow("sp2", new string[] { "age" }, new string[] { "number" }, DisplayName = "Validate that a output result set column is resolved separately from an equivalently named parameter.")]
+        [DataRow("sp1", new string[] { "id", "title", "publisher_id" }, new string[] { "number", "string", "number" }, DisplayName = "Validate response body parameters and parameter Json data types.")]
         [DataTestMethod]
         public void ValidateResponseBodyContents(string entityName, string[] expectedColumns, string[] expectedColumnJsonTypes)
         {

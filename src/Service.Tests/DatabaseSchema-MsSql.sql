@@ -18,8 +18,6 @@ DROP PROCEDURE IF EXISTS delete_last_inserted_book;
 DROP PROCEDURE IF EXISTS update_book_title;
 DROP PROCEDURE IF EXISTS get_authors_history_by_first_name;
 DROP PROCEDURE IF EXISTS insert_and_display_all_books_for_given_publisher;
-DROP PROCEDURE IF EXISTS openapi_sp_inParam_outColumn;
-DROP PROCEDURE IF EXISTS openapi_sp_inParam_outColumn_sameNames;
 DROP TABLE IF EXISTS book_author_link;
 DROP TABLE IF EXISTS reviews;
 DROP TABLE IF EXISTS authors;
@@ -532,10 +530,3 @@ EXEC('CREATE FUNCTION dbo.revenuesPredicate(@accessible_role varchar(20))
 -- Adding a security policy which would restrict access to the rows in revenues table for
 -- SELECT,UPDATE,DELETE operations using the filter predicate dbo.revenuesPredicate.
 EXEC('CREATE SECURITY POLICY dbo.revenuesSecPolicy ADD FILTER PREDICATE dbo.revenuesPredicate(accessible_role) ON dbo.revenues;');
-
--- SP with one input parameter with different name than the column name present in the first result set.
-EXEC('CREATE PROCEDURE openapi_sp_inParam_outColumn @inputName varchar(10) AS SET NOCOUNT ON BEGIN SELECT @inputName as [outputName] END');
-
--- SP where input parameter and first result set column have the same name.
-EXEC('CREATE PROCEDURE openapi_sp_inParam_outColumn_sameNames @age int AS SET NOCOUNT ON BEGIN SELECT @age as age END')
-

@@ -275,7 +275,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
             string? runtimeBaseRoute = runtimeConfig.Runtime.BaseRoute;
             if (!string.IsNullOrEmpty(runtimeBaseRoute))
             {
-                string exceptionMsgSuffix = ValidateAndGetURIComponentExceptionMsg(runtimeBaseRoute);
+                string exceptionMsgSuffix = ValidateAndGetUriComponentExceptionMsg(runtimeBaseRoute);
 
                 if (!string.IsNullOrEmpty(exceptionMsgSuffix))
                 {
@@ -320,7 +320,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
             }
 
             string restPath = runtimeConfig.Runtime.Rest.Path;
-            string exceptionMsgSuffix = ValidateAndGetURIComponentExceptionMsg(restPath);
+            string exceptionMsgSuffix = ValidateAndGetUriComponentExceptionMsg(restPath);
 
             if (!string.IsNullOrEmpty(exceptionMsgSuffix))
             {
@@ -338,7 +338,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
         public static void ValidateGraphQLURI(RuntimeConfig runtimeConfig)
         {
             string graphqlPath = runtimeConfig.Runtime.GraphQL.Path;
-            string exceptionMsgSuffix = ValidateAndGetURIComponentExceptionMsg(graphqlPath);
+            string exceptionMsgSuffix = ValidateAndGetUriComponentExceptionMsg(graphqlPath);
 
             if (!string.IsNullOrEmpty(exceptionMsgSuffix))
             {
@@ -351,12 +351,12 @@ namespace Azure.DataApiBuilder.Core.Configurations
 
         /// <summary>
         /// Method to validate that the REST/GraphQL URI component is well formed and does not contain
-        /// any reserved characters.
+        /// any reserved characters. In case the URI component is not well formed the exception message containing
+        /// the reason for ill-formed URI component is returned. Else we return an empty string.
         /// </summary>
         /// <param name="uriComponent">path prefix/base route for rest/graphql apis</param>
-        /// <param name="apiType">Either REST or GraphQL</param>
-        /// <exception cref="DataApiBuilderException"></exception>
-        private static string ValidateAndGetURIComponentExceptionMsg(string? uriComponent)
+        /// <returns>Exception message when the URI component is not well formed.</returns>
+        private static string ValidateAndGetUriComponentExceptionMsg(string? uriComponent)
         {
             string exceptionMessageSuffix = string.Empty;
             ;
@@ -373,7 +373,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
             {
                 uriComponent = uriComponent.Substring(1);
                 // URI component should not contain any reserved characters.
-                if (DoesURIComponentContainInvalidChars(uriComponent))
+                if (DoesUriComponentContainInvalidChars(uriComponent))
                 {
                     exceptionMessageSuffix = URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG;
                 }
@@ -387,7 +387,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
         /// any reserved characters.
         /// </summary>
         /// <param name="uriComponent">path prefix for rest/graphql apis</param>
-        public static bool DoesURIComponentContainInvalidChars(string uriComponent)
+        public static bool DoesUriComponentContainInvalidChars(string uriComponent)
         {
             return _invalidApiPathCharsRgx.IsMatch(uriComponent);
         }

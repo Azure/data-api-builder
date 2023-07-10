@@ -223,8 +223,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     scheme: request.Scheme,
                     host: request.Host,
                     pathBase: baseRoute,
-                    path: request.Path,
-                    query: request.QueryString).Split('?')[0];
+                    path: request.Path);
             }
 
             JsonElement nextLink = SqlPaginationUtil.CreateNextLink(

@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service;
 using Cli.Commands;
 using Microsoft.Extensions.Logging;
@@ -133,11 +134,21 @@ namespace Cli
                 return false;
             }
 
-            if (!IsURIComponentValid(restPath, ApiType.REST, RuntimeOptions.PROPERTY_NAME_PATH) ||
-                !IsURIComponentValid(options.GraphQLPath, ApiType.GraphQL, RuntimeOptions.PROPERTY_NAME_PATH) ||
-                !IsURIComponentValid(runtimeBaseRoute, ApiType.REST, RuntimeOptions.PROPERTY_NAME_BASE_ROUTE))
-
+            if (!IsURIComponentValid(restPath, ApiType.REST, EntityRestOptions.PROPERTY_NAME_PATH))
             {
+                _logger.LogError($"{ApiType.REST} {EntityRestOptions.PROPERTY_NAME_PATH} {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}");
+                return false;
+            }
+
+            if (!IsURIComponentValid(options.GraphQLPath, ApiType.GraphQL, EntityRestOptions.PROPERTY_NAME_PATH))
+            {
+                _logger.LogError($"{ApiType.GraphQL} {EntityGraphQLOptions.PROPERTY_NAME_PATH} {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}");
+                return false;
+            }
+
+            if (!IsURIComponentValid(runtimeBaseRoute, ApiType.GraphQL, EntityRestOptions.PROPERTY_NAME_PATH))
+            {
+                _logger.LogError($"Runtime {RuntimeOptions.PROPERTY_NAME_BASE_ROUTE} {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}");
                 return false;
             }
 

@@ -190,29 +190,20 @@ namespace Cli
         /// <param name="apiType">Either REST or GraphQL</param>
         public static bool IsURIComponentValid(string? uriComponent, ApiType apiType, string apiProperty)
         {
-            // uriComponent is null only in case of cosmosDB and apiType=REST. For this case, validation is not required.
-            // Since, cosmosDB do not support REST calls.
+            // uriComponent is null only in case of cosmosDB and apiType=REST or when the runtime base-route is specified as null.
+            // For these cases, validation is not required.
             if (uriComponent is null)
             {
                 return true;
             }
 
-            // removing leading '/' before checking for forbidden characters.
+            // removing leading '/' before checking for reserved characters.
             if (uriComponent.StartsWith('/'))
             {
                 uriComponent = uriComponent.Substring(1);
             }
 
-            try
-            {
-                DoURIComponentInvalidCharCheck(uriComponent, apiType, apiProperty);
-                return true;
-            }
-            catch (DataApiBuilderException ex)
-            {
-                _logger.LogError(ex.Message);
-                return false;
-            }
+            return DoesURIComponentContainInvalidChars(uriComponent);
         }
 
         /// <summary>

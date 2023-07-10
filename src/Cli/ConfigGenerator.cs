@@ -49,11 +49,11 @@ namespace Cli
                 {
                     _logger.LogInformation("The environment variable {variableName} has a value of {variableValue}", RuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
                     runtimeConfigFile = RuntimeConfigLoader.GetEnvironmentFileName(RuntimeConfigLoader.CONFIGFILE_NAME, environmentValue);
-                    _logger.LogInformation("Generating environment config file: {configPath}", Path.GetFullPath(runtimeConfigFile));
+                    _logger.LogInformation("Generating environment config file: {configPath}", fileSystem.Path.GetFullPath(runtimeConfigFile));
                 }
                 else
                 {
-                    _logger.LogInformation("Generating default config file: {config}", Path.GetFullPath(runtimeConfigFile));
+                    _logger.LogInformation("Generating default config file: {config}", fileSystem.Path.GetFullPath(runtimeConfigFile));
                 }
             }
 
@@ -61,7 +61,7 @@ namespace Cli
             if (fileSystem.File.Exists(runtimeConfigFile))
             {
                 _logger.LogError("Config file: {runtimeConfigFile} already exists. Please provide a different name or remove the existing config file.",
-                    Path.GetFullPath(runtimeConfigFile));
+                    fileSystem.Path.GetFullPath(runtimeConfigFile));
                 return false;
             }
 

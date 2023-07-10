@@ -1521,19 +1521,26 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             if (expectError)
             {
-                if (pathContainsReservedCharacters)
-                {
-                    expectedErrorMessage = $"{apiType} {RuntimeOptions.PROPERTY_NAME_PATH} contains one or more reserved characters.";
-                }
-
                 DataApiBuilderException ex;
                 if (apiType is ApiType.REST)
                 {
+                    if (pathContainsReservedCharacters)
+                    {
+                        expectedErrorMessage =
+                            $"{apiType} {EntityRestOptions.PROPERTY_NAME_PATH} {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}";
+                    }
+
                     ex = Assert.ThrowsException<DataApiBuilderException>(() =>
                     RuntimeConfigValidator.ValidateRestURI(configuration));
                 }
                 else
                 {
+                    if (pathContainsReservedCharacters)
+                    {
+                        expectedErrorMessage =
+                            $"{apiType} {EntityGraphQLOptions.PROPERTY_NAME_PATH} {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}";
+                    }
+
                     ex = Assert.ThrowsException<DataApiBuilderException>(() =>
                     RuntimeConfigValidator.ValidateGraphQLURI(configuration));
                 }

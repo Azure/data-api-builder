@@ -22,4 +22,5 @@ public record EntityRestOptions(SupportedHttpVerb[] Methods, string? Path = null
     public const string PROPERTY_METHODS = "methods";
     public const string PROPERTY_ENABLED = "enabled";
     public static readonly SupportedHttpVerb[] DEFAULT_SUPPORTED_VERBS = new[] { SupportedHttpVerb.Get, SupportedHttpVerb.Post, SupportedHttpVerb.Put, SupportedHttpVerb.Patch, SupportedHttpVerb.Delete };
+    public static readonly SupportedHttpVerb[] DEFAULT_HTTP_VERBS_ENABLED_FOR_SP = new[] { SupportedHttpVerb.Post };
 }

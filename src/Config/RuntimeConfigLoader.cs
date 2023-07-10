@@ -230,6 +230,15 @@ public class RuntimeConfigLoader
         return $"{fileName}.overrides{CONFIG_EXTENSION}";
     }
 
+    /// <summary>
+    /// Generates the name of the file based on environment value.
+    /// NOTE: Input File name should not contain extension
+    /// </summary>
+    public static string GetEnvironmentFileName(string fileName, string environmentValue)
+    {
+        return $"{fileName}.{environmentValue}{CONFIG_EXTENSION}";
+    }
+
     public bool DoesFileExistInCurrentDirectory(string fileName)
     {
         string currentDir = _fileSystem.Directory.GetCurrentDirectory();

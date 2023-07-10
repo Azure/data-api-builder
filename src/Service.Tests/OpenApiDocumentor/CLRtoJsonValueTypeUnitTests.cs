@@ -34,6 +34,7 @@ public class CLRtoJsonValueTypeUnitTests
     /// <param name="sqlDataTypeLiteral">Raw string provided by database e.g. 'bigint'</param>
     /// <param name="isSupportedSqlDataType">Whether DAB supports the resolved SqlDbType value.</param>
     [TestMethod]
+    [DataRow("UnsupportedTypeName", false, DisplayName = "Validate unexpected SqlDbType name value is handled gracefully.")]
     [DynamicData(nameof(GetTestData_SupportedSystemTypesMapToJsonValueType), DynamicDataSourceType.Method)]
     public void SupportedSystemTypesMapToJsonValueType(string sqlDataTypeLiteral, bool isSupportedSqlDataType)
     {

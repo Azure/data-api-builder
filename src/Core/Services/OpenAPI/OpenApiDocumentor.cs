@@ -558,7 +558,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     OpenApiSchema parameterSchema = new()
                     {
-                        Type = columnDef is not null ? TypeHelper.SystemTypeToJsonDataType(columnDef.SystemType) : string.Empty
+                        Type = columnDef is not null ? TypeHelper.GetJsonDataTypeFromSystemType(columnDef.SystemType).ToString().ToLower() : string.Empty
                     };
 
                     OpenApiParameter openApiParameter = new()
@@ -928,9 +928,9 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     string typeMetadata = string.Empty;
                     string formatMetadata = string.Empty;
-                    if (dbObject.SourceDefinition.Columns.TryGetValue(backingColumnValue, out ColumnDefinition? columnDef) && columnDef is not null)
+                    if (dbObject.SourceDefinition.Columns.TryGetValue(backingColumnValue, out ColumnDefinition? columnDef))
                     {
-                        typeMetadata = TypeHelper.SystemTypeToJsonDataType(columnDef.SystemType).ToString().ToLower();
+                        typeMetadata = TypeHelper.GetJsonDataTypeFromSystemType(columnDef.SystemType).ToString().ToLower();
                     }
 
                     properties.Add(field, new OpenApiSchema()

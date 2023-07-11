@@ -39,7 +39,7 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
                         throw new JsonException($"The value of {propertyName} must be a string. Found {reader.TokenType}.");
                     }
 
-                    case "mathods":
+                    case "methods":
                     {
                         List<SupportedHttpVerb> methods = new();
                         while (reader.Read())

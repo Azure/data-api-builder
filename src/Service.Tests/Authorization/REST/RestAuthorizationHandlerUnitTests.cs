@@ -4,14 +4,14 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Security.Claims;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Service.Authorization;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.Models;
-using Azure.DataApiBuilder.Service.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -150,22 +150,22 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
             authorizationResolver.Setup(x => x.AreRoleAndOperationDefinedForEntity(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Config.Operation.Create
+                EntityActionOperation.Create
                 )).Returns(isValidCreateRoleOperation);
             authorizationResolver.Setup(x => x.AreRoleAndOperationDefinedForEntity(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Config.Operation.Read
+                EntityActionOperation.Read
                 )).Returns(isValidReadRoleOperation);
             authorizationResolver.Setup(x => x.AreRoleAndOperationDefinedForEntity(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Config.Operation.Update
+                EntityActionOperation.Update
                 )).Returns(isValidUpdateRoleOperation);
             authorizationResolver.Setup(x => x.AreRoleAndOperationDefinedForEntity(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Config.Operation.Delete
+                EntityActionOperation.Delete
                 )).Returns(isValidDeleteRoleOperation);
 
             HttpContext httpContext = CreateHttpContext(httpMethod);
@@ -260,13 +260,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
             authorizationResolver.Setup(x => x.AreColumnsAllowedForOperation(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Config.Operation.Read,
+                EntityActionOperation.Read,
                 It.IsAny<IEnumerable<string>>() // Can be any IEnumerable<string>, as find request result field list is depedent on AllowedColumns.
                 )).Returns(areColumnsAllowed);
             authorizationResolver.Setup(x => x.GetAllowedExposedColumns(
                 AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE,
-                Config.Operation.Read
+                EntityActionOperation.Read
                 )).Returns(allowedColumns);
 
             string httpMethod = HttpConstants.GET;
@@ -368,12 +368,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
                 entityName: AuthorizationHelpers.TEST_ENTITY,
                 roleName: "admin",
-                operation: Config.Operation.All);
-
-            // Override the operation to be a list of string for wildcard instead of a list of object created by InitRuntimeConfig()
-            //
-            runtimeConfig.Entities[AuthorizationHelpers.TEST_ENTITY].Permissions[0].Operations = new object[] { JsonSerializer.SerializeToElement(AuthorizationResolver.WILDCARD) };
-
+                operation: EntityActionOperation.All);
             return AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
         }
         #endregion

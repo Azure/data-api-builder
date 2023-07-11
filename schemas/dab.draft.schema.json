@@ -298,6 +298,11 @@
                           "delete"
                         ]
                       }
+                    },
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Allow enabling/disabling REST requests this specific entity.",
+                      "default": true
                     }
                   },
                   "anyOf": [
@@ -332,6 +337,11 @@
                         "mutation",
                         "query"
                       ]
+                    },
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Allow enabling/disabling GraphQL requests for this specific entity.",
+                      "default": true
                     }
                   },
                   "anyOf": [

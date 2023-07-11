@@ -4,7 +4,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers;
 using HotChocolate.Language;
@@ -31,7 +32,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         {
             _entityPermissions = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { "Foo" },
-                    new Config.Operation[] { Config.Operation.Read },
+                    new EntityActionOperation[] { EntityActionOperation.Read },
                     new string[] { "anonymous", "authenticated" }
                     );
         }
@@ -60,12 +61,12 @@ type Foo @model(name:""Foo"") {
             Dictionary<string, EntityMetadata> entityPermissionsMap
                 = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { "Foo" },
-                    new Config.Operation[] { Config.Operation.Read },
+                    new EntityActionOperation[] { EntityActionOperation.Read },
                     roles);
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
-                DatabaseType.cosmosdb_nosql,
-                new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
+                DatabaseType.CosmosDB_NoSQL,
+                new(new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } }),
                 inputTypes: new(),
                 entityPermissionsMap: entityPermissionsMap
                 );
@@ -94,8 +95,8 @@ type Foo @model(name:""Foo"") {
 
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
-                DatabaseType.cosmosdb_nosql,
-                new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
+                DatabaseType.CosmosDB_NoSQL,
+                new(new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } }),
                 inputTypes: new(),
                 entityPermissionsMap: _entityPermissions
                 );
@@ -135,12 +136,12 @@ type foo @model(name:""foo"") {
             Dictionary<string, EntityMetadata> entityPermissionsMap
                 = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { "foo" },
-                    new Config.Operation[] { Config.Operation.Read },
+                    new EntityActionOperation[] { EntityActionOperation.Read },
                     roles);
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
-                DatabaseType.cosmosdb_nosql,
-                new Dictionary<string, Entity> { { "foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
+                DatabaseType.CosmosDB_NoSQL,
+                new(new Dictionary<string, Entity> { { "foo", GraphQLTestHelpers.GenerateEmptyEntity() } }),
                 inputTypes: new(),
                 entityPermissionsMap: entityPermissionsMap
                 );
@@ -169,8 +170,8 @@ type Foo @model(name:""Foo"") {
 
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
-                DatabaseType.cosmosdb_nosql,
-                new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
+                DatabaseType.CosmosDB_NoSQL,
+                new(new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } }),
                 inputTypes: new(),
                 entityPermissionsMap: _entityPermissions
                 );
@@ -201,8 +202,8 @@ type Foo @model(name:""Foo"") {
 
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
-                DatabaseType.mssql,
-                new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
+                DatabaseType.MSSQL,
+                new(new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } }),
                 inputTypes: new(),
                 entityPermissionsMap: _entityPermissions
                 );
@@ -226,8 +227,8 @@ type Foo @model(name:""Foo"") {
 
             DocumentNode queryRoot = QueryBuilder.Build(
                             root,
-                            DatabaseType.cosmosdb_nosql,
-                            new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
+                            DatabaseType.CosmosDB_NoSQL,
+                            new(new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } }),
                             inputTypes: new(),
                             entityPermissionsMap: _entityPermissions
                             );
@@ -270,7 +271,7 @@ type Table @model(name: ""table"") {
         }
 
         [TestMethod]
-        public void RelationshipWithCardinalityOfOneIsntUpdated()
+        public void RelationshipWithCardinalityOfOneIsNotUpdated()
         {
             string gql =
                 @"
@@ -337,7 +338,7 @@ type Table @model(name: ""table"") {
             Dictionary<string, EntityMetadata> entityPermissionsMap
                 = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { entityName },
-                    new Config.Operation[] { Config.Operation.Read },
+                    new EntityActionOperation[] { EntityActionOperation.Read },
                     new string[] { "anonymous", "authenticated" });
 
             Entity entity = (singularName is not null)
@@ -346,8 +347,8 @@ type Table @model(name: ""table"") {
 
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
-                DatabaseType.cosmosdb_nosql,
-                new Dictionary<string, Entity> { { entityName, entity } },
+                DatabaseType.CosmosDB_NoSQL,
+                new(new Dictionary<string, Entity> { { entityName, entity } }),
                 inputTypes: new(),
                 entityPermissionsMap: entityPermissionsMap
                 );
@@ -381,11 +382,11 @@ type Table @model(name: ""table"") {
         /// <param name="permissionOperations">CRUD + Execute -> for Entity.Permissions</param>
         /// <param name="expectsQueryField">Whether QueryBuilder will generate a query field for the GraphQL schema.</param>
         [DataTestMethod]
-        [DataRow(GraphQLOperation.Query, new[] { Config.Operation.Execute }, new[] { "execute" }, true, DisplayName = "Query field generated since all metadata is valid")]
-        [DataRow(null, new[] { Config.Operation.Execute }, new[] { "execute" }, false, DisplayName = "Query field not generated since default operation is mutation.")]
-        [DataRow(GraphQLOperation.Query, new[] { Config.Operation.Read }, new[] { "read" }, false, DisplayName = "Query field not generated because invalid permissions were supplied")]
-        [DataRow(GraphQLOperation.Mutation, new[] { Config.Operation.Execute }, new[] { "execute" }, false, DisplayName = "Query field not generated because the configured operation is mutation.")]
-        public void StoredProcedureEntityAsQueryField(GraphQLOperation? graphQLOperation, Config.Operation[] operations, string[] permissionOperations, bool expectsQueryField)
+        [DataRow(GraphQLOperation.Query, new[] { EntityActionOperation.Execute }, new[] { "execute" }, true, DisplayName = "Query field generated since all metadata is valid")]
+        [DataRow(null, new[] { EntityActionOperation.Execute }, new[] { "execute" }, false, DisplayName = "Query field not generated since default operation is mutation.")]
+        [DataRow(GraphQLOperation.Query, new[] { EntityActionOperation.Read }, new[] { "read" }, false, DisplayName = "Query field not generated because invalid permissions were supplied")]
+        [DataRow(GraphQLOperation.Mutation, new[] { EntityActionOperation.Execute }, new[] { "execute" }, false, DisplayName = "Query field not generated because the configured operation is mutation.")]
+        public void StoredProcedureEntityAsQueryField(GraphQLOperation? graphQLOperation, EntityActionOperation[] operations, string[] permissionOperations, bool expectsQueryField)
         {
             string entityName = "MyStoredProcedure";
             string gql =
@@ -405,7 +406,7 @@ type Table @model(name: ""table"") {
 
             DatabaseObject spDbObj = new DatabaseStoredProcedure(schemaName: "dbo", tableName: "dbObjectName")
             {
-                SourceType = SourceType.StoredProcedure,
+                SourceType = EntitySourceType.StoredProcedure,
                 StoredProcedureDefinition = new()
                 {
                     Parameters = new() {
@@ -416,8 +417,8 @@ type Table @model(name: ""table"") {
 
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
-                DatabaseType.mssql,
-                new Dictionary<string, Entity> { { entityName, entity } },
+                DatabaseType.MSSQL,
+                new(new Dictionary<string, Entity> { { entityName, entity } }),
                 inputTypes: new(),
                 entityPermissionsMap: _entityPermissions,
                 dbObjects: new Dictionary<string, DatabaseObject> { { entityName, spDbObj } }

@@ -1,14 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
-using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,7 +18,6 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
     [TestClass, TestCategory(TestCategory.COSMOSDBNOSQL)]
     public class QueryTests : TestBase
     {
-        private static readonly string _containerName = Guid.NewGuid().ToString();
 
         public static readonly string PlanetByPKQuery = @"
 query ($id: ID, $partitionKeyValue: String) {
@@ -62,16 +60,13 @@ query ($id: ID, $partitionKeyValue: String) {
         private static List<string> _idList;
         private const int TOTAL_ITEM_COUNT = 10;
 
-        [ClassInitialize]
-        public static void TestFixtureSetup(TestContext context)
+        [TestInitialize]
+        public void TestFixtureSetup()
         {
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
             cosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
             cosmosClient.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
             _idList = CreateItems(DATABASE_NAME, _containerName, TOTAL_ITEM_COUNT);
-            OverrideEntityContainer("Planet", _containerName);
-            OverrideEntityContainer("StarAlias", _containerName);
-            OverrideEntityContainer("Moon", _containerName);
         }
 
         [TestMethod]
@@ -124,6 +119,26 @@ query ($id: ID, $partitionKeyValue: String) {
             string[] tags = response.GetProperty("tags").Deserialize<string[]>();
             Assert.AreEqual(2, tags.Length);
             CollectionAssert.AreEqual(new[] { "tag1", "tag2" }, tags);
+        }
+
+        /// <summary>
+        /// Validates that a query with only __typename in the selection set
+        /// returns the right type
+        /// </summary>
+        [TestMethod]
+        public async Task QueryWithOnlyTypenameInSelectionSet()
+        {
+            string id = _idList[0];
+            JsonElement response = await ExecuteGraphQLRequestAsync("planet_by_pk", @"
+                query ($id: ID, $partitionKeyValue: String) {
+                    planet_by_pk (id: $id, _partitionKeyValue: $partitionKeyValue) {
+                        __typename
+                    }
+                }", new() { { "id", id }, { "partitionKeyValue", id } });
+
+            string expected = @"Planet";
+            string actual = response.GetProperty("__typename").Deserialize<string>();
+            Assert.AreEqual(expected, actual);
         }
 
         [TestMethod]
@@ -279,7 +294,7 @@ query {{
         public async Task GetByPrimaryKeyWhenEntityNameDoesntMatchGraphQLType()
         {
             // Run query
-            // _idList is the mock data that's generated for testing purpose, arbitrarilys pick the first id here to query.
+            // _idList is the mock data that's generated for testing purpose, arbitrarily pick the first id here to query.
             string id = _idList[0];
             string query = @$"
 query {{
@@ -490,8 +505,8 @@ query {
             }
         }
 
-        [ClassCleanup]
-        public static void TestFixtureTearDown()
+        [TestCleanup]
+        public void TestFixtureTearDown()
         {
             CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
             cosmosClient.GetDatabase(DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();

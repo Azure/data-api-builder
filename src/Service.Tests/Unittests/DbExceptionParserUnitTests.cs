@@ -1,12 +1,14 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.Generic;
 using System.Data.Common;
+using System.IO.Abstractions.TestingHelpers;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Service.Configurations;
-using Azure.DataApiBuilder.Service.Resolvers;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
-using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
@@ -29,15 +31,27 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(false, "While processing your request the database ran into an error.")]
         public void VerifyCorrectErrorMessage(bool isDeveloperMode, string expected)
         {
+            RuntimeConfig mockConfig = new(
+                Schema: "",
+                DataSource: new(DatabaseType.MSSQL, "", new()),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(null, null, isDeveloperMode ? HostMode.Development : HostMode.Production)
+                ),
+                Entities: new(new Dictionary<string, Entity>())
+            );
             // We can use any other error code here, doesn't really matter.
             int connectionEstablishmentError = 53;
-            Mock<RuntimeConfigPath> configPath = new();
-            Mock<ILogger<RuntimeConfigProvider>> configProviderLogger = new();
-            Mock<RuntimeConfigProvider> provider = new(configPath.Object, configProviderLogger.Object);
-            provider.Setup(x => x.IsDeveloperMode()).Returns(isDeveloperMode);
-            Mock<DbExceptionParser> parser = new(provider.Object);
+
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+
+            Mock<DbExceptionParser> parser = new(provider);
             DbException e = SqlTestHelper.CreateSqlException(connectionEstablishmentError, expected);
-            string actual = (parser.Object).Parse(e).Message;
+            string actual = parser.Object.Parse(e).Message;
             Assert.AreEqual(expected, actual);
         }
 
@@ -54,8 +68,21 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(false, 209, DisplayName = "Non-transient exception error code #2")]
         public void TestIsTransientExceptionMethod(bool expected, int number)
         {
-            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestCategory.MSSQL);
-            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
+            RuntimeConfig mockConfig = new(
+                Schema: "",
+                DataSource: new(DatabaseType.MSSQL, "", new()),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(null, null, HostMode.Development)
+                ),
+                Entities: new(new Dictionary<string, Entity>())
+            );
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
 
             Assert.AreEqual(expected, dbExceptionParser.IsTransientException(SqlTestHelper.CreateSqlException(number)));
         }

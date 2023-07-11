@@ -2,11 +2,14 @@
 // Licensed under the MIT License.
 
 using System;
-using System.Text.Json;
+using System.Collections.Generic;
+using System.IO.Abstractions.TestingHelpers;
 using System.Threading.Tasks;
 using Azure.Core;
-using Azure.DataApiBuilder.Service.Configurations;
-using Azure.DataApiBuilder.Service.Resolvers;
+using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -37,12 +40,25 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             bool expectManagedIdentityAccessToken,
             bool isDefaultAzureCredential)
         {
-            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestCategory.MYSQL);
-            runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString = connectionString;
-            Mock<DbExceptionParser> dbExceptionParser = new(runtimeConfigProvider);
+            RuntimeConfig mockConfig = new(
+               Schema: "",
+               DataSource: new(DatabaseType.MySQL, connectionString, new()),
+               Runtime: new(
+                   Rest: new(),
+                   GraphQL: new(),
+                   Host: new(null, null)
+               ),
+               Entities: new(new Dictionary<string, Entity>())
+           );
+
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
+            RuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            Mock<DbExceptionParser> dbExceptionParser = new(provider);
             Mock<ILogger<MySqlQueryExecutor>> queryExecutorLogger = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
-            MySqlQueryExecutor mySqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
+            MySqlQueryExecutor mySqlQueryExecutor = new(provider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
 
             const string DEFAULT_TOKEN = "Default access token";
             const string CONFIG_TOKEN = "Configuration controller access token";
@@ -60,12 +76,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 }
                 else
                 {
-                    await runtimeConfigProvider.Initialize(
-                        JsonSerializer.Serialize(runtimeConfigProvider.GetRuntimeConfiguration()),
-                        schema: null,
+                    await provider.Initialize(
+                        provider.GetConfig().ToJson(),
+                        graphQLSchema: null,
                         connectionString: connectionString,
                         accessToken: CONFIG_TOKEN);
-                    mySqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
+                    mySqlQueryExecutor = new(provider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
                 }
             }
 

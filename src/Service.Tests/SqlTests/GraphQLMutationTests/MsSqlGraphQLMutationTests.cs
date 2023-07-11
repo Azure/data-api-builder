@@ -571,7 +571,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// Demonstrates that using mapped column names for fields within the GraphQL mutatation results in successful engine processing
+        /// Demonstrates that using mapped column names for fields within the GraphQL mutation results in successful engine processing
         /// of the column2 value update for the record where column1 = $id.
         /// </summary>
         [TestMethod]
@@ -592,7 +592,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// Demonstrates that using mapped column names for fields within the GraphQL mutatation results in successful engine processing
+        /// Demonstrates that using mapped column names for fields within the GraphQL mutation results in successful engine processing
         /// of removal of the record where column1 = $id and the returned object representing the deleting record utilizes the mapped column values.
         /// </summary>
         [TestMethod]
@@ -674,6 +674,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             ";
 
             await InsertIntoInsertableComplexView(msSqlQuery);
+        }
+
+        /// <summary>
+        /// <code>Do: </code> Execute a stored procedure and return the typename of the SP entity
+        /// <code>Check :</code>if the mutation executed successfully and returned the correct typename
+        /// </summary>
+        [TestMethod]
+        public async override Task ExecuteMutationWithOnlyTypenameInSelectionSet()
+        {
+            await base.ExecuteMutationWithOnlyTypenameInSelectionSet();
         }
 
         #endregion

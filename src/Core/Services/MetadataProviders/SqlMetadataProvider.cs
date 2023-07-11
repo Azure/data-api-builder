@@ -1000,6 +1000,41 @@ namespace Azure.DataApiBuilder.Core.Services
             PopulateColumnDefinitionWithHasDefault(
                 sourceDefinition,
                 columnsInTable);
+
+            if (GetDatabaseType() is DatabaseType.MSSQL && _entities.TryGetValue(entityName, out Entity? currentEntity)
+                && currentEntity.Source.Type is EntitySourceType.Table)
+            {
+                await PopulateColumnDefinitionWithReadOnlyFlag(tableName, schemaName, sourceDefinition);
+            }
+        }
+
+        private async Task PopulateColumnDefinitionWithReadOnlyFlag(string tableName, string schemaName, SourceDefinition sourceDefinition)
+        {
+            string queryToGetReadOnlyColumns = SqlQueryBuilder.GetQuerytoGetReadOnlyColumns();
+            Dictionary<string, DbConnectionParam> parameters = new()
+            {
+                { $"{BaseQueryStructure.PARAM_NAME_PREFIX}param0", new(schemaName, DbType.String) },
+                { $"{BaseQueryStructure.PARAM_NAME_PREFIX}param1", new(tableName, DbType.String) }
+            };
+
+            JsonArray? resultArray = await QueryExecutor.ExecuteQueryAsync(
+                sqltext: queryToGetReadOnlyColumns,
+                parameters: parameters!,
+                dataReaderHandler: QueryExecutor.GetJsonArrayAsync);
+            using JsonDocument sqlResult = JsonDocument.Parse(resultArray!.ToJsonString());
+
+            // Iterate through each row returned by the query which corresponds to
+            // one read only column in the table.
+            foreach (JsonElement element in sqlResult.RootElement.EnumerateArray())
+            {
+                string column_name = element.GetProperty("column_name").ToString();
+                ColumnDefinition columnDef = sourceDefinition.Columns[column_name];
+                columnDef.IsReadOnly = true;
+                /*string is_computed = element.GetProperty("is_computed").ToString();
+                string is_identity = element.GetProperty("is_identity").ToString();
+                string table_name = element.GetProperty("table_name").ToString();
+                string data_type = element.GetProperty("data_type").ToString();*/
+            }
         }
 
         /// <summary>

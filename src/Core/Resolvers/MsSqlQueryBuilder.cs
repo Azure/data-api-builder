@@ -256,5 +256,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             "WHERE is_hidden is not NULL AND is_hidden = 0";
             return query;
         }
+
+        /// <inheritdoc/>
+        public string GetQuerytoGetReadOnlyColumns()
+        {
+            string query = "select sc.is_computed,sc.is_identity,ifsc.table_name,ifsc.column_name ,ifsc.data_type " +
+                "from sys.columns as sc, information_schema.columns as ifsc " +
+                "where (sc.is_computed = 1 or ifsc.data_type = 'timestamp') " +
+                "and sc.object_id = object_id(@param0+'.'+@param1) and ifsc.TABLE_NAME = @param1 " +
+                "and ifsc.TABLE_SCHEMA = @param0 and ifsc.COLUMN_NAME = sc.name;";
+
+            return query;
+        }
     }
 }

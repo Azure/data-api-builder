@@ -65,6 +65,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName);
 
         /// <summary>
+        /// Returns the query to get the read-only columns present in the table.
+        /// </summary>
+        /// <exception cref="NotImplementedException"></exception>
+        string GetQuerytoGetReadOnlyColumns() => throw new NotImplementedException();
+
+        /// <summary>
         /// Adds database specific quotes to string identifier
         /// </summary>
         public string QuoteIdentifier(string identifier);

@@ -36,10 +36,10 @@ namespace Azure.DataApiBuilder.Core.Configurations
         // "Reserved characters as defined in RFC3986 are not allowed to be present in the
         // REST/GraphQL custom path because they are not acceptable to be present in URIs.
         // " Refer here: https://www.rfc-editor.org/rfc/rfc3986#page-12.
-        private static readonly string _invalidPathChars = @"[\.:\?#/\[\]@!$&'()\*\+,;=]+";
+        private static readonly string _reservedUriChars = @"[\.:\?#/\[\]@!$&'()\*\+,;=]+";
 
         //  Regex to validate rest/graphql custom path prefix.
-        public static readonly Regex _invalidApiPathCharsRgx = new(_invalidPathChars, RegexOptions.Compiled);
+        public static readonly Regex _reservedUriCharsRgx = new(_reservedUriChars, RegexOptions.Compiled);
 
         // Regex used to extract all claimTypes in policy. It finds all the substrings which are
         // of the form @claims.*** delimited by space character,end of the line or end of the string.
@@ -325,7 +325,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
             if (!string.IsNullOrEmpty(exceptionMsgSuffix))
             {
                 throw new DataApiBuilderException(
-                    message: $"{ApiType.REST} {EntityRestOptions.PROPERTY_NAME_PATH} {exceptionMsgSuffix}",
+                    message: $"{ApiType.REST} path {exceptionMsgSuffix}",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
             }
@@ -343,7 +343,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
             if (!string.IsNullOrEmpty(exceptionMsgSuffix))
             {
                 throw new DataApiBuilderException(
-                    message: $"{ApiType.GraphQL} {EntityGraphQLOptions.PROPERTY_NAME_PATH} {exceptionMsgSuffix}",
+                    message: $"{ApiType.GraphQL} path {exceptionMsgSuffix}",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
             }
@@ -373,7 +373,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
             {
                 uriComponent = uriComponent.Substring(1);
                 // URI component should not contain any reserved characters.
-                if (DoesUriComponentContainInvalidChars(uriComponent))
+                if (DoesUriComponentContainReservedChars(uriComponent))
                 {
                     exceptionMessageSuffix = URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG;
                 }
@@ -387,9 +387,9 @@ namespace Azure.DataApiBuilder.Core.Configurations
         /// any reserved characters.
         /// </summary>
         /// <param name="uriComponent">path prefix for rest/graphql apis</param>
-        public static bool DoesUriComponentContainInvalidChars(string uriComponent)
+        public static bool DoesUriComponentContainReservedChars(string uriComponent)
         {
-            return _invalidApiPathCharsRgx.IsMatch(uriComponent);
+            return _reservedUriCharsRgx.IsMatch(uriComponent);
         }
 
         private static void ValidateAuthenticationOptions(RuntimeConfig runtimeConfig)

@@ -134,21 +134,21 @@ namespace Cli
                 return false;
             }
 
-            if (!IsURIComponentValid(restPath, ApiType.REST, EntityRestOptions.PROPERTY_NAME_PATH))
+            if (!IsURIComponentValid(restPath))
             {
-                _logger.LogError($"{ApiType.REST} {EntityRestOptions.PROPERTY_NAME_PATH} {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}");
+                _logger.LogError($"{ApiType.REST} path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}");
                 return false;
             }
 
-            if (!IsURIComponentValid(options.GraphQLPath, ApiType.GraphQL, EntityRestOptions.PROPERTY_NAME_PATH))
+            if (!IsURIComponentValid(options.GraphQLPath))
             {
-                _logger.LogError($"{ApiType.GraphQL} {EntityGraphQLOptions.PROPERTY_NAME_PATH} {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}");
+                _logger.LogError($"{ApiType.GraphQL} path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}");
                 return false;
             }
 
-            if (!IsURIComponentValid(runtimeBaseRoute, ApiType.GraphQL, EntityRestOptions.PROPERTY_NAME_PATH))
+            if (!IsURIComponentValid(runtimeBaseRoute))
             {
-                _logger.LogError($"Runtime {RuntimeOptions.PROPERTY_NAME_BASE_ROUTE} {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}");
+                _logger.LogError($"Runtime path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}");
                 return false;
             }
 

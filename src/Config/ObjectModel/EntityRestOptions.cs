@@ -20,5 +20,4 @@ public record EntityRestOptions(SupportedHttpVerb[] Methods, string? Path = null
 {
     public static readonly SupportedHttpVerb[] DEFAULT_SUPPORTED_VERBS = new[] { SupportedHttpVerb.Get, SupportedHttpVerb.Post, SupportedHttpVerb.Put, SupportedHttpVerb.Patch, SupportedHttpVerb.Delete };
     public static readonly SupportedHttpVerb[] DEFAULT_HTTP_VERBS_ENABLED_FOR_SP = new[] { SupportedHttpVerb.Post };
-    public const string PROPERTY_NAME_PATH = "path";
 }

@@ -183,10 +183,10 @@ namespace Cli
         }
 
         /// <summary>
-        /// Checks whether the URI component conforms with the expected behavior.
+        /// Checks whether the URI component conforms with the expected behavior and does not contain any reserved characters.
         /// </summary>
         /// <param name="uriComponent">Path prefix/base route for REST/GraphQL APIs.</param>
-        public static bool IsURIComponentValid(string? uriComponent, ApiType apiType, string apiProperty)
+        public static bool IsURIComponentValid(string? uriComponent)
         {
             // uriComponent is null only in case of cosmosDB and apiType=REST or when the runtime base-route is specified as null.
             // For these cases, validation is not required.
@@ -201,7 +201,7 @@ namespace Cli
                 uriComponent = uriComponent.Substring(1);
             }
 
-            return !DoesUriComponentContainInvalidChars(uriComponent);
+            return !DoesUriComponentContainReservedChars(uriComponent);
         }
 
         /// <summary>

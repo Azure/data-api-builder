@@ -15,7 +15,4 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// <param name="Operation">When the entity maps to a stored procedure, this represents the GraphQL operation to use, otherwise it will be null.</param>
 /// <seealso cref="<https://engdic.org/singular-and-plural-noun-rules-definitions-examples/"/>
 [JsonConverter(typeof(EntityGraphQLOptionsConverter))]
-public record EntityGraphQLOptions(string Singular, string Plural, bool Enabled = true, GraphQLOperation? Operation = null)
-{
-    public const string PROPERTY_NAME_PATH = "path";
-}
+public record EntityGraphQLOptions(string Singular, string Plural, bool Enabled = true, GraphQLOperation? Operation = null);

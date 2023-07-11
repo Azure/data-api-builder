@@ -1410,92 +1410,65 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <summary>
         /// Tests whether the API path prefix is well formed or not.
         /// </summary>
-        /// <param name="apiPath">API path prefix</param>
-        /// <param name="expectedErrorMessage">Expected error message in case an exception is thrown.</param>
-        /// <param name="IsPathContainingReservedCharacters">Boolean indicating if path prefix contains reserved characters.</param>
-        /// <param name="expectError">Exception expected</param>
-        [DataTestMethod]
-        [DataRow("/.", "", true, ApiType.REST, true,
-            DisplayName = "REST path prefix containing reserved character .")]
-        [DataRow("/:", "", true, ApiType.REST, true,
-            DisplayName = "REST path prefix containing reserved character :")]
-        [DataRow("/?", "", true, ApiType.REST, true,
-            DisplayName = "REST path prefix containing reserved character ?")]
-        [DataRow("/#", "", true, ApiType.REST, true,
-            DisplayName = "REST path prefix containing reserved character #")]
-        [DataRow("//", "", true, ApiType.REST, true,
-            DisplayName = "REST path prefix containing reserved character /")]
-        [DataRow("/[", "", true, ApiType.REST, true,
-            DisplayName = "REST path prefix containing reserved character [")]
-        [DataRow("/)", "", true, ApiType.REST, true,
-            DisplayName = "REST path prefix containing reserved character )")]
-        [DataRow("/@", "", true, ApiType.REST, true,
-            DisplayName = "REST path prefix containing reserved character @")]
-        [DataRow("/!", "", true, ApiType.GraphQL, true,
-            DisplayName = "GraphQL path prefix containing reserved character !")]
-        [DataRow("/$", "", true, ApiType.GraphQL, true,
-            DisplayName = "GraphQL path prefix containing reserved character $")]
-        [DataRow("/&", "", true, ApiType.GraphQL, true,
-            DisplayName = "GraphQL path prefix containing reserved character &")]
-        [DataRow("/'", "", true, ApiType.GraphQL, true,
-            DisplayName = "GraphQL path prefix containing reserved character '")]
-        [DataRow("/+", "", true, ApiType.GraphQL, true,
-            DisplayName = "GraphQL path prefix containing reserved character +")]
-        [DataRow("/;", "", true, ApiType.GraphQL, true,
-            DisplayName = "GraphQL path prefix containing reserved character .")]
-        [DataRow("/=", "", true, ApiType.GraphQL, true,
-            DisplayName = "GraphQL path prefix containing reserved character .")]
-        [DataRow("/?#*(=", "", true, ApiType.GraphQL, true,
-            DisplayName = "GraphQL path prefix containing multiple reserved characters /?#*(=")]
-        [DataRow("/+&,", "", true, ApiType.GraphQL, true,
-            DisplayName = "GraphQL path prefix containing reserved characters /+&,")]
-        [DataRow("/@)", "", true, ApiType.GraphQL, true,
-            DisplayName = "GraphQL path prefix containing reserved characters /@)")]
-        [DataRow("", "GraphQL path cannot be null or empty.", false, ApiType.GraphQL, true,
-            DisplayName = "Empty GraphQL path prefix.")]
-        [DataRow(null, "GraphQL path cannot be null or empty.", false, ApiType.GraphQL, true,
-            DisplayName = "Null GraphQL path prefix.")]
-        [DataRow("?", "GraphQL path should start with a '/'.", false, ApiType.GraphQL, true,
-            DisplayName = "GraphQL path not starting with forward slash.")]
-        [DataRow("/-api", null, false, ApiType.GraphQL, false,
-            DisplayName = "GraphQL path containing hyphen (-)")]
-        [DataRow("/api path", null, false, ApiType.GraphQL, false,
-            DisplayName = "GraphQL path prefix containing space in between")]
-        [DataRow("/ apipath", null, false, ApiType.REST, false,
-            DisplayName = "REST path containing space at the start")]
-        [DataRow("/ api_path", null, false, ApiType.GraphQL, false,
-            DisplayName = "GraphQL path prefix containing space at the start and underscore in between.")]
-        [DataRow("/", null, false, ApiType.REST, false,
-            DisplayName = "REST path containing only a forward slash.")]
-        public void ValidateApiURIsAreWellFormed(
-            string apiPath,
-            string expectedErrorMessage,
-            bool pathContainsReservedCharacters,
-            ApiType apiType,
-            bool expectError)
-        {
-            ValidateRestAndGraphQLURIIsWellFormed(
-                apiPath,
-                expectedErrorMessage,
-                pathContainsReservedCharacters,
-                apiType,
-                expectError
-            );
-        }
-
-        /// <summary>
-        /// Validate Rest and GraphQL prefix path and matches the thrown exception with appropriate error messages
-        /// on failure.
-        /// </summary>
         /// <param name="apiPathPrefix">API path prefix</param>
         /// <param name="expectedErrorMessage">Expected error message in case an exception is thrown.</param>
-        /// <param name="pathContainsReservedCharacters">Boolean indicating if path prefix contains reserved characters.</param>
         /// <param name="expectError">Exception expected</param>
-        /// <param name="apiType">Either REST or GraphQL</param>
-        private static void ValidateRestAndGraphQLURIIsWellFormed(
+        [DataTestMethod]
+        [DataRow("/.", $"REST path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
+            DisplayName = "REST path prefix containing reserved character .")]
+        [DataRow("/:", $"REST path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
+            DisplayName = "REST path prefix containing reserved character :")]
+        [DataRow("/?", $"REST path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
+            DisplayName = "REST path prefix containing reserved character ?")]
+        [DataRow("/#", $"REST path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
+            DisplayName = "REST path prefix containing reserved character #")]
+        [DataRow("//", $"REST path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
+            DisplayName = "REST path prefix containing reserved character /")]
+        [DataRow("/[", $"REST path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
+            DisplayName = "REST path prefix containing reserved character [")]
+        [DataRow("/)", $"REST path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
+            DisplayName = "REST path prefix containing reserved character )")]
+        [DataRow("/@", $"REST path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
+            DisplayName = "REST path prefix containing reserved character @")]
+        [DataRow("/!", $"GraphQL path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
+            DisplayName = "GraphQL path prefix containing reserved character !")]
+        [DataRow("/$", $"GraphQL path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
+            DisplayName = "GraphQL path prefix containing reserved character $")]
+        [DataRow("/&", $"GraphQL path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
+            DisplayName = "GraphQL path prefix containing reserved character &")]
+        [DataRow("/'", $"GraphQL path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
+            DisplayName = "GraphQL path prefix containing reserved character '")]
+        [DataRow("/+", $"GraphQL path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
+            DisplayName = "GraphQL path prefix containing reserved character +")]
+        [DataRow("/;", $"GraphQL path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
+            DisplayName = "GraphQL path prefix containing reserved character .")]
+        [DataRow("/=", $"GraphQL path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
+            DisplayName = "GraphQL path prefix containing reserved character .")]
+        [DataRow("/?#*(=", $"GraphQL path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
+            DisplayName = "GraphQL path prefix containing multiple reserved characters /?#*(=")]
+        [DataRow("/+&,", $"GraphQL path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
+            DisplayName = "GraphQL path prefix containing reserved characters /+&,")]
+        [DataRow("/@)", $"GraphQL path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
+            DisplayName = "GraphQL path prefix containing reserved characters /@)")]
+        [DataRow("", "GraphQL path cannot be null or empty.", ApiType.GraphQL, true,
+            DisplayName = "Empty GraphQL path prefix.")]
+        [DataRow(null, "GraphQL path cannot be null or empty.", ApiType.GraphQL, true,
+            DisplayName = "Null GraphQL path prefix.")]
+        [DataRow("?", "GraphQL path should start with a '/'.", ApiType.GraphQL, true,
+            DisplayName = "GraphQL path not starting with forward slash.")]
+        [DataRow("/-api", null, ApiType.GraphQL, false,
+            DisplayName = "GraphQL path containing hyphen (-)")]
+        [DataRow("/api path", null, ApiType.GraphQL, false,
+            DisplayName = "GraphQL path prefix containing space in between")]
+        [DataRow("/ apipath", null, ApiType.REST, false,
+            DisplayName = "REST path containing space at the start")]
+        [DataRow("/ api_path", null, ApiType.GraphQL, false,
+            DisplayName = "GraphQL path prefix containing space at the start and underscore in between.")]
+        [DataRow("/", null, ApiType.REST, false,
+            DisplayName = "REST path containing only a forward slash.")]
+        public void ValidateApiURIsAreWellFormed(
             string apiPathPrefix,
             string expectedErrorMessage,
-            bool pathContainsReservedCharacters,
             ApiType apiType,
             bool expectError)
         {
@@ -1521,44 +1494,15 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             if (expectError)
             {
-                DataApiBuilderException ex;
-                if (apiType is ApiType.REST)
-                {
-                    if (pathContainsReservedCharacters)
-                    {
-                        expectedErrorMessage =
-                            $"{apiType} {EntityRestOptions.PROPERTY_NAME_PATH} {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}";
-                    }
-
-                    ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                    RuntimeConfigValidator.ValidateRestURI(configuration));
-                }
-                else
-                {
-                    if (pathContainsReservedCharacters)
-                    {
-                        expectedErrorMessage =
-                            $"{apiType} {EntityGraphQLOptions.PROPERTY_NAME_PATH} {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}";
-                    }
-
-                    ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                    RuntimeConfigValidator.ValidateGraphQLURI(configuration));
-                }
-
+                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+                RuntimeConfigValidator.ValidateGlobalEndpointRouteConfig(configuration));
                 Assert.AreEqual(expectedErrorMessage, ex.Message);
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
             }
             else
             {
-                if (apiType is ApiType.REST)
-                {
-                    RuntimeConfigValidator.ValidateRestURI(configuration);
-                }
-                else
-                {
-                    RuntimeConfigValidator.ValidateGraphQLURI(configuration);
-                }
+                RuntimeConfigValidator.ValidateGlobalEndpointRouteConfig(configuration);
             }
         }
 

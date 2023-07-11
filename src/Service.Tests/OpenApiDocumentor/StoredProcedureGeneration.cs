@@ -10,12 +10,13 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Services;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.OpenApi.Models;
 using Microsoft.OpenApi.Readers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Azure.DataApiBuilder.Service.Tests.OpenApiDocumentorTests
+namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
 {
     /// <summary>
     /// Integration tests validating correct OpenAPI schema metadata

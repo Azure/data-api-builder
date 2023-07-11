@@ -878,7 +878,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
             foreach (string parameter in fields.Keys)
             {
-                string typeMetadata = TypeHelper.SystemTypeToJsonDataType(fields[parameter].SystemType).ToString().ToLower();
+                string typeMetadata = TypeHelper.GetJsonDataTypeFromSystemType(fields[parameter].SystemType).ToString().ToLower();
 
                 properties.Add(parameter, new OpenApiSchema()
                 {

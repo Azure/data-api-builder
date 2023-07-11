@@ -1709,7 +1709,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             using TestServer server = new(Program.CreateWebHostBuilder(args));
             using HttpClient client = server.CreateClient();
             // Setup and send GET request
-            HttpRequestMessage readOpenApiDocumentRequest = new(HttpMethod.Get, $"{RestRuntimeOptions.DEFAULT_PATH}/{Core.Services.OpenAPI.OpenApiDocumentor.OPENAPI_ROUTE}");
+            HttpRequestMessage readOpenApiDocumentRequest = new(HttpMethod.Get, $"{RestRuntimeOptions.DEFAULT_PATH}/{Core.Services.OpenApiDocumentor.OPENAPI_ROUTE}");
             HttpResponseMessage response = await client.SendAsync(readOpenApiDocumentRequest);
 
             // Parse response metadata

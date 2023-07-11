@@ -24,7 +24,6 @@ using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
-using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
@@ -46,7 +45,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 {
     [TestClass]
     public class ConfigurationTests
-        : VerifyBase
+    : VerifyBase
     {
         private const string COSMOS_ENVIRONMENT = TestCategory.COSMOSDBNOSQL;
         private const string MSSQL_ENVIRONMENT = TestCategory.MSSQL;
@@ -854,9 +853,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
             string[] args = new[]
             {
-                $"--ConfigFileName={RuntimeConfigLoader.CONFIGFILE_NAME}." +
-                $"{COSMOS_ENVIRONMENT}{RuntimeConfigLoader.CONFIG_EXTENSION}"
-            };
+            $"--ConfigFileName={RuntimeConfigLoader.CONFIGFILE_NAME}." +
+            $"{COSMOS_ENVIRONMENT}{RuntimeConfigLoader.CONFIG_EXTENSION}"
+        };
 
             TestServer server = new(Program.CreateWebHostBuilder(args));
 
@@ -1006,8 +1005,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             File.WriteAllText(CUSTOM_CONFIG, configWithCustomHostMode.ToJson());
             string[] args = new[]
             {
-                $"--ConfigFileName={CUSTOM_CONFIG}"
-            };
+            $"--ConfigFileName={CUSTOM_CONFIG}"
+        };
 
             using TestServer server = new(Program.CreateWebHostBuilder(args));
             using HttpClient client = server.CreateClient();
@@ -1114,8 +1113,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             TestHelper.ConstructNewConfigWithSpecifiedHostMode(CUSTOM_CONFIG, HostMode.Production, TestCategory.MSSQL);
             string[] args = new[]
             {
-                    $"--ConfigFileName={CUSTOM_CONFIG}"
-            };
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+        };
 
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
@@ -1233,8 +1232,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             string[] args = new[]
             {
-                    $"--ConfigFileName={CUSTOM_CONFIG}"
-            };
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+        };
 
             // Non-Hosted Scenario
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
@@ -1313,8 +1312,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             string[] args = new[]
             {
-                    $"--ConfigFileName={CUSTOM_CONFIG}"
-            };
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+        };
 
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
@@ -1392,8 +1391,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             File.WriteAllText(CUSTOM_CONFIG, configWithCustomHostMode.ToJson());
             string[] args = new[]
             {
-                $"--ConfigFileName={CUSTOM_CONFIG}"
-            };
+            $"--ConfigFileName={CUSTOM_CONFIG}"
+        };
 
             // This test only checks for startup errors, so no requests are sent to the test server.
             try
@@ -1433,8 +1432,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             string[] args = new[]
             {
-                $"--ConfigFileName={CUSTOM_CONFIG}"
-            };
+            $"--ConfigFileName={CUSTOM_CONFIG}"
+        };
 
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
@@ -1481,9 +1480,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             // Configure Entity for testing
             Dictionary<string, string> mappings = new()
-            {
-                { "__introspectionName", "conformingIntrospectionName" }
-            };
+        {
+            { "__introspectionName", "conformingIntrospectionName" }
+        };
 
             if (!string.IsNullOrWhiteSpace(columnMapping))
             {
@@ -1505,8 +1504,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             string[] args = new[]
             {
-                $"--ConfigFileName={CUSTOM_CONFIG}"
-            };
+            $"--ConfigFileName={CUSTOM_CONFIG}"
+        };
 
             try
             {
@@ -1571,8 +1570,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             string[] args = new[]
             {
-                    $"--ConfigFileName={CUSTOM_CONFIG}"
-            };
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+        };
 
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
@@ -1633,16 +1632,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Mappings: null);
 
             Dictionary<string, Entity> entityMap = new()
-            {
-                { "Book", requiredEntity }
-            };
+        {
+            { "Book", requiredEntity }
+        };
 
             CreateCustomConfigFile(globalRestEnabled: globalRestEnabled, entityMap);
 
             string[] args = new[]
             {
-                    $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}"
-            };
+                $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}"
+        };
 
             using TestServer server = new(Program.CreateWebHostBuilder(args));
             using HttpClient client = server.CreateClient();
@@ -1695,22 +1694,22 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Mappings: null);
 
             Dictionary<string, Entity> entityMap = new()
-            {
-                { "Book", restEnabledEntity },
-                { "Publisher", restDisabledEntity }
-            };
+        {
+            { "Book", restEnabledEntity },
+            { "Publisher", restDisabledEntity }
+        };
 
             CreateCustomConfigFile(globalRestEnabled: true, entityMap);
 
             string[] args = new[]
             {
-                    $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}"
-            };
+                $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}"
+        };
 
             using TestServer server = new(Program.CreateWebHostBuilder(args));
             using HttpClient client = server.CreateClient();
             // Setup and send GET request
-            HttpRequestMessage readOpenApiDocumentRequest = new(HttpMethod.Get, $"{RestRuntimeOptions.DEFAULT_PATH}/{OpenApiDocumentor.OPENAPI_ROUTE}");
+            HttpRequestMessage readOpenApiDocumentRequest = new(HttpMethod.Get, $"{RestRuntimeOptions.DEFAULT_PATH}/{Core.Services.OpenAPI.OpenApiDocumentor.OPENAPI_ROUTE}");
             HttpResponseMessage response = await client.SendAsync(readOpenApiDocumentRequest);
 
             // Parse response metadata
@@ -2081,9 +2080,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             entityName ??= "Book";
 
             Dictionary<string, Entity> entityMap = new()
-            {
-                { entityName, entity }
-            };
+        {
+            { entityName, entity }
+        };
 
             return new(
                 Schema: "IntegrationTestMinimalSchema",

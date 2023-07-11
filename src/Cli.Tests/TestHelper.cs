@@ -1049,5 +1049,25 @@ namespace Cli.Tests
           }
         }
       }";
+
+        /// <summary>
+        /// Creates basic initialization options for MS SQL config.
+        /// </summary>
+        /// <param name="config">Optional config file name.</param>
+        /// <returns>InitOptions</returns>
+        public static InitOptions CreateBasicInitOptionsForMsSqlWithConfig(string? config = null)
+        {
+            return new(
+                databaseType: DatabaseType.MSSQL,
+                connectionString: "testconnectionstring",
+                cosmosNoSqlDatabase: null,
+                cosmosNoSqlContainer: null,
+                graphQLSchemaPath: null,
+                setSessionContext: true,
+                hostMode: HostMode.Development,
+                corsOrigin: new List<string>(),
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                config: config);
+        }
     }
 }

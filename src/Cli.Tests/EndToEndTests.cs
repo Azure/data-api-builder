@@ -1,9 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.IO.Abstractions;
-using System.IO.Abstractions.TestingHelpers;
-using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service;
 
 namespace Cli.Tests;

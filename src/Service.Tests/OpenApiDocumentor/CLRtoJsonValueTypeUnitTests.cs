@@ -9,7 +9,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Models;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Azure.DataApiBuilder.Service.Tests.OpenApiDocumentor;
+namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration;
 
 /// <summary>
 /// Validates TypeHelper converters return expected results.

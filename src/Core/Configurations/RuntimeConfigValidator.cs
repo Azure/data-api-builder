@@ -243,21 +243,12 @@ namespace Azure.DataApiBuilder.Core.Configurations
 
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
-                if (runtimeConfig.Runtime.Rest.Enabled)
+                if (runtimeConfig.Runtime.Rest.Enabled && entity.Rest is not null && entity.Rest.Enabled)
                 {
-                    // By default we assume Rest is enabled for the entity.
-                    bool isRestEnabledForEntity = true;
-
                     // If no custom rest path is defined for the entity, we default it to the entityName.
-                    string pathForEntity = entityName;
-                    if (entity.Rest is not null)
-                    {
-                        pathForEntity = entity.Rest.Path is not null ? entity.Rest.Path.TrimStart('/') : entityName;
-                        isRestEnabledForEntity = entity.Rest.Enabled;
-                        ValidateRestPathSettingsForEntity(entityName, pathForEntity);
-                    }
-
-                    if (isRestEnabledForEntity && !restPathsForEntities.Add(pathForEntity))
+                    string pathForEntity = entity.Rest.Path is not null ? entity.Rest.Path.TrimStart('/') : entityName;
+                    ValidateRestPathSettingsForEntity(entityName, pathForEntity);
+                    if (!restPathsForEntities.Add(pathForEntity))
                     {
                         // Presence of multiple entities having the same rest path configured causes conflict.
                         throw new DataApiBuilderException(

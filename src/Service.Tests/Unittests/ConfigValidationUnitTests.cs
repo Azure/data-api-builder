@@ -1933,25 +1933,28 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="restPathForEntity">Custom rest path to be configured for the first entity.</param>
         /// <param name="expectedExceptionMessage">The expected exception message.</param>
         [DataTestMethod]
-        [DataRow(true, "EntityA", "", "The rest path for entity: EntityA cannot be empty.",
+        [DataRow(true, "EntityA", "", true, "The rest path for entity: EntityA cannot be empty.",
             DisplayName = "Empty rest path configured for an entity fails config validation.")]
-        [DataRow(true, "EntityA", "entity?RestPath", "The rest path: entity?RestPath for entity: EntityA contains one or more reserved characters.",
+        [DataRow(true, "EntityA", "entity?RestPath", true, "The rest path: entity?RestPath for entity: EntityA contains one or more reserved characters.",
             DisplayName = "Rest path for an entity containing reserved character ? fails config validation.")]
-        [DataRow(true, "EntityA", "entity#RestPath", "The rest path: entity#RestPath for entity: EntityA contains one or more reserved characters.",
+        [DataRow(true, "EntityA", "entity#RestPath", true, "The rest path: entity#RestPath for entity: EntityA contains one or more reserved characters.",
             DisplayName = "Rest path for an entity containing reserved character ? fails config validation.")]
-        [DataRow(true, "EntityA", "entity[]RestPath", "The rest path: entity[]RestPath for entity: EntityA contains one or more reserved characters.",
+        [DataRow(true, "EntityA", "entity[]RestPath", true, "The rest path: entity[]RestPath for entity: EntityA contains one or more reserved characters.",
             DisplayName = "Rest path for an entity containing reserved character ? fails config validation.")]
-        [DataRow(true, "EntityA", "entity+Rest*Path", "The rest path: entity+Rest*Path for entity: EntityA contains one or more reserved characters.",
+        [DataRow(true, "EntityA", "entity+Rest*Path", true, "The rest path: entity+Rest*Path for entity: EntityA contains one or more reserved characters.",
             DisplayName = "Rest path for an entity containing reserved character ? fails config validation.")]
-        [DataRow(true, "Entity?A", null, "The rest path: Entity?A for entity: Entity?A contains one or more reserved characters.",
+        [DataRow(true, "Entity?A", null, true, "The rest path: Entity?A for entity: Entity?A contains one or more reserved characters.",
             DisplayName = "Entity name for an entity containing reserved character ? fails config validation.")]
-        [DataRow(true, "Entity&*[]A", null, "The rest path: Entity&*[]A for entity: Entity&*[]A contains one or more reserved characters.",
-            DisplayName = "Entity name for an entity containing reserved character ? fails config validation.")]
-        [DataRow(false, "EntityA", "entityRestPath", DisplayName = "Rest path correctly configured as a non-empty string without any reserved characters.")]
+        [DataRow(true, "Entity&*[]A", null, true, "The rest path: Entity&*[]A for entity: Entity&*[]A contains one or more reserved characters.",
+            DisplayName = "Entity name containing reserved character ? fails config validation.")]
+        [DataRow(false, "EntityA", "entityRestPath", true, DisplayName = "Rest path correctly configured as a non-empty string without any reserved characters.")]
+        [DataRow(false, "EntityA", "entityRest/?Path", false,
+            DisplayName = "Rest path for an entity containing reserved character but with rest disabled passes config validation.")]
         public void ValidateRestPathForEntityInConfig(
             bool exceptionExpected,
             string entityName,
             string restPathForEntity,
+            bool isRestEnabledForEntity,
             string expectedExceptionMessage = "")
         {
             Dictionary<string, Entity> entityMap = new();
@@ -1959,7 +1962,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 source: "TEST_SOURCEA",
                 relationshipMap: null,
                 graphQLDetails: null,
-                restDetails: new(new SupportedHttpVerb[] { }, restPathForEntity, true)
+                restDetails: new(new SupportedHttpVerb[] { }, restPathForEntity, isRestEnabledForEntity)
             );
             entityMap.Add(entityName, sampleEntity);
 
@@ -1996,15 +1999,21 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="restPathForSecondEntity">Custom rest path to be configured for the second entity.</param>
         /// <param name="expectedExceptionMessage">The expected exception message.</param>
         [DataTestMethod]
-        [DataRow(false, "restPathA", "restPathB", DisplayName = "Unique rest paths configured for entities pass config validation.")]
-        [DataRow(true, "restPath", "restPath", "The rest path: restPath specified for entity: EntityB is already used by another entity.",
-            DisplayName = "Duplicate rest paths configures for entities fail config validation.")]
-        [DataRow(true, null, "EntityA", "The rest path: EntityA specified for entity: EntityB is already used by another entity.",
+        [DataRow(false, "restPathA", "restPathB", true, true, DisplayName = "Unique rest paths configured for entities pass config validation.")]
+        [DataRow(true, "restPath", "restPath", true, true, "The rest path: restPath specified for entity: EntityB is already used by another entity.",
+            DisplayName = "Duplicate rest paths configured for entities fail config validation.")]
+        [DataRow(false, "restPath", "restPath", true, false,
+            DisplayName = "Duplicate rest paths configured for entities with rest disabled on one of them pass config validation.")]
+        [DataRow(false, "restPath", "restPath", false, false,
+            DisplayName = "Duplicate rest paths configured for entities with rest disabled on both of them pass config validation.")]
+        [DataRow(true, null, "EntityA", true, true, "The rest path: EntityA specified for entity: EntityB is already used by another entity.",
             DisplayName = "Rest path for an entity configured as the name of another entity fails config validation.")]
         public void ValidateUniqueRestPathsForEntitiesInConfig(
             bool exceptionExpected,
             string restPathForFirstEntity,
             string restPathForSecondEntity,
+            bool isRestEnabledForFirstEntity,
+            bool isRestEnabledForSecondEntity,
             string expectedExceptionMessage = "")
         {
             Dictionary<string, Entity> entityMap = new();
@@ -2012,14 +2021,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 source: "TEST_SOURCEA",
                 relationshipMap: null,
                 graphQLDetails: null,
-                restDetails: new(new SupportedHttpVerb[] { }, restPathForFirstEntity, true)
+                restDetails: new(new SupportedHttpVerb[] { }, restPathForFirstEntity, isRestEnabledForFirstEntity)
             );
 
             Entity sampleEntityB = GetSampleEntityUsingSourceAndRelationshipMap(
                 source: "TEST_SOURCEB",
                 relationshipMap: null,
                 graphQLDetails: null,
-                restDetails: new(new SupportedHttpVerb[] { }, restPathForSecondEntity, true)
+                restDetails: new(new SupportedHttpVerb[] { }, restPathForSecondEntity, isRestEnabledForSecondEntity)
             );
 
             entityMap.Add("EntityA", sampleEntityA);

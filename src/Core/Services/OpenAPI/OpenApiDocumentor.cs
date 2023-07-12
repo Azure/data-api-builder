@@ -166,8 +166,6 @@ namespace Azure.DataApiBuilder.Core.Services
 
             foreach (KeyValuePair<string, DatabaseObject> entityDbMetadataMap in _metadataProvider.EntityToDatabaseObject)
             {
-                // Entities which disable their REST endpoint must not be included in
-                // the OpenAPI description document.
                 string entityName = entityDbMetadataMap.Key;
                 string entityRestPath = GetEntityRestPath(entityName);
                 string entityBasePathComponent = $"/{entityRestPath}";
@@ -451,7 +449,7 @@ namespace Azure.DataApiBuilder.Core.Services
             if (dbObject.SourceType == EntitySourceType.StoredProcedure)
             {
                 Entity entityTest = _runtimeConfig.Entities[entityName];
-                List<SupportedHttpVerb>? spRestMethods = entityTest.Rest.Methods.ToList();
+                List<SupportedHttpVerb> spRestMethods = entityTest.Rest.Methods.ToList();
 
                 if (spRestMethods is null)
                 {

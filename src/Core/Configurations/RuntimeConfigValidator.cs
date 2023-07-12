@@ -275,9 +275,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
             string? runtimeBaseRoute = runtimeConfig.Runtime.BaseRoute;
             if (!string.IsNullOrEmpty(runtimeBaseRoute))
             {
-                string exceptionMsgSuffix = ValidateAndGetUriComponentExceptionMsg(runtimeBaseRoute);
-
-                if (!string.IsNullOrEmpty(exceptionMsgSuffix))
+                if (!TryValidateUriComponent(runtimeBaseRoute, out string exceptionMsgSuffix))
                 {
                     throw new DataApiBuilderException(
                         message: $"Runtime {RuntimeOptions.PROPERTY_NAME_BASE_ROUTE} {exceptionMsgSuffix}",
@@ -320,9 +318,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
             }
 
             string restPath = runtimeConfig.Runtime.Rest.Path;
-            string exceptionMsgSuffix = ValidateAndGetUriComponentExceptionMsg(restPath);
-
-            if (!string.IsNullOrEmpty(exceptionMsgSuffix))
+            if (!TryValidateUriComponent(restPath, out string exceptionMsgSuffix))
             {
                 throw new DataApiBuilderException(
                     message: $"{ApiType.REST} path {exceptionMsgSuffix}",
@@ -338,9 +334,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
         public static void ValidateGraphQLURI(RuntimeConfig runtimeConfig)
         {
             string graphqlPath = runtimeConfig.Runtime.GraphQL.Path;
-            string exceptionMsgSuffix = ValidateAndGetUriComponentExceptionMsg(graphqlPath);
-
-            if (!string.IsNullOrEmpty(exceptionMsgSuffix))
+            if (!TryValidateUriComponent(graphqlPath, out string exceptionMsgSuffix))
             {
                 throw new DataApiBuilderException(
                     message: $"{ApiType.GraphQL} path {exceptionMsgSuffix}",
@@ -355,10 +349,10 @@ namespace Azure.DataApiBuilder.Core.Configurations
         /// the reason for ill-formed URI component is returned. Else we return an empty string.
         /// </summary>
         /// <param name="uriComponent">path prefix/base route for rest/graphql apis</param>
-        /// <returns>Exception message when the URI component is not well formed.</returns>
-        private static string ValidateAndGetUriComponentExceptionMsg(string? uriComponent)
+        /// <returns>false when the URI component is not well formed.</returns>
+        private static bool TryValidateUriComponent(string? uriComponent, out string exceptionMessageSuffix)
         {
-            string exceptionMessageSuffix = string.Empty;
+            exceptionMessageSuffix = string.Empty;
             ;
             if (string.IsNullOrEmpty(uriComponent))
             {
@@ -379,7 +373,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
                 }
             }
 
-            return exceptionMessageSuffix;
+            return string.IsNullOrEmpty(exceptionMessageSuffix);
         }
 
         /// <summary>

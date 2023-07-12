@@ -1,10 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.IO.Abstractions;
-using System.IO.Abstractions.TestingHelpers;
-using System.Reflection;
-using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service;
 
 namespace Cli.Tests;
@@ -23,14 +19,7 @@ public class EndToEndTests
     [TestInitialize]
     public void TestInitialize()
     {
-        MockFileSystem fileSystem = new();
-
-        fileSystem.AddFile(
-            fileSystem.Path.Combine(
-                fileSystem.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "",
-                "dab.draft.schema.json"),
-            new MockFileData("{ \"additionalProperties\": {\"version\": \"https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json\"} }"));
-
+        MockFileSystem fileSystem = FileSystemUtils.ProvisionMockFileSystem();
         fileSystem.AddFile(
             TEST_SCHEMA_FILE,
             new MockFileData(""));
@@ -39,10 +28,7 @@ public class EndToEndTests
 
         _runtimeConfigLoader = new RuntimeConfigLoader(_fileSystem);
 
-        ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
-        {
-            builder.AddConsole();
-        });
+        ILoggerFactory loggerFactory = TestLoggerSupport.ProvisionLoggerFactory();
 
         _cliLogger = loggerFactory.CreateLogger<Program>();
         SetLoggerForCliConfigGenerator(loggerFactory.CreateLogger<ConfigGenerator>());

@@ -2,8 +2,6 @@
 // Licensed under the MIT License.
 
 using Azure.DataApiBuilder.Config.Converters;
-using Azure.DataApiBuilder.Config.ObjectModel;
-using Cli.Commands;
 
 namespace Cli.Tests
 {
@@ -16,11 +14,7 @@ namespace Cli.Tests
         [TestInitialize]
         public void TestInitialize()
         {
-            ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
-            {
-                builder.AddConsole();
-            });
-
+            ILoggerFactory loggerFactory = TestLoggerSupport.ProvisionLoggerFactory();
             SetLoggerForCliConfigGenerator(loggerFactory.CreateLogger<ConfigGenerator>());
             SetCliUtilsLogger(loggerFactory.CreateLogger<Utils>());
         }

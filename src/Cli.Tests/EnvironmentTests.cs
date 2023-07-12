@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Text.Json;
 using Azure.DataApiBuilder.Config.Converters;
 
 namespace Cli.Tests;

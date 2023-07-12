@@ -208,6 +208,10 @@
               }
             }
           }
+        },
+        "base-route": {
+          "type": "string",
+          "description": "Specifies the custom base route for API requests."
         }
       }
     },

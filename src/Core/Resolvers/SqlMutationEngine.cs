@@ -18,6 +18,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
 using HotChocolate.Resolvers;
+using HotChocolate.Types;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
@@ -182,7 +183,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 _sqlMetadataProvider.TryGetBackingColumn(entityName, resultEntry.Key, out string? name);
                 if (!string.IsNullOrWhiteSpace(name))
                 {
-                    backingRowParams.Add(name, resultEntry.Value);
+                    backingRowParams.Add(name!, resultEntry.Value);
                 }
                 else
                 {
@@ -612,7 +613,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     if (_sqlMetadataProvider.TryGetExposedColumnName(entityName, primaryKey, out string? name) && !string.IsNullOrWhiteSpace(name))
                     {
-                        primaryKeyExposedColumnNames.Add(name);
+                        primaryKeyExposedColumnNames.Add(name!);
                     }
                 }
 

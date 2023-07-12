@@ -40,7 +40,7 @@ namespace Azure.DataApiBuilder.Core.Parsers
                                                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
-            return (schemaTable.Item1, schemaTable.Item2);
+            return (schemaTable.Item1, schemaTable.Item2)!;
         }
 
         /// <summary>
@@ -64,7 +64,7 @@ namespace Azure.DataApiBuilder.Core.Parsers
                                                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
-            if (input.EndsWith('.'))
+            if (input.EndsWith("."))
             {
                 throw new DataApiBuilderException(message: "Input cannot end with '.'",
                                                statusCode: HttpStatusCode.ServiceUnavailable,
@@ -188,7 +188,7 @@ namespace Azure.DataApiBuilder.Core.Parsers
             // Special cases for parsing tokens at the end of the string.
             if (startsWithBracket)
             {
-                if (!input.EndsWith(']'))
+                if (!input.EndsWith("]"))
                 {
                     // ^ is startIndex and i is current index
                     // Ex: [abcdef

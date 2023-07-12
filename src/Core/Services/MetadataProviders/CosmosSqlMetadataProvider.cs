@@ -74,7 +74,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
             return entitySource switch
             {
-                string s when string.IsNullOrEmpty(s) && !string.IsNullOrEmpty(_cosmosDb.Container) => _cosmosDb.Container,
+                string s when string.IsNullOrEmpty(s) && !string.IsNullOrEmpty(_cosmosDb.Container) => _cosmosDb.Container!,
                 string s when !string.IsNullOrEmpty(s) => EntitySourceNamesParser.ParseSchemaAndTable(entitySource).Item2,
                 string s => s,
                 _ => throw new DataApiBuilderException(
@@ -107,14 +107,14 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                 }
 
-                return _cosmosDb.Database;
+                return _cosmosDb.Database!;
             }
 
             (string? database, _) = EntitySourceNamesParser.ParseSchemaAndTable(entitySource);
 
             return database switch
             {
-                string db when string.IsNullOrEmpty(db) && !string.IsNullOrEmpty(_cosmosDb.Database) => _cosmosDb.Database,
+                string db when string.IsNullOrEmpty(db) && !string.IsNullOrEmpty(_cosmosDb.Database) => _cosmosDb.Database!,
                 string db when !string.IsNullOrEmpty(db) => db,
                 _ => throw new DataApiBuilderException(
                         message: $"No database provided for {entityName}",

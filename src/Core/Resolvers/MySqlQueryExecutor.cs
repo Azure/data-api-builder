@@ -31,11 +31,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         public DefaultAzureCredential AzureCredential { get; set; } = new();
 
-        /// <summary>
-        /// The MySql specific connection string builder.
-        /// </summary>
-        public override MySqlConnectionStringBuilder ConnectionStringBuilder
-            => (MySqlConnectionStringBuilder)base.ConnectionStringBuilder;
+        public MySqlConnectionStringBuilder CustomConnectionStringBuilder
+        {
+            get
+            {
+                return (MySqlConnectionStringBuilder)base.ConnectionStringBuilder;
+            }
+        }
 
         /// <summary>
         /// The saved cached access token obtained from DefaultAzureCredentials
@@ -61,11 +63,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 ShouldManagedIdentityAccessBeAttempted();
 
             // Force always allow user variables
-            ConnectionStringBuilder.AllowUserVariables = true;
+            CustomConnectionStringBuilder.AllowUserVariables = true;
 
             if (runtimeConfigProvider.IsLateConfigured)
             {
-                ConnectionStringBuilder.SslMode = MySqlSslMode.VerifyFull;
+                CustomConnectionStringBuilder.SslMode = MySqlSslMode.VerifyFull;
             }
         }
 
@@ -111,8 +113,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         private bool ShouldManagedIdentityAccessBeAttempted()
         {
-            return !string.IsNullOrEmpty(ConnectionStringBuilder.UserID) &&
-                string.IsNullOrEmpty(ConnectionStringBuilder.Password);
+            return !string.IsNullOrEmpty(CustomConnectionStringBuilder.UserID) &&
+                string.IsNullOrEmpty(CustomConnectionStringBuilder.Password);
         }
 
         /// <summary>

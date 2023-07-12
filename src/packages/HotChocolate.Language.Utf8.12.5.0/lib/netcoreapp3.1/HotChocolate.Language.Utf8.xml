@@ -1,0 +1,846 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>HotChocolate.Language.Utf8</name>
+    </assembly>
+    <members>
+        <member name="T:HotChocolate.Language.GraphQLConstants">
+            <summary>
+            This class provides internal char utilities
+            that are used to tokenize a GraphQL source text.
+            These utilities are used by the lexer default implementation.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Language.IDocumentCache">
+            <summary>
+            The document cache is ues to cache parsed syntax trees.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.IDocumentCache.Capacity">
+            <summary>
+            Gets maximum amount of GraphQL syntax trees that can be cached. The default
+            value is <c>100</c>. The minimum allowed value is <c>10</c>.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.IDocumentCache.Count">
+            <summary>
+            Gets the amount of compiled queries residing in the cache.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.IDocumentCache.TryGetDocument(System.String,HotChocolate.Language.DocumentNode@)">
+            <summary>
+            Tries to get a cached GraphQL syntax tree by its internal <paramref name="documentId"/>.
+            </summary>
+            <param name="documentId">
+            The internal document id.
+            </param>
+            <param name="document">
+            The GraphQL syntax tree.
+            </param>
+            <returns>
+            <c>true</c> if a cached GraphQL syntax tree was found that matches the
+            <paramref name="documentId"/>, otherwise <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.IDocumentCache.TryAddDocument(System.String,HotChocolate.Language.DocumentNode)">
+            <summary>
+            Tries to add a parsed GraphQL syntax tree to the cache.
+            </summary>
+            <param name="documentId">
+            The internal document id.
+            </param>
+            <param name="document">
+            The GraphQL syntax tree.
+            </param>
+        </member>
+        <member name="M:HotChocolate.Language.IDocumentCache.Clear">
+            <summary>
+            Clears the cache.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Language.ParserOptions">
+            <summary>
+            The GraphQL parser options.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.ParserOptions.#ctor(System.Boolean,System.Boolean)">
+            <summary>
+            Initializes a new instance of <see cref="T:HotChocolate.Language.ParserOptions"/>.
+            </summary>
+            <param name="noLocations">
+            Defines that the parse shall not preserve syntax node locations.
+            </param>
+            <param name="allowFragmentVariables">
+            Defines that the parser shall parse fragment variables.
+            </param>
+        </member>
+        <member name="P:HotChocolate.Language.ParserOptions.NoLocations">
+            <summary>
+            By default, the parser creates <see cref="T:HotChocolate.Language.ISyntaxNode" />s
+            that know the location in the source that they correspond to.
+            This configuration flag disables that behavior
+            for performance or testing.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.ParserOptions.Experimental">
+            <summary>
+            Gets the experimental parser options
+            which are by default switched of.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.ParserOptions.Default">
+            <summary>
+            Gets the default parser options.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.ParserOptions.NoLocation">
+            <summary>
+            Gets the default parser options with the locations switched of.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Language.ParserOptionsExperimental">
+            <summary>
+            Represents the experimental parser options.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.ParserOptionsExperimental.AllowFragmentVariables">
+            <summary>
+            If enabled, the parser will understand and parse variable 
+            definitions contained in a fragment definition.They'll be 
+            represented in the `variableDefinitions` field of the 
+            FragmentDefinitionNode.
+            
+            The syntax is identical to normal, query-defined variables. 
+            For example:
+            
+            fragment A($var: Boolean = false) on T
+            {
+               ...
+            }
+            
+            Note: this feature is experimental and may change or be 
+            removed in the future.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Language.TokenKind">
+            <summary>
+            Represents the token kinds.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Language.TokenKind.StartOfFile">
+            <summary>
+            The start of file token.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Language.TokenKind.EndOfFile">
+            <summary>
+            The end of file token.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Language.TokenKind.Bang">
+            <summary>
+            !
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Language.TokenKind.QuestionMark">
+            <summary>
+            ?
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Language.TokenKind.Dollar">
+            <summary>
+            $
+            </summary>
+        </member>
+        <!-- Badly formed XML comment ignored for member "F:HotChocolate.Language.TokenKind.Ampersand" -->
+        <member name="F:HotChocolate.Language.TokenKind.LeftParenthesis">
+            <summary>
+            (
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Language.TokenKind.RightParenthesis">
+            <summary>
+            )
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Language.TokenKind.Spread">
+            <summary>
+            ...
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Language.TokenKind.Colon">
+            <summary>
+            :
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Language.TokenKind.Equal">
+            <summary>
+            =
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Language.TokenKind.At">
+            <summary>
+            @
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Language.TokenKind.LeftBracket">
+            <summary>
+            [
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Language.TokenKind.RightBracket">
+            <summary>
+            ]
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Language.TokenKind.LeftBrace">
+            <summary>
+            {
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Language.TokenKind.RightBrace">
+            <summary>
+            }
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Language.TokenKind.Pipe">
+            <summary>
+            |
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Language.TokenKind.Name">
+            <summary>
+            A name token.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Language.TokenKind.Integer">
+            <summary>
+            A integer token.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Language.TokenKind.Float">
+            <summary>
+            A float token.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Language.TokenKind.String">
+            <summary>
+            A string token.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Language.TokenKind.BlockString">
+            <summary>
+            A block string token.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Language.TokenKind.Comment">
+            <summary>
+            A comment token.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Language.TokenKind.Dot">
+            <summary>
+            .
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseSchemaExtension(HotChocolate.Language.Utf8GraphQLParser.TokenInfo@)">
+            <summary>
+            Parse schema definition extension.
+            <see cref="T:HotChocolate.Language.SchemaExtensionNode" />:
+            * - extend schema Directives[Const]? { OperationTypeDefinition+ }
+            * - extend schema Directives[Const]
+            </summary>
+            <param name="context">The parser context.</param>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseFragment">
+            <summary>
+            Parses a fragment spred or inline fragment within a selection set.
+            <see cref="M:HotChocolate.Language.Utf8GraphQLParser.ParseFragmentSpread(HotChocolate.Language.Utf8GraphQLParser.TokenInfo@)" /> and
+            <see cref="M:HotChocolate.Language.Utf8GraphQLParser.ParseInlineFragment(HotChocolate.Language.Utf8GraphQLParser.TokenInfo@,HotChocolate.Language.NamedTypeNode)" />.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseFragmentDefinition">
+            <summary>
+            Parses a fragment definition.
+            <see cref="T:HotChocolate.Language.FragmentDefinitionNode" />:
+            fragment FragmentName on TypeCondition Directives? SelectionSet
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseFragmentSpread(HotChocolate.Language.Utf8GraphQLParser.TokenInfo@)">
+            <summary>
+            Parses a fragment spread.
+            <see cref="T:HotChocolate.Language.FragmentSpreadNode" />:
+            ... FragmentName Directives?
+            </summary>
+            <param name="start">
+            The start token of the current fragment node.
+            </param>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseInlineFragment(HotChocolate.Language.Utf8GraphQLParser.TokenInfo@,HotChocolate.Language.NamedTypeNode)">
+            <summary>
+            Parses an inline fragment.
+            <see cref="T:HotChocolate.Language.FragmentSpreadNode" />:
+            ... TypeCondition? Directives? SelectionSet
+            </summary>
+            <param name="start">
+            The start token of the current fragment node.
+            </param>
+            <param name="typeCondition">
+            The fragment type condition.
+            </param>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseFragmentName">
+            <summary>
+            Parse fragment name.
+            <see cref="T:HotChocolate.Language.NameNode" />:
+            Name
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseOperationDefinition">
+            <summary>
+            Parses an operation definition.
+            <see cref="T:HotChocolate.Language.OperationDefinitionNode" />:
+            OperationType? OperationName? ($x : Type = DefaultValue?)? SelectionSet
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseShortOperationDefinition">
+            <summary>
+            Parses a short-hand form operation definition.
+            <see cref="T:HotChocolate.Language.OperationDefinitionNode" />:
+            SelectionSet
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseOperationType">
+            <summary>
+            Parses the <see cref="T:HotChocolate.Language.OperationType" />.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseVariableDefinitions">
+            <summary>
+            Parses variable definitions.
+            <see cref="T:System.Collections.Generic.IEnumerable`1" />:
+            ( VariableDefinition+ )
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseVariableDefinition">
+            <summary>
+            Parses a variable definition.
+            <see cref="T:HotChocolate.Language.VariableDefinitionNode" />:
+            $variable : Type = DefaultValue?
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseVariable">
+            <summary>
+            Parse a variable.
+            <see cref="T:HotChocolate.Language.VariableNode" />:
+            $Name
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseSelectionSet">
+            <summary>
+            Parses a selection set.
+            <see cref="T:HotChocolate.Language.SelectionSetNode" />:
+            { Selection+ }
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseSelection">
+            <summary>
+            Parses a selection.
+            <see cref="T:HotChocolate.Language.ISelectionNode" />:
+            - Field
+            - FragmentSpread
+            - InlineFragment
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseField">
+            <summary>
+            Parses a field.
+            <see cref="T:HotChocolate.Language.FieldNode"  />:
+            Alias? : Name Arguments? Directives? SelectionSet?
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseArguments(System.Boolean)">
+            <summary>
+            Parses an argument.
+            <see cref="T:HotChocolate.Language.ArgumentNode" />:
+            Name : Value[isConstant]
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseArgument(System.Boolean)">
+            <summary>
+            Parses an argument.
+            <see cref="T:HotChocolate.Language.ArgumentNode" />:
+            Name : Value[isConstant]
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseSingleSchemaCoordinate">
+            <summary>
+            Parses a single schema coordinate.
+            <see cref="T:HotChocolate.Language.SchemaCoordinateNode"  />:
+            SchemaCoordinate :
+             - Name
+             - Name . Name
+             - Name . Name ( Name : )
+             - @ Name
+             - @ Name ( Name : )
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseSchemaCoordinate">
+            <summary>
+            Parses a schema coordinate.
+            <see cref="T:HotChocolate.Language.SchemaCoordinateNode"  />:
+            SchemaCoordinate :
+             - Name
+             - Name . Name
+             - Name . Name ( Name : )
+             - @ Name
+             - @ Name ( Name : )
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.Syntax.ParseField(System.String)">
+            <summary>
+            Parses a GraphQL field selection string e.g. field(arg: "abc")
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.Syntax.ParseField(System.ReadOnlySpan{System.Byte})">
+            <summary>
+            Parses a GraphQL field selection string e.g. field(arg: "abc")
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.Syntax.ParseField(HotChocolate.Language.Utf8GraphQLReader)">
+            <summary>
+            Parses a GraphQL field selection string e.g. field(arg: "abc")
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.Syntax.ParseSelectionSet(System.String)">
+            <summary>
+            Parses a GraphQL selection set string e.g. { field(arg: "abc") }
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.Syntax.ParseSelectionSet(System.ReadOnlySpan{System.Byte})">
+            <summary>
+            Parses a GraphQL selection set string e.g. { field(arg: "abc") }
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.Syntax.ParseSelectionSet(HotChocolate.Language.Utf8GraphQLReader)">
+            <summary>
+            Parses a GraphQL selection set string e.g. { field(arg: "abc") }
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.Syntax.ParseTypeReference(System.String)">
+            <summary>
+            Parses a GraphQL type reference e.g. [String!]
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.Syntax.ParseTypeReference(System.ReadOnlySpan{System.Byte})">
+            <summary>
+            Parses a GraphQL type reference e.g. [String!]
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.Syntax.ParseTypeReference(HotChocolate.Language.Utf8GraphQLReader)">
+            <summary>
+            Parses a GraphQL type reference e.g. [String!]
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.Syntax.ParseSchemaCoordinate(System.String)">
+            <summary>
+            Parses a GraphQL schema coordinate e.g. Query.userById(id:)
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.Syntax.ParseSchemaCoordinate(System.ReadOnlySpan{System.Byte})">
+            <summary>
+            Parses a GraphQL schema coordinate e.g. Query.userById(id:)
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.Syntax.ParseSchemaCoordinate(HotChocolate.Language.Utf8GraphQLReader)">
+            <summary>
+            Parses a GraphQL schema coordinate e.g. Query.userById(id:)
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.Utf8GraphQLParser.TokenInfo.Start">
+            <summary>
+            Gets the character offset at which this
+            <see cref="T:HotChocolate.Language.ISyntaxNode" /> begins.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.Utf8GraphQLParser.TokenInfo.End">
+            <summary>
+            Gets the character offset at which this
+            <see cref="T:HotChocolate.Language.ISyntaxNode" /> ends.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.Utf8GraphQLParser.TokenInfo.Line">
+            <summary>
+            Gets the 1-indexed line number on which this
+            <see cref="!:SyntaxToken" /> appears.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.Utf8GraphQLParser.TokenInfo.Column">
+            <summary>
+            Gets the 1-indexed column number at which this
+            <see cref="!:SyntaxToken" /> begins.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseDescription">
+            <summary>
+            Parses a description.
+            <see cref="T:HotChocolate.Language.StringValueNode" />:
+            StringValue
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseSchemaDefinition">
+            <summary>
+            Parses a schema definition.
+            <see cref="T:HotChocolate.Language.SchemaDefinitionNode" />:
+            schema Directives[isConstant:true]? { OperationTypeDefinition+ }
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseOperationTypeDefinition">
+            <summary>
+            Parses an operation type definition.
+            <see cref="T:HotChocolate.Language.OperationTypeDefinitionNode" />:
+            OperationType : NamedType
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseScalarTypeDefinition">
+            <summary>
+            Parses a scalar type definition.
+            <see cref="T:HotChocolate.Language.ScalarTypeDefinitionNode" />:
+            Description?
+            scalar Name Directives[isConstant=true]?
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseObjectTypeDefinition">
+            <summary>
+            Parses an object type definition.
+            <see cref="T:HotChocolate.Language.ObjectTypeDefinitionNode" />:
+            Description?
+            type Name ImplementsInterfaces? Directives[isConstant=true]? FieldsDefinition?
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseImplementsInterfaces">
+            <summary>
+            Parses implementing interfaces.
+            <see cref="T:System.Collections.Generic.List`1" />:
+            implements &amp;? NamedType
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseFieldsDefinition">
+            <summary>
+            Parses field definitions of an interface type or object type
+            <see cref="T:System.Collections.Generic.IReadOnlyList`1" />:
+            { FieldDefinition+ }
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseFieldDefinition">
+            <summary>
+            Parses a interface type or object type field definition.
+            <see cref="T:HotChocolate.Language.FieldDefinitionNode" />:
+            Description?
+            Name ArgumentsDefinition? : Type Directives[isConstant=true]?
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseArgumentDefinitions">
+            <summary>
+            Parses field arguments.
+            <see cref="T:System.Collections.Generic.List`1" />:
+            ( InputValueDefinition+ )
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseInputValueDefinition">
+            <summary>
+            Parses input value definitions.
+            <see cref="T:HotChocolate.Language.InputValueDefinitionNode" />:
+            Description? Name : Type DefaultValue? Directives[isConstant=true]?
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseInterfaceTypeDefinition">
+            <summary>
+            Parses an interface type definition.
+            <see cref="T:HotChocolate.Language.InterfaceTypeDefinitionNode" />:
+            Description? interface Name Directives[isConstant=true]?
+            FieldsDefinition?
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseUnionTypeDefinition">
+            <summary>
+            Parses an union type definition.
+            <see cref="T:HotChocolate.Language.UnionTypeDefinitionNode" />:
+            Description? union Name Directives[isConstant=true]?
+            UnionMemberTypes?
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseUnionMemberTypes">
+            <summary>
+            Parses the union member types.
+            <see cref="T:System.Collections.Generic.List`1" />:
+            = `|`? NamedType
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseEnumTypeDefinition">
+            <summary>
+            Parses an enum type definition.
+            <see cref="T:HotChocolate.Language.EnumTypeDefinitionNode" />:
+            Description? enum Name Directives[Const]? EnumValuesDefinition?
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseEnumValuesDefinition">
+            <summary>
+            Parses the value definitions of an enum type definition.
+            <see cref="T:System.Collections.Generic.List`1" />:
+            { EnumValueDefinition+ }
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseEnumValueDefinition">
+            <summary>
+            Parses an enum value definitions.
+            <see cref="T:HotChocolate.Language.EnumValueDefinitionNode" />:
+            Description? EnumValue Directives[isConstant=true]?
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseTypeReference">
+            <summary>
+            Parses a type reference.
+            <see cref="T:HotChocolate.Language.ITypeNode" />:
+            - NamedType
+            - ListType
+            - NonNullType
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseNamedType">
+            <summary>
+            Parses a named type.
+            <see cref="T:HotChocolate.Language.NamedTypeNode" />:
+            Name
+            </summary>
+            <param name="context">The parser context.</param>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseValueLiteral(System.Boolean)">
+            <summary>
+            Parses a value.
+            <see cref="T:HotChocolate.Language.IValueNode" />:
+            - Variable [only if isConstant is <c>false</c>]
+            - IntValue
+            - FloatValue
+            - StringValue
+            - BooleanValue
+            - NullValue
+            - EnumValue
+            - ListValue[isConstant]
+            - ObjectValue[isConstant]
+            <see cref="T:HotChocolate.Language.BooleanValueNode" />: true or false.
+            <see cref="T:HotChocolate.Language.NullValueNode" />: null
+            <see cref="T:HotChocolate.Language.EnumValueNode" />: Name but not true, false or null.
+            </summary>
+            <param name="isConstant">
+            Defines if only constant values are allowed;
+            otherwise, variables are allowed.
+            </param>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseList(System.Boolean)">
+            <summary>
+            Parses a list value.
+            <see cref="T:HotChocolate.Language.ListValueNode" />:
+            - [ ]
+            - [ Value[isConstant]+ ]
+            </summary>
+            <param name="isConstant">
+            Defines if only constant values are allowed;
+            otherwise, variables are allowed.
+            </param>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLParser.ParseObject(System.Boolean)">
+            <summary>
+            Parses an object value.
+            <see cref="T:HotChocolate.Language.ObjectValueNode" />:
+            - { }
+            - { Value[isConstant]+ }
+            </summary>
+            <param name="isConstant">
+            Defines if only constant values are allowed;
+            otherwise, variables are allowed.
+            </param>
+        </member>
+        <member name="T:HotChocolate.Language.Utf8GraphQLReader">
+            <summary>
+            The UTF-8 GraphQL Lexer.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.Utf8GraphQLReader.GraphQLData">
+            <summary>
+            Gets the GraphQL Data that is being read.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.Utf8GraphQLReader.Kind">
+            <summary>
+            Gets the kind of the current syntax token.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.Utf8GraphQLReader.Start">
+            <summary>
+            Gets the character offset at which this node begins.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.Utf8GraphQLReader.End">
+            <summary>
+            Gets the character offset at which this node ends.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.Utf8GraphQLReader.Position">
+            <summary>
+            The current position of the lexer pointer.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.Utf8GraphQLReader.Line">
+            <summary>
+            Gets the 1-indexed line number on which the current syntax token appears.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.Utf8GraphQLReader.LineStart">
+            <summary>
+            The source index of where the current line starts.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.Utf8GraphQLReader.Column">
+            <summary>
+            Gets the 1-indexed column number at which the current syntax token begins.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.Utf8GraphQLReader.Value">
+            <summary>
+            For non-punctuation tokens, represents the interpreted
+            value of the token.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.Utf8GraphQLReader.FloatFormat">
+            <summary>
+            Defines the type of the float if the current syntax token represents a float number.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLReader.Read">
+            <summary>
+            Reads the next token.
+            </summary>
+            <returns>
+            Returns a boolean defining if the read was successful.
+            </returns>
+            <exception cref="T:HotChocolate.Language.SyntaxException">
+            The steam contains invalid syntax tokens.
+            </exception>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLReader.ReadNameToken">
+            <summary>
+            Reads name tokens as specified in
+            http://facebook.github.io/graphql/October2016/#Name
+            [_A-Za-z][_0-9A-Za-z]
+            from the current lexer state.
+            </summary>
+            <returns>
+            Returns the name token read from the current lexer state.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLReader.ReadPunctuatorToken(System.Byte)">
+            <summary>
+            Reads punctuator tokens as specified in
+            http://facebook.github.io/graphql/October2016/#sec-Punctuators
+            one of ! ? $ ( ) ... . : = @ [ ] { | }
+            additionally the reader will tokenize ampersands.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLReader.ReadNumberToken(System.Byte)">
+            <summary>
+            Reads int tokens as specified in
+            http://facebook.github.io/graphql/October2016/#IntValue
+            or a float tokens as specified in
+            http://facebook.github.io/graphql/October2016/#FloatValue
+            from the current lexer state.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLReader.ReadCommentToken">
+            <summary>
+            Reads comment tokens as specified in
+            http://facebook.github.io/graphql/October2016/#sec-Comments
+            #[\u0009\u0020-\uFFFF]*
+            from the current lexer state.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLReader.ReadStringValueToken">
+            <summary>
+            Reads string tokens as specified in
+            http://facebook.github.io/graphql/October2016/#StringValue
+            "([^"\\\u000A\u000D]|(\\(u[0-9a-fA-F]{4}|["\\/bfnrt])))*"
+            from the current lexer state.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLReader.ReadBlockStringToken">
+            <summary>
+            Reads block string tokens as specified in
+            http://facebook.github.io/graphql/draft/#BlockStringCharacter
+            from the current lexer state.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLReader.NewLine">
+            <summary>
+            Sets the state to a new line.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLReader.NewLine(System.Int32)">
+            <summary>
+            Sets the state to a new line.
+            </summary>
+            <param name="lines">
+            The number of lines to skip.
+            </param>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLReader.UpdateColumn">
+            <summary>
+            Updates the column index.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utf8GraphQLReader.IsEndOfStream">
+            <summary>
+            Checks if the lexer source pointer has reached
+            the end of the GraphQL source text.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Language.NameUtils">
+            <summary>
+            Helper methods to handle GraphQL names.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.NameUtils.IsValidGraphQLName(System.String)">
+            <summary>
+            Checks if the provided name is a valid GraphQL type or field name.
+            </summary>
+            <param name="name">
+            The name that shall be checked.
+            </param>
+            <returns>
+            <c>true</c>, if the name is a valid GraphQL name;
+            otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.NameUtils.IsValidGraphQLName(System.ReadOnlySpan{System.Byte})">
+            <summary>
+            Checks if the provided name is a valid GraphQL type or field name.
+            </summary>
+            <param name="name">
+            The name that shall be checked.
+            </param>
+            <returns>
+            <c>true</c>, if the name is a valid GraphQL name;
+            otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.NameUtils.MakeValidGraphQLName(System.String)">
+            <summary>
+            Takes the provided name and replaces invalid
+            characters with an underscore.
+            </summary>
+            <param name="name">
+            A name that shall be made a value GraphQL name.
+            </param>
+            <returns>Returns a valid GraphQL name.</returns>
+        </member>
+    </members>
+</doc>

@@ -131,7 +131,7 @@ namespace Azure.DataApiBuilder.Core.Models
         /// <inheritdoc/>
         public override int GetHashCode()
         {
-            return base.GetHashCode() ^ Label.GetHashCode(StringComparison.Ordinal);
+            return base.GetHashCode() ^ Label.GetHashCode();
         }
     }
 

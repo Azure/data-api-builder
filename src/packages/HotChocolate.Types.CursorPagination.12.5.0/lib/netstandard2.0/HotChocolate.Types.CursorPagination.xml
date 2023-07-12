@@ -1,0 +1,599 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>HotChocolate.Types.CursorPagination</name>
+    </assembly>
+    <members>
+        <member name="T:System.Diagnostics.CodeAnalysis.AllowNullAttribute">
+            <summary>Specifies that null is allowed as an input even if the corresponding type disallows it.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.DisallowNullAttribute">
+            <summary>Specifies that null is disallowed as an input even if the corresponding type allows it.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.MaybeNullAttribute">
+            <summary>Specifies that an output may be null even if the corresponding type disallows it.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.NotNullAttribute">
+            <summary>Specifies that an output will not be null even if the corresponding type allows it.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.MaybeNullWhenAttribute">
+            <summary>Specifies that when a method returns <see cref="P:System.Diagnostics.CodeAnalysis.MaybeNullWhenAttribute.ReturnValue"/>, the parameter may be null even if the corresponding type disallows it.</summary>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.MaybeNullWhenAttribute.#ctor(System.Boolean)">
+            <summary>Initializes the attribute with the specified return value condition.</summary>
+            <param name="returnValue">
+            The return value condition. If the method returns this value, the associated parameter may be null.
+            </param>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.MaybeNullWhenAttribute.ReturnValue">
+            <summary>Gets the return value condition.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.NotNullWhenAttribute">
+            <summary>Specifies that when a method returns <see cref="P:System.Diagnostics.CodeAnalysis.NotNullWhenAttribute.ReturnValue"/>, the parameter will not be null even if the corresponding type allows it.</summary>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.NotNullWhenAttribute.#ctor(System.Boolean)">
+            <summary>Initializes the attribute with the specified return value condition.</summary>
+            <param name="returnValue">
+            The return value condition. If the method returns this value, the associated parameter will not be null.
+            </param>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.NotNullWhenAttribute.ReturnValue">
+            <summary>Gets the return value condition.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.NotNullIfNotNullAttribute">
+            <summary>Specifies that the output will be non-null if the named parameter is non-null.</summary>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.NotNullIfNotNullAttribute.#ctor(System.String)">
+            <summary>Initializes the attribute with the associated parameter name.</summary>
+            <param name="parameterName">
+            The associated parameter name.  The output will be non-null if the argument to the parameter specified is non-null.
+            </param>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.NotNullIfNotNullAttribute.ParameterName">
+            <summary>Gets the associated parameter name.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.DoesNotReturnAttribute">
+            <summary>Applied to a method that will never return under any circumstance.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.DoesNotReturnIfAttribute">
+            <summary>Specifies that the method will not return if the associated Boolean parameter is passed the specified value.</summary>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.DoesNotReturnIfAttribute.#ctor(System.Boolean)">
+            <summary>Initializes the attribute with the specified parameter value.</summary>
+            <param name="parameterValue">
+            The condition parameter value. Code after the method will be considered unreachable by diagnostics if the argument to
+            the associated parameter matches this value.
+            </param>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.DoesNotReturnIfAttribute.ParameterValue">
+            <summary>Gets the condition parameter value.</summary>
+        </member>
+        <member name="T:HotChocolate.Types.Pagination.ConnectionType">
+            <summary>
+            The connection type.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.Pagination.ConnectionType.ConnectionName">
+            <summary>
+            Gets the connection name of this connection type.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.Pagination.ConnectionType.EdgeType">
+            <summary>
+            Gets the edge type of this connection.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Types.Pagination.CursorPaginationAlgorithm`2">
+            <summary>
+            This base class is a helper class for cursor paging handlers and contains the basic
+            algorithm for cursor pagination.
+            </summary>
+            <typeparam name="TQuery">
+            The type representing the query builder.
+            </typeparam>
+            <typeparam name="TEntity">
+            The entity type.
+            </typeparam>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.CursorPaginationAlgorithm`2.ApplyPaginationAsync(`0,HotChocolate.Types.Pagination.CursorPagingArguments,System.Threading.CancellationToken)">
+            <summary>
+            Applies the pagination algorithm to the provided query.
+            </summary>
+            <param name="query">The query builder.</param>
+            <param name="arguments">The paging arguments.</param>
+            <param name="cancellationToken">The cancellation token.</param>
+            <returns>
+            Returns the connection.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.CursorPaginationAlgorithm`2.ApplyPaginationAsync(`0,HotChocolate.Types.Pagination.CursorPagingArguments,System.Nullable{System.Int32},System.Threading.CancellationToken)">
+            <summary>
+            Applies the pagination algorithm to the provided query.
+            </summary>
+            <param name="query">The query builder.</param>
+            <param name="arguments">The paging arguments.</param>
+            <param name="totalCount">Specify the total amount of elements</param>
+            <param name="cancellationToken">The cancellation token.</param>
+            <returns>
+            Returns the connection.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.CursorPaginationAlgorithm`2.ApplySkip(`0,System.Int32)">
+            <summary>
+            Override this method to apply a skip on top of the provided query.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.CursorPaginationAlgorithm`2.ApplyTake(`0,System.Int32)">
+            <summary>
+            Override this method to apply a take (limit) on top of the provided query.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.CursorPaginationAlgorithm`2.CountAsync(`0,System.Threading.CancellationToken)">
+            <summary>
+            Override this to implement a count function on top of the provided query.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.CursorPaginationAlgorithm`2.ExecuteAsync(`0,System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Override this to implement the query execution.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.Pagination.CursorPagingArguments.After">
+            <summary>
+            The cursor after which entities shall be taken.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.Pagination.CursorPagingArguments.Before">
+            <summary>
+            The cursor before which entities shall be taken.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.Pagination.CursorPagingHandler.DefaultPageSize">
+            <summary>
+            Gets the default page size.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.Pagination.CursorPagingHandler.MaxPageSize">
+            <summary>
+            Gets max allowed page size.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.Pagination.CursorPagingHandler.RequirePagingBoundaries">
+            <summary>
+            Defines if the paging middleware shall require the
+            API consumer to specify paging boundaries.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.Pagination.CursorPagingHandler.IncludeTotalCount">
+            <summary>
+            Result should include total count.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.Pagination.CursorPagingHandler.AllowBackwardPagination">
+            <summary>
+            Defines if backward pagination is allowed or deactivated.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Types.Pagination.EdgeType">
+            <summary>
+            Represents an edge in a connection.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.Pagination.EdgeType.ConnectionName">
+            <summary>
+            Gets the connection name of this connection type.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.Pagination.EdgeType.NodeType">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Types.Pagination.EdgeType.EntityType">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.EdgeType.IsInstanceOfType(HotChocolate.Resolvers.IResolverContext,System.Object)">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.CursorPaginationResolverContextExtensions.IsTotalCountSelected(HotChocolate.Resolvers.IResolverContext)">
+             <summary>
+             TotalCount is one of the heaviest operations. It is only necessary to load totalCount
+             when it is enabled (IncludeTotalCount) and when it is contained in the selection set.
+            
+             This method checks if the total count is selected
+             </summary>
+             <param name="context"></param>
+             <returns></returns>
+        </member>
+        <member name="T:HotChocolate.Types.Pagination.Extensions.CursorPagingQueryableExtensions">
+            <summary>
+            Provides cursor paging extensions to <see cref="T:System.Linq.IQueryable`1"/>.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.Extensions.CursorPagingQueryableExtensions.ApplyCursorPaginationAsync``1(System.Linq.IQueryable{``0},System.Nullable{System.Int32},System.Nullable{System.Int32},System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Applies the cursor pagination algorithm to the <paramref name="query"/>.
+            </summary>
+            <param name="query">
+            The query on which the the cursor pagination algorithm shall be applied to.
+            </param>
+            <param name="first">
+            Returns the first _n_ elements from the list.
+            </param>
+            <param name="last">
+            Returns the last _n_ elements from the list.
+            </param>
+            <param name="after">
+            Returns the elements in the list that come after the specified cursor.
+            </param>
+            <param name="before">
+            Returns the elements in the list that come before the specified cursor.
+            </param>
+            <param name="cancellationToken">
+            The cancellation token.
+            </param>
+            <typeparam name="TEntity">
+            The entity type.
+            </typeparam>
+            <returns>
+            Returns a connection instance that represents the result of applying the
+            cursor paging algorithm to the provided <paramref name="query"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.Extensions.CursorPagingQueryableExtensions.ApplyCursorPaginationAsync``1(System.Linq.IQueryable{``0},HotChocolate.Types.Pagination.CursorPagingArguments,System.Threading.CancellationToken)">
+            <summary>
+            Applies the cursor pagination algorithm to the <paramref name="query"/>.
+            </summary>
+            <param name="query">
+            The query on which the the cursor pagination algorithm shall be applied to.
+            </param>
+            <param name="arguments">
+            The cursor paging arguments.
+            </param>
+            <param name="cancellationToken">
+            The cancellation token.
+            </param>
+            <typeparam name="TEntity">
+            The entity type.
+            </typeparam>
+            <returns>
+            Returns a connection instance that represents the result of applying the
+            cursor paging algorithm to the provided <paramref name="query"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.Extensions.CursorPagingQueryableExtensions.ApplyCursorPaginationAsync``1(System.Linq.IQueryable{``0},HotChocolate.Resolvers.IResolverContext,System.Nullable{System.Int32},System.Nullable{System.Int32},System.Threading.CancellationToken)">
+            <summary>
+            Applies the cursor pagination algorithm to the <paramref name="query"/>.
+            </summary>
+            <param name="query">
+            The query on which the the cursor pagination algorithm shall be applied to.
+            </param>
+            <param name="context">
+            The field resolver context.
+            </param>
+            <param name="defaultPageSize">
+            The default page size if no boundaries are set.
+            </param>
+            <param name="totalCount">
+            The total count if already known.
+            </param>
+            <param name="cancellationToken">
+            The cancellation token.
+            </param>
+            <typeparam name="TEntity">
+            The entity type.
+            </typeparam>
+            <returns>
+            Returns a connection instance that represents the result of applying the
+            cursor paging algorithm to the provided <paramref name="query"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.Extensions.CursorPagingQueryableExtensions.ApplyCursorPaginationAsync``1(System.Collections.Generic.IEnumerable{``0},HotChocolate.Resolvers.IResolverContext,System.Nullable{System.Int32},System.Nullable{System.Int32},System.Threading.CancellationToken)">
+            <summary>
+            Applies the cursor pagination algorithm to the <paramref name="enumerable"/>.
+            </summary>
+            <param name="enumerable">
+            The enumerable on which the the cursor pagination algorithm shall be applied to.
+            </param>
+            <param name="context">
+            The field resolver context.
+            </param>
+            <param name="defaultPageSize">
+            The default page size if no boundaries are set.
+            </param>
+            <param name="totalCount">
+            The total count if already known.
+            </param>
+            <param name="cancellationToken">
+            The cancellation token.
+            </param>
+            <typeparam name="TEntity">
+            The entity type.
+            </typeparam>
+            <returns>
+            Returns a connection instance that represents the result of applying the
+            cursor paging algorithm to the provided <paramref name="enumerable"/>.
+            </returns>
+        </member>
+        <member name="T:HotChocolate.Types.Pagination.IConnectionType">
+            <summary>
+            The connection type.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.Pagination.IConnectionType.ConnectionName">
+            <summary>
+            Gets the connection name of this connection type.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.Pagination.IConnectionType.EdgeType">
+            <summary>
+            Gets the edge type of this connection.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.Pagination.IEdge.Cursor">
+            <summary>
+            Gets the cursor which identifies the <see cref="P:HotChocolate.Types.Pagination.IEdge.Node" /> in the current data set.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.Pagination.IEdge.Node">
+            <summary>
+            Gets the node.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Types.Pagination.IEdgeType">
+            <summary>
+            Represents an edge in a connection.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.Pagination.IEdgeType.ConnectionName">
+            <summary>
+            Gets the connection name of this connection type.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.Pagination.IEdgeType.NodeType">
+            <summary>
+            Gets the item type of the node field on the edge type.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.Pagination.IEdgeType.EntityType">
+            <summary>
+            Gets the item type of the node field on the edge type.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Types.Pagination.QueryableCursorPagingProvider">
+            <summary>
+            The cursor pagination provider for <see cref="T:System.Linq.IQueryable`1"/>.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.QueryableCursorPagingProvider.CanHandle(HotChocolate.Internal.IExtendedType)">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.QueryableCursorPagingProvider.CreateHandler(HotChocolate.Internal.IExtendedType,HotChocolate.Types.Pagination.PagingOptions)">
+            <inheritdoc />
+        </member>
+        <member name="T:HotChocolate.Types.GetCursorPagingProvider">
+            <summary>
+            A delegate to resolve the optimal paging provider
+            for the specified <paramref name="sourceType"/>.
+            </summary>
+            <param name="services">
+            The application services.
+            </param>
+            <param name="sourceType">
+            The source type.
+            </param>
+            <param name="providerName">
+            The paging provider name that shall be selected.
+            </param>
+            <returns>
+            Returns a paging provider for the specified <paramref name="sourceType"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Types.PagingObjectFieldDescriptorExtensions.UsePaging``2(HotChocolate.Types.IObjectFieldDescriptor,HotChocolate.Types.GetCursorPagingProvider,System.Nullable{HotChocolate.NameString},HotChocolate.Types.Pagination.PagingOptions)">
+            <summary>
+            Applies a cursor paging middleware to the field and rewrites the 
+            field type to a connection.
+            </summary>
+            <param name="descriptor">The field descriptor.</param>
+            <param name="resolvePagingProvider">
+            A delegate that can resolve the correct paging provider for the field.
+            </param>
+            <param name="connectionName">
+            The name of the connection.
+            </param>
+            <param name="options">
+            The paging options.
+            </param>
+            <returns>
+            Returns the field descriptor to allow configuration chaining.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Types.PagingObjectFieldDescriptorExtensions.UsePaging``1(HotChocolate.Types.IObjectFieldDescriptor,System.Type,HotChocolate.Types.GetCursorPagingProvider,System.Nullable{HotChocolate.NameString},HotChocolate.Types.Pagination.PagingOptions)">
+            <summary>
+            Applies a cursor paging middleware to the field and rewrites the 
+            field type to a connection.
+            </summary>
+            <param name="descriptor">The field descriptor.</param>
+            <param name="entityType">
+            The entity type represents the runtime type of the node.
+            </param>
+            <param name="resolvePagingProvider">
+            A delegate that can resolve the correct paging provider for the field.
+            </param>
+            <param name="connectionName">
+            The name of the connection.
+            </param>
+            <param name="options">
+            The paging options.
+            </param>
+            <returns>
+            Returns the field descriptor to allow configuration chaining.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Types.PagingObjectFieldDescriptorExtensions.UsePaging(HotChocolate.Types.IObjectFieldDescriptor,System.Type,System.Type,HotChocolate.Types.GetCursorPagingProvider,System.Nullable{HotChocolate.NameString},HotChocolate.Types.Pagination.PagingOptions)">
+            <summary>
+            Applies a cursor paging middleware to the field and rewrites the 
+            field type to a connection.
+            </summary>
+            <param name="descriptor">The field descriptor.</param>
+            <param name="nodeType">
+            The schema type of the node.
+            </param>
+            <param name="entityType">
+            The entity type represents the runtime type of the node.
+            </param>
+            <param name="resolvePagingProvider">
+            A delegate that can resolve the correct paging provider for the field.
+            </param>
+            <param name="connectionName">
+            The name of the connection.
+            </param>
+            <param name="options">
+            The paging options.
+            </param>
+            <returns>
+            Returns the field descriptor to allow configuration chaining.
+            </returns>
+        </member>
+        <member name="T:HotChocolate.Types.UsePagingAttribute">
+            <summary>
+            This attribute adds the cursor paging middleware to the annotated method or property.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Types.UsePagingAttribute.#ctor(System.Type,System.Int32)">
+            <summary>
+            Applies the offset paging middleware to the annotated property.
+            </summary>
+            <param name="type">
+            The schema type representing the item type.
+            </param>
+            <param name="order">
+            The explicit order priority for this attribute.
+            </param>
+        </member>
+        <member name="P:HotChocolate.Types.UsePagingAttribute.SchemaType">
+            <summary>
+            The schema type representation of the node type.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.UsePagingAttribute.Type">
+            <summary>
+            The schema type representation of the node type.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.UsePagingAttribute.ConnectionName">
+            <summary>
+            Specifies the connection name.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.UsePagingAttribute.DefaultPageSize">
+            <summary>
+            Specifies the default page size for this field.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.UsePagingAttribute.MaxPageSize">
+            <summary>
+            Specifies the maximum allowed page size.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.UsePagingAttribute.IncludeTotalCount">
+            <summary>
+            Include the total count field to the result type.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.UsePagingAttribute.AllowBackwardPagination">
+            <summary>
+            Allow backward paging using <c>last</c> and <c>before</c>
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.UsePagingAttribute.RequirePagingBoundaries">
+            <summary>
+            Defines if the paging middleware shall require the
+            API consumer to specify paging boundaries.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.UsePagingAttribute.InferConnectionNameFromField">
+            <summary>
+            Connection names are by default inferred from the field name to
+            which they are bound to as opposed to the node type name.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.UsePagingAttribute.ProviderName">
+            <summary>
+            Specifies the name of the paging provider that shall be used.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Extensions.DependencyInjection.CursorPagingRequestExecutorBuilderExtension">
+            <summary>
+            GraphQL Configurations for cursor pagination.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Extensions.DependencyInjection.CursorPagingRequestExecutorBuilderExtension.AddQueryableCursorPagingProvider(HotChocolate.Execution.Configuration.IRequestExecutorBuilder,System.String,System.Boolean)">
+            <summary>
+            Adds the queryable cursor paging provider to the DI.
+            </summary>
+            <param name="builder">
+            The request executor builder.
+            </param>
+            <param name="providerName">
+            The name the provider shall have.
+            </param>
+            <param name="defaultProvider">
+            Defines if the registered provider shall be registered as the default provider.
+            </param>
+            <returns>
+            The request executor builder.
+            </returns>
+            <exception cref="T:System.ArgumentNullException">
+            <paramref name="builder"/> is <c>null</c>.
+            </exception>
+        </member>
+        <member name="M:Microsoft.Extensions.DependencyInjection.CursorPagingRequestExecutorBuilderExtension.AddCursorPagingProvider``1(HotChocolate.Execution.Configuration.IRequestExecutorBuilder,System.String,System.Boolean)">
+            <summary>
+            Adds a cursor paging provider to the DI.
+            </summary>
+            <param name="builder">
+            The request executor builder.
+            </param>
+            <param name="providerName">
+            The name the provider shall have.
+            </param>
+            <param name="defaultProvider">
+            Defines if the registered provider shall be registered as the default provider.
+            </param>
+            <typeparam name="TProvider">
+            The type of the provider.
+            </typeparam>
+            <returns>
+            The request executor builder.
+            </returns>
+            <exception cref="T:System.ArgumentNullException">
+            <paramref name="builder"/> is <c>null</c>.
+            </exception>
+        </member>
+        <member name="M:Microsoft.Extensions.DependencyInjection.CursorPagingRequestExecutorBuilderExtension.AddCursorPagingProvider``1(HotChocolate.Execution.Configuration.IRequestExecutorBuilder,System.Func{System.IServiceProvider,``0},System.String,System.Boolean)">
+            <summary>
+            Adds a cursor paging provider to the DI.
+            </summary>
+            <param name="builder">
+            The request executor builder.
+            </param>
+            <param name="factory">
+            A factory to create the paging provider.
+            </param>
+            <param name="providerName">
+            The name the provider shall have.
+            </param>
+            <param name="defaultProvider">
+            Defines if the registered provider shall be registered as the default provider.
+            </param>
+            <typeparam name="TProvider">
+            The type of the provider.
+            </typeparam>
+            <returns>
+            The request executor builder.
+            </returns>
+            <exception cref="T:System.ArgumentNullException">
+            <paramref name="builder"/> is <c>null</c>.
+            </exception>
+        </member>
+    </members>
+</doc>

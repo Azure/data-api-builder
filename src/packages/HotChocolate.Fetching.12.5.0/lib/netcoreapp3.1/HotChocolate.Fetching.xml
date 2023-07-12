@@ -1,0 +1,77 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>HotChocolate.Fetching</name>
+    </assembly>
+    <members>
+        <member name="T:HotChocolate.Fetching.BatchDispatcherResult">
+            <summary>
+            Represents the outcome of dispatching enqueued batches.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Fetching.BatchDispatcherResult.#ctor(System.Collections.Generic.IReadOnlyList{System.Exception})">
+            <summary>
+            Creates a new error result.
+            </summary>
+            <param name="exceptions">
+            The exceptions that occured while dispatching enqueued batches.
+            </param>
+        </member>
+        <member name="P:HotChocolate.Fetching.BatchDispatcherResult.IsSuccessful">
+            <summary>
+            Specifies that the execution of the enqueued batches was successful.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Fetching.BatchDispatcherResult.Exceptions">
+            <summary>
+            Gets the list of exceptions that occured during the execution of the enqueued
+            batches if <see cref="P:HotChocolate.Fetching.BatchDispatcherResult.IsSuccessful"/> is <c>false</c>.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Fetching.BatchDispatcherResult.Success">
+            <summary>
+            Gets the cached success result.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Fetching.BatchScheduler">
+            <summary>
+            The execution engine batch dispatcher.
+            </summary>
+        </member>
+        <member name="E:HotChocolate.Fetching.BatchScheduler.TaskEnqueued">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Fetching.BatchScheduler.DispatchOnSchedule">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Fetching.BatchScheduler.BeginDispatch(System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="T:HotChocolate.Fetching.IBatchDispatcher">
+            <summary>
+            The execution engine batch dispatcher.
+            </summary>
+        </member>
+        <member name="E:HotChocolate.Fetching.IBatchDispatcher.TaskEnqueued">
+            <summary>
+            Signals that a batch task was enqueued.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Fetching.IBatchDispatcher.DispatchOnSchedule">
+            <summary>
+            Defines if the batch dispatcher shall dispatch tasks directly when they are enqueued.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Fetching.IBatchDispatcher.BeginDispatch(System.Threading.CancellationToken)">
+            <summary>
+            Begins dispatching batched tasks.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Fetching.IDataLoaderRegistry">
+            <summary>
+            The DataLoader-registry holds the instances of DataLoaders
+            that are used by the execution engine.
+            </summary>
+        </member>
+    </members>
+</doc>

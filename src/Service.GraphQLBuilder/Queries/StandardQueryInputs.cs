@@ -224,8 +224,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         /// </summary>
         public static bool IsStandardInputType(string inputObjectTypeName)
         {
-            HashSet<string> standardQueryInputNames =
-                InputTypes.Values.ToList().Select(x => x.Name.Value).ToHashSet();
+            IEnumerable<string> standardQueryInputNames =
+                InputTypes.Values.ToList().Select(x => x.Name.Value);
             return standardQueryInputNames.Contains(inputObjectTypeName);
         }
     }

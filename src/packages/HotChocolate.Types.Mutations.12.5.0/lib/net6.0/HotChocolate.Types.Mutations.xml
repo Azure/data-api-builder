@@ -1,0 +1,1003 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>HotChocolate.Types.Mutations</name>
+    </assembly>
+    <members>
+        <member name="T:Microsoft.Extensions.DependencyInjection.MutationRequestExecutorBuilderExtensions">
+            <summary>
+            Provides global configuration methods for mutation conventions to the
+            <see cref="T:HotChocolate.Execution.Configuration.IRequestExecutorBuilder"/>.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Extensions.DependencyInjection.MutationRequestExecutorBuilderExtensions.AddMutationConventions(HotChocolate.Execution.Configuration.IRequestExecutorBuilder,System.Boolean)">
+            <summary>
+            Enables mutation conventions which will simplify creating GraphQL mutations.
+            </summary>
+            <param name="builder">
+            The request executor builder
+            </param>
+            <param name="applyToAllMutations">
+            Defines if the mutation convention defaults shall be applied to all mutations.
+            </param>
+            <returns>
+            The request executor builder
+            </returns>
+            <exception cref="T:System.ArgumentNullException">
+            The <paramref name="builder"/> is null.
+            </exception>
+        </member>
+        <member name="M:Microsoft.Extensions.DependencyInjection.MutationRequestExecutorBuilderExtensions.AddMutationConventions(HotChocolate.Execution.Configuration.IRequestExecutorBuilder,HotChocolate.Types.MutationConventionOptions)">
+            <summary>
+            Enables mutation conventions which will simplify creating GraphQL mutations.
+            </summary>
+            <param name="builder">
+            The request executor builder
+            </param>
+            <param name="options">
+            The mutation convention options.
+            </param>
+            <returns>
+            The request executor builder
+            </returns>
+            <exception cref="T:System.ArgumentNullException">
+            The <paramref name="builder"/> is null.
+            </exception>
+        </member>
+        <member name="M:Microsoft.Extensions.DependencyInjection.MutationRequestExecutorBuilderExtensions.AddErrorInterfaceType``1(HotChocolate.Execution.Configuration.IRequestExecutorBuilder)">
+             <summary>
+             Defines the common interface that all errors implement.
+             To specify the interface you can either provide a interface runtime type or a HotChocolate
+             interface schema type.
+            
+             This has to be used together with <see cref="T:HotChocolate.Types.ErrorAttribute"/>  or
+             <see cref="M:HotChocolate.Types.MutationObjectFieldDescriptorExtensions.Error(HotChocolate.Types.IObjectFieldDescriptor,System.Type)"/>
+             </summary>
+             <param name="builder">
+             The request executor builder
+             </param>
+             <typeparam name="T">
+             The type that is used as the common interface
+             </typeparam>
+             <returns>
+             The schema builder
+             </returns>
+        </member>
+        <member name="M:Microsoft.Extensions.DependencyInjection.MutationRequestExecutorBuilderExtensions.AddErrorInterfaceType(HotChocolate.Execution.Configuration.IRequestExecutorBuilder,System.Type)">
+             <summary>
+             Defines the common interface that all errors implement.
+             To specify the interface you can either provide a interface runtime type or a HotChocolate
+             interface schema type.
+            
+             This has to be used together with <see cref="T:HotChocolate.Types.ErrorAttribute"/>  or
+             <see cref="M:HotChocolate.Types.MutationObjectFieldDescriptorExtensions.Error(HotChocolate.Types.IObjectFieldDescriptor,System.Type)"/>
+             </summary>
+             <param name="builder">
+             The request executor builder
+             </param>
+             <param name="type">
+             The type that is used as the common interface
+             </param>
+             <returns>
+             The request executor builder
+             </returns>
+        </member>
+        <member name="T:HotChocolate.Types.ErrorAttribute">
+             <summary>
+             The <see cref="T:HotChocolate.Types.ErrorAttribute"/> registers a middleware that will catch all exceptions of
+             type <see cref="P:HotChocolate.Types.ErrorAttribute.ErrorType"/> on mutations.
+            
+             By annotating the attribute the response type
+             of the annotated mutation resolver, will be automatically extended by a field of type
+             <c>errors:[Error!]</c>. This field will return errors that are caught by the middleware.
+             All the other fields on this type will be rewritten to nullable types. In case of a error
+             these fields will be set to null.
+             <para>
+             There are three different ways to map exceptions to GraphQL errors.
+             </para>
+             </summary>
+             <remarks>
+             The idea of the error middleware is to keep the resolver clean of any error handling code
+             and use exceptions to signal a error state. The HotChocolate schema is automatically
+             rewritten into a common error handling pattern.
+             <a href="https://xuorig.medium.com/a-guide-to-graphql-errors-bb9ba9f15f85">Learn More</a>
+             </remarks>
+             <example>
+             <para>
+             There are three different ways to map exceptions to GraphQL errors.
+             </para>
+             <list type="number">
+             <item>
+             <para>
+             <b>Catching exceptions directly</b>
+             </para>
+             If <see cref="P:HotChocolate.Types.ErrorAttribute.ErrorType"/> is a exception, the exception is automatically
+             mapped into a GraphQL error and the middleware will catch this exception
+             <code>
+             public class Mutation
+             {
+                 [Error(typeof(SomeSpecificDomainError))]
+                 [Error(typeof(SomeOtherError))]
+                 public CreateUserPayload CreateUser(CreateUserInput input)
+                 {
+                    // ...
+                 }
+             }
+            
+             public record CreateUserInput(string UserName);
+            
+             public record CreateUserPayload(User User);
+             </code>
+             This will generate the following schema
+             <code>
+             type Mutation {
+               createUser(input: CreateUserInput!): CreateUserPayload!
+             }
+            
+             input CreateUserInput {
+               userName: String!
+             }
+            
+             type CreateUserPayload {
+               user: User
+               errors: [CreateUserError!]
+             }
+            
+             type User {
+               username: String
+             }
+            
+             interface Error {
+               message: String!
+             }
+            
+             type SomeSpecificDomainError implements Error {
+               message: String!
+             }
+            
+             type SomeOtherDomainError implements Error {
+               message: String!
+             }
+            
+             union CreateUserError = SomeSpecificDomainError | SomeOtherDomainError
+             </code>
+                </item>
+             <item>
+             <para>
+             <b>Map Exceptions with a factory method</b>
+             </para>
+             <para>
+             If there should be any translation between exception and error, you can defined a class
+             with factory methods. These factory methods receive a <see cref="T:System.Exception"/> and return
+             a object which will be used as the representation of the error
+             </para>
+             <para>
+             A factory method has to be `public static` and the name of the method has to be
+             `CreateErrorFrom`. There should only be one parameter of type <see cref="T:System.Exception"/> and
+             it can return a arbitrary class/struct/record that will be used as the representation
+             of the error.
+             </para>
+             <code>
+             public class MyCustomError
+             {
+                 public static MyCustomError CreateErrorFrom(DomainExceptionA ex)
+                 {
+                     return new MyCustomError();
+                 }
+            
+                 public static MyCustomError CreateErrorFrom(DomainExceptionB ex)
+                 {
+                     return new MyCustomError();
+                 }
+            
+                 public string Message => "My custom error Message";
+             }
+            
+             public class Mutation
+             {
+                 [Error(typeof(MyCustomError))]
+                 public CreateUserPayload CreateUser(CreateUserInput input)
+                 {
+                    // ...
+                 }
+             }
+            
+             public record CreateUserInput(string UserName);
+            
+             public record CreateUserPayload(User User);
+             </code>
+             </item>
+             <item>
+             <para>
+             <b>Map exceptions with a constructors</b>
+             </para>
+             <para>
+             As a alternative to mapping exceptions with factory methods, you can also map the exception
+             in the constructor of the object that should be used to represent the error in the schema.
+             </para>
+             <code>
+             public class MyCustomError
+             {
+                 public MyCustomError(MyCustomDomainException exception)
+                 {
+                     Message = exception.Message;
+                 }
+            
+                 public MyCustomError(MyCustomDomainException2 exception)
+                 {
+                     Message = exception.Message;
+                 }
+            
+                 public string Message { get; }
+             }
+            
+             public class Mutation
+             {
+                 [Error(typeof(MyCustomError))]
+                 public CreateUserPayload CreateUser(CreateUserInput input)
+                 {
+                    // ...
+                 }
+             }
+             </code>
+             </item>
+             </list>
+             </example>
+        </member>
+        <member name="M:HotChocolate.Types.ErrorAttribute.#ctor(System.Type)">
+            <inheritdoc cref="T:HotChocolate.Types.ErrorAttribute"/>
+            <param name="errorType">
+            The type of the exception, the class with factory methods or the error with an exception
+            as the argument. See the examples in <see cref="T:HotChocolate.Types.ErrorAttribute"/>.
+            </param>
+        </member>
+        <member name="P:HotChocolate.Types.ErrorAttribute.ErrorType">
+            <summary>
+            The type of the exception, the class with factory methods or the error with an exception
+            as the argument. See the examples in <see cref="T:HotChocolate.Types.ErrorAttribute"/>.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Types.ErrorAttribute.OnConfigure(HotChocolate.Types.Descriptors.IDescriptorContext,HotChocolate.Types.IObjectFieldDescriptor,System.Reflection.MemberInfo)">
+            <inheritdoc />
+        </member>
+        <!-- Badly formed XML comment ignored for member "T:HotChocolate.Types.ErrorAttribute`1" -->
+        <member name="M:HotChocolate.Types.ErrorAttribute`1.#ctor">
+            <inheritdoc cref="T:HotChocolate.Types.ErrorAttribute"/>
+        </member>
+        <member name="F:HotChocolate.Types.ErrorContextDataKeys.ErrorDefinitions">
+            <summary>
+            Stores the definition of the errors on the context data
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Types.ErrorContextDataKeys.Errors">
+            <summary>
+            Stores the errors on the scoped context for the middleware
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Types.ErrorContextDataKeys.IsErrorType">
+            <summary>
+            Defines if a type is a error type
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Types.ErrorContextDataKeys.ErrorType">
+            <summary>
+            Marks the common error type of the schema
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Types.IPayloadErrorFactory`2">
+            <summary>
+            Defines a error factory that translates exceptions into GraphQL errors.
+            This has to be used together with <see cref="T:HotChocolate.Types.ErrorAttribute"/>  or
+            <see cref="M:HotChocolate.Types.MutationObjectFieldDescriptorExtensions.Error(HotChocolate.Types.IObjectFieldDescriptor,System.Type)"/>
+            </summary>
+            <typeparam name="TError">
+            The type of the error that is exposed in the API
+            </typeparam>
+            <typeparam name="TException">
+            The exception that should be caught and translated
+            </typeparam>
+        </member>
+        <member name="M:HotChocolate.Types.IPayloadErrorFactory`2.CreateErrorFrom(`0)">
+            <summary>
+            Translates a exception of type <typeparamref name="TException"/> to a GraphQL error of
+            type <typeparamref name="TError"/>
+            </summary>
+            <param name="exception">
+            The exception that was caught by the error middleware
+            </param>
+            <returns>
+            The translated GraphQL error
+            </returns>
+        </member>
+        <member name="T:HotChocolate.Types.ErrorSchemaBuilderExtensions">
+            <summary>
+            Common extensions to configure the schema with a common error interface
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Types.ErrorSchemaBuilderExtensions.AddErrorInterfaceType``1(HotChocolate.ISchemaBuilder)">
+             <summary>
+             Defines the common interface that all errors implement.
+             To specify the interface you can either provide a interface runtime type or a HotChocolate
+             interface schema type.
+            
+             This has to be used together with <see cref="T:HotChocolate.Types.ErrorAttribute"/>  or
+             <see cref="M:HotChocolate.Types.MutationObjectFieldDescriptorExtensions.Error(HotChocolate.Types.IObjectFieldDescriptor,System.Type)"/>
+             </summary>
+             <param name="schemaBuilder">
+             The schema builder
+             </param>
+             <typeparam name="T">
+             The type that is used as the common interface
+             </typeparam>
+             <returns>j
+             The schema builder
+             </returns>
+        </member>
+        <member name="M:HotChocolate.Types.ErrorSchemaBuilderExtensions.AddErrorInterfaceType(HotChocolate.ISchemaBuilder,System.Type)">
+             <summary>
+             Defines the common interface that all errors implement.
+             To specify the interface you can either provide a interface runtime type or a HotChocolate
+             interface schema type.
+            
+             This has to be used together with <see cref="T:HotChocolate.Types.ErrorAttribute"/>  or
+             <see cref="M:HotChocolate.Types.MutationObjectFieldDescriptorExtensions.Error(HotChocolate.Types.IObjectFieldDescriptor,System.Type)"/>
+             </summary>
+             <param name="schemaBuilder">
+             The schema builder
+             </param>
+             <param name="type">
+             The type that is used as the common interface
+             </param>
+             <returns>
+             The schema builder
+             </returns>
+        </member>
+        <member name="T:HotChocolate.Types.MutationObjectFieldDescriptorExtensions">
+            <summary>
+            Provides extensions to the <see cref="T:HotChocolate.Types.IObjectFieldDescriptor"/> for the mutation convention.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Types.MutationObjectFieldDescriptorExtensions.UseMutationConvention(HotChocolate.Types.IObjectFieldDescriptor,HotChocolate.Types.MutationFieldOptions)">
+            <summary>
+            The UseMutationConvention allows to override the global mutation convention settings
+            on a per field basis.
+            </summary>
+            <param name="descriptor">The descriptor of the field</param>
+            <param name="options">
+            The options that shall override the global mutation convention options.
+            </param>
+            <returns>
+            Returns the <paramref name="descriptor"/> for configuration chaining.
+            </returns>
+            <exception cref="T:System.ArgumentNullException">
+            The <paramref name="descriptor"/> is <c>null</c>.
+            </exception>
+        </member>
+        <member name="M:HotChocolate.Types.MutationObjectFieldDescriptorExtensions.Error``1(HotChocolate.Types.IObjectFieldDescriptor)">
+             <summary>
+             The <c>.Error&lt;TError>()</c> extension method registers a middleware that will catch
+             all exceptions of type <typeparamref name="TError"/> on mutations.
+            
+             By applying the error extension to a mutation field the
+             response type of the annotated resolver, will be automatically extended by a field of
+             type <c>errors:[Error!]</c>. This field will return errors that are caught by the
+             middleware. All the other fields on this type will be rewritten to nullable types.
+             In case of a error these fields will be set to null.
+             <para>
+             There are three different ways to map exceptions to GraphQL errors.
+             </para>
+             </summary>
+             <remarks>
+             The idea of the error middleware is to keep the resolver clean of any error handling
+             code and use exceptions to signal a error state. The HotChocolate schema is
+             automatically rewritten into a common error handling pattern.
+             <a href="https://xuorig.medium.com/a-guide-to-graphql-errors-bb9ba9f15f85">
+             Learn More
+             </a>
+             </remarks>
+             <example>
+             <para>
+             There are three different ways to map exceptions to GraphQL errors.
+             </para>
+             <list type="number">
+             <item>
+             <para>
+             <b>Catching exceptions directly</b>
+             </para>
+             If <typeparamref name="TError"/> is a exception, the exception is automatically
+             mapped into a GraphQL error and the middleware will catch this exception
+             <code>
+             public class Mutation
+             {
+                 public CreateUserPayload CreateUser(CreateUserInput input)
+                 {
+                    // ...
+                 }
+             }
+             public class MutationType : ObjectType&lt;Mutation>
+             {
+                 protected override Configure(IObjectTypeDescriptor&lt;Mutation> descriptor)
+                 {
+                     descriptor
+                        .Field(x =>; x.CreateUserAsync(default)
+                        <b>.Error&lt;SomeSpecificDomainError>()</b>
+                        <b>.Error&lt;SomeOtherError>();</b>
+                 }
+             }
+             </code>
+             This will generate the following schema
+             <code>
+             type Mutation {
+               createUser(input: CreateUserInput!): CreateUserPayload!
+             }
+            
+             input CreateUserInput {
+               userName: String!
+             }
+            
+             type CreateUserPayload {
+               user: User
+               errors: [CreateUserError!]
+             }
+            
+             type User {
+               username: String
+             }
+            
+             interface Error {
+               message: String!
+             }
+            
+             type SomeSpecificDomainError implements Error {
+               message: String!
+             }
+            
+             type SomeOtherDomainError implements Error {
+               message: String!
+             }
+            
+             union CreateUserError = SomeSpecificDomainError | SomeOtherDomainError
+             </code>
+             </item>
+             <item>
+             <para>
+             <b>Map Exceptions with a factory method</b>
+             </para>
+             <para>
+             If there should be any translation between exception and error, you can defined a class
+             with factory methods. These factory methods receive a <see cref="T:System.Exception"/> and return
+             a object which will be used as the representation of the error
+             </para>
+             <para>
+             A factory method has to be `public static` and the name of the method has to be
+             `CreateErrorFrom`. There should only be one parameter of type <see cref="T:System.Exception"/>
+             and it can return a arbitrary class/struct/record that will be used as the
+             representation of the error.
+             </para>
+             <code>
+             public class MyCustomError
+             {
+                 public static MyCustomError CreateErrorFrom(DomainExceptionA ex)
+                 {
+                     return new MyCustomError();
+                 }
+            
+                 public static MyCustomError CreateErrorFrom(DomainExceptionB ex)
+                 {
+                     return new MyCustomError();
+                 }
+            
+                 public string Message => "My custom error Message";
+             }
+            
+             public class MutationType : ObjectType&lt;Mutation>
+             {
+                 protected override Configure(IObjectTypeDescriptor&lt;Mutation> descriptor)
+                 {
+                     descriptor
+                        .Field(x =>; x.CreateUserAsync(default)
+                        <b>.Error&lt;MyCustomError>();</b>
+                 }
+             }
+             </code>
+             </item>
+             <item>
+             <para>
+             <b>Map exceptions with a constructors</b>
+             </para>
+             <para>
+             As a alternative to mapping exceptions with factory methods, you can also map the
+             exception in the constructor of the object that should be used to represent the
+             error in the schema.
+             </para>
+             <code>
+             public class MyCustomError
+             {
+                 public MyCustomError(MyCustomDomainException exception)
+                 {
+                     Message = exception.Message;
+                 }
+            
+                 public MyCustomError(MyCustomDomainException2 exception)
+                 {
+                     Message = exception.Message;
+                 }
+            
+                 public string Message { get; }
+             }
+            
+             public class MutationType : ObjectType&lt;Mutation>
+             {
+                 protected override Configure(IObjectTypeDescriptor&lt;Mutation> descriptor)
+                 {
+                     descriptor
+                        .Field(x =>; x.CreateUserAsync(default)
+                        <b>.Error&lt;MyCustomError>();</b>
+                 }
+             }
+             </code>
+             </item>
+             </list>
+             </example>
+             <param name="descriptor">The descriptor of the field</param>
+             <typeparam name="TError">
+             The type of the exception, the class with factory methods or the error with an exception
+             as the argument. See the examples in <see cref="M:HotChocolate.Types.MutationObjectFieldDescriptorExtensions.Error``1(HotChocolate.Types.IObjectFieldDescriptor)"/>.
+             </typeparam>
+        </member>
+        <member name="M:HotChocolate.Types.MutationObjectFieldDescriptorExtensions.Error(HotChocolate.Types.IObjectFieldDescriptor,System.Type)">
+             <summary>
+             The <c>.Error&lt;TError>()</c> extension method registers a middleware that will catch
+             all exceptions of type <typeparamref name="TError"/> on mutations.
+            
+             By applying the error extension to a mutation field the
+             response type of the annotated resolver, will be automatically extended by a field of
+             type <c>errors:[Error!]</c>. This field will return errors that are caught by the
+             middleware. All the other fields on this type will be rewritten to nullable types.
+             In case of a error these fields will be set to null.
+             <para>
+             There are three different ways to map exceptions to GraphQL errors.
+             </para>
+             </summary>
+             <remarks>
+             The idea of the error middleware is to keep the resolver clean of any error handling
+             code and use exceptions to signal a error state. The HotChocolate schema is
+             automatically rewritten into a common error handling pattern.
+             <a href="https://xuorig.medium.com/a-guide-to-graphql-errors-bb9ba9f15f85">
+             Learn More
+             </a>
+             </remarks>
+             <example>
+             <para>
+             There are three different ways to map exceptions to GraphQL errors.
+             </para>
+             <list type="number">
+             <item>
+             <para>
+             <b>Catching exceptions directly</b>
+             </para>
+             If <paramref name="errorType"/> is a exception, the exception is automatically
+             mapped into a GraphQL error and the middleware will catch this exception
+             <code>
+             public class Mutation
+             {
+                 public CreateUserPayload CreateUser(CreateUserInput input)
+                 {
+                    // ...
+                 }
+             }
+             public class MutationType : ObjectType&lt;Mutation>
+             {
+                 protected override Configure(IObjectTypeDescriptor&lt;Mutation> descriptor)
+                 {
+                     descriptor
+                        .Field(x =>; x.CreateUserAsync(default)
+                        <b>.Error(typeof(SomeSpecificDomainError))</b>
+                        <b>.Error(typeof(SomeOtherError));</b>
+                 }
+             }
+             </code>
+             This will generate the following schema
+             <code>
+             type Mutation {
+               createUser(input: CreateUserInput!): CreateUserPayload!
+             }
+            
+             input CreateUserInput {
+               userName: String!
+             }
+            
+             type CreateUserPayload {
+               user: User
+               errors: [CreateUserError!]
+             }
+            
+             type User {
+               username: String
+             }
+            
+             interface Error {
+               message: String!
+             }
+            
+             type SomeSpecificDomainError implements Error {
+               message: String!
+             }
+            
+             type SomeOtherDomainError implements Error {
+               message: String!
+             }
+            
+             union CreateUserError = SomeSpecificDomainError | SomeOtherDomainError
+             </code>
+             </item>
+             <item>
+             <para>
+             <b>Map Exceptions with a factory method</b>
+             </para>
+             <para>
+             If there should be any translation between exception and error, you can defined a class
+             with factory methods. These factory methods receive a <see cref="T:System.Exception"/> and return
+             a object which will be used as the representation of the error
+             </para>
+             <para>
+             A factory method has to be `public static` and the name of the method has to be
+             `CreateErrorFrom`. There should only be one parameter of type <see cref="T:System.Exception"/> and
+             it can return a arbitrary class/struct/record that will be used as the representation
+             of the error.
+             </para>
+             <code>
+             public class MyCustomError
+             {
+                 public static MyCustomError CreateErrorFrom(DomainExceptionA ex)
+                 {
+                     return new MyCustomError();
+                 }
+            
+                 public static MyCustomError CreateErrorFrom(DomainExceptionB ex)
+                 {
+                     return new MyCustomError();
+                 }
+            
+                 public string Message => "My custom error Message";
+             }
+            
+             public class MutationType : ObjectType&lt;Mutation>
+             {
+                 protected override Configure(IObjectTypeDescriptor&lt;Mutation> descriptor)
+                 {
+                     descriptor
+                        .Field(x =>; x.CreateUserAsync(default)
+                        <b>.Error(typeof(MyCustomError));</b>
+                 }
+             }
+             </code>
+             </item>
+             <item>
+             <para>
+             <b>Map exceptions with a constructors</b>
+             </para>
+             <para>
+             As a alternative to mapping exceptions with factory methods, you can also map the
+             exception in the constructor of the object that should be used to represent the
+             error in the schema.
+             </para>
+             <code>
+             public class MyCustomError
+             {
+                 public MyCustomError(MyCustomDomainException exception)
+                 {
+                     Message = exception.Message;
+                 }
+            
+                 public MyCustomError(MyCustomDomainException2 exception)
+                 {
+                     Message = exception.Message;
+                 }
+            
+                 public string Message { get; }
+             }
+            
+             public class MutationType : ObjectType&lt;Mutation>
+             {
+                 protected override Configure(IObjectTypeDescriptor&lt;Mutation> descriptor)
+                 {
+                     descriptor
+                        .Field(x =>; x.CreateUserAsync(default)
+                        <b>.Error(typeof(MyCustomError));</b>
+                 }
+             }
+             </code>
+             </item>
+             </list>
+             </example>
+             <param name="descriptor">The descriptor of the field</param>
+             <param name="errorType">
+             The type of the exception, the class with factory methods or the error with an exception
+             as the argument. See the examples in <see cref="M:HotChocolate.Types.MutationObjectFieldDescriptorExtensions.Error(HotChocolate.Types.IObjectFieldDescriptor,System.Type)"/>.
+             </param>
+        </member>
+        <member name="T:HotChocolate.Types.MutationContextData">
+            <summary>
+            This internal data structure is used to store the effective mutation options of a field
+            on the context so that the type interceptor can access them.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Types.MutationConventionMiddleware">
+            <summary>
+            This middleware ensures that the rewritten argument structure is remapped so that the
+            resolver can request the arguments in the original structure.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Types.MutationConventionOptions">
+            <summary>
+            Represents the global mutation convention settings.
+            The global convention settings will be applied to all
+            mutations and can be overriden on a per field basis.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.MutationConventionOptions.InputTypeNamePattern">
+             <summary>
+             Specifies a name pattern for the input type name of a mutation.
+             The pattern is specified like the following:
+             <code>"{MutationName}Input"</code>
+            
+             <code>
+             type Mutation {
+               createUser(input: ThisTypeName): CreateUserPayload
+             }
+            
+             type CreateUserPayload {
+                user: User
+                errors: [CreateUserError!]
+             }
+             </code>
+             </summary>
+        </member>
+        <member name="P:HotChocolate.Types.MutationConventionOptions.InputArgumentName">
+             <summary>
+             The name of the input argument.
+             <code>
+             type Mutation {
+               createUser(thisIsTheArgumentName: CreateUserCustomInput): CreateUserPayload
+             }
+            
+             type CreateUserPayload {
+                user: User
+                errors: [CreateUserError!]
+             }
+             </code>
+             </summary>
+        </member>
+        <member name="P:HotChocolate.Types.MutationConventionOptions.PayloadTypeNamePattern">
+             <summary>
+             Specifies a name pattern for the payload type name of a mutation.
+             The pattern is specified like the following:
+             <code>"{MutationName}Payload"</code>
+            
+             <code>
+             type Mutation {
+               createUser(input: CreateUserCustomInput): ThisTypeName
+             }
+            
+             type ThisTypeName {
+                user: User
+                errors: [CreateUserError!]
+             }
+             </code>
+             </summary>
+        </member>
+        <member name="P:HotChocolate.Types.MutationConventionOptions.PayloadErrorTypeNamePattern">
+             <summary>
+             Specifies a name pattern for the error union type name of a mutation.
+             The pattern is specified like the following:
+             <code>"{MutationName}Error"</code>
+            
+             <code>
+             type Mutation {
+               createUser(input: CreateUserCustomInput): CreateUserPayload
+             }
+            
+             type CreateUserPayload {
+                user: User
+                errors: [ThisTypeName!]
+             }
+             </code>
+             </summary>
+        </member>
+        <member name="P:HotChocolate.Types.MutationConventionOptions.PayloadErrorsFieldName">
+             <summary>
+             The name of the errors field name on the payload type.
+             <code>
+             type Mutation {
+               createUser(input: CreateUserCustomInput): CreateUserPayload
+             }
+            
+             type CreateUserPayload {
+                user: User
+                thisIsTheFieldName: [CreateUserError!]
+             }
+             </code>
+             </summary>
+        </member>
+        <member name="P:HotChocolate.Types.MutationConventionOptions.ApplyToAllMutations">
+            <summary>
+            Defines if the mutation conventions shall be automatically applied to all mutation fields.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Types.MutationFieldOptions">
+            <summary>
+            Represent the mutation convention field option that allows to override the global convention
+            settings on a per field basis.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.MutationFieldOptions.InputTypeName">
+            <summary>
+            The type name of the mutation input type.
+            <code>
+            type Mutation {
+              createUser(input: ThisIsTheTypeName): CreateUserPayload
+            }
+            </code>
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.MutationFieldOptions.InputArgumentName">
+            <summary>
+            The name of the input argument.
+            <code>
+            type Mutation {
+              createUser(thisIsTheArgumentName: CreateUserCustomInput): CreateUserPayload
+            }
+            </code>
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.MutationFieldOptions.PayloadTypeName">
+            <summary>
+            The type name of the field in the payload
+            <code>
+            type Mutation {
+              createUser(input: CreateUserCustomInput): ThisIsTheTypeName
+            }
+            </code>
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.MutationFieldOptions.PayloadFieldName">
+             <summary>
+             The name of the field in the payload type that represents our data.
+             <code>
+             type Mutation {
+               createUser(input: CreateUserCustomInput): CreateUserPayload
+             }
+            
+             type CreateUserPayload {
+                thisIsTheFieldName: User
+                errors: [CreateUserError!]
+             }
+             </code>
+             </summary>
+        </member>
+        <member name="P:HotChocolate.Types.MutationFieldOptions.PayloadErrorTypeName">
+             <summary>
+             The name of the error union type for this mutation.
+             <code>
+             type Mutation {
+               createUser(input: CreateUserCustomInput): CreateUserPayload
+             }
+            
+             type CreateUserPayload {
+                user: User
+                errors: [ThisIsTheTypeName!]
+             }
+             </code>
+             </summary>
+        </member>
+        <member name="P:HotChocolate.Types.MutationFieldOptions.PayloadErrorsFieldName">
+             <summary>
+             The name of the errors field name on the payload type.
+             <code>
+             type Mutation {
+               createUser(input: CreateUserCustomInput): CreateUserPayload
+             }
+            
+             type CreateUserPayload {
+                user: User
+                thisIsTheFieldName: [CreateUserError!]
+             }
+             </code>
+             </summary>
+        </member>
+        <member name="P:HotChocolate.Types.MutationFieldOptions.Disable">
+            <summary>
+            Overrides a the global <see cref="P:HotChocolate.Types.MutationConventionOptions.ApplyToAllMutations" />
+            setting on a specific mutation.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Types.UseMutationConventionAttribute">
+            <summary>
+            By annotating a mutation with this attribute one can override the global
+            mutation convention settings on a per mutation basis.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.UseMutationConventionAttribute.InputTypeName">
+            <summary>
+            The type name of the mutation input type.
+            <code>
+            type Mutation {
+              createUser(input: ThisIsTheTypeName): CreateUserPayload
+            }
+            </code>
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.UseMutationConventionAttribute.InputArgumentName">
+            <summary>
+            The name of the input argument.
+            <code>
+            type Mutation {
+              createUser(thisIsTheArgumentName: CreateUserCustomInput): CreateUserPayload
+            }
+            </code>
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.UseMutationConventionAttribute.PayloadTypeName">
+            <summary>
+            The type name of the field in the payload
+            <code>
+            type Mutation {
+              createUser(input: CreateUserCustomInput): ThisIsTheTypeName
+            }
+            </code>
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.UseMutationConventionAttribute.PayloadFieldName">
+             <summary>
+             The name of the field in the payload type that represents our data.
+             <code>
+             type Mutation {
+               createUser(input: CreateUserCustomInput): CreateUserPayload
+             }
+            
+             type CreateUserPayload {
+                thisIsTheFieldName: User
+                errors: [CreateUserError!]
+             }
+             </code>
+             </summary>
+        </member>
+        <member name="P:HotChocolate.Types.UseMutationConventionAttribute.PayloadErrorTypeName">
+             <summary>
+             The name of the error union type for this mutation.
+             <code>
+             type Mutation {
+               createUser(input: CreateUserCustomInput): CreateUserPayload
+             }
+            
+             type CreateUserPayload {
+                user: User
+                errors: [ThisIsTheTypeName!]
+             }
+             </code>
+             </summary>
+        </member>
+        <member name="P:HotChocolate.Types.UseMutationConventionAttribute.PayloadErrorsFieldName">
+             <summary>
+             The name of the errors field name on the payload type.
+             <code>
+             type Mutation {
+               createUser(input: CreateUserCustomInput): CreateUserPayload
+             }
+            
+             type CreateUserPayload {
+                user: User
+                thisIsTheFieldName: [CreateUserError!]
+             }
+             </code>
+             </summary>
+        </member>
+        <member name="P:HotChocolate.Types.UseMutationConventionAttribute.Disable">
+            <summary>
+            Overrides a the global <see cref="P:HotChocolate.Types.MutationConventionOptions.ApplyToAllMutations" />
+            setting on a specific mutation.
+            </summary>
+        </member>
+    </members>
+</doc>

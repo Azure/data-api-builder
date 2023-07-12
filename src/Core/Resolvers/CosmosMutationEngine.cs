@@ -13,6 +13,7 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
+using HotChocolate.Types;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Primitives;
@@ -340,4 +341,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             throw new NotImplementedException();
         }
     }
+}
+
+public static class Extensions
+{
+    public static TValue GetValueOrDefault<TKey, TValue>(this Dictionary<TKey, TValue> dict, TKey key)
+      => dict.TryGetValue(key, out TValue? value) ? value : default(TValue)!;
 }

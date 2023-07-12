@@ -89,7 +89,7 @@ public class RuntimeConfigLoader
 
             if (!string.IsNullOrEmpty(connectionString))
             {
-                config = config with { DataSource = config.DataSource with { ConnectionString = connectionString } };
+                config = config with { DataSource = config.DataSource with { ConnectionString = connectionString! } };
             }
         }
         catch (JsonException ex)

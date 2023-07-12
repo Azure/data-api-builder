@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -12,7 +13,7 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
     /// <inheritdoc/>
     public override bool CanConvert(Type typeToConvert)
     {
-        return typeToConvert.IsAssignableTo(typeof(GraphQLRuntimeOptions));
+        return typeToConvert.GetTypeInfo().IsAssignableFrom(typeof(GraphQLRuntimeOptions));
     }
 
     /// <inheritdoc/>

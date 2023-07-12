@@ -4,7 +4,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Text.Json;
-using System.Web;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
@@ -164,13 +163,13 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     // After parsing primary key, the Context will be populated with the
                     // correct PrimaryKeyValuePairs.
-                    RequestParser.ParsePrimaryKey(primaryKeyRoute, context);
+                    RequestParser.ParsePrimaryKey(primaryKeyRoute!, context);
                     RequestValidator.ValidatePrimaryKey(context, _sqlMetadataProvider);
                 }
 
                 if (!string.IsNullOrWhiteSpace(queryString))
                 {
-                    context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
+                    context.ParsedQueryString = System.Web.HttpUtility.ParseQueryString(queryString);
                     RequestParser.ParseQueryString(context, _sqlMetadataProvider);
                 }
             }
@@ -259,7 +258,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     // So, $filter will be treated as any other parameter (inevitably will raise a Bad Request)
                     if (!string.IsNullOrWhiteSpace(queryString))
                     {
-                        context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
+                        context.ParsedQueryString = System.Web.HttpUtility.ParseQueryString(queryString);
                     }
 
                     break;
@@ -455,7 +454,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             if (requirement is not RoleContextPermissionsRequirement && resource is null)
             {
-                throw new ArgumentNullException(paramName: "resource", message: $"Resource can't be null for the requirement: {requirement.GetType}");
+                throw new ArgumentNullException(paramName: "resource", message: $"Resource can't be null for the requirement: {requirement.GetType()}");
             }
 
             AuthorizationResult authorizationResult = await _authorizationService.AuthorizeAsync(

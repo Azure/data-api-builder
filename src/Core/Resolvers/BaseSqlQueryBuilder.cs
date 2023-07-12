@@ -36,7 +36,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             string predicates = new(JoinPredicateStrings(
                        structure.GetDbPolicyForOperation(EntityActionOperation.Read),
-                       Build(structure.Predicates)));
+                       Build(structure.Predicates)).ToCharArray());
 
             string query = $"SELECT 1 " +
                    $"FROM {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
@@ -143,7 +143,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // If the table alias is not empty, we return [{SourceAlias}].[{Column}]
             if (!string.IsNullOrEmpty(column.TableAlias))
             {
-                return $"{QuoteIdentifier(column.TableAlias)}.{QuoteIdentifier(column.ColumnName)}";
+                return $"{QuoteIdentifier(column.TableAlias!)}.{QuoteIdentifier(column.ColumnName)}";
             }
             // If there is no table alias then if the schema is not empty, we return [{TableSchema}].[{TableName}].[{Column}]
             else if (!string.IsNullOrEmpty(column.TableSchema))

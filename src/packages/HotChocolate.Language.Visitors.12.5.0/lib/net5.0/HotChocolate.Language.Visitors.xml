@@ -1,0 +1,80 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>HotChocolate.Language.Visitors</name>
+    </assembly>
+    <members>
+        <member name="T:HotChocolate.Language.Visitors.SyntaxVisitorOptions">
+            <summary>
+            Represents basic visitor options.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.Visitors.SyntaxVisitorOptions.VisitNames">
+            <summary>
+            Specifies if the visitor shall traverse name nodes.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.Visitors.SyntaxVisitorOptions.VisitDescriptions">
+            <summary>
+            Specifies if the visitor shall traverse description nodes.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.Visitors.SyntaxVisitorOptions.VisitDirectives">
+            <summary>
+            Specifies if the visitor shall traverse directives nodes.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.Visitors.SyntaxVisitorOptions.VisitArguments">
+            <summary>
+            Specifies if the visitor shall traverse argument nodes.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.Visitors.SyntaxVisitor`1.Options">
+            <summary>
+            The visitor options.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.Visitors.SyntaxVisitor`1.DefaultAction">
+            <summary>
+            The visitor default action.
+            </summary>
+            <value></value>
+        </member>
+        <member name="P:HotChocolate.Language.Visitors.SyntaxVisitor`1.Break">
+            <summary>
+            Ends traversing the graph.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.Visitors.SyntaxVisitor`1.Skip">
+            <summary>
+            Skips the child nodes and the current node.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.Visitors.SyntaxVisitor`1.Continue">
+            <summary>
+            Continues traversing the graph.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.Visitors.SyntaxVisitor`1.SkipAndLeave">
+            <summary>
+            Skips the child node but completes the current node.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Language.Properties.Resources">
+            <summary>
+              A strongly-typed resource class, for looking up localized strings, etc.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.Properties.Resources.ResourceManager">
+            <summary>
+              Returns the cached ResourceManager instance used by this class.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.Properties.Resources.Culture">
+            <summary>
+              Overrides the current thread's CurrentUICulture property for all
+              resource lookups using this strongly typed resource class.
+            </summary>
+        </member>
+    </members>
+</doc>

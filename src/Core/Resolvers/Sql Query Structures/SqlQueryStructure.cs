@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Data;
 using System.Net;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -15,6 +14,7 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
+using HotChocolate.Types;
 using Microsoft.AspNetCore.Http;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
@@ -189,7 +189,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (!string.IsNullOrWhiteSpace(context.After))
             {
-                AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromJsonString(context.After,
+                AddPaginationPredicate(SqlPaginationUtil.ParseAfterFromJsonString(context.After!,
                                                                                   PaginationMetadata,
                                                                                   sqlMetadataProvider,
                                                                                   EntityName,
@@ -446,7 +446,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 MetadataProvider.TryGetBackingColumn(base.EntityName, parameter.Key, out string? backingColumnName);
                 if (!string.IsNullOrWhiteSpace(backingColumnName))
                 {
-                    columnName = backingColumnName;
+                    columnName = backingColumnName!;
                 }
 
                 Predicates.Add(new Predicate(

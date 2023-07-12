@@ -98,23 +98,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <inheritdoc/>
         public override bool IsTransientException(DbException e)
         {
-            return e.SqlState is not null && TransientExceptionCodes.Contains(e.SqlState);
+            return e.Message is not null && TransientExceptionCodes.Contains(e.Message);
         }
 
         /// <inheritdoc/>
         public override HttpStatusCode GetHttpStatusCodeForException(DbException e)
         {
-            if (e.SqlState is null)
+            if (e.Message is null)
             {
                 return HttpStatusCode.InternalServerError;
             }
 
-            if (BadRequestExceptionCodes.Contains(e.SqlState))
+            if (BadRequestExceptionCodes.Contains(e.Message))
             {
                 return HttpStatusCode.BadRequest;
             }
 
-            if (ConflictExceptionCodes.Contains(e.SqlState))
+            if (ConflictExceptionCodes.Contains(e.Message))
             {
                 return HttpStatusCode.Conflict;
             }

@@ -1,0 +1,2313 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>HotChocolate.Language.SyntaxTree</name>
+    </assembly>
+    <members>
+        <member name="T:System.Diagnostics.CodeAnalysis.AllowNullAttribute">
+            <summary>Specifies that null is allowed as an input even if the corresponding type disallows it.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.DisallowNullAttribute">
+            <summary>Specifies that null is disallowed as an input even if the corresponding type allows it.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.MaybeNullAttribute">
+            <summary>Specifies that an output may be null even if the corresponding type disallows it.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.NotNullAttribute">
+            <summary>Specifies that an output will not be null even if the corresponding type allows it.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.MaybeNullWhenAttribute">
+            <summary>Specifies that when a method returns <see cref="P:System.Diagnostics.CodeAnalysis.MaybeNullWhenAttribute.ReturnValue"/>, the parameter may be null even if the corresponding type disallows it.</summary>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.MaybeNullWhenAttribute.#ctor(System.Boolean)">
+            <summary>Initializes the attribute with the specified return value condition.</summary>
+            <param name="returnValue">
+            The return value condition. If the method returns this value, the associated parameter may be null.
+            </param>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.MaybeNullWhenAttribute.ReturnValue">
+            <summary>Gets the return value condition.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.NotNullWhenAttribute">
+            <summary>Specifies that when a method returns <see cref="P:System.Diagnostics.CodeAnalysis.NotNullWhenAttribute.ReturnValue"/>, the parameter will not be null even if the corresponding type allows it.</summary>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.NotNullWhenAttribute.#ctor(System.Boolean)">
+            <summary>Initializes the attribute with the specified return value condition.</summary>
+            <param name="returnValue">
+            The return value condition. If the method returns this value, the associated parameter will not be null.
+            </param>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.NotNullWhenAttribute.ReturnValue">
+            <summary>Gets the return value condition.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.NotNullIfNotNullAttribute">
+            <summary>Specifies that the output will be non-null if the named parameter is non-null.</summary>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.NotNullIfNotNullAttribute.#ctor(System.String)">
+            <summary>Initializes the attribute with the associated parameter name.</summary>
+            <param name="parameterName">
+            The associated parameter name.  The output will be non-null if the argument to the parameter specified is non-null.
+            </param>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.NotNullIfNotNullAttribute.ParameterName">
+            <summary>Gets the associated parameter name.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.DoesNotReturnAttribute">
+            <summary>Applied to a method that will never return under any circumstance.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.DoesNotReturnIfAttribute">
+            <summary>Specifies that the method will not return if the associated Boolean parameter is passed the specified value.</summary>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.DoesNotReturnIfAttribute.#ctor(System.Boolean)">
+            <summary>Initializes the attribute with the specified parameter value.</summary>
+            <param name="parameterValue">
+            The condition parameter value. Code after the method will be considered unreachable by diagnostics if the argument to
+            the associated parameter matches this value.
+            </param>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.DoesNotReturnIfAttribute.ParameterValue">
+            <summary>Gets the condition parameter value.</summary>
+        </member>
+        <member name="T:HotChocolate.Language.ArgumentNode">
+            <summary>
+            This syntax node represents a argument value of a <see cref="T:HotChocolate.Language.FieldNode"/>.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.ArgumentNode.Kind">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Language.ArgumentNode.Location">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Language.ArgumentNode.Name">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Language.ArgumentNode.Value">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Language.ArgumentNode.GetNodes">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Language.ArgumentNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ArgumentNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ArgumentNode.WithLocation(HotChocolate.Language.Location)">
+            <summary>
+            Creates a new node from the current instance and replaces the 
+            <see cref="P:HotChocolate.Language.ArgumentNode.Location" /> with <paramref name="location" />.
+            </summary>
+            <param name="location">
+            The location that shall be used to replace the current location.
+            </param>
+            <returns>
+            Returns the new node with the new <paramref name="location" />.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ArgumentNode.WithName(HotChocolate.Language.NameNode)">
+            <summary>
+            Creates a new node from the current instance and replaces the 
+            <see cref="P:HotChocolate.Language.ArgumentNode.Name" /> with <paramref name="name" />.
+            </summary>
+            <param name="name">
+            The name that shall be used to replace the current name.
+            </param>
+            <returns>
+            Returns the new node with the new <paramref name="name" />.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ArgumentNode.WithValue(HotChocolate.Language.IValueNode)">
+            <summary>
+            Creates a new node from the current instance and replaces the 
+            <see cref="P:HotChocolate.Language.ArgumentNode.Value" /> with <paramref name="value" />.
+            </summary>
+            <param name="value">
+            The value that shall be used to replace the current value.
+            </param>
+            <returns>
+            Returns the new node with the new <paramref name="value" />.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.BooleanValueNode.Equals(HotChocolate.Language.BooleanValueNode)">
+            <summary>
+            Determines whether the specified <see cref="T:HotChocolate.Language.BooleanValueNode"/>
+            is equal to the current <see cref="T:HotChocolate.Language.BooleanValueNode"/>.
+            </summary>
+            <param name="other">
+            The <see cref="T:HotChocolate.Language.BooleanValueNode"/> to compare with the current
+            <see cref="T:HotChocolate.Language.BooleanValueNode"/>.
+            </param>
+            <returns>
+            <c>true</c> if the specified <see cref="T:HotChocolate.Language.BooleanValueNode"/> is equal
+            to the current <see cref="T:HotChocolate.Language.BooleanValueNode"/>;
+            otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.BooleanValueNode.Equals(HotChocolate.Language.IValueNode)">
+            <summary>
+            Determines whether the specified <see cref="T:HotChocolate.Language.IValueNode"/> is equal
+            to the current <see cref="T:HotChocolate.Language.BooleanValueNode"/>.
+            </summary>
+            <param name="other">
+            The <see cref="T:HotChocolate.Language.IValueNode"/> to compare with the current
+            <see cref="T:HotChocolate.Language.BooleanValueNode"/>.
+            </param>
+            <returns>
+            <c>true</c> if the specified <see cref="T:HotChocolate.Language.IValueNode"/> is equal
+            to the current <see cref="T:HotChocolate.Language.BooleanValueNode"/>;
+            otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.BooleanValueNode.Equals(System.Object)">
+            <summary>
+            Determines whether the specified <see cref="T:System.Object"/> is equal to
+            the current <see cref="T:HotChocolate.Language.BooleanValueNode"/>.
+            </summary>
+            <param name="obj">
+            The <see cref="T:System.Object"/> to compare with the current
+            <see cref="T:HotChocolate.Language.BooleanValueNode"/>.
+            </param>
+            <returns>
+            <c>true</c> if the specified <see cref="T:System.Object"/> is equal to the
+            current <see cref="T:HotChocolate.Language.BooleanValueNode"/>; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.BooleanValueNode.GetHashCode">
+            <summary>
+            Serves as a hash function for a <see cref="T:HotChocolate.Language.BooleanValueNode"/>
+            object.
+            </summary>
+            <returns>
+            A hash code for this instance that is suitable for use in
+            hashing algorithms and data structures such as a hash table.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.BooleanValueNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.BooleanValueNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="T:HotChocolate.Language.IDefinitionNode">
+            <summary>
+            Document definition nodes represent root level syntax nodes.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Language.IExecutableDefinitionNode">
+            <summary>
+            Executable definition nodes are root level syntax nodes
+            for query documents.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Language.IHasName">
+            <summary>
+            Represents types that containe a name node.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Language.INamedSyntaxNode">
+            <summary>
+            Represents named syntax nodes.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Language.ISyntaxNode">
+            <summary>
+            Represents a non-terminal node in the GraphQL syntax tree.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.ISyntaxNode.Kind">
+            <summary>
+            Returns the <see cref="T:HotChocolate.Language.SyntaxKind"/> of the node.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.ISyntaxNode.Location">
+            <summary>
+            Gets a <see cref="P:HotChocolate.Language.ISyntaxNode.Location"/> of this node in the parsed source text 
+            if available the parser provided this information.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.ISyntaxNode.GetNodes">
+            <summary>
+            Gets the children of this node.
+            </summary>
+            <returns>
+            Returns the children of this node..
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ISyntaxNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ISyntaxNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="T:HotChocolate.Language.ITypeDefinitionNode">
+            <summary>
+            Represents type definition that has a name like <see cref="!:ObejctTypeDefinitionNode" />.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Language.ITypeExtensionNode">
+            <summary>
+            Represents type extensions that has a name like <see cref="T:HotChocolate.Language.ObjectTypeExtensionNode" />.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Language.ITypeSystemDefinitionNode">
+            <summary>
+            The GraphQL language includes an IDL used to describe a GraphQL service’s
+            type system. Tools may use this definition language to provide utilities
+            such as client code generation or service boot‐strapping.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Language.ITypeSystemExtensionNode">
+             <summary>
+             Type system extensions are used to represent a GraphQL type system which
+             has been extended from some original type system. For example, this might
+             be used by a local service to represent data a GraphQL client only accesses
+             locally, or by a GraphQL service which is itself an extension of another GraphQL
+             service.
+            
+             https://graphql.github.io/graphql-spec/June2018/#sec-Type-System-Extensions
+             </summary>
+        </member>
+        <member name="M:HotChocolate.Language.DirectiveDefinitionNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.DirectiveDefinitionNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.DirectiveNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.DirectiveNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="T:HotChocolate.Language.DocumentNode">
+             <summary>
+             The <see cref="T:HotChocolate.Language.DocumentNode"/> represents a parsed GraphQL document
+             which also is the root node of a parsed GraphQL document.
+            
+             The document can contain schema definition nodes or query nodes.
+             </summary>
+        </member>
+        <member name="M:HotChocolate.Language.DocumentNode.#ctor(System.Collections.Generic.IReadOnlyList{HotChocolate.Language.IDefinitionNode})">
+            <summary>
+            Initializes a new instance of <see cref="T:HotChocolate.Language.DocumentNode"/>.
+            </summary>
+            <param name="definitions">
+            The GraphQL definitions this document contains.
+            </param>
+        </member>
+        <member name="M:HotChocolate.Language.DocumentNode.#ctor(HotChocolate.Language.Location,System.Collections.Generic.IReadOnlyList{HotChocolate.Language.IDefinitionNode})">
+            <summary>
+            Initializes a new instance of <see cref="T:HotChocolate.Language.DocumentNode"/>.
+            </summary>
+            <param name="location">
+            The location of the document in the parsed source text.
+            </param>
+            <param name="definitions">
+            The GraphQL definitions this document contains.
+            </param>
+        </member>
+        <member name="P:HotChocolate.Language.DocumentNode.Kind">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Language.DocumentNode.Location">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Language.DocumentNode.GetNodes">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Language.DocumentNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.DocumentNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.DocumentNode.WithLocation(HotChocolate.Language.Location)">
+            <summary>
+            Creates a new instance that has all the characteristics of this
+            documents but with a different location.
+            </summary>
+            <param name="location">
+            The location that shall be applied to the new document.
+            </param>
+            <returns>
+            Returns a new instance that has all the characteristics of this
+            documents but with a different location.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.DocumentNode.WithDefinitions(System.Collections.Generic.IReadOnlyList{HotChocolate.Language.IDefinitionNode})">
+            <summary>
+            Creates a new instance that has all the characteristics of this
+            documents but with different definitions.
+            </summary>
+            <param name="definitions">
+            The definitions that shall be applied to the new document.
+            </param>
+            <returns>
+            Returns a new instance that has all the characteristics of this
+            documents but with a different definitions.
+            </returns>
+        </member>
+        <member name="P:HotChocolate.Language.DocumentNode.Empty">
+            <summary>
+            Gets an empty GraphQL document.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.EnumTypeDefinitionNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.EnumTypeDefinitionNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.EnumTypeExtensionNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.EnumTypeExtensionNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.EnumValueDefinitionNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.EnumValueDefinitionNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="T:HotChocolate.Language.EnumValueNode">
+             <summary>
+             Represents a enum value literal.
+            
+             http://facebook.github.io/graphql/June2018/#sec-Enum-Value
+             </summary>
+        </member>
+        <member name="M:HotChocolate.Language.EnumValueNode.Equals(HotChocolate.Language.EnumValueNode)">
+            <summary>
+            Determines whether the specified <see cref="T:HotChocolate.Language.EnumValueNode"/>
+            is equal to the current <see cref="T:HotChocolate.Language.EnumValueNode"/>.
+            </summary>
+            <param name="other">
+            The <see cref="T:HotChocolate.Language.EnumValueNode"/> to compare with the current
+            <see cref="T:HotChocolate.Language.EnumValueNode"/>.
+            </param>
+            <returns>
+            <c>true</c> if the specified <see cref="T:HotChocolate.Language.EnumValueNode"/> is equal
+            to the current <see cref="T:HotChocolate.Language.EnumValueNode"/>;
+            otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.EnumValueNode.Equals(HotChocolate.Language.IValueNode)">
+            <summary>
+            Determines whether the specified <see cref="T:HotChocolate.Language.IValueNode"/> is equal
+            to the current <see cref="T:HotChocolate.Language.EnumValueNode"/>.
+            </summary>
+            <param name="other">
+            The <see cref="T:HotChocolate.Language.IValueNode"/> to compare with the current
+            <see cref="T:HotChocolate.Language.EnumValueNode"/>.
+            </param>
+            <returns>
+            <c>true</c> if the specified <see cref="T:HotChocolate.Language.IValueNode"/> is equal
+            to the current <see cref="T:HotChocolate.Language.EnumValueNode"/>;
+            otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.EnumValueNode.Equals(System.Object)">
+            <summary>
+            Determines whether the specified <see cref="T:System.Object"/> is equal to
+            the current <see cref="T:HotChocolate.Language.EnumValueNode"/>.
+            </summary>
+            <param name="obj">
+            The <see cref="T:System.Object"/> to compare with the current
+            <see cref="T:HotChocolate.Language.EnumValueNode"/>.
+            </param>
+            <returns>
+            <c>true</c> if the specified <see cref="T:System.Object"/> is equal to the
+            current <see cref="T:HotChocolate.Language.EnumValueNode"/>; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.EnumValueNode.GetHashCode">
+            <summary>
+            Serves as a hash function for a <see cref="T:HotChocolate.Language.EnumValueNode"/>
+            object.
+            </summary>
+            <returns>
+            A hash code for this instance that is suitable for use in
+            hashing algorithms and data structures such as a hash table.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.EnumValueNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.EnumValueNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.FieldDefinitionNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.FieldDefinitionNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="T:HotChocolate.Language.FieldNode">
+            <summary>
+            A field describes one discrete piece of information available to 
+            request within a selection set.
+            
+            Some fields describe complex data or relationships to other data. 
+            In order to further explore this data, a field may itself contain 
+            a selection set, allowing for deeply nested requests. 
+            
+            All GraphQL operations must specify their selections down to fields 
+            which return scalar values to ensure an unambiguously shaped response.
+            
+            Field : Alias? Name Arguments? Nullability? Directives? SelectionSet?
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.FieldNode.Kind">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Language.FieldNode.GetNodes">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Language.FieldNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.FieldNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.FieldNode.WithLocation(HotChocolate.Language.Location)">
+            <summary>
+            Creates a new node from the current instance and replaces the 
+            <see cref="T:HotChocolate.Language.Location" /> with <paramref name="location" />.
+            </summary>
+            <param name="location">
+            The location that shall be used to replace the current location.
+            </param>
+            <returns>
+            Returns the new node with the new <paramref name="location" />.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.FieldNode.WithName(HotChocolate.Language.NameNode)">
+            <summary>
+            Creates a new node from the current instance and replaces the 
+            <see cref="!:Name" /> with <paramref name="name" />.
+            </summary>
+            <param name="name">
+            The location that shall be used to replace the current location.
+            </param>
+            <returns>
+            Returns the new node with the new <paramref name="name" />.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.FieldNode.WithAlias(HotChocolate.Language.NameNode)">
+            <summary>
+            Creates a new node from the current instance and replaces the 
+            <see cref="P:HotChocolate.Language.FieldNode.Alias" /> with <paramref name="alias" />.
+            </summary>
+            <param name="alias">
+            The location that shall be used to replace the current location.
+            </param>
+            <returns>
+            Returns the new node with the new <paramref name="alias" />.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.FieldNode.WithDirectives(System.Collections.Generic.IReadOnlyList{HotChocolate.Language.DirectiveNode})">
+            <summary>
+            Creates a new node from the current instance and replaces the 
+            <see cref="!:Directives" /> with <paramref name="directives" />.
+            </summary>
+            <param name="directives">
+            The location that shall be used to replace the current location.
+            </param>
+            <returns>
+            Returns the new node with the new <paramref name="directives" />.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.FieldNode.WithArguments(System.Collections.Generic.IReadOnlyList{HotChocolate.Language.ArgumentNode})">
+            <summary>
+            Creates a new node from the current instance and replaces the 
+            <see cref="P:HotChocolate.Language.FieldNode.Arguments" /> with <paramref name="arguments" />.
+            </summary>
+            <param name="arguments">
+            The location that shall be used to replace the current location.
+            </param>
+            <returns>
+            Returns the new node with the new <paramref name="arguments" />.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.FieldNode.WithSelectionSet(HotChocolate.Language.SelectionSetNode)">
+            <summary>
+            Creates a new node from the current instance and replaces the 
+            <see cref="P:HotChocolate.Language.FieldNode.SelectionSet" /> with <paramref name="selectionSet" />.
+            </summary>
+            <param name="selectionSet">
+            The location that shall be used to replace the current location.
+            </param>
+            <returns>
+            Returns the new node with the new <paramref name="selectionSet" />.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.FieldNode.WithRequired(HotChocolate.Language.INullabilityNode)">
+            <summary>
+            Creates a new node from the current instance and replaces the 
+            <see cref="P:HotChocolate.Language.FieldNode.Required" /> with <paramref name="required" />.
+            </summary>
+            <param name="required">
+            The location that shall be used to replace the current location.
+            </param>
+            <returns>
+            Returns the new node with the new <paramref name="required" />.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.FloatValueNode.Equals(HotChocolate.Language.FloatValueNode)">
+            <summary>
+            Determines whether the specified <see cref="T:HotChocolate.Language.FloatValueNode"/>
+            is equal to the current <see cref="T:HotChocolate.Language.FloatValueNode"/>.
+            </summary>
+            <param name="other">
+            The <see cref="T:HotChocolate.Language.FloatValueNode"/> to compare with the current
+            <see cref="T:HotChocolate.Language.FloatValueNode"/>.
+            </param>
+            <returns>
+            <c>true</c> if the specified <see cref="T:HotChocolate.Language.FloatValueNode"/> is equal
+            to the current <see cref="T:HotChocolate.Language.FloatValueNode"/>;
+            otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.FloatValueNode.Equals(HotChocolate.Language.IValueNode)">
+            <summary>
+            Determines whether the specified <see cref="T:HotChocolate.Language.IValueNode"/> is equal
+            to the current <see cref="T:HotChocolate.Language.FloatValueNode"/>.
+            </summary>
+            <param name="other">
+            The <see cref="T:HotChocolate.Language.IValueNode"/> to compare with the current
+            <see cref="T:HotChocolate.Language.FloatValueNode"/>.
+            </param>
+            <returns>
+            <c>true</c> if the specified <see cref="T:HotChocolate.Language.IValueNode"/> is equal
+            to the current <see cref="T:HotChocolate.Language.FloatValueNode"/>;
+            otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.FloatValueNode.Equals(System.Object)">
+            <summary>
+            Determines whether the specified <see cref="T:System.Object"/> is equal to
+            the current <see cref="T:HotChocolate.Language.FloatValueNode"/>.
+            </summary>
+            <param name="obj">
+            The <see cref="T:System.Object"/> to compare with the current
+            <see cref="T:HotChocolate.Language.FloatValueNode"/>.
+            </param>
+            <returns>
+            <c>true</c> if the specified <see cref="T:System.Object"/> is equal to the
+            current <see cref="T:HotChocolate.Language.FloatValueNode"/>; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.FloatValueNode.GetHashCode">
+            <summary>
+            Serves as a hash function for a <see cref="T:HotChocolate.Language.FloatValueNode"/>
+            object.
+            </summary>
+            <returns>
+            A hash code for this instance that is suitable for use in
+            hashing algorithms and data structures such as a hash table.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.FloatValueNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.FloatValueNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.FragmentDefinitionNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.FragmentDefinitionNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.FragmentSpreadNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.FragmentSpreadNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.InlineFragmentNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.InlineFragmentNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.InputObjectTypeDefinitionNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.InputObjectTypeDefinitionNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.InputObjectTypeExtensionNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.InputObjectTypeExtensionNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="T:HotChocolate.Language.InputValueDefinitionNode">
+            <summary>
+            A GraphQL Input Object defines a set of input fields; the input fields are either
+            scalars, enums, or other input objects. This allows arguments to accept arbitrarily
+            complex structs.
+            https://graphql.github.io/graphql-spec/June2018/#sec-Input-Objects
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.InputValueDefinitionNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.InputValueDefinitionNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.InterfaceTypeDefinitionNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.InterfaceTypeDefinitionNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.InterfaceTypeExtensionNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.InterfaceTypeExtensionNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.IntValueNode.Equals(HotChocolate.Language.IntValueNode)">
+            <summary>
+            Determines whether the specified <see cref="T:HotChocolate.Language.IntValueNode"/>
+            is equal to the current <see cref="T:HotChocolate.Language.IntValueNode"/>.
+            </summary>
+            <param name="other">
+            The <see cref="T:HotChocolate.Language.IntValueNode"/> to compare with the current
+            <see cref="T:HotChocolate.Language.IntValueNode"/>.
+            </param>
+            <returns>
+            <c>true</c> if the specified <see cref="T:HotChocolate.Language.IntValueNode"/> is equal
+            to the current <see cref="T:HotChocolate.Language.IntValueNode"/>;
+            otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.IntValueNode.Equals(HotChocolate.Language.IValueNode)">
+            <summary>
+            Determines whether the specified <see cref="T:HotChocolate.Language.IValueNode"/> is equal
+            to the current <see cref="T:HotChocolate.Language.IntValueNode"/>.
+            </summary>
+            <param name="other">
+            The <see cref="T:HotChocolate.Language.IValueNode"/> to compare with the current
+            <see cref="T:HotChocolate.Language.IntValueNode"/>.
+            </param>
+            <returns>
+            <c>true</c> if the specified <see cref="T:HotChocolate.Language.IValueNode"/> is equal
+            to the current <see cref="T:HotChocolate.Language.IntValueNode"/>;
+            otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.IntValueNode.Equals(System.Object)">
+            <summary>
+            Determines whether the specified <see cref="T:System.Object"/> is equal to
+            the current <see cref="T:HotChocolate.Language.IntValueNode"/>.
+            </summary>
+            <param name="obj">
+            The <see cref="T:System.Object"/> to compare with the current
+            <see cref="T:HotChocolate.Language.IntValueNode"/>.
+            </param>
+            <returns>
+            <c>true</c> if the specified <see cref="T:System.Object"/> is equal to the
+            current <see cref="T:HotChocolate.Language.IntValueNode"/>; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.IntValueNode.GetHashCode">
+            <summary>
+            Serves as a hash function for a <see cref="T:HotChocolate.Language.IntValueNode"/>
+            object.
+            </summary>
+            <returns>
+            A hash code for this instance that is suitable for use in
+            hashing algorithms and data structures such as a hash table.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.IntValueNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.IntValueNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="T:HotChocolate.Language.INullabilityModifierNode">
+            <summary>
+            Represents the nullability modifier which is expressed by ! or ?
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.INullabilityModifierNode.Element">
+            <summary>
+            Gets the inner nullability status.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Language.INullabilityNode">
+            <summary>
+            Represents the nullability status which is expressed by !, ? or []
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.INullabilityNode.Element">
+            <summary>
+            Gets the inner nullability status.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.ListNullabilityNode.Kind">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Language.ListNullabilityNode.Location">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Language.ListNullabilityNode.Element">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Language.ListNullabilityNode.GetNodes">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Language.ListNullabilityNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ListNullabilityNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ListTypeNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ListTypeNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ListValueNode.Equals(HotChocolate.Language.ListValueNode)">
+            <summary>
+            Determines whether the specified <see cref="T:HotChocolate.Language.ListValueNode"/>
+            is equal to the current <see cref="T:HotChocolate.Language.ListValueNode"/>.
+            </summary>
+            <param name="other">
+            The <see cref="T:HotChocolate.Language.ListValueNode"/> to compare with the current
+            <see cref="T:HotChocolate.Language.ListValueNode"/>.
+            </param>
+            <returns>
+            <c>true</c> if the specified <see cref="T:HotChocolate.Language.ListValueNode"/> is equal
+            to the current <see cref="T:HotChocolate.Language.ListValueNode"/>;
+            otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ListValueNode.Equals(HotChocolate.Language.IValueNode)">
+            <summary>
+            Determines whether the specified <see cref="T:HotChocolate.Language.IValueNode"/> is equal
+            to the current <see cref="T:HotChocolate.Language.ListValueNode"/>.
+            </summary>
+            <param name="other">
+            The <see cref="T:HotChocolate.Language.IValueNode"/> to compare with the current
+            <see cref="T:HotChocolate.Language.ListValueNode"/>.
+            </param>
+            <returns>
+            <c>true</c> if the specified <see cref="T:HotChocolate.Language.IValueNode"/> is equal
+            to the current <see cref="T:HotChocolate.Language.ListValueNode"/>;
+            otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ListValueNode.Equals(System.Object)">
+            <summary>
+            Determines whether the specified <see cref="T:System.Object"/> is equal to
+            the current <see cref="T:HotChocolate.Language.ListValueNode"/>.
+            </summary>
+            <param name="obj">
+            The <see cref="T:System.Object"/> to compare with the current
+            <see cref="T:HotChocolate.Language.ListValueNode"/>.
+            </param>
+            <returns>
+            <c>true</c> if the specified <see cref="T:System.Object"/> is equal to the
+            current <see cref="T:HotChocolate.Language.ListValueNode"/>; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ListValueNode.GetHashCode">
+            <summary>
+            Serves as a hash function for a <see cref="T:HotChocolate.Language.ListValueNode"/>
+            object.
+            </summary>
+            <returns>
+            A hash code for this instance that is suitable for use in
+            hashing algorithms and data structures such as a hash table.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ListValueNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ListValueNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="P:HotChocolate.Language.Location.Start">
+            <summary>
+            Gets the character offset at which this
+            <see cref="T:HotChocolate.Language.ISyntaxNode" /> begins.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.Location.End">
+            <summary>
+            Gets the character offset at which this
+            <see cref="T:HotChocolate.Language.ISyntaxNode" /> ends.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.Location.Line">
+            <summary>
+            Gets the 1-indexed line number on which this
+            <see cref="!:SyntaxToken" /> appears.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.Location.Column">
+            <summary>
+            Gets the 1-indexed column number at which this
+            <see cref="!:SyntaxToken" /> begins.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.NamedSyntaxNode.Kind">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Language.NamedSyntaxNode.Location">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Language.NamedSyntaxNode.Name">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Language.NamedSyntaxNode.Directives">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Language.NamedSyntaxNode.GetNodes">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Language.NamedSyntaxNode.ToString(System.Boolean)">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Language.NamedSyntaxNode.ToString">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Language.NamedTypeNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.NamedTypeNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.NameNode.Equals(HotChocolate.Language.NameNode)">
+            <summary>
+            Determines whether the specified <see cref="T:HotChocolate.Language.NameNode"/>
+            is equal to the current <see cref="T:HotChocolate.Language.NameNode"/>.
+            </summary>
+            <param name="other">
+            The <see cref="T:HotChocolate.Language.NameNode"/> to compare with the current
+            <see cref="T:HotChocolate.Language.NameNode"/>.
+            </param>
+            <returns>
+            <c>true</c> if the specified <see cref="T:HotChocolate.Language.NameNode"/> is equal
+            to the current <see cref="T:HotChocolate.Language.NameNode"/>;
+            otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.NameNode.Equals(System.Object)">
+            <summary>
+            Determines whether the specified <see cref="T:System.Object"/> is equal to
+            the current <see cref="T:HotChocolate.Language.NameNode"/>.
+            </summary>
+            <param name="obj">
+            The <see cref="T:System.Object"/> to compare with the current
+            <see cref="T:HotChocolate.Language.NameNode"/>.
+            </param>
+            <returns>
+            <c>true</c> if the specified <see cref="T:System.Object"/> is equal to the
+            current <see cref="T:HotChocolate.Language.NameNode"/>; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.NameNode.GetHashCode">
+            <summary>
+            Serves as a hash function for a <see cref="T:HotChocolate.Language.NameNode"/>
+            object.
+            </summary>
+            <returns>
+            A hash code for this instance that is suitable for use in
+            hashing algorithms and data structures such as a hash table.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.NameNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.NameNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.NonNullTypeNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.NonNullTypeNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.NullValueNode.Equals(HotChocolate.Language.NullValueNode)">
+            <summary>
+            Determines whether the specified <see cref="T:HotChocolate.Language.NullValueNode"/>
+            is equal to the current <see cref="T:HotChocolate.Language.NullValueNode"/>.
+            </summary>
+            <param name="other">
+            The <see cref="T:HotChocolate.Language.NullValueNode"/> to compare with the current
+            <see cref="T:HotChocolate.Language.NullValueNode"/>.
+            </param>
+            <returns>
+            <c>true</c> if the specified <see cref="T:HotChocolate.Language.NullValueNode"/> is equal
+            to the current <see cref="T:HotChocolate.Language.NullValueNode"/>;
+            otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.NullValueNode.Equals(HotChocolate.Language.IValueNode)">
+            <summary>
+            Determines whether the specified <see cref="T:HotChocolate.Language.IValueNode"/> is equal
+            to the current <see cref="T:HotChocolate.Language.NullValueNode"/>.
+            </summary>
+            <param name="other">
+            The <see cref="T:HotChocolate.Language.IValueNode"/> to compare with the current
+            <see cref="T:HotChocolate.Language.NullValueNode"/>.
+            </param>
+            <returns>
+            <c>true</c> if the specified <see cref="T:HotChocolate.Language.IValueNode"/> is equal
+            to the current <see cref="T:HotChocolate.Language.NullValueNode"/>;
+            otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.NullValueNode.Equals(System.Object)">
+            <summary>
+            Determines whether the specified <see cref="T:System.Object"/> is equal to
+            the current <see cref="T:HotChocolate.Language.NullValueNode"/>.
+            </summary>
+            <param name="obj">
+            The <see cref="T:System.Object"/> to compare with the current
+            <see cref="T:HotChocolate.Language.NullValueNode"/>.
+            </param>
+            <returns>
+            <c>true</c> if the specified <see cref="T:System.Object"/> is equal to the
+            current <see cref="T:HotChocolate.Language.NullValueNode"/>; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.NullValueNode.GetHashCode">
+            <summary>
+            Serves as a hash function for a <see cref="T:HotChocolate.Language.NullValueNode"/>
+            object.
+            </summary>
+            <returns>
+            A hash code for this instance that is suitable for use in
+            hashing algorithms and data structures such as a hash table.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.NullValueNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.NullValueNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ObjectFieldNode.Equals(HotChocolate.Language.ObjectFieldNode)">
+            <summary>
+            Determines whether the specified <see cref="T:HotChocolate.Language.ObjectFieldNode"/>
+            is equal to the current <see cref="T:HotChocolate.Language.ObjectFieldNode"/>.
+            </summary>
+            <param name="other">
+            The <see cref="T:HotChocolate.Language.ObjectFieldNode"/> to compare with the current
+            <see cref="T:HotChocolate.Language.ObjectFieldNode"/>.
+            </param>
+            <returns>
+            <c>true</c> if the specified <see cref="T:HotChocolate.Language.ObjectFieldNode"/> is equal
+            to the current <see cref="T:HotChocolate.Language.ObjectFieldNode"/>;
+            otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ObjectFieldNode.Equals(System.Object)">
+            <summary>
+            Determines whether the specified <see cref="T:System.Object"/> is equal to
+            the current <see cref="T:HotChocolate.Language.ObjectFieldNode"/>.
+            </summary>
+            <param name="obj">
+            The <see cref="T:System.Object"/> to compare with the current
+            <see cref="T:HotChocolate.Language.ObjectFieldNode"/>.
+            </param>
+            <returns>
+            <c>true</c> if the specified <see cref="T:System.Object"/> is equal to the
+            current <see cref="T:HotChocolate.Language.ObjectFieldNode"/>; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ObjectFieldNode.GetHashCode">
+            <summary>
+            Serves as a hash function for a <see cref="T:HotChocolate.Language.ObjectFieldNode"/>
+            object.
+            </summary>
+            <returns>
+            A hash code for this instance that is suitable for use in
+            hashing algorithms and data structures such as a hash table.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ObjectFieldNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ObjectFieldNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ObjectTypeDefinitionNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ObjectTypeDefinitionNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ObjectTypeExtensionNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ObjectTypeExtensionNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ObjectValueNode.Equals(HotChocolate.Language.ObjectValueNode)">
+            <summary>
+            Determines whether the specified <see cref="T:HotChocolate.Language.ObjectValueNode"/>
+            is equal to the current <see cref="T:HotChocolate.Language.ObjectValueNode"/>.
+            </summary>
+            <param name="other">
+            The <see cref="T:HotChocolate.Language.ObjectValueNode"/> to compare with the current
+            <see cref="T:HotChocolate.Language.ObjectValueNode"/>.
+            </param>
+            <returns>
+            <c>true</c> if the specified <see cref="T:HotChocolate.Language.ObjectValueNode"/> is equal
+            to the current <see cref="T:HotChocolate.Language.ObjectValueNode"/>;
+            otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ObjectValueNode.Equals(HotChocolate.Language.IValueNode)">
+            <summary>
+            Determines whether the specified <see cref="T:HotChocolate.Language.IValueNode"/> is equal
+            to the current <see cref="T:HotChocolate.Language.ObjectValueNode"/>.
+            </summary>
+            <param name="other">
+            The <see cref="T:HotChocolate.Language.IValueNode"/> to compare with the current
+            <see cref="T:HotChocolate.Language.ObjectValueNode"/>.
+            </param>
+            <returns>
+            <c>true</c> if the specified <see cref="T:HotChocolate.Language.IValueNode"/> is equal
+            to the current <see cref="T:HotChocolate.Language.ObjectValueNode"/>;
+            otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ObjectValueNode.Equals(System.Object)">
+            <summary>
+            Determines whether the specified <see cref="T:System.Object"/> is equal to
+            the current <see cref="T:HotChocolate.Language.ObjectValueNode"/>.
+            </summary>
+            <param name="obj">
+            The <see cref="T:System.Object"/> to compare with the current
+            <see cref="T:HotChocolate.Language.ObjectValueNode"/>.
+            </param>
+            <returns>
+            <c>true</c> if the specified <see cref="T:System.Object"/> is equal to the
+            current <see cref="T:HotChocolate.Language.ObjectValueNode"/>; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ObjectValueNode.GetHashCode">
+            <summary>
+            Serves as a hash function for a <see cref="T:HotChocolate.Language.ObjectValueNode"/>
+            object.
+            </summary>
+            <returns>
+            A hash code for this instance that is suitable for use in
+            hashing algorithms and data structures such as a hash table.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ObjectValueNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ObjectValueNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.OperationDefinitionNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.OperationDefinitionNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.OperationTypeDefinitionNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.OperationTypeDefinitionNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="P:HotChocolate.Language.OptionalModifierNode.Kind">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Language.OptionalModifierNode.Location">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Language.OptionalModifierNode.Element">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Language.OptionalModifierNode.GetNodes">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Language.OptionalModifierNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.OptionalModifierNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="P:HotChocolate.Language.RequiredModifierNode.Kind">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Language.RequiredModifierNode.Location">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Language.RequiredModifierNode.Element">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Language.RequiredModifierNode.GetNodes">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Language.RequiredModifierNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.RequiredModifierNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ScalarTypeDefinitionNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ScalarTypeDefinitionNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ScalarTypeExtensionNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.ScalarTypeExtensionNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="T:HotChocolate.Language.SchemaCoordinateNode">
+             <summary>
+             A <see cref="T:HotChocolate.Language.SchemaCoordinateNode"/> is a human readable string that uniquely identifies a
+             schema element within a GraphQL Schema.
+             A schema element is a specific instance of a named type, field, input field, enum value,
+             field argument, directive, or directive argument.
+             A <see cref="T:HotChocolate.Language.SchemaCoordinateNode"/> is always unique. Each schema element may be referenced
+             by exactly one possible schema coordinate.
+            
+             A <see cref="T:HotChocolate.Language.SchemaCoordinateNode"/> may refer to either a defined or built-in schema element.
+             For example, `String` and `@deprecated(reason:)` are both valid schema coordinates which refer
+             to built-in schema elements. However it must not refer to a meta-field.
+             For example, `Business.__typename` is <b>not</b> a valid schema coordinate.
+            
+             SchemaCoordinate :
+              - Name
+              - Name . Name
+              - Name . Name ( Name : )
+              - @ Name
+              - @ Name ( Name : )
+            
+             <remarks>
+             Note: A <see cref="T:HotChocolate.Language.SchemaCoordinateNode"/> is not a definition within a GraphQL
+             <see cref="T:HotChocolate.Language.DocumentNode"/>, but a separate standalone grammar, intended to be used by tools
+             to reference types, fields, and other schema elements. For example as references within
+             documentation, or as lookup keys in usage frequency tracking.
+             </remarks>
+             </summary>
+        </member>
+        <member name="M:HotChocolate.Language.SchemaCoordinateNode.#ctor(HotChocolate.Language.Location,System.Boolean,HotChocolate.Language.NameNode,HotChocolate.Language.NameNode,HotChocolate.Language.NameNode)">
+            <summary>
+            Creates a new instance of <see cref="T:HotChocolate.Language.SchemaCoordinateNode"/>
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.SchemaCoordinateNode.Location">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Language.SchemaCoordinateNode.Kind">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Language.SchemaCoordinateNode.OfDirective">
+            <summary>
+            Specifies if this <see cref="T:HotChocolate.Language.SchemaCoordinateNode"/> is a coordinate of a directive.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.SchemaCoordinateNode.Name">
+            <summary>
+            The name of the referenced <see cref="T:HotChocolate.Language.INamedSyntaxNode"/>
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.SchemaCoordinateNode.MemberName">
+            <summary>
+            The optional name of the referenced field or enum value
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Language.SchemaCoordinateNode.ArgumentName">
+            <summary>
+            The optional name of the referenced argument
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.SchemaCoordinateNode.GetNodes">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Language.SchemaCoordinateNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.SchemaCoordinateNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.SchemaCoordinateNode.WithLocation(HotChocolate.Language.Location)">
+            <summary>
+            Creates a new node from the current instance and replaces the
+            <see cref="P:HotChocolate.Language.SchemaCoordinateNode.Location" /> with <paramref name="location" />.
+            </summary>
+            <param name="location">
+            The location that shall be used to replace the current location.
+            </param>
+            <returns>
+            Returns the new node with the new <paramref name="location" />.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.SchemaCoordinateNode.WithOfDirective(System.Boolean)">
+            <summary>
+            Creates a new node from the current instance and replaces the
+            <see cref="P:HotChocolate.Language.SchemaCoordinateNode.OfDirective" /> with <paramref name="ofDirective" />.
+            </summary>
+            <param name="ofDirective">
+            The ofDirective that shall be used to replace the current ofDirective.
+            </param>
+            <returns>
+            Returns the new node with the new <paramref name="ofDirective" />.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.SchemaCoordinateNode.WithName(HotChocolate.Language.NameNode)">
+            <summary>
+            Creates a new node from the current instance and replaces the
+            <see cref="P:HotChocolate.Language.SchemaCoordinateNode.Name" /> with <paramref name="name" />.
+            </summary>
+            <param name="name">
+            The name that shall be used to replace the current name.
+            </param>
+            <returns>
+            Returns the new node with the new <paramref name="name" />.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.SchemaCoordinateNode.WithMemberName(HotChocolate.Language.NameNode)">
+            <summary>
+            Creates a new node from the current instance and replaces the
+            <see cref="P:HotChocolate.Language.SchemaCoordinateNode.MemberName" /> with <paramref name="memberName" />.
+            </summary>
+            <param name="memberName">
+            The memberName that shall be used to replace the current memberName.
+            </param>
+            <returns>
+            Returns the new node with the new <paramref name="memberName" />.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.SchemaCoordinateNode.WithArgumentName(HotChocolate.Language.NameNode)">
+            <summary>
+            Creates a new node from the current instance and replaces the
+            <see cref="P:HotChocolate.Language.SchemaCoordinateNode.ArgumentName" /> with <paramref name="argumentName" />.
+            </summary>
+            <param name="argumentName">
+            The argumentName that shall be used to replace the current argumentName.
+            </param>
+            <returns>
+            Returns the new node with the new <paramref name="argumentName" />.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.SchemaDefinitionNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.SchemaDefinitionNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.SchemaExtensionNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.SchemaExtensionNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.SelectionSetNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.SelectionSetNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="T:HotChocolate.Language.StringValueNode">
+             <summary>
+             Represents a string value literal.
+            
+             http://facebook.github.io/graphql/June2018/#sec-String-Value
+             </summary>
+        </member>
+        <member name="M:HotChocolate.Language.StringValueNode.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the
+            <see cref="T:HotChocolate.Language.StringValueNode"/> class.
+            </summary>
+            <param name="value">The string value.</param>
+            <exception cref="T:System.ArgumentNullException">
+            <paramref name="value"/> is <c>null</c>.
+            </exception>
+        </member>
+        <member name="M:HotChocolate.Language.StringValueNode.#ctor(HotChocolate.Language.Location,System.String,System.Boolean)">
+            <summary>
+            Initializes a new instance of the
+            <see cref="T:HotChocolate.Language.StringValueNode"/> class.
+            </summary>
+            <param name="location">The source location.</param>
+            <param name="value">The string value.</param>
+            <param name="block">
+            If set to <c>true</c> this instance represents a block string.
+            </param>
+            <exception cref="T:System.ArgumentNullException">
+            <paramref name="value"/> is <c>null</c>.
+            </exception>
+        </member>
+        <member name="P:HotChocolate.Language.StringValueNode.Block">
+            <summary>
+            Gets a value indicating whether this <see cref="T:HotChocolate.Language.StringValueNode"/>
+            was parsed from a block string.
+            </summary>
+            <value>
+            <c>true</c> if this string value was parsed from a block string;
+            otherwise, <c>false</c>.
+            </value>
+        </member>
+        <member name="M:HotChocolate.Language.StringValueNode.Equals(HotChocolate.Language.StringValueNode)">
+            <summary>
+            Determines whether the specified <see cref="T:HotChocolate.Language.StringValueNode"/>
+            is equal to the current <see cref="T:HotChocolate.Language.StringValueNode"/>.
+            </summary>
+            <param name="other">
+            The <see cref="T:HotChocolate.Language.StringValueNode"/> to compare with the current
+            <see cref="T:HotChocolate.Language.StringValueNode"/>.
+            </param>
+            <returns>
+            <c>true</c> if the specified <see cref="T:HotChocolate.Language.StringValueNode"/> is equal
+            to the current <see cref="T:HotChocolate.Language.StringValueNode"/>;
+            otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.StringValueNode.Equals(HotChocolate.Language.IValueNode)">
+            <summary>
+            Determines whether the specified <see cref="T:HotChocolate.Language.IValueNode"/> is equal
+            to the current <see cref="T:HotChocolate.Language.StringValueNode"/>.
+            </summary>
+            <param name="other">
+            The <see cref="T:HotChocolate.Language.IValueNode"/> to compare with the current
+            <see cref="T:HotChocolate.Language.StringValueNode"/>.
+            </param>
+            <returns>
+            <c>true</c> if the specified <see cref="T:HotChocolate.Language.IValueNode"/> is equal
+            to the current <see cref="T:HotChocolate.Language.StringValueNode"/>;
+            otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.StringValueNode.Equals(System.Object)">
+            <summary>
+            Determines whether the specified <see cref="T:System.Object"/> is equal to
+            the current <see cref="T:HotChocolate.Language.StringValueNode"/>.
+            </summary>
+            <param name="obj">
+            The <see cref="T:System.Object"/> to compare with the current
+            <see cref="T:HotChocolate.Language.StringValueNode"/>.
+            </param>
+            <returns>
+            <c>true</c> if the specified <see cref="T:System.Object"/> is equal to the
+            current <see cref="T:HotChocolate.Language.StringValueNode"/>; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.StringValueNode.GetHashCode">
+            <summary>
+            Serves as a hash function for a <see cref="T:HotChocolate.Language.StringValueNode"/>
+            object.
+            </summary>
+            <returns>
+            A hash code for this instance that is suitable for use in
+            hashing algorithms and data structures such as a hash table.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.StringValueNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.StringValueNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.UnionTypeDefinitionNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.UnionTypeDefinitionNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.UnionTypeExtensionNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.UnionTypeExtensionNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="T:HotChocolate.Language.Utilities.ISyntaxWriter">
+            <summary>
+            This interface represents a GraphQL syntax writer.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utilities.ISyntaxWriter.Indent">
+            <summary>
+            Increase writer indentation.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utilities.ISyntaxWriter.Unindent">
+            <summary>
+            Decrease writer indentation.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utilities.ISyntaxWriter.Write(System.Char)">
+            <summary>
+            Write a single character.
+            </summary>
+            <param name="c">
+            The characted that shall be written.
+            </param>
+        </member>
+        <member name="M:HotChocolate.Language.Utilities.ISyntaxWriter.Write(System.String)">
+            <summary>
+            Write a string.
+            </summary>
+            <param name="s">
+            The string that shall be written.
+            </param>
+        </member>
+        <member name="M:HotChocolate.Language.Utilities.ISyntaxWriter.WriteLine(System.Boolean)">
+            <summary>
+            Write a line if the <paramref name="condition"/> is <c>true</c>.
+            </summary>
+            <param name="condition">
+            The condition that defines if a line shall be written.
+            </param>
+        </member>
+        <member name="M:HotChocolate.Language.Utilities.ISyntaxWriter.WriteSpace(System.Boolean)">
+            <summary>
+            Write a space if the <paramref name="condition"/> is <c>true</c>.
+            </summary>
+            <param name="condition">
+            The condition that defines if a space shall be written.
+            </param>
+        </member>
+        <member name="M:HotChocolate.Language.Utilities.ISyntaxWriter.WriteIndent(System.Boolean)">
+            <summary>
+            Write the current indentation if the <paramref name="condition"/> is <c>true</c>.
+            </summary>
+            <param name="condition">
+            The condition that defines if the current indentation shall be written.
+            </param>
+        </member>
+        <member name="T:HotChocolate.Language.Utilities.SyntaxPrinter">
+            <summary>
+            This helper can serialize a GraphQL syntax tree into its string representation.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Language.Utilities.SyntaxPrinter.Print(HotChocolate.Language.ISyntaxNode,System.Boolean)">
+            <summary>
+            Prints a GraphQL syntax node`s string representation.
+            </summary>
+            <param name="node">The syntax node that shall be printed.</param>
+            <param name="indented">Specified if the printed string shall have indentations.</param>
+            <returns>
+            Returns the printed GraphQL syntax tree.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.Utilities.SyntaxPrinter.PrintToAsync(HotChocolate.Language.ISyntaxNode,System.IO.Stream,System.Boolean,System.Threading.CancellationToken)">
+            <summary>
+            Prints a GraphQL syntax node`s string representation into a stream.
+            </summary>
+            <param name="node">The syntax node that shall be printed.</param>
+            <param name="stream">The stream to which the printed node shall be written to.</param>
+            <param name="indented">Specified if the printed string shall have indentations.</param>
+            <param name="cancellationToken">The cancellation token.</param>
+            <returns>
+            Returns the printed GraphQL syntax tree.
+            </returns>
+        </member>
+        <member name="T:HotChocolate.Language.Utilities.SyntaxSerializer">
+            <summary>
+            This helper can serialize a GraphQL syntax tree into its string representation.
+            </summary>
+        </member>
+        <!-- Badly formed XML comment ignored for member "P:HotChocolate.Language.Utilities.SyntaxSerializerOptions.Indented" -->
+        <member name="M:HotChocolate.Language.VariableDefinitionNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.VariableDefinitionNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.VariableNode.Equals(HotChocolate.Language.VariableNode)">
+            <summary>
+            Determines whether the specified <see cref="T:HotChocolate.Language.VariableNode"/>
+            is equal to the current <see cref="T:HotChocolate.Language.VariableNode"/>.
+            </summary>
+            <param name="other">
+            The <see cref="T:HotChocolate.Language.VariableNode"/> to compare with the current
+            <see cref="T:HotChocolate.Language.VariableNode"/>.
+            </param>
+            <returns>
+            <c>true</c> if the specified <see cref="T:HotChocolate.Language.VariableNode"/> is equal
+            to the current <see cref="T:HotChocolate.Language.VariableNode"/>;
+            otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.VariableNode.Equals(HotChocolate.Language.IValueNode)">
+            <summary>
+            Determines whether the specified <see cref="T:HotChocolate.Language.IValueNode"/> is equal
+            to the current <see cref="T:HotChocolate.Language.VariableNode"/>.
+            </summary>
+            <param name="other">
+            The <see cref="T:HotChocolate.Language.IValueNode"/> to compare with the current
+            <see cref="T:HotChocolate.Language.VariableNode"/>.
+            </param>
+            <returns>
+            <c>true</c> if the specified <see cref="T:HotChocolate.Language.IValueNode"/> is equal
+            to the current <see cref="T:HotChocolate.Language.VariableNode"/>;
+            otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.VariableNode.Equals(System.Object)">
+            <summary>
+            Determines whether the specified <see cref="T:System.Object"/> is equal to
+            the current <see cref="T:HotChocolate.Language.VariableNode"/>.
+            </summary>
+            <param name="obj">
+            The <see cref="T:System.Object"/> to compare with the current
+            <see cref="T:HotChocolate.Language.VariableNode"/>.
+            </param>
+            <returns>
+            <c>true</c> if the specified <see cref="T:System.Object"/> is equal to the
+            current <see cref="T:HotChocolate.Language.VariableNode"/>; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.VariableNode.GetHashCode">
+            <summary>
+            Serves as a hash function for a <see cref="T:HotChocolate.Language.VariableNode"/>
+            object.
+            </summary>
+            <returns>
+            A hash code for this instance that is suitable for use in
+            hashing algorithms and data structures such as a hash table.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.VariableNode.ToString">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Language.VariableNode.ToString(System.Boolean)">
+            <summary>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </summary>
+            <param name="indented">
+            A value that indicates whether the GraphQL output should be formatted,
+            which includes indenting nested GraphQL tokens, adding
+            new lines, and adding white space between property names and values.
+            </param>
+            <returns>
+            Returns the GraphQL syntax representation of this <see cref="T:HotChocolate.Language.ISyntaxNode"/>.
+            </returns>
+        </member>
+    </members>
+</doc>

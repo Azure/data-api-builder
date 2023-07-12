@@ -56,7 +56,7 @@ public static class EnumExtensions
 
     public static string GenerateMessageForInvalidInput<T>(string invalidType)
         where T : struct, Enum
-        => $"Invalid Source Type: {invalidType}. Valid values are: {string.Join(",", Enum.GetNames<T>())}";
+        => $"Invalid Source Type: {invalidType}. Valid values are: {string.Join(",", Enum.GetNames(typeof(T)))}";
 }
 
 /// <summary>
@@ -87,7 +87,7 @@ internal class EnumMemberJsonEnumConverterFactory : JsonConverterFactory
         public JsonStringEnumConverterEx()
         {
             Type type = typeof(TEnum);
-            TEnum[] values = Enum.GetValues<TEnum>();
+            TEnum[] values = (TEnum[])Enum.GetValues(type);
 
             foreach (TEnum value in values)
             {

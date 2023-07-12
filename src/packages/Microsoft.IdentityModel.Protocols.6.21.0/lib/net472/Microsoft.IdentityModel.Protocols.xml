@@ -1,0 +1,415 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Microsoft.IdentityModel.Protocols</name>
+    </assembly>
+    <members>
+        <member name="T:Microsoft.IdentityModel.Protocols.AuthenticationProtocolMessage">
+            <summary>
+            base class for authentication protocol messages.
+            </summary>
+        </member>
+        <member name="M:Microsoft.IdentityModel.Protocols.AuthenticationProtocolMessage.#ctor">
+            <summary>
+            Initializes a default instance of the <see cref="T:Microsoft.IdentityModel.Protocols.AuthenticationProtocolMessage"/> class.
+            </summary>
+        </member>
+        <member name="M:Microsoft.IdentityModel.Protocols.AuthenticationProtocolMessage.BuildFormPost">
+            <summary>
+            Builds a form post using the current IssuerAddress and the parameters that have been set.
+            </summary>
+            <returns>html with head set to 'Title', body containing a hiden from with action = IssuerAddress.</returns>
+        </member>
+        <member name="M:Microsoft.IdentityModel.Protocols.AuthenticationProtocolMessage.BuildRedirectUrl">
+            <summary>
+            Builds a URL using the current IssuerAddress and the parameters that have been set.
+            </summary>
+            <returns>UrlEncoded string.</returns>
+            <remarks>Each parameter &lt;Key, Value&gt; is first transformed using <see cref="M:System.Uri.EscapeDataString(System.String)"/>.</remarks>
+        </member>
+        <member name="M:Microsoft.IdentityModel.Protocols.AuthenticationProtocolMessage.GetParameter(System.String)">
+            <summary>
+            Returns a parameter.
+            </summary>
+            <param name="parameter">The parameter name.</param>
+            <returns>The value of the parameter or null if the parameter does not exists.</returns>
+            <exception cref="T:System.ArgumentNullException">If parameter is null</exception>
+        </member>
+        <member name="P:Microsoft.IdentityModel.Protocols.AuthenticationProtocolMessage.IssuerAddress">
+            <summary>
+            Gets or sets the issuer address.
+            </summary>
+            <exception cref="T:System.ArgumentNullException">If the 'value' is null.</exception>
+        </member>
+        <member name="P:Microsoft.IdentityModel.Protocols.AuthenticationProtocolMessage.Parameters">
+            <summary>
+            Gets the message parameters as a Dictionary.
+            </summary>
+        </member>
+        <member name="P:Microsoft.IdentityModel.Protocols.AuthenticationProtocolMessage.PostTitle">
+            <summary>
+            Gets or sets the title used when constructing the post string.
+            </summary>
+            <exception cref="T:System.ArgumentNullException">If the 'value' is null.</exception>
+        </member>
+        <member name="M:Microsoft.IdentityModel.Protocols.AuthenticationProtocolMessage.RemoveParameter(System.String)">
+            <summary>
+            Removes a parameter.
+            </summary>
+            <param name="parameter">The parameter name.</param>
+            <exception cref="T:System.ArgumentNullException">If 'parameter' is null or empty.</exception>
+        </member>
+        <member name="M:Microsoft.IdentityModel.Protocols.AuthenticationProtocolMessage.SetParameter(System.String,System.String)">
+            <summary>
+            Sets a parameter to the Parameters Dictionary.
+            </summary>
+            <param name="parameter">The parameter name.</param>
+            <param name="value">The value to be assigned to parameter.</param>
+            <exception cref="T:System.ArgumentNullException">If 'parameterName' is null or empty.</exception>
+            <remarks>If null is passed as value and the parameter exists, that parameter is removed.</remarks>
+        </member>
+        <member name="M:Microsoft.IdentityModel.Protocols.AuthenticationProtocolMessage.SetParameters(System.Collections.Specialized.NameValueCollection)">
+            <summary>
+            Sets a collection parameters.
+            </summary>
+            <param name="nameValueCollection"></param>
+        </member>
+        <member name="P:Microsoft.IdentityModel.Protocols.AuthenticationProtocolMessage.Script">
+            <summary>
+            Gets the script used when constructing the post string.
+            </summary>
+            <exception cref="T:System.ArgumentNullException">If the 'value' is null.</exception>
+        </member>
+        <member name="P:Microsoft.IdentityModel.Protocols.AuthenticationProtocolMessage.ScriptButtonText">
+            <summary>
+            Gets or sets the script button text used when constructing the post string.
+            </summary>
+            <exception cref="T:System.ArgumentNullException">If the 'value' is null.</exception>
+        </member>
+        <member name="P:Microsoft.IdentityModel.Protocols.AuthenticationProtocolMessage.ScriptDisabledText">
+            <summary>
+            Gets or sets the text used when constructing the post string that will be displayed to used if script is disabled.
+            </summary>
+            <exception cref="T:System.ArgumentNullException">If the 'value' is null.</exception>
+        </member>
+        <member name="T:Microsoft.IdentityModel.Protocols.ConfigurationManager`1">
+            <summary>
+            Manages the retrieval of Configuration data.
+            </summary>
+            <typeparam name="T">The type of <see cref="T:Microsoft.IdentityModel.Protocols.IDocumentRetriever"/>.</typeparam>
+        </member>
+        <member name="M:Microsoft.IdentityModel.Protocols.ConfigurationManager`1.#cctor">
+            <summary>
+            Static initializer for a new object. Static initializers run before the first instance of the type is created.
+            </summary>
+        </member>
+        <member name="M:Microsoft.IdentityModel.Protocols.ConfigurationManager`1.#ctor(System.String,Microsoft.IdentityModel.Protocols.IConfigurationRetriever{`0})">
+            <summary>
+            Instantiates a new <see cref="T:Microsoft.IdentityModel.Protocols.ConfigurationManager`1"/> that manages automatic and controls refreshing on configuration data.
+            </summary>
+            <param name="metadataAddress">The address to obtain configuration.</param>
+            <param name="configRetriever">The <see cref="T:Microsoft.IdentityModel.Protocols.IConfigurationRetriever`1"/></param>
+        </member>
+        <member name="M:Microsoft.IdentityModel.Protocols.ConfigurationManager`1.#ctor(System.String,Microsoft.IdentityModel.Protocols.IConfigurationRetriever{`0},System.Net.Http.HttpClient)">
+            <summary>
+            Instantiates a new <see cref="T:Microsoft.IdentityModel.Protocols.ConfigurationManager`1"/> that manages automatic and controls refreshing on configuration data.
+            </summary>
+            <param name="metadataAddress">The address to obtain configuration.</param>
+            <param name="configRetriever">The <see cref="T:Microsoft.IdentityModel.Protocols.IConfigurationRetriever`1"/></param>
+            <param name="httpClient">The client to use when obtaining configuration.</param>
+        </member>
+        <member name="M:Microsoft.IdentityModel.Protocols.ConfigurationManager`1.#ctor(System.String,Microsoft.IdentityModel.Protocols.IConfigurationRetriever{`0},Microsoft.IdentityModel.Protocols.IDocumentRetriever)">
+            <summary>
+            Instantiates a new <see cref="T:Microsoft.IdentityModel.Protocols.ConfigurationManager`1"/> that manages automatic and controls refreshing on configuration data.
+            </summary>
+            <param name="metadataAddress">The address to obtain configuration.</param>
+            <param name="configRetriever">The <see cref="T:Microsoft.IdentityModel.Protocols.IConfigurationRetriever`1"/></param>
+            <param name="docRetriever">The <see cref="T:Microsoft.IdentityModel.Protocols.IDocumentRetriever"/> that reaches out to obtain the configuration.</param>
+            <exception cref="T:System.ArgumentNullException">If 'metadataAddress' is null or empty.</exception>
+            <exception cref="T:System.ArgumentNullException">If 'configRetriever' is null.</exception>
+            <exception cref="T:System.ArgumentNullException">If 'docRetriever' is null.</exception>
+        </member>
+        <member name="M:Microsoft.IdentityModel.Protocols.ConfigurationManager`1.#ctor(System.String,Microsoft.IdentityModel.Protocols.IConfigurationRetriever{`0},Microsoft.IdentityModel.Protocols.IDocumentRetriever,Microsoft.IdentityModel.Protocols.IConfigurationValidator{`0})">
+            <summary>
+            Instantiates a new <see cref="T:Microsoft.IdentityModel.Protocols.ConfigurationManager`1"/> with cinfiguration validator that manages automatic and controls refreshing on configuration data.
+            </summary>
+            <param name="metadataAddress">The address to obtain configuration.</param>
+            <param name="configRetriever">The <see cref="T:Microsoft.IdentityModel.Protocols.IConfigurationRetriever`1"/></param>
+            <param name="docRetriever">The <see cref="T:Microsoft.IdentityModel.Protocols.IDocumentRetriever"/> that reaches out to obtain the configuration.</param>
+            <param name="configValidator">The <see cref="T:Microsoft.IdentityModel.Protocols.IConfigurationValidator`1"/></param>
+            <exception cref="T:System.ArgumentNullException">If 'configValidator' is null.</exception>
+        </member>
+        <member name="M:Microsoft.IdentityModel.Protocols.ConfigurationManager`1.GetConfigurationAsync">
+            <summary>
+            Obtains an updated version of Configuration.
+            </summary>
+            <returns>Configuration of type T.</returns>
+            <remarks>If the time since the last call is less than <see cref="P:Microsoft.IdentityModel.Tokens.BaseConfigurationManager.AutomaticRefreshInterval"/> then <see cref="M:Microsoft.IdentityModel.Protocols.IConfigurationRetriever`1.GetConfigurationAsync(System.String,Microsoft.IdentityModel.Protocols.IDocumentRetriever,System.Threading.CancellationToken)"/> is not called and the current Configuration is returned.</remarks>
+        </member>
+        <member name="M:Microsoft.IdentityModel.Protocols.ConfigurationManager`1.GetConfigurationAsync(System.Threading.CancellationToken)">
+            <summary>
+            Obtains an updated version of Configuration.
+            </summary>
+            <param name="cancel">CancellationToken</param>
+            <returns>Configuration of type T.</returns>
+            <remarks>If the time since the last call is less than <see cref="P:Microsoft.IdentityModel.Tokens.BaseConfigurationManager.AutomaticRefreshInterval"/> then <see cref="M:Microsoft.IdentityModel.Protocols.IConfigurationRetriever`1.GetConfigurationAsync(System.String,Microsoft.IdentityModel.Protocols.IDocumentRetriever,System.Threading.CancellationToken)"/> is not called and the current Configuration is returned.</remarks>
+        </member>
+        <member name="M:Microsoft.IdentityModel.Protocols.ConfigurationManager`1.GetBaseConfigurationAsync(System.Threading.CancellationToken)">
+            <summary>
+            Obtains an updated version of Configuration.
+            </summary>
+            <param name="cancel">CancellationToken</param>
+            <returns>Configuration of type BaseConfiguration    .</returns>
+            <remarks>If the time since the last call is less than <see cref="P:Microsoft.IdentityModel.Tokens.BaseConfigurationManager.AutomaticRefreshInterval"/> then <see cref="M:Microsoft.IdentityModel.Protocols.IConfigurationRetriever`1.GetConfigurationAsync(System.String,Microsoft.IdentityModel.Protocols.IDocumentRetriever,System.Threading.CancellationToken)"/> is not called and the current Configuration is returned.</remarks>
+        </member>
+        <member name="M:Microsoft.IdentityModel.Protocols.ConfigurationManager`1.RequestRefresh">
+            <summary>
+            Requests that then next call to <see cref="M:Microsoft.IdentityModel.Protocols.ConfigurationManager`1.GetConfigurationAsync"/> obtain new configuration.
+            <para>If it is a first force refresh or the last refresh was greater than <see cref="P:Microsoft.IdentityModel.Tokens.BaseConfigurationManager.RefreshInterval"/> then the next call to <see cref="M:Microsoft.IdentityModel.Protocols.ConfigurationManager`1.GetConfigurationAsync"/> will retrieve new configuration.</para>
+            <para>If <see cref="P:Microsoft.IdentityModel.Tokens.BaseConfigurationManager.RefreshInterval"/> == <see cref="F:System.TimeSpan.MaxValue"/> then this method does nothing.</para>
+            </summary>
+        </member>
+        <member name="F:Microsoft.IdentityModel.Protocols.ConfigurationManager`1.DefaultAutomaticRefreshInterval">
+            <summary>
+            12 hours is the default time interval that afterwards, <see cref="M:Microsoft.IdentityModel.Protocols.ConfigurationManager`1.GetBaseConfigurationAsync(System.Threading.CancellationToken)"/> will obtain new configuration.
+            </summary>
+        </member>
+        <member name="F:Microsoft.IdentityModel.Protocols.ConfigurationManager`1.DefaultRefreshInterval">
+            <summary>
+            5 minutes is the default time interval that must pass for <see cref="M:Microsoft.IdentityModel.Protocols.ConfigurationManager`1.RequestRefresh"/> to obtain a new configuration.
+            </summary>
+        </member>
+        <member name="F:Microsoft.IdentityModel.Protocols.ConfigurationManager`1.MinimumAutomaticRefreshInterval">
+            <summary>
+            5 minutes is the minimum value for automatic refresh. <see cref="F:Microsoft.IdentityModel.Protocols.ConfigurationManager`1.MinimumAutomaticRefreshInterval"/> can not be set less than this value.
+            </summary>
+        </member>
+        <member name="F:Microsoft.IdentityModel.Protocols.ConfigurationManager`1.MinimumRefreshInterval">
+            <summary>
+            1 second is the minimum time interval that must pass for <see cref="F:Microsoft.IdentityModel.Protocols.ConfigurationManager`1.MinimumRefreshInterval"/> to  obtain new configuration.
+            </summary>
+        </member>
+        <member name="T:Microsoft.IdentityModel.Protocols.ConfigurationValidationResult">
+            <summary>
+            Represents the result of validation a <see cref="T:Microsoft.IdentityModel.Protocols.IConfigurationValidator`1"/>.
+            </summary>
+        </member>
+        <member name="P:Microsoft.IdentityModel.Protocols.ConfigurationValidationResult.ErrorMessage">
+            <summary>
+            Gets or sets the error message that occurred during validation of the configuration.
+            </summary>
+        </member>
+        <member name="P:Microsoft.IdentityModel.Protocols.ConfigurationValidationResult.Succeeded">
+            <summary>
+            Gets or sets a bool indicating if the configuration validation was successful.
+            </summary>
+        </member>
+        <member name="T:Microsoft.IdentityModel.Protocols.FileDocumentRetriever">
+            <summary>
+            Reads a local file from the disk.
+            </summary>
+        </member>
+        <member name="M:Microsoft.IdentityModel.Protocols.FileDocumentRetriever.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Microsoft.IdentityModel.Protocols.FileDocumentRetriever"/> class.
+            </summary>
+        </member>
+        <member name="M:Microsoft.IdentityModel.Protocols.FileDocumentRetriever.GetDocumentAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Reads a document using <see cref="T:System.IO.FileStream"/>.
+            </summary>
+            <param name="address">Fully qualified path to a file.</param>
+            <param name="cancel"><see cref="T:System.Threading.CancellationToken"/> not used.</param>
+            <returns>UTF8 decoding of bytes in the file.</returns>
+            <exception cref="T:System.ArgumentNullException">If address is null or whitespace.</exception>
+            <exception cref="T:System.IO.IOException">with inner expection containing the original exception.</exception>
+        </member>
+        <member name="T:Microsoft.IdentityModel.Protocols.HttpDocumentRetriever">
+            <summary>
+            Retrieves metadata information using HttpClient.
+            </summary>
+        </member>
+        <member name="F:Microsoft.IdentityModel.Protocols.HttpDocumentRetriever.StatusCode">
+            <summary>
+            The key is used to add status code into <see cref="P:System.Exception.Data"/>.
+            </summary>
+        </member>
+        <member name="F:Microsoft.IdentityModel.Protocols.HttpDocumentRetriever.ResponseContent">
+            <summary>
+            The key is used to add response content into <see cref="P:System.Exception.Data"/>.
+            </summary>
+        </member>
+        <member name="P:Microsoft.IdentityModel.Protocols.HttpDocumentRetriever.DefaultSendAdditionalHeaderData">
+            <summary>
+            Gets or sets whether additional default headers are added to a <see cref="T:System.Net.Http.HttpRequestMessage"/> headers. Set to true by default.
+            </summary>
+        </member>
+        <member name="P:Microsoft.IdentityModel.Protocols.HttpDocumentRetriever.SendAdditionalHeaderData">
+            <summary>
+            Gets or sets whether additional headers are added to a <see cref="T:System.Net.Http.HttpRequestMessage"/> headers
+            </summary>
+        </member>
+        <member name="M:Microsoft.IdentityModel.Protocols.HttpDocumentRetriever.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Microsoft.IdentityModel.Protocols.HttpDocumentRetriever"/> class.
+            </summary>
+        </member>
+        <member name="M:Microsoft.IdentityModel.Protocols.HttpDocumentRetriever.#ctor(System.Net.Http.HttpClient)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Microsoft.IdentityModel.Protocols.HttpDocumentRetriever"/> class with a specified httpClient.
+            </summary>
+            <param name="httpClient"><see cref="T:System.Net.Http.HttpClient"/></param>
+            <exception cref="T:System.ArgumentNullException">'httpClient' is null.</exception>
+        </member>
+        <member name="P:Microsoft.IdentityModel.Protocols.HttpDocumentRetriever.RequireHttps">
+            <summary>
+            Requires Https secure channel for sending requests.. This is turned ON by default for security reasons. It is RECOMMENDED that you do not allow retrieval from http addresses by default.
+            </summary>
+        </member>
+        <member name="M:Microsoft.IdentityModel.Protocols.HttpDocumentRetriever.GetDocumentAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Returns a task which contains a string converted from remote document when completed, by using the provided address.
+            </summary>
+            <param name="address">Location of document</param>
+            <param name="cancel">A cancellation token that can be used by other objects or threads to receive notice of cancellation. <see cref="T:System.Threading.CancellationToken"/></param>
+            <returns>Document as a string</returns>
+        </member>
+        <member name="T:Microsoft.IdentityModel.Protocols.IConfigurationManager`1">
+            <summary>
+            Interface that defines a model for retrieving configuration data.
+            </summary>
+            <typeparam name="T">The type of <see cref="T:Microsoft.IdentityModel.Protocols.IDocumentRetriever"/>.</typeparam>
+        </member>
+        <member name="M:Microsoft.IdentityModel.Protocols.IConfigurationManager`1.GetConfigurationAsync(System.Threading.CancellationToken)">
+            <summary>
+            Retrieve the current configuration, refreshing and/or caching as needed.
+            This method will throw if the configuration cannot be retrieved, instead of returning null.
+            </summary>
+            <param name="cancel"><see cref="T:System.Threading.CancellationToken"/></param>
+            <returns><see cref="T:System.Threading.Tasks.Task`1"/></returns>
+        </member>
+        <member name="M:Microsoft.IdentityModel.Protocols.IConfigurationManager`1.RequestRefresh">
+            <summary>
+            Indicate that the configuration may be stale (as indicated by failing to process incoming tokens).
+            </summary>
+        </member>
+        <member name="T:Microsoft.IdentityModel.Protocols.IConfigurationRetriever`1">
+            <summary>
+            Interface that defines methods to retrieve configuration.
+            </summary>
+            <typeparam name="T">The type of the configuration metadata.</typeparam>
+        </member>
+        <member name="M:Microsoft.IdentityModel.Protocols.IConfigurationRetriever`1.GetConfigurationAsync(System.String,Microsoft.IdentityModel.Protocols.IDocumentRetriever,System.Threading.CancellationToken)">
+            <summary>
+            Retrieves a populated configuration given an address and an <see cref="T:Microsoft.IdentityModel.Protocols.IDocumentRetriever"/>.
+            </summary>
+            <param name="address">Address of the discovery document.</param>
+            <param name="retriever">The <see cref="T:Microsoft.IdentityModel.Protocols.IDocumentRetriever"/> to use to read the discovery document.</param>
+            <param name="cancel">A cancellation token that can be used by other objects or threads to receive notice of cancellation. <see cref="T:System.Threading.CancellationToken"/>.</param>
+        </member>
+        <member name="T:Microsoft.IdentityModel.Protocols.IConfigurationValidator`1">
+            <summary>
+            Interface that defines a policy for validating configuration data.
+            </summary>
+            <typeparam name="T">The type of the configuration metadata.</typeparam>
+        </member>
+        <member name="M:Microsoft.IdentityModel.Protocols.IConfigurationValidator`1.Validate(`0)">
+            <summary>
+            Validate the retrieved configuration.
+            </summary>
+            <param name="configuration">Configuration of type T.</param>
+            <returns><see cref="T:Microsoft.IdentityModel.Protocols.ConfigurationValidationResult"/>.</returns>
+        </member>
+        <member name="T:Microsoft.IdentityModel.Protocols.IDocumentRetriever">
+            <summary>
+            Interface that defines a document retriever that returns the document as a string.
+            </summary>
+        </member>
+        <member name="M:Microsoft.IdentityModel.Protocols.IDocumentRetriever.GetDocumentAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Obtains a document from an address.
+            </summary>
+            <param name="address">location of document.</param>
+            <param name="cancel"><see cref="T:System.Threading.CancellationToken"/>.</param>
+            <returns>document as a string.</returns>
+        </member>
+        <member name="T:Microsoft.IdentityModel.Protocols.StaticConfigurationManager`1">
+            <summary>
+            This type is for users that want a fixed and static Configuration.
+            In this case, the configuration is obtained and passed to the constructor.
+            </summary>
+            <typeparam name="T">must be a class.</typeparam>
+        </member>
+        <member name="M:Microsoft.IdentityModel.Protocols.StaticConfigurationManager`1.#ctor(`0)">
+            <summary>
+            Initializes an new instance of <see cref="T:Microsoft.IdentityModel.Protocols.StaticConfigurationManager`1"/> with a Configuration instance.
+            </summary>
+            <param name="configuration">Configuration of type OpenIdConnectConfiguration or OpenIdConnectConfiguration.</param>
+        </member>
+        <member name="M:Microsoft.IdentityModel.Protocols.StaticConfigurationManager`1.GetConfigurationAsync(System.Threading.CancellationToken)">
+            <summary>
+            Obtains an updated version of Configuration.
+            </summary>
+            <param name="cancel"><see cref="T:System.Threading.CancellationToken"/>.</param>
+            <returns>Configuration of type T.</returns>
+        </member>
+        <member name="M:Microsoft.IdentityModel.Protocols.StaticConfigurationManager`1.GetBaseConfigurationAsync(System.Threading.CancellationToken)">
+            <summary>
+            Obtains an updated version of Configuration.
+            </summary>
+            <param name="cancel"><see cref="T:System.Threading.CancellationToken"/>.</param>
+            <returns>Configuration of type T.</returns>
+        </member>
+        <member name="M:Microsoft.IdentityModel.Protocols.StaticConfigurationManager`1.RequestRefresh">
+            <summary>
+            For the this type, this is a no-op
+            </summary>
+        </member>
+        <member name="T:Microsoft.IdentityModel.Protocols.HttpRequestData">
+            <summary>
+            Structure that represents an incoming or an outgoing http request.
+            </summary>
+        </member>
+        <member name="P:Microsoft.IdentityModel.Protocols.HttpRequestData.Uri">
+            <summary>
+            Gets or sets the http request URI. 
+            </summary>
+        </member>
+        <member name="P:Microsoft.IdentityModel.Protocols.HttpRequestData.Method">
+            <summary>
+            Gets or sets the http request method.
+            </summary>
+        </member>
+        <member name="P:Microsoft.IdentityModel.Protocols.HttpRequestData.Body">
+            <summary>
+            Gets or sets the http request body.
+            </summary>
+        </member>
+        <member name="P:Microsoft.IdentityModel.Protocols.HttpRequestData.Headers">
+            <summary>
+            Gets or sets the collection of http request headers.
+            </summary>
+        </member>
+        <member name="P:Microsoft.IdentityModel.Protocols.HttpRequestData.PropertyBag">
+            <summary>
+            Gets or sets an <see cref="T:System.Collections.Generic.IDictionary`2"/> that enables custom extensibility scenarios.
+            </summary>
+        </member>
+        <member name="M:Microsoft.IdentityModel.Protocols.HttpRequestData.AppendHeaders(System.Net.Http.Headers.HttpHeaders)">
+            <summary>
+            A utility method that appends <paramref name="headers"/> to the <see cref="P:Microsoft.IdentityModel.Protocols.HttpRequestData.Headers"/>.
+            </summary>
+            <param name="headers">A collection of http request headers.</param>
+        </member>
+        <member name="T:Microsoft.IdentityModel.Protocols.LogMessages">
+            <summary>
+            Log messages and codes
+            </summary>
+        </member>
+        <member name="T:Microsoft.IdentityModel.Protocols.X509CertificateValidationMode">
+            <summary>
+            Represents X509Certificate validation mode.
+            </summary>
+        </member>
+    </members>
+</doc>

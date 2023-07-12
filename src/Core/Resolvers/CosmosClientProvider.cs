@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
                 else
                 {
-                    TokenCredential servicePrincipal = new AADTokenCredential(_accessToken);
+                    TokenCredential servicePrincipal = new AADTokenCredential(_accessToken!);
                     Client = new CosmosClient(_accountEndpoint, servicePrincipal, options);
                 }
             }
@@ -106,11 +106,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     throw new InvalidOperationException("Managed Identity Access Token is invalid." + ex.Message);
                 }
-            }
-
-            public override ValueTask<AccessToken> GetTokenAsync(TokenRequestContext requestContext, CancellationToken cancellationToken)
-            {
-                return ValueTask.FromResult(GetToken(requestContext, cancellationToken));
             }
         }
 

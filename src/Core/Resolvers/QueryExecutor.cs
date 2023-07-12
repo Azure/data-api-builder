@@ -40,13 +40,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                              ILogger<IQueryExecutor> logger,
                              DbConnectionStringBuilder connectionStringBuilder,
                              RuntimeConfigProvider configProvider,
-                             IHttpContextAccessor httpContextAccessor)
+                             IHttpContextAccessor? httpContextAccessor)
         {
             DbExceptionParser = dbExceptionParser;
             QueryExecutorLogger = logger;
             ConnectionStringBuilder = connectionStringBuilder;
             ConfigProvider = configProvider;
-            HttpContextAccessor = httpContextAccessor;
+            HttpContextAccessor = httpContextAccessor!;
             _retryPolicy = Polly.Policy
             .Handle<DbException>(DbExceptionParser.IsTransientException)
             .WaitAndRetryAsync(

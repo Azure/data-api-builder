@@ -122,7 +122,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             List<FieldDefinitionNode> mutationFields
             )
         {
-            IEnumerable<string> rolesAllowedForMutation = IAuthorizationResolver.GetRolesForOperation(dbEntityName, operation: operation, entityPermissionsMap);
+            IEnumerable<string> rolesAllowedForMutation = GetRolesForOperation(dbEntityName, operation: operation, entityPermissionsMap);
             if (rolesAllowedForMutation.Count() > 0)
             {
                 switch (operation)
@@ -155,7 +155,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             DatabaseObject dbObject
             )
         {
-            IEnumerable<string> rolesAllowedForMutation = IAuthorizationResolver.GetRolesForOperation(dbEntityName, operation: EntityActionOperation.Execute, entityPermissionsMap);
+            IEnumerable<string> rolesAllowedForMutation = GetRolesForOperation(dbEntityName, operation: EntityActionOperation.Execute, entityPermissionsMap);
             if (rolesAllowedForMutation.Any())
             {
                 mutationFields.Add(GraphQLStoredProcedureBuilder.GenerateStoredProcedureSchema(name, entities[dbEntityName], dbObject, rolesAllowedForMutation));

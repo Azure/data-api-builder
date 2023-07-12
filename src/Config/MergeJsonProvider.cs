@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Buffers;
 using System.Text;
 using System.Text.Json;
 
@@ -19,7 +18,7 @@ namespace Azure.DataApiBuilder.Config
         /// <param name="overridingJson">Json to override the base json.</param>
         public static string Merge(string originalJson, string overridingJson)
         {
-            ArrayBufferWriter<byte> outputBuffer = new();
+            MemoryStream outputBuffer = new ();
 
             using (JsonDocument originalJsonDoc = JsonDocument.Parse(originalJson))
             using (JsonDocument overridingJsonDoc = JsonDocument.Parse(overridingJson))
@@ -48,7 +47,7 @@ namespace Azure.DataApiBuilder.Config
                 }
             }
 
-            return Encoding.UTF8.GetString(outputBuffer.WrittenSpan);
+            return Encoding.UTF8.GetString(outputBuffer.ToArray());
         }
 
         /// <summary>

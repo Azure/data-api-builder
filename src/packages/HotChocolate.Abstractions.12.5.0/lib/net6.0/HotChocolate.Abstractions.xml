@@ -1,0 +1,2487 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>HotChocolate.Abstractions</name>
+    </assembly>
+    <members>
+        <member name="T:HotChocolate.AggregateError">
+            <summary>
+            An aggregate error allows to pass a collection of error in a single error object.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.AggregateError.Errors">
+            <summary>
+            Gets the actual errors.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.ArgumentAttribute">
+            <summary>
+            Specifies resolver parameter represents a GraphQL field argument.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.ArgumentAttribute.#ctor(System.String)">
+            <summary>
+            Specifies resolver parameter represents a GraphQL field argument.
+            </summary>
+            <param name="name">
+            The name override for the GraphQL field argument.
+            </param>
+        </member>
+        <member name="P:HotChocolate.ArgumentAttribute.Name">
+            <summary>
+            Gets the name override for the GraphQL field argument.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.DiagnosticEventSourceAttribute">
+            <summary>
+            This attribute can be used by custom diagnostic event listeners
+            to specify the source to which a listener shall be bound to.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.DiagnosticEventSourceAttribute.#ctor(System.Type)">
+            <summary>
+            This attribute can be used by custom diagnostic event listeners
+            to specify the source to which a listener shall be bound to.
+            </summary>
+            <param name="listener">
+            The listener interface.
+            </param>
+        </member>
+        <member name="P:HotChocolate.DiagnosticEventSourceAttribute.Listener">
+            <summary>
+            Gets the listener interface.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Error">
+            <summary>
+            Represents a GraphQL execution error.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Error.#ctor(System.String,System.String,HotChocolate.Path,System.Collections.Generic.IReadOnlyList{HotChocolate.Location},System.Collections.Generic.IReadOnlyDictionary{System.String,System.Object},System.Exception,HotChocolate.Language.ISyntaxNode)">
+            <summary>
+            Initializes a new instance of <see cref="T:HotChocolate.Error"/>.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Error.Message">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Error.Code">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Error.Path">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Error.Locations">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Error.Extensions">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Error.Exception">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Error.SyntaxNode">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Error.WithMessage(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Error.WithCode(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Error.RemoveCode">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Error.WithPath(HotChocolate.Path)">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Error.WithPath(System.Collections.Generic.IReadOnlyList{System.Object})">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Error.RemovePath">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Error.WithLocations(System.Collections.Generic.IReadOnlyList{HotChocolate.Location})">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Error.RemoveLocations">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Error.WithExtensions(System.Collections.Generic.IReadOnlyDictionary{System.String,System.Object})">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Error.RemoveExtensions">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Error.SetExtension(System.String,System.Object)">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Error.RemoveExtension(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Error.WithException(System.Exception)">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Error.RemoveException">
+            <inheritdoc />
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Execution.Timeout">
+            <summary>
+            The request exceeded the configured timeout.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Execution.Canceled">
+            <summary>
+            The request was canceled
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Execution.ComplexityExceeded">
+            <summary>
+            The operation complexity was exceeded.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Execution.ComplexityStateInvalid">
+            <summary>
+            The analyzer needs a documentId, operationId, document and coerced variables.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Execution.PersistedQueryNotFound">
+            <summary>
+            A persisted query was not found when using the active persisted query pipeline.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Execution.CannotCastParent">
+            <summary>
+            Cannot cast the parent type to the resolver requested type.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Execution.OneOfNoFieldSet">
+            <summary>
+            The Oneof Input Objects `{0}` require that exactly one field must be supplied and that
+            field must not be `null`. Oneof Input Objects are a special variant of Input Objects 
+            where the type system asserts that exactly one of the fields must be set and non-null.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Execution.OneOfMoreThanOneFieldSet">
+            <summary>
+            More than one field of the Oneof Input Object `{0}` is set. Oneof Input Objects 
+            are a special variant of Input Objects where the type system asserts that exactly 
+            one of the fields must be set and non-null.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Execution.OneOfFieldIsNull">
+            <summary>
+            `null` was set to the field `{0}`of the Oneof Input Object `{1}`. Oneof Input Objects 
+            are a special variant of Input Objects where the type system asserts that exactly 
+            one of the fields must be set and non-null.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Execution.OneOfFieldMustBeNonNull">
+            <summary>
+            Value for oneof field {field.FieldName} must be non-null.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.ErrorCodes.Server">
+            <summary>
+            The server error codes.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Server.MultiPartInvalidForm">
+            <summary>
+            The multipart form could not be read.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Server.MultiPartNoOperationsSpecified">
+            <summary>
+            No 'operations' specified.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Server.MultiPartFieldsMisordered">
+            <summary>
+            Misordered multipart fields; 'map' should follow 'operations'.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Server.MultiPartNoObjectPath">
+            <summary>
+            No object paths specified for a key in the 'map'.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Server.MultiPartFileMissing">
+            <summary>
+            A key is referring to a file that was not provided.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Server.MultiPartVariableNotFound">
+            <summary>
+            The variable path is referring to a variable that does not exist.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Server.MultiPartVariableStructureInvalid">
+            <summary>
+            No object paths specified for key in 'map'.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Server.MultiPartInvalidPath">
+            <summary>
+            Invalid variable path in `map`.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Server.MultiPartPathMustStartWithVariable">
+            <summary>
+            The variable path must start with `variables`.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Server.MultiPartInvalidMapJson">
+            <summary>
+            Invalid JSON in the `map` multipart field; Expected type of
+            <see cref="T:System.Collections.Generic.Dictionary`2" />.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Server.MultiPartMapNotSpecified">
+            <summary>
+            No `map` specified.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Server.TypeParameterIsEmpty">
+            <summary>
+            The type parameter is empty.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Server.InvalidTypeName">
+            <summary>
+            Invalid type name when requesting the SDL.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Server.TypeDoesNotExist">
+            <summary>
+            The requested type does not exist.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Schema.MiddlewareOrderInvalid">
+            <summary>
+            The middleware order of a field pipeline is incorrect.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Schema.NoSchemaTypesAllowedAsRuntimeType">
+            <summary>
+            Type system members are not supported as runtime types
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Scalars.InvalidRuntimeType">
+            <summary>
+            The runtime type is not supported by the scalars ParseValue method.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Scalars.InvalidSyntaxFormat">
+            <summary>
+            Either the syntax node is invalid when parsing the literal or the syntax
+            node value has an invalid format.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Spatial.UnknowCrs">
+            <summary>
+            The coordinate reference system is not supported by this server
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Spatial.CoordinateMNotSupported">
+            <summary>
+            Coordinates with M values cannot be reprojected
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Data.NodeFieldWasNotFound">
+            <summary>
+            Type does not contain a valid node field. Only `items` and `nodes` are supported
+            </summary>
+        </member>
+        <member name="T:HotChocolate.ErrorCodes.Validation">
+            <summary>
+            Error codes relating to the document validation.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Validation.IntrospectionNotAllowed">
+            <summary>
+            The introspection is not allowed for the current request
+            </summary>
+        </member>
+        <member name="T:HotChocolate.ErrorCodes.Paging">
+            <summary>
+            Error codes related to paging compinents
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Paging.NodeTypeUnknown">
+            <summary>
+            Unable to infer the element type from the current resolver.
+            This often happens if the resolver is not an iterable type like
+            IEnumerable, IQueryable, IList etc. Ensure that you either
+            explicitly specify the element type or that the return type of your resolver
+            is an iterable type.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Paging.SchemaTypeInvalid">
+            <summary>
+            The element schema type for pagination must be a valid GraphQL output type
+            (ObjectType, InterfaceType, UnionType, EnumType, ScalarType).
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Paging.MaxPaginationItems">
+            <summary>
+            The maximum allowed items per page were exceeded.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ErrorCodes.Paging.NoPagingBoundaries">
+            <summary>
+            You must provide a `first` or `last` value to properly paginate the connection.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.ErrorExtensions">
+            <summary>
+            Common extensions of <see cref="T:HotChocolate.IError"/>
+            </summary>
+        </member>
+        <member name="M:HotChocolate.ErrorExtensions.RemoveSyntaxNode(HotChocolate.IError)">
+            <summary>
+            Creates a new error that contains all properties of this error
+            but removed the syntax node from it.
+            </summary>
+            <param name="error">The error this extension method applies to</param>
+            <returns>
+            Returns a new error that contains all properties of this error
+            but without any syntax node details.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.ErrorExtensions.WithSyntaxNode(HotChocolate.IError,HotChocolate.Language.ISyntaxNode)">
+            <summary>
+            Creates a new error that contains all properties of this error
+            but with the specified <paramref name="syntaxNode" />.
+            </summary>
+            <param name="error">The error this extension method applies to</param>
+            <param name="syntaxNode">
+            The .net syntaxNode that caused this error.
+            </param>
+            <returns>
+            Returns a new error that contains all properties of this error
+            but with the specified <paramref name="syntaxNode" />.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Execution.BatchQueryResult.RegisterDisposable(System.IDisposable)">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Execution.BatchQueryResult.DisposeAsync">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Execution.BatchQueryResult.Dispose">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Execution.DeferredQueryResult.RegisterDisposable(System.IDisposable)">
+            <inheritdoc />
+        </member>
+        <member name="T:HotChocolate.Execution.ExecutionStrategy">
+            <summary>
+            Represents the execution strategies.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Execution.ExecutionStrategy.Serial">
+            <summary>
+            Defines that a task or execution step has to be executed serial.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Execution.ExecutionStrategy.Parallel">
+            <summary>
+            Defines that a task or execution step can be executed in parallel.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Execution.IExecutionResult">
+            <summary>
+            Represents the result of the GraphQL execution pipeline.
+            </summary>
+            <remarks>
+            Execution results are by default disposable and disposing
+            them allows it to give back its used memory to the execution
+            engine result pools.
+            </remarks>
+        </member>
+        <member name="P:HotChocolate.Execution.IExecutionResult.Errors">
+            <summary>
+            Gets the GraphQL errors of the result.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Execution.IExecutionResult.Extensions">
+            <summary>
+            Gets the additional information that are passed along
+            with the result and will be serialized for transport.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Execution.IExecutionResult.ContextData">
+            <summary>
+            Gets the result context data which represent additional
+            properties that are NOT written to the transport.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Execution.IExecutionTaskDefinition">
+            <summary>
+            The execution task definition represents one kind of execution task.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Execution.IExecutionTaskDefinition.Create(HotChocolate.Execution.IExecutionTaskContext)">
+            <summary>
+            Creates a new execution task from this definition.
+            </summary>
+            <param name="context">
+            The execution task context.
+            </param>
+            <returns>
+            Returns a new execution task.
+            </returns>
+        </member>
+        <member name="T:HotChocolate.Execution.IQuery">
+            <summary>
+            Represents an executable query.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Execution.IQuery.WriteTo(System.IO.Stream)">
+            <summary>
+            Writes the current query to the output stream.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Execution.IQuery.WriteToAsync(System.IO.Stream)">
+            <summary>
+            Writes the current query to the output stream.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Execution.IQuery.WriteToAsync(System.IO.Stream,System.Threading.CancellationToken)">
+            <summary>
+            Writes the current query to the output stream.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Execution.IQuery.AsSpan">
+            <summary>
+            Returns the binary query representation.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Execution.IQuery.ToString">
+            <summary>
+            Returns the query string representation.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Execution.IQueryRequest">
+            <summary>
+            Represents a GraphQL query request.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Execution.IQueryRequest.Query">
+            <summary>
+            Gets the GraphQL query document.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Execution.IQueryRequest.QueryId">
+            <summary>
+            Gets an ID referring to a GraphQL persisted query.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Execution.IQueryRequest.QueryHash">
+            <summary>
+            Gets the GraphQL query hash.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Execution.IQueryRequest.OperationName">
+            <summary>
+            Gets the operation from the GraphQL query that shall be executed.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Execution.IQueryRequest.VariableValues">
+            <summary>
+            Gets the GraphQL request variables.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Execution.IQueryRequest.InitialValue">
+            <summary>
+            Gets the GraphQL operation instance.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Execution.IQueryRequest.ContextData">
+            <summary>
+            Gets custom context properties that can be passed into the GraphQL execution. 
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Execution.IQueryRequest.Extensions">
+            <summary>
+            Gets custom extension properties from the GraphQL request,
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Execution.IQueryRequest.Services">
+            <summary>
+            Gets the GraphQL request services.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Execution.IQueryRequest.AllowedOperations">
+            <summary>
+            Specifies the allowed GraphQL operations.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Execution.IQueryResult">
+            <summary>
+            Represents a query result object.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Execution.IQueryResult.Label">
+            <summary>
+            A string that was passed to the label argument of the @defer or @stream 
+            directive that corresponds to this results.
+            </summary>
+            <value></value>
+        </member>
+        <member name="P:HotChocolate.Execution.IQueryResult.Path">
+            <summary>
+             A path to the insertion point that informs the client how to patch a 
+            subsequent delta payload into the original payload.
+            </summary>
+            <value></value>
+        </member>
+        <member name="P:HotChocolate.Execution.IQueryResult.Data">
+            <summary>
+            The data that is being delivered.
+            </summary>
+            <value></value>
+        </member>
+        <member name="P:HotChocolate.Execution.IQueryResult.HasNext">
+            <summary>
+            A boolean that is present and <c>true</c> when there are more payloads 
+            that will be sent for this operation. The last payload in a multi payload response 
+            should return HasNext: <c>false</c>. 
+            HasNext is null for single-payload responses to preserve backwards compatibility.
+            </summary>
+            <value></value>
+        </member>
+        <member name="M:HotChocolate.Execution.IQueryResult.ToDictionary">
+            <summary>
+            Serializes this GraphQL result into a dictionary.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Execution.IQueryResultSerializer">
+            <summary>
+            Represents a serializer for <see cref="T:HotChocolate.Execution.IQueryResult"/>s.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Execution.IQueryResultSerializer.SerializeAsync(HotChocolate.Execution.IQueryResult,System.IO.Stream,System.Threading.CancellationToken)">
+            <summary>
+            Serializes a query result and writes it to the given <paramref name="stream"/>.
+            </summary>
+            <param name="result">
+            The query result that shall be serialized.
+            </param>
+            <param name="stream">
+            The stream to which the serialized <paramref name="result"/> shall be written to.
+            </param>
+            <param name="cancellationToken">
+            The cancellation token.
+            </param>
+        </member>
+        <member name="M:HotChocolate.Execution.IQueryResultSerializer.Serialize(HotChocolate.Execution.IQueryResult,System.Buffers.IBufferWriter{System.Byte})">
+            <summary>
+            Serializes a query result and writes it to the given <paramref name="writer"/>.
+            </summary>
+            <param name="result">
+            The query result that shall be serialized.
+            </param>
+            <param name="writer">
+            The writer to which the serialized <paramref name="result"/> shall be written to.
+            </param>
+        </member>
+        <member name="T:HotChocolate.Execution.IReadStoredQueries">
+            <summary>
+            A tool for reading queries from some persistence medium.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Execution.IReadStoredQueries.TryReadQueryAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Retrieves the query associated with the given identifier.
+            If the query is not found <c>null</c> is returned.
+            </summary>
+            <param name="queryId">The query identifier.</param>
+            <param name="cancellationToken">The cancellation token.</param>
+            <returns>
+            The desired query or null if no query
+            is found with the specified identifier.
+            </returns>
+        </member>
+        <member name="T:HotChocolate.Execution.IResponseStream">
+            <summary>
+            The response stream represents a stream of <see cref="T:HotChocolate.Execution.IQueryResult" /> that are produced
+            by the execution engine.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Execution.IResponseStream.ReadResultsAsync">
+            <summary>
+            Reads the subscription results from the execution engine.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Execution.IResponseStream.RegisterDisposable(System.IDisposable)">
+            <summary>
+            Registers disposable dependencies that have to be disposed when this stream disposes.
+            </summary>
+            <param name="disposable">
+            The disposable dependency that needs to be disposed with this stream.
+            </param>
+        </member>
+        <member name="T:HotChocolate.Execution.IResultMemoryOwner">
+            <summary>
+            This interface represents the owner of the rented objects associated 
+            with the result data structure. 
+            
+            When this object is disposed it will return the objects representing the 
+            <see cref="P:HotChocolate.Execution.IResultMemoryOwner.Data" /> object structure back to the object pools.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Execution.IResultMemoryOwner.Data">
+            <summary>
+            The data object structure representing the GraphQL result.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Execution.ISourceStream">
+            <summary>
+            The source stream represents a stream of events from a pub/sub system.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Execution.ISourceStream.ReadEventsAsync">
+            <summary>
+            Reads the subscription result from the pub/sub system.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Execution.ISourceStream`1">
+            <summary>
+            The source stream represents a stream of events from a pub/sub system.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Execution.ISourceStream`1.ReadEventsAsync">
+            <summary>
+            Reads the subscription result from the pub/sub system.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Execution.IVariableValueCollection">
+            <summary>
+            Represents a collection of coerced variables.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Execution.IVariableValueCollection.GetVariable``1(HotChocolate.NameString)">
+            <summary>
+            Gets a coerced variable value from the collection.
+            </summary>
+            <param name="name">The variable name.</param>
+            <returns></returns>
+            <exception cref="T:HotChocolate.Execution.QueryException">
+            A GraphQL execution error is thrown when the
+            requested variable cannot be found or cannot
+            be converted to the request type.
+            </exception>
+            <exception cref="T:System.ArgumentNullException">
+            The <paramref name="name" /> mustn't be null or
+            <see cref="F:System.String.Empty" />.
+            </exception>
+        </member>
+        <member name="M:HotChocolate.Execution.IVariableValueCollection.TryGetVariable``1(HotChocolate.NameString,``0@)">
+            <summary>
+            Tries to get a coerced variable value from the collection.
+            </summary>
+            <param name="name">The variable name.</param>
+            <param name="value">The coerced variable value.</param>
+            <returns>
+            <c>true</c> if a coerced variable exists and can be converted
+            to the requested type; otherwise, <c>false</c> will be returned.
+            </returns>
+        </member>
+        <member name="T:HotChocolate.Execution.IWriteStoredQueries">
+            <summary>
+            A tool for storing queries to some persistence medium.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Execution.IWriteStoredQueries.WriteQueryAsync(System.String,HotChocolate.Execution.IQuery,System.Threading.CancellationToken)">
+            <summary>
+            Stores a given query using the given identifier.
+            </summary>
+            <param name="queryId">The query identifier.</param>
+            <param name="query">The query to store.</param>
+            <param name="cancellationToken">The cancellation token.</param>
+            <returns>An asynchronous operation.</returns>
+        </member>
+        <member name="T:HotChocolate.Execution.QueryRequestBuilderExtensions">
+            <summary>
+            Extensions methods for <see cref="T:HotChocolate.Execution.IQueryRequestBuilder"/>.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Execution.QueryRequestBuilderExtensions.AllowIntrospection(HotChocolate.Execution.IQueryRequestBuilder)">
+            <summary>
+            Allows introspection usage in the current request.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Execution.QueryRequestBuilderExtensions.SetIntrospectionNotAllowedMessage(HotChocolate.Execution.IQueryRequestBuilder,System.String)">
+            <summary>
+            Sets the error message for when the introspection is not allowed.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Execution.QueryRequestBuilderExtensions.SetIntrospectionNotAllowedMessage(HotChocolate.Execution.IQueryRequestBuilder,System.Func{System.String})">
+            <summary>
+            Sets the error message for when the introspection is not allowed.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Execution.QueryRequestBuilderExtensions.SkipComplexityAnalysis(HotChocolate.Execution.IQueryRequestBuilder)">
+            <summary>
+            Skips the operation complexity analysis of this request.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Execution.QueryRequestBuilderExtensions.SetMaximumAllowedComplexity(HotChocolate.Execution.IQueryRequestBuilder,System.Int32)">
+            <summary>
+            Set allowed complexity for this request and override the global allowed complexity.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Execution.QueryResult">
+            <summary>
+            Represents a query result object.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Execution.QueryResult.#ctor(System.Collections.Generic.IReadOnlyDictionary{System.String,System.Object},System.Collections.Generic.IReadOnlyList{HotChocolate.IError},System.Collections.Generic.IReadOnlyDictionary{System.String,System.Object},System.Collections.Generic.IReadOnlyDictionary{System.String,System.Object},System.String,HotChocolate.Path,System.Nullable{System.Boolean},System.IDisposable)">
+            <summary>
+            Initializes a new <see cref="T:HotChocolate.Execution.QueryResult"/>.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Execution.QueryResult.Label">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Execution.QueryResult.Path">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Execution.QueryResult.Data">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Execution.QueryResult.Errors">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Execution.QueryResult.Extensions">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Execution.QueryResult.ContextData">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Execution.QueryResult.HasNext">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Execution.QueryResult.ToDictionary">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Execution.QueryResult.Dispose">
+            <inheritdoc />
+        </member>
+        <member name="T:HotChocolate.Execution.ResultValue">
+            <summary>
+            Represents an entry in a <see cref="T:HotChocolate.Execution.IResultMap"/>
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Execution.ResultValue.#ctor(System.String,System.Object,System.Boolean)">
+            <summary>
+            Creates a new result value.
+            </summary>
+            <param name="name">The name of the entry.</param>
+            <param name="value">The value of the entry.</param>
+            <param name="isNullable">
+            Specifies if the <paramref name="value"/> is allowed to be null.
+            </param>
+            <exception cref="T:System.ArgumentException">
+            <see cref="!:name"/> is <c>null</c> or <see cref="F:System.String.Empty"/>.
+            </exception>
+        </member>
+        <member name="P:HotChocolate.Execution.ResultValue.Name">
+            <summary>
+            Gets the name of this <see cref="T:HotChocolate.Execution.IResultMap"/> entry.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Execution.ResultValue.Value">
+            <summary>
+            Gets the value of this <see cref="T:HotChocolate.Execution.IResultMap"/> entry.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Execution.ResultValue.IsNullable">
+            <summary>
+            Specifies if <see cref="P:HotChocolate.Execution.ResultValue.Value"/> is allowed to be empty.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Execution.ResultValue.IsInitialized">
+            <summary>
+            Specifies if this entry is fully initialized.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Execution.ResultValue.Equals(System.Object)">
+            <summary>Indicates whether this instance and a specified object are equal.</summary>
+            <param name="obj">The object to compare with the current instance.</param>
+            <returns>
+            <see langword="true" /> if <paramref name="obj" /> and this instance are the same type
+            and represent the same value; otherwise, <see langword="false" />.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Execution.ResultValue.Equals(HotChocolate.Execution.ResultValue)">
+            <summary>
+            Indicates whether the current object is equal to another object of the same type.
+            </summary>
+            <param name="other">An object to compare with this object.</param>
+            <returns>
+            <see langword="true" /> if the current object is equal to the
+            <paramref name="other" /> parameter; otherwise, <see langword="false" />.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Execution.ResultValue.GetHashCode">
+            <summary>
+            Returns the hash code for this instance.
+            </summary>
+            <returns>
+            A 32-bit signed integer that is the hash code for this instance.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Execution.SubscriptionResult.RegisterDisposable(System.IDisposable)">
+            <inheritdoc />
+        </member>
+        <member name="T:HotChocolate.Execution.ExecutionTask">
+            <summary>
+            Provides the base implementation for a executable task.
+            </summary>
+            <remarks>
+            The task is by default a parallel execution task.
+            </remarks>
+        </member>
+        <member name="P:HotChocolate.Execution.ExecutionTask.Context">
+            <summary>
+            Gets the execution engine task context.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Execution.ExecutionTask.Kind">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Execution.ExecutionTask.Status">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Execution.ExecutionTask.Next">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Execution.ExecutionTask.Previous">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Execution.ExecutionTask.State">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Execution.ExecutionTask.IsSerial">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.Execution.ExecutionTask.IsRegistered">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Execution.ExecutionTask.BeginExecute(System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Execution.ExecutionTask.WaitForCompletionAsync(System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.Execution.ExecutionTask.ExecuteAsync(System.Threading.CancellationToken)">
+            <summary>
+            This execute method represents the work of this task.
+            </summary>
+            <param name="cancellationToken">
+            The cancellation token.
+            </param>
+        </member>
+        <member name="M:HotChocolate.Execution.ExecutionTask.Faulted">
+            <summary>
+            Completes the task as faulted.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Execution.ExecutionTask.Reset">
+            <summary>
+            Resets the state of this task in case the task object is reused.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Execution.ExecutionTaskExtensions">
+            <summary>
+            Extensions for <see cref="T:HotChocolate.Execution.IExecutionTask"/>.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Execution.ExecutionTaskExtensions.IsCompleted(HotChocolate.Execution.IExecutionTask)">
+            <summary>
+            Defines if this task is completed.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Execution.ExecutionTaskKind">
+            <summary>
+            The execution task kind defines the task behavior during execution.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Execution.ExecutionTaskKind.Parallel">
+            <summary>
+            Tasks that can be executed in parallel.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Execution.ExecutionTaskKind.Serial">
+            <summary>
+            Tasks that need to be executed serially.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Execution.ExecutionTaskKind.Pure">
+            <summary>
+            Tasks that have no side-effects and are synchronous.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Execution.ExecutionTaskStatus">
+            <summary>
+            The execution task status.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Execution.ExecutionTaskStatus.WaitingToRun">
+            <summary>
+            The task is initialized and waiting to run.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Execution.ExecutionTaskStatus.Running">
+            <summary>
+            The task is running.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Execution.ExecutionTaskStatus.Completed">
+            <summary>
+            The task is completed.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Execution.ExecutionTaskStatus.Faulted">
+            <summary>
+            The task completed and is in a faulted state.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Execution.IExecutionTask">
+            <summary>
+            This interface represents a task that can be executed by the execution engine.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Execution.IExecutionTask.Kind">
+            <summary>
+            Defines the kind of task.
+            The task kind is used to apply the correct execution strategy.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Execution.IExecutionTask.Status">
+            <summary>
+            Specifies the status of this task.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Execution.IExecutionTask.Next">
+            <summary>
+            Next and previous are properties that are used by the execution engine to
+            track the execution state.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Execution.IExecutionTask.Previous">
+            <summary>
+            Next and previous are properties that are used by the execution engine to
+            track the execution state.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Execution.IExecutionTask.State">
+            <summary>
+            This property is set by the execution engine and stores the execution state on it.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Execution.IExecutionTask.IsSerial">
+            <summary>
+            This property is set by the execution engine defines if the task needs to be
+            executed in a serial context.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Execution.IExecutionTask.IsRegistered">
+            <summary>
+            Specifies if the task was fully registered with the scheduler.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Execution.IExecutionTask.BeginExecute(System.Threading.CancellationToken)">
+            <summary>
+            Begins executing this task.
+            </summary>
+            <param name="cancellationToken">
+            The cancellation token.
+            </param>
+        </member>
+        <member name="M:HotChocolate.Execution.IExecutionTask.WaitForCompletionAsync(System.Threading.CancellationToken)">
+            <summary>
+            The running task can be awaited to track completion of this particular task.
+            </summary>
+            <param name="cancellationToken">
+            The cancellation token.
+            </param>
+        </member>
+        <member name="T:HotChocolate.Execution.IExecutionTaskContext">
+            <summary>
+            The execution task context can be used by an execution task to
+            interact with the execution engine.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Execution.IExecutionTaskContext.Track(HotChocolate.Execution.IExecutionTask)">
+            <summary>
+            Tracks the running task for the diagnostics.
+            </summary>
+            <param name="task">The task that shall be tracked.</param>
+            <returns>Returns a disposable representing the task activity scope.</returns>
+        </member>
+        <member name="M:HotChocolate.Execution.IExecutionTaskContext.Completed(HotChocolate.Execution.IExecutionTask)">
+            <summary>
+            Signals to the execution engine that the task has finished.
+            </summary>
+            <param name="task">The task that has been completed.</param>
+        </member>
+        <member name="M:HotChocolate.Execution.IExecutionTaskContext.ReportError(HotChocolate.Execution.IExecutionTask,HotChocolate.IError)">
+            <summary>
+            Reports an error that happened during the task execution.
+            </summary>
+            <param name="task">
+            The task that is reporting the error.
+            </param>
+            <param name="error">
+            The GraphQL error.
+            </param>
+        </member>
+        <member name="M:HotChocolate.Execution.IExecutionTaskContext.ReportError(HotChocolate.Execution.IExecutionTask,System.Exception)">
+            <summary>
+            Reports an error that happened during the task execution.
+            </summary>
+            <param name="task">
+            The task that is reporting the error.
+            </param>
+            <param name="exception">
+            The exception that happened during execution.
+            </param>
+        </member>
+        <member name="M:HotChocolate.Execution.IExecutionTaskContext.Register(HotChocolate.Execution.IExecutionTask)">
+            <summary>
+            Registers a new execution task.
+            An execution task may register new execution tasks
+            before it has hit <see cref="M:HotChocolate.Execution.IExecutionTaskContext.Completed(HotChocolate.Execution.IExecutionTask)"/>.
+            </summary>
+            <param name="task">
+            The new execution task.
+            </param>
+        </member>
+        <member name="T:HotChocolate.Execution.VariableValue">
+            <summary>
+            Represents a variable value.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Execution.VariableValue.Name">
+            <summary>
+            Gets the variable name.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Execution.VariableValue.Type">
+            <summary>
+            Gets the variable type.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Execution.VariableValue.Value">
+            <summary>
+            Gets the variable value.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.FieldCoordinate">
+            <summary>
+            A field in graphql is uniquely located within a parent type and hence code elements
+            need to be specified using those coordinates.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.FieldCoordinate.#ctor(HotChocolate.NameString,HotChocolate.NameString,System.Nullable{HotChocolate.NameString})">
+            <summary>
+            Initializes a new instance of <see cref="T:HotChocolate.FieldCoordinate"/>.
+            </summary>
+            <param name="typeName">
+            The type name.
+            </param>
+            <param name="fieldName">
+            The field name.
+            </param>
+            <param name="argumentName">
+            The optional argument name.
+            </param>
+        </member>
+        <member name="M:HotChocolate.FieldCoordinate.Deconstruct(HotChocolate.NameString@,HotChocolate.NameString@,System.Nullable{HotChocolate.NameString}@)">
+            <summary>
+            Deconstructs this type into its parts
+            </summary>
+        </member>
+        <member name="M:HotChocolate.FieldCoordinate.CreateWithoutType(HotChocolate.NameString,System.Nullable{HotChocolate.NameString})">
+            <summary>
+            Creates a field coordinate that is missing the type name which is later filled in.
+            </summary>
+            <param name="fieldName">The field name.</param>
+            <param name="argumentName">The argument name.</param>
+            <returns></returns>
+        </member>
+        <member name="P:HotChocolate.FieldCoordinate.HasValue">
+            <summary>
+            Defines if this field coordinate is empty.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.FieldCoordinate.TypeName">
+            <summary>
+            Gets the type name to which this field coordinate is referring to.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.FieldCoordinate.FieldName">
+            <summary>
+            Gets the field name to which this field coordinate is referring to.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.FieldCoordinate.ArgumentName">
+            <summary>
+            Gets the argument name to which this field coordinate is referring to.
+            Note: the argument name can be null if the coordinate is just referring to a field.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.FieldCoordinate.With(HotChocolate.Optional{HotChocolate.NameString},HotChocolate.Optional{HotChocolate.NameString},HotChocolate.Optional{System.Nullable{HotChocolate.NameString}})">
+            <summary>
+            Create a new field coordinate based on the current one.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.FieldCoordinate.Equals(HotChocolate.FieldCoordinate)">
+            <summary>
+            Indicates whether the current field coordinate is equal
+            to another field coordinate of the same type.
+            </summary>
+            <param name="other">
+            A field coordinate to compare with this field coordinate.
+            </param>
+            <returns>
+            true if the current field coordinate is equal to the
+            <paramref name="other">other</paramref> parameter;
+            otherwise, false.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.FieldCoordinate.Equals(System.Object)">
+            <summary>
+            Indicates whether this instance and a specified object are equal.
+            </summary>
+            <param name="obj">
+            The object to compare with the current instance.
+            </param>
+            <returns>
+            true if <paramref name="obj">obj</paramref> and this instance
+            are the same type and represent the same value; otherwise, false.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.FieldCoordinate.GetHashCode">
+            <summary>
+            Returns the hash code for this instance.
+            </summary>
+            <returns>
+            A 32-bit signed integer that is the hash code for this instance.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.FieldCoordinate.ToString">
+            <summary>
+            Returns the string representation of this field coordinate.
+            </summary>
+            <returns>
+            A fully qualified field reference string.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.FieldCoordinate.op_Implicit(System.String)~HotChocolate.FieldCoordinate">
+            <summary>
+            Converts a field coordinate string into a <see cref="T:HotChocolate.FieldCoordinate"/> instance.
+            </summary>
+            <param name="s">
+            The field coordinate string.
+            </param>
+            <returns></returns>
+            <exception cref="T:System.ArgumentNullException">
+            <paramref name="s"/> is <c>null</c>.
+            </exception>
+            <exception cref="T:System.ArgumentException">
+            The format of <paramref name="s"/> is wrong.
+            </exception>
+        </member>
+        <member name="T:HotChocolate.GraphQLDeprecatedAttribute">
+            <summary>
+            Denotes a deprecated field on a GraphQL type or a
+            deprecated value on a GraphQL enum.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.GraphQLDeprecatedAttribute.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:HotChocolate.GraphQLDeprecatedAttribute"/>
+            with a specific deprecation reason.
+            </summary>
+            <param name="deprecationReason">The deprecation reason.</param>
+        </member>
+        <member name="P:HotChocolate.GraphQLDeprecatedAttribute.DeprecationReason">
+            <summary>
+            The reason the field or enum value was deprecated.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.GraphQLTypeAttribute">
+            <summary>
+            Specifies the GraphQL type.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.GraphQLTypeAttribute.#ctor(System.Type)">
+            <summary>
+            Specifies the GraphQL type.
+            </summary>
+            <param name="type">The GraphQL type.</param>
+            <exception cref="T:System.ArgumentNullException">
+            <paramref name="type"/> is <c>null</c>.
+            </exception>
+        </member>
+        <member name="M:HotChocolate.GraphQLTypeAttribute.#ctor(System.String)">
+            <summary>
+            Specifies the GraphQL type with SDL type syntax e.g. `[String!]!`.
+            </summary>
+            <param name="typeSyntax">A string representing a GraphQL type.</param>
+            <exception cref="T:System.ArgumentNullException">
+            <paramref name="typeSyntax"/> is <c>null</c>.
+            </exception>
+        </member>
+        <member name="P:HotChocolate.GraphQLTypeAttribute.Type">
+            <summary>
+            Gets the GraphQL Type.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.GraphQLTypeAttribute.TypeSyntax">
+            <summary>
+            Gets the GraphQL type syntax.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.IError">
+            <summary>
+            Represents a GraphQL execution error.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.IError.Message">
+            <summary>
+            Gets the error message.
+            This property is mandatory and cannot be null.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.IError.Code">
+            <summary>
+            Gets an error code that can be used to automatically
+            process an error.
+            This property is optional and can be null.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.IError.Path">
+            <summary>
+            Gets the path to the object that caused the error.
+            This property is optional and can be null.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.IError.Locations">
+            <summary>
+            Gets the source text positions to which this error refers to.
+            This property is optional and can be null.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.IError.Extensions">
+            <summary>
+            Gets non-spec error properties.
+            This property is optional and can be null.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.IError.Exception">
+            <summary>
+            Gets the exception associated with this error.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.IError.WithMessage(System.String)">
+            <summary>
+            Creates a new error that contains all properties of this error
+            but with the specified <paramref name="message" />.
+            </summary>
+            <param name="message">
+            The error message.
+            </param>
+            <returns>
+            Returns a new error that contains all properties of this error
+            but with the specified <paramref name="message" />.
+            </returns>
+            <exception cref="T:System.ArgumentNullException">
+            The <paramref name="message" /> is null or empty.
+            </exception>
+        </member>
+        <member name="M:HotChocolate.IError.WithCode(System.String)">
+            <summary>
+            Creates a new error that contains all properties of this error
+            but with the specified <paramref name="code" />.
+            </summary>
+            <param name="code">
+            An error code that is specified as custom error property.
+            </param>
+            <returns>
+            Returns a new error that contains all properties of this error
+            but with the specified <paramref name="code" />.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.IError.RemoveCode">
+            <summary>
+            Creates a new error that contains all properties of this error
+            but with <see cref="P:HotChocolate.IError.Code"/> removed.
+            </summary>
+            <returns>
+            Returns a new error that contains all properties of this error
+            but with <see cref="P:HotChocolate.IError.Code"/> removed.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.IError.WithPath(HotChocolate.Path)">
+            <summary>
+            Creates a new error that contains all properties of this error
+            but with the specified <paramref name="path" />.
+            </summary>
+            <param name="path">
+            A path representing a certain syntax node of a query or schema.
+            </param>
+            <returns>
+            Returns a new error that contains all properties of this error
+            but with the specified <paramref name="path" />.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.IError.WithPath(System.Collections.Generic.IReadOnlyList{System.Object})">
+            <summary>
+            Creates a new error that contains all properties of this error
+            but with the specified <paramref name="path" />.
+            </summary>
+            <param name="path">
+            A path representing a certain syntax node of a query or schema.
+            </param>
+            <returns>
+            Returns a new error that contains all properties of this error
+            but with the specified <paramref name="path" />.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.IError.RemovePath">
+            <summary>
+            Creates a new error that contains all properties of this error
+            but with the <see cref="P:HotChocolate.IError.Path"/> removed.
+            </summary>
+            <returns>
+            Returns a new error that contains all properties of this error
+            but with the <see cref="P:HotChocolate.IError.Path"/> removed.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.IError.WithLocations(System.Collections.Generic.IReadOnlyList{HotChocolate.Location})">
+            <summary>
+            Creates a new error that contains all properties of this error
+            but with the specified <paramref name="locations" />.
+            </summary>
+            <param name="locations">
+            A collection of locations referring to certain
+            syntax nodes of a query or schema.
+            </param>
+            <returns>
+            Returns a new error that contains all properties of this error
+            but with the specified <paramref name="locations" />.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.IError.RemoveLocations">
+            <summary>
+            Creates a new error that contains all properties of this error
+            but with the <see cref="P:HotChocolate.IError.Locations"/> removed.
+            </summary>
+            <returns>
+            Returns a new error that contains all properties of this error
+            but with the <see cref="P:HotChocolate.IError.Locations"/> removed.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.IError.WithExtensions(System.Collections.Generic.IReadOnlyDictionary{System.String,System.Object})">
+            <summary>
+            Creates a new error that contains all properties of this error
+            but with the specified <paramref name="extensions" />.
+            </summary>
+            <param name="extensions">
+            A collection of custom error properties.
+            </param>
+            <returns>
+            Returns a new error that contains all properties of this error
+            but with the specified <paramref name="extensions" />.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.IError.RemoveExtensions">
+            <summary>
+            Creates a new error that contains all properties of this error
+            but with the <see cref="P:HotChocolate.IError.Extensions"/> removed.
+            </summary>
+            <returns>
+            Returns a new error that contains all properties of this error
+            but with the <see cref="P:HotChocolate.IError.Extensions"/> removed.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.IError.SetExtension(System.String,System.Object)">
+            <summary>
+            Creates a new error that contains all properties of this error
+            but with and additional custom error property.
+            </summary>
+            <param name="key">The custom error property name.</param>
+            <param name="value">The value of the custom error property.</param>
+            <returns>
+            Returns a new error that contains all properties of this error
+            but with and additional custom error property.
+            </returns>
+            <exception cref="T:System.ArgumentNullException">
+            The <paramref name="key" /> is null or empty.
+            </exception>
+        </member>
+        <member name="M:HotChocolate.IError.RemoveExtension(System.String)">
+            <summary>
+            Creates a new error that contains all properties of this error
+            but with the specified additional custom error property removed.
+            </summary>
+            <param name="key">The custom error property name.</param>
+            <returns>
+            Returns a new error that contains all properties of this error
+            but with the specified additional custom error property removed.
+            </returns>
+            <exception cref="T:System.ArgumentNullException">
+            The <paramref name="key" /> is null or empty.
+            </exception>
+        </member>
+        <member name="M:HotChocolate.IError.WithException(System.Exception)">
+            <summary>
+            Creates a new error that contains all properties of this error
+            but with the specified <paramref name="exception" />.
+            </summary>
+            <param name="exception">
+            The .net exception that caused this error.
+            </param>
+            <returns>
+            Returns a new error that contains all properties of this error
+            but with the specified <paramref name="exception" />.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.IError.RemoveException">
+            <summary>
+            Creates a new error that contains all properties of this error
+            but removed the exception from it.
+            </summary>
+            <returns>
+            Returns a new error that contains all properties of this error
+            but without any exception details.
+            </returns>
+        </member>
+        <member name="T:HotChocolate.IErrorFilter">
+            <summary>
+            An error filter can handle and rewrite errors that occurred
+            during execution.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.IErrorFilter.OnError(HotChocolate.IError)">
+            <summary>
+            OnError is called whenever an error occurred during
+            execution of a query.
+            </summary>
+            <param name="error">
+            The error that occurred. This argument cannot be null.
+            </param>
+            <returns>
+            Returns the error passed in to this filter or a rewritten error.
+            It is not allowed to return null.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.IErrorHandler.CreateUnexpectedError(System.Exception)">
+            <summary>
+            Creates an error from an unexpected exception.
+            </summary>
+            <param name="exception"></param>
+            <returns></returns>
+        </member>
+        <member name="T:HotChocolate.IExecutable">
+            <summary>
+            Represents a abstract executable that is well known in the framework. If the execution
+            engine encounters a <see cref="T:HotChocolate.IExecutable"/>, it will call execute it
+            </summary>
+        </member>
+        <member name="P:HotChocolate.IExecutable.Source">
+            <summary>
+            The current state of the executable
+            </summary>
+        </member>
+        <member name="M:HotChocolate.IExecutable.ToListAsync(System.Threading.CancellationToken)">
+            <summary>
+            Executes the executable and returns a list
+            </summary>
+            <param name="cancellationToken">
+            A cancellation token that can be used to cancel the execution.
+            </param>
+            <returns>Returns a arbitrary list</returns>
+        </member>
+        <member name="M:HotChocolate.IExecutable.FirstOrDefaultAsync(System.Threading.CancellationToken)">
+            <summary>
+            Returns the first element of a sequence, or a default value if the sequence contains no
+            elements.
+            </summary>
+            <param name="cancellationToken">
+            A cancellation token that can be used to cancel the execution.
+            </param>
+            <returns>Returns the result</returns>
+        </member>
+        <member name="M:HotChocolate.IExecutable.SingleOrDefaultAsync(System.Threading.CancellationToken)">
+            <summary>
+            Returns the only element of a default value if no such element exists. This method
+            throws an exception if more than one element satisfies the condition.
+            </summary>
+            <param name="cancellationToken"></param>
+            <returns></returns>
+        </member>
+        <member name="M:HotChocolate.IExecutable.Print">
+            <summary>
+            Prints the executable in its current state
+            </summary>
+            <returns>A string that represents the executables state</returns>
+        </member>
+        <member name="T:HotChocolate.IHasContextData">
+            <summary>
+            Defines that the implementor of this interface allows to
+            access and store arbitrary context data.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.IHasContextData.ContextData">
+            <summary>
+            The context data dictionary can be used by middleware components and
+            resolvers to store and retrieve data during execution.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.IHasReadOnlyContextData.ContextData">
+            <summary>
+            The context data dictionary can be used by middleware components and
+            resolvers to store and retrieve data during execution.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.IndexerPathSegment">
+            <summary>
+            An <see cref="T:HotChocolate.IndexerPathSegment" /> represents a pointer to 
+            an list element in the result structure.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.IndexerPathSegment.Parent">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.IndexerPathSegment.Depth">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.IndexerPathSegment.Index">
+            <summary>
+            Gets the <see cref="P:HotChocolate.IndexerPathSegment.Index"/> which represents the position an element in a 
+            list of the result structure.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.IndexerPathSegment.Print">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.IndexerPathSegment.Equals(HotChocolate.Path)">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.IndexerPathSegment.GetHashCode">
+            <inheritdoc />
+        </member>
+        <member name="T:HotChocolate.IOptional">
+            <summary>
+            This interface represents a way to access optionals easier
+            without the need to know the actual value type.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.IOptional.Value">
+            <summary>
+            The name value.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.IOptional.HasValue">
+            <summary>
+            <c>true</c> if the optional has a value.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.NamePathSegment.Parent">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.NamePathSegment.Depth">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.NamePathSegment.Name">
+            <summary>
+             Gets the name representing a field on a result map.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.NamePathSegment.Print">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.NamePathSegment.Equals(HotChocolate.Path)">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.NamePathSegment.GetHashCode">
+            <inheritdoc />
+        </member>
+        <member name="T:HotChocolate.NameString">
+            <summary>
+            The type name string guarantees that a string adheres to the
+            GraphQL spec rules: /[_A-Za-z][_0-9A-Za-z]*/
+            </summary>
+        </member>
+        <member name="M:HotChocolate.NameString.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:HotChocolate.NameString"/> struct.
+            </summary>
+            <param name="value">The actual type name string</param>
+            <exception cref="T:System.ArgumentException"></exception>
+        </member>
+        <member name="P:HotChocolate.NameString.Value">
+            <summary>
+            The name value.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.NameString.HasValue">
+            <summary>
+            <c>true</c> if the name is not empty
+            </summary>
+        </member>
+        <member name="M:HotChocolate.NameString.ToString">
+            <summary>
+            Provides the name string.
+            </summary>
+            <returns>The name string value</returns>
+        </member>
+        <member name="M:HotChocolate.NameString.Add(HotChocolate.NameString)">
+            <summary>
+            Appends a <see cref="T:HotChocolate.NameString"/> to this
+            instance and returns a new instance of <see cref="T:HotChocolate.NameString"/>
+            representing the combined <see cref="T:HotChocolate.NameString"/>.
+            </summary>
+            <returns>The combined <see cref="T:HotChocolate.NameString"/>.</returns>
+        </member>
+        <member name="M:HotChocolate.NameString.Equals(HotChocolate.NameString,System.StringComparison)">
+            <summary>
+            Compares this <see cref="T:HotChocolate.NameString"/> value to another value
+            using a specific <see cref="T:System.StringComparison"/> type.
+            </summary>
+            <param name="other">
+            The second <see cref="T:HotChocolate.NameString"/> for comparison.
+            </param>
+            <param name="comparisonType">
+            The <see cref="T:System.StringComparison"/> type to use.
+            </param>
+            <returns>
+            <c>true</c> if both <see cref="T:HotChocolate.NameString"/> values are equal.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.NameString.Equals(HotChocolate.NameString)">
+            <summary>
+            Compares this <see cref="T:HotChocolate.NameString"/> value to another value using
+            <see cref="F:System.StringComparison.Ordinal"/> comparison type.
+            </summary>
+            <param name="other">
+            The second <see cref="T:HotChocolate.NameString"/> for comparison.
+            </param>
+            <returns>
+            <c>true</c> if both <see cref="T:HotChocolate.NameString"/> values are equal.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.NameString.Equals(System.Object)">
+            <summary>
+            Compares this <see cref="T:HotChocolate.NameString"/> value to another value using
+            <see cref="F:System.StringComparison.Ordinal"/> comparison.
+            </summary>
+            <param name="obj">
+            The second <see cref="T:HotChocolate.NameString"/> for comparison.
+            </param>
+            <returns>
+            <c>true</c> if both <see cref="T:HotChocolate.NameString"/> values are equal.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.NameString.GetHashCode">
+            <summary>
+            Serves as a hash function for a <see cref="T:HotChocolate.NameString"/> object.
+            </summary>
+            <returns>
+            A hash code for this instance that is suitable for use in hashing
+            algorithms and data structures such as a hash table.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.NameString.op_Equality(HotChocolate.NameString,HotChocolate.NameString)">
+            <summary>
+            Operator call through to Equals
+            </summary>
+            <param name="left">The left parameter</param>
+            <param name="right">The right parameter</param>
+            <returns>
+            <c>true</c> if both <see cref="T:HotChocolate.NameString"/> values are equal.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.NameString.op_Inequality(HotChocolate.NameString,HotChocolate.NameString)">
+            <summary>
+            Operator call through to Equals
+            </summary>
+            <param name="left">The left parameter</param>
+            <param name="right">The right parameter</param>
+            <returns>
+            <c>true</c> if both <see cref="T:HotChocolate.NameString"/> values are not equal.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.NameString.op_Addition(System.String,HotChocolate.NameString)">
+            <summary>
+            </summary>
+            <param name="left">The left parameter</param>
+            <param name="right">The right parameter</param>
+            <returns>The ToString combination of both values</returns>
+        </member>
+        <member name="M:HotChocolate.NameString.op_Addition(HotChocolate.NameString,System.String)">
+            <summary>
+            </summary>
+            <param name="left">The left parameter</param>
+            <param name="right">The right parameter</param>
+            <returns>The ToString combination of both values</returns>
+        </member>
+        <member name="M:HotChocolate.NameString.op_Addition(HotChocolate.NameString,HotChocolate.NameString)">
+            <summary>
+            Operator call through to Add
+            </summary>
+            <param name="left">The left parameter</param>
+            <param name="right">The right parameter</param>
+            <returns>
+            The <see cref="T:HotChocolate.NameString"/> combination of both values
+            </returns>
+        </member>
+        <member name="M:HotChocolate.NameString.op_Implicit(System.String)~HotChocolate.NameString">
+            <summary>
+            Implicitly creates a new <see cref="T:HotChocolate.NameString"/> from
+            the given string.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.NameString.op_Implicit(HotChocolate.NameString)~System.String">
+            <summary>
+            Implicitly calls ToString().
+            </summary>
+        </member>
+        <member name="M:HotChocolate.NameString.op_Implicit(HotChocolate.NameString)~HotChocolate.Path">
+            <summary>
+            Implicitly creates a new root path.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Optional`1">
+            <summary>
+            The optional type is used to differentiate between not set and set input values.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Optional`1.#ctor(`0)">
+            <summary>
+            Initializes a new instance of the <see cref="T:HotChocolate.Optional`1"/> struct.
+            </summary>
+            <param name="value">The actual value.</param>
+        </member>
+        <member name="P:HotChocolate.Optional`1.Value">
+            <summary>
+            The name value.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Optional`1.HasValue">
+            <summary>
+            <c>true</c> if the optional was explicitly set.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Optional`1.IsEmpty">
+            <summary>
+            <c>true</c> if the optional was not explicitly set.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Optional`1.ToString">
+            <summary>
+            Provides the name string.
+            </summary>
+            <returns>The name string value</returns>
+        </member>
+        <member name="M:HotChocolate.Optional`1.Equals(HotChocolate.Optional{`0})">
+            <summary>
+            Compares this <see cref="T:HotChocolate.Optional`1"/> value to another value.
+            </summary>
+            <param name="other">
+            The second <see cref="T:HotChocolate.Optional`1"/> for comparison.
+            </param>
+            <returns>
+            <c>true</c> if both <see cref="T:HotChocolate.Optional`1"/> values are equal.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Optional`1.Equals(System.Object)">
+            <summary>
+            Compares this <see cref="T:HotChocolate.Optional`1"/> value to another value.
+            </summary>
+            <param name="obj">
+            The second <see cref="T:HotChocolate.Optional`1"/> for comparison.
+            </param>
+            <returns>
+            <c>true</c> if both <see cref="T:HotChocolate.Optional`1"/> values are equal.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Optional`1.GetHashCode">
+            <summary>
+            Serves as a hash function for a <see cref="T:HotChocolate.Optional`1"/> object.
+            </summary>
+            <returns>
+            A hash code for this instance that is suitable for use in hashing
+            algorithms and data structures such as a hash table.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Optional`1.op_Equality(HotChocolate.Optional{`0},HotChocolate.Optional{`0})">
+            <summary>
+            Operator call through to Equals
+            </summary>
+            <param name="left">The left parameter</param>
+            <param name="right">The right parameter</param>
+            <returns>
+            <c>true</c> if both <see cref="T:HotChocolate.Optional`1"/> values are equal.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Optional`1.op_Inequality(HotChocolate.Optional{`0},HotChocolate.Optional{`0})">
+            <summary>
+            Operator call through to Equals
+            </summary>
+            <param name="left">The left parameter</param>
+            <param name="right">The right parameter</param>
+            <returns>
+            <c>true</c> if both <see cref="T:HotChocolate.Optional`1"/> values are not equal.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Optional`1.op_Implicit(`0)~HotChocolate.Optional{`0}">
+            <summary>
+            Implicitly creates a new <see cref="T:HotChocolate.Optional`1"/> from
+            the given value.
+            </summary>
+            <param name="value">The value.</param>
+        </member>
+        <member name="M:HotChocolate.Optional`1.op_Implicit(HotChocolate.Optional{`0})~`0">
+            <summary>
+            Implicitly gets the optional value.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Optional`1.Empty(`0)">
+            <summary>
+            Creates an empty optional that provides a default value.
+            </summary>
+            <param name="defaultValue">The default value.</param>
+        </member>
+        <member name="M:HotChocolate.Optional`1.From(HotChocolate.IOptional)">
+            <summary>
+            Creates a new generic optional from a non-generic optional.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.ParentAttribute">
+            <summary>
+            Specifies that a resolver parameter represents the parent object.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Path.Parent">
+            <summary>
+            Gets the parent path segment.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Path.Depth">
+            <summary>
+            Gets the count of segments this path contains.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Path.Append(System.Int32)">
+            <summary>
+            Appends an element.
+            </summary>
+            <param name="index">The index of the element.</param>
+            <returns>Returns a new path segment pointing to an element in a list.</returns>
+        </member>
+        <member name="M:HotChocolate.Path.Append(HotChocolate.NameString)">
+            <summary>
+            Appends a new path segment.
+            </summary>
+            <param name="name">The name of the path segment.</param>
+            <returns>Returns a new path segment.</returns>
+        </member>
+        <member name="M:HotChocolate.Path.Print">
+            <summary>
+            Generates a string that represents the current path.
+            </summary>
+            <returns>
+            Returns a string that represents the current path.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Path.ToList">
+            <summary>
+            Creates a new list representing the current <see cref="T:HotChocolate.Path"/>.
+            </summary>
+            <returns>
+            Returns a new list representing the current <see cref="T:HotChocolate.Path"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Path.ToString">
+            <summary>Returns a string that represents the current <see cref="T:HotChocolate.Path"/>.</summary>
+            <returns>A string that represents the current <see cref="T:HotChocolate.Path"/>.</returns>
+        </member>
+        <member name="M:HotChocolate.Path.GetHashCode">
+            <summary>
+            Serves as the default hash function.
+            </summary>
+            <returns>
+            A hash code for the current <see cref="T:HotChocolate.Path"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Path.New(HotChocolate.NameString)">
+            <summary>
+            Creates a root segment.
+            </summary>
+            <param name="name">The name of the root segment.</param>
+            <returns>
+            Returns a new root segment.
+            </returns>
+        </member>
+        <member name="P:HotChocolate.RootPathSegment.Parent">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.RootPathSegment.Depth">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.RootPathSegment.Name">
+            <summary>
+             Gets the name representing a field on a result map.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.RootPathSegment.Append(System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.RootPathSegment.Append(HotChocolate.NameString)">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.RootPathSegment.Print">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.RootPathSegment.Equals(HotChocolate.Path)">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.RootPathSegment.GetHashCode">
+            <inheritdoc />
+        </member>
+        <member name="T:HotChocolate.SchemaCoordinate">
+             <summary>
+             A <see cref="T:HotChocolate.SchemaCoordinate"/> is a human readable string that uniquely identifies a
+             schema element within a GraphQL Schema.
+             A schema element is a specific instance of a named type, field, input field, enum value,
+             field argument, directive, or directive argument.
+             A <see cref="T:HotChocolate.SchemaCoordinate"/> is always unique. Each schema element may be referenced
+             by exactly one possible schema coordinate.
+            
+             A <see cref="T:HotChocolate.SchemaCoordinate"/> may refer to either a defined or built-in schema element.
+             For example, `String` and `@deprecated(reason:)` are both valid schema coordinates which refer
+             to built-in schema elements. However it must not refer to a meta-field.
+             For example, `Business.__typename` is <b>not</b> a valid schema coordinate.
+            
+             SchemaCoordinate :
+              - Name
+              - Name . Name
+              - Name . Name ( Name : )
+              - @ Name
+              - @ Name ( Name : )
+             </summary>
+        </member>
+        <member name="M:HotChocolate.SchemaCoordinate.#ctor(HotChocolate.NameString,System.Nullable{HotChocolate.NameString},System.Nullable{HotChocolate.NameString},System.Boolean)">
+            <summary>
+            Creates a new instance of <see cref="T:HotChocolate.SchemaCoordinate"/>
+            </summary>
+            <exception cref="T:System.ArgumentNullException">
+            The <paramref name="name"/> is <c>null</c> or <see cref="F:System.String.Empty" />.
+            </exception>
+            <exception cref="T:System.ArgumentException">
+            - A directive cannot contain a <paramref name="memberName"/>.
+            - A <paramref name="argumentName"/>. without a <paramref name="memberName"/> is only allowed 
+            on directive coordinates.
+            </exception>
+        </member>
+        <member name="P:HotChocolate.SchemaCoordinate.OfDirective">
+            <summary>
+            Specifies if this <see cref="T:HotChocolate.Language.SchemaCoordinateNode"/> is a coordinate of a directive.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.SchemaCoordinate.Name">
+            <summary>
+            The name of the referenced <see cref="T:HotChocolate.Language.INamedSyntaxNode"/>
+            </summary>
+        </member>
+        <member name="P:HotChocolate.SchemaCoordinate.MemberName">
+            <summary>
+            The optional name of the referenced field or enum value
+            </summary>
+        </member>
+        <member name="P:HotChocolate.SchemaCoordinate.ArgumentName">
+            <summary>
+            The optional name of the referenced argument
+            </summary>
+        </member>
+        <member name="M:HotChocolate.SchemaCoordinate.ToSyntax">
+            <summary>
+            Gets the syntax representation of this <see cref="T:HotChocolate.SchemaCoordinate"/>.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.SchemaCoordinate.ToString">
+            <summary>
+            Gets the string representation of this <see cref="T:HotChocolate.SchemaCoordinate"/>.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.SchemaCoordinate.TryParse(System.String,System.Nullable{HotChocolate.SchemaCoordinate}@)">
+            <summary>
+            Tries to parse a <see cref="T:HotChocolate.SchemaCoordinate"/> from a <see cref="T:System.String"/>.
+            </summary>
+            <param name="s">The string that may represent a <see cref="T:HotChocolate.SchemaCoordinate"/>.</param>
+            <param name="coordinate">
+            If the string <paramref name="s"/> represented a valid schema coordinate string this 
+            will be the parsed schema coordinate.
+            </param>
+            <returns>
+            <c>true</c> if the string was a valid representation of a schema coordinate.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.SchemaCoordinate.Parse(System.String)">
+            <summary>
+            Parses a schema coordinate string representation.
+            </summary>
+            <param name="s">The schema coordinate string representation.</param>
+            <returns>
+            Returns the parses schema coordinate.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.SchemaCoordinate.FromSyntax(HotChocolate.Language.SchemaCoordinateNode)">
+            <summary>
+            Creates a <see cref="T:HotChocolate.SchemaCoordinate"/> from a <see cref="T:HotChocolate.Language.SchemaCoordinateNode"/>.
+            </summary>
+            <param name="node">
+            The syntax node.
+            </param>
+            <returns>
+            Returns the <see cref="T:HotChocolate.SchemaCoordinate"/> instance.
+            </returns>
+        </member>
+        <member name="T:HotChocolate.ScopedServiceAttribute">
+            <summary>
+            Marks a resolver parameter as a pooled service that shall be injected by the execution engine.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.ServiceAttribute">
+            <summary>
+            Marks a resolver parameter as a service that shall be injected by the execution engine.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.ServiceAttribute.#ctor(HotChocolate.ServiceKind)">
+            <summary>
+            Marks a resolver parameter as a service that shall be injected by the execution engine.
+            </summary>
+            <param name="kind">
+            The scope of the service.
+            </param>
+        </member>
+        <member name="P:HotChocolate.ServiceAttribute.Kind">
+            <summary>
+            Gets the service kind which specifies the way the service
+            shall be injected and handled by the execution engine.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.ServiceKind">
+            <summary>
+            Represents the way a service is injected and handled by the execution engine.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ServiceKind.Default">
+            <summary>
+            The execution engine will retrieve the service from a
+            <see cref="T:System.IServiceProvider" /> and inject it into the
+            annotated parameter.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ServiceKind.Synchronized">
+            <summary>
+            The service will will be retrieved from the <see cref="T:System.IServiceProvider" />
+            but can only accessed by a single resolver at a time.
+            Example for such service is for instance the Entity
+            Framework DbContext when scoped on the request.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ServiceKind.Pooled">
+            <summary>
+            A service is rented for each resolver execution.
+            Pooled services need to be registered as <see cref="T:Microsoft.Extensions.ObjectPool.ObjectPool`1"/>
+            on the resolver's <see cref="T:System.IServiceProvider" />.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.ServiceKind.Resolver">
+            <summary>
+            A service that is retrieved from a IServiceScope that is bound to the resolver
+            execution.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.SingleValueExtensionData">
+            <summary>
+            An optimized extension data dictionary for <see cref="P:HotChocolate.Execution.IExecutionResult.Extensions"/> or
+            <see cref="P:HotChocolate.Execution.IExecutionResult.ContextData"/> when only one value is needed.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.SingleValueExtensionData.#ctor(System.String,System.Object)">
+            <summary>
+            Creates a new instance of <see cref="T:HotChocolate.SingleValueExtensionData"/>.
+            </summary>
+            <param name="key">The key.</param>
+            <param name="value">The value.</param>
+        </member>
+        <member name="P:HotChocolate.SingleValueExtensionData.Count">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.SingleValueExtensionData.ContainsKey(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.SingleValueExtensionData.TryGetValue(System.String,System.Object@)">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.SingleValueExtensionData.Item(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.SingleValueExtensionData.Keys">
+            <inheritdoc />
+        </member>
+        <member name="P:HotChocolate.SingleValueExtensionData.Values">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.SingleValueExtensionData.GetEnumerator">
+            <inheritdoc />
+        </member>
+        <member name="M:HotChocolate.SingleValueExtensionData.System#Collections#IEnumerable#GetEnumerator">
+            <inheritdoc />
+        </member>
+        <member name="T:HotChocolate.Types.IHasRuntimeType">
+            <summary>
+            The implementor of this interface exposes the type it will have 
+            at runtime when manifested in the execution engine.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.IHasRuntimeType.RuntimeType">
+            <summary>
+            Gets the runtime type. 
+            The runtime type defines of which value the type is when it 
+            manifests in the execution engine.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Types.IInputType">
+             <summary>
+             Represents types that can be used as argument types or as variable types.
+             These types essentially specify the data that can be passed into a GraphQL server.
+            
+             Spec: https://spec.graphql.org/draft/#sec-Input-and-Output-Types
+             </summary>
+        </member>
+        <member name="T:HotChocolate.Types.IType">
+            <summary>
+            Represents a GraphQL type.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.IType.Kind">
+            <summary>
+            Gets the type kind.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Types.ITypeSystemMember">
+            <summary>
+            This marker interface identifies member of the type system like
+            types, directives, the schema or fields and arguments.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Types.TypeKind">
+            <summary>
+            Specifies the GraphQL type kind.
+            </summary>
+        </member>
+        <!-- Badly formed XML comment ignored for member "F:HotChocolate.Types.TypeKind.Interface" -->
+        <member name="F:HotChocolate.Types.TypeKind.Object">
+             <summary>
+             GraphQL operations are hierarchical and composed, describing a tree of information.
+             While Scalar types describe the leaf values of these hierarchical operations,
+             Objects describe the intermediate levels.
+            
+             GraphQL Objects represent a list of named fields, each of which yield a value of a
+             specific type. Object values should be serialized as ordered maps, where the selected
+             field names (or aliases) are the keys and the result of evaluating the field is the value,
+             ordered by the order in which they appear in the selection set.
+            
+             All fields defined within an Object type must not have a name which begins
+             with "__" (two underscores), as this is used exclusively by
+             GraphQL’s introspection system.
+             </summary>
+        </member>
+        <member name="F:HotChocolate.Types.TypeKind.Union">
+             <summary>
+             GraphQL Unions represent an object that could be one of a list of GraphQL Object types,
+             but provides for no guaranteed fields between those types.
+             They also differ from interfaces in that Object types declare what interfaces
+             they implement, but are not aware of what unions contain them.
+            
+             With interfaces and objects, only those fields defined on the type can be queried directly;
+             to query other fields on an interface, typed fragments must be used.
+             This is the same as for unions, but unions do not define any fields,
+             so no fields may be queried on this type without the use of type refining
+             fragments or inline fragments (with the exception of the meta-field __typename).
+            
+             For example, we might define the following types:
+            
+             <code>
+             union SearchResult = Photo | Person
+            
+             type Person {
+               name: String
+               age: Int
+             }
+            
+             type Photo {
+               height: Int
+               width: Int
+             }
+            
+             type SearchQuery {
+               firstSearchResult: SearchResult
+             }
+             </code>
+             </summary>
+        </member>
+        <member name="F:HotChocolate.Types.TypeKind.InputObject">
+             <summary>
+             A GraphQL Input Object defines a set of input fields; the input fields are either scalars,
+             enums, or other input objects. This allows arguments to accept arbitrarily complex structs.
+            
+             In this example, an Input Object called Point2D describes x and y inputs:
+            
+             <code>
+             input Point2D {
+               x: Float
+               y: Float
+             }
+             </code>
+             </summary>
+        </member>
+        <member name="F:HotChocolate.Types.TypeKind.Enum">
+             <summary>
+             GraphQL Enum types, like Scalar types, also represent leaf values in a GraphQL type system.
+             However Enum types describe the set of possible values.
+            
+             Enums are not references for a numeric value, but are unique values in their own right.
+             They may serialize as a string: the name of the represented value.
+            
+             In this example, an Enum type called Direction is defined:
+            
+             <code>
+             enum Direction {
+               NORTH
+               EAST
+               SOUTH
+               WEST
+             }
+             </code>
+             </summary>
+        </member>
+        <member name="F:HotChocolate.Types.TypeKind.Scalar">
+            <summary>
+            Scalar types represent primitive leaf values in a GraphQL type system.
+            GraphQL responses take the form of a hierarchical tree;
+            the leaves on these trees are GraphQL scalars.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Types.TypeKind.List">
+            <summary>
+            Indicates this type is a list. `ofType` is a valid field.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Types.TypeKind.NonNull">
+            <summary>
+            Indicates this type is a non-null. `ofType` is a valid field.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.Types.TypeKind.Directive">
+             <summary>
+             A GraphQL schema describes directives which are used to annotate various parts of a
+             GraphQL document as an indicator that they should be evaluated differently by a
+             validator, executor, or client tool such as a code generator.
+            
+             http://spec.graphql.org/draft/#sec-Type-System.Directives
+             </summary>
+        </member>
+        <member name="T:HotChocolate.WellKnownContextData">
+            <summary>
+            Provides keys for well-known context data.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownContextData.EventMessage">
+            <summary>
+            The key for storing the event message / event payload to the context data.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownContextData.Subscription">
+            <summary>
+            The key for storing the subscription object to the context data.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownContextData.EnableTracing">
+            <summary>
+            The key for storing the enable tracing flag to the context data.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownContextData.DocumentSaved">
+            <summary>
+            The key for setting a flag the a document was saved to the persisted query storage.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownContextData.ValidationErrors">
+            <summary>
+            The key for setting a flag that the execution had document validation errors.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownContextData.OperationNotAllowed">
+            <summary>
+            The key for setting a flag that an operation was not allowed during request execution.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownContextData.IntrospectionAllowed">
+            <summary>
+            The key for setting a flag that introspection is allowed for this request.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownContextData.IntrospectionMessage">
+            <summary>
+            The key for setting a message that is being used when introspection is not allowed.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownContextData.SkipComplexityAnalysis">
+            <summary>
+            Signals that the complexity analysis shall be skipped.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownContextData.OperationComplexity">
+            <summary>
+            The key for setting the operation complexity.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownContextData.MaximumAllowedComplexity">
+            <summary>
+            The key for setting the maximum operation complexity.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownContextData.IncludeQueryPlan">
+            <summary>
+            Includes the query plan into the response.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownContextData.ResolverConfigs">
+            <summary>
+            The key for setting resolver configurations.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownContextData.ResolverTypes">
+            <summary>
+            The key for setting resolver types.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownContextData.RuntimeTypes">
+            <summary>
+            The key for setting runtime types.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownContextData.RootInstance">
+            <summary>
+            The key for setting root instances.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownContextData.ResolverServiceScope">
+            <summary>
+            The key identifies the resolver scope on the local context.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownContextData.RequestExecutor">
+            <summary>
+            The key to the current executor.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownContextData.SchemaName">
+            <summary>
+            The key to the current schema name.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownContextData.Schema">
+            <summary>
+            The key to the current schema.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.WellKnownMiddleware">
+            <summary>
+            Provides keys that identify well-known middleware components.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownMiddleware.Paging">
+            <summary>
+            This key identifies the paging middleware.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownMiddleware.Projection">
+            <summary>
+            This key identifies the projection middleware.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownMiddleware.Filtering">
+            <summary>
+            This key identifies the filtering middleware.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownMiddleware.Sorting">
+            <summary>
+            This key identifies the sorting middleware.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownMiddleware.DataLoader">
+            <summary>
+            This key identifies the DataLoader middleware.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownMiddleware.GlobalId">
+            <summary>
+            This key identifies the relay global ID middleware.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownMiddleware.SingleOrDefault">
+            <summary>
+            This key identifies the single or default middleware.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownMiddleware.DbContext">
+            <summary>
+            This key identifies the DbContext middleware.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownMiddleware.ToList">
+            <summary>
+            This key identifies the ToList middleware.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownMiddleware.ResolverServiceScope">
+            <summary>
+            The key identifies the resolver service scope middleware.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownMiddleware.PooledService">
+            <summary>
+            This key identifies a pooled service middleware.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownMiddleware.ResolverService">
+            <summary>
+            This key identifies a resolver service middleware.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownMiddleware.MutationArguments">
+            <summary>
+            This key identifies the mutation convention middleware.
+            </summary>
+        </member>
+        <member name="F:HotChocolate.WellKnownMiddleware.MutationErrors">
+            <summary>
+            This key identifies the mutation convention middleware.
+            </summary>
+        </member>
+    </members>
+</doc>

@@ -505,7 +505,7 @@ namespace Azure.DataApiBuilder.Core.Services.OpenAPI
                 Content = new Dictionary<string, OpenApiMediaType>()
                 {
                     {
-                        MediaTypeNames.Application.Json,
+                        MediaTypeNames.Application.Pdf,
                         new()
                         {
                             Schema = new OpenApiSchema()
@@ -545,7 +545,7 @@ namespace Azure.DataApiBuilder.Core.Services.OpenAPI
 
                 if (_metadataProvider.TryGetExposedColumnName(entityName, column, out string? mappedColumnAlias) && !string.IsNullOrEmpty(mappedColumnAlias))
                 {
-                    columnNameForComponent = mappedColumnAlias;
+                    columnNameForComponent = mappedColumnAlias!;
                 }
 
                 // The SourceDefinition's Columns dictionary keys represent the original (unmapped) column names. 
@@ -651,7 +651,7 @@ namespace Azure.DataApiBuilder.Core.Services.OpenAPI
             string entityRestPath = entityName;
             EntityRestOptions entityRestSettings = _runtimeConfig.Entities[entityName].Rest;
 
-            if (!string.IsNullOrEmpty(entityRestSettings.Path) && entityRestSettings.Path.StartsWith('/'))
+            if (!string.IsNullOrEmpty(entityRestSettings.Path) && entityRestSettings.Path!.StartsWith("/"))
             {
                 // Remove slash from start of rest path.
                 entityRestPath = entityRestPath.Substring(1);
@@ -682,8 +682,8 @@ namespace Azure.DataApiBuilder.Core.Services.OpenAPI
                 Dictionary<string, OpenApiMediaType> contentDictionary = new()
                 {
                     {
-                        MediaTypeNames.Application.Json,
-                        CreateResponseContainer(responseObjectSchemaName, includeNextLink)
+                        MediaTypeNames.Application.Pdf,
+                        CreateResponseContainer(responseObjectSchemaName!, includeNextLink)
                     }
                 };
                 response.Content = contentDictionary;

@@ -1,0 +1,716 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>HotChocolate.Types.OffsetPagination</name>
+    </assembly>
+    <members>
+        <member name="T:System.Diagnostics.CodeAnalysis.AllowNullAttribute">
+            <summary>Specifies that null is allowed as an input even if the corresponding type disallows it.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.DisallowNullAttribute">
+            <summary>Specifies that null is disallowed as an input even if the corresponding type allows it.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.MaybeNullAttribute">
+            <summary>Specifies that an output may be null even if the corresponding type disallows it.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.NotNullAttribute">
+            <summary>Specifies that an output will not be null even if the corresponding type allows it.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.MaybeNullWhenAttribute">
+            <summary>Specifies that when a method returns <see cref="P:System.Diagnostics.CodeAnalysis.MaybeNullWhenAttribute.ReturnValue"/>, the parameter may be null even if the corresponding type disallows it.</summary>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.MaybeNullWhenAttribute.#ctor(System.Boolean)">
+            <summary>Initializes the attribute with the specified return value condition.</summary>
+            <param name="returnValue">
+            The return value condition. If the method returns this value, the associated parameter may be null.
+            </param>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.MaybeNullWhenAttribute.ReturnValue">
+            <summary>Gets the return value condition.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.NotNullWhenAttribute">
+            <summary>Specifies that when a method returns <see cref="P:System.Diagnostics.CodeAnalysis.NotNullWhenAttribute.ReturnValue"/>, the parameter will not be null even if the corresponding type allows it.</summary>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.NotNullWhenAttribute.#ctor(System.Boolean)">
+            <summary>Initializes the attribute with the specified return value condition.</summary>
+            <param name="returnValue">
+            The return value condition. If the method returns this value, the associated parameter will not be null.
+            </param>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.NotNullWhenAttribute.ReturnValue">
+            <summary>Gets the return value condition.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.NotNullIfNotNullAttribute">
+            <summary>Specifies that the output will be non-null if the named parameter is non-null.</summary>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.NotNullIfNotNullAttribute.#ctor(System.String)">
+            <summary>Initializes the attribute with the associated parameter name.</summary>
+            <param name="parameterName">
+            The associated parameter name.  The output will be non-null if the argument to the parameter specified is non-null.
+            </param>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.NotNullIfNotNullAttribute.ParameterName">
+            <summary>Gets the associated parameter name.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.DoesNotReturnAttribute">
+            <summary>Applied to a method that will never return under any circumstance.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.DoesNotReturnIfAttribute">
+            <summary>Specifies that the method will not return if the associated Boolean parameter is passed the specified value.</summary>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.DoesNotReturnIfAttribute.#ctor(System.Boolean)">
+            <summary>Initializes the attribute with the specified parameter value.</summary>
+            <param name="parameterValue">
+            The condition parameter value. Code after the method will be considered unreachable by diagnostics if the argument to
+            the associated parameter matches this value.
+            </param>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.DoesNotReturnIfAttribute.ParameterValue">
+            <summary>Gets the condition parameter value.</summary>
+        </member>
+        <member name="T:HotChocolate.Types.Pagination.CollectionSegment">
+            <summary>
+            The collection segment represents one page of a pageable dataset / collection.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.CollectionSegment.#ctor(System.Collections.Generic.IReadOnlyCollection{System.Object},HotChocolate.Types.Pagination.CollectionSegmentInfo,System.Func{System.Threading.CancellationToken,System.Threading.Tasks.ValueTask{System.Int32}})">
+            <summary>
+            Initializes <see cref="T:HotChocolate.Types.Pagination.CollectionSegment" />.
+            </summary>
+            <param name="items">
+            The items that belong to this page.
+            </param>
+            <param name="info">
+            Additional information about this page.
+            </param>
+            <param name="getTotalCount">
+            A delegate to request the the total count.
+            </param>
+        </member>
+        <member name="P:HotChocolate.Types.Pagination.CollectionSegment.Items">
+            <summary>
+            The items that belong to this page.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.Pagination.CollectionSegment.Info">
+            <summary>
+            Gets more information about this page.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.CollectionSegment.GetTotalCountAsync(System.Threading.CancellationToken)">
+            <summary>
+            Requests the total count of the data set / collection that is being paged.
+            </summary>
+            <param name="cancellationToken">
+            The cancellation token.
+            </param>
+            <returns>
+            The total count of the data set / collection.
+            </returns>
+        </member>
+        <member name="T:HotChocolate.Types.Pagination.CollectionSegmentCountType`1">
+            <summary>
+            The collection segment type with additional total count field.
+            </summary>
+            <typeparam name="T">
+            The item type.
+            </typeparam>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.CollectionSegmentCountType`1.#ctor">
+            <summary>
+            Initializes <see cref="T:HotChocolate.Types.Pagination.CollectionSegmentCountType`1" />.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.CollectionSegmentCountType`1.#ctor(System.Action{HotChocolate.Types.IObjectTypeDescriptor{HotChocolate.Types.Pagination.CollectionSegment}})">
+            <summary>
+            Initializes <see cref="T:HotChocolate.Types.Pagination.CollectionSegmentCountType`1" />.
+            </summary>
+            <param name="configure">
+            A delegate adding more configuration to the type.
+            </param>
+        </member>
+        <member name="T:HotChocolate.Types.Pagination.CollectionSegmentInfo">
+            <summary>
+            Represents the offset paging page info. 
+            This class provides additional information about the selected page.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.CollectionSegmentInfo.#ctor(System.Boolean,System.Boolean)">
+            <summary>
+            Initializes <see cref="T:HotChocolate.Types.Pagination.CollectionSegmentCountType`1" />.
+            </summary>
+            <param name="hasNextPage"></param>
+            <param name="hasPreviousPage"></param>
+        </member>
+        <member name="P:HotChocolate.Types.Pagination.CollectionSegmentInfo.HasNextPage">
+            <summary>
+            <c>true</c> if there is another page after the current one.
+            <c>false</c> if this page is the last page of the current data set / collection.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.Pagination.CollectionSegmentInfo.HasPreviousPage">
+            <summary>
+            <c>true</c> if there is before this page.
+            <c>false</c> if this page is the first page in the current data set / collection.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Types.Pagination.CollectionSegmentInfoType">
+            <summary>
+            Specifies the page info for a <see cref="T:HotChocolate.Types.Pagination.CollectionSegment"/>.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.CollectionSegmentType`1.#ctor">
+            <summary>
+            Initializes <see cref="T:HotChocolate.Types.Pagination.CollectionSegmentType`1" />.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.CollectionSegmentType`1.#ctor(System.Action{HotChocolate.Types.IObjectTypeDescriptor{HotChocolate.Types.Pagination.CollectionSegment}})">
+            <summary>
+            Initializes <see cref="T:HotChocolate.Types.Pagination.CollectionSegmentType`1" />.
+            </summary>
+            <param name="configure">
+            A delegate adding more configuration to the type.
+            </param>
+        </member>
+        <member name="P:HotChocolate.Types.Pagination.CollectionSegmentType`1.ItemType">
+            <summary>
+            Gets the item type of this collection segment.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Types.Pagination.CollectionSegment`1">
+            <summary>
+            The collection segment represents one page of a pageable dataset / collection.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.CollectionSegment`1.#ctor(System.Collections.Generic.IReadOnlyCollection{`0},HotChocolate.Types.Pagination.CollectionSegmentInfo,System.Func{System.Threading.CancellationToken,System.Threading.Tasks.ValueTask{System.Int32}})">
+            <summary>
+            Initializes <see cref="T:HotChocolate.Types.Pagination.CollectionSegment" />.
+            </summary>
+            <param name="items">
+            The items that belong to this page.
+            </param>
+            <param name="info">
+            Additional information about this page.
+            </param>
+            <param name="getTotalCount">
+            A delegate to request the the total count.
+            </param>
+        </member>
+        <member name="P:HotChocolate.Types.Pagination.CollectionSegment`1.Items">
+            <summary>
+            The items that belong to this page.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Types.Pagination.CollectionSegment`1.CollectionWrapper">
+            <summary>
+            This wrapper is used to be able to pass along the items collection to the base class
+            which demands <see cref="T:System.Collections.Generic.IReadOnlyCollection`1"/>.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.CursorPaginationResolverContextExtensions.IsTotalCountSelected(HotChocolate.Resolvers.IResolverContext)">
+             <summary>
+             TotalCount is one of the heaviest operations. It is only necessary to load totalCount
+             when it is enabled (IncludeTotalCount) and when it is contained in the selection set.
+            
+             This method checks if the total count is selected
+             </summary>
+             <param name="context"></param>
+             <returns></returns>
+        </member>
+        <member name="T:HotChocolate.Types.Pagination.Extensions.OffsetPagingQueryableExtensions">
+            <summary>
+            Provides offset paging extensions to <see cref="T:System.Linq.IQueryable`1"/>.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.Extensions.OffsetPagingQueryableExtensions.ApplyOffsetPaginationAsync``1(System.Linq.IQueryable{``0},System.Nullable{System.Int32},System.Nullable{System.Int32},System.Threading.CancellationToken)">
+            <summary>
+            Applies the offset pagination algorithm to the <paramref name="query"/>.
+            </summary>
+            <param name="query">
+            The query on which the the offset pagination algorithm shall be applied to.
+            </param>
+            <param name="skip">
+            Bypasses a _n_ elements from the list..
+            </param>
+            <param name="take">
+            Returns the last _n_ elements from the list.
+            </param>
+            <param name="cancellationToken">
+            The cancellation token.
+            </param>
+            <typeparam name="TEntity">
+            The entity type.
+            </typeparam>
+            <returns>
+            Returns a collection segment instance that represents the result of applying the
+            offset paging algorithm to the provided <paramref name="query"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.Extensions.OffsetPagingQueryableExtensions.ApplyOffsetPaginationAsync``1(System.Linq.IQueryable{``0},HotChocolate.Types.Pagination.OffsetPagingArguments,System.Threading.CancellationToken)">
+            <summary>
+            Applies the offset pagination algorithm to the <paramref name="query"/>.
+            </summary>
+            <param name="query">
+            The query on which the the offset pagination algorithm shall be applied to.
+            </param>
+            <param name="arguments">
+            The offset paging arguments.
+            </param>
+            <param name="cancellationToken">
+            The cancellation token.
+            </param>
+            <typeparam name="TEntity">
+            The entity type.
+            </typeparam>
+            <returns>
+            Returns a collection segment instance that represents the result of applying the
+            offset paging algorithm to the provided <paramref name="query"/>.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.Extensions.OffsetPagingQueryableExtensions.ApplyOffsetPaginationAsync``1(System.Linq.IQueryable{``0},HotChocolate.Resolvers.IResolverContext,System.Nullable{System.Int32},System.Nullable{System.Int32},System.Threading.CancellationToken)">
+            <summary>
+            Applies the offset pagination algorithm to the <paramref name="query"/>.
+            </summary>
+            <param name="query">
+            The query on which the the offset pagination algorithm shall be applied to.
+            </param>
+            <param name="context">
+            The field resolver context.
+            </param>
+            <param name="defaultPageSize">
+            The default page size if no boundaries are set.
+            </param>
+            <param name="totalCount">
+            The total count if already known.
+            </param>
+            <param name="cancellationToken">
+            The cancellation token.
+            </param>
+            <typeparam name="TEntity">
+            The entity type.
+            </typeparam>
+            <returns>
+            Returns a collection segment instance that represents the result of applying the
+            offset paging algorithm to the provided <paramref name="query"/>.
+            </returns>
+        </member>
+        <member name="T:HotChocolate.Types.Pagination.OffsetPaginationAlgorithm`2">
+            <summary>
+            This base class is a helper class for offset paging handlers and contains the basic
+            algorithm for offset pagination.
+            </summary>
+            <typeparam name="TQuery">
+            The type representing the query builder.
+            </typeparam>
+            <typeparam name="TEntity">
+            The entity type.
+            </typeparam>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.OffsetPaginationAlgorithm`2.ApplyPaginationAsync(`0,HotChocolate.Types.Pagination.OffsetPagingArguments,System.Threading.CancellationToken)">
+            <summary>
+            Applies the pagination algorithm to the provided data.
+            </summary>
+            <param name="query">The query builder.</param>
+            <param name="arguments">The paging arguments.</param>
+            <param name="cancellationToken">The cancellation token.</param>
+            <returns></returns>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.OffsetPaginationAlgorithm`2.ApplyPaginationAsync(`0,HotChocolate.Types.Pagination.OffsetPagingArguments,System.Nullable{System.Int32},System.Threading.CancellationToken)">
+            <summary>
+            Applies the pagination algorithm to the provided data.
+            </summary>
+            <param name="query">The query builder.</param>
+            <param name="arguments">The paging arguments.</param>
+            <param name="totalCount">Specify the total amount of elements</param>
+            <param name="cancellationToken">The cancellation token.</param>
+            <returns></returns>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.OffsetPaginationAlgorithm`2.ApplySkip(`0,System.Int32)">
+            <summary>
+            Override this method to apply a skip on top of the provided query.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.OffsetPaginationAlgorithm`2.ApplyTake(`0,System.Int32)">
+            <summary>
+            Override this method to apply a take (limit) on top of the provided query.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.OffsetPaginationAlgorithm`2.CountAsync(`0,System.Threading.CancellationToken)">
+            <summary>
+            Override this to implement a count function on top of the provided query.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.OffsetPaginationAlgorithm`2.ExecuteAsync(`0,System.Threading.CancellationToken)">
+            <summary>
+            Override this to implement the query execution.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Types.Pagination.OffsetPagingArguments">
+            <summary>
+            The offset paging argument values provided by the user.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.OffsetPagingArguments.#ctor(System.Nullable{System.Int32},System.Nullable{System.Int32})">
+            <summary>
+            Initializes <see cref="T:HotChocolate.Types.Pagination.OffsetPagingArguments" />.
+            </summary>
+            <param name="skip">
+            The items that shall be skipped.
+            </param>
+            <param name="take">
+            The count of items that shall be included into the page.
+            </param>
+        </member>
+        <member name="P:HotChocolate.Types.Pagination.OffsetPagingArguments.Skip">
+            <summary>
+            The items that shall be skipped.
+            </summary>
+            <value></value>
+        </member>
+        <member name="P:HotChocolate.Types.Pagination.OffsetPagingArguments.Take">
+            <summary>
+            The count of items that shall be included into the page.
+            </summary>
+            <value></value>
+        </member>
+        <member name="T:HotChocolate.Types.Pagination.OffsetPagingHandler">
+             <summary>
+             Represents an offset paging handler, which can be implemented to
+             create optimized pagination for data sources.
+            
+             The paging handler will be used by the paging middleware to slice the data.
+             </summary>
+        </member>
+        <member name="P:HotChocolate.Types.Pagination.OffsetPagingHandler.DefaultPageSize">
+            <summary>
+            The default page size configured for this handler.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.Pagination.OffsetPagingHandler.MaxPageSize">
+            <summary>
+            The maximum allowed page size configured for this handler.
+            </summary>
+            <value></value>
+        </member>
+        <member name="P:HotChocolate.Types.Pagination.OffsetPagingHandler.IncludeTotalCount">
+            <summary>
+            Result should include total count.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.Pagination.OffsetPagingHandler.RequirePagingBoundaries">
+            <summary>
+            Defines if the paging middleware shall require the
+            API consumer to specify paging boundaries.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.OffsetPagingHandler.ValidateContext(HotChocolate.Resolvers.IResolverContext)">
+            <summary>
+            Ensures that the arguments passed in by the user are valid and
+            do not try to consume more items per page as specified by
+            <see cref="P:HotChocolate.Types.Pagination.OffsetPagingHandler.MaxPageSize"/>.
+            </summary>
+            <param name="context">
+            The resolver context of the execution field.
+            </param>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.OffsetPagingHandler.SliceAsync(HotChocolate.Resolvers.IResolverContext,System.Object,HotChocolate.Types.Pagination.OffsetPagingArguments)">
+            <summary>
+            The algorithm defining how to slice data of the specified <paramref name="source"/>.
+            </summary>
+            <param name="context">
+            The resolver context of the execution field.
+            </param>
+            <param name="source">
+            The object representing the data source, collection, or query builder.
+            </param>
+            <param name="arguments">
+            The paging arguments provided by the user.
+            </param>
+            <returns>
+            The <see cref="T:HotChocolate.Types.Pagination.CollectionSegment"/> representing
+            the slice of items belonging to the requested page.
+            </returns>
+        </member>
+        <member name="T:HotChocolate.Types.Pagination.OffsetPagingProvider">
+            <summary>
+            Represents an offset paging provider, which can be implemented to 
+            create optimized pagination for data sources. 
+            
+            The paging provider will be used by the configuration to choose 
+            the right paging handler for executing the field.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.OffsetPagingProvider.CanHandle(HotChocolate.Internal.IExtendedType)">
+            <summary>
+            Specifies if this paging provider can handle the specified <see cref="!:source"/>.
+            </summary>
+            <param name="source">
+            The source type represents the result of the field resolver and could be a collection, 
+            a query builder or some other object representing the data set.
+            </param>
+        </member>
+        <member name="M:HotChocolate.Types.Pagination.OffsetPagingProvider.CreateHandler(HotChocolate.Internal.IExtendedType,HotChocolate.Types.Pagination.PagingOptions)">
+            <summary>
+            Creates the paging handler for offset pagination.
+            </summary>
+            <param name="source">
+            The source type represents the result of the field resolver and could be a collection, 
+            a query builder or some other object representing the data set.
+            </param>
+            <param name="options">
+            The paging settings that apply to the newly create paging handler.
+            </param>
+            <returns>
+            Returns the paging handler that was create for the specified <paramref name="source"/>.
+            </returns>
+        </member>
+        <member name="T:HotChocolate.Types.Pagination.QueryableOffsetPagingHandler`1">
+            <summary>
+            Represents the default paging handler for in-memory collections and queryables.
+            </summary>
+            <typeparam name="TEntity">
+            The entity type.
+            </typeparam>
+        </member>
+        <member name="T:HotChocolate.Types.Pagination.QueryableOffsetPagingProvider">
+            <summary>
+            Represents the default paging provider for in-memory collections or queryables.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Types.GetOffsetPagingProvider">
+            <summary>
+            A delegate to resolve the optimal paging provider
+            for the specified <paramref name="sourceType"/>.
+            </summary>
+            <param name="services">
+            The application services.
+            </param>
+            <param name="sourceType">
+            The source type.
+            </param>
+            <param name="providerName">
+            The paging provider name that shall be selected.
+            </param>
+            <returns>
+            Returns a paging provider for the specified <paramref name="sourceType"/>.
+            </returns>
+        </member>
+        <member name="T:HotChocolate.Types.OffsetPagingObjectFieldDescriptorExtensions">
+            <summary>
+            Provides offset paging extensions to <see cref="T:HotChocolate.Types.IObjectFieldDescriptor"/> and
+            <see cref="T:HotChocolate.Types.IInterfaceFieldDescriptor"/>.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Types.OffsetPagingObjectFieldDescriptorExtensions.UseOffsetPaging``1(HotChocolate.Types.IObjectFieldDescriptor,System.Type,HotChocolate.Types.GetOffsetPagingProvider,HotChocolate.Types.Pagination.PagingOptions)">
+            <summary>
+            Applies the offset paging middleware to the current field.
+            </summary>
+            <param name="descriptor">
+            The object field descriptor.
+            </param>
+            <param name="itemType">
+            The item type.
+            </param>
+            <param name="resolvePagingProvider">
+            A delegate allowing to dynamically define a paging resolver for a field.
+            </param>
+            <param name="options">
+            The paging settings that shall be applied to this field.
+            </param>
+            <typeparam name="TSchemaType">
+            The schema type representation of the item type.
+            </typeparam>
+            <returns>
+            Returns the field descriptor for chaining in other configurations.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Types.OffsetPagingObjectFieldDescriptorExtensions.UseOffsetPaging(HotChocolate.Types.IObjectFieldDescriptor,System.Type,System.Type,HotChocolate.Types.GetOffsetPagingProvider,HotChocolate.Types.Pagination.PagingOptions)">
+            <summary>
+            Applies the offset paging middleware to the current field.
+            </summary>
+            <param name="descriptor">
+            The object field descriptor.
+            </param>
+            <param name="itemType">
+            The schema type representation of the item.
+            </param>
+            <param name="entityType">
+            The entity type represents the runtime type of the item.
+            </param>
+            <param name="resolvePagingProvider">
+            A delegate allowing to dynamically define a paging resolver for a field.
+            </param>
+            <param name="options">
+            The paging settings that shall be applied to this field.
+            </param>
+            <returns>
+            Returns the field descriptor for chaining in other configurations.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Types.OffsetPagingObjectFieldDescriptorExtensions.UseOffsetPaging``1(HotChocolate.Types.IInterfaceFieldDescriptor,HotChocolate.Types.Pagination.PagingOptions)">
+            <summary>
+            Applies the offset paging middleware to the current field.
+            </summary>
+            <param name="descriptor">
+            The object field descriptor.
+            </param>
+            <param name="options">
+            The paging settings that shall be applied to this field.
+            </param>
+            <typeparam name="TSchemaType">
+            The schema type representation of the item type.
+            </typeparam>
+            <returns>
+            Returns the field descriptor for chaining in other configurations.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Types.OffsetPagingObjectFieldDescriptorExtensions.UseOffsetPaging(HotChocolate.Types.IInterfaceFieldDescriptor,System.Type,HotChocolate.Types.Pagination.PagingOptions)">
+            <summary>
+            Applies the offset paging middleware to the current field.
+            </summary>
+            <param name="descriptor">
+            The object field descriptor.
+            </param>
+            <param name="type">
+            The schema type representation of the item type.
+            </param>
+            <param name="options">
+            The paging settings that shall be applied to this field.
+            </param>
+            <returns>
+            Returns the field descriptor for chaining in other configurations.
+            </returns>
+        </member>
+        <member name="M:HotChocolate.Types.OffsetPagingObjectFieldDescriptorExtensions.AddOffsetPagingArguments(HotChocolate.Types.IObjectFieldDescriptor)">
+            <summary>
+            Adds the offset paging arguments to an object field.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Types.OffsetPagingObjectFieldDescriptorExtensions.AddOffsetPagingArguments(HotChocolate.Types.IInterfaceFieldDescriptor)">
+            <summary>
+            Adds the offset paging arguments to an interface field.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Types.UseOffsetPagingAttribute">
+            <summary>
+            This attribute adds the offset paging middleware to the annotated method or property.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Types.UseOffsetPagingAttribute.#ctor(System.Type,System.Int32)">
+            <summary>
+            Applies the offset paging middleware to the annotated property.
+            </summary>
+            <param name="type">
+            The schema type representing the item type.
+            </param>
+            <param name="order">
+            The explicit order priority for this attribute.
+            </param>
+        </member>
+        <member name="P:HotChocolate.Types.UseOffsetPagingAttribute.Type">
+            <summary>
+            The schema type representation of the item type.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.UseOffsetPagingAttribute.DefaultPageSize">
+            <summary>
+            Specifies the default page size for this field.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.UseOffsetPagingAttribute.MaxPageSize">
+            <summary>
+            Specifies the maximum allowed page size.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.UseOffsetPagingAttribute.IncludeTotalCount">
+            <summary>
+            Include the total count field to the result type.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.UseOffsetPagingAttribute.RequirePagingBoundaries">
+            <summary>
+            Defines if the paging middleware shall require the
+            API consumer to specify paging boundaries.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Types.UseOffsetPagingAttribute.ProviderName">
+            <summary>
+            Specifies the name of the paging provider that shall be used.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Extensions.DependencyInjection.OffsetPagingRequestExecutorBuilderExtension">
+            <summary>
+            GraphQL Configurations for offset pagination.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Extensions.DependencyInjection.OffsetPagingRequestExecutorBuilderExtension.AddQueryableOffsetPagingProvider(HotChocolate.Execution.Configuration.IRequestExecutorBuilder,System.String,System.Boolean)">
+            <summary>
+            Adds the queryable offset paging provider to the DI.
+            </summary>
+            <param name="builder">
+            The request executor builder.
+            </param>
+            <param name="providerName">
+            The name the provider shall have.
+            </param>
+            <param name="defaultProvider">
+            Defines if the registered provider shall be registered as the default provider.
+            </param>
+            <returns>
+            The request executor builder.
+            </returns>
+            <exception cref="T:System.ArgumentNullException">
+            <paramref name="builder"/> is <c>null</c>.
+            </exception>
+        </member>
+        <member name="M:Microsoft.Extensions.DependencyInjection.OffsetPagingRequestExecutorBuilderExtension.AddOffsetPagingProvider``1(HotChocolate.Execution.Configuration.IRequestExecutorBuilder,System.String,System.Boolean)">
+            <summary>
+            Adds a offset paging provider to the DI.
+            </summary>
+            <param name="builder">
+            The request executor builder.
+            </param>
+            <param name="providerName">
+            The name the provider shall have.
+            </param>
+            <param name="defaultProvider">
+            Defines if the registered provider shall be registered as the default provider.
+            </param>
+            <typeparam name="TProvider">
+            The type of the provider.
+            </typeparam>
+            <returns>
+            The request executor builder.
+            </returns>
+            <exception cref="T:System.ArgumentNullException">
+            <paramref name="builder"/> is <c>null</c>.
+            </exception>
+        </member>
+        <member name="M:Microsoft.Extensions.DependencyInjection.OffsetPagingRequestExecutorBuilderExtension.AddOffsetPagingProvider``1(HotChocolate.Execution.Configuration.IRequestExecutorBuilder,System.Func{System.IServiceProvider,``0},System.String,System.Boolean)">
+            <summary>
+            Adds a offset paging provider to the DI.
+            </summary>
+            <param name="builder">
+            The request executor builder.
+            </param>
+            <param name="factory">
+            A factory to create the paging provider.
+            </param>
+            <param name="providerName">
+            The name the provider shall have.
+            </param>
+            <param name="defaultProvider">
+            Defines if the registered provider shall be registered as the default provider.
+            </param>
+            <typeparam name="TProvider">
+            The type of the provider.
+            </typeparam>
+            <returns>
+            The request executor builder.
+            </returns>
+            <exception cref="T:System.ArgumentNullException">
+            <paramref name="builder"/> is <c>null</c>.
+            </exception>
+        </member>
+    </members>
+</doc>

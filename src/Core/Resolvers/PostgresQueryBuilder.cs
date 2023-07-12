@@ -150,7 +150,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // If the table alias is not empty, we return [{SourceAlias}].[{Column}]
             if (!string.IsNullOrEmpty(column.TableAlias))
             {
-                return $"{QuoteIdentifier(column.TableAlias)}.{QuoteIdentifier(column.ColumnName)}";
+                return $"{QuoteIdentifier(column.TableAlias!)}.{QuoteIdentifier(column.ColumnName)}";
             }
             // If there is no table alias we return [{Column}]
             else

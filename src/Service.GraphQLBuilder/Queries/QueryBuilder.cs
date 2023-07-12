@@ -60,7 +60,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                         // Check runtime configuration of the stored procedure entity to check that the GraphQL operation type was overridden to 'query' from the default 'mutation.'
                         bool isSPDefinedAsQuery = entity.GraphQL.Operation is GraphQLOperation.Query;
 
-                        IEnumerable<string> rolesAllowedForExecute = IAuthorizationResolver.GetRolesForOperation(entityName, operation: EntityActionOperation.Execute, entityPermissionsMap);
+                        IEnumerable<string> rolesAllowedForExecute = GetRolesForOperation(entityName, operation: EntityActionOperation.Execute, entityPermissionsMap);
 
                         if (isSPDefinedAsQuery && rolesAllowedForExecute.Any())
                         {
@@ -72,7 +72,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     }
                     else
                     {
-                        IEnumerable<string> rolesAllowedForRead = IAuthorizationResolver.GetRolesForOperation(entityName, operation: EntityActionOperation.Read, entityPermissionsMap);
+                        IEnumerable<string> rolesAllowedForRead = GetRolesForOperation(entityName, operation: EntityActionOperation.Read, entityPermissionsMap);
                         ObjectTypeDefinitionNode paginationReturnType = GenerateReturnType(name);
 
                         if (rolesAllowedForRead.Any())

@@ -10,6 +10,7 @@ using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
+using HotChocolate.Types;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Cosmos;
 using Newtonsoft.Json.Linq;
@@ -312,7 +313,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 return null;
             }
 
-            string currentEntity = (partitionKeyPath.Split("/").Length > 1) ? partitionKeyPath.Split("/")[1] : string.Empty;
+            string currentEntity = (partitionKeyPath.Split('/').Length > 1) ? partitionKeyPath.Split('/')[1] : string.Empty;
 
             foreach (ObjectFieldNode item in (IList<ObjectFieldNode>)parameter)
             {

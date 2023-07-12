@@ -46,7 +46,7 @@ namespace Azure.DataApiBuilder.Core.Parsers
         {
             if (!string.IsNullOrWhiteSpace(primaryKeyRoute))
             {
-                string[] primaryKeyValues = primaryKeyRoute.Split("/");
+                string[] primaryKeyValues = primaryKeyRoute.Split(',');
 
                 if (primaryKeyValues.Length % 2 != 0)
                 {
@@ -109,8 +109,8 @@ namespace Azure.DataApiBuilder.Core.Parsers
                 switch (key)
                 {
                     case FIELDS_URL:
-                        CheckListForNullElement(context.ParsedQueryString[key]!.Split(",").ToList());
-                        context.FieldsToBeReturned = context.ParsedQueryString[key]!.Split(",").ToList();
+                        CheckListForNullElement(context.ParsedQueryString[key]!.Split(',').ToList());
+                        context.FieldsToBeReturned = context.ParsedQueryString[key]!.Split(',').ToList();
                         break;
                     case FILTER_URL:
                         // save the AST that represents the filter for the query

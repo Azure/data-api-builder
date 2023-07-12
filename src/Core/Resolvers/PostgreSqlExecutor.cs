@@ -32,11 +32,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         public DefaultAzureCredential AzureCredential { get; set; } = new();
 
-        /// <summary>
-        /// The PostgreSql specific connection string builder.
-        /// </summary>
-        public override NpgsqlConnectionStringBuilder ConnectionStringBuilder
-            => (NpgsqlConnectionStringBuilder)base.ConnectionStringBuilder;
+        public NpgsqlConnectionStringBuilder CustomConnectionStringBuilder
+        {
+            get
+            {
+                return (NpgsqlConnectionStringBuilder)base.ConnectionStringBuilder;
+            }
+        }
 
         /// <summary>
         /// The saved cached access token obtained from DefaultAzureCredentials
@@ -63,7 +65,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (runtimeConfigProvider.IsLateConfigured)
             {
-                ConnectionStringBuilder.SslMode = SslMode.VerifyFull;
+                CustomConnectionStringBuilder.SslMode = SslMode.VerifyFull;
             }
         }
 
@@ -105,7 +107,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         private bool ShouldManagedIdentityAccessBeAttempted()
         {
-            return string.IsNullOrEmpty(ConnectionStringBuilder.Password);
+            return string.IsNullOrEmpty(CustomConnectionStringBuilder.Password);
         }
 
         /// <summary>

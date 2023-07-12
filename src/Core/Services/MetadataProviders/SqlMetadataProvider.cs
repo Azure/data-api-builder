@@ -287,7 +287,7 @@ namespace Azure.DataApiBuilder.Core.Services
             procedureRestrictions[1] = schemaName;
             procedureRestrictions[2] = storedProcedureSourceName;
 
-            DataTable procedureMetadata = await conn.GetSchemaAsync(collectionName: "Procedures", restrictionValues: procedureRestrictions);
+            DataTable procedureMetadata = conn.GetSchema(collectionName: "Procedures", restrictionValues: procedureRestrictions);
 
             // Stored procedure does not exist in DB schema
             if (procedureMetadata.Rows.Count == 0)
@@ -299,7 +299,7 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             // Each row in the procedureParams DataTable corresponds to a single parameter
-            DataTable parameterMetadata = await conn.GetSchemaAsync(collectionName: "ProcedureParameters", restrictionValues: procedureRestrictions);
+            DataTable parameterMetadata = conn.GetSchema(collectionName: "ProcedureParameters", restrictionValues: procedureRestrictions);
 
             // For each row/parameter, add an entry to StoredProcedureDefinition.Parameters dictionary
             foreach (DataRow row in parameterMetadata.Rows)
@@ -756,7 +756,7 @@ namespace Azure.DataApiBuilder.Core.Services
                                                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
-            return (schemaName, dbTableName);
+            return (schemaName, dbTableName)!;
         }
 
         /// <inheritdoc />
@@ -1186,7 +1186,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
             // Each row in the columnsInTable DataTable corresponds to
             // a single column of the table.
-            DataTable columnsInTable = await conn.GetSchemaAsync("Columns", columnRestrictions);
+            DataTable columnsInTable = conn.GetSchema("Columns", columnRestrictions);
 
             return columnsInTable;
         }

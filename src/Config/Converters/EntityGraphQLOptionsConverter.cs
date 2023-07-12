@@ -80,7 +80,7 @@ internal class EntityGraphQLOptionsConverter : JsonConverter<EntityGraphQLOption
 
                         if (op is not null)
                         {
-                            operation = Enum.Parse<GraphQLOperation>(op, ignoreCase: true);
+                            operation = (GraphQLOperation?)Enum.Parse(typeof(GraphQLOperation),op, ignoreCase: true);
                         }
 
                         break;

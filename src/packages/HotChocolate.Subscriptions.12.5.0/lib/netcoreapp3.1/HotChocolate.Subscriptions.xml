@@ -1,0 +1,76 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>HotChocolate.Subscriptions</name>
+    </assembly>
+    <members>
+        <member name="T:HotChocolate.Subscriptions.ITopicEventReceiver">
+            <summary>
+            The <see cref="T:HotChocolate.Subscriptions.ITopicEventReceiver" /> creates subscriptions to
+            specific event topics and returns an <see cref="T:HotChocolate.Execution.ISourceStream`1" />
+            which represents a stream of event message for the specified topic.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Subscriptions.ITopicEventReceiver.SubscribeAsync``2(``0,System.Threading.CancellationToken)">
+            <summary>
+            Subscribes to the specified event <paramref name="topic" />.
+            </summary>
+            <param name="topic">
+            The topic to which the event message belongs to.
+            </param>
+            <param name="cancellationToken">
+            The cancellation token.
+            </param>
+            <returns>
+            Returns a <see cref="T:HotChocolate.Execution.ISourceStream`1" />
+            for the given event <paramref name="topic" />.
+            </returns>
+        </member>
+        <member name="T:HotChocolate.Subscriptions.ITopicEventSender">
+            <summary>
+            The topic event sender sends event messages to the pub/sub-system.
+            Typically a mutation would use the event dispatcher to raise events
+            after some changes were committed to the backend system.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Subscriptions.ITopicEventSender.SendAsync``2(``0,``1,System.Threading.CancellationToken)">
+            <summary>
+            Sends an event message to the pub/sub-system.
+            </summary>
+            <param name="topic">
+            The topic to which the event message belongs to.
+            </param>
+            <param name="message">
+            The event message.
+            </param>
+            <param name="cancellationToken">
+            The cancellation token.
+            </param>
+        </member>
+        <member name="M:HotChocolate.Subscriptions.ITopicEventSender.CompleteAsync``1(``0)">
+            <summary>
+            Completes a event topic which causes the
+            <see cref="T:HotChocolate.Execution.ISourceStream`1" /> to complete.
+            </summary>
+            <param name="topic">
+            The topic to which the event message belongs to.
+            </param>
+        </member>
+        <member name="T:HotChocolate.Subscriptions.Properties.Resources">
+            <summary>
+              A strongly-typed resource class, for looking up localized strings, etc.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Subscriptions.Properties.Resources.ResourceManager">
+            <summary>
+              Returns the cached ResourceManager instance used by this class.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Subscriptions.Properties.Resources.Culture">
+            <summary>
+              Overrides the current thread's CurrentUICulture property for all
+              resource lookups using this strongly typed resource class.
+            </summary>
+        </member>
+    </members>
+</doc>

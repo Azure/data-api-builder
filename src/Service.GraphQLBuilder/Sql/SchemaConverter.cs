@@ -274,3 +274,28 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         }
     }
 }
+
+public static class KeyValuePairExtensions
+{
+    public static void Deconstruct<TKey, TValue>(this KeyValuePair<TKey, TValue> keyValuePair, out TKey key, out TValue value)
+    {
+        key = keyValuePair.Key;
+        value = keyValuePair.Value;
+    }
+
+    public static bool TryAdd<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key, TValue value)
+    {
+        if (dictionary == null)
+        {
+            throw new ArgumentNullException(nameof(dictionary));
+        }
+
+        if (!dictionary.ContainsKey(key))
+        {
+            dictionary.Add(key, value);
+            return true;
+        }
+
+        return false;
+    }
+}

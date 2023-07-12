@@ -1,0 +1,216 @@
+<!--
+ *
+ * Microsoft.Data.SqlClient.SNI.targets -
+ *
+ * WARNING: This MSBuild file requires MSBuild 4.0 features.
+ *
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+  ******************************************************************************
+  **                          Load Per-User Settings                          **
+  ******************************************************************************
+  -->
+
+  <!--
+      NOTE: If the per-user settings file exists, import it now.  The contained
+            settings, if any, will override the default ones provided below.
+  -->
+  <Import Condition="'$(MSBuildThisFileDirectory)' != '' And
+                     HasTrailingSlash('$(MSBuildThisFileDirectory)') And
+                     Exists('$(MSBuildThisFileDirectory)Microsoft.Data.SqlClient.SNI.targets.user')"
+          Project="$(MSBuildThisFileDirectory)Microsoft.Data.SqlClient.SNI.targets.user" />
+
+  <!--
+  ******************************************************************************
+  **                           Library Build Items                            **
+  ******************************************************************************
+  -->
+
+  <ItemGroup>
+    <SNIDllFiles Condition="'$(MSBuildThisFileDirectory)' != '' And
+                                    HasTrailingSlash('$(MSBuildThisFileDirectory)')"
+                        Include="$(MSBuildThisFileDirectory)**\Microsoft.Data.SqlClient.SNI.*.dll" />
+    <SNIFiles Condition="'$(MSBuildThisFileDirectory)' != '' And
+                                   HasTrailingSlash('$(MSBuildThisFileDirectory)')"
+                        Include="$(MSBuildThisFileDirectory)**\Microsoft.Data.SqlClient.SNI.*"
+                        Exclude="$(MSBuildThisFileDirectory)**\*.targets" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ClickOnce Include="@(SNIDllFiles)">
+      <InProject>false</InProject>
+      <Visible>false</Visible>
+    </ClickOnce>
+  </ItemGroup>
+  
+  <!--
+  ******************************************************************************
+  **                          Library Content Items                           **
+  ******************************************************************************
+  -->
+
+  <ItemGroup Condition="'$(ContentSNIFiles)' != '' And
+                        '$(ContentSNIFiles)' != 'false' And
+                        '@(SNIFiles)' != ''">
+    <Content Include="@(SNIFiles)">
+      <Link>%(RecursiveDir)%(FileName)%(Extension)</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!--
+  ******************************************************************************
+  **                          Library Build Targets                           **
+  ******************************************************************************
+  -->
+
+  <Target Name="CopySNIFiles"
+          Condition="'$(CopySNIFiles)' != 'false' And
+                     '$(OutDir)' != '' And
+                     HasTrailingSlash('$(OutDir)') And
+                     Exists('$(OutDir)')"
+          Inputs="@(SNIFiles)"
+          Outputs="@(SNIFiles -> '$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')">
+    <!--
+        NOTE: Copy "Microsoft.Data.SqlClient.SNI.dll" and all related files, for every
+              architecture that we support, to the build output directory.        
+    -->
+    <Copy SourceFiles="@(SNIFiles)"
+          DestinationFiles="@(SNIFiles -> '$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')" />
+  </Target>
+
+  <Target Name="CopySNIRoleFiles"
+          Condition="'@(WorkerRoleReferences)' != ''"
+          Inputs="@(SNIFiles)"
+          Outputs="@(SNIFiles -> '$(_IntermediateWorkerOutputPath)%(RecursiveDir)%(Filename)%(Extension)')">
+    <!--
+        NOTE: Copy "Microsoft.Data.SqlClient.SNI.dll" and all related files, for every
+              architecture that we support, to the build output directory.        
+    -->
+    <PropertyGroup>
+      <_IntermediateWorkerOutputPath>%(WorkerRoleReferences.OutputDir)</_IntermediateWorkerOutputPath>
+    </PropertyGroup>
+
+    <Copy SourceFiles="@(SNIFiles)"
+          DestinationFiles="@(SNIFiles -> '$(_IntermediateWorkerOutputPath)%(RecursiveDir)%(Filename)%(Extension)')" />
+  </Target>
+
+  <Target Name="AppendSNIDllsInManifest" Condition="'@(ClickOnce)' != ''" AfterTargets="BeforeBuild">
+    <CreateItem Include="@(ClickOnce)" AdditionalMetadata="TargetPath=%(FileName)%(Extension);IsDataFile=false">
+      <Output TaskParameter="Include" ItemName="_DeploymentManifestFiles" />
+    </CreateItem>
+  </Target>
+  
+  <Target Name="PublishSNIFiles" AfterTargets="Publish"
+          Condition="'$(CopySNIFiles)' != 'false' And
+                     '$(PublishSNIFiles)' != 'false' And
+                     '$(PublishDir)' != '' And
+                     '$(_DeploymentApplicationDir)' == '' And
+                     HasTrailingSlash('$(PublishDir)') And
+                     Exists('$(PublishDir)') And
+                     '@(ClickOnce)' != ''"
+          Inputs="@(SNIDllFiles)"
+          Outputs="@(SNIDllFiles -> '$(PublishDir)%(RecursiveDir)%(Filename)%(Extension)')">
+    <!--
+        NOTE: Copy "Microsoft.Data.SqlClient.SNI.dll" only to the publish directory.
+
+    -->
+    <Copy SourceFiles="@(SNIDllFiles)"
+          DestinationFiles="@(SNIDllFiles -> '$(PublishDir)%(RecursiveDir)%(Filename)%(Extension)')" />
+  </Target>
+
+  <Target Name="_CopySNIFilesToPublishFolder" AfterTargets="_CopyFilesToPublishFolder" 
+            Condition="'$(CopySNIFiles)' != 'false' And
+                      '$(_CopySNIFilesToPublishFolder)' != 'false' And
+                      '$(_DeploymentApplicationDir)' != '' And
+                      HasTrailingSlash('$(_DeploymentApplicationDir)') And
+                      Exists('$(_DeploymentApplicationDir)')"
+            Inputs="@(SNIDllFiles)"
+            Outputs="@(SNIDllFiles -> '$(_DeploymentApplicationDir)%(RecursiveDir)%(Filename)%(Extension)')">
+    <!--
+        NOTE: Copy "Microsoft.Data.SqlClient.SNI.dll" only to the publish output directory.
+    -->
+    <Copy SourceFiles="@(SNIDllFiles)"
+          DestinationFiles="@(SNIDllFiles -> '$(_DeploymentApplicationDir)%(RecursiveDir)%(Filename)%(Extension)')" />
+  </Target>
+
+  <!--
+  ******************************************************************************
+  -->
+
+  <Target Name="CleanSNIFiles"
+          Condition="'$(CleanSNIFiles)' != 'false' And
+                     '$(OutDir)' != '' And
+                     HasTrailingSlash('$(OutDir)') And
+                     Exists('$(OutDir)')">
+    <!--
+        NOTE: Delete "Microsoft.Data.SqlClient.SNI.dll" and all related files, for every
+              architecture that we support, from the build output directory.
+    -->
+    <Delete Files="@(SNIFiles -> '$(OutDir)%(RecursiveDir)%(Filename)%(Extension)')" />
+  </Target>
+
+  <!--
+  ******************************************************************************
+  -->
+
+  <Target Name="CollectSNIFiles"
+          Condition="'$(CollectSNIFiles)' != 'false'">
+    <ItemGroup>
+      <FilesForPackagingFromProject Include="@(SNIFiles)">
+        <DestinationRelativePath>bin\%(RecursiveDir)%(Filename)%(Extension)</DestinationRelativePath>
+      </FilesForPackagingFromProject>
+    </ItemGroup>
+  </Target>
+
+  <!--
+  ******************************************************************************
+  **                         Library Build Properties                         **
+  ******************************************************************************
+  -->
+
+  <PropertyGroup>
+    <PostBuildEventDependsOn>
+      $(PostBuildEventDependsOn);
+      CopySNIFiles;
+    </PostBuildEventDependsOn>
+    <PublishItemsOutputGroupDependsOn>
+      $(PublishItemsOutputGroupDependsOn);
+      PublishSNIFiles;
+    </PublishItemsOutputGroupDependsOn>
+    <BuildDependsOn>
+      $(BuildDependsOn);
+      CopySNIFiles;
+    </BuildDependsOn>
+    <PrepareForRunDependsOn>
+      $(PrepareForRunDependsOn);
+      CopySNIFiles;
+    </PrepareForRunDependsOn>
+    <CleanDependsOn>
+      $(CleanDependsOn);
+      CleanSNIFiles;
+    </CleanDependsOn>
+  </PropertyGroup>
+
+  <!--
+  ******************************************************************************
+  **            Library Publish Properties for Visual Studio 201x             **
+  ******************************************************************************
+  -->
+
+  <PropertyGroup>
+    <PipelineCollectFilesPhaseDependsOn>
+      CollectSNIFiles;
+      $(PipelineCollectFilesPhaseDependsOn);
+    </PipelineCollectFilesPhaseDependsOn>
+    <CollectRoleFilesDependsOn>
+      $(CollectRoleFilesDependsOn);
+      CollectSNIFiles;
+    </CollectRoleFilesDependsOn>
+    <CopyRoleFilesDependsOn>
+      $(CopyRoleFilesDependsOn)
+      CopySNIRoleFiles;
+    </CopyRoleFilesDependsOn>
+  </PropertyGroup>
+</Project>

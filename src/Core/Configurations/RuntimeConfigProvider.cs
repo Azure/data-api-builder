@@ -40,14 +40,19 @@ public class RuntimeConfigProvider
     /// </summary>
     public string? ManagedIdentityAccessToken { get; private set; }
 
-    private readonly RuntimeConfigLoader _runtimeConfigLoader;
+    private readonly RuntimeConfigLoader? _runtimeConfigLoader;
     private RuntimeConfig? _runtimeConfig;
 
-    public string RuntimeConfigFileName => _runtimeConfigLoader.ConfigFileName;
+    public string RuntimeConfigFileName => _runtimeConfigLoader == null ? string.Empty : _runtimeConfigLoader.ConfigFileName;
 
     public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader)
     {
         _runtimeConfigLoader = runtimeConfigLoader;
+    }
+
+    public RuntimeConfigProvider(RuntimeConfig runtimeConfig)
+    {
+        _runtimeConfig = runtimeConfig;
     }
 
     /// <summary>
@@ -63,7 +68,7 @@ public class RuntimeConfigProvider
             return _runtimeConfig;
         }
 
-        if (_runtimeConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config))
+        if (_runtimeConfigLoader!.TryLoadKnownConfig(out RuntimeConfig? config))
         {
             _runtimeConfig = config;
         }
@@ -88,7 +93,7 @@ public class RuntimeConfigProvider
     {
         if (_runtimeConfig is null)
         {
-            if (_runtimeConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config))
+            if (_runtimeConfigLoader!.TryLoadKnownConfig(out RuntimeConfig? config))
             {
                 _runtimeConfig = config;
             }

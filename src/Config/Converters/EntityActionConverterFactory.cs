@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -18,7 +19,7 @@ internal class EntityActionConverterFactory : JsonConverterFactory
     /// <inheritdoc/>
     public override bool CanConvert(Type typeToConvert)
     {
-        return typeToConvert.IsAssignableTo(typeof(EntityAction));
+        return typeToConvert.GetTypeInfo().IsAssignableFrom(typeof(EntityAction));
     }
 
     /// <inheritdoc/>

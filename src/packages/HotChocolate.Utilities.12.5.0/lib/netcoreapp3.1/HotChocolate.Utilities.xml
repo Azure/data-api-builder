@@ -1,0 +1,54 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>HotChocolate.Utilities</name>
+    </assembly>
+    <members>
+        <member name="T:HotChocolate.Utilities.ActivatorHelper">
+            <summary>
+            The activator helper compiles a factory delegate for types to resolver their
+            dependencies against a <see cref="T:System.IServiceProvider" />.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Utilities.Cache`1.Size">
+            <summary>
+            Gets the maximum allowed item count that can be stored in this cache.
+            </summary>
+        </member>
+        <member name="P:HotChocolate.Utilities.Cache`1.Usage">
+            <summary>
+            Gets the current item count that is currently stored in this cache.
+            </summary>
+        </member>
+        <member name="T:HotChocolate.Utilities.CacheEntryEventArgs`1">
+            <summary>
+            Represents cache entry event args.
+            </summary>
+        </member>
+        <member name="M:HotChocolate.Utilities.CacheEntryEventArgs`1.#ctor(System.String,`0)">
+            <summary>
+            Initializes a new instance of the
+            <see cref="T:HotChocolate.Utilities.CacheEntryEventArgs`1"/> class.
+            </summary>
+            <param name="key">The cache entry key.</param>
+            <param name="value">The cache entry value.</param>
+        </member>
+        <member name="P:HotChocolate.Utilities.CacheEntryEventArgs`1.Key">
+            <summary>
+            Gets the cache entry key.
+            </summary>
+            <value>The key.</value>
+        </member>
+        <member name="P:HotChocolate.Utilities.CacheEntryEventArgs`1.Value">
+            <summary>
+            Gets the cache entry value.
+            </summary>
+            <value>The value.</value>
+        </member>
+        <member name="T:HotChocolate.Utilities.MiddlewareCompiler`1">
+            <summary>
+            This helper compiles classes to middleware delegates.
+            </summary>
+        </member>
+    </members>
+</doc>

@@ -8,6 +8,7 @@ using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
+using HotChocolate.Types;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -113,7 +114,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string encodedParamName = GetEncodedParamName(Counter.Next());
             if (!string.IsNullOrEmpty(paramName))
             {
-                Parameters.Add(encodedParamName, new(value, GetUnderlyingSourceDefinition().GetDbTypeForParam(paramName)));
+                Parameters.Add(encodedParamName, new(value, GetUnderlyingSourceDefinition().GetDbTypeForParam(paramName!)));
             }
             else
             {

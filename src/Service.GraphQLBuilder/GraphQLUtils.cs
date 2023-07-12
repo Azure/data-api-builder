@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -258,6 +259,33 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                         subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping,
                         innerException: error);
             }
+        }
+
+        /// <summary>
+        /// Returns a list of roles which define permissions for the provided operation.
+        /// i.e. list of roles which allow the operation 'Read' on entityName.
+        /// </summary>
+        /// <param name="entityName">Entity to lookup permissions</param>
+        /// <param name="operation">Operation to lookup applicable roles</param>
+        /// <returns>Collection of roles. Empty list if entityPermissionsMap is null.</returns>
+        public static IEnumerable<string> GetRolesForOperation(
+            string entityName,
+            EntityActionOperation operation,
+            Dictionary<string, EntityMetadata>? entityPermissionsMap)
+        {
+            if (entityName is null)
+            {
+                throw new ArgumentNullException(paramName: nameof(entityName));
+            }
+
+            if (entityPermissionsMap is not null &&
+                entityPermissionsMap[entityName].OperationToRolesMap.TryGetValue(operation, out List<string>? roleList) &&
+                roleList is not null)
+            {
+                return roleList;
+            }
+
+            return new List<string>();
         }
     }
 }

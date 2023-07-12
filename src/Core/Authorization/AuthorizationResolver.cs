@@ -41,7 +41,7 @@ namespace Azure.DataApiBuilder.Core.Authorization
             if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
                 // Datastructure constructor will pull required properties from metadataprovider.
-                SetEntityPermissionMap(runtimeConfig);
+                SetEntityPermissionMap(runtimeConfig!);
             }
             else
             {

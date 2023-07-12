@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Azure.DataApiBuilder.Core.Models;
 using HotChocolate.Resolvers;
+using HotChocolate.Types;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Azure.DataApiBuilder.Core.Resolvers

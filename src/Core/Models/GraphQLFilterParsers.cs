@@ -11,6 +11,7 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
+using HotChocolate.Types;
 using Microsoft.AspNetCore.Http;
 using static Azure.DataApiBuilder.Core.Authorization.AuthorizationResolver;
 
@@ -134,7 +135,7 @@ namespace Azure.DataApiBuilder.Core.Models
                     bool relationshipField = true;
                     if (!string.IsNullOrWhiteSpace(resolvedBackingColumnName))
                     {
-                        backingColumnName = resolvedBackingColumnName;
+                        backingColumnName = resolvedBackingColumnName!;
                         relationshipField = false;
                     }
 

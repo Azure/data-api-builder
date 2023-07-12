@@ -36,11 +36,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         private readonly string? _accessTokenFromController;
 
-        /// <summary>
-        /// The MsSql specific connection string builder.
-        /// </summary>
-        public override SqlConnectionStringBuilder ConnectionStringBuilder
-            => (SqlConnectionStringBuilder)base.ConnectionStringBuilder;
+        public SqlConnectionStringBuilder CustomConnectionStringBuilder
+        {
+            get
+            {
+                return (SqlConnectionStringBuilder)base.ConnectionStringBuilder;
+            }
+        }
 
         public DefaultAzureCredential AzureCredential { get; set; } = new();
 
@@ -58,7 +60,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             RuntimeConfigProvider runtimeConfigProvider,
             DbExceptionParser dbExceptionParser,
             ILogger<IQueryExecutor> logger,
-            IHttpContextAccessor httpContextAccessor)
+            IHttpContextAccessor? httpContextAccessor)
             : base(dbExceptionParser,
                   logger,
                   new SqlConnectionStringBuilder(runtimeConfigProvider.GetConfig().DataSource.ConnectionString),
@@ -69,8 +71,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (runtimeConfigProvider.IsLateConfigured)
             {
-                ConnectionStringBuilder.Encrypt = SqlConnectionEncryptOption.Mandatory;
-                ConnectionStringBuilder.TrustServerCertificate = false;
+                CustomConnectionStringBuilder.Encrypt = SqlConnectionEncryptOption.Mandatory;
+                CustomConnectionStringBuilder.TrustServerCertificate = false;
             }
 
             MsSqlOptions? msSqlOptions = runtimeConfig.DataSource.GetTypedOptions<MsSqlOptions>();
@@ -119,10 +121,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         private bool ShouldManagedIdentityAccessBeAttempted()
         {
-            return string.IsNullOrEmpty(ConnectionStringBuilder.UserID) &&
-                string.IsNullOrEmpty(ConnectionStringBuilder.Password) &&
-                ConnectionStringBuilder.Authentication == SqlAuthenticationMethod.NotSpecified &&
-                !ConnectionStringBuilder.IntegratedSecurity;
+            return string.IsNullOrEmpty(CustomConnectionStringBuilder.UserID) &&
+                string.IsNullOrEmpty(CustomConnectionStringBuilder.Password) &&
+                CustomConnectionStringBuilder.Authentication == SqlAuthenticationMethod.NotSpecified &&
+                !CustomConnectionStringBuilder.IntegratedSecurity;
         }
 
         /// <summary>

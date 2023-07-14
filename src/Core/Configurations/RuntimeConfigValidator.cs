@@ -331,12 +331,12 @@ namespace Azure.DataApiBuilder.Core.Configurations
                 (runtimeConfig.Runtime.Host.Authentication is null || !runtimeConfig.Runtime.Host.Authentication.IsStaticWebAppsIdentityProvider()))
             {
                 throw new DataApiBuilderException(
-                    message: $"Runtime base-route can only be used when the authentication provider is Static Web Apps.",
+                    message: "Runtime base-route can only be used when the authentication provider is Static Web Apps.",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
             }
 
-            if (!string.IsNullOrEmpty(runtimeBaseRoute))
+            if (!string.IsNullOrWhiteSpace(runtimeBaseRoute))
             {
                 if (!TryValidateUriComponent(runtimeBaseRoute, out string exceptionMsgSuffix))
                 {

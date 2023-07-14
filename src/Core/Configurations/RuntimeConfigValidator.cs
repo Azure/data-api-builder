@@ -273,12 +273,23 @@ namespace Azure.DataApiBuilder.Core.Configurations
             }
 
             string? runtimeBaseRoute = runtimeConfig.Runtime.BaseRoute;
+
+            // Ensure that the runtime base-route is only configured when authentication provider is StaticWebApps.
+            if (runtimeBaseRoute is not null &&
+                (runtimeConfig.Runtime.Host.Authentication is null || !runtimeConfig.Runtime.Host.Authentication.IsStaticWebAppsIdentityProvider()))
+            {
+                throw new DataApiBuilderException(
+                    message: $"Runtime base-route is not used for non-Static Web Apps authentication providers.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+            }
+
             if (!string.IsNullOrEmpty(runtimeBaseRoute))
             {
                 if (!TryValidateUriComponent(runtimeBaseRoute, out string exceptionMsgSuffix))
                 {
                     throw new DataApiBuilderException(
-                        message: $"Runtime {RuntimeOptions.PROPERTY_NAME_BASE_ROUTE} {exceptionMsgSuffix}",
+                        message: $"Runtime base-route {exceptionMsgSuffix}",
                         statusCode: HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }

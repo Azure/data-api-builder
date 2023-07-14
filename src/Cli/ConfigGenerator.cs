@@ -163,8 +163,18 @@ namespace Cli
 
             if (!IsURIComponentValid(runtimeBaseRoute))
             {
-                _logger.LogError($"Runtime path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}");
+                _logger.LogError($"Runtime base-route {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}");
                 return false;
+            }
+
+            if (runtimeBaseRoute is not null)
+            {
+                bool isEasyAuthProvider = Enum.TryParse(options.AuthenticationProvider, ignoreCase: true, out EasyAuthType easyAuthMode);
+                if (!isEasyAuthProvider || isEasyAuthProvider && easyAuthMode is not EasyAuthType.StaticWebApps)
+                {
+                    _logger.LogError($"Runtime base-route can only be specified when authentication provider is Static Web Apps.");
+                    return false;
+                }
             }
 
             if (options.RestDisabled && options.GraphQLDisabled)

@@ -76,11 +76,14 @@ namespace Azure.DataApiBuilder.Core.Configurations
 
             // Running these graphQL validations only in development mode to ensure
             // fast startup of engine in production mode.
-            if (runtimeConfig.Runtime.GraphQL.Enabled
-                 && runtimeConfig.Runtime.Host.Mode is HostMode.Development)
+            if (runtimeConfig.Runtime.Host.Mode is HostMode.Development)
             {
-                ValidateEntityNamesInConfig(runtimeConfig.Entities);
-                ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(runtimeConfig.Entities);
+                ValidateEntityConfiguration(runtimeConfig);
+
+                if (runtimeConfig.Runtime.GraphQL.Enabled)
+                {
+                    ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(runtimeConfig.Entities);
+                }
             }
         }
 
@@ -225,22 +228,71 @@ namespace Azure.DataApiBuilder.Core.Configurations
         }
 
         /// <summary>
-        /// Check whether the entity name defined in runtime config only contains
-        /// characters allowed for GraphQL names.
-        /// Does not perform validation for entities which do not
+        /// Check whether the entity configuration defined in runtime config only contains characters allowed for GraphQL names
+        /// and other validations related to rest path and methods configured for the entity.
+        /// The GraphQL validation is not performed for entities which do not
         /// have GraphQL configuration: when entity.GraphQL == false or null.
         /// </summary>
         /// <seealso cref="https://spec.graphql.org/October2021/#Name"/>
-        /// <param name="entityCollection">The runtime entities to process.</param>
-        public static void ValidateEntityNamesInConfig(RuntimeEntities entityCollection)
+        /// <param name="runtimeConfig">The runtime configuration.</param>
+        public static void ValidateEntityConfiguration(RuntimeConfig runtimeConfig)
         {
-            foreach ((string _, Entity entity) in entityCollection)
+            // Stores the unique rest paths configured for different entities present in the config.
+            HashSet<string> restPathsForEntities = new();
+
+            foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
-                if (entity.GraphQL.Enabled)
+                if (runtimeConfig.Runtime.Rest.Enabled && entity.Rest is not null && entity.Rest.Enabled)
+                {
+                    // If no custom rest path is defined for the entity, we default it to the entityName.
+                    string pathForEntity = entity.Rest.Path is not null ? entity.Rest.Path.TrimStart('/') : entityName;
+                    ValidateRestPathSettingsForEntity(entityName, pathForEntity);
+                    if (!restPathsForEntities.Add(pathForEntity))
+                    {
+                        // Presence of multiple entities having the same rest path configured causes conflict.
+                        throw new DataApiBuilderException(
+                            message: $"The rest path: {pathForEntity} specified for entity: {entityName} is already used by another entity.",
+                            statusCode: HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
+                            );
+                    }
+                }
+
+                // If GraphQL endpoint is enabled globally and at entity level, then only we perform the validations related to it.
+                if (runtimeConfig.Runtime.GraphQL.Enabled && entity.GraphQL is not null && entity.GraphQL.Enabled)
                 {
                     ValidateNameRequirements(entity.GraphQL.Singular);
                     ValidateNameRequirements(entity.GraphQL.Plural);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Helper method to validate that the rest path property for the entity is correctly configured.
+        /// The rest path should not be null/empty and should not contain any reserved characters.
+        /// </summary>
+        /// <param name="entityName">Name of the entity.</param>
+        /// <param name="pathForEntity">The rest path for the entity.</param>
+        /// <exception cref="DataApiBuilderException">Throws exception when rest path contains an unexpected value.</exception>
+        private static void ValidateRestPathSettingsForEntity(string entityName, string pathForEntity)
+        {
+            if (string.IsNullOrEmpty(pathForEntity))
+            {
+                // The rest 'path' cannot be empty.
+                throw new DataApiBuilderException(
+                    message: $"The rest path for entity: {entityName} cannot be empty.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
+                    );
+            }
+
+            if (_reservedUriCharsRgx.IsMatch(pathForEntity))
+            {
+                throw new DataApiBuilderException(
+                    message: $"The rest path: {pathForEntity} for entity: {entityName} contains one or more reserved characters.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
+                    );
             }
         }
 

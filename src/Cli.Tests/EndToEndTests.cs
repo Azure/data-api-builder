@@ -725,6 +725,7 @@ public class EndToEndTests
     /// authentication provider is Static Web Apps.
     /// </summary>
     /// <param name="authProvider">Authentication provider specified for the runtime.</param>
+    /// <param name="isExceptionExpected">Whether an exception is expected as a result of test run.</param>
     [DataTestMethod]
     [DataRow("StaticWebApps", false)]
     [DataRow("AppService", true)]

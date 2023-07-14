@@ -104,8 +104,7 @@ public class EndToEndTests
     [TestMethod]
     public void TestInitializingRestAndGraphQLGlobalSettings()
     {
-        string[] args = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql", "--rest.path", "/rest-api",
-                          "--runtime.base-route", "/base-route", "--rest.disabled", "--graphql.path", "/graphql-api" };
+        string[] args = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql", "--rest.path", "/rest-api", "--rest.disabled", "--graphql.path", "/graphql-api" };
         Program.Execute(args, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
@@ -114,7 +113,6 @@ public class EndToEndTests
         Assert.AreEqual(DatabaseType.MSSQL, runtimeConfig.DataSource.DatabaseType);
         Assert.IsNotNull(runtimeConfig.Runtime);
         Assert.AreEqual("/rest-api", runtimeConfig.Runtime.Rest.Path);
-        Assert.AreEqual("/base-route", runtimeConfig.Runtime.BaseRoute);
         Assert.IsFalse(runtimeConfig.Runtime.Rest.Enabled);
         Assert.AreEqual("/graphql-api", runtimeConfig.Runtime.GraphQL.Path);
         Assert.IsTrue(runtimeConfig.Runtime.GraphQL.Enabled);
@@ -242,7 +240,7 @@ public class EndToEndTests
     public Task TestConfigGeneratedAfterAddingEntityWithoutIEnumerables()
     {
         string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql", "--connection-string", "localhost:5000",
-            "--set-session-context", "true", "--runtime.base-route", "/base-route" };
+            "--set-session-context", "true" };
         Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
@@ -730,8 +728,7 @@ public class EndToEndTests
     [DataTestMethod]
     [DataRow("StaticWebApps")]
     [DataRow("AppService")]
-    [DataRow("AzureAD")]
-    public void TestBaseRouteIsConfigurablForSWA(string authProvider)
+    public void TestBaseRouteIsConfigurableForSWA(string authProvider)
     {
         string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type", "mssql",
             "--connection-string", "localhost:5000", "--auth.provider", authProvider, "--runtime.base-route", "base-route" };
@@ -747,6 +744,7 @@ public class EndToEndTests
         {
             Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
             Assert.IsNotNull(runtimeConfig);
+            Assert.AreEqual("/base-route", runtimeConfig.Runtime.BaseRoute);
         }
     }
 }

@@ -115,10 +115,7 @@ namespace Azure.DataApiBuilder.Service.Tests
         public const string SAMPLE_SCHEMA_DATA_SOURCE = SCHEMA_PROPERTY + "," + @"
             ""data-source"": {
               ""database-type"": ""mssql"",
-              ""connection-string"": ""testconnectionstring"",
-              ""options"": {
-                ""set-session-context"": true
-                }
+              ""connection-string"": ""testconnectionstring""
             }
         ";
 

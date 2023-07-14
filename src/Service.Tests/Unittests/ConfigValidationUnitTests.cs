@@ -1997,7 +1997,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Validates that runtime base-route can only be configured when authentication provider is Static Web Apps.
+        /// Validates that the runtime base-route is well-formatted and does not contain any reserved characeters and
+        /// can only be configured when authentication provider is Static Web Apps.
         /// </summary>
         /// <param name="runtimeBaseRoute">Value of runtime base-route as specified in config.</param>
         /// <param name="authenticationProvider">The authentication provider configured.</param>
@@ -2007,6 +2008,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("/base-route", "StaticWebApps", false, DisplayName = "Runtime base-route correctly configured for Static Web Apps.")]
         [DataRow("/base-route", "AppService", true, "Runtime base-route is not used for non-Static Web Apps authentication providers.",
             DisplayName = "Runtime base-route specified for non-Static Web Apps authentication provider - AppService.")]
+        [DataRow("/base+?route", "StaticWebApps", true, $"Runtime base-route {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}",
+            DisplayName = "Runtime base-route specified for Static Web Apps authentication provider containing reserved characters +?")]
+        [DataRow("/base%&#route", "StaticWebApps", true, $"Runtime base-route {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}",
+            DisplayName = "Runtime base-route specified for Static Web Apps authentication provider containing reserved characters %&#")]
+        [DataRow("base-route", "StaticWebApps", true, $"Runtime base-route should start with a '/'.",
+            DisplayName = "Runtime base-route specified for Static Web Apps authentication provider not starting with '/'")]
         public void ValidateRuntimeBaseRouteSettings(
             string runtimeBaseRoute,
             string authenticationProvider,

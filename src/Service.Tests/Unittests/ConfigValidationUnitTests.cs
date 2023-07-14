@@ -2006,7 +2006,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="expectedExceptionMessage">The expected exception message.</param>
         [DataTestMethod]
         [DataRow("/base-route", "StaticWebApps", false, DisplayName = "Runtime base-route correctly configured for Static Web Apps.")]
-        [DataRow("/base-route", "AppService", true, "Runtime base-route is not used for non-Static Web Apps authentication providers.",
+        [DataRow("/base-route", "AppService", true, "Runtime base-route can only be used when the authentication provider is Static Web Apps.",
             DisplayName = "Runtime base-route specified for non-Static Web Apps authentication provider - AppService.")]
         [DataRow("/base+?route", "StaticWebApps", true, $"Runtime base-route {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}",
             DisplayName = "Runtime base-route specified for Static Web Apps authentication provider containing reserved characters +?")]

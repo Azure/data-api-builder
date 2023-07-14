@@ -721,4 +721,32 @@ public class EndToEndTests
 
         process.Kill();
     }
+
+    /// <summary>
+    /// Test to verify that when base-route is configured, the runtime config is only successfully generated when the
+    /// authentication provider is Static Web Apps.
+    /// </summary>
+    /// <param name="authProvider">Authentication provider specified for the runtime.</param>
+    [DataTestMethod]
+    [DataRow("StaticWebApps")]
+    [DataRow("AppService")]
+    [DataRow("AzureAD")]
+    public void TestBaseRouteIsConfigurablForSWA(string authProvider)
+    {
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type", "mssql",
+            "--connection-string", "localhost:5000", "--auth.provider", authProvider, "--runtime.base-route", "base-route" };
+        Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        if (!Enum.TryParse(authProvider, ignoreCase: true, out EasyAuthType easyAuthProvider)
+            || easyAuthProvider is not EasyAuthType.StaticWebApps)
+        {
+            Assert.IsFalse(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+            Assert.IsNull(runtimeConfig);
+        }
+        else
+        {
+            Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig);
+        }
+    }
 }

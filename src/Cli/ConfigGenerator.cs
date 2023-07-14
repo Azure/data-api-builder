@@ -169,8 +169,7 @@ namespace Cli
 
             if (runtimeBaseRoute is not null)
             {
-                bool isEasyAuthProvider = Enum.TryParse(options.AuthenticationProvider, ignoreCase: true, out EasyAuthType easyAuthMode);
-                if (!isEasyAuthProvider || isEasyAuthProvider && easyAuthMode is not EasyAuthType.StaticWebApps)
+                if (!Enum.TryParse(options.AuthenticationProvider, ignoreCase: true, out EasyAuthType easyAuthMode) || easyAuthMode is not EasyAuthType.StaticWebApps)
                 {
                     _logger.LogError($"Runtime base-route can only be specified when authentication provider is Static Web Apps.");
                     return false;

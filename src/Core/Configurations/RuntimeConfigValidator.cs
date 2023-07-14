@@ -33,9 +33,9 @@ namespace Azure.DataApiBuilder.Core.Configurations
         // The claimType is invalid if there is a match found.
         private static readonly Regex _invalidClaimCharsRgx = new(_invalidClaimChars, RegexOptions.Compiled);
 
-        // "Reserved characters as defined in RFC3986 are not allowed to be present in the
+        // Reserved characters as defined in RFC3986 are not allowed to be present in the
         // REST/GraphQL custom path because they are not acceptable to be present in URIs.
-        // " Refer here: https://www.rfc-editor.org/rfc/rfc3986#page-12.
+        // Refer here: https://www.rfc-editor.org/rfc/rfc3986#page-12.
         private static readonly string _reservedUriChars = @"[\.:\?#/\[\]@!$&'()\*\+,;=]+";
 
         //  Regex to validate rest/graphql custom path prefix.
@@ -331,7 +331,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
                 (runtimeConfig.Runtime.Host.Authentication is null || !runtimeConfig.Runtime.Host.Authentication.IsStaticWebAppsIdentityProvider()))
             {
                 throw new DataApiBuilderException(
-                    message: $"Runtime base-route is not used for non-Static Web Apps authentication providers.",
+                    message: $"Runtime base-route can only be used when the authentication provider is Static Web Apps.",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
             }

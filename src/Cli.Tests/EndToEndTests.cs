@@ -726,16 +726,23 @@ public class EndToEndTests
     /// </summary>
     /// <param name="authProvider">Authentication provider specified for the runtime.</param>
     [DataTestMethod]
-    [DataRow("StaticWebApps")]
-    [DataRow("AppService")]
-    public void TestBaseRouteIsConfigurableForSWA(string authProvider)
+    [DataRow("StaticWebApps", false)]
+    [DataRow("AppService", true)]
+    [DataRow("AzureAD", true)]
+    public void TestBaseRouteIsConfigurableForSWA(string authProvider, bool isExceptionExpected)
     {
         string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type", "mssql",
             "--connection-string", "localhost:5000", "--auth.provider", authProvider, "--runtime.base-route", "base-route" };
+
+        if (!Enum.TryParse(authProvider, ignoreCase: true, out EasyAuthType _))
+        {
+            string[] audIssuers = { "--auth.audience", "aud-xxx", "--auth.issuer", "issuer-xxx" };
+            initArgs = initArgs.Concat(audIssuers).ToArray();
+        }
+
         Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
-        if (!Enum.TryParse(authProvider, ignoreCase: true, out EasyAuthType easyAuthProvider)
-            || easyAuthProvider is not EasyAuthType.StaticWebApps)
+        if (isExceptionExpected)
         {
             Assert.IsFalse(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
             Assert.IsNull(runtimeConfig);

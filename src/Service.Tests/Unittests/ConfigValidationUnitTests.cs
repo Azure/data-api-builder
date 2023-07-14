@@ -1995,5 +1995,48 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig);
             }
         }
+
+        /// <summary>
+        /// Validates that runtime base-route can only be configured when authentication provider is Static Web Apps.
+        /// </summary>
+        /// <param name="runtimeBaseRoute">Value of runtime base-route as specified in config.</param>
+        /// <param name="authenticationProvider">The authentication provider configured.</param>
+        /// <param name="isExceptionExpected">Whether an exception is expected as a result of test run.</param>
+        /// <param name="expectedExceptionMessage">The expected exception message.</param>
+        [DataTestMethod]
+        [DataRow("/base-route", "StaticWebApps", false, DisplayName = "Runtime base-route correctly configured for Static Web Apps.")]
+        [DataRow("/base-route", "AppService", true, "Runtime base-route is not used for non-Static Web Apps authentication providers.",
+            DisplayName = "Runtime base-route specified for non-Static Web Apps authentication provider - AppService.")]
+        public void ValidateRuntimeBaseRouteSettings(
+            string runtimeBaseRoute,
+            string authenticationProvider,
+            bool isExceptionExpected,
+            string expectedExceptionMessage = "")
+        {
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", new()),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(Cors: null, Authentication: new(Provider: authenticationProvider, Jwt: null)),
+                    BaseRoute: runtimeBaseRoute
+                ),
+                Entities: new(new Dictionary<string, Entity>())
+            );
+
+            if (!isExceptionExpected)
+            {
+                RuntimeConfigValidator.ValidateGlobalEndpointRouteConfig(runtimeConfig);
+            }
+            else
+            {
+                DataApiBuilderException dabException =
+                    Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidateGlobalEndpointRouteConfig(runtimeConfig));
+                Assert.AreEqual(expectedExceptionMessage, dabException.Message);
+                Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
+                Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
+            }
+        }
     }
 }

@@ -1,22 +1,24 @@
 using System;
 using System.Collections.Generic;
-using System.Data.SqlClient;
+using System.Collections.Immutable;
 using System.Data;
+using System.Data.SqlClient;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
-using HotChocolate.Language;
-using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
-using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services;
-using Microsoft.Extensions.Logging;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Sql;
-using System.Net;
-using System.Collections.Immutable;
-using Microsoft.AspNetCore.Http;
+using HotChocolate.Language;
+using Microsoft.Extensions.Logging;
 
 namespace TestApp
 {
@@ -40,6 +42,8 @@ namespace TestApp
                 };
                 await conn.OpenAsync();
 
+                string dbName = await GetDatabaseName(conn);
+
                 SqlCommand command = new("SELECT * from model.authors", conn);
 
                 using (SqlDataReader reader = await command.ExecuteReaderAsync())
@@ -57,29 +61,54 @@ namespace TestApp
                 }
 
                 // Generate schema
-                string fileContent = await AttachDataSourceAsync(endpoint, authtoken);
+                string fileContent = await AttachDataSourceAsync(endpoint, dbName, authtoken);
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
             }
         }
-    
 
-    /// <summary>
-    /// Attach a datasource async
-    /// </summary>
-    /// <param name="endpoint">artifact metadata</param>
-    /// <param name="originalAadToken">original aad token</param>
-    /// <param name="ct">cancellation token</param>
-    /// <returns>Result of the task.</returns>
-    private async static Task<string> AttachDataSourceAsync(string endpoint, string originalAadToken)
+        /// <summary>
+        /// Get database name when using default database
+        /// </summary>
+        /// <param name="conn"></param>
+        /// <returns></returns>
+        private static async Task<string> GetDatabaseName(SqlConnection conn)
+        {
+#pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
+            string dbName = null;
+#pragma warning restore CS8600 // Converting null literal or possible null value to non-nullable type.
+            SqlCommand dbNameCommand = new("SELECT DB_NAME() AS dbname", conn);
+            using (SqlDataReader reader = await dbNameCommand.ExecuteReaderAsync())
+            {
+                while (await reader.ReadAsync())
+                {
+                    dbName = (string)reader[0];
+                }
+            }
+
+#pragma warning disable CS8603 // Possible null reference return.
+            return dbName;
+#pragma warning restore CS8603 // Possible null reference return.
+        }
+
+        /// <summary>
+        /// Attach a datasource async
+        /// </summary>
+        /// <param name="endpoint">artifact metadata</param>
+        /// <param name="dbName">Database name</param>
+        /// <param name="originalAadToken">original aad token</param>
+        /// <param name="ct">cancellation token</param>
+        /// <returns>Result of the task.</returns>
+        private async static Task<string> AttachDataSourceAsync(string endpoint, string dbName, string originalAadToken)
     {
         try
         {
             SqlConnectionStringBuilder connectionString = new()
             {
                 DataSource = endpoint,
+                InitialCatalog = dbName,
             };
             using SqlConnection connection = new(connectionString.ToString());
             connection.AccessToken = originalAadToken;
@@ -93,11 +122,33 @@ namespace TestApp
 
             Dictionary<string, Entity> entityKeyValuePairs = new();
 
+            EntityAction[] entityActions = new EntityAction[]
+            {
+                new EntityAction(Action: EntityActionOperation.All, Fields: null, Policy: new EntityActionPolicy())                
+            };
+            EntityPermission[] entityPermissions = new EntityPermission[]
+            {
+                new EntityPermission("anonymous", entityActions),
+            };
+
             // Create an entity object for each of them.
             foreach (string tableName in tableNames)
             {
-                EntitySource entitySource = new($"[model].{tableName}", EntitySourceType.View, null, null);
-                Entity entity = new(entitySource, new EntityGraphQLOptions("none", "none"), new EntityRestOptions(new SupportedHttpVerb[0]), new EntityPermission[0], null, null);
+#nullable enable
+                string[]? keyFields = null;
+#nullable disable
+
+                if (tableName == "authors" || tableName == "books")
+                {
+                    keyFields = new[] { "id" };
+                }
+                else if (tableName == "books_authors")
+                {
+                    keyFields = new[] { "author_id", "book_id" };
+                }
+
+                EntitySource entitySource = new($"[model].{tableName}", EntitySourceType.View, null, KeyFields: keyFields);
+                Entity entity = new(entitySource, new EntityGraphQLOptions(tableName, "none"), new EntityRestOptions(new SupportedHttpVerb[0]), entityPermissions, null, null);
                 entityKeyValuePairs[tableName] = entity;
             }
 
@@ -124,11 +175,12 @@ namespace TestApp
             IQueryBuilder builder = new MsSqlQueryBuilder();
             MsSqlMetadataProvider metadataProvider = new(runtimeConfigProvider, executor, builder, mp);
             await metadataProvider.InitializeAsync();
+            AuthorizationResolver authorizationResolver = new AuthorizationResolver(runtimeConfigProvider, metadataProvider);
 
             // Generate the three documents that make up a graphql schema -> root with types, querynode, mutation node.
-            (DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputObjectTypes) = GenerateSqlGraphQLObjects(metadataProvider, entities);
-            DocumentNode queryNode = QueryBuilder.Build(root, DatabaseType.MSSQL, entities, inputObjectTypes);
-            DocumentNode mutationNode = MutationBuilder.Build(root, DatabaseType.MSSQL, entities);
+            (DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputObjectTypes) = GenerateSqlGraphQLObjects(metadataProvider, authorizationResolver, entities);
+            DocumentNode queryNode = QueryBuilder.Build(root, DatabaseType.MSSQL, entities, inputObjectTypes, authorizationResolver.EntityPermissionsMap, metadataProvider.EntityToDatabaseObject);
+            DocumentNode mutationNode = MutationBuilder.Build(root, DatabaseType.MSSQL, entities, authorizationResolver.EntityPermissionsMap, metadataProvider.EntityToDatabaseObject);
             DocumentNode finalmerge = root.WithDefinitions(root.Definitions.Concat(queryNode.Definitions.Concat(mutationNode.Definitions)).ToList());
 
             // write schema document node to one lake.
@@ -171,7 +223,7 @@ namespace TestApp
     /// <param name="entities">Key/Value Collection {entityName -> Entity object}</param>
     /// <returns>Root GraphQLSchema DocumentNode and inputNodes to be processed by downstream schema generation helpers.</returns>
     /// <exception cref="DataApiBuilderException">Exception in case of internal server error.</exception>
-    private static (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) GenerateSqlGraphQLObjects(ISqlMetadataProvider provider, RuntimeEntities entities)
+    private static (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) GenerateSqlGraphQLObjects(ISqlMetadataProvider provider, IAuthorizationResolver authorizationResolver, RuntimeEntities entities)
     {
         Dictionary<string, ObjectTypeDefinitionNode> objectTypes = new();
         Dictionary<string, InputObjectTypeDefinitionNode> inputObjects = new();
@@ -194,6 +246,23 @@ namespace TestApp
                 IEnumerable<string> rolesAllowedForEntity = new List<string>();
                 Dictionary<string, IEnumerable<string>> rolesAllowedForFields = new();
 
+                SourceDefinition sourceDefinition = provider.GetSourceDefinition(entityName);
+                bool isStoredProcedure = entity.Source.Type is EntitySourceType.StoredProcedure;
+                foreach (string column in sourceDefinition.Columns.Keys)
+                {
+                   //rolesAllowedForFields.TryAdd(key: column, value: new string[] { "anonymous" });
+                    EntityActionOperation operation = isStoredProcedure ? EntityActionOperation.Execute : EntityActionOperation.Read;
+                    IEnumerable<string> roles = authorizationResolver.GetRolesForField(entityName, field: column, operation: operation);
+                    if (!rolesAllowedForFields.TryAdd(key: column, value: roles))
+                    {
+                        throw new DataApiBuilderException(
+                            message: "Column already processed for building ObjectTypeDefinition authorization definition.",
+                            statusCode: System.Net.HttpStatusCode.InternalServerError,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization
+                            );
+                    }
+                }
+                    
                 ObjectTypeDefinitionNode node = SchemaConverter.FromDatabaseObject(
                     entityName,
                     databaseObject,

@@ -6,7 +6,6 @@ using System.IO.Abstractions;
 using System.Net;
 using System.Reflection;
 using System.Text.Json;
-using Azure.DataApiBuilder.Config.Interfaces;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 
@@ -24,7 +23,7 @@ namespace Azure.DataApiBuilder.Config;
 /// which allows for mocking of the file system in tests, providing a way to run the test
 /// in isolation of other tests or the actual file system.
 /// </remarks>
-public class RuntimeConfigLoader : IRunTimeConfigLoader
+public class RuntimeConfigLoader : BaseRunTimeConfigLoader
 {
     private string _baseConfigFileName;
 

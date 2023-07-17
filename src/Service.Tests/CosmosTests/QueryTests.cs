@@ -119,8 +119,6 @@ query ($id: ID, $partitionKeyValue: String) {
             string[] tags = response.GetProperty("tags").Deserialize<string[]>();
             Assert.AreEqual(2, tags.Length);
             CollectionAssert.AreEqual(new[] { "tag1", "tag2" }, tags);
-
-            Assert.Fail();
         }
 
         /// <summary>

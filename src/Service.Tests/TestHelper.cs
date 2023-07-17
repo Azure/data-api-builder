@@ -10,6 +10,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Humanizer;
+using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Service.Tests
 {
@@ -127,6 +128,37 @@ namespace Azure.DataApiBuilder.Service.Tests
             @"
             ""runtime"": {
               ""rest"": {
+                ""path"": ""/api"",
+                ""enabled"": true
+              },
+              ""graphql"": {
+                ""path"": ""/graphql"",
+                ""enabled"": true,
+                ""allow-introspection"": true
+              },
+              ""host"": {
+                ""mode"": ""development"",
+                ""cors"": {
+                  ""origins"": [],
+                  ""allow-credentials"": false
+                },
+                ""authentication"": {
+                  ""provider"": ""StaticWebApps""
+                }
+              }
+            },
+            ""entities"": {}" +
+          "}";
+
+        /// <summary>
+        /// A minimal valid config json without any entities. This config string is used in tests.
+        /// </summary>
+        public const string BASE_CONFIG =
+          "{" +
+            SAMPLE_SCHEMA_DATA_SOURCE + "," +
+            @"
+            ""runtime"": {
+              ""rest"": {
                 ""path"": ""/api""
               },
               ""graphql"": {
@@ -136,7 +168,7 @@ namespace Azure.DataApiBuilder.Service.Tests
               ""host"": {
                 ""mode"": ""development"",
                 ""cors"": {
-                  ""origins"": [],
+                  ""origins"": [""http://localhost:5000""],
                   ""allow-credentials"": false
                 },
                 ""authentication"": {
@@ -158,12 +190,13 @@ namespace Azure.DataApiBuilder.Service.Tests
 
         /// <summary>
         /// Utility method that reads the config file for a given database type and constructs a
-        /// new config file with changes just in the host mode section.
+        /// new config file with custom changes as specified in the method parameters.
         /// </summary>
         /// <param name="configFileName">Name of the new config file to be constructed</param>
         /// <param name="hostModeType">HostMode for the engine</param>
         /// <param name="databaseType">Database type</param>
-        public static void ConstructNewConfigWithSpecifiedHostMode(string configFileName, HostMode hostModeType, string databaseType)
+        /// <param name="runtimeBaseRoute">Base route for API requests.</param>
+        public static void ConstructNewConfigWithSpecifiedHostMode(string configFileName, HostMode hostModeType, string databaseType, string runtimeBaseRoute = "/")
         {
             TestHelper.SetupDatabaseEnvironment(databaseType);
             RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(TestHelper.GetRuntimeConfigLoader());
@@ -178,11 +211,29 @@ namespace Azure.DataApiBuilder.Service.Tests
                     {
                         Host = config.Runtime.Host
                 with
-                        { Mode = hostModeType }
+                        { Mode = hostModeType },
+                        BaseRoute = runtimeBaseRoute
                     }
                 };
             File.WriteAllText(configFileName, configWithCustomHostMode.ToJson());
 
+        }
+
+        /// <summary>
+        /// Adds the entity properties to the configuration and returns the updated configuration json as a string.
+        /// </summary>
+        /// <param name="configuration">Configuration Json.</param>
+        /// <param name="entityProperties">Entity properties to be added to the configuration.</param>
+        public static string AddPropertiesToJson(string configuration, string entityProperties)
+        {
+            JObject configurationJson = JObject.Parse(configuration);
+            JObject entityPropertiesJson = JObject.Parse(entityProperties);
+
+            configurationJson.Merge(entityPropertiesJson, new JsonMergeSettings
+            {
+                MergeArrayHandling = MergeArrayHandling.Union
+            });
+            return configurationJson.ToString();
         }
     }
 }

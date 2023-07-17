@@ -9,5 +9,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 public enum ApiType
 {
     REST,
-    GraphQL
+    GraphQL,
+    // This is required to indicate features common between all APIs.
+    All
 }

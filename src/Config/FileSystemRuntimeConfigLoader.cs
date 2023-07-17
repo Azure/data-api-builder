@@ -23,7 +23,7 @@ namespace Azure.DataApiBuilder.Config;
 /// which allows for mocking of the file system in tests, providing a way to run the test
 /// in isolation of other tests or the actual file system.
 /// </remarks>
-public class FileSystemRuntimeConfigLoader : RunTimeConfigLoader
+public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
 {
     private string _baseConfigFileName;
 
@@ -159,6 +159,15 @@ public class FileSystemRuntimeConfigLoader : RunTimeConfigLoader
         return $"{fileName}.overrides{CONFIG_EXTENSION}";
     }
 
+    /// <summary>
+    /// Generates the name of the file based on environment value.
+    /// NOTE: Input File name should not contain extension
+    /// </summary>
+    public static string GetEnvironmentFileName(string fileName, string environmentValue)
+    {
+        return $"{fileName}.{environmentValue}{CONFIG_EXTENSION}";
+    }
+
     public bool DoesFileExistInCurrentDirectory(string fileName)
     {
         string currentDir = _fileSystem.Directory.GetCurrentDirectory();
@@ -243,4 +252,3 @@ public class FileSystemRuntimeConfigLoader : RunTimeConfigLoader
         _baseConfigFileName = fileName;
     }
 }
-

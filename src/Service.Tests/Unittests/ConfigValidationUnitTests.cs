@@ -3,6 +3,7 @@
 
 #nullable disable
 using System.Collections.Generic;
+using System.Data;
 using System.IO.Abstractions.TestingHelpers;
 using System.Linq;
 using System.Net;
@@ -249,7 +250,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", new()),
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
@@ -313,7 +314,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", new()),
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
@@ -367,7 +368,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", new()),
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
@@ -474,7 +475,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", new()),
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
@@ -565,7 +566,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", new()),
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
@@ -845,7 +846,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", new()),
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
@@ -897,30 +898,41 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("__introspectionField", true, DisplayName = "Invalid double underscore reserved for introspection fields.")]
         public void ValidateGraphQLTypeNamesFromConfig(string entityNameFromConfig, bool expectsException)
         {
-            Dictionary<string, Entity> entityCollection = new();
+            Dictionary<string, Entity> entityMap = new();
 
             // Sets only the top level name and enables GraphQL for entity
             Entity entity = SchemaConverterTests.GenerateEmptyEntity("");
             entity = entity with { GraphQL = entity.GraphQL with { Enabled = true } };
-            entityCollection.Add(entityNameFromConfig, entity);
+            entityMap.Add(entityNameFromConfig, entity);
 
             // Sets the top level name to an arbitrary value since it is not used in this check
             // and enables GraphQL for entity by setting the GraphQLSettings.Type to a string.
             entity = SchemaConverterTests.GenerateEmptyEntity("");
             entity = entity with { GraphQL = new(Singular: entityNameFromConfig, Plural: "") };
-            entityCollection.Add("EntityA", entity);
+            entityMap.Add("EntityA", entity);
 
             // Sets the top level name to an arbitrary value since it is not used in this check
             // and enables GraphQL for entity by setting the GraphQLSettings.Type to
             // a SingularPlural object where both Singular and Plural are defined.
             entity = SchemaConverterTests.GenerateEmptyEntity("");
             entity = entity with { GraphQL = new(entityNameFromConfig, entityNameFromConfig) };
-            entityCollection.Add("EntityC", entity);
+            entityMap.Add("EntityC", entity);
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, string.Empty, Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(null, null)
+                ),
+                Entities: new(entityMap)
+                );
 
             if (expectsException)
             {
                 DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
-                    action: () => RuntimeConfigValidator.ValidateEntityNamesInConfig(new(entityCollection)),
+                    action: () => RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig),
                     message: $"Entity name \"{entityNameFromConfig}\" incorrectly passed validation.");
 
                 Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
@@ -928,7 +940,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
             else
             {
-                RuntimeConfigValidator.ValidateEntityNamesInConfig(new(entityCollection));
+                RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig);
             }
         }
 
@@ -1263,7 +1275,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RestRuntimeOptions rest = new(Path: restConfiguredPath);
 
             RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(
-                new(DatabaseType.MSSQL, "", new()),
+                new(DatabaseType.MSSQL, "", Options: null),
                 graphQL,
                 rest);
             string expectedErrorMessage = "Conflicting GraphQL and REST path configuration.";
@@ -1310,13 +1322,15 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <summary>
         /// Method to create a sample entity with GraphQL enabled,
         /// with given source and relationship Info.
+        /// Rest is disabled by default, unless specified otherwise.
         /// </summary>
         /// <param name="source">Database name of entity.</param>
         /// <param name="relationshipMap">Dictionary containing {relationshipName, Relationship}</param>
         private static Entity GetSampleEntityUsingSourceAndRelationshipMap(
             string source,
             Dictionary<string, EntityRelationship> relationshipMap,
-            EntityGraphQLOptions graphQLDetails
+            EntityGraphQLOptions graphQLDetails,
+            EntityRestOptions restDetails = null
             )
         {
             EntityAction actionForRole = new(
@@ -1330,7 +1344,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Entity sampleEntity = new(
                 Source: new(source, EntitySourceType.Table, null, null),
-                Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS, Enabled: false),
+                Rest: restDetails ?? new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS, Enabled: false),
                 GraphQL: graphQLDetails,
                 Permissions: new[] { permissionForEntity },
                 Relationships: relationshipMap,
@@ -1412,91 +1426,63 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// </summary>
         /// <param name="apiPathPrefix">API path prefix</param>
         /// <param name="expectedErrorMessage">Expected error message in case an exception is thrown.</param>
-        /// <param name="IsPathContainingReservedCharacters">Boolean indicating if path prefix contains reserved characters.</param>
         /// <param name="expectError">Exception expected</param>
-        // @"[\.:\?#/\[\]@!$&'()\*\+,;=]+";
         [DataTestMethod]
-        [DataRow("/.", "", true, ApiType.REST, true,
-            DisplayName = "API path prefix containing reserved character .")]
-        [DataRow("/:", "", true, ApiType.REST, true,
-            DisplayName = "API path prefix containing reserved character :")]
-        [DataRow("/?", "", true, ApiType.REST, true,
-            DisplayName = "API path prefix containing reserved character ?")]
-        [DataRow("/#", "", true, ApiType.REST, true,
-            DisplayName = "API path prefix containing reserved character #")]
-        [DataRow("//", "", true, ApiType.REST, true,
-            DisplayName = "API path prefix containing reserved character /")]
-        [DataRow("/[", "", true, ApiType.REST, true,
-            DisplayName = "API path prefix containing reserved character [")]
-        [DataRow("/)", "", true, ApiType.REST, true,
-            DisplayName = "API path prefix containing reserved character )")]
-        [DataRow("/@", "", true, ApiType.REST, true,
-            DisplayName = "API path prefix containing reserved character @")]
-        [DataRow("/!", "", true, ApiType.GraphQL, true,
-            DisplayName = "API path prefix containing reserved character !")]
-        [DataRow("/$", "", true, ApiType.GraphQL, true,
-            DisplayName = "API path prefix containing reserved character $")]
-        [DataRow("/&", "", true, ApiType.GraphQL, true,
-            DisplayName = "API path prefix containing reserved character &")]
-        [DataRow("/'", "", true, ApiType.GraphQL, true,
-            DisplayName = "API path prefix containing reserved character '")]
-        [DataRow("/+", "", true, ApiType.GraphQL, true,
-            DisplayName = "API path prefix containing reserved character +")]
-        [DataRow("/;", "", true, ApiType.GraphQL, true,
-            DisplayName = "API path prefix containing reserved character .")]
-        [DataRow("/=", "", true, ApiType.GraphQL, true,
-            DisplayName = "API path prefix containing reserved character .")]
-        [DataRow("/?#*(=", "", true, ApiType.GraphQL, true,
-            DisplayName = "API path prefix containing multiple reserved characters /?#*(=")]
-        [DataRow("/+&,", "", true, ApiType.GraphQL, true,
-            DisplayName = "API path prefix containing reserved characters /+&,")]
-        [DataRow("/@)", "", true, ApiType.GraphQL, true,
-            DisplayName = "API path prefix containing reserved characters /@)")]
-        [DataRow("", "path prefix cannot be null or empty.", false, ApiType.GraphQL, true,
-            DisplayName = "Empty API path prefix.")]
-        [DataRow(null, "path prefix cannot be null or empty.", false, ApiType.GraphQL, true,
-            DisplayName = "Null API path prefix.")]
-        [DataRow("?", "path should start with a '/'.", false, ApiType.GraphQL, true,
-            DisplayName = "API path prefix not starting with forward slash.")]
-        [DataRow("/-api", null, false, ApiType.GraphQL, false,
-            DisplayName = "API path prefix containing hyphen (-)")]
-        [DataRow("/api path", null, false, ApiType.GraphQL, false,
-            DisplayName = "API path prefix containing space in between")]
-        [DataRow("/ apipath", null, false, ApiType.REST, false,
-            DisplayName = "API path prefix containing space at the start")]
-        [DataRow("/ api_path", null, false, ApiType.GraphQL, false,
-            DisplayName = "API path prefix containing space at the start and underscore in between.")]
-        [DataRow("/", null, false, ApiType.GraphQL, false,
-            DisplayName = "API path containing only a forward slash.")]
-        public void ValidateApiPathIsWellFormed(
+        [DataRow("/.", $"REST path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
+            DisplayName = "REST path prefix containing reserved character .")]
+        [DataRow("/:", $"REST path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
+            DisplayName = "REST path prefix containing reserved character :")]
+        [DataRow("/?", $"REST path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
+            DisplayName = "REST path prefix containing reserved character ?")]
+        [DataRow("/#", $"REST path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
+            DisplayName = "REST path prefix containing reserved character #")]
+        [DataRow("//", $"REST path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
+            DisplayName = "REST path prefix containing reserved character /")]
+        [DataRow("/[", $"REST path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
+            DisplayName = "REST path prefix containing reserved character [")]
+        [DataRow("/)", $"REST path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
+            DisplayName = "REST path prefix containing reserved character )")]
+        [DataRow("/@", $"REST path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
+            DisplayName = "REST path prefix containing reserved character @")]
+        [DataRow("/!", $"GraphQL path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
+            DisplayName = "GraphQL path prefix containing reserved character !")]
+        [DataRow("/$", $"GraphQL path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
+            DisplayName = "GraphQL path prefix containing reserved character $")]
+        [DataRow("/&", $"GraphQL path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
+            DisplayName = "GraphQL path prefix containing reserved character &")]
+        [DataRow("/'", $"GraphQL path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
+            DisplayName = "GraphQL path prefix containing reserved character '")]
+        [DataRow("/+", $"GraphQL path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
+            DisplayName = "GraphQL path prefix containing reserved character +")]
+        [DataRow("/;", $"GraphQL path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
+            DisplayName = "GraphQL path prefix containing reserved character ;")]
+        [DataRow("/=", $"GraphQL path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
+            DisplayName = "GraphQL path prefix containing reserved character =")]
+        [DataRow("/?#*(=", $"GraphQL path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
+            DisplayName = "GraphQL path prefix containing multiple reserved characters /?#*(=")]
+        [DataRow("/+&,", $"GraphQL path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
+            DisplayName = "GraphQL path prefix containing reserved characters /+&,")]
+        [DataRow("/@)", $"GraphQL path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
+            DisplayName = "GraphQL path prefix containing reserved characters /@)")]
+        [DataRow("", "GraphQL path cannot be null or empty.", ApiType.GraphQL, true,
+            DisplayName = "Empty GraphQL path prefix.")]
+        [DataRow(null, "GraphQL path cannot be null or empty.", ApiType.GraphQL, true,
+            DisplayName = "Null GraphQL path prefix.")]
+        [DataRow("?", "GraphQL path should start with a '/'.", ApiType.GraphQL, true,
+            DisplayName = "GraphQL path not starting with forward slash.")]
+        [DataRow("/-api", null, ApiType.GraphQL, false,
+            DisplayName = "GraphQL path containing hyphen (-)")]
+        [DataRow("/api path", null, ApiType.GraphQL, false,
+            DisplayName = "GraphQL path prefix containing space in between")]
+        [DataRow("/ apipath", null, ApiType.REST, false,
+            DisplayName = "REST path containing space at the start")]
+        [DataRow("/ api_path", null, ApiType.GraphQL, false,
+            DisplayName = "GraphQL path prefix containing space at the start and underscore in between.")]
+        [DataRow("/", null, ApiType.REST, false,
+            DisplayName = "REST path containing only a forward slash.")]
+        public void ValidateApiURIsAreWellFormed(
             string apiPathPrefix,
             string expectedErrorMessage,
-            bool pathContainsReservedCharacters,
-            ApiType apiType,
-            bool expectError)
-        {
-            ValidateRestAndGraphQLPathIsWellFormed(
-                apiPathPrefix,
-                expectedErrorMessage,
-                pathContainsReservedCharacters,
-                apiType,
-                expectError
-            );
-        }
-
-        /// <summary>
-        /// Validate Rest and GraphQL prefix path and matches the thrown exception with appropriate error messages
-        /// on failure.
-        /// </summary>
-        /// <param name="apiPathPrefix">API path prefix</param>
-        /// <param name="expectedErrorMessage">Expected error message in case an exception is thrown.</param>
-        /// <param name="pathContainsReservedCharacters">Boolean indicating if path prefix contains reserved characters.</param>
-        /// <param name="expectError">Exception expected</param>
-        /// <param name="apiType">Either REST or GraphQL</param>
-        private static void ValidateRestAndGraphQLPathIsWellFormed(
-            string apiPathPrefix,
-            string expectedErrorMessage,
-            bool pathContainsReservedCharacters,
             ApiType apiType,
             bool expectError)
         {
@@ -1516,56 +1502,21 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RestRuntimeOptions rest = new(Path: restPathPrefix);
 
             RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(
-                new(DatabaseType.MSSQL, "", new()),
+                new(DatabaseType.MSSQL, "", Options: null),
                 graphQL,
                 rest);
 
             if (expectError)
             {
-                DataApiBuilderException ex;
-                if (apiType is ApiType.REST)
-                {
-                    ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                    RuntimeConfigValidator.ValidateRestPathForRelationalDbs(configuration));
-
-                    if (pathContainsReservedCharacters)
-                    {
-                        expectedErrorMessage = RuntimeConfigValidator.INVALID_REST_PATH_WITH_RESERVED_CHAR_ERR_MSG;
-                    }
-                    else
-                    {
-                        expectedErrorMessage = "REST " + expectedErrorMessage;
-                    }
-                }
-                else
-                {
-                    ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                    RuntimeConfigValidator.ValidateGraphQLPath(configuration));
-
-                    if (pathContainsReservedCharacters)
-                    {
-                        expectedErrorMessage = RuntimeConfigValidator.INVALID_GRAPHQL_PATH_WITH_RESERVED_CHAR_ERR_MSG;
-                    }
-                    else
-                    {
-                        expectedErrorMessage = "GraphQL " + expectedErrorMessage;
-                    }
-                }
-
+                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+                RuntimeConfigValidator.ValidateGlobalEndpointRouteConfig(configuration));
                 Assert.AreEqual(expectedErrorMessage, ex.Message);
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
             }
             else
             {
-                if (apiType is ApiType.REST)
-                {
-                    RuntimeConfigValidator.ValidateRestPathForRelationalDbs(configuration);
-                }
-                else
-                {
-                    RuntimeConfigValidator.ValidateGraphQLPath(configuration);
-                }
+                RuntimeConfigValidator.ValidateGlobalEndpointRouteConfig(configuration);
             }
         }
 
@@ -1589,7 +1540,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RestRuntimeOptions rest = new(Enabled: restEnabled);
 
             RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(
-                new(DatabaseType.MSSQL, "", new()),
+                new(DatabaseType.MSSQL, "", Options: null),
                 graphQL,
                 rest);
             string expectedErrorMessage = "Both GraphQL and REST endpoints are disabled.";
@@ -1730,7 +1681,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Method to validate that any field set (included/excluded) if misconfigured, thorws an exception during
+        /// Method to validate that any field set (included/excluded) if misconfigured, throws an exception during
         /// config validation stage. If any field set contains a wildcard and any other field, we consider it as misconfigured.
         /// </summary>
         /// <param name="databasePolicy">Database policy for a particular role/action combination for an entity.</param>
@@ -1823,6 +1774,286 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             else
             {
                 RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
+            }
+        }
+
+        /// <summary>
+        /// Test to validate that the rest methods are correctly configured for entities in the config.
+        /// Rest methods can only be configured for stored procedures as an array of valid REST operations. 
+        /// </summary>
+        /// <param name="sourceType">The source type of the entity.</param>
+        /// <param name="methods">Value of the rest methods property configured for the entity.</param>
+        /// <param name="exceptionExpected">Boolean value representing whether an exception is expected or not.</param>
+        /// <param name="expectedErrorMessage">Expected error message when an exception is expected for the test run.</param>
+        [Ignore]
+        [DataTestMethod]
+        [DataRow(EntitySourceType.Table, "[\"get\"]", true,
+            $"The rest property 'methods' is present for entity: HybridEntity of type: Table, but is only valid for type: StoredProcedure.",
+            DisplayName = "Rest methods specified for non-storedprocedure entity fail config validation.")]
+        [DataRow(EntitySourceType.StoredProcedure, "[\"Get\", \"post\", \"PUT\", \"paTch\", \"delete\"]", false,
+            DisplayName = "Valid rest operations specified in rest methods for stored procedure pass config validation.")]
+        public void ValidateRestMethodsForEntityInConfig(
+            EntitySourceType sourceType,
+            string methods,
+            bool exceptionExpected,
+            string expectedErrorMessage = "")
+        {
+            string runtimeConfigString = @"{
+                    " +
+                @"""$schema"": ""test_schema""," +
+                @"""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""testconnectionstring"",
+                    ""options"":{
+                        ""set-session-context"": false
+                    }
+                },
+                ""runtime"": {
+                    ""host"": {
+                    ""mode"": ""development"",
+                    ""authentication"": {
+                        ""provider"": ""StaticWebApps""
+                    }
+                  },
+                  ""rest"": {
+                    ""enabled"": true,
+                    ""path"": ""/api""
+                    },
+                  ""graphql"": {
+                       ""enabled"": true,
+                       ""path"": ""/graphql"",
+                       ""allow-introspection"": true
+                    }
+                },
+                ""entities"": {
+                    ""HybridEntity"":{
+                        ""source"": {
+                            ""object"": ""hybridSource"",
+                            ""type"":" + $"\"{sourceType}\"" + @"
+                        },
+                        ""permissions"": [
+                           {
+                            ""role"": ""anonymous"",
+                            ""actions"": [
+                               ""*""
+                            ]
+                           }
+                         ],
+                        ""rest"":{
+                            ""methods"":" + $"{methods}" + @"
+                         }
+                       }
+                    }
+                }";
+
+            RuntimeConfigLoader.TryParseConfig(runtimeConfigString, out RuntimeConfig runtimeConfig);
+
+            // Perform validation on the entity in the config and assert the expected results.
+            if (exceptionExpected)
+            {
+                DataApiBuilderException ex =
+                    Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig));
+                Assert.AreEqual(expectedErrorMessage, ex.Message);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+            }
+            else
+            {
+                RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig);
+            }
+        }
+
+        /// <summary>
+        /// Test to validate that the rest path for an entity cannot be empty and cannot contain any reserved characters.
+        /// </summary>
+        /// <param name="exceptionExpected">Whether an exception is expected as a result of test run.</param>
+        /// <param name="restPathForEntity">Custom rest path to be configured for the first entity.</param>
+        /// <param name="expectedExceptionMessage">The expected exception message.</param>
+        [DataTestMethod]
+        [DataRow(true, "EntityA", "", true, "The rest path for entity: EntityA cannot be empty.",
+            DisplayName = "Empty rest path configured for an entity fails config validation.")]
+        [DataRow(true, "EntityA", "entity?RestPath", true, "The rest path: entity?RestPath for entity: EntityA contains one or more reserved characters.",
+            DisplayName = "Rest path for an entity containing reserved character ? fails config validation.")]
+        [DataRow(true, "EntityA", "entity#RestPath", true, "The rest path: entity#RestPath for entity: EntityA contains one or more reserved characters.",
+            DisplayName = "Rest path for an entity containing reserved character ? fails config validation.")]
+        [DataRow(true, "EntityA", "entity[]RestPath", true, "The rest path: entity[]RestPath for entity: EntityA contains one or more reserved characters.",
+            DisplayName = "Rest path for an entity containing reserved character ? fails config validation.")]
+        [DataRow(true, "EntityA", "entity+Rest*Path", true, "The rest path: entity+Rest*Path for entity: EntityA contains one or more reserved characters.",
+            DisplayName = "Rest path for an entity containing reserved character ? fails config validation.")]
+        [DataRow(true, "Entity?A", null, true, "The rest path: Entity?A for entity: Entity?A contains one or more reserved characters.",
+            DisplayName = "Entity name for an entity containing reserved character ? fails config validation.")]
+        [DataRow(true, "Entity&*[]A", null, true, "The rest path: Entity&*[]A for entity: Entity&*[]A contains one or more reserved characters.",
+            DisplayName = "Entity name containing reserved character ? fails config validation.")]
+        [DataRow(false, "EntityA", "entityRestPath", true, DisplayName = "Rest path correctly configured as a non-empty string without any reserved characters.")]
+        [DataRow(false, "EntityA", "entityRest/?Path", false,
+            DisplayName = "Rest path for an entity containing reserved character but with rest disabled passes config validation.")]
+        public void ValidateRestPathForEntityInConfig(
+            bool exceptionExpected,
+            string entityName,
+            string restPathForEntity,
+            bool isRestEnabledForEntity,
+            string expectedExceptionMessage = "")
+        {
+            Dictionary<string, Entity> entityMap = new();
+            Entity sampleEntity = GetSampleEntityUsingSourceAndRelationshipMap(
+                source: "TEST_SOURCEA",
+                relationshipMap: null,
+                graphQLDetails: null,
+                restDetails: new(new SupportedHttpVerb[] { }, restPathForEntity, isRestEnabledForEntity)
+            );
+            entityMap.Add(entityName, sampleEntity);
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(null, null)
+                ),
+                Entities: new(entityMap)
+            );
+
+            if (exceptionExpected)
+            {
+                DataApiBuilderException dabException =
+                    Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig));
+                Assert.AreEqual(expectedExceptionMessage, dabException.Message);
+                Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
+                Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
+            }
+            else
+            {
+                RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig);
+            }
+        }
+
+        /// <summary>
+        /// Test to validate that when multiple entities have the same rest path configured, we throw an exception.
+        /// </summary>
+        /// <param name="exceptionExpected">Whether an exception is expected as a result of test run.</param>
+        /// <param name="restPathForFirstEntity">Custom rest path to be configured for the first entity.</param>
+        /// <param name="restPathForSecondEntity">Custom rest path to be configured for the second entity.</param>
+        /// <param name="expectedExceptionMessage">The expected exception message.</param>
+        [DataTestMethod]
+        [DataRow(false, "restPathA", "restPathB", true, true, DisplayName = "Unique rest paths configured for entities pass config validation.")]
+        [DataRow(true, "restPath", "restPath", true, true, "The rest path: restPath specified for entity: EntityB is already used by another entity.",
+            DisplayName = "Duplicate rest paths configured for entities fail config validation.")]
+        [DataRow(false, "restPath", "restPath", true, false,
+            DisplayName = "Duplicate rest paths configured for entities with rest disabled on one of them pass config validation.")]
+        [DataRow(false, "restPath", "restPath", false, false,
+            DisplayName = "Duplicate rest paths configured for entities with rest disabled on both of them pass config validation.")]
+        [DataRow(true, null, "EntityA", true, true, "The rest path: EntityA specified for entity: EntityB is already used by another entity.",
+            DisplayName = "Rest path for an entity configured as the name of another entity fails config validation.")]
+        public void ValidateUniqueRestPathsForEntitiesInConfig(
+            bool exceptionExpected,
+            string restPathForFirstEntity,
+            string restPathForSecondEntity,
+            bool isRestEnabledForFirstEntity,
+            bool isRestEnabledForSecondEntity,
+            string expectedExceptionMessage = "")
+        {
+            Dictionary<string, Entity> entityMap = new();
+            Entity sampleEntityA = GetSampleEntityUsingSourceAndRelationshipMap(
+                source: "TEST_SOURCEA",
+                relationshipMap: null,
+                graphQLDetails: null,
+                restDetails: new(new SupportedHttpVerb[] { }, restPathForFirstEntity, isRestEnabledForFirstEntity)
+            );
+
+            Entity sampleEntityB = GetSampleEntityUsingSourceAndRelationshipMap(
+                source: "TEST_SOURCEB",
+                relationshipMap: null,
+                graphQLDetails: null,
+                restDetails: new(new SupportedHttpVerb[] { }, restPathForSecondEntity, isRestEnabledForSecondEntity)
+            );
+
+            entityMap.Add("EntityA", sampleEntityA);
+            entityMap.Add("EntityB", sampleEntityB);
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(null, null)
+                ),
+                Entities: new(entityMap)
+            );
+
+            if (exceptionExpected)
+            {
+                DataApiBuilderException dabException =
+                    Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig));
+                Assert.AreEqual(expectedExceptionMessage, dabException.Message);
+                Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
+                Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
+            }
+            else
+            {
+                RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig);
+            }
+        }
+
+        /// <summary>
+        /// Validates that the runtime base-route is well-formatted and does not contain any reserved characeters and
+        /// can only be configured when authentication provider is Static Web Apps.
+        /// </summary>
+        /// <param name="runtimeBaseRoute">Value of runtime base-route as specified in config.</param>
+        /// <param name="authenticationProvider">The authentication provider configured.</param>
+        /// <param name="isExceptionExpected">Whether an exception is expected as a result of test run.</param>
+        /// <param name="expectedExceptionMessage">The expected exception message.</param>
+        [DataTestMethod]
+        [DataRow("/base-route", "StaticWebApps", false, DisplayName = "Runtime base-route correctly configured as '/base-route' for Static Web Apps.")]
+        [DataRow("/", "StaticWebApps", false, DisplayName = "Runtime base-route correctly configured as '/' for Static Web Apps.")]
+        [DataRow(null, "StaticWebApps", false,
+            DisplayName = "Runtime base-route specified as null for Static Web Apps authentication provider passes config validation.")]
+        [DataRow(null, "AppService", false,
+            DisplayName = "Runtime base-route specified as null for AppService authentication provider passes config validation.")]
+        [DataRow(null, "StaticWebApps", false,
+            DisplayName = "Runtime base-route specified as null for Static Web Apps authentication provider passes config validation.")]
+        [DataRow("/    ", "StaticWebApps", false,
+            DisplayName = "Runtime base-route specified as whitespace string for Static Web Apps authentication provider passes config validation.")]
+        [DataRow("/    ", "AppService", true, "Runtime base-route can only be used when the authentication provider is Static Web Apps.",
+            DisplayName = "Runtime base-route specified as whitespace string for AppService authentication provider fails config validation.")]
+        [DataRow("/base-route", "AppService", true, "Runtime base-route can only be used when the authentication provider is Static Web Apps.",
+            DisplayName = "Runtime base-route specified for non-Static Web Apps authentication provider - AppService.")]
+        [DataRow("/base+?route", "StaticWebApps", true, $"Runtime base-route {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}",
+            DisplayName = "Runtime base-route specified for Static Web Apps authentication provider containing reserved characters +?")]
+        [DataRow("/base%&#route", "StaticWebApps", true, $"Runtime base-route {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}",
+            DisplayName = "Runtime base-route specified for Static Web Apps authentication provider containing reserved characters %&#")]
+        [DataRow("base-route", "StaticWebApps", true, $"Runtime base-route should start with a '/'.",
+            DisplayName = "Runtime base-route specified for Static Web Apps authentication provider not starting with '/'")]
+        public void ValidateRuntimeBaseRouteSettings(
+            string runtimeBaseRoute,
+            string authenticationProvider,
+            bool isExceptionExpected,
+            string expectedExceptionMessage = "")
+        {
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(Cors: null, Authentication: new(Provider: authenticationProvider, Jwt: null)),
+                    BaseRoute: runtimeBaseRoute
+                ),
+                Entities: new(new Dictionary<string, Entity>())
+            );
+
+            if (!isExceptionExpected)
+            {
+                RuntimeConfigValidator.ValidateGlobalEndpointRouteConfig(runtimeConfig);
+            }
+            else
+            {
+                DataApiBuilderException dabException =
+                    Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidateGlobalEndpointRouteConfig(runtimeConfig));
+                Assert.AreEqual(expectedExceptionMessage, dabException.Message);
+                Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
+                Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
             }
         }
     }

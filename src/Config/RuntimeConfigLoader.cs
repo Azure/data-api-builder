@@ -6,15 +6,16 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.Extensions.Logging;
 
-namespace Azure.DataApiBuilder.Config.ObjectModel;
+namespace Azure.DataApiBuilder.Config;
 
-public abstract class RunTimeConfigLoader
+public abstract class RuntimeConfigLoader
 {
     protected readonly string? _connectionString;
 
-    public RunTimeConfigLoader(string? connectionString = null)
+    public RuntimeConfigLoader(string? connectionString = null)
     {
         _connectionString = connectionString;
     }

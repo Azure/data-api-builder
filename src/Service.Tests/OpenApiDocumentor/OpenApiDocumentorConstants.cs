@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.DataApiBuilder.Service.Tests
+namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
 {
     public class OpenApiDocumentorConstants
     {

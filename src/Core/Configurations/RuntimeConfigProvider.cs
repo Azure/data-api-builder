@@ -227,11 +227,19 @@ public class RuntimeConfigProvider
 
         HyphenatedNamingPolicy namingPolicy = new();
 
-        Dictionary<string, JsonElement> options = new(runtimeConfig.DataSource.Options)
+        Dictionary<string, JsonElement> options;
+        if (runtimeConfig.DataSource.Options is not null)
         {
-            // push the "raw" GraphQL schema into the options to pull out later when requested
-            { namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.GraphQLSchema)), JsonSerializer.SerializeToElement(schema) }
-        };
+            options = new(runtimeConfig.DataSource.Options)
+            {
+                // push the "raw" GraphQL schema into the options to pull out later when requested
+                { namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.GraphQLSchema)), JsonSerializer.SerializeToElement(schema) }
+            };
+        }
+        else
+        {
+            throw new ArgumentException($"'{nameof(CosmosDbNoSQLDataSourceOptions)}' cannot be null or empty.", nameof(CosmosDbNoSQLDataSourceOptions));
+        }
 
         // SWA may provide CosmosDB database name in connectionString
         string? database = dbConnectionStringBuilder.ContainsKey("Database") ? (string)dbConnectionStringBuilder["Database"] : null;

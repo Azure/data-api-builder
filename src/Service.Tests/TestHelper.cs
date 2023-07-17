@@ -193,12 +193,13 @@ namespace Azure.DataApiBuilder.Service.Tests
 
         /// <summary>
         /// Utility method that reads the config file for a given database type and constructs a
-        /// new config file with changes just in the host mode section.
+        /// new config file with custom changes as specified in the method parameters.
         /// </summary>
         /// <param name="configFileName">Name of the new config file to be constructed</param>
         /// <param name="hostModeType">HostMode for the engine</param>
         /// <param name="databaseType">Database type</param>
-        public static void ConstructNewConfigWithSpecifiedHostMode(string configFileName, HostMode hostModeType, string databaseType)
+        /// <param name="runtimeBaseRoute">Base route for API requests.</param>
+        public static void ConstructNewConfigWithSpecifiedHostMode(string configFileName, HostMode hostModeType, string databaseType, string runtimeBaseRoute = "/")
         {
             TestHelper.SetupDatabaseEnvironment(databaseType);
             RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(TestHelper.GetRuntimeConfigLoader());
@@ -213,7 +214,8 @@ namespace Azure.DataApiBuilder.Service.Tests
                     {
                         Host = config.Runtime.Host
                 with
-                        { Mode = hostModeType }
+                        { Mode = hostModeType },
+                        BaseRoute = runtimeBaseRoute
                     }
                 };
             File.WriteAllText(configFileName, configWithCustomHostMode.ToJson());

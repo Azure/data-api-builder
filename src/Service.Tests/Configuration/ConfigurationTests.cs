@@ -1200,6 +1200,47 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
+        /// Test to validate that when an entity which will return a paginated response is queried, and a custom runtime base route is configured in the runtime configuration,
+        /// then the generated nextLink in the response would contain the rest base-route just before the rest path. For the subsequent query, the rest base-route will be trimmed
+        /// by the upstream before the request lands at DAB.
+        /// </summary>
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task TestRuntimeBaseRouteInNextLinkForPaginatedRestResponse()
+        {
+            const string CUSTOM_CONFIG = "custom-config.json";
+            string runtimeBaseRoute = "/base-route";
+            TestHelper.ConstructNewConfigWithSpecifiedHostMode(CUSTOM_CONFIG, HostMode.Production, TestCategory.MSSQL, runtimeBaseRoute: runtimeBaseRoute);
+            string[] args = new[]
+            {
+                    $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                string requestPath = "/api/MappedBookmarks";
+                HttpMethod httpMethod = SqlTestHelper.ConvertRestMethodToHttpMethod(SupportedHttpVerb.Get);
+                HttpRequestMessage request = new(httpMethod, requestPath);
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                string responseBody = await response.Content.ReadAsStringAsync();
+                Assert.IsTrue(response.StatusCode is HttpStatusCode.OK);
+
+                JsonElement responseElement = JsonSerializer.Deserialize<JsonElement>(responseBody);
+                JsonElement responseValue = responseElement.GetProperty(SqlTestHelper.jsonResultTopLevelKey);
+                string nextLink = responseElement.GetProperty("nextLink").ToString();
+
+                // Assert that we got an array response with length equal to the maximum allowed records in a paginated response.
+                Assert.AreEqual(JsonValueKind.Array, responseValue.ValueKind);
+                Assert.AreEqual(100, responseValue.GetArrayLength());
+
+                // Assert that the nextLink contains the rest base-route just before the request path.
+                StringAssert.Contains(nextLink, runtimeBaseRoute + requestPath);
+            }
+        }
+
+        /// <summary>
         /// Tests that the when Rest or GraphQL is disabled Globally,
         /// any requests made will get a 404 response.
         /// </summary>

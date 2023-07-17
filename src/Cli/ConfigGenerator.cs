@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service;
 using Cli.Commands;
 using Microsoft.Extensions.Logging;
@@ -87,6 +88,7 @@ namespace Cli
             DatabaseType dbType = options.DatabaseType;
             string? restPath = options.RestPath;
             string graphQLPath = options.GraphQLPath;
+            string? runtimeBaseRoute = options.RuntimeBaseRoute;
             Dictionary<string, JsonElement> dbOptions = new();
 
             HyphenatedNamingPolicy namingPolicy = new();
@@ -147,9 +149,31 @@ namespace Cli
                 return false;
             }
 
-            if (!IsApiPathValid(restPath, ApiType.REST) || !IsApiPathValid(options.GraphQLPath, ApiType.GraphQL))
+            if (!IsURIComponentValid(restPath))
             {
+                _logger.LogError($"{ApiType.REST} path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}");
                 return false;
+            }
+
+            if (!IsURIComponentValid(options.GraphQLPath))
+            {
+                _logger.LogError($"{ApiType.GraphQL} path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}");
+                return false;
+            }
+
+            if (!IsURIComponentValid(runtimeBaseRoute))
+            {
+                _logger.LogError($"Runtime base-route {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}");
+                return false;
+            }
+
+            if (runtimeBaseRoute is not null)
+            {
+                if (!Enum.TryParse(options.AuthenticationProvider, ignoreCase: true, out EasyAuthType easyAuthMode) || easyAuthMode is not EasyAuthType.StaticWebApps)
+                {
+                    _logger.LogError($"Runtime base-route can only be specified when the authentication provider is Static Web Apps.");
+                    return false;
+                }
             }
 
             if (options.RestDisabled && options.GraphQLDisabled)
@@ -164,6 +188,12 @@ namespace Cli
             if (restPath is not null && !restPath.StartsWith('/'))
             {
                 restPath = "/" + restPath;
+            }
+
+            // Prefix base-route with '/', if not already present.
+            if (runtimeBaseRoute is not null && !runtimeBaseRoute.StartsWith('/'))
+            {
+                runtimeBaseRoute = "/" + runtimeBaseRoute;
             }
 
             // Prefix GraphQL path with '/', if not already present.
@@ -183,7 +213,8 @@ namespace Cli
                         Authentication: new(
                             Provider: options.AuthenticationProvider,
                             Jwt: (options.Audience is null && options.Issuer is null) ? null : new(options.Audience, options.Issuer)),
-                        Mode: options.HostMode)
+                        Mode: options.HostMode),
+                    BaseRoute: runtimeBaseRoute
                 ),
                 Entities: new RuntimeEntities(new Dictionary<string, Entity>()));
 

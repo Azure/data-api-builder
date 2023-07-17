@@ -4,6 +4,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
@@ -208,6 +209,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // nextLink is the URL needed to get the next page of records using the same query options
             // with $after base64 encoded for opaqueness
             string path = UriHelper.GetEncodedUrl(_httpContextAccessor.HttpContext!.Request).Split('?')[0];
+
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+            // If the base route is not empty, we need to insert it into the URI before the rest path.
+            string? baseRoute = runtimeConfig.Runtime.BaseRoute;
+            if (!string.IsNullOrWhiteSpace(baseRoute))
+            {
+                HttpRequest request = _httpContextAccessor.HttpContext!.Request;
+
+                // Path is of the form ....restPath/pathNameForEntity. We want to insert the base route before the restPath.
+                // Finally, it will be of the form: .../baseRoute/restPath/pathNameForEntity.
+                path = UriHelper.BuildAbsolute(
+                    scheme: request.Scheme,
+                    host: request.Host,
+                    pathBase: baseRoute,
+                    path: request.Path);
+            }
+
             JsonElement nextLink = SqlPaginationUtil.CreateNextLink(
                                   path,
                                   nvc: context!.ParsedQueryString,

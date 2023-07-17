@@ -34,12 +34,12 @@ namespace Azure.DataApiBuilder.Core.Configurations
         private static readonly Regex _invalidClaimCharsRgx = new(_invalidClaimChars, RegexOptions.Compiled);
 
         // Reserved characters as defined in RFC3986 are not allowed to be present in the
-        // REST/GraphQL URI path because they are not acceptable to be present in URIs.
+        // REST/GraphQL custom path because they are not acceptable to be present in URIs.
         // Refer here: https://www.rfc-editor.org/rfc/rfc3986#page-12.
-        private static readonly string _invalidUriCharacters = @"[\.:\?#/\[\]@!$&'()\*\+,;=]+";
+        private static readonly string _reservedUriChars = @"[\.:\?#/\[\]@!$&'()\*\+,;=]+";
 
-        //  Regex to validate rest/graphql URI path components.
-        public static readonly Regex _invalidUriCharactersRgx = new(_invalidUriCharacters, RegexOptions.Compiled);
+        //  Regex to validate rest/graphql custom path prefix.
+        public static readonly Regex _reservedUriCharsRgx = new(_reservedUriChars, RegexOptions.Compiled);
 
         // Regex used to extract all claimTypes in policy. It finds all the substrings which are
         // of the form @claims.*** delimited by space character,end of the line or end of the string.
@@ -47,8 +47,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
 
         // Error messages.
         public const string INVALID_CLAIMS_IN_POLICY_ERR_MSG = "One or more claim types supplied in the database policy are not supported.";
-        public const string INVALID_REST_PATH_WITH_RESERVED_CHAR_ERR_MSG = "REST path contains one or more reserved characters.";
-        public const string INVALID_GRAPHQL_PATH_WITH_RESERVED_CHAR_ERR_MSG = "GraphQL path contains one or more reserved characters.";
+        public const string URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG = "contains one or more reserved characters.";
 
         public RuntimeConfigValidator(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -287,7 +286,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
                     );
             }
 
-            if (_invalidUriCharactersRgx.IsMatch(pathForEntity))
+            if (_reservedUriCharsRgx.IsMatch(pathForEntity))
             {
                 throw new DataApiBuilderException(
                     message: $"The rest path: {pathForEntity} for entity: {entityName} contains one or more reserved characters.",
@@ -325,8 +324,30 @@ namespace Azure.DataApiBuilder.Core.Configurations
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
             }
 
-            ValidateRestPathForRelationalDbs(runtimeConfig);
-            ValidateGraphQLPath(runtimeConfig);
+            string? runtimeBaseRoute = runtimeConfig.Runtime.BaseRoute;
+
+            // Ensure that the runtime base-route is only configured when authentication provider is StaticWebApps.
+            if (runtimeBaseRoute is not null)
+            {
+                if (runtimeConfig.Runtime.Host.Authentication is null || !runtimeConfig.Runtime.Host.Authentication.IsStaticWebAppsIdentityProvider())
+                {
+                    throw new DataApiBuilderException(
+                        message: "Runtime base-route can only be used when the authentication provider is Static Web Apps.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                }
+
+                if (!TryValidateUriComponent(runtimeBaseRoute, out string exceptionMsgSuffix))
+                {
+                    throw new DataApiBuilderException(
+                        message: $"Runtime base-route {exceptionMsgSuffix}",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                }
+            }
+
+            ValidateRestURI(runtimeConfig);
+            ValidateGraphQLURI(runtimeConfig);
             // Do not check for conflicts if GraphQL or REST endpoints are disabled.
             if (!runtimeConfig.Runtime.Rest.Enabled || !runtimeConfig.Runtime.GraphQL.Enabled)
             {
@@ -346,11 +367,11 @@ namespace Azure.DataApiBuilder.Core.Configurations
         }
 
         /// <summary>
-        /// Method to validate that the rest path prefix.
+        /// Method to validate that the REST URI (REST path prefix, REST base route).
         /// Skips validation for cosmosDB since it doesn't support REST.
         /// </summary>
         /// <param name="runtimeConfig"></param>
-        public static void ValidateRestPathForRelationalDbs(RuntimeConfig runtimeConfig)
+        public static void ValidateRestURI(RuntimeConfig runtimeConfig)
         {
             // CosmosDB_NoSQL does not support rest. No need to do any validations.
             if (runtimeConfig.DataSource.DatabaseType is DatabaseType.CosmosDB_NoSQL)
@@ -359,75 +380,71 @@ namespace Azure.DataApiBuilder.Core.Configurations
             }
 
             string restPath = runtimeConfig.Runtime.Rest.Path;
-
-            ValidateApiPath(restPath, ApiType.REST);
+            if (!TryValidateUriComponent(restPath, out string exceptionMsgSuffix))
+            {
+                throw new DataApiBuilderException(
+                    message: $"{ApiType.REST} path {exceptionMsgSuffix}",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+            }
         }
 
         /// <summary>
-        /// Method to validate that the GraphQL path prefix.
+        /// Method to validate that the GraphQL URI (GraphQL path prefix).
         /// </summary>
-        /// <param name="runtimeConfig">The config that will be validated</param>
-        public static void ValidateGraphQLPath(RuntimeConfig runtimeConfig)
+        /// <param name="runtimeConfig"></param>
+        public static void ValidateGraphQLURI(RuntimeConfig runtimeConfig)
         {
             string graphqlPath = runtimeConfig.Runtime.GraphQL.Path;
-
-            ValidateApiPath(graphqlPath, ApiType.GraphQL);
-        }
-
-        /// <summary>
-        /// Method to validate that the REST/GraphQL path prefix is well formed and does not contain
-        /// any forbidden characters.
-        /// </summary>
-        /// <param name="apiPath">path prefix for rest/graphql apis</param>
-        /// <param name="apiType">Either REST or GraphQL</param>
-        /// <exception cref="DataApiBuilderException">Thrown if the path is null/empty or it doesn't start with a preceding /.</exception>
-        private static void ValidateApiPath(string apiPath, ApiType apiType)
-        {
-            if (string.IsNullOrEmpty(apiPath))
+            if (!TryValidateUriComponent(graphqlPath, out string exceptionMsgSuffix))
             {
                 throw new DataApiBuilderException(
-                    message: $"{apiType} path prefix cannot be null or empty.",
+                    message: $"{ApiType.GraphQL} path {exceptionMsgSuffix}",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
             }
-
-            // A valid api path prefix should start with a forward slash '/'.
-            if (!apiPath.StartsWith("/"))
-            {
-                throw new DataApiBuilderException(
-                    message: $"{apiType} path should start with a '/'.",
-                    statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
-            }
-
-            apiPath = apiPath[1..];
-
-            // API path prefix should not contain any reserved characters.
-            DoApiPathInvalidCharCheck(apiPath, apiType);
         }
 
         /// <summary>
-        /// Method to validate that the REST/GraphQL path prefix does not contain
-        /// any forbidden characters.
+        /// Method to validate that the REST/GraphQL URI component is well formed and does not contain
+        /// any reserved characters. In case the URI component is not well formed the exception message containing
+        /// the reason for ill-formed URI component is returned. Else we return an empty string.
         /// </summary>
-        /// <param name="apiPath">path prefix for rest/graphql apis</param>
-        /// <param name="apiType">Either REST or GraphQL</param>
-        /// <exception cref="DataApiBuilderException"></exception>
-        public static void DoApiPathInvalidCharCheck(string apiPath, ApiType apiType)
+        /// <param name="uriComponent">path prefix/base route for rest/graphql apis</param>
+        /// <returns>false when the URI component is not well formed.</returns>
+        private static bool TryValidateUriComponent(string? uriComponent, out string exceptionMessageSuffix)
         {
-            if (_invalidUriCharactersRgx.IsMatch(apiPath))
+            exceptionMessageSuffix = string.Empty;
+            if (string.IsNullOrEmpty(uriComponent))
             {
-                string errorMessage = INVALID_GRAPHQL_PATH_WITH_RESERVED_CHAR_ERR_MSG;
-                if (apiType == ApiType.REST)
+                exceptionMessageSuffix = "cannot be null or empty.";
+            }
+            // A valid URI component should start with a forward slash '/'.
+            else if (!uriComponent.StartsWith("/"))
+            {
+                exceptionMessageSuffix = "should start with a '/'.";
+            }
+            else
+            {
+                uriComponent = uriComponent.Substring(1);
+                // URI component should not contain any reserved characters.
+                if (DoesUriComponentContainReservedChars(uriComponent))
                 {
-                    errorMessage = INVALID_REST_PATH_WITH_RESERVED_CHAR_ERR_MSG;
+                    exceptionMessageSuffix = URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG;
                 }
-
-                throw new DataApiBuilderException(
-                    message: errorMessage,
-                    statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
             }
+
+            return string.IsNullOrEmpty(exceptionMessageSuffix);
+        }
+
+        /// <summary>
+        /// Method to validate that the REST/GraphQL API's URI component does not contain
+        /// any reserved characters.
+        /// </summary>
+        /// <param name="uriComponent">path prefix for rest/graphql apis</param>
+        public static bool DoesUriComponentContainReservedChars(string uriComponent)
+        {
+            return _reservedUriCharsRgx.IsMatch(uriComponent);
         }
 
         private static void ValidateAuthenticationOptions(RuntimeConfig runtimeConfig)

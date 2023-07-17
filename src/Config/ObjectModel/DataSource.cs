@@ -40,10 +40,8 @@ public record DataSource(DatabaseType DatabaseType, string ConnectionString, Dic
 
         if (typeof(TOptionType).IsAssignableFrom(typeof(MsSqlOptions)))
         {
-            return Options is not null ?
-                (TOptionType)(object)new MsSqlOptions(
-                SetSessionContext: ReadBoolOption(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext))))
-                : default;
+            return (TOptionType)(object)new MsSqlOptions(
+                SetSessionContext: ReadBoolOption(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext))));
         }
 
         throw new NotSupportedException($"The type {typeof(TOptionType).FullName} is not a supported strongly typed options object");

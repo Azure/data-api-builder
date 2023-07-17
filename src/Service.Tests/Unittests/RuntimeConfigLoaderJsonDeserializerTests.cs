@@ -61,8 +61,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void CheckConfigEnvParsingTest(string[] repKeys, string[] repValues)
         {
             SetEnvVariables();
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(GetModifiedJsonString(repValues), out RuntimeConfig expectedConfig), "Should read the expected config");
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(GetModifiedJsonString(repKeys), out RuntimeConfig actualConfig), "Should read actual config");
+            Assert.IsTrue(FileSystemRuntimeConfigLoader.TryParseConfig(GetModifiedJsonString(repValues), out RuntimeConfig expectedConfig), "Should read the expected config");
+            Assert.IsTrue(FileSystemRuntimeConfigLoader.TryParseConfig(GetModifiedJsonString(repKeys), out RuntimeConfig actualConfig), "Should read actual config");
 
             Assert.AreEqual(expectedConfig.ToJson(), actualConfig.ToJson());
         }
@@ -85,7 +85,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                                     ""connection-string"": ""Server=tcp:127.0.0.1,1433;Persist Security Info=False;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=False;Connection Timeout=5;""
                                     }
                                 }";
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(actualJson, out RuntimeConfig _), "Should not fail to parse with comments");
+            Assert.IsTrue(FileSystemRuntimeConfigLoader.TryParseConfig(actualJson, out RuntimeConfig _), "Should not fail to parse with comments");
         }
 
         #endregion Positive Tests
@@ -126,7 +126,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         ""database-type"": ""notsupporteddb""
      }
 }";
-            Assert.IsFalse(RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig));
+            Assert.IsFalse(FileSystemRuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig));
             Assert.IsNull(deserializedConfig);
         }
 
@@ -143,7 +143,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             string exceptionMessage)
         {
             MockFileSystem fileSystem = new();
-            RuntimeConfigLoader loader = new(fileSystem);
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
 
             Assert.IsFalse(loader.TryLoadConfig(configFileName, out RuntimeConfig _));
         }

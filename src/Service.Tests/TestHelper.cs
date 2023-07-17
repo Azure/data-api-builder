@@ -17,14 +17,14 @@ namespace Azure.DataApiBuilder.Service.Tests
     {
         public static void SetupDatabaseEnvironment(string database)
         {
-            Environment.SetEnvironmentVariable(RuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, database);
+            Environment.SetEnvironmentVariable(FileSystemRuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, database);
         }
 
         public static void UnsetAllDABEnvironmentVariables()
         {
-            Environment.SetEnvironmentVariable(RuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, null);
-            Environment.SetEnvironmentVariable(RuntimeConfigLoader.ASP_NET_CORE_ENVIRONMENT_VAR_NAME, null);
-            Environment.SetEnvironmentVariable(RuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING, null);
+            Environment.SetEnvironmentVariable(FileSystemRuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, null);
+            Environment.SetEnvironmentVariable(FileSystemRuntimeConfigLoader.ASP_NET_CORE_ENVIRONMENT_VAR_NAME, null);
+            Environment.SetEnvironmentVariable(FileSystemRuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING, null);
         }
 
         /// <summary>
@@ -32,10 +32,10 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// </summary>
         /// <param name="environment"></param>
         /// <returns></returns>
-        public static RuntimeConfigLoader GetRuntimeConfigLoader()
+        public static FileSystemRuntimeConfigLoader GetRuntimeConfigLoader()
         {
             FileSystem fileSystem = new();
-            RuntimeConfigLoader runtimeConfigLoader = new(fileSystem);
+            FileSystemRuntimeConfigLoader runtimeConfigLoader = new(fileSystem);
             return runtimeConfigLoader;
         }
 
@@ -45,7 +45,7 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// </summary>
         /// <param name="loader"></param>
         /// <returns></returns>
-        public static RuntimeConfigProvider GetRuntimeConfigProvider(RuntimeConfigLoader loader)
+        public static RuntimeConfigProvider GetRuntimeConfigProvider(FileSystemRuntimeConfigLoader loader)
         {
             RuntimeConfigProvider runtimeConfigProvider = new(loader);
 
@@ -105,7 +105,7 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// for unit tests
         /// </summary>
         public const string SCHEMA_PROPERTY = @"
-          ""$schema"": """ + RuntimeConfigLoader.SCHEMA + @"""";
+          ""$schema"": """ + FileSystemRuntimeConfigLoader.SCHEMA + @"""";
 
         /// <summary>
         /// Data source property of the config json. This is used for constructing the required config json strings
@@ -150,8 +150,8 @@ namespace Azure.DataApiBuilder.Service.Tests
         public static RuntimeConfigProvider GenerateInMemoryRuntimeConfigProvider(RuntimeConfig runtimeConfig)
         {
             MockFileSystem fileSystem = new();
-            fileSystem.AddFile(RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, runtimeConfig.ToJson());
-            RuntimeConfigLoader loader = new(fileSystem);
+            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, runtimeConfig.ToJson());
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider runtimeConfigProvider = new(loader);
             return runtimeConfigProvider;
         }

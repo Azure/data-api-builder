@@ -18,6 +18,6 @@ public record RuntimeConfig(
     /// <returns></returns>
     public string ToJson()
     {
-        return JsonSerializer.Serialize(this, RuntimeConfigLoader.GetSerializationOptions());
+        return JsonSerializer.Serialize(this, FileSystemRuntimeConfigLoader.GetSerializationOptions());
     }
 }

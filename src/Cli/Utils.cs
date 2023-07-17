@@ -388,7 +388,7 @@ namespace Cli
         /// In case of false, the runtimeConfigFile will be set to string.Empty.
         /// </summary>
         public static bool TryGetConfigFileBasedOnCliPrecedence(
-            RuntimeConfigLoader loader,
+            FileSystemRuntimeConfigLoader loader,
             string? userProvidedConfigFile,
             out string runtimeConfigFile)
         {

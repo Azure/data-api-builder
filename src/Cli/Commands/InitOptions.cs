@@ -98,7 +98,7 @@ namespace Cli.Commands
         [Option("graphql.disabled", Default = false, Required = false, HelpText = "Disables GraphQL endpoint for all entities.")]
         public bool GraphQLDisabled { get; }
 
-        public void Handler(ILogger logger, RuntimeConfigLoader loader, IFileSystem fileSystem)
+        public void Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             logger.LogInformation($"{PRODUCT_NAME} {ProductInfo.GetProductVersion()}");
             bool isSuccess = ConfigGenerator.TryGenerateConfig(this, loader, fileSystem);

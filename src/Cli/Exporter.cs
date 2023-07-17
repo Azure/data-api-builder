@@ -13,7 +13,7 @@ namespace Cli
 {
     internal static class Exporter
     {
-        public static void Export(ExportOptions options, ILogger logger, RuntimeConfigLoader loader, IFileSystem fileSystem)
+        public static void Export(ExportOptions options, ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             StartOptions startOptions = new(false, LogLevel.None, false, options.Config!);
 

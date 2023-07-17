@@ -35,7 +35,7 @@ namespace Cli.Commands
         [Option("no-https-redirect", Required = false, HelpText = "Disables automatic https redirects.")]
         public bool IsHttpsRedirectionDisabled { get; }
 
-        public void Handler(ILogger logger, RuntimeConfigLoader loader, IFileSystem fileSystem)
+        public void Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             logger.LogInformation($"{PRODUCT_NAME} {ProductInfo.GetProductVersion()}");
             bool isSuccess = ConfigGenerator.TryStartEngineWithOptions(this, loader, fileSystem);

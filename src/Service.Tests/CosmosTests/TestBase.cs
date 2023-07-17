@@ -97,7 +97,7 @@ type Sun @model(name:""Sun"") {
     {
         // Read the base config from the file system
         TestHelper.SetupDatabaseEnvironment(TestCategory.COSMOSDBNOSQL);
-        RuntimeConfigLoader baseLoader = TestHelper.GetRuntimeConfigLoader();
+        FileSystemRuntimeConfigLoader baseLoader = TestHelper.GetRuntimeConfigLoader();
         if (!baseLoader.TryLoadKnownConfig(out RuntimeConfig baseConfig))
         {
             throw new ApplicationException("Failed to load the default CosmosDB_NoSQL config and cannot continue with tests.");
@@ -117,9 +117,9 @@ type Sun @model(name:""Sun"") {
         MockFileSystem fileSystem = new(new Dictionary<string, MockFileData>()
         {
             { @"../schema.gql", new MockFileData(GRAPHQL_SCHEMA) },
-            { RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(updatedConfig.ToJson()) }
+            { FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(updatedConfig.ToJson()) }
         });
-        RuntimeConfigLoader loader = new(fileSystem);
+        FileSystemRuntimeConfigLoader loader = new(fileSystem);
         RuntimeConfigProvider provider = new(loader);
 
         ISqlMetadataProvider cosmosSqlMetadataProvider = new CosmosSqlMetadataProvider(provider, fileSystem);

@@ -14,7 +14,7 @@ namespace Azure.DataApiBuilder.Core.Configurations;
 
 /// <summary>
 /// This class is responsible for exposing the runtime config to the rest of the service.
-/// The <c>RuntimeConfigProvider</c> won't directly load the config, but will instead rely on the <see cref="RuntimeConfigLoader"/> to do so.
+/// The <c>RuntimeConfigProvider</c> won't directly load the config, but will instead rely on the <see cref="FileSystemRuntimeConfigLoader"/> to do so.
 /// </summary>
 /// <remarks>
 /// The <c>RuntimeConfigProvider</c> will maintain internal state of the config, and will only load it once.
@@ -40,12 +40,12 @@ public class RuntimeConfigProvider
     /// </summary>
     public string? ManagedIdentityAccessToken { get; private set; }
 
-    private readonly RuntimeConfigLoader _runtimeConfigLoader;
+    private readonly FileSystemRuntimeConfigLoader _runtimeConfigLoader;
     private RuntimeConfig? _runtimeConfig;
 
     public string RuntimeConfigFileName => _runtimeConfigLoader.ConfigFileName;
 
-    public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader)
+    public RuntimeConfigProvider(FileSystemRuntimeConfigLoader runtimeConfigLoader)
     {
         _runtimeConfigLoader = runtimeConfigLoader;
     }
@@ -130,7 +130,7 @@ public class RuntimeConfigProvider
             throw new ArgumentException($"'{nameof(configuration)}' cannot be null or empty.", nameof(configuration));
         }
 
-        if (RuntimeConfigLoader.TryParseConfig(
+        if (FileSystemRuntimeConfigLoader.TryParseConfig(
                 configuration,
                 out RuntimeConfig? runtimeConfig))
         {
@@ -182,7 +182,7 @@ public class RuntimeConfigProvider
 
         IsLateConfigured = true;
 
-        if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig))
+        if (FileSystemRuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig))
         {
             _runtimeConfig = runtimeConfig.DataSource.DatabaseType switch
             {

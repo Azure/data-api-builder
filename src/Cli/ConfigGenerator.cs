@@ -34,11 +34,11 @@ namespace Cli
         /// <summary>
         /// This method will generate the initial config with databaseType and connection-string.
         /// </summary>
-        public static bool TryGenerateConfig(InitOptions options, RuntimeConfigLoader loader, IFileSystem fileSystem)
+        public static bool TryGenerateConfig(InitOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
             {
-                runtimeConfigFile = RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME;
+                runtimeConfigFile = FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME;
                 _logger.LogInformation($"Creating a new config file: {runtimeConfigFile}");
             }
 
@@ -65,7 +65,7 @@ namespace Cli
         /// <param name="options">Init options</param>
         /// <param name="runtimeConfig">Output runtime config json.</param>
         /// <returns>True on success. False otherwise.</returns>
-        public static bool TryCreateRuntimeConfig(InitOptions options, RuntimeConfigLoader loader, IFileSystem fileSystem, [NotNullWhen(true)] out RuntimeConfig? runtimeConfig)
+        public static bool TryCreateRuntimeConfig(InitOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem, [NotNullWhen(true)] out RuntimeConfig? runtimeConfig)
         {
             runtimeConfig = null;
 
@@ -179,7 +179,7 @@ namespace Cli
         /// This method will add a new Entity with the given REST and GraphQL endpoints, source, and permissions.
         /// It also supports fields that needs to be included or excluded for a given role and operation.
         /// </summary>
-        public static bool TryAddEntityToConfigWithOptions(AddOptions options, RuntimeConfigLoader loader, IFileSystem fileSystem)
+        public static bool TryAddEntityToConfigWithOptions(AddOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
             {
@@ -409,7 +409,7 @@ namespace Cli
         /// This method will update an existing Entity with the given REST and GraphQL endpoints, source, and permissions.
         /// It also supports updating fields that need to be included or excluded for a given role and operation.
         /// </summary>
-        public static bool TryUpdateEntityWithOptions(UpdateOptions options, RuntimeConfigLoader loader, IFileSystem fileSystem)
+        public static bool TryUpdateEntityWithOptions(UpdateOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
             {
@@ -905,7 +905,7 @@ namespace Cli
         /// overrides < environmentConfig < defaultConfig
         /// Also preforms validation to check connection string is not null or empty.
         /// </summary>
-        public static bool TryStartEngineWithOptions(StartOptions options, RuntimeConfigLoader loader, IFileSystem fileSystem)
+        public static bool TryStartEngineWithOptions(StartOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             string? configToBeUsed = options.Config;
             if (string.IsNullOrEmpty(configToBeUsed) && ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, _logger, out configToBeUsed))

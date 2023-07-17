@@ -79,8 +79,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
            );
 
             MockFileSystem fileSystem = new();
-            fileSystem.AddFile(RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
-            RuntimeConfigLoader loader = new(fileSystem);
+            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider provider = new(loader);
             Mock<DbExceptionParser> dbExceptionParser = new(provider);
             Mock<ILogger<MsSqlQueryExecutor>> queryExecutorLogger = new();
@@ -153,8 +153,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
            );
 
             MockFileSystem fileSystem = new();
-            fileSystem.AddFile(RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
-            RuntimeConfigLoader loader = new(fileSystem);
+            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider provider = new(loader)
             {
                 IsLateConfigured = true
@@ -213,7 +213,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
             FileSystem fileSystem = new();
-            RuntimeConfigLoader loader = new(fileSystem);
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider provider = new(loader) { IsLateConfigured = true };
             Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();

@@ -224,5 +224,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             throw new NotImplementedException();
         }
+
+        /// <inheritdoc/>
+        public string GetQuerytoGetReadOnlyColumns()
+        {
+            string query = "SELECT attname AS COLUMN_NAME FROM pg_attribute " +
+                "WHERE attrelid = (@param0 || '.' || @param1)::regclass AND attgenerated = 's';";
+            return query;
+        }
     }
 }

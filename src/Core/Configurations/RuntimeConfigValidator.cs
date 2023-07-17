@@ -327,17 +327,15 @@ namespace Azure.DataApiBuilder.Core.Configurations
             string? runtimeBaseRoute = runtimeConfig.Runtime.BaseRoute;
 
             // Ensure that the runtime base-route is only configured when authentication provider is StaticWebApps.
-            if (runtimeBaseRoute is not null &&
-                (runtimeConfig.Runtime.Host.Authentication is null || !runtimeConfig.Runtime.Host.Authentication.IsStaticWebAppsIdentityProvider()))
+            if (runtimeBaseRoute is not null)
             {
-                throw new DataApiBuilderException(
-                    message: "Runtime base-route can only be used when the authentication provider is Static Web Apps.",
-                    statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
-            }
+                if (runtimeConfig.Runtime.Host.Authentication is null || !runtimeConfig.Runtime.Host.Authentication.IsStaticWebAppsIdentityProvider()){
+                    throw new DataApiBuilderException(
+                        message: "Runtime base-route can only be used when the authentication provider is Static Web Apps.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                }
 
-            if (!string.IsNullOrWhiteSpace(runtimeBaseRoute))
-            {
                 if (!TryValidateUriComponent(runtimeBaseRoute, out string exceptionMsgSuffix))
                 {
                     throw new DataApiBuilderException(
@@ -416,7 +414,6 @@ namespace Azure.DataApiBuilder.Core.Configurations
         private static bool TryValidateUriComponent(string? uriComponent, out string exceptionMessageSuffix)
         {
             exceptionMessageSuffix = string.Empty;
-            ;
             if (string.IsNullOrEmpty(uriComponent))
             {
                 exceptionMessageSuffix = "cannot be null or empty.";

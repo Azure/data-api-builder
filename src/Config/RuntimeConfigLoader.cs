@@ -6,12 +6,9 @@ using System.IO.Abstractions;
 using System.Net;
 using System.Reflection;
 using System.Text.Json;
-using System.Text.Json.Serialization;
-using Azure.DataApiBuilder.Config.Converters;
-using Azure.DataApiBuilder.Config.NamingPolicies;
+using Azure.DataApiBuilder.Config.Interfaces;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Config;
 
@@ -27,12 +24,11 @@ namespace Azure.DataApiBuilder.Config;
 /// which allows for mocking of the file system in tests, providing a way to run the test
 /// in isolation of other tests or the actual file system.
 /// </remarks>
-public class RuntimeConfigLoader
+public class RuntimeConfigLoader : IRunTimeConfigLoader
 {
     private string _baseConfigFileName;
 
     private readonly IFileSystem _fileSystem;
-    private readonly string? _connectionString;
 
     public const string CONFIGFILE_NAME = "dab-config";
     public const string CONFIG_EXTENSION = ".json";
@@ -42,13 +38,18 @@ public class RuntimeConfigLoader
     public const string ASP_NET_CORE_ENVIRONMENT_VAR_NAME = "ASPNETCORE_ENVIRONMENT";
     public const string SCHEMA = "dab.draft.schema.json";
 
+    /// <summary>
+    /// Returns the default config file name.
+    /// </summary>
+    public const string DEFAULT_CONFIG_FILE_NAME = $"{CONFIGFILE_NAME}{CONFIG_EXTENSION}";
+
     public string ConfigFileName => GetFileNameForEnvironment(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), false);
 
     public RuntimeConfigLoader(IFileSystem fileSystem, string baseConfigFileName = DEFAULT_CONFIG_FILE_NAME, string? connectionString = null)
+        : base(connectionString)
     {
         _fileSystem = fileSystem;
         _baseConfigFileName = baseConfigFileName;
-        _connectionString = connectionString;
     }
 
     /// <summary>
@@ -70,77 +71,11 @@ public class RuntimeConfigLoader
     }
 
     /// <summary>
-    /// Parses a JSON string into a <c>RuntimeConfig</c> object
-    /// </summary>
-    /// <param name="json">JSON that represents the config file.</param>
-    /// <param name="config">The parsed config, or null if it parsed unsuccessfully.</param>
-    /// <returns>True if the config was parsed, otherwise false.</returns>
-    public static bool TryParseConfig(string json, [NotNullWhen(true)] out RuntimeConfig? config, ILogger? logger = null, string? connectionString = null)
-    {
-        JsonSerializerOptions options = GetSerializationOptions();
-
-        try
-        {
-            config = JsonSerializer.Deserialize<RuntimeConfig>(json, options);
-
-            if (config is null)
-            {
-                return false;
-            }
-
-            if (!string.IsNullOrEmpty(connectionString))
-            {
-                config = config with { DataSource = config.DataSource with { ConnectionString = connectionString } };
-            }
-        }
-        catch (JsonException ex)
-        {
-            string errorMessage = $"Deserialization of the configuration file failed.\n" +
-                        $"Message:\n {ex.Message}\n" +
-                        $"Stack Trace:\n {ex.StackTrace}";
-
-            if (logger is null)
-            {
-                // logger can be null when called from CLI
-                Console.Error.WriteLine(errorMessage);
-            }
-            else
-            {
-                logger.LogError(ex, errorMessage);
-            }
-
-            config = null;
-            return false;
-        }
-
-        return true;
-    }
-
-    public static JsonSerializerOptions GetSerializationOptions()
-    {
-        JsonSerializerOptions options = new()
-        {
-            PropertyNameCaseInsensitive = false,
-            PropertyNamingPolicy = new HyphenatedNamingPolicy(),
-            ReadCommentHandling = JsonCommentHandling.Skip,
-            WriteIndented = true,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-        };
-        options.Converters.Add(new EnumMemberJsonEnumConverterFactory());
-        options.Converters.Add(new RestRuntimeOptionsConverterFactory());
-        options.Converters.Add(new GraphQLRuntimeOptionsConverterFactory());
-        options.Converters.Add(new EntitySourceConverterFactory());
-        options.Converters.Add(new EntityActionConverterFactory());
-        options.Converters.Add(new StringJsonConverterFactory());
-        return options;
-    }
-
-    /// <summary>
     /// Tries to load the config file using the filename known to the RuntimeConfigLoader and for the default environment.
     /// </summary>
     /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
-    public bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config)
+    public override bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config)
     {
         return TryLoadConfig(ConfigFileName, out config);
     }
@@ -186,11 +121,6 @@ public class RuntimeConfigLoader
 
         return configFileNameWithExtension;
     }
-
-    /// <summary>
-    /// Returns the default config file name.
-    /// </summary>
-    public const string DEFAULT_CONFIG_FILE_NAME = $"{CONFIGFILE_NAME}{CONFIG_EXTENSION}";
 
     /// <summary>
     /// Generates the config file name and a corresponding overridden file name,

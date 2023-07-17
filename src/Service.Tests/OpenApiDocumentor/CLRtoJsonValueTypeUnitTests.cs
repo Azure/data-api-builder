@@ -75,8 +75,8 @@ public class CLRtoJsonValueTypeUnitTests
     /// <summary>
     /// Validates the behavior of TypeHelper.GetJsonDataTypeFromSystemType(Type type) by
     /// ensuring that a nullable value type like int? is resolved to its underlying type int.
-    /// Consequently, the lookup in the _systemTypeToJsonDataTypeMap dictionary succeeds without
-    /// requiring nullable value type be defined as keys.
+    /// Consequently, the lookup in the _systemTypeToJsonDataTypeMap and _systemTypeToDbTypeMap
+    /// dictionary succeeds without requiring nullable value type be defined as keys.
     /// Nullable value types are represented in runtime as Nullable<t>. Whereas
     /// nullable reference types do no have a standalone runtime representation.
     /// See csharplang discussion on why typeof(string?) (nullable reference type) is not valid,
@@ -106,5 +106,6 @@ public class CLRtoJsonValueTypeUnitTests
     public void ResolveUnderlyingTypeForNullableValueType(Type nullableType)
     {
         Assert.AreNotEqual(notExpected: JsonDataType.Undefined, actual: TypeHelper.GetJsonDataTypeFromSystemType(nullableType));
+        Assert.IsNotNull(TypeHelper.GetDbTypeFromSystemType(nullableType));
     }
 }

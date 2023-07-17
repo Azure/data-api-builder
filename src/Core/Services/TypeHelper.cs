@@ -35,22 +35,9 @@ namespace Azure.DataApiBuilder.Core.Services
             [typeof(char)] = DbType.StringFixedLength,
             [typeof(Guid)] = DbType.Guid,
             [typeof(byte[])] = DbType.Binary,
+            [typeof(DateTime)] = DbType.DateTime,
+            [typeof(DateTimeOffset)] = DbType.DateTimeOffset,
             [typeof(TimeSpan)] = DbType.Time,
-            [typeof(byte?)] = DbType.Byte,
-            [typeof(sbyte?)] = DbType.SByte,
-            [typeof(short?)] = DbType.Int16,
-            [typeof(ushort?)] = DbType.UInt16,
-            [typeof(int?)] = DbType.Int32,
-            [typeof(uint?)] = DbType.UInt32,
-            [typeof(long?)] = DbType.Int64,
-            [typeof(ulong?)] = DbType.UInt64,
-            [typeof(float?)] = DbType.Single,
-            [typeof(double?)] = DbType.Double,
-            [typeof(decimal?)] = DbType.Decimal,
-            [typeof(bool?)] = DbType.Boolean,
-            [typeof(char?)] = DbType.StringFixedLength,
-            [typeof(Guid?)] = DbType.Guid,
-            [typeof(TimeSpan?)] = DbType.Time,
             [typeof(object)] = DbType.Object
         };
 
@@ -153,6 +140,15 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <returns>DbType for the given system type. Null when no mapping exists.</returns>
         public static DbType? GetDbTypeFromSystemType(Type systemType)
         {
+            // Get the underlying type argument if the 'systemType' argument is a nullable type.
+            Type? nullableUnderlyingType = Nullable.GetUnderlyingType(systemType);
+
+            // Will not be null when the input argument 'systemType' is a closed generic nullable type.
+            if (nullableUnderlyingType is not null)
+            {
+                systemType = nullableUnderlyingType;
+            }
+
             if (!_systemTypeToDbTypeMap.TryGetValue(systemType, out DbType dbType))
             {
                 return null;

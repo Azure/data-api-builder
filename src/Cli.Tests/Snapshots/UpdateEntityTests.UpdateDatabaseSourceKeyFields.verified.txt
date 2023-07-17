@@ -3,7 +3,7 @@
     DatabaseType: MSSQL,
     Options: {
       set-session-context: {
-        ValueKind: True
+        ValueKind: False
       }
     }
   },

@@ -24,10 +24,10 @@ using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
-using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
+using Azure.DataApiBuilder.Service.Tests.OpenApiIntegration;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using HotChocolate;
 using Microsoft.AspNetCore.TestHost;
@@ -46,7 +46,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 {
     [TestClass]
     public class ConfigurationTests
-        : VerifyBase
+    : VerifyBase
     {
         private const string COSMOS_ENVIRONMENT = TestCategory.COSMOSDBNOSQL;
         private const string MSSQL_ENVIRONMENT = TestCategory.MSSQL;
@@ -88,6 +88,235 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                         ""publisher_id"": ""one""
                     }
                 ";
+
+        /// <summary>
+        /// A config file with SP entity with no REST section defined.
+        /// This config string is used for validating the REST HTTP methods that are enabled. 
+        /// </summary>
+        public const string SP_CONFIG_WITH_NO_REST_SETTINGS = @"
+        {
+          ""entities"": {
+            ""GetBooks"": {
+              ""source"": {
+                ""object"": ""get_books"",
+                ""type"": ""stored-procedure"",
+                ""parameters"": null,
+                ""key-fields"": null
+              },
+              ""graphql"": {
+                ""enabled"": true,
+                ""operation"": ""query"",
+                ""type"": {
+                  ""singular"": ""GetBooks"",
+                  ""plural"": ""GetBooks""
+                }
+              },
+              ""permissions"": [
+                {
+                  ""role"": ""anonymous"",
+                  ""actions"": [
+                    {
+                      ""action"": ""execute"",
+                      ""fields"": null,
+                      ""policy"": {
+                        ""request"": null,
+                        ""database"": null
+                      }
+                    }
+                  ]
+                }
+              ],
+              ""mappings"": null,
+              ""relationships"": null
+            }
+          }
+        }";
+
+        /// <summary>
+        /// A config file with SP entity with a custom path defined in REST section.
+        /// This config string is used for validating the REST HTTP methods that are enabled.
+        /// </summary>
+        public const string SP_CONFIG_WITH_ONLY_PATH_IN_REST_SETTINGS = @"
+        {
+            ""entities"": {
+                ""GetBooks"": {
+                    ""source"": {
+                    ""object"": ""get_books"",
+                    ""type"": ""stored-procedure"",
+                    ""parameters"": null,
+                    ""key-fields"": null
+                    },
+                    ""graphql"": {
+                    ""enabled"": true,
+                    ""operation"": ""query"",
+                    ""type"": {
+                        ""singular"": ""GetBooks"",
+                        ""plural"": ""GetBooks""
+                    }
+                    },
+                    ""rest"":{
+                    ""path"": ""get_books""
+                    },
+                    ""permissions"": [
+                    {
+                        ""role"": ""anonymous"",
+                        ""actions"": [
+                        {
+                            ""action"": ""execute"",
+                            ""fields"": null,
+                            ""policy"": {
+                            ""request"": null,
+                            ""database"": null
+                            }
+                        }
+                        ]
+                    }
+                    ],
+                    ""mappings"": null,
+                    ""relationships"": null
+                }
+            }
+        }";
+
+        /// <summary>
+        /// A config file with a SP entity with the supported HTTP methods defined in REST section.
+        /// This config string is used for validating the REST HTTP methods that are enabled.
+        /// </summary>
+        public const string SP_CONFIG_WITH_JUST_METHODS_IN_REST_SETTINGS = @"
+            {
+              ""entities"": {
+                    ""GetBooks"": {
+                    ""source"": {
+                        ""object"": ""get_books"",
+                        ""type"": ""stored-procedure"",
+                        ""parameters"": null,
+                        ""key-fields"": null
+                    },
+                    ""graphql"": {
+                        ""enabled"": true,
+                        ""operation"": ""query"",
+                        ""type"": {
+                        ""singular"": ""GetBooks"",
+                        ""plural"": ""GetBooks""
+                        }
+                    },
+                    ""rest"":{
+                        ""methods"": [
+                        ""get""
+                        ]
+                    },
+                    ""permissions"": [
+                        {
+                        ""role"": ""anonymous"",
+                        ""actions"": [
+                            {
+                            ""action"": ""execute"",
+                            ""fields"": null,
+                            ""policy"": {
+                                ""request"": null,
+                                ""database"": null
+                            }
+                            }
+                        ]
+                        }
+                    ],
+                    ""mappings"": null,
+                    ""relationships"": null
+                    }
+                }
+            }";
+
+        /// <summary>
+        /// A config file with a SP entity for which REST APIs are disabled.
+        /// This config string is used for validating that none of the REST methods are enabled.
+        /// </summary>
+        public const string SP_CONFIG_WITH_REST_DISABLED = @"
+            {
+              ""entities"": {
+                    ""GetBooks"": {
+                    ""source"": {
+                        ""object"": ""get_books"",
+                        ""type"": ""stored-procedure"",
+                        ""parameters"": null,
+                        ""key-fields"": null
+                    },
+                    ""graphql"": {
+                        ""enabled"": true,
+                        ""operation"": ""query"",
+                        ""type"": {
+                        ""singular"": ""GetBooks"",
+                        ""plural"": ""GetBooks""
+                        }
+                    },
+                    ""rest"":{
+                        ""enabled"": false
+                    },
+                    ""permissions"": [
+                        {
+                        ""role"": ""anonymous"",
+                        ""actions"": [
+                            {
+                            ""action"": ""execute"",
+                            ""fields"": null,
+                            ""policy"": {
+                                ""request"": null,
+                                ""database"": null
+                            }
+                            }
+                        ]
+                        }
+                    ],
+                    ""mappings"": null,
+                    ""relationships"": null
+                    }
+                }
+            }";
+
+        /// <summary>
+        /// A config file with a SP entity for which REST path and methods are not explicitly configured.
+        /// This config string is used for validating the default REST behavior.
+        /// </summary>
+        public const string SP_CONFIG_WITH_JUST_REST_ENABLED = @"
+            {
+              ""entities"": {
+                    ""GetBooks"": {
+                    ""source"": {
+                        ""object"": ""get_books"",
+                        ""type"": ""stored-procedure"",
+                        ""parameters"": null,
+                        ""key-fields"": null
+                    },
+                    ""graphql"": {
+                        ""enabled"": true,
+                        ""operation"": ""query"",
+                        ""type"": {
+                        ""singular"": ""GetBooks"",
+                        ""plural"": ""GetBooks""
+                        }
+                    },
+                    ""rest"":{
+                        ""enabled"": true
+                    },
+                    ""permissions"": [
+                        {
+                        ""role"": ""anonymous"",
+                        ""actions"": [
+                            {
+                            ""action"": ""execute"",
+                            ""fields"": null,
+                            ""policy"": {
+                                ""request"": null,
+                                ""database"": null
+                            }
+                            }
+                        ]
+                        }
+                    ],
+                    ""mappings"": null,
+                    ""relationships"": null
+                    }
+                }
+            }";
 
         [TestCleanup]
         public void CleanupAfterEachTest()
@@ -538,11 +767,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             ConfigurationPostParameters expectedParameters = GetCosmosConfigurationParameters();
             Assert.AreEqual(DatabaseType.CosmosDB_NoSQL, configuration.DataSource.DatabaseType, "Expected CosmosDB_NoSQL database type after configuring the runtime with CosmosDB_NoSQL settings.");
-            Assert.AreEqual(expectedParameters.Schema, configuration.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>().GraphQLSchema, "Expected the schema in the configuration to match the one sent to the configuration endpoint.");
+            CosmosDbNoSQLDataSourceOptions options = configuration.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>();
+            Assert.IsNotNull(options);
+            Assert.AreEqual(expectedParameters.Schema, options.GraphQLSchema, "Expected the schema in the configuration to match the one sent to the configuration endpoint.");
 
             // Don't use Assert.AreEqual, because a failure will print the entire connection string in the error message.
             Assert.IsTrue(expectedParameters.ConnectionString == configuration.DataSource.ConnectionString, "Expected the connection string in the configuration to match the one sent to the configuration endpoint.");
-            string db = configuration.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>().Database;
+            string db = options.Database;
             Assert.AreEqual(COSMOS_DATABASE_NAME, db, "Expected the database name in the runtime config to match the one sent to the configuration endpoint.");
         }
 
@@ -625,9 +856,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
             string[] args = new[]
             {
-                $"--ConfigFileName={RuntimeConfigLoader.CONFIGFILE_NAME}." +
-                $"{COSMOS_ENVIRONMENT}{RuntimeConfigLoader.CONFIG_EXTENSION}"
-            };
+            $"--ConfigFileName={RuntimeConfigLoader.CONFIGFILE_NAME}." +
+            $"{COSMOS_ENVIRONMENT}{RuntimeConfigLoader.CONFIG_EXTENSION}"
+        };
 
             TestServer server = new(Program.CreateWebHostBuilder(args));
 
@@ -777,8 +1008,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             File.WriteAllText(CUSTOM_CONFIG, configWithCustomHostMode.ToJson());
             string[] args = new[]
             {
-                $"--ConfigFileName={CUSTOM_CONFIG}"
-            };
+            $"--ConfigFileName={CUSTOM_CONFIG}"
+        };
 
             using TestServer server = new(Program.CreateWebHostBuilder(args));
             using HttpClient client = server.CreateClient();
@@ -822,7 +1053,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             GraphQLRuntimeOptions graphqlOptions = new(Path: graphQLConfiguredPath);
 
-            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), new());
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL),
+                Options: null);
 
             RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, new());
             const string CUSTOM_CONFIG = "custom-config.json";
@@ -885,8 +1118,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             TestHelper.ConstructNewConfigWithSpecifiedHostMode(CUSTOM_CONFIG, HostMode.Production, TestCategory.MSSQL);
             string[] args = new[]
             {
-                    $"--ConfigFileName={CUSTOM_CONFIG}"
-            };
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+        };
 
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
@@ -909,6 +1142,105 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 string body = await response.Content.ReadAsStringAsync();
                 Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
                 Assert.IsTrue(body.Contains(expectedErrorMessage));
+            }
+        }
+
+        /// <summary>
+        /// Validates the REST HTTP methods that are enabled for Stored Procedures when
+        /// some of the default fields are absent in the config file.
+        /// When methods section is not defined explicitly in the config file, only POST
+        /// method should be enabled for Stored Procedures.
+        /// </summary>
+        [DataTestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        [DataRow(SP_CONFIG_WITH_NO_REST_SETTINGS, SupportedHttpVerb.Post, "/api/GetBooks", HttpStatusCode.Created, DisplayName = "SP - REST POST enabled when no REST section is present")]
+        [DataRow(SP_CONFIG_WITH_NO_REST_SETTINGS, SupportedHttpVerb.Get, "/api/GetBooks", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST GET disabled when no REST section is present")]
+        [DataRow(SP_CONFIG_WITH_NO_REST_SETTINGS, SupportedHttpVerb.Patch, "/api/GetBooks", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST PATCH disabled when no REST section is present")]
+        [DataRow(SP_CONFIG_WITH_NO_REST_SETTINGS, SupportedHttpVerb.Put, "/api/GetBooks", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST PUT disabled when no REST section is present")]
+        [DataRow(SP_CONFIG_WITH_NO_REST_SETTINGS, SupportedHttpVerb.Delete, "/api/GetBooks", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST DELETE disabled when no REST section is present")]
+        [DataRow(SP_CONFIG_WITH_ONLY_PATH_IN_REST_SETTINGS, SupportedHttpVerb.Post, "/api/get_books/", HttpStatusCode.Created, DisplayName = "SP - REST POST enabled when only a custom path is defined")]
+        [DataRow(SP_CONFIG_WITH_ONLY_PATH_IN_REST_SETTINGS, SupportedHttpVerb.Get, "/api/get_books/", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST GET disabled when only a custom path is defined")]
+        [DataRow(SP_CONFIG_WITH_ONLY_PATH_IN_REST_SETTINGS, SupportedHttpVerb.Patch, "/api/get_books/", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST PATCH disabled when only a custom path is defined")]
+        [DataRow(SP_CONFIG_WITH_ONLY_PATH_IN_REST_SETTINGS, SupportedHttpVerb.Delete, "/api/get_books/", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST DELETE disabled when only a custom path is defined")]
+        [DataRow(SP_CONFIG_WITH_ONLY_PATH_IN_REST_SETTINGS, SupportedHttpVerb.Put, "/api/get_books/", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST PUT disabled when a custom path is defined")]
+        [DataRow(SP_CONFIG_WITH_JUST_METHODS_IN_REST_SETTINGS, SupportedHttpVerb.Post, "/api/GetBooks/", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST POST disabled by not specifying in the methods section")]
+        [DataRow(SP_CONFIG_WITH_JUST_METHODS_IN_REST_SETTINGS, SupportedHttpVerb.Get, "/api/GetBooks/", HttpStatusCode.OK, DisplayName = "SP - REST GET enabled by specifying in the methods section")]
+        [DataRow(SP_CONFIG_WITH_JUST_METHODS_IN_REST_SETTINGS, SupportedHttpVerb.Patch, "/api/GetBooks/", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST PATCH disabled by not specifying in the methods section")]
+        [DataRow(SP_CONFIG_WITH_JUST_METHODS_IN_REST_SETTINGS, SupportedHttpVerb.Put, "/api/GetBooks/", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST PUT disabled by not specifying in the methods section")]
+        [DataRow(SP_CONFIG_WITH_JUST_METHODS_IN_REST_SETTINGS, SupportedHttpVerb.Delete, "/api/GetBooks/", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST DELETE disabled by not specifying in the methods section")]
+        [DataRow(SP_CONFIG_WITH_REST_DISABLED, SupportedHttpVerb.Get, "/api/GetBooks", HttpStatusCode.NotFound, DisplayName = "SP - REST GET disabled by configuring enabled as false")]
+        [DataRow(SP_CONFIG_WITH_REST_DISABLED, SupportedHttpVerb.Post, "/api/GetBooks", HttpStatusCode.NotFound, DisplayName = "SP - REST POST disabled by configuring enabled as false")]
+        [DataRow(SP_CONFIG_WITH_REST_DISABLED, SupportedHttpVerb.Patch, "/api/GetBooks", HttpStatusCode.NotFound, DisplayName = "SP - REST PATCH disabled by configuring enabled as false")]
+        [DataRow(SP_CONFIG_WITH_REST_DISABLED, SupportedHttpVerb.Put, "/api/GetBooks", HttpStatusCode.NotFound, DisplayName = "SP - REST PUT disabled by configuring enabled as false")]
+        [DataRow(SP_CONFIG_WITH_REST_DISABLED, SupportedHttpVerb.Delete, "/api/GetBooks", HttpStatusCode.NotFound, DisplayName = "SP - REST DELETE disabled by configuring enabled as false")]
+        [DataRow(SP_CONFIG_WITH_JUST_REST_ENABLED, SupportedHttpVerb.Get, "/api/GetBooks", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST GET is disabled when enabled flag is configured to true")]
+        [DataRow(SP_CONFIG_WITH_JUST_REST_ENABLED, SupportedHttpVerb.Post, "/api/GetBooks", HttpStatusCode.Created, DisplayName = "SP - REST POST is enabled when enabled flag is configured to true")]
+        [DataRow(SP_CONFIG_WITH_JUST_REST_ENABLED, SupportedHttpVerb.Patch, "/api/GetBooks", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST PATCH is disabled when enabled flag is configured to true")]
+        [DataRow(SP_CONFIG_WITH_JUST_REST_ENABLED, SupportedHttpVerb.Put, "/api/GetBooks", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST PUT is disabled when enabled flag is configured to true")]
+        [DataRow(SP_CONFIG_WITH_JUST_REST_ENABLED, SupportedHttpVerb.Delete, "/api/GetBooks", HttpStatusCode.MethodNotAllowed, DisplayName = "SP - REST DELETE is disabled when enabled flag is configured to true")]
+        public async Task TestSPRestDefaultsForManuallyConstructedConfigs(
+           string entityJson,
+           SupportedHttpVerb requestType,
+           string requestPath,
+           HttpStatusCode expectedResponseStatusCode)
+        {
+            string configJson = TestHelper.AddPropertiesToJson(TestHelper.BASE_CONFIG, entityJson);
+            RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig, logger: null, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL));
+            string configFileName = "custom-config.json";
+            File.WriteAllText(configFileName, deserializedConfig.ToJson());
+            string[] args = new[]
+            {
+                    $"--ConfigFileName={configFileName}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                HttpMethod httpMethod = SqlTestHelper.ConvertRestMethodToHttpMethod(requestType);
+                HttpRequestMessage request = new(httpMethod, requestPath);
+                HttpResponseMessage response = await client.SendAsync(request);
+                Assert.AreEqual(expectedResponseStatusCode, response.StatusCode);
+            }
+        }
+
+        /// <summary>
+        /// Test to validate that when an entity which will return a paginated response is queried, and a custom runtime base route is configured in the runtime configuration,
+        /// then the generated nextLink in the response would contain the rest base-route just before the rest path. For the subsequent query, the rest base-route will be trimmed
+        /// by the upstream before the request lands at DAB.
+        /// </summary>
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task TestRuntimeBaseRouteInNextLinkForPaginatedRestResponse()
+        {
+            const string CUSTOM_CONFIG = "custom-config.json";
+            string runtimeBaseRoute = "/base-route";
+            TestHelper.ConstructNewConfigWithSpecifiedHostMode(CUSTOM_CONFIG, HostMode.Production, TestCategory.MSSQL, runtimeBaseRoute: runtimeBaseRoute);
+            string[] args = new[]
+            {
+                    $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                string requestPath = "/api/MappedBookmarks";
+                HttpMethod httpMethod = SqlTestHelper.ConvertRestMethodToHttpMethod(SupportedHttpVerb.Get);
+                HttpRequestMessage request = new(httpMethod, requestPath);
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                string responseBody = await response.Content.ReadAsStringAsync();
+                Assert.IsTrue(response.StatusCode is HttpStatusCode.OK);
+
+                JsonElement responseElement = JsonSerializer.Deserialize<JsonElement>(responseBody);
+                JsonElement responseValue = responseElement.GetProperty(SqlTestHelper.jsonResultTopLevelKey);
+                string nextLink = responseElement.GetProperty("nextLink").ToString();
+
+                // Assert that we got an array response with length equal to the maximum allowed records in a paginated response.
+                Assert.AreEqual(JsonValueKind.Array, responseValue.ValueKind);
+                Assert.AreEqual(100, responseValue.GetArrayLength());
+
+                // Assert that the nextLink contains the rest base-route just before the request path.
+                StringAssert.Contains(nextLink, runtimeBaseRoute + requestPath);
             }
         }
 
@@ -938,7 +1270,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             GraphQLRuntimeOptions graphqlOptions = new(Enabled: isGraphQLEnabled);
             RestRuntimeOptions restRuntimeOptions = new(Enabled: isRestEnabled);
 
-            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), new());
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
             RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions);
             const string CUSTOM_CONFIG = "custom-config.json";
@@ -946,8 +1279,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             string[] args = new[]
             {
-                    $"--ConfigFileName={CUSTOM_CONFIG}"
-            };
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+        };
 
             // Non-Hosted Scenario
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
@@ -1006,7 +1339,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestMethod, TestCategory(TestCategory.MSSQL)]
         public async Task TestEngineSupportViewsWithoutKeyFieldsInConfigForMsSQL()
         {
-            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), new());
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
             Entity viewEntity = new(
                 Source: new("books_view_all", EntitySourceType.Table, null, null),
                 Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
@@ -1026,8 +1360,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             string[] args = new[]
             {
-                    $"--ConfigFileName={CUSTOM_CONFIG}"
-            };
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+        };
 
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
@@ -1105,8 +1439,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             File.WriteAllText(CUSTOM_CONFIG, configWithCustomHostMode.ToJson());
             string[] args = new[]
             {
-                $"--ConfigFileName={CUSTOM_CONFIG}"
-            };
+            $"--ConfigFileName={CUSTOM_CONFIG}"
+        };
 
             // This test only checks for startup errors, so no requests are sent to the test server.
             try
@@ -1138,7 +1472,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             GraphQLRuntimeOptions graphqlOptions = new(AllowIntrospection: enableIntrospection);
             RestRuntimeOptions restRuntimeOptions = new();
 
-            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), new());
+            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
             RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions);
             const string CUSTOM_CONFIG = "custom-config.json";
@@ -1146,8 +1480,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             string[] args = new[]
             {
-                $"--ConfigFileName={CUSTOM_CONFIG}"
-            };
+            $"--ConfigFileName={CUSTOM_CONFIG}"
+        };
 
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
@@ -1190,13 +1524,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             GraphQLRuntimeOptions graphqlOptions = new(Enabled: globalGraphQLEnabled);
             RestRuntimeOptions restRuntimeOptions = new(Enabled: true);
 
-            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), new());
+            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
             // Configure Entity for testing
             Dictionary<string, string> mappings = new()
-            {
-                { "__introspectionName", "conformingIntrospectionName" }
-            };
+        {
+            { "__introspectionName", "conformingIntrospectionName" }
+        };
 
             if (!string.IsNullOrWhiteSpace(columnMapping))
             {
@@ -1218,8 +1552,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             string[] args = new[]
             {
-                $"--ConfigFileName={CUSTOM_CONFIG}"
-            };
+            $"--ConfigFileName={CUSTOM_CONFIG}"
+        };
 
             try
             {
@@ -1263,7 +1597,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             string expectedOpenApiTargetContent)
         {
             string swaggerEndpoint = "/swagger";
-            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), new());
+            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
             RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource: dataSource, new(), new(Path: customRestPath));
             configuration = configuration
@@ -1284,8 +1618,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             string[] args = new[]
             {
-                    $"--ConfigFileName={CUSTOM_CONFIG}"
-            };
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+        };
 
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
@@ -1346,16 +1680,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Mappings: null);
 
             Dictionary<string, Entity> entityMap = new()
-            {
-                { "Book", requiredEntity }
-            };
+        {
+            { "Book", requiredEntity }
+        };
 
             CreateCustomConfigFile(globalRestEnabled: globalRestEnabled, entityMap);
 
             string[] args = new[]
             {
-                    $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}"
-            };
+                $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}"
+        };
 
             using TestServer server = new(Program.CreateWebHostBuilder(args));
             using HttpClient client = server.CreateClient();
@@ -1408,17 +1742,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Mappings: null);
 
             Dictionary<string, Entity> entityMap = new()
-            {
-                { "Book", restEnabledEntity },
-                { "Publisher", restDisabledEntity }
-            };
+        {
+            { "Book", restEnabledEntity },
+            { "Publisher", restDisabledEntity }
+        };
 
             CreateCustomConfigFile(globalRestEnabled: true, entityMap);
 
             string[] args = new[]
             {
-                    $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}"
-            };
+                $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}"
+        };
 
             using TestServer server = new(Program.CreateWebHostBuilder(args));
             using HttpClient client = server.CreateClient();
@@ -1461,7 +1795,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <param name="entityMap">Collection of entityName -> Entity object.</param>
         private static void CreateCustomConfigFile(bool globalRestEnabled, Dictionary<string, Entity> entityMap)
         {
-            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), new());
+            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
             RuntimeConfig runtimeConfig = new(
                 Schema: string.Empty,
@@ -1794,9 +2128,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             entityName ??= "Book";
 
             Dictionary<string, Entity> entityMap = new()
-            {
-                { entityName, entity }
-            };
+        {
+            { entityName, entity }
+        };
 
             return new(
                 Schema: "IntegrationTestMinimalSchema",

@@ -20,4 +20,8 @@ public record Entity(
     EntityRestOptions Rest,
     EntityPermission[] Permissions,
     Dictionary<string, string>? Mappings,
-    Dictionary<string, EntityRelationship>? Relationships);
+    Dictionary<string, EntityRelationship>? Relationships)
+{
+    public const string PROPERTY_PATH = "path";
+    public const string PROPERTY_METHODS = "methods";
+}

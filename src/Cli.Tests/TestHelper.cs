@@ -846,52 +846,6 @@ namespace Cli.Tests
             }
         }";
 
-        public const string CONFIG_WITH_SINGLE_ENTITY =
-        @"{" +
-          @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
-          @"""data-source"": {
-          ""database-type"": ""mssql"",
-          ""connection-string"": ""localhost:5000"",
-          ""options"":{
-            ""set-session-context"": true
-          }
-        },
-        ""runtime"": {
-          ""rest"": {
-            ""path"": ""/api"",
-            ""enabled"": true
-          },
-          ""graphql"": {
-            ""path"": ""/graphql"",
-            ""enabled"": true,
-            ""allow-introspection"": true
-          },
-          ""host"": {
-            ""mode"": ""production"",
-            ""cors"": {
-              ""origins"": [],
-              ""allow-credentials"": false
-            },
-            ""authentication"": {
-              ""provider"": ""StaticWebApps""
-            }
-          }
-        },
-        ""entities"": {
-          ""book"": {
-            ""source"": ""s001.book"",
-            ""permissions"": [
-              {
-                ""role"": ""anonymous"",
-                ""actions"": [
-                  ""*""
-                ]
-              }
-            ]
-          }
-        }
-      }";
-
         public const string BASE_CONFIG =
           @"{" +
             @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +

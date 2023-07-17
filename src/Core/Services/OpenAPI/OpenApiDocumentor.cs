@@ -114,6 +114,8 @@ namespace Azure.DataApiBuilder.Core.Services
             try
             {
                 string restEndpointPath = _runtimeConfig.Runtime.Rest.Path;
+                string? runtimeBaseRoute = _runtimeConfig.Runtime.BaseRoute;
+                string url = string.IsNullOrEmpty(runtimeBaseRoute) ? restEndpointPath : runtimeBaseRoute + "/" + restEndpointPath;
                 OpenApiComponents components = new()
                 {
                     Schemas = CreateComponentSchemas()
@@ -128,7 +130,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     },
                     Servers = new List<OpenApiServer>
                     {
-                        new OpenApiServer { Url = $"{restEndpointPath}" }
+                        new OpenApiServer { Url = url }
                     },
                     Paths = BuildPaths(),
                     Components = components

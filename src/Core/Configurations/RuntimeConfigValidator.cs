@@ -329,7 +329,8 @@ namespace Azure.DataApiBuilder.Core.Configurations
             // Ensure that the runtime base-route is only configured when authentication provider is StaticWebApps.
             if (runtimeBaseRoute is not null)
             {
-                if (runtimeConfig.Runtime.Host.Authentication is null || !runtimeConfig.Runtime.Host.Authentication.IsStaticWebAppsIdentityProvider()){
+                if (runtimeConfig.Runtime.Host.Authentication is null || !runtimeConfig.Runtime.Host.Authentication.IsStaticWebAppsIdentityProvider())
+                {
                     throw new DataApiBuilderException(
                         message: "Runtime base-route can only be used when the authentication provider is Static Web Apps.",
                         statusCode: HttpStatusCode.ServiceUnavailable,

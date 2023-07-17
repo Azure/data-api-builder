@@ -2006,7 +2006,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="expectedExceptionMessage">The expected exception message.</param>
         [DataTestMethod]
         [DataRow("/base-route", "StaticWebApps", false, DisplayName = "Runtime base-route correctly configured as '/base-route' for Static Web Apps.")]
-        [DataRow("/base-route", "StaticWebApps", false, DisplayName = "Runtime base-route correctly configured as '/' for Static Web Apps.")]
+        [DataRow("/", "StaticWebApps", false, DisplayName = "Runtime base-route correctly configured as '/' for Static Web Apps.")]
         [DataRow(null, "StaticWebApps", false,
             DisplayName = "Runtime base-route specified as null for Static Web Apps authentication provider passes config validation.")]
         [DataRow(null, "AppService", false,

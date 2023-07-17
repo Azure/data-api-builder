@@ -5,6 +5,7 @@ using System.Data;
 using System.Net;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.OData.Edm;
 
 namespace Azure.DataApiBuilder.Core.Services
 {
@@ -104,6 +105,42 @@ namespace Azure.DataApiBuilder.Core.Services
             [SqlDbType.VarBinary] = typeof(byte[]),
             [SqlDbType.VarChar] = typeof(string)
         };
+
+        /// <summary>
+        /// Given the system type, returns the corresponding primitive type kind.
+        /// </summary>
+        /// <param name="columnSystemType">Type of the column.</param>
+        /// <returns>EdmPrimitiveTypeKind</returns>
+        /// <exception cref="ArgumentException">Throws when the column</exception>
+        public static EdmPrimitiveTypeKind GetEdmPrimitiveTypeFromSystemType(Type columnSystemType)
+        {
+            if (columnSystemType.IsArray)
+            {
+                columnSystemType = columnSystemType.GetElementType()!;
+            }
+
+            EdmPrimitiveTypeKind type = columnSystemType.Name switch
+            {
+                "String" => EdmPrimitiveTypeKind.String,
+                "Guid" => EdmPrimitiveTypeKind.Guid,
+                "Byte" => EdmPrimitiveTypeKind.Byte,
+                "Int16" => EdmPrimitiveTypeKind.Int16,
+                "Int32" => EdmPrimitiveTypeKind.Int32,
+                "Int64" => EdmPrimitiveTypeKind.Int64,
+                "Single" => EdmPrimitiveTypeKind.Single,
+                "Double" => EdmPrimitiveTypeKind.Double,
+                "Decimal" => EdmPrimitiveTypeKind.Decimal,
+                "Boolean" => EdmPrimitiveTypeKind.Boolean,
+                "DateTime" => EdmPrimitiveTypeKind.DateTimeOffset,
+                "DateTimeOffset" => EdmPrimitiveTypeKind.DateTimeOffset,
+                "Date" => EdmPrimitiveTypeKind.Date,
+                "TimeSpan" => EdmPrimitiveTypeKind.TimeOfDay,
+                _ => throw new ArgumentException($"Column type" +
+                        $" {columnSystemType.Name} not yet supported.")
+            };
+
+            return type;
+        }
 
         /// <summary>
         /// Converts the .NET Framework (System/CLR) type to JsonDataType.

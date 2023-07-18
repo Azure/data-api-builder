@@ -122,7 +122,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private bool IsDefaultAccessTokenValid()
         {
             return _defaultAccessToken is not null &&
-                ((AccessToken)_defaultAccessToken).ExpiresOn.CompareTo(System.DateTimeOffset.Now) > 0;
+                ((AccessToken)_defaultAccessToken).ExpiresOn.CompareTo(DateTimeOffset.Now) > 0;
         }
 
         /// <summary>

@@ -107,8 +107,8 @@ public class UtilsTests
     [DataTestMethod]
     [DataRow("", "my-config.json", "my-config.json", DisplayName = "user provided the config file and environment variable was not set.")]
     [DataRow("Test", "my-config.json", "my-config.json", DisplayName = "user provided the config file and environment variable was set.")]
-    [DataRow("Test", null, $"{FileSystemRuntimeConfigLoader.CONFIGFILE_NAME}.Test{FileSystemRuntimeConfigLoader.CONFIG_EXTENSION}", DisplayName = "config not provided, but environment variable was set.")]
-    [DataRow("", null, $"{FileSystemRuntimeConfigLoader.CONFIGFILE_NAME}{FileSystemRuntimeConfigLoader.CONFIG_EXTENSION}", DisplayName = "neither config was provided, nor environment variable was set.")]
+    [DataRow("Test", null, $"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}", DisplayName = "config not provided, but environment variable was set.")]
+    [DataRow("", null, $"{CONFIGFILE_NAME}{CONFIG_EXTENSION}", DisplayName = "neither config was provided, nor environment variable was set.")]
     public void TestConfigSelectionBasedOnCliPrecedence(
         string? environmentValue,
         string? userProvidedConfigFile,
@@ -119,11 +119,11 @@ public class UtilsTests
 
         FileSystemRuntimeConfigLoader loader = new(fileSystem);
 
-        string? envValueBeforeTest = Environment.GetEnvironmentVariable(FileSystemRuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME);
-        Environment.SetEnvironmentVariable(FileSystemRuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
+        string? envValueBeforeTest = Environment.GetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME);
+        Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
         Assert.IsTrue(TryGetConfigFileBasedOnCliPrecedence(loader, userProvidedConfigFile, out string? actualRuntimeConfigFile));
         Assert.AreEqual(expectedRuntimeConfigFile, actualRuntimeConfigFile);
-        Environment.SetEnvironmentVariable(FileSystemRuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, envValueBeforeTest);
+        Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, envValueBeforeTest);
     }
 
     /// <summary>
@@ -239,14 +239,14 @@ public class UtilsTests
     public void TestMergeConfig()
     {
         MockFileSystem fileSystem = new();
-        fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(BASE_CONFIG));
+        fileSystem.AddFile(DEFAULT_CONFIG_FILE_NAME, new MockFileData(BASE_CONFIG));
         fileSystem.AddFile("dab-config.Test.json", new MockFileData(ENV_BASED_CONFIG));
 
         FileSystemRuntimeConfigLoader loader = new(fileSystem);
 
-        Environment.SetEnvironmentVariable(FileSystemRuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, "Test");
+        Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, "Test");
 
-        Assert.IsTrue(Cli.ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, new StringLogger(), out string? mergedConfig), "Failed to merge config files");
+        Assert.IsTrue(ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, new StringLogger(), out string? mergedConfig), "Failed to merge config files");
         Assert.AreEqual(mergedConfig, "dab-config.Test.merged.json");
         Assert.IsTrue(fileSystem.File.Exists(mergedConfig));
         Assert.IsTrue(JToken.DeepEquals(JObject.Parse(MERGED_CONFIG), JObject.Parse(fileSystem.File.ReadAllText(mergedConfig))));
@@ -282,7 +282,7 @@ public class UtilsTests
         MockFileSystem fileSystem = new();
 
         // Setting up the test scenarios
-        Environment.SetEnvironmentVariable(FileSystemRuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
+        Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
         string baseConfig = "dab-config.json";
         string envBasedConfig = "dab-config.Test.json";
 
@@ -304,7 +304,7 @@ public class UtilsTests
             "Availability of merge config should match");
         Assert.AreEqual(expectedMergedConfigFileName, mergedConfigFile, "Merge config file name should match expected");
 
-        Environment.SetEnvironmentVariable(FileSystemRuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, null);
+        Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, null);
     }
 }
 

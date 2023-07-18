@@ -160,7 +160,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         {
                             throw new DataApiBuilderException(
                                 message: "Column already processed for building ObjectTypeDefinition authorization definition.",
-                                statusCode: System.Net.HttpStatusCode.InternalServerError,
+                                statusCode: HttpStatusCode.InternalServerError,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization
                                 );
                         }

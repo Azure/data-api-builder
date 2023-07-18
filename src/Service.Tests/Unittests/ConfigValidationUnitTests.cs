@@ -1659,7 +1659,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     }
                 }";
 
-            FileSystemRuntimeConfigLoader.TryParseConfig(runtimeConfigString, out RuntimeConfig runtimeConfig);
+            RuntimeConfigLoader.TryParseConfig(runtimeConfigString, out RuntimeConfig runtimeConfig);
             MockFileSystem fileSystem = new();
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider provider = new(loader);
@@ -1755,7 +1755,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     }
                 }";
 
-            FileSystemRuntimeConfigLoader.TryParseConfig(runtimeConfigString, out RuntimeConfig runtimeConfig);
+            RuntimeConfigLoader.TryParseConfig(runtimeConfigString, out RuntimeConfig runtimeConfig);
             MockFileSystem fileSystem = new();
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider provider = new(loader);

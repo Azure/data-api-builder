@@ -47,7 +47,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ConnectionStringBuilder = connectionStringBuilder;
             ConfigProvider = configProvider;
             HttpContextAccessor = httpContextAccessor;
-            _retryPolicy = Polly.Policy
+            _retryPolicy = Policy
             .Handle<DbException>(DbExceptionParser.IsTransientException)
             .WaitAndRetryAsync(
                 retryCount: _maxRetryCount,

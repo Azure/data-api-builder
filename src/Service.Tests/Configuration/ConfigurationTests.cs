@@ -431,7 +431,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Assert.IsTrue(runtimeConfigJson.Contains(sourceTypeName));
             }
 
-            Assert.IsTrue(FileSystemRuntimeConfigLoader.TryParseConfig(runtimeConfigJson, out RuntimeConfig deserializedRuntimeConfig));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(runtimeConfigJson, out RuntimeConfig deserializedRuntimeConfig));
 
             Assert.IsTrue(deserializedRuntimeConfig.Entities.ContainsKey("MyEntity"));
             Assert.AreEqual("sourceName", deserializedRuntimeConfig.Entities["MyEntity"].Source.Object);
@@ -802,7 +802,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestMethod("Validates if deserialization of MsSql config file succeeds."), TestCategory(TestCategory.MSSQL)]
         public Task TestReadingRuntimeConfigForMsSql()
         {
-            return ConfigFileDeserializationValidationHelper(File.ReadAllText($"{FileSystemRuntimeConfigLoader.CONFIGFILE_NAME}.{MSSQL_ENVIRONMENT}{FileSystemRuntimeConfigLoader.CONFIG_EXTENSION}"));
+            return ConfigFileDeserializationValidationHelper(File.ReadAllText($"{CONFIGFILE_NAME}.{MSSQL_ENVIRONMENT}{CONFIG_EXTENSION}"));
         }
 
         /// <summary>
@@ -812,7 +812,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestMethod("Validates if deserialization of MySql config file succeeds."), TestCategory(TestCategory.MYSQL)]
         public Task TestReadingRuntimeConfigForMySql()
         {
-            return ConfigFileDeserializationValidationHelper(File.ReadAllText($"{FileSystemRuntimeConfigLoader.CONFIGFILE_NAME}.{MYSQL_ENVIRONMENT}{FileSystemRuntimeConfigLoader.CONFIG_EXTENSION}"));
+            return ConfigFileDeserializationValidationHelper(File.ReadAllText($"{CONFIGFILE_NAME}.{MYSQL_ENVIRONMENT}{CONFIG_EXTENSION}"));
         }
 
         /// <summary>
@@ -822,7 +822,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestMethod("Validates if deserialization of PostgreSql config file succeeds."), TestCategory(TestCategory.POSTGRESQL)]
         public Task TestReadingRuntimeConfigForPostgreSql()
         {
-            return ConfigFileDeserializationValidationHelper(File.ReadAllText($"{FileSystemRuntimeConfigLoader.CONFIGFILE_NAME}.{POSTGRESQL_ENVIRONMENT}{FileSystemRuntimeConfigLoader.CONFIG_EXTENSION}"));
+            return ConfigFileDeserializationValidationHelper(File.ReadAllText($"{CONFIGFILE_NAME}.{POSTGRESQL_ENVIRONMENT}{CONFIG_EXTENSION}"));
         }
 
         /// <summary>
@@ -832,7 +832,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestMethod("Validates if deserialization of the CosmosDB_NoSQL config file succeeds."), TestCategory(TestCategory.COSMOSDBNOSQL)]
         public Task TestReadingRuntimeConfigForCosmos()
         {
-            return ConfigFileDeserializationValidationHelper(File.ReadAllText($"{FileSystemRuntimeConfigLoader.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{FileSystemRuntimeConfigLoader.CONFIG_EXTENSION}"));
+            return ConfigFileDeserializationValidationHelper(File.ReadAllText($"{CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{CONFIG_EXTENSION}"));
         }
 
         /// <summary>
@@ -842,7 +842,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <param name="runtimeConfig"></param>
         private Task ConfigFileDeserializationValidationHelper(string jsonString)
         {
-            Assert.IsTrue(FileSystemRuntimeConfigLoader.TryParseConfig(jsonString, out RuntimeConfig runtimeConfig), "Deserialization of the config file failed.");
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(jsonString, out RuntimeConfig runtimeConfig), "Deserialization of the config file failed.");
             return Verify(runtimeConfig);
         }
 
@@ -856,8 +856,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
             string[] args = new[]
             {
-            $"--ConfigFileName={FileSystemRuntimeConfigLoader.CONFIGFILE_NAME}." +
-            $"{COSMOS_ENVIRONMENT}{FileSystemRuntimeConfigLoader.CONFIG_EXTENSION}"
+            $"--ConfigFileName={CONFIGFILE_NAME}." +
+            $"{COSMOS_ENVIRONMENT}{CONFIG_EXTENSION}"
         };
 
             TestServer server = new(Program.CreateWebHostBuilder(args));
@@ -875,7 +875,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Environment.SetEnvironmentVariable(
                 ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
             Environment.SetEnvironmentVariable(
-                FileSystemRuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
+                RUNTIME_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
 
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
@@ -906,26 +906,26 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// has highest precedence irrespective of what the connection string is in the config file.
         /// Verifying the Exception thrown.
         /// </summary>
-        [TestMethod($"Validates that environment variable {FileSystemRuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING} has highest precedence."), TestCategory(TestCategory.COSMOSDBNOSQL)]
+        [TestMethod($"Validates that environment variable {RUNTIME_ENV_CONNECTION_STRING} has highest precedence."), TestCategory(TestCategory.COSMOSDBNOSQL)]
         public void TestConnectionStringEnvVarHasHighestPrecedence()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
             Environment.SetEnvironmentVariable(
-                FileSystemRuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING,
+                RUNTIME_ENV_CONNECTION_STRING,
                 "Invalid Connection String");
 
             try
             {
                 TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
                 _ = server.Services.GetService(typeof(CosmosClientProvider)) as CosmosClientProvider;
-                Assert.Fail($"{FileSystemRuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING} is not given highest precedence");
+                Assert.Fail($"{RUNTIME_ENV_CONNECTION_STRING} is not given highest precedence");
             }
             catch (Exception e)
             {
                 Assert.AreEqual(typeof(ApplicationException), e.GetType());
                 Assert.AreEqual(
                     $"Could not initialize the engine with the runtime config file: " +
-                    $"{FileSystemRuntimeConfigLoader.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{FileSystemRuntimeConfigLoader.CONFIG_EXTENSION}",
+                    $"{CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{CONFIG_EXTENSION}",
                     e.Message);
             }
         }
@@ -1947,7 +1947,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         private static ConfigurationPostParameters GetCosmosConfigurationParameters()
         {
-            string cosmosFile = $"{FileSystemRuntimeConfigLoader.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{FileSystemRuntimeConfigLoader.CONFIG_EXTENSION}";
+            string cosmosFile = $"{CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{CONFIG_EXTENSION}";
             return new(
                 File.ReadAllText(cosmosFile),
                 File.ReadAllText("schema.gql"),
@@ -1957,7 +1957,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         private static ConfigurationPostParametersV2 GetCosmosConfigurationParametersV2()
         {
-            string cosmosFile = $"{FileSystemRuntimeConfigLoader.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{FileSystemRuntimeConfigLoader.CONFIG_EXTENSION}";
+            string cosmosFile = $"{CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{CONFIG_EXTENSION}";
             RuntimeConfig overrides = new(
                 null,
                 new DataSource(DatabaseType.CosmosDB_NoSQL, $"AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==;Database={COSMOS_DATABASE_NAME}", new()),
@@ -2171,7 +2171,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             string sqlFile = new FileSystemRuntimeConfigLoader(fileSystem).GetFileNameForEnvironment(environment, considerOverrides: true);
             string configPayload = File.ReadAllText(sqlFile);
 
-            FileSystemRuntimeConfigLoader.TryParseConfig(configPayload, out RuntimeConfig runtimeConfig);
+            RuntimeConfigLoader.TryParseConfig(configPayload, out RuntimeConfig runtimeConfig);
 
             return runtimeConfig.DataSource.ConnectionString;
         }

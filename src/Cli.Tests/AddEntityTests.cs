@@ -102,7 +102,7 @@ namespace Cli.Tests
                 );
 
             string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
-            Assert.IsTrue(FileSystemRuntimeConfigLoader.TryParseConfig(initialConfiguration, out RuntimeConfig? runtimeConfig), "Loaded config");
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(initialConfiguration, out RuntimeConfig? runtimeConfig), "Loaded config");
 
             Assert.IsFalse(TryAddNewEntity(options, runtimeConfig, out RuntimeConfig updatedRuntimeConfig));
 
@@ -276,7 +276,7 @@ namespace Cli.Tests
                 graphQLOperationForStoredProcedure: null
                 );
 
-            FileSystemRuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? runtimeConfig);
+            RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? runtimeConfig);
 
             Assert.AreEqual(expectSuccess, TryAddNewEntity(options, runtimeConfig!, out RuntimeConfig _));
         }
@@ -366,7 +366,7 @@ namespace Cli.Tests
                 graphQLOperationForStoredProcedure: graphQLOperation
             );
 
-            FileSystemRuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? runtimeConfig);
+            RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? runtimeConfig);
 
             Assert.IsFalse(TryAddNewEntity(options, runtimeConfig!, out RuntimeConfig _));
         }
@@ -402,7 +402,7 @@ namespace Cli.Tests
                 graphQLOperationForStoredProcedure: null
                 );
 
-            FileSystemRuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? runtimeConfig);
+            RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? runtimeConfig);
 
             Assert.IsFalse(TryAddNewEntity(options, runtimeConfig!, out RuntimeConfig _));
         }
@@ -427,7 +427,7 @@ namespace Cli.Tests
 
         private Task ExecuteVerifyTest(AddOptions options, string config = INITIAL_CONFIG, VerifySettings? settings = null)
         {
-            Assert.IsTrue(FileSystemRuntimeConfigLoader.TryParseConfig(config, out RuntimeConfig? runtimeConfig), "Loaded base config.");
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(config, out RuntimeConfig? runtimeConfig), "Loaded base config.");
 
             Assert.IsTrue(TryAddNewEntity(options, runtimeConfig, out RuntimeConfig updatedRuntimeConfig), "Added entity to config.");
 

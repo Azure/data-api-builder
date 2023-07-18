@@ -522,7 +522,7 @@ namespace Cli.Tests
                 sourceKeyFields: keyFields);
 
             string initialConfig = AddPropertiesToJson(INITIAL_CONFIG, initialSourceObjectEntity);
-            FileSystemRuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig);
+            RuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig);
             Assert.AreEqual(expectSuccess, TryUpdateExistingEntity(options, runtimeConfig!, out RuntimeConfig updatedConfig));
 
             if (expectSuccess)
@@ -578,7 +578,7 @@ namespace Cli.Tests
                 sourceType: "stored-procedure");
 
             string initialConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
-            FileSystemRuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig);
+            RuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig);
 
             Assert.AreEqual(isSuccess, TryUpdateExistingEntity(options, runtimeConfig!, out RuntimeConfig _));
         }
@@ -644,7 +644,7 @@ namespace Cli.Tests
                         }
                     }";
 
-            FileSystemRuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig);
+            RuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig);
 
             Assert.IsFalse(TryUpdateExistingEntity(options, runtimeConfig!, out RuntimeConfig _));
         }
@@ -779,7 +779,7 @@ namespace Cli.Tests
                 graphQLOperationForStoredProcedure: graphQLOperation);
 
             string initialConfig = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_METHODS_GRAPHQL_OPERATION);
-            FileSystemRuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig);
+            RuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig);
 
             Assert.IsFalse(TryUpdateExistingEntity(options, runtimeConfig!, out RuntimeConfig _));
         }
@@ -815,7 +815,7 @@ namespace Cli.Tests
                         }
                     }";
 
-            FileSystemRuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig);
+            RuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig);
 
             Assert.IsFalse(TryUpdateExistingEntity(options, runtimeConfig!, out RuntimeConfig _));
         }
@@ -851,7 +851,7 @@ namespace Cli.Tests
 
             string initialConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
 
-            FileSystemRuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig);
+            RuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig);
 
             Assert.IsFalse(TryUpdateExistingEntity(options, runtimeConfig!, out RuntimeConfig _));
         }
@@ -920,7 +920,7 @@ namespace Cli.Tests
                         }
                     }";
 
-            FileSystemRuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig);
+            RuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig);
 
             Assert.IsFalse(TryUpdateExistingEntity(options, runtimeConfig!, out RuntimeConfig _));
         }
@@ -958,7 +958,7 @@ namespace Cli.Tests
                             }
                         }
                     }";
-            FileSystemRuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig);
+            RuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig);
 
             Assert.IsFalse(TryUpdateExistingEntity(options, runtimeConfig!, out RuntimeConfig _));
         }
@@ -1125,7 +1125,7 @@ namespace Cli.Tests
 
         private Task ExecuteVerifyTest(string initialConfig, UpdateOptions options, VerifySettings? settings = null)
         {
-            Assert.IsTrue(FileSystemRuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig), "Parsed config file.");
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig), "Parsed config file.");
 
             Assert.IsTrue(TryUpdateExistingEntity(options, runtimeConfig, out RuntimeConfig updatedRuntimeConfig), "Successfully added entity to config.");
 

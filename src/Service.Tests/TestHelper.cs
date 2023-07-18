@@ -198,8 +198,8 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// <param name="runtimeBaseRoute">Base route for API requests.</param>
         public static void ConstructNewConfigWithSpecifiedHostMode(string configFileName, HostMode hostModeType, string databaseType, string runtimeBaseRoute = "/")
         {
-            TestHelper.SetupDatabaseEnvironment(databaseType);
-            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(TestHelper.GetRuntimeConfigLoader());
+            SetupDatabaseEnvironment(databaseType);
+            RuntimeConfigProvider configProvider = GetRuntimeConfigProvider(GetRuntimeConfigLoader());
             RuntimeConfig config = configProvider.GetConfig();
 
             RuntimeConfig configWithCustomHostMode =

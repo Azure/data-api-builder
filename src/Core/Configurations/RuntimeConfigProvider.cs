@@ -40,14 +40,13 @@ public class RuntimeConfigProvider
     /// </summary>
     public string? ManagedIdentityAccessToken { get; private set; }
 
-    private readonly FileSystemRuntimeConfigLoader _runtimeConfigLoader;
+    public RuntimeConfigLoader ConfigLoader { get; private set; }
+
     private RuntimeConfig? _runtimeConfig;
 
-    public string RuntimeConfigFileName => _runtimeConfigLoader.ConfigFileName;
-
-    public RuntimeConfigProvider(FileSystemRuntimeConfigLoader runtimeConfigLoader)
+    public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader)
     {
-        _runtimeConfigLoader = runtimeConfigLoader;
+        ConfigLoader = runtimeConfigLoader;
     }
 
     /// <summary>
@@ -63,7 +62,7 @@ public class RuntimeConfigProvider
             return _runtimeConfig;
         }
 
-        if (_runtimeConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config))
+        if (ConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config))
         {
             _runtimeConfig = config;
         }
@@ -88,7 +87,7 @@ public class RuntimeConfigProvider
     {
         if (_runtimeConfig is null)
         {
-            if (_runtimeConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config))
+            if (ConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config))
             {
                 _runtimeConfig = config;
             }
@@ -130,7 +129,7 @@ public class RuntimeConfigProvider
             throw new ArgumentException($"'{nameof(configuration)}' cannot be null or empty.", nameof(configuration));
         }
 
-        if (FileSystemRuntimeConfigLoader.TryParseConfig(
+        if (RuntimeConfigLoader.TryParseConfig(
                 configuration,
                 out RuntimeConfig? runtimeConfig))
         {
@@ -182,7 +181,7 @@ public class RuntimeConfigProvider
 
         IsLateConfigured = true;
 
-        if (FileSystemRuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig))
+        if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig))
         {
             _runtimeConfig = runtimeConfig.DataSource.DatabaseType switch
             {

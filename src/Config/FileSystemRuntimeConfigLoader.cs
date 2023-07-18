@@ -192,7 +192,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// This method reads the dab.draft.schema.json which contains the link for online published
     /// schema for dab, based on the version of dab being used to generate the runtime config.
     /// </summary>
-    public string GetPublishedDraftSchemaLink()
+    public override string GetPublishedDraftSchemaLink()
     {
         string? assemblyDirectory = _fileSystem.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 

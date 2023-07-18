@@ -21,11 +21,17 @@ public abstract class RuntimeConfigLoader
     }
 
     /// <summary>
-    /// Returns RuntimeConfig. Needs to be implemented by the derived class.
+    /// Returns RuntimeConfig.
     /// </summary>
     /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
     public abstract bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config);
+
+    /// <summary>
+    /// Returns the link to the published draft schema.
+    /// </summary>
+    /// <returns></returns>
+    public abstract string GetPublishedDraftSchemaLink();
 
     /// <summary>
     /// Parses a JSON string into a <c>RuntimeConfig</c> object

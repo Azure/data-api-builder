@@ -21,7 +21,7 @@ public abstract class RuntimeConfigLoader
     }
 
     /// <summary>
-    /// Returns RunTimeConfig. Needs to be implemented by the derived class.
+    /// Returns RuntimeConfig. Needs to be implemented by the derived class.
     /// </summary>
     /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>

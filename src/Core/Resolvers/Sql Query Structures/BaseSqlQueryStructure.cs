@@ -364,7 +364,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 "DateTime" => DateTimeOffset.Parse(param, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal),
                 "DateTimeOffset" => DateTimeOffset.Parse(param),
                 "Date" => DateOnly.Parse(param),
-                "TimeSpan" => TimeSpan.Parse(param, DateTimeFormatInfo.InvariantInfo),
+                "TimeOnly" => TimeOnly.Parse(param),
                 "Guid" => Guid.Parse(param),
                 _ => throw new NotSupportedException($"{systemType.Name} is not supported")
             };

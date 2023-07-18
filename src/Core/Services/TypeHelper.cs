@@ -38,7 +38,7 @@ namespace Azure.DataApiBuilder.Core.Services
             [typeof(byte[])] = DbType.Binary,
             [typeof(DateTime)] = DbType.DateTime,
             [typeof(DateTimeOffset)] = DbType.DateTimeOffset,
-            [typeof(TimeSpan)] = DbType.Time,
+            [typeof(TimeOnly)] = DbType.Time,
             [typeof(object)] = DbType.Object
         };
 
@@ -67,6 +67,7 @@ namespace Azure.DataApiBuilder.Core.Services
             [typeof(Guid)] = JsonDataType.String,
             [typeof(byte[])] = JsonDataType.String,
             [typeof(TimeSpan)] = JsonDataType.String,
+            [typeof(TimeOnly)] = JsonDataType.String,
             [typeof(object)] = JsonDataType.Object,
             [typeof(DateTime)] = JsonDataType.String,
             [typeof(DateTimeOffset)] = JsonDataType.String
@@ -98,7 +99,7 @@ namespace Azure.DataApiBuilder.Core.Services
             [SqlDbType.SmallInt] = typeof(short),
             [SqlDbType.SmallMoney] = typeof(decimal),
             [SqlDbType.Text] = typeof(string),
-            [SqlDbType.Time] = typeof(TimeSpan),
+            [SqlDbType.Time] = typeof(TimeOnly),
             [SqlDbType.Timestamp] = typeof(byte[]),
             [SqlDbType.TinyInt] = typeof(byte),
             [SqlDbType.UniqueIdentifier] = typeof(Guid),
@@ -134,7 +135,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 "DateTime" => EdmPrimitiveTypeKind.DateTimeOffset,
                 "DateTimeOffset" => EdmPrimitiveTypeKind.DateTimeOffset,
                 "Date" => EdmPrimitiveTypeKind.Date,
-                "TimeSpan" => EdmPrimitiveTypeKind.TimeOfDay,
+                "TimeOnly" => EdmPrimitiveTypeKind.TimeOfDay,
                 _ => throw new ArgumentException($"Column type" +
                         $" {columnSystemType.Name} not yet supported.")
             };

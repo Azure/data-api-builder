@@ -99,7 +99,7 @@ public class CLRtoJsonValueTypeUnitTests
     [DataRow(typeof(bool?))]
     [DataRow(typeof(char?))]
     [DataRow(typeof(Guid?))]
-    [DataRow(typeof(TimeSpan?))]
+    [DataRow(typeof(TimeOnly?))]
     [DataRow(typeof(DateTime?))]
     [DataRow(typeof(DateTimeOffset?))]
     [DataTestMethod]

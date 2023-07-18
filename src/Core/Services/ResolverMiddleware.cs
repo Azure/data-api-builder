@@ -199,7 +199,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 SingleType => Single.Parse(leafJson),
                 DateTimeType => DateTimeOffset.Parse(leafJson, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal),
                 ByteArrayType => Convert.FromBase64String(leafJson),
-                TimeSpanType => TimeSpan.Parse(leafJson, DateTimeFormatInfo.InvariantInfo),
+                TimeSpanType => TimeOnly.Parse(leafJson, DateTimeFormatInfo.InvariantInfo),
                 _ => leafJson
             };
         }

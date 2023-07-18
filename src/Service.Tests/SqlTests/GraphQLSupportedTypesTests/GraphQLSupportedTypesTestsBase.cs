@@ -331,7 +331,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             }
             else if (type == TIMESPAN_TYPE)
             {
-                CompareTimeSpanResults(actual.ToString(), expected);
+                CompareTimeResults(actual.ToString(), expected);
             }
             else
             {
@@ -407,9 +407,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// <summary>
         /// Required due to different format between SQL time and HotChocolate TimeSpan time(ISO-8601) result.
         /// </summary>
-        private static void CompareTimeSpanResults(string actual, string expected)
+        private static void CompareTimeResults(string actual, string expected)
         {
-            string fieldName = "timespan_types";
+            string fieldName = "time_types";
 
             using JsonDocument actualJsonDoc = JsonDocument.Parse(actual);
             using JsonDocument expectedJsonDoc = JsonDocument.Parse(expected);

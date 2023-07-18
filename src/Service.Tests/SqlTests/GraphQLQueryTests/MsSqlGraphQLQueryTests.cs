@@ -371,7 +371,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         public async Task QueryAgainstSPWithOnlyTypenameInSelectionSet()
         {
             string dbQuery = "select count(*) as count from books";
-            await base.QueryAgainstSPWithOnlyTypenameInSelectionSet(dbQuery);
+            await QueryAgainstSPWithOnlyTypenameInSelectionSet(dbQuery);
         }
 
         #endregion

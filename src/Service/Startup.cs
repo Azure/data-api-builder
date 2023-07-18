@@ -58,12 +58,12 @@ namespace Azure.DataApiBuilder.Service
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            string configFileName = Configuration.GetValue<string>("ConfigFileName", RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME);
+            string configFileName = Configuration.GetValue<string>("ConfigFileName", FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME);
             string? connectionString = Configuration.GetValue<string?>(
-                RuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING.Replace(RuntimeConfigLoader.ENVIRONMENT_PREFIX, ""),
+                FileSystemRuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING.Replace(FileSystemRuntimeConfigLoader.ENVIRONMENT_PREFIX, ""),
                 null);
             IFileSystem fileSystem = new FileSystem();
-            RuntimeConfigLoader configLoader = new(fileSystem, configFileName, connectionString);
+            FileSystemRuntimeConfigLoader configLoader = new(fileSystem, configFileName, connectionString);
             RuntimeConfigProvider configProvider = new(configLoader);
 
             services.AddSingleton(fileSystem);
@@ -287,13 +287,15 @@ namespace Azure.DataApiBuilder.Service
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, RuntimeConfigProvider runtimeConfigProvider)
         {
             bool isRuntimeReady = false;
+            FileSystemRuntimeConfigLoader fileSystemRuntimeConfigLoader = (FileSystemRuntimeConfigLoader)runtimeConfigProvider.ConfigLoader;
+
             if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
                 // Config provided before starting the engine.
                 isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
                 if (_logger is not null)
                 {
-                    _logger.LogDebug("Loaded config file from {filePath}", runtimeConfigProvider.RuntimeConfigFileName);
+                    _logger.LogDebug("Loaded config file from {filePath}", fileSystemRuntimeConfigLoader.ConfigFileName);
                 }
 
                 if (!isRuntimeReady)
@@ -304,7 +306,7 @@ namespace Azure.DataApiBuilder.Service
                         _logger.LogError("Exiting the runtime engine...");
                     }
 
-                    throw new ApplicationException($"Could not initialize the engine with the runtime config file: {runtimeConfigProvider.RuntimeConfigFileName}");
+                    throw new ApplicationException($"Could not initialize the engine with the runtime config file: {fileSystemRuntimeConfigLoader.ConfigFileName}");
                 }
             }
             else

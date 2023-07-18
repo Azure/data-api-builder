@@ -48,7 +48,7 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
         {
             TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
             FileSystem fileSystem = new();
-            RuntimeConfigLoader loader = new(fileSystem);
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
             loader.TryLoadKnownConfig(out RuntimeConfig config);
             CreateEntities();
 

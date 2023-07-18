@@ -10,14 +10,14 @@ namespace Cli.Tests;
 public class ConfigGeneratorTests
 {
     private IFileSystem? _fileSystem;
-    private RuntimeConfigLoader? _runtimeConfigLoader;
+    private FileSystemRuntimeConfigLoader? _runtimeConfigLoader;
 
     [TestInitialize]
     public void TestInitialize()
     {
         _fileSystem = FileSystemUtils.ProvisionMockFileSystem();
 
-        _runtimeConfigLoader = new RuntimeConfigLoader(_fileSystem);
+        _runtimeConfigLoader = new FileSystemRuntimeConfigLoader(_fileSystem);
 
         ILoggerFactory loggerFactory = TestLoggerSupport.ProvisionLoggerFactory();
 
@@ -49,9 +49,9 @@ public class ConfigGeneratorTests
 
         // Mocking logger to assert on logs
         Mock<ILogger<ConfigGenerator>> loggerMock = new();
-        ConfigGenerator.SetLoggerForCliConfigGenerator(loggerMock.Object);
+        SetLoggerForCliConfigGenerator(loggerMock.Object);
 
-        Assert.AreEqual(isConfigGenerationSuccessful, ConfigGenerator.TryGenerateConfig(options, _runtimeConfigLoader!, _fileSystem!));
+        Assert.AreEqual(isConfigGenerationSuccessful, TryGenerateConfig(options, _runtimeConfigLoader!, _fileSystem!));
 
         if (!isConfigFilePresent)
         {
@@ -96,9 +96,9 @@ public class ConfigGeneratorTests
 
         // Mocking logger to assert on logs
         Mock<ILogger<ConfigGenerator>> loggerMock = new();
-        ConfigGenerator.SetLoggerForCliConfigGenerator(loggerMock.Object);
+        SetLoggerForCliConfigGenerator(loggerMock.Object);
 
-        Assert.AreEqual(isConfigGenerationSuccessful, ConfigGenerator.TryGenerateConfig(options, _runtimeConfigLoader!, _fileSystem!));
+        Assert.AreEqual(isConfigGenerationSuccessful, TryGenerateConfig(options, _runtimeConfigLoader!, _fileSystem!));
         if (!isConfigFilePresent)
         {
             Assert.AreEqual(isConfigGenerationSuccessful, _fileSystem!.File.Exists(configFileName));

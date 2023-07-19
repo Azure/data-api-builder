@@ -87,46 +87,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         }
 
         [DataTestMethod]
-        [DataRow(BYTE_TYPE, SHORT_TYPE)]
-        [DataRow(SHORT_TYPE, INT_TYPE)]
-        [DataRow(INT_TYPE, LONG_TYPE)]
-        [DataRow(LONG_TYPE, SINGLE_TYPE)]
-        [DataRow(SINGLE_TYPE, FLOAT_TYPE)]
-        [DataRow(FLOAT_TYPE, DECIMAL_TYPE)]
-        [DataRow(DECIMAL_TYPE, STRING_TYPE)]
-        [DataRow(STRING_TYPE, BOOLEAN_TYPE)]
-        [DataRow(BOOLEAN_TYPE, DATETIME_TYPE)]
-        [DataRow(DATETIME_TYPE, BYTEARRAY_TYPE)]
-        [DataRow(BYTEARRAY_TYPE, GUID_TYPE)]
-        [DataRow(GUID_TYPE, BYTE_TYPE)]
-        public async Task QueryTypeColumnOrderBy(string type, string orderByType)
-        {
-            if (!IsSupportedType(type))
-            {
-                Assert.Inconclusive("Type not supported");
-            }
-
-            string field = $"{type.ToLowerInvariant()}_types";
-            string orderByField = $"{orderByType.ToLowerInvariant()}_types";
-            string graphQLQueryName = "supportedTypes";
-            string gqlQuery = @"{
-                supportedTypes(first: 100 orderBy: { " + orderByField + @": ASC } ) {
-                    items {
-                        " + field + @"
-                        " + orderByField + @"
-                    }
-                }
-            }";
-
-            string dbQuery = MakeQueryOnTypeTable(new List<string> { field, orderByField }, orderBy: orderByField, limit: "100");
-
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-
-            PerformTestEqualsForExtendedTypes(type, expected, actual.GetProperty("items").ToString());
-        }
-
-        [DataTestMethod]
         [DataRow(BYTE_TYPE, "gt", "0", "0", ">")]
         [DataRow(BYTE_TYPE, "gte", "0", "0", ">=")]
         [DataRow(BYTE_TYPE, "lt", "1", "1", "<")]
@@ -199,7 +159,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(DATETIME_TYPE, "lte", "\'2079-06-06\'", "\"2079-06-06\"", " <= ")]
         [DataRow(DATETIME_TYPE, "neq", "\'1999-01-08 10:23:54\'", "\"1999-01-08 10:23:54\"", "!=")]
         [DataRow(DATETIME_TYPE, "eq", "\'1999-01-08 10:23:54\'", "\"1999-01-08 10:23:54\"", "=")]
-        public async Task QueryTypeColumnFilter(string type, string filterOperator, string sqlValue, string gqlValue, string queryOperator)
+        public async Task QueryTypeColumnFilterAndOrderBy(string type, string filterOperator, string sqlValue, string gqlValue, string queryOperator)
         {
             if (!IsSupportedType(type))
             {

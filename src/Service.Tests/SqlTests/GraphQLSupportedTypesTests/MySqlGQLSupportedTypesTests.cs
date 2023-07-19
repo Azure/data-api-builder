@@ -37,7 +37,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             string limit = "1")
         {
             return @"
-                SELECT JSON_OBJECT(" + string.Join(", ", queriedColumns.Select(c => $"\"{c}\" , {ProperlyFormatTypeTableColumn(c)}")) + @") AS `data`
+                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT(" + string.Join(", ", queriedColumns.Select(c => $"\"{c}\", {ProperlyFormatTypeTableColumn(c)}")) + @")), '[]') AS `data`
                 FROM (
                     SELECT " + string.Join(", ", queriedColumns) + @"
                     FROM type_table AS `table0`

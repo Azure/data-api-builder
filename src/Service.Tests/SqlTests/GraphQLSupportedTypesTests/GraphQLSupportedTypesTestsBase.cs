@@ -440,18 +440,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             if (actualJsonDoc.RootElement.ValueKind is JsonValueKind.Array)
             {
-                JsonElement.ArrayEnumerator actualEnumerater = actualJsonDoc.RootElement.EnumerateArray();
-                foreach (JsonElement expectedElement in actualJsonDoc.RootElement.EnumerateArray())
-                {
-                    actualEnumerater.MoveNext();
-                    JsonElement actualElement = actualEnumerater.Current;
-                    JsonElement actualValue;
-                    JsonElement expectedValue;
-                    actualElement.TryGetProperty(fieldName, out actualValue);
-                    expectedElement.TryGetProperty(fieldName, out expectedValue);
-                    Assert.AreEqual(actualValue, expectedValue);
-                }
-
+                ValidateArrayResults(actualJsonDoc, expectedJsonDoc, fieldName);
                 return;
             }
 
@@ -495,18 +484,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             if (actualJsonDoc.RootElement.ValueKind is JsonValueKind.Array)
             {
-                JsonElement.ArrayEnumerator actualEnumerater = actualJsonDoc.RootElement.EnumerateArray();
-                foreach (JsonElement expectedElement in actualJsonDoc.RootElement.EnumerateArray())
-                {
-                    actualEnumerater.MoveNext();
-                    JsonElement actualElement = actualEnumerater.Current;
-                    JsonElement actualValue;
-                    JsonElement expectedValue;
-                    actualElement.TryGetProperty(fieldName, out actualValue);
-                    expectedElement.TryGetProperty(fieldName, out expectedValue);
-                    Assert.AreEqual(actualValue, expectedValue);
-                }
-
+                ValidateArrayResults(actualJsonDoc, expectedJsonDoc, fieldName);
                 return;
             }
 
@@ -521,6 +499,21 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             else
             {
                 Assert.AreEqual(DateTimeOffset.Parse(expectedDateTime), DateTimeOffset.Parse(actualDateTime));
+            }
+        }
+
+        private static void ValidateArrayResults(JsonDocument actualJsonDoc, JsonDocument expectedJsonDoc, string fieldName)
+        {
+            JsonElement.ArrayEnumerator actualEnumerater = actualJsonDoc.RootElement.EnumerateArray();
+            foreach (JsonElement expectedElement in expectedJsonDoc.RootElement.EnumerateArray())
+            {
+                actualEnumerater.MoveNext();
+                JsonElement actualElement = actualEnumerater.Current;
+                JsonElement actualValue;
+                JsonElement expectedValue;
+                actualElement.TryGetProperty(fieldName, out actualValue);
+                expectedElement.TryGetProperty(fieldName, out expectedValue);
+                Assert.AreEqual(actualValue, expectedValue);
             }
         }
 

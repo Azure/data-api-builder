@@ -37,7 +37,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             string limit = "1")
         {
             return @"
-                SELECT to_jsonb(subq3) AS DATA
+                SELECT json_agg(to_jsonb(subq3)) AS DATA
                 FROM
                   (SELECT " + string.Join(", ", queriedColumns.Select(c => ProperlyFormatTypeTableColumn(c) + $" AS {c}")) + @"
                    FROM public.type_table AS table0

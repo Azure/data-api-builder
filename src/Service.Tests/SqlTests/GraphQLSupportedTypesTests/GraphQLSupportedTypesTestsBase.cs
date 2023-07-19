@@ -493,11 +493,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 }
 
                 return;
-            } else
-            {
-                actualFloat = actualJsonDoc.RootElement.GetProperty(fieldName).ToString();
-                expectedFloat = expectedJsonDoc.RootElement.GetProperty(fieldName).ToString();
             }
+
+            actualFloat = actualJsonDoc.RootElement.GetProperty(fieldName).ToString();
+            expectedFloat = expectedJsonDoc.RootElement.GetProperty(fieldName).ToString();
 
             // handles cases when one of the values is null
             if (string.IsNullOrEmpty(actualFloat) || string.IsNullOrEmpty(expectedFloat))
@@ -550,13 +549,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
                 return;
             }
-            else
-            {
-
-            }
 
             string actualDateTime = actualJsonDoc.RootElement.GetProperty(fieldName).ToString();
             string expectedDateTime = expectedJsonDoc.RootElement.GetProperty(fieldName).ToString();
+
             // handles cases when one of the values is null
             if (string.IsNullOrEmpty(actualDateTime) || string.IsNullOrEmpty(expectedDateTime))
             {

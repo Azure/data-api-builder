@@ -36,8 +36,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             string orderBy = "id",
             string limit = "1")
         {
+            string formattedSelect = limit.Equals("1") ? "SELECT JSON_OBJECT(" + string.Join(", ", queriedColumns.Select(c => $"\"{c}\" , {ProperlyFormatTypeTableColumn(c)}")) + @") AS `data`" :
+                "SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT(" + string.Join(", ", queriedColumns.Select(c => $"\"{c}\", {ProperlyFormatTypeTableColumn(c)}")) + @")), '[]') AS `data`";
+
             return @"
-                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT(" + string.Join(", ", queriedColumns.Select(c => $"\"{c}\", {ProperlyFormatTypeTableColumn(c)}")) + @")), '[]') AS `data`
+                " + formattedSelect + @"
                 FROM (
                     SELECT " + string.Join(", ", queriedColumns) + @"
                     FROM type_table AS `table0`

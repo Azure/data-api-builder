@@ -127,97 +127,79 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         }
 
         [DataTestMethod]
-        [DataRow(BYTE_TYPE, "gt", "0", ">")]
-        [DataRow(BYTE_TYPE, "gte", "0", ">=")]
-        [DataRow(BYTE_TYPE, "lt", "1", "<")]
-        [DataRow(BYTE_TYPE, "lte", "1", "<=")]
-        [DataRow(BYTE_TYPE, "neq", "NULL", "!=")]
-        [DataRow(BYTE_TYPE, "eq", "NULL", "=")]
-        [DataRow(SHORT_TYPE, "gt", "-1", ">")]
-        [DataRow(SHORT_TYPE, "gte", "-1", ">=")]
-        [DataRow(SHORT_TYPE, "lt", "1", "<")]
-        [DataRow(SHORT_TYPE, "lte", "1", "<=")]
-        [DataRow(SHORT_TYPE, "neq", "NULL", "!=")]
-        [DataRow(SHORT_TYPE, "eq", "NULL", "=")]
-        [DataRow(INT_TYPE, "gt", "-1", ">")]
-        [DataRow(INT_TYPE, "gte", "2147483647", " >= ")]
-        [DataRow(INT_TYPE, "lt", "1", "<")]
-        [DataRow(INT_TYPE, "lte", "-2147483648", " <= ")]
-        [DataRow(INT_TYPE, "neq", "NULL", "!=")]
-        [DataRow(INT_TYPE, "eq", "NULL", "=")]
-        [DataRow(LONG_TYPE, "gt", "-1", ">")]
-        [DataRow(LONG_TYPE, "gte", "9223372036854775808", " >= ")]
-        [DataRow(LONG_TYPE, "lt", "1", "<")]
-        [DataRow(LONG_TYPE, "lte", "-9223372036854775808", " <= ")]
-        [DataRow(LONG_TYPE, "neq", "NULL", "!=")]
-        [DataRow(LONG_TYPE, "eq", "NULL", "=")]
-        [DataRow(STRING_TYPE, "gt", "\'null\'", ">")]
-        [DataRow(STRING_TYPE, "gte", "\'null\'", ">=")]
-        [DataRow(STRING_TYPE, "lt", "\'lksa;jdflasdf;alsdflksdfkldj\'", "<")]
-        [DataRow(STRING_TYPE, "lte", "\'lksa;jdflasdf;alsdflksdfkldj\'", "<=")]
-        [DataRow(STRING_TYPE, "neq", "NULL", "!=")]
-        [DataRow(STRING_TYPE, "eq", "NULL", "=")]
-        [DataRow(SINGLE_TYPE, "gt", "-9.2", ">")]
-        [DataRow(SINGLE_TYPE, "gte", "-9.2", ">=")]
-        [DataRow(SINGLE_TYPE, "lt", ".33", "<")]
-        [DataRow(SINGLE_TYPE, "lte", ".33", "<=")]
-        [DataRow(SINGLE_TYPE, "neq", "NULL", "!=")]
-        [DataRow(SINGLE_TYPE, "eq", "NULL", "=")]
-        [DataRow(FLOAT_TYPE, "gt", "-9.2", ">")]
-        [DataRow(FLOAT_TYPE, "gte", "-9.2", ">=")]
-        [DataRow(FLOAT_TYPE, "lt", ".33", "<")]
-        [DataRow(FLOAT_TYPE, "lte", ".33", "<=")]
-        [DataRow(FLOAT_TYPE, "neq", "NULL", "!=")]
-        [DataRow(FLOAT_TYPE, "eq", "NULL", "=")]
-        [DataRow(DECIMAL_TYPE, "gt", "-9.292929", " > ")]
-        [DataRow(DECIMAL_TYPE, "gte", "-9.292929", " >= ")]
-        [DataRow(DECIMAL_TYPE, "lt", "0.333333", "<")]
-        [DataRow(DECIMAL_TYPE, "lte", "0.333333", " <= ")]
-        [DataRow(DECIMAL_TYPE, "neq", "NULL", "!=")]
-        [DataRow(DECIMAL_TYPE, "eq", "NULL", "=")]
-        [DataRow(BOOLEAN_TYPE, "gt", "1", ">")]
-        [DataRow(BOOLEAN_TYPE, "gte", "1", ">=")]
-        [DataRow(BOOLEAN_TYPE, "lt", "0", "<")]
-        [DataRow(BOOLEAN_TYPE, "lte", "0", "<=")]
-        [DataRow(BOOLEAN_TYPE, "neq", "NULL", "!=")]
-        [DataRow(BOOLEAN_TYPE, "eq", "NULL", "=")]
-        [DataRow(DATETIME_TYPE, "gt", "1999-01-08", " > ")]
-        [DataRow(DATETIME_TYPE, "gte", "1999-01-08", " >= ")]
-        [DataRow(DATETIME_TYPE, "lt", "0001-01-01", " < ")]
-        [DataRow(DATETIME_TYPE, "lte", "0001-01-01", " <= ")]
-        [DataRow(DATETIME_TYPE, "neq", "NULL", "!=")]
-        [DataRow(DATETIME_TYPE, "eq", "NULL", "=")]
-        [DataRow(DATETIME_TYPE, "gt", "1999-01-08 10:23:00", " > ")]
-        [DataRow(DATETIME_TYPE, "gte", "1999-01-08 10:23:00", " >= ")]
-        [DataRow(DATETIME_TYPE, "lt", "9999-12-31 23:59:59", " < ")]
-        [DataRow(DATETIME_TYPE, "lte", "9999-12-31 23:59:59", " <= ")]
-        [DataRow(DATETIME_TYPE, "neq", "NULL", "!=")]
-        [DataRow(DATETIME_TYPE, "eq", "NULL", "=")]
-        [DataRow(DATETIME_TYPE, "gt", "1999-01-08 10:23:00.9999999", " > ")]
-        [DataRow(DATETIME_TYPE, "gte", "1999-01-08 10:23:00.9999999", " >= ")]
-        [DataRow(DATETIME_TYPE, "lt", "9999-12-31 23:59:59.9999999", " < ")]
-        [DataRow(DATETIME_TYPE, "lte", "9999-12-31 23:59:59.9999999", " <= ")]
-        [DataRow(DATETIME_TYPE, "neq", "NULL", "!=")]
-        [DataRow(DATETIME_TYPE, "eq", "NULL", "=")]
-        [DataRow(DATETIME_NONUTC_TYPE, "gt", "1999-01-08 10:23:54.9999999-14:00", " > ")]
-        [DataRow(DATETIME_NONUTC_TYPE, "gte", "1999-01-08 10:23:54.9999999-14:00", " >= ")]
-        [DataRow(DATETIME_NONUTC_TYPE, "lt", "9999-12-31 23:59:59.9999999+14:00", " < ")]
-        [DataRow(DATETIME_NONUTC_TYPE, "lte", "9999-12-31 23:59:59.9999999+14:00", " <= ")]
-        [DataRow(DATETIME_TYPE, "neq", "NULL", "!=")]
-        [DataRow(DATETIME_TYPE, "eq", "NULL", "=")]
-        [DataRow(DATETIME_TYPE, "gt", "1999-01-08 10:23:54", " > ")]
-        [DataRow(DATETIME_TYPE, "gte", "1999-01-08 10:23:54", " >= ")]
-        [DataRow(DATETIME_TYPE, "lt", "2079-06-06", " < ")]
-        [DataRow(DATETIME_TYPE, "lte", "2079-06-06", " <= ")]
-        [DataRow(DATETIME_TYPE, "neq", "NULL", "!=")]
-        [DataRow(DATETIME_TYPE, "eq", "NULL", "=")]
-        [DataRow(BYTEARRAY_TYPE, "gt", "0xABCDEF0123", " > ")]
-        [DataRow(BYTEARRAY_TYPE, "gte", "0xABCDEF0123", " >= ")]
-        [DataRow(BYTEARRAY_TYPE, "lt", "0xFFFFFFFF", " < ")]
-        [DataRow(BYTEARRAY_TYPE, "lte", "0xFFFFFFFF", " <= ")]
-        [DataRow(BYTEARRAY_TYPE, "neq", "NULL", "!=")]
-        [DataRow(BYTEARRAY_TYPE, "eq", "NULL", "=")]
-        public async Task QueryTypeColumnFilter(string type, string filterOperator, string value, string queryOperator)
+        [DataRow(BYTE_TYPE, "gt", "0", "0", ">")]
+        [DataRow(BYTE_TYPE, "gte", "0", "0", ">=")]
+        [DataRow(BYTE_TYPE, "lt", "1", "1", "<")]
+        [DataRow(BYTE_TYPE, "lte", "1", "1", "<=")]
+        [DataRow(BYTE_TYPE, "neq", "0", "0", "!=")]
+        [DataRow(BYTE_TYPE, "eq", "1", "1", "=")]
+        [DataRow(SHORT_TYPE, "gt", "-1", "-1", ">")]
+        [DataRow(SHORT_TYPE, "gte", "-1", "-1", ">=")]
+        [DataRow(SHORT_TYPE, "lt", "1", "1", "<")]
+        [DataRow(SHORT_TYPE, "lte", "1", "1", "<=")]
+        [DataRow(SHORT_TYPE, "neq", "1", "1", "!=")]
+        [DataRow(SHORT_TYPE, "eq", "-1", "-1", "=")]
+        [DataRow(INT_TYPE, "gt", "-1", "-1", ">")]
+        [DataRow(INT_TYPE, "gte", "2147483647", "2147483647", " >= ")]
+        [DataRow(INT_TYPE, "lt", "1", "1", "<")]
+        [DataRow(INT_TYPE, "lte", "-2147483648", "-2147483648", " <= ")]
+        [DataRow(INT_TYPE, "neq", "1", "1", "!=")]
+        [DataRow(INT_TYPE, "eq", "-1", "-1", "=")]
+        [DataRow(LONG_TYPE, "gt", "-1", "-1", ">")]
+        [DataRow(LONG_TYPE, "gte", "9223372036854775807", "9223372036854775807", " >= ")]
+        [DataRow(LONG_TYPE, "lt", "1", "1", "<")]
+        [DataRow(LONG_TYPE, "lte", "-9223372036854775808", "-9223372036854775808", " <= ")]
+        [DataRow(LONG_TYPE, "neq", "1", "1", "!=")]
+        [DataRow(LONG_TYPE, "eq", "-1", "-1", "=")]
+        [DataRow(STRING_TYPE, "neq", "\'foo\'", "\"foo\"", "!=")]
+        [DataRow(STRING_TYPE, "eq", "\'lksa;jdflasdf;alsdflksdfkldj\'", "\"lksa;jdflasdf;alsdflksdfkldj\"", "=")]
+        [DataRow(SINGLE_TYPE, "gt", "-9.2", "-9.2", ">")]
+        [DataRow(SINGLE_TYPE, "gte", "-9.2", "-9.2", ">=")]
+        [DataRow(SINGLE_TYPE, "lt", ".33", "0.33", "<")]
+        [DataRow(SINGLE_TYPE, "lte", ".33", "0.33", "<=")]
+        [DataRow(SINGLE_TYPE, "neq", "9.2", "9.2", "!=")]
+        [DataRow(SINGLE_TYPE, "eq", "-9.2", "-9.2", "=")]
+        [DataRow(FLOAT_TYPE, "gt", "-9.2", "-9.2", ">")]
+        [DataRow(FLOAT_TYPE, "gte", "-9.2", "-9.2", ">=")]
+        [DataRow(FLOAT_TYPE, "lt", ".33", "0.33", "<")]
+        [DataRow(FLOAT_TYPE, "lte", ".33", "0.33", "<=")]
+        [DataRow(FLOAT_TYPE, "neq", "-9.2", "-9.2", "!=")]
+        [DataRow(FLOAT_TYPE, "eq", "-9.2", "-9.2", "=")]
+        [DataRow(DECIMAL_TYPE, "gt", "-9.292929", "-9.292929", " > ")]
+        [DataRow(DECIMAL_TYPE, "gte", "-9.292929", "-9.292929", " >= ")]
+        [DataRow(DECIMAL_TYPE, "lt", "0.333333", "0.333333", "<")]
+        [DataRow(DECIMAL_TYPE, "lte", "0.333333", "0.333333", " <= ")]
+        [DataRow(DECIMAL_TYPE, "neq", "0.0", "0.0", "!=")]
+        [DataRow(DECIMAL_TYPE, "eq", "-9.292929", "-9.292929", "=")]
+        [DataRow(BOOLEAN_TYPE, "neq", "\'true\'", "true", "!=")]
+        [DataRow(BOOLEAN_TYPE, "eq", "\'false\'", "false", "=")]
+        [DataRow(DATETIME_TYPE, "gt", "\'1999-01-08\'", "\"1999-01-08\"", " > ")]
+        [DataRow(DATETIME_TYPE, "gte", "\'1999-01-08\'", "\"1999-01-08\"", " >= ")]
+        [DataRow(DATETIME_TYPE, "lt", "\'0001-01-01\'", "\"0001-01-01\"", " < ")]
+        [DataRow(DATETIME_TYPE, "lte", "\'0001-01-01\'", "\"0001-01-01\"", " <= ")]
+        [DataRow(DATETIME_TYPE, "neq", "\'0001-01-01\'", "\"0001-01-01\"", "!=")]
+        [DataRow(DATETIME_TYPE, "eq", "\'0001-01-01\'", "\"0001-01-01T01:01:01\"", "=")]
+        [DataRow(DATETIME_TYPE, "gt", "\'1999-01-08 10:23:00\'", "\"1999-01-08 10:23:00\"", " > ")]
+        [DataRow(DATETIME_TYPE, "gte", "\'1999-01-08 10:23:00\'", "\"1999-01-08 10:23:00\"", " >= ")]
+        [DataRow(DATETIME_TYPE, "lt", "\'9999-12-31 23:59:59\'", "\"9999-12-31 23:59:59\"", " < ")]
+        [DataRow(DATETIME_TYPE, "lte", "\'9999-12-31 23:59:59\'", "\"9999-12-31 23:59:59\"", " <= ")]
+        [DataRow(DATETIME_TYPE, "neq", "\'1999-01-08 10:23:00\'", "\"1999-01-08 10:23:00\"", "!=")]
+        [DataRow(DATETIME_TYPE, "eq", "\'1999-01-08 10:23:00\'", "\"1999-01-08 10:23:00\"", "=")]
+        [DataRow(DATETIME_TYPE, "gt", "\'1999-01-08 10:23:00.9999999\'", "\"1999-01-08 10:23:00.9999999\"", " > ")]
+        [DataRow(DATETIME_TYPE, "gte", "\'1999-01-08 10:23:00.9999999\'", "\"1999-01-08 10:23:00.9999999\"", " >= ")]
+        [DataRow(DATETIME_TYPE, "lt", "\'9999-12-31 23:59:59.9999999\'", "\"9999-12-31 23:59:59.9999999\"", " < ")]
+        [DataRow(DATETIME_TYPE, "lte", "\'9999-12-31 23:59:59.9999999\'", "\"9999-12-31 23:59:59.9999999\"", " <= ")]
+        [DataRow(DATETIME_TYPE, "neq", "\'1999-01-08 10:23:00.9999999\'", "\"1999-01-08 10:23:00.9999999\"", "!=")]
+        [DataRow(DATETIME_TYPE, "eq", "\'1999-01-08 10:23:00.9999999\'", "\"1999-01-08 10:23:00.9999999\"", "=")]
+        [DataRow(DATETIME_TYPE, "neq", "\'1999-01-08 10:23:54.9999999-14:00\'", "\"1999-01-08 10:23:54.9999999-14:00\"", "!=")]
+        [DataRow(DATETIME_TYPE, "eq", "\'1999-01-08 10:23:54.9999999-14:00\'", "\"1999-01-08 10:23:54.9999999-14:00\"", "=")]
+        [DataRow(DATETIME_TYPE, "gt", "\'1999-01-08 10:23:54\'", "\"1999-01-08 10:23:54\"", " > ")]
+        [DataRow(DATETIME_TYPE, "gte", "\'1999-01-08 10:23:54\'", "\"1999-01-08 10:23:54\"", " >= ")]
+        [DataRow(DATETIME_TYPE, "lt", "\'2079-06-06\'", "\"2079-06-06\"", " < ")]
+        [DataRow(DATETIME_TYPE, "lte", "\'2079-06-06\'", "\"2079-06-06\"", " <= ")]
+        [DataRow(DATETIME_TYPE, "neq", "\'1999-01-08 10:23:54\'", "\"1999-01-08 10:23:54\"", "!=")]
+        [DataRow(DATETIME_TYPE, "eq", "\'1999-01-08 10:23:54\'", "\"1999-01-08 10:23:54\"", "=")]
+        public async Task QueryTypeColumnFilter(string type, string filterOperator, string sqlValue, string gqlValue, string queryOperator)
         {
             if (!IsSupportedType(type))
             {
@@ -227,14 +209,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             string field = $"{type.ToLowerInvariant()}_types";
             string graphQLQueryName = "supportedTypes";
             string gqlQuery = @"{
-                supportedTypes(first: 100 filter: { " + field + ": {" + filterOperator + ": " + value + @"} }) {
+                supportedTypes(first: 100 orderBy: { " + field + ": ASC } filter: { " + field + ": {" + filterOperator + ": " + gqlValue + @"} }) {
                     items {
                         " + field + @"
                     }
                 }
             }";
 
-            string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, filterValue: value, filterField: field, orderBy: field, limit: "100");
+            string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, filterValue: sqlValue, filterOperator: queryOperator, filterField: field, orderBy: field, limit: "100");
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -493,8 +475,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             using JsonDocument actualJsonDoc = JsonDocument.Parse(actual);
             using JsonDocument expectedJsonDoc = JsonDocument.Parse(expected);
 
-            string actualFloat = actualJsonDoc.RootElement.GetProperty(fieldName).ToString();
-            string expectedFloat = expectedJsonDoc.RootElement.GetProperty(fieldName).ToString();
+            string actualFloat;
+            string expectedFloat;
+
+            if (actualJsonDoc.RootElement.ValueKind is JsonValueKind.Array)
+            {
+                JsonElement.ArrayEnumerator actualEnumerater = actualJsonDoc.RootElement.EnumerateArray();
+                foreach (JsonElement expectedElement in actualJsonDoc.RootElement.EnumerateArray())
+                {
+                    actualEnumerater.MoveNext();
+                    JsonElement actualElement = actualEnumerater.Current;
+                    JsonElement actualValue;
+                    JsonElement expectedValue;
+                    actualElement.TryGetProperty(fieldName, out actualValue);
+                    expectedElement.TryGetProperty(fieldName, out expectedValue);
+                    Assert.AreEqual(actualValue, expectedValue);
+                }
+
+                return;
+            } else
+            {
+                actualFloat = actualJsonDoc.RootElement.GetProperty(fieldName).ToString();
+                expectedFloat = expectedJsonDoc.RootElement.GetProperty(fieldName).ToString();
+            }
 
             // handles cases when one of the values is null
             if (string.IsNullOrEmpty(actualFloat) || string.IsNullOrEmpty(expectedFloat))
@@ -531,9 +534,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             using JsonDocument actualJsonDoc = JsonDocument.Parse(actual);
             using JsonDocument expectedJsonDoc = JsonDocument.Parse(expected);
 
+            if (actualJsonDoc.RootElement.ValueKind is JsonValueKind.Array)
+            {
+                JsonElement.ArrayEnumerator actualEnumerater = actualJsonDoc.RootElement.EnumerateArray();
+                foreach (JsonElement expectedElement in actualJsonDoc.RootElement.EnumerateArray())
+                {
+                    actualEnumerater.MoveNext();
+                    JsonElement actualElement = actualEnumerater.Current;
+                    JsonElement actualValue;
+                    JsonElement expectedValue;
+                    actualElement.TryGetProperty(fieldName, out actualValue);
+                    expectedElement.TryGetProperty(fieldName, out expectedValue);
+                    Assert.AreEqual(actualValue, expectedValue);
+                }
+
+                return;
+            }
+            else
+            {
+
+            }
+
             string actualDateTime = actualJsonDoc.RootElement.GetProperty(fieldName).ToString();
             string expectedDateTime = expectedJsonDoc.RootElement.GetProperty(fieldName).ToString();
-
             // handles cases when one of the values is null
             if (string.IsNullOrEmpty(actualDateTime) || string.IsNullOrEmpty(expectedDateTime))
             {

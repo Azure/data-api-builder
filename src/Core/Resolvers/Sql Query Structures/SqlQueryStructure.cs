@@ -443,7 +443,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 string columnName = parameter.Key;
 
-                MetadataProvider.TryGetBackingColumn(base.EntityName, parameter.Key, out string? backingColumnName);
+                MetadataProvider.TryGetBackingColumn(EntityName, parameter.Key, out string? backingColumnName);
                 if (!string.IsNullOrWhiteSpace(backingColumnName))
                 {
                     columnName = backingColumnName;

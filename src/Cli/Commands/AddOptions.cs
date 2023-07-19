@@ -56,7 +56,7 @@ namespace Cli.Commands
         [Option("permissions", Required = true, Separator = ':', HelpText = "Permissions required to access the source table or container.")]
         public IEnumerable<string> Permissions { get; }
 
-        public void Handler(ILogger logger, RuntimeConfigLoader loader, IFileSystem fileSystem)
+        public void Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             logger.LogInformation($"{PRODUCT_NAME} {ProductInfo.GetProductVersion()}");
             if (!IsEntityProvided(Entity, logger, command: "add"))

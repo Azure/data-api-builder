@@ -14,7 +14,7 @@ namespace Azure.DataApiBuilder.Core.Configurations;
 
 /// <summary>
 /// This class is responsible for exposing the runtime config to the rest of the service.
-/// The <c>RuntimeConfigProvider</c> won't directly load the config, but will instead rely on the <see cref="RuntimeConfigLoader"/> to do so.
+/// The <c>RuntimeConfigProvider</c> won't directly load the config, but will instead rely on the <see cref="FileSystemRuntimeConfigLoader"/> to do so.
 /// </summary>
 /// <remarks>
 /// The <c>RuntimeConfigProvider</c> will maintain internal state of the config, and will only load it once.
@@ -40,14 +40,13 @@ public class RuntimeConfigProvider
     /// </summary>
     public string? ManagedIdentityAccessToken { get; private set; }
 
-    private readonly RuntimeConfigLoader _runtimeConfigLoader;
-    private RuntimeConfig? _runtimeConfig;
+    public RuntimeConfigLoader ConfigLoader { get; private set; }
 
-    public string RuntimeConfigFileName => _runtimeConfigLoader.ConfigFileName;
+    private RuntimeConfig? _runtimeConfig;
 
     public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader)
     {
-        _runtimeConfigLoader = runtimeConfigLoader;
+        ConfigLoader = runtimeConfigLoader;
     }
 
     /// <summary>
@@ -63,7 +62,7 @@ public class RuntimeConfigProvider
             return _runtimeConfig;
         }
 
-        if (_runtimeConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config))
+        if (ConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config))
         {
             _runtimeConfig = config;
         }
@@ -88,7 +87,7 @@ public class RuntimeConfigProvider
     {
         if (_runtimeConfig is null)
         {
-            if (_runtimeConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config))
+            if (ConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config))
             {
                 _runtimeConfig = config;
             }
@@ -227,11 +226,19 @@ public class RuntimeConfigProvider
 
         HyphenatedNamingPolicy namingPolicy = new();
 
-        Dictionary<string, JsonElement> options = new(runtimeConfig.DataSource.Options)
+        Dictionary<string, JsonElement> options;
+        if (runtimeConfig.DataSource.Options is not null)
         {
-            // push the "raw" GraphQL schema into the options to pull out later when requested
-            { namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.GraphQLSchema)), JsonSerializer.SerializeToElement(schema) }
-        };
+            options = new(runtimeConfig.DataSource.Options)
+            {
+                // push the "raw" GraphQL schema into the options to pull out later when requested
+                { namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.GraphQLSchema)), JsonSerializer.SerializeToElement(schema) }
+            };
+        }
+        else
+        {
+            throw new ArgumentException($"'{nameof(CosmosDbNoSQLDataSourceOptions)}' cannot be null or empty.", nameof(CosmosDbNoSQLDataSourceOptions));
+        }
 
         // SWA may provide CosmosDB database name in connectionString
         string? database = dbConnectionStringBuilder.ContainsKey("Database") ? (string)dbConnectionStringBuilder["Database"] : null;

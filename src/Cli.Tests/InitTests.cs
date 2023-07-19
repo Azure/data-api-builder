@@ -11,14 +11,14 @@ namespace Cli.Tests
         : VerifyBase
     {
         private IFileSystem? _fileSystem;
-        private RuntimeConfigLoader? _runtimeConfigLoader;
+        private FileSystemRuntimeConfigLoader? _runtimeConfigLoader;
 
         [TestInitialize]
         public void TestInitialize()
         {
             _fileSystem = FileSystemUtils.ProvisionMockFileSystem();
 
-            _runtimeConfigLoader = new RuntimeConfigLoader(_fileSystem);
+            _runtimeConfigLoader = new FileSystemRuntimeConfigLoader(_fileSystem);
 
             ILoggerFactory loggerFactory = TestLoggerSupport.ProvisionLoggerFactory();
 

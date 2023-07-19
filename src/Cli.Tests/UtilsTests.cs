@@ -107,8 +107,8 @@ public class UtilsTests
     [DataTestMethod]
     [DataRow("", "my-config.json", "my-config.json", DisplayName = "user provided the config file and environment variable was not set.")]
     [DataRow("Test", "my-config.json", "my-config.json", DisplayName = "user provided the config file and environment variable was set.")]
-    [DataRow("Test", null, $"{RuntimeConfigLoader.CONFIGFILE_NAME}.Test{RuntimeConfigLoader.CONFIG_EXTENSION}", DisplayName = "config not provided, but environment variable was set.")]
-    [DataRow("", null, $"{RuntimeConfigLoader.CONFIGFILE_NAME}{RuntimeConfigLoader.CONFIG_EXTENSION}", DisplayName = "neither config was provided, nor environment variable was set.")]
+    [DataRow("Test", null, $"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}", DisplayName = "config not provided, but environment variable was set.")]
+    [DataRow("", null, $"{CONFIGFILE_NAME}{CONFIG_EXTENSION}", DisplayName = "neither config was provided, nor environment variable was set.")]
     public void TestConfigSelectionBasedOnCliPrecedence(
         string? environmentValue,
         string? userProvidedConfigFile,
@@ -117,13 +117,13 @@ public class UtilsTests
         MockFileSystem fileSystem = new();
         fileSystem.AddFile(expectedRuntimeConfigFile, new MockFileData(""));
 
-        RuntimeConfigLoader loader = new(fileSystem);
+        FileSystemRuntimeConfigLoader loader = new(fileSystem);
 
-        string? envValueBeforeTest = Environment.GetEnvironmentVariable(RuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME);
-        Environment.SetEnvironmentVariable(RuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
+        string? envValueBeforeTest = Environment.GetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME);
+        Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
         Assert.IsTrue(TryGetConfigFileBasedOnCliPrecedence(loader, userProvidedConfigFile, out string? actualRuntimeConfigFile));
         Assert.AreEqual(expectedRuntimeConfigFile, actualRuntimeConfigFile);
-        Environment.SetEnvironmentVariable(RuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, envValueBeforeTest);
+        Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, envValueBeforeTest);
     }
 
     /// <summary>
@@ -174,14 +174,14 @@ public class UtilsTests
     /// Test to verify that CLI is able to figure out if the api path prefix for rest/graphql contains invalid characters.
     /// </summary>
     [DataTestMethod]
-    [DataRow("/", ApiType.REST, true, DisplayName = "Only forward slash as api path")]
-    [DataRow("/$%^", ApiType.REST, false, DisplayName = "Api path containing only reserved characters.")]
-    [DataRow("/rest-api", ApiType.REST, true, DisplayName = "Valid api path")]
-    [DataRow("/graphql@api", ApiType.GraphQL, false, DisplayName = "Api path containing some reserved characters.")]
-    [DataRow("/api path", ApiType.REST, true, DisplayName = "Api path containing space.")]
-    public void TestApiPathIsWellFormed(string apiPath, ApiType apiType, bool expectSuccess)
+    [DataRow("/", true, DisplayName = "Only forward slash as api path")]
+    [DataRow("/$%^", false, DisplayName = "Api path containing only reserved characters.")]
+    [DataRow("/rest-api", true, DisplayName = "Valid api path")]
+    [DataRow("/graphql@api", false, DisplayName = "Api path containing some reserved characters.")]
+    [DataRow("/api path", true, DisplayName = "Api path containing space.")]
+    public void TestApiPathIsWellFormed(string apiPath, bool expectSuccess)
     {
-        Assert.AreEqual(expectSuccess, IsApiPathValid(apiPath, apiType));
+        Assert.AreEqual(expectSuccess, IsURIComponentValid(apiPath));
     }
 
     /// <summary>
@@ -239,14 +239,14 @@ public class UtilsTests
     public void TestMergeConfig()
     {
         MockFileSystem fileSystem = new();
-        fileSystem.AddFile(RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(BASE_CONFIG));
+        fileSystem.AddFile(DEFAULT_CONFIG_FILE_NAME, new MockFileData(BASE_CONFIG));
         fileSystem.AddFile("dab-config.Test.json", new MockFileData(ENV_BASED_CONFIG));
 
-        RuntimeConfigLoader loader = new(fileSystem);
+        FileSystemRuntimeConfigLoader loader = new(fileSystem);
 
-        Environment.SetEnvironmentVariable(RuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, "Test");
+        Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, "Test");
 
-        Assert.IsTrue(Cli.ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, new StringLogger(), out string? mergedConfig), "Failed to merge config files");
+        Assert.IsTrue(ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, new StringLogger(), out string? mergedConfig), "Failed to merge config files");
         Assert.AreEqual(mergedConfig, "dab-config.Test.merged.json");
         Assert.IsTrue(fileSystem.File.Exists(mergedConfig));
         Assert.IsTrue(JToken.DeepEquals(JObject.Parse(MERGED_CONFIG), JObject.Parse(fileSystem.File.ReadAllText(mergedConfig))));
@@ -282,7 +282,7 @@ public class UtilsTests
         MockFileSystem fileSystem = new();
 
         // Setting up the test scenarios
-        Environment.SetEnvironmentVariable(RuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
+        Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
         string baseConfig = "dab-config.json";
         string envBasedConfig = "dab-config.Test.json";
 
@@ -296,7 +296,7 @@ public class UtilsTests
             fileSystem.AddFile(envBasedConfig, new("{}"));
         }
 
-        RuntimeConfigLoader loader = new(fileSystem);
+        FileSystemRuntimeConfigLoader loader = new(fileSystem);
 
         Assert.AreEqual(
             expectedIsMergedConfigAvailable,
@@ -304,7 +304,7 @@ public class UtilsTests
             "Availability of merge config should match");
         Assert.AreEqual(expectedMergedConfigFileName, mergedConfigFile, "Merge config file name should match expected");
 
-        Environment.SetEnvironmentVariable(RuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, null);
+        Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, null);
     }
 }
 

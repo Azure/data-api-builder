@@ -70,7 +70,7 @@ namespace Azure.DataApiBuilder.Core.Authorization
             {
                 throw new DataApiBuilderException(
                     message: "HTTP Context Unavailable, Something went wrong",
-                    statusCode: System.Net.HttpStatusCode.Unauthorized,
+                    statusCode: HttpStatusCode.Unauthorized,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError
                     );
             }

@@ -27,6 +27,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
+using Azure.DataApiBuilder.Service.Tests.OpenApiIntegration;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using HotChocolate;
 using Microsoft.AspNetCore.TestHost;
@@ -39,7 +40,7 @@ using Moq;
 using MySqlConnector;
 using Npgsql;
 using VerifyMSTest;
-using static Azure.DataApiBuilder.Config.RuntimeConfigLoader;
+using static Azure.DataApiBuilder.Config.FileSystemRuntimeConfigLoader;
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration
 {
@@ -766,11 +767,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             ConfigurationPostParameters expectedParameters = GetCosmosConfigurationParameters();
             Assert.AreEqual(DatabaseType.CosmosDB_NoSQL, configuration.DataSource.DatabaseType, "Expected CosmosDB_NoSQL database type after configuring the runtime with CosmosDB_NoSQL settings.");
-            Assert.AreEqual(expectedParameters.Schema, configuration.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>().GraphQLSchema, "Expected the schema in the configuration to match the one sent to the configuration endpoint.");
+            CosmosDbNoSQLDataSourceOptions options = configuration.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>();
+            Assert.IsNotNull(options);
+            Assert.AreEqual(expectedParameters.Schema, options.GraphQLSchema, "Expected the schema in the configuration to match the one sent to the configuration endpoint.");
 
             // Don't use Assert.AreEqual, because a failure will print the entire connection string in the error message.
             Assert.IsTrue(expectedParameters.ConnectionString == configuration.DataSource.ConnectionString, "Expected the connection string in the configuration to match the one sent to the configuration endpoint.");
-            string db = configuration.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>().Database;
+            string db = options.Database;
             Assert.AreEqual(COSMOS_DATABASE_NAME, db, "Expected the database name in the runtime config to match the one sent to the configuration endpoint.");
         }
 
@@ -799,7 +802,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestMethod("Validates if deserialization of MsSql config file succeeds."), TestCategory(TestCategory.MSSQL)]
         public Task TestReadingRuntimeConfigForMsSql()
         {
-            return ConfigFileDeserializationValidationHelper(File.ReadAllText($"{RuntimeConfigLoader.CONFIGFILE_NAME}.{MSSQL_ENVIRONMENT}{RuntimeConfigLoader.CONFIG_EXTENSION}"));
+            return ConfigFileDeserializationValidationHelper(File.ReadAllText($"{CONFIGFILE_NAME}.{MSSQL_ENVIRONMENT}{CONFIG_EXTENSION}"));
         }
 
         /// <summary>
@@ -809,7 +812,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestMethod("Validates if deserialization of MySql config file succeeds."), TestCategory(TestCategory.MYSQL)]
         public Task TestReadingRuntimeConfigForMySql()
         {
-            return ConfigFileDeserializationValidationHelper(File.ReadAllText($"{RuntimeConfigLoader.CONFIGFILE_NAME}.{MYSQL_ENVIRONMENT}{RuntimeConfigLoader.CONFIG_EXTENSION}"));
+            return ConfigFileDeserializationValidationHelper(File.ReadAllText($"{CONFIGFILE_NAME}.{MYSQL_ENVIRONMENT}{CONFIG_EXTENSION}"));
         }
 
         /// <summary>
@@ -819,7 +822,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestMethod("Validates if deserialization of PostgreSql config file succeeds."), TestCategory(TestCategory.POSTGRESQL)]
         public Task TestReadingRuntimeConfigForPostgreSql()
         {
-            return ConfigFileDeserializationValidationHelper(File.ReadAllText($"{RuntimeConfigLoader.CONFIGFILE_NAME}.{POSTGRESQL_ENVIRONMENT}{RuntimeConfigLoader.CONFIG_EXTENSION}"));
+            return ConfigFileDeserializationValidationHelper(File.ReadAllText($"{CONFIGFILE_NAME}.{POSTGRESQL_ENVIRONMENT}{CONFIG_EXTENSION}"));
         }
 
         /// <summary>
@@ -829,7 +832,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestMethod("Validates if deserialization of the CosmosDB_NoSQL config file succeeds."), TestCategory(TestCategory.COSMOSDBNOSQL)]
         public Task TestReadingRuntimeConfigForCosmos()
         {
-            return ConfigFileDeserializationValidationHelper(File.ReadAllText($"{RuntimeConfigLoader.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigLoader.CONFIG_EXTENSION}"));
+            return ConfigFileDeserializationValidationHelper(File.ReadAllText($"{CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{CONFIG_EXTENSION}"));
         }
 
         /// <summary>
@@ -853,8 +856,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
             string[] args = new[]
             {
-            $"--ConfigFileName={RuntimeConfigLoader.CONFIGFILE_NAME}." +
-            $"{COSMOS_ENVIRONMENT}{RuntimeConfigLoader.CONFIG_EXTENSION}"
+            $"--ConfigFileName={CONFIGFILE_NAME}." +
+            $"{COSMOS_ENVIRONMENT}{CONFIG_EXTENSION}"
         };
 
             TestServer server = new(Program.CreateWebHostBuilder(args));
@@ -872,7 +875,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Environment.SetEnvironmentVariable(
                 ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
             Environment.SetEnvironmentVariable(
-                RuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
+                RUNTIME_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
 
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
@@ -883,7 +886,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         public void TestConfigIsValid()
         {
             TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
-            RuntimeConfigLoader configPath = TestHelper.GetRuntimeConfigLoader();
+            FileSystemRuntimeConfigLoader configPath = TestHelper.GetRuntimeConfigLoader();
             RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(configPath);
 
             Mock<ILogger<RuntimeConfigValidator>> configValidatorLogger = new();
@@ -903,26 +906,26 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// has highest precedence irrespective of what the connection string is in the config file.
         /// Verifying the Exception thrown.
         /// </summary>
-        [TestMethod($"Validates that environment variable {RuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING} has highest precedence."), TestCategory(TestCategory.COSMOSDBNOSQL)]
+        [TestMethod($"Validates that environment variable {RUNTIME_ENV_CONNECTION_STRING} has highest precedence."), TestCategory(TestCategory.COSMOSDBNOSQL)]
         public void TestConnectionStringEnvVarHasHighestPrecedence()
         {
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, COSMOS_ENVIRONMENT);
             Environment.SetEnvironmentVariable(
-                RuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING,
+                RUNTIME_ENV_CONNECTION_STRING,
                 "Invalid Connection String");
 
             try
             {
                 TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
                 _ = server.Services.GetService(typeof(CosmosClientProvider)) as CosmosClientProvider;
-                Assert.Fail($"{RuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING} is not given highest precedence");
+                Assert.Fail($"{RUNTIME_ENV_CONNECTION_STRING} is not given highest precedence");
             }
             catch (Exception e)
             {
                 Assert.AreEqual(typeof(ApplicationException), e.GetType());
                 Assert.AreEqual(
                     $"Could not initialize the engine with the runtime config file: " +
-                    $"{RuntimeConfigLoader.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigLoader.CONFIG_EXTENSION}",
+                    $"{CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{CONFIG_EXTENSION}",
                     e.Message);
             }
         }
@@ -944,7 +947,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             MockFileSystem fileSystem = new();
             fileSystem.AddFile(expectedRuntimeConfigFile, new MockFileData(string.Empty));
-            RuntimeConfigLoader runtimeConfigLoader = new(fileSystem);
+            FileSystemRuntimeConfigLoader runtimeConfigLoader = new(fileSystem);
 
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, hostingEnvironmentValue);
             Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, environmentValue);
@@ -992,7 +995,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             const string CUSTOM_CONFIG = "custom-config.json";
             TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
             FileSystem fileSystem = new();
-            RuntimeConfigLoader loader = new(fileSystem);
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
             loader.TryLoadKnownConfig(out RuntimeConfig config);
 
             RuntimeConfig configWithCustomHostMode = config with
@@ -1050,7 +1053,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             GraphQLRuntimeOptions graphqlOptions = new(Path: graphQLConfiguredPath);
 
-            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), new());
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL),
+                Options: null);
 
             RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, new());
             const string CUSTOM_CONFIG = "custom-config.json";
@@ -1199,6 +1204,47 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
+        /// Test to validate that when an entity which will return a paginated response is queried, and a custom runtime base route is configured in the runtime configuration,
+        /// then the generated nextLink in the response would contain the rest base-route just before the rest path. For the subsequent query, the rest base-route will be trimmed
+        /// by the upstream before the request lands at DAB.
+        /// </summary>
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task TestRuntimeBaseRouteInNextLinkForPaginatedRestResponse()
+        {
+            const string CUSTOM_CONFIG = "custom-config.json";
+            string runtimeBaseRoute = "/base-route";
+            TestHelper.ConstructNewConfigWithSpecifiedHostMode(CUSTOM_CONFIG, HostMode.Production, TestCategory.MSSQL, runtimeBaseRoute: runtimeBaseRoute);
+            string[] args = new[]
+            {
+                    $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                string requestPath = "/api/MappedBookmarks";
+                HttpMethod httpMethod = SqlTestHelper.ConvertRestMethodToHttpMethod(SupportedHttpVerb.Get);
+                HttpRequestMessage request = new(httpMethod, requestPath);
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                string responseBody = await response.Content.ReadAsStringAsync();
+                Assert.IsTrue(response.StatusCode is HttpStatusCode.OK);
+
+                JsonElement responseElement = JsonSerializer.Deserialize<JsonElement>(responseBody);
+                JsonElement responseValue = responseElement.GetProperty(SqlTestHelper.jsonResultTopLevelKey);
+                string nextLink = responseElement.GetProperty("nextLink").ToString();
+
+                // Assert that we got an array response with length equal to the maximum allowed records in a paginated response.
+                Assert.AreEqual(JsonValueKind.Array, responseValue.ValueKind);
+                Assert.AreEqual(100, responseValue.GetArrayLength());
+
+                // Assert that the nextLink contains the rest base-route just before the request path.
+                StringAssert.Contains(nextLink, runtimeBaseRoute + requestPath);
+            }
+        }
+
+        /// <summary>
         /// Tests that the when Rest or GraphQL is disabled Globally,
         /// any requests made will get a 404 response.
         /// </summary>
@@ -1224,7 +1270,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             GraphQLRuntimeOptions graphqlOptions = new(Enabled: isGraphQLEnabled);
             RestRuntimeOptions restRuntimeOptions = new(Enabled: isRestEnabled);
 
-            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), new());
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
             RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions);
             const string CUSTOM_CONFIG = "custom-config.json";
@@ -1292,7 +1339,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestMethod, TestCategory(TestCategory.MSSQL)]
         public async Task TestEngineSupportViewsWithoutKeyFieldsInConfigForMsSQL()
         {
-            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), new());
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
             Entity viewEntity = new(
                 Source: new("books_view_all", EntitySourceType.Table, null, null),
                 Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
@@ -1373,7 +1421,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
 
             FileSystem fileSystem = new();
-            RuntimeConfigLoader loader = new(fileSystem);
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
 
             RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(loader);
             RuntimeConfig config = configProvider.GetConfig();
@@ -1424,7 +1472,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             GraphQLRuntimeOptions graphqlOptions = new(AllowIntrospection: enableIntrospection);
             RestRuntimeOptions restRuntimeOptions = new();
 
-            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), new());
+            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
             RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions);
             const string CUSTOM_CONFIG = "custom-config.json";
@@ -1476,7 +1524,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             GraphQLRuntimeOptions graphqlOptions = new(Enabled: globalGraphQLEnabled);
             RestRuntimeOptions restRuntimeOptions = new(Enabled: true);
 
-            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), new());
+            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
             // Configure Entity for testing
             Dictionary<string, string> mappings = new()
@@ -1549,7 +1597,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             string expectedOpenApiTargetContent)
         {
             string swaggerEndpoint = "/swagger";
-            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), new());
+            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
             RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource: dataSource, new(), new(Path: customRestPath));
             configuration = configuration
@@ -1709,7 +1757,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             using TestServer server = new(Program.CreateWebHostBuilder(args));
             using HttpClient client = server.CreateClient();
             // Setup and send GET request
-            HttpRequestMessage readOpenApiDocumentRequest = new(HttpMethod.Get, $"{RestRuntimeOptions.DEFAULT_PATH}/{Core.Services.OpenAPI.OpenApiDocumentor.OPENAPI_ROUTE}");
+            HttpRequestMessage readOpenApiDocumentRequest = new(HttpMethod.Get, $"{RestRuntimeOptions.DEFAULT_PATH}/{OpenApiDocumentor.OPENAPI_ROUTE}");
             HttpResponseMessage response = await client.SendAsync(readOpenApiDocumentRequest);
 
             // Parse response metadata
@@ -1747,7 +1795,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <param name="entityMap">Collection of entityName -> Entity object.</param>
         private static void CreateCustomConfigFile(bool globalRestEnabled, Dictionary<string, Entity> entityMap)
         {
-            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), new());
+            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
             RuntimeConfig runtimeConfig = new(
                 Schema: string.Empty,
@@ -1899,7 +1947,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         private static ConfigurationPostParameters GetCosmosConfigurationParameters()
         {
-            string cosmosFile = $"{RuntimeConfigLoader.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigLoader.CONFIG_EXTENSION}";
+            string cosmosFile = $"{CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{CONFIG_EXTENSION}";
             return new(
                 File.ReadAllText(cosmosFile),
                 File.ReadAllText("schema.gql"),
@@ -1909,7 +1957,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         private static ConfigurationPostParametersV2 GetCosmosConfigurationParametersV2()
         {
-            string cosmosFile = $"{RuntimeConfigLoader.CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{RuntimeConfigLoader.CONFIG_EXTENSION}";
+            string cosmosFile = $"{CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{CONFIG_EXTENSION}";
             RuntimeConfig overrides = new(
                 null,
                 new DataSource(DatabaseType.CosmosDB_NoSQL, $"AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==;Database={COSMOS_DATABASE_NAME}", new()),
@@ -2120,7 +2168,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         public static string GetConnectionStringFromEnvironmentConfig(string environment)
         {
             FileSystem fileSystem = new();
-            string sqlFile = new RuntimeConfigLoader(fileSystem).GetFileNameForEnvironment(environment, considerOverrides: true);
+            string sqlFile = new FileSystemRuntimeConfigLoader(fileSystem).GetFileNameForEnvironment(environment, considerOverrides: true);
             string configPayload = File.ReadAllText(sqlFile);
 
             RuntimeConfigLoader.TryParseConfig(configPayload, out RuntimeConfig runtimeConfig);

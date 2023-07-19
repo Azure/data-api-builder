@@ -13,7 +13,7 @@ public class EndToEndTests
     : VerifyBase
 {
     private IFileSystem? _fileSystem;
-    private RuntimeConfigLoader? _runtimeConfigLoader;
+    private FileSystemRuntimeConfigLoader? _runtimeConfigLoader;
     private ILogger<Program>? _cliLogger;
 
     [TestInitialize]
@@ -26,7 +26,7 @@ public class EndToEndTests
 
         _fileSystem = fileSystem;
 
-        _runtimeConfigLoader = new RuntimeConfigLoader(_fileSystem);
+        _runtimeConfigLoader = new FileSystemRuntimeConfigLoader(_fileSystem);
 
         ILoggerFactory loggerFactory = TestLoggerSupport.ProvisionLoggerFactory();
 
@@ -104,8 +104,7 @@ public class EndToEndTests
     [TestMethod]
     public void TestInitializingRestAndGraphQLGlobalSettings()
     {
-        string[] args = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql", "--rest.path", "/rest-api",
-                          "--rest.disabled", "--graphql.path", "/graphql-api" };
+        string[] args = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql", "--rest.path", "/rest-api", "--rest.disabled", "--graphql.path", "/graphql-api" };
         Program.Execute(args, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
@@ -719,5 +718,41 @@ public class EndToEndTests
         }
 
         process.Kill();
+    }
+
+    /// <summary>
+    /// Test to verify that when base-route is configured, the runtime config is only successfully generated when the
+    /// authentication provider is Static Web Apps.
+    /// </summary>
+    /// <param name="authProvider">Authentication provider specified for the runtime.</param>
+    /// <param name="isExceptionExpected">Whether an exception is expected as a result of test run.</param>
+    [DataTestMethod]
+    [DataRow("StaticWebApps", false)]
+    [DataRow("AppService", true)]
+    [DataRow("AzureAD", true)]
+    public void TestBaseRouteIsConfigurableForSWA(string authProvider, bool isExceptionExpected)
+    {
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type", "mssql",
+            "--connection-string", "localhost:5000", "--auth.provider", authProvider, "--runtime.base-route", "base-route" };
+
+        if (!Enum.TryParse(authProvider, ignoreCase: true, out EasyAuthType _))
+        {
+            string[] audIssuers = { "--auth.audience", "aud-xxx", "--auth.issuer", "issuer-xxx" };
+            initArgs = initArgs.Concat(audIssuers).ToArray();
+        }
+
+        Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        if (isExceptionExpected)
+        {
+            Assert.IsFalse(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+            Assert.IsNull(runtimeConfig);
+        }
+        else
+        {
+            Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig);
+            Assert.AreEqual("/base-route", runtimeConfig.Runtime.BaseRoute);
+        }
     }
 }

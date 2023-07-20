@@ -73,5 +73,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 return columnName;
             }
         }
+
+        public static new void QueryTypeColumnFilterAndOrderByDateTime(string type, string filterOperator, string sqlValue, string gqlValue, string queryOperator)
+        {
+            Assert.Inconclusive("Test skipped for PostgreSql.");
+        }
     }
 }

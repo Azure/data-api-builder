@@ -134,6 +134,31 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(DECIMAL_TYPE, "eq", "-9.292929", "-9.292929", "=")]
         [DataRow(BOOLEAN_TYPE, "neq", "\'false\'", "false", "!=")]
         [DataRow(BOOLEAN_TYPE, "eq", "\'false\'", "false", "=")]
+        public async Task QueryTypeColumnFilterAndOrderBy(string type, string filterOperator, string sqlValue, string gqlValue, string queryOperator)
+        {
+            if (!IsSupportedType(type))
+            {
+                Assert.Inconclusive("Type not supported");
+            }
+
+            string field = $"{type.ToLowerInvariant()}_types";
+            string graphQLQueryName = "supportedTypes";
+            string gqlQuery = @"{
+                supportedTypes(first: 100 orderBy: { " + field + ": ASC } filter: { " + field + ": {" + filterOperator + ": " + gqlValue + @"} }) {
+                    items {
+                        " + field + @"
+                    }
+                }
+            }";
+
+            string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, filterValue: sqlValue, filterOperator: queryOperator, filterField: field, orderBy: field, limit: "100");
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            PerformTestEqualsForExtendedTypes(type, expected, actual.GetProperty("items").ToString());
+        }
+
         [DataRow(DATETIME_TYPE, "gt", "\'1999-01-08\'", "\"1999-01-08\"", " > ")]
         [DataRow(DATETIME_TYPE, "gte", "\'1999-01-08\'", "\"1999-01-08\"", " >= ")]
         [DataRow(DATETIME_TYPE, "lt", "\'0001-01-01\'", "\"0001-01-01\"", " < ")]
@@ -160,29 +185,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(DATETIME_TYPE, "lte", "\'2079-06-06\'", "\"2079-06-06\"", " <= ")]
         [DataRow(DATETIME_TYPE, "neq", "\'1999-01-08 10:23:54\'", "\"1999-01-08 10:23:54\"", "!=")]
         [DataRow(DATETIME_TYPE, "eq", "\'1999-01-08 10:23:54\'", "\"1999-01-08 10:23:54\"", "=")]
-        public async Task QueryTypeColumnFilterAndOrderBy(string type, string filterOperator, string sqlValue, string gqlValue, string queryOperator)
+        public async Task QueryTypeColumnFilterAndOrderByDateTime(string type, string filterOperator, string sqlValue, string gqlValue, string queryOperator)
         {
-            if (!IsSupportedType(type))
-            {
-                Assert.Inconclusive("Type not supported");
-            }
-
-            string field = $"{type.ToLowerInvariant()}_types";
-            string graphQLQueryName = "supportedTypes";
-            string gqlQuery = @"{
-                supportedTypes(first: 100 orderBy: { " + field + ": ASC } filter: { " + field + ": {" + filterOperator + ": " + gqlValue + @"} }) {
-                    items {
-                        " + field + @"
-                    }
-                }
-            }";
-
-            string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, filterValue: sqlValue, filterOperator: queryOperator, filterField: field, orderBy: field, limit: "100");
-
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-
-            PerformTestEqualsForExtendedTypes(type, expected, actual.GetProperty("items").ToString());
+            await QueryTypeColumnFilterAndOrderBy(type, filterOperator, sqlValue, gqlValue, queryOperator);
         }
 
         [DataTestMethod]

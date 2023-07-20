@@ -380,7 +380,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 if (upsertRequestCtx.FieldValuePairsInBody.ContainsKey(exposedName!) && sourceDefinition.Columns[column.Key].IsReadOnly)
                 {
                     throw new DataApiBuilderException(
-                            message: $"Field {exposedName} provided in request body cannot be updated.",
+                            message: $"Field {exposedName} provided in request body cannot be assigned a value.",
                             statusCode: HttpStatusCode.BadRequest,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }

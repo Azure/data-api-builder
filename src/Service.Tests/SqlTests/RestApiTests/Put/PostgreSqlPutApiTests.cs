@@ -120,6 +120,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 "
             },
             {
+                "PutOneUpdateWithReadOnlyFieldMissingFromRequestBody",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, item_name, subtotal, tax, total
+                        FROM " + _tableWithReadOnlyFields + @"
+                        WHERE id = 1 AND item_name = 'Shoes' AND subtotal = 100
+                            AND tax = 50 AND total = 150
+                    ) AS subq
+                "
+            },
+            {
                 "PutOne_Update_With_Mapping_Test",
                 @"
                     SELECT to_jsonb(subq) AS data

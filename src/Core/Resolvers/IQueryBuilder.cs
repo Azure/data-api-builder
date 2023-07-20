@@ -68,7 +68,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Returns the query to get the read-only columns present in the table.
         /// </summary>
         /// <exception cref="NotImplementedException"></exception>
-        string GetQuerytoGetReadOnlyColumns();
+        string GetQueryToGetReadOnlyColumns() => throw new NotImplementedException();
 
         /// <summary>
         /// Adds database specific quotes to string identifier

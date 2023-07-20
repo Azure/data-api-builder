@@ -1004,15 +1004,21 @@ namespace Azure.DataApiBuilder.Core.Services
             if (_entities.TryGetValue(entityName, out Entity? currentEntity)
                 && currentEntity.Source.Type is EntitySourceType.Table)
             {
-                string defaultOrProvidedSchemaName = GetDatabaseType() is DatabaseType.MySQL && string.IsNullOrEmpty(schemaName) ?
-                    "mysql" : schemaName;
-                await PopulateColumnDefinitionWithReadOnlyFlag(tableName, defaultOrProvidedSchemaName, sourceDefinition);
+                await PopulateColumnDefinitionWithReadOnlyFlag(tableName, schemaName, sourceDefinition);
             }
         }
 
+        /// <summary>
+        /// Helper method to populate the column definitions of each column in an table with the metadata about
+        /// whether the column can be updated or not.
+        /// </summary>
+        /// <param name="tableName">Name of the table.</param>
+        /// <param name="schemaName">Schema of the table.</param>
+        /// <param name="sourceDefinition">Table definition.</param>
+        /// <returns></returns>
         private async Task PopulateColumnDefinitionWithReadOnlyFlag(string tableName, string schemaName, SourceDefinition sourceDefinition)
         {
-            string queryToGetReadOnlyColumns = SqlQueryBuilder.GetQuerytoGetReadOnlyColumns();
+            string queryToGetReadOnlyColumns = SqlQueryBuilder.GetQueryToGetReadOnlyColumns();
             Dictionary<string, DbConnectionParam> parameters = new()
             {
                 { $"{BaseQueryStructure.PARAM_NAME_PREFIX}param0", new(schemaName, DbType.String) },
@@ -1032,10 +1038,6 @@ namespace Azure.DataApiBuilder.Core.Services
                 string column_name = element.GetProperty("column_name").ToString();
                 ColumnDefinition columnDef = sourceDefinition.Columns[column_name];
                 columnDef.IsReadOnly = true;
-                /*string is_computed = element.GetProperty("is_computed").ToString();
-                string is_identity = element.GetProperty("is_identity").ToString();
-                string table_name = element.GetProperty("table_name").ToString();
-                string data_type = element.GetProperty("data_type").ToString();*/
             }
         }
 

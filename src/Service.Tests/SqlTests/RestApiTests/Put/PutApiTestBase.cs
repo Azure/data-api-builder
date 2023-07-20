@@ -412,6 +412,28 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 );
         }
 
+        [TestMethod]
+        public virtual async Task PutOneUpdateWithReadOnlyFieldMissingFromRequestBody()
+        {
+            string requestBody = @"
+            {
+                ""item_name"": ""Shoes"",
+                ""subtotal"": 100,
+                ""tax"": 50
+            }";
+            string expectedLocationHeader = $"id/1";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: expectedLocationHeader,
+                    queryString: null,
+                    entityNameOrPath: _entityWithReadOnlyFields,
+                    sqlQuery: GetQuery("PutOneUpdateWithReadOnlyFieldMissingFromRequestBody"),
+                    operationType: EntityActionOperation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+        }
+
         /// <summary>
         /// Tests successful execution of PUT update requests which try to
         /// modify fields belonging to one base table in the view.
@@ -939,6 +961,52 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 expectedErrorMessage: "One or more fields referenced by the database policy are not present in the request.",
                 expectedStatusCode: HttpStatusCode.Forbidden,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed.ToString()
+                );
+        }
+
+        [TestMethod]
+        public virtual async Task PutOneWithReadOnlyFieldInRequestBody()
+        {
+            string requestBody = @"
+            {
+                ""item_name"": ""Shoes"",
+                ""subtotal"": 10,
+                ""tax"": 5,
+                ""total"": 55
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/1",
+                queryString: string.Empty,
+                entityNameOrPath: _entityWithReadOnlyFields,
+                sqlQuery: string.Empty,
+                operationType: EntityActionOperation.Upsert,
+                exceptionExpected: true,
+                requestBody: requestBody,
+                expectedErrorMessage: "Field total provided in request body cannot be assigned a value.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                );
+
+            requestBody = @"
+            {
+                ""item_name"": ""Shoes"",
+                ""subtotal"": 10,
+                ""tax"": 5,
+                ""total"": 55
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/3",
+                queryString: string.Empty,
+                entityNameOrPath: _entityWithReadOnlyFields,
+                sqlQuery: string.Empty,
+                operationType: EntityActionOperation.Upsert,
+                exceptionExpected: true,
+                requestBody: requestBody,
+                expectedErrorMessage: "Field total provided in request body cannot be assigned a value.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
         }
         #endregion

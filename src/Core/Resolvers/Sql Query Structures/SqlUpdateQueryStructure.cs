@@ -139,7 +139,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         if (sourceDefinition.Columns[fieldBackingColumn].IsReadOnly)
                         {
                             throw new DataApiBuilderException(
-                                message: $"Field {field.Key} provided in request body cannot be updated.",
+                                message: $"Field {field.Key} provided in request body cannot be assigned a value.",
                                 statusCode: HttpStatusCode.BadRequest,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                         }

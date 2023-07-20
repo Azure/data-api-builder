@@ -299,6 +299,28 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 );
         }
 
+        [TestMethod]
+        public virtual async Task PatchOneUpdateWithReadOnlyFieldMissingFromRequestBody()
+        {
+            string requestBody = @"
+            {
+                ""item_name"": ""Shoes"",
+                ""subtotal"": 100,
+                ""tax"": 50
+            }";
+            string expectedLocationHeader = $"id/1";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: expectedLocationHeader,
+                    queryString: null,
+                    entityNameOrPath: _entityWithReadOnlyFields,
+                    sqlQuery: GetQuery("PatchOneUpdateWithReadOnlyFieldMissingFromRequestBody"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+        }
+
         /// <summary>
         /// Tests that the PATCH updates can only update the rows which are accessible after applying the
         /// security policy which uses data from session context.
@@ -737,6 +759,45 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
             );
         }
 
+        [TestMethod]
+        public virtual async Task PatchOneWithReadOnlyFieldInRequestBody()
+        {
+            string requestBody = @"
+            {
+                ""total"": 55
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/1",
+                queryString: string.Empty,
+                entityNameOrPath: _entityWithReadOnlyFields,
+                sqlQuery: string.Empty,
+                operationType: EntityActionOperation.UpsertIncremental,
+                exceptionExpected: true,
+                requestBody: requestBody,
+                expectedErrorMessage: "Field total provided in request body cannot be assigned a value.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                );
+
+            requestBody = @"
+            {
+                ""total"": 55
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/3",
+                queryString: string.Empty,
+                entityNameOrPath: _entityWithReadOnlyFields,
+                sqlQuery: string.Empty,
+                operationType: EntityActionOperation.UpsertIncremental,
+                exceptionExpected: true,
+                requestBody: requestBody,
+                expectedErrorMessage: "Field total provided in request body cannot be assigned a value.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                );
+        }
         #endregion
     }
 }

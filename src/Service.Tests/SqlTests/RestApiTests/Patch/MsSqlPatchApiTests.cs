@@ -130,6 +130,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "PatchOneUpdateWithReadOnlyFieldMissingFromRequestBody",
+                $"SELECT * FROM { _tableWithReadOnlyFields } " +
+                $"WHERE [id] = 1 AND [item_name] = 'Shoes' AND [subtotal] = 100 AND [tax] = 50 AND [total] = 150" +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
                 "PatchOneUpdateStocksViewSelected",
                 $"SELECT [categoryid], [pieceid], [categoryName], [piecesAvailable] " +
                 $"FROM {_simple_subset_stocks} WHERE categoryid = 2 AND pieceid = 1 " +

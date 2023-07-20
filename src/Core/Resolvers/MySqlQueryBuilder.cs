@@ -328,13 +328,5 @@ WHERE
         {
             throw new NotImplementedException();
         }
-
-        /// <inheritdoc/>
-        public string GetQuerytoGetReadOnlyColumns()
-        {
-            string query = "select column_name as column_name from information_schema.columns " +
-                "where table_schema = @param0 and table_name = @param1 and generation_expression!= '';";
-            return query;
-        }
     }
 }

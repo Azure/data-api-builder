@@ -966,12 +966,13 @@ namespace Azure.DataApiBuilder.Core.Services
             using DataTableReader reader = new(dataTable);
             DataTable schemaTable = reader.GetSchemaTable();
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+            _entities.TryGetValue(entityName, out Entity? entity);
             foreach (DataRow columnInfoFromAdapter in schemaTable.Rows)
             {
                 string columnName = columnInfoFromAdapter["ColumnName"].ToString()!;
 
                 if (runtimeConfig.Runtime.GraphQL.Enabled
-                    && _entities.TryGetValue(entityName, out Entity? entity)
+                    && entity is not null
                     && IsGraphQLReservedName(entity, columnName, graphQLEnabledGlobally: runtimeConfig.Runtime.GraphQL.Enabled))
                 {
                     throw new DataApiBuilderException(
@@ -1002,8 +1003,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 sourceDefinition,
                 columnsInTable);
 
-            if (GetDatabaseType() is not DatabaseType.MySQL && _entities.TryGetValue(entityName, out Entity? currentEntity)
-                && currentEntity.Source.Type is EntitySourceType.Table)
+            if (GetDatabaseType() is not DatabaseType.MySQL && entity is not null && entity.Source.Type is EntitySourceType.Table)
             {
                 await PopulateColumnDefinitionsWithReadOnlyFlag(tableName, schemaName, sourceDefinition);
             }

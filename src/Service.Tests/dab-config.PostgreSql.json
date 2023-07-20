@@ -2037,6 +2037,39 @@
         "bkname": "name"
       }
     },
+    "books_sold": {
+      "source": {
+        "object": "books_sold",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "books_sold",
+          "plural": "books_solds"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "methods": [
+          "get",
+          "post",
+          "put",
+          "patch",
+          "delete"
+        ]
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ]
+    },
     "PublisherNF": {
       "source": {
         "object": "publishers",

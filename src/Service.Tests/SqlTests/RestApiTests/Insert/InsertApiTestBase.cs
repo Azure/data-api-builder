@@ -286,6 +286,28 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             );
         }
 
+        [TestMethod]
+        public virtual async Task InsertOneWithComputedFieldInRequestBody()
+        {
+            string requestBody = @"
+            {
+                ""id"": 2,
+                ""last_sold_on_date"": null
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: string.Empty,
+                entityNameOrPath: _entityWithReadOnlyFields,
+                sqlQuery: string.Empty,
+                operationType: EntityActionOperation.Insert,
+                exceptionExpected: true,
+                requestBody: requestBody,
+                expectedErrorMessage: "Field 'last_sold_on_date' provided in request body cannot be assigned a value.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                );
+        }
         #endregion
 
         #region Negative Tests

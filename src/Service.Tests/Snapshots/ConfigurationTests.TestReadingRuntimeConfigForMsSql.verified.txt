@@ -31,6 +31,39 @@
   },
   Entities: [
     {
+      books_sold: {
+        Source: {
+          Object: books_sold,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: books_sold,
+          Plural: books_solds,
+          Enabled: true
+        },
+        Rest: {
+          Methods: [
+            Get,
+            Post,
+            Put,
+            Patch,
+            Delete
+          ],
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       Publisher: {
         Source: {
           Object: publishers,

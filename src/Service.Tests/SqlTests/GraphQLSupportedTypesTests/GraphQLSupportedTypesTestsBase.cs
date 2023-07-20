@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -514,9 +515,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 actualElement.TryGetProperty(fieldName, out actualValue);
                 expectedElement.TryGetProperty(fieldName, out expectedValue);
 
-                if (fieldName.StartsWith("datetime"))
+                if (fieldName.StartsWith(DATETIME_TYPE.ToLower()))
                 {
-                    Assert.IsTrue(actualValue.ToString().StartsWith(expectedValue.ToString()));
+                    DateTime actualDateTime = DateTime.Parse(actualValue.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None);
+                    DateTime expectedDateTime = DateTime.Parse(expectedValue.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None);
+                    Assert.AreEqual(actualDateTime, expectedDateTime);
                 }
                 else
                 {

@@ -120,7 +120,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 "
             },
             {
-                "PutOneUpdateWithReadOnlyFieldMissingFromRequestBody",
+                "PutOneUpdateWithComputedFieldMissingFromRequestBody",
                 @"
                     SELECT to_jsonb(subq) AS data
                     FROM (

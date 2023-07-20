@@ -199,14 +199,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
 
         [TestMethod]
         [Ignore]
-        public override Task PatchOneUpdateWithReadOnlyFieldMissingFromRequestBody()
+        public override Task PatchOneUpdateWithComputedFieldMissingFromRequestBody()
         {
             throw new NotImplementedException();
         }
 
         [TestMethod]
         [Ignore]
-        public override Task PatchOneWithReadOnlyFieldInRequestBody()
+        public override Task PatchOneWithComputedFieldInRequestBody()
         {
             throw new NotImplementedException();
         }

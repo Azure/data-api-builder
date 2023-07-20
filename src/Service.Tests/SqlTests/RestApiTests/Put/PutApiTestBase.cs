@@ -413,7 +413,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         }
 
         [TestMethod]
-        public virtual async Task PutOneUpdateWithReadOnlyFieldMissingFromRequestBody()
+        public virtual async Task PutOneUpdateWithComputedFieldMissingFromRequestBody()
         {
             string requestBody = @"
             {
@@ -426,8 +426,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: expectedLocationHeader,
                     queryString: null,
-                    entityNameOrPath: _entityWithReadOnlyFields,
-                    sqlQuery: GetQuery("PutOneUpdateWithReadOnlyFieldMissingFromRequestBody"),
+                    entityNameOrPath: _entityWithReadOnlyField,
+                    sqlQuery: GetQuery("PutOneUpdateWithComputedFieldMissingFromRequestBody"),
                     operationType: EntityActionOperation.Upsert,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
@@ -965,7 +965,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         }
 
         [TestMethod]
-        public virtual async Task PutOneWithReadOnlyFieldInRequestBody()
+        public virtual async Task PutOneWithComputedFieldInRequestBody()
         {
             string requestBody = @"
             {
@@ -978,7 +978,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/1",
                 queryString: string.Empty,
-                entityNameOrPath: _entityWithReadOnlyFields,
+                entityNameOrPath: _entityWithReadOnlyField,
                 sqlQuery: string.Empty,
                 operationType: EntityActionOperation.Upsert,
                 exceptionExpected: true,
@@ -999,7 +999,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/3",
                 queryString: string.Empty,
-                entityNameOrPath: _entityWithReadOnlyFields,
+                entityNameOrPath: _entityWithReadOnlyField,
                 sqlQuery: string.Empty,
                 operationType: EntityActionOperation.Upsert,
                 exceptionExpected: true,

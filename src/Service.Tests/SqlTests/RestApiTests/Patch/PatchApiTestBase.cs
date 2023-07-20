@@ -300,7 +300,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         [TestMethod]
-        public virtual async Task PatchOneUpdateWithReadOnlyFieldMissingFromRequestBody()
+        public virtual async Task PatchOneUpdateWithComputedFieldMissingFromRequestBody()
         {
             string requestBody = @"
             {
@@ -313,8 +313,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: expectedLocationHeader,
                     queryString: null,
-                    entityNameOrPath: _entityWithReadOnlyFields,
-                    sqlQuery: GetQuery("PatchOneUpdateWithReadOnlyFieldMissingFromRequestBody"),
+                    entityNameOrPath: _entityWithReadOnlyField,
+                    sqlQuery: GetQuery("PatchOneUpdateWithComputedFieldMissingFromRequestBody"),
                     operationType: EntityActionOperation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
@@ -760,7 +760,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         [TestMethod]
-        public virtual async Task PatchOneWithReadOnlyFieldInRequestBody()
+        public virtual async Task PatchOneWithComputedFieldInRequestBody()
         {
             string requestBody = @"
             {
@@ -770,7 +770,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/1",
                 queryString: string.Empty,
-                entityNameOrPath: _entityWithReadOnlyFields,
+                entityNameOrPath: _entityWithReadOnlyField,
                 sqlQuery: string.Empty,
                 operationType: EntityActionOperation.UpsertIncremental,
                 exceptionExpected: true,
@@ -788,7 +788,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/3",
                 queryString: string.Empty,
-                entityNameOrPath: _entityWithReadOnlyFields,
+                entityNameOrPath: _entityWithReadOnlyField,
                 sqlQuery: string.Empty,
                 operationType: EntityActionOperation.UpsertIncremental,
                 exceptionExpected: true,

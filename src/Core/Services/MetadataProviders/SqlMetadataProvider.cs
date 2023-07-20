@@ -1005,19 +1005,19 @@ namespace Azure.DataApiBuilder.Core.Services
             if (GetDatabaseType() is not DatabaseType.MySQL && _entities.TryGetValue(entityName, out Entity? currentEntity)
                 && currentEntity.Source.Type is EntitySourceType.Table)
             {
-                await PopulateColumnDefinitionWithReadOnlyFlag(tableName, schemaName, sourceDefinition);
+                await PopulateColumnDefinitionsWithReadOnlyFlag(tableName, schemaName, sourceDefinition);
             }
         }
 
         /// <summary>
-        /// Helper method to populate the column definitions of each column in an table with the metadata about
+        /// Helper method to populate the column definitions of each column in a table with the info about
         /// whether the column can be updated or not.
         /// </summary>
         /// <param name="tableName">Name of the table.</param>
         /// <param name="schemaName">Schema of the table.</param>
         /// <param name="sourceDefinition">Table definition.</param>
         /// <returns></returns>
-        private async Task PopulateColumnDefinitionWithReadOnlyFlag(string tableName, string schemaName, SourceDefinition sourceDefinition)
+        private async Task PopulateColumnDefinitionsWithReadOnlyFlag(string tableName, string schemaName, SourceDefinition sourceDefinition)
         {
             string queryToGetReadOnlyColumns = SqlQueryBuilder.GetQueryToGetReadOnlyColumns();
             Dictionary<string, DbConnectionParam> parameters = new()

@@ -412,9 +412,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 );
         }
 
+        /// <summary>
+        /// Test to validate successful execution of a request when a computed field is missing from the request body.
+        /// In such a case, we don't attempt to NULL out computed field (as per PUT semantics) but instead skip updating/inserting the field. 
+        /// </summary>
         [TestMethod]
         public virtual async Task PutOneWithComputedFieldMissingFromRequestBody()
         {
+            // Validate successful execution of a PUT update when a computed field (here 'last_sold_on_update')
+            // is missing from the request body.
             string requestBody = @"
             {
                 ""book_name"": ""New book"",
@@ -432,6 +438,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     expectedStatusCode: HttpStatusCode.OK
                 );
 
+            // Validate successful execution of a PUT insert when a computed field (here 'last_sold_on_update')
+            // is missing from the request body.
             requestBody = @"
             {
                 ""book_name"": ""New book"",
@@ -981,9 +989,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 );
         }
 
+        /// <summary>
+        /// Test to validate that whenever a computed field is included in the request body, we throw an appropriate exception
+        /// as it is not allowed to provide value (to insert/update) for a computed field.
+        /// </summary>
         [TestMethod]
         public virtual async Task PutOneWithComputedFieldInRequestBody()
         {
+            // Validate that appropriate exception is thrown for a PUT update when a computed field (here 'last_sold_on_date') is included in request body.
             string requestBody = @"
             {
                 ""last_sold_on_date"": null
@@ -1002,6 +1015,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
 
+            // Validate that appropriate exception is thrown for a PUT insert when a computed field (here 'last_sold_on_date') is included in request body.
             requestBody = @"
             {
                 ""last_sold_on_date"": null

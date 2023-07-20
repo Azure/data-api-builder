@@ -87,9 +87,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             );
         }
 
+        /// <summary>
+        /// Test to validate successful execution of a request when a computed field is missing from the request body.
+        /// In such a case, we skip inserting the field. 
+        /// </summary>
         [TestMethod]
         public virtual async Task InsertOneWithComputedFieldMissingInRequestBody()
         {
+            // Validate successful execution of a POST request when a computed field (here 'last_sold_on_update')
+            // is missing from the request body.
             string requestBody = @"
             {
                 ""id"": 2,
@@ -309,9 +315,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             );
         }
 
+        /// <summary>
+        /// Test to validate that whenever a computed field is included in the request body, we throw an appropriate exception
+        /// as it is not allowed to provide value (to insert) for a computed field.
+        /// </summary>
         [TestMethod]
         public virtual async Task InsertOneWithComputedFieldInRequestBody()
         {
+            // Validate that appropriate exception is thrown for a POST request when a computed field (here 'last_sold_on_date') is included in request body.
             string requestBody = @"
             {
                 ""id"": 2,

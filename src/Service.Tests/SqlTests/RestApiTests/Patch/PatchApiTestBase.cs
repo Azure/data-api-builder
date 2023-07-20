@@ -299,9 +299,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 );
         }
 
+        /// <summary>
+        /// Test to validate successful execution of a request when a computed field is missing from the request body.
+        /// </summary>
         [TestMethod]
         public virtual async Task PatchOneWithComputedFieldMissingFromRequestBody()
         {
+            // Validate successful execution of a PATCH update when a computed field (here 'last_sold_on_update')
+            // is missing from the request body.
             string requestBody = @"
             {
                 ""book_name"": ""New book"",
@@ -320,6 +325,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     expectedStatusCode: HttpStatusCode.OK
                 );
 
+            // Validate successful execution of a PATCH insert when a computed field (here 'last_sold_on_update')
+            // is missing from the request body.
             requestBody = @"
             {
                 ""book_name"": ""New book"",
@@ -777,9 +784,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
             );
         }
 
+        /// <summary>
+        /// Test to validate that whenever a computed field is included in the request body, we throw an appropriate exception
+        /// as it is not allowed to provide value (to insert/update) for a computed field.
+        /// </summary>
         [TestMethod]
         public virtual async Task PatchOneWithComputedFieldInRequestBody()
         {
+            // Validate that appropriate exception is thrown for a PATCH update when a computed field is included in request body.
             string requestBody = @"
             {
                 ""last_sold_on_date"": null
@@ -798,6 +810,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
 
+            // Validate that appropriate exception is thrown for a PATCH insert when a computed field is included in request body.
             requestBody = @"
             {
                 ""last_sold_on_date"": null

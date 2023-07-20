@@ -273,9 +273,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
 
         #endregion
 
+        /// <summary>
+        /// Test to validate successful execution of a request when a timestamp field is missing from the request body.
+        /// In such a case, we skip inserting the field. 
+        /// </summary>
         [TestMethod]
         public async Task InsertOneWithTimestampFieldMissingFromRequestBody()
         {
+            // Validate successful execution of a POST request when a timestamp field (here 'row_version')
+            // is missing from the request body.
             string requestBody = @"
             {
                 ""id"": 2,
@@ -294,6 +300,37 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
                     expectedLocationHeader: expectedLocationHeader
+                );
+        }
+
+        /// <summary>
+        /// Test to validate that whenever a timestamp field is included in the request body, we throw an appropriate exception
+        /// as it is not allowed to provide value (to insert) for a timestamp field.
+        /// </summary>
+        [TestMethod]
+        public async Task InsertOneWithTimestampFieldInRequestBody()
+        {
+            // Validate that appropriate exception is thrown when a timestamp field (here 'row_version') is included in request body.
+            string requestBody = @"
+            {
+                ""id"": 2,
+                ""book_name"": ""Another Awesome Book"",
+                ""copies_sold"": 100,
+                ""last_sold_on"": null,
+                ""row_version"": null
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: string.Empty,
+                entityNameOrPath: _entityWithReadOnlyFields,
+                sqlQuery: string.Empty,
+                operationType: EntityActionOperation.Insert,
+                exceptionExpected: true,
+                requestBody: requestBody,
+                expectedErrorMessage: "Field 'row_version' provided in request body cannot be assigned a value.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
         }
 

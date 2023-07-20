@@ -228,7 +228,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <inheritdoc/>
         public string GetQueryToGetReadOnlyColumns()
         {
-            string query = "SELECT attname AS COLUMN_NAME FROM pg_attribute " +
+            string query = "SELECT attname AS column_name FROM pg_attribute " +
                 "WHERE attrelid = (@param0 || '.' || @param1)::regclass AND attgenerated = 's';";
             return query;
         }

@@ -132,19 +132,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
             },
             {
                 "PatchOneUpdateWithComputedFieldMissingFromRequestBody",
-                $"SELECT * FROM { _tableWithComputedField } " +
-                $"WHERE [id] = 1 AND [item_name] = 'Shoes' AND [subtotal] = 100 AND [tax] = 50 AND [total] = 150" +
+                $"SELECT * FROM { _tableWithReadOnlyFields } " +
+                $"WHERE [id] = 1 AND [book_name] = 'New book' AND [copies_sold] = 50 AND [last_sold_on] is NULL AND [last_sold_on_date] is NULL " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
                 "PatchOneUpdateWithTimestampFieldMissingFromRequestBody",
-                $"SELECT * FROM {_entityWithTimeStampField } WHERE [id] = 1 AND [book_name] = 'Another Awesome Book' " +
+                $"SELECT * FROM {_entityWithReadOnlyFields } WHERE [id] = 1 AND [book_name] = 'Another Awesome Book' " +
                 $"AND [copies_sold] = 100 AND [last_sold_on] is NULL " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
                 "PatchOneInsertWithTimestampFieldMissingFromRequestBody",
-                $"SELECT * FROM {_entityWithTimeStampField } WHERE [id] = 2 AND [book_name] = 'Best seller' " +
+                $"SELECT * FROM {_entityWithReadOnlyFields } WHERE [id] = 2 AND [book_name] = 'Best seller' " +
                 $"AND [copies_sold] = 100 AND [last_sold_on] is NULL AND [last_sold_on_date] is NULL " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
@@ -223,7 +223,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: expectedLocationHeader,
                     queryString: null,
-                    entityNameOrPath: _entityWithTimeStampField,
+                    entityNameOrPath: _entityWithReadOnlyFields,
                     sqlQuery: GetQuery("PatchOneUpdateWithTimestampFieldMissingFromRequestBody"),
                     operationType: EntityActionOperation.UpsertIncremental,
                     requestBody: requestBody,
@@ -242,7 +242,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: expectedLocationHeader,
                     queryString: null,
-                    entityNameOrPath: _entityWithTimeStampField,
+                    entityNameOrPath: _entityWithReadOnlyFields,
                     sqlQuery: GetQuery("PatchOneInsertWithTimestampFieldMissingFromRequestBody"),
                     operationType: EntityActionOperation.UpsertIncremental,
                     requestBody: requestBody,
@@ -262,7 +262,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/1",
                 queryString: string.Empty,
-                entityNameOrPath: _entityWithTimeStampField,
+                entityNameOrPath: _entityWithReadOnlyFields,
                 sqlQuery: string.Empty,
                 operationType: EntityActionOperation.UpsertIncremental,
                 exceptionExpected: true,
@@ -280,7 +280,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/2",
                 queryString: string.Empty,
-                entityNameOrPath: _entityWithTimeStampField,
+                entityNameOrPath: _entityWithReadOnlyFields,
                 sqlQuery: string.Empty,
                 operationType: EntityActionOperation.UpsertIncremental,
                 exceptionExpected: true,

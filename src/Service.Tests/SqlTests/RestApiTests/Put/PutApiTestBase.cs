@@ -417,16 +417,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         {
             string requestBody = @"
             {
-                ""item_name"": ""Shoes"",
-                ""subtotal"": 100,
-                ""tax"": 50
+                ""book_name"": ""New book"",
+                ""copies_sold"": 101
             }";
             string expectedLocationHeader = $"id/1";
 
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: expectedLocationHeader,
                     queryString: null,
-                    entityNameOrPath: _entityWithComputedField,
+                    entityNameOrPath: _entityWithReadOnlyFields,
                     sqlQuery: GetQuery("PutOneUpdateWithComputedFieldMissingFromRequestBody"),
                     operationType: EntityActionOperation.Upsert,
                     requestBody: requestBody,
@@ -969,42 +968,36 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         {
             string requestBody = @"
             {
-                ""item_name"": ""Shoes"",
-                ""subtotal"": 10,
-                ""tax"": 5,
-                ""total"": 55
+                ""last_sold_on_date"": null
             }";
 
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/1",
                 queryString: string.Empty,
-                entityNameOrPath: _entityWithComputedField,
+                entityNameOrPath: _entityWithReadOnlyFields,
                 sqlQuery: string.Empty,
                 operationType: EntityActionOperation.Upsert,
                 exceptionExpected: true,
                 requestBody: requestBody,
-                expectedErrorMessage: "Field 'total' provided in request body cannot be assigned a value.",
+                expectedErrorMessage: "Field 'last_sold_on_date' provided in request body cannot be assigned a value.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
 
             requestBody = @"
             {
-                ""item_name"": ""Shoes"",
-                ""subtotal"": 10,
-                ""tax"": 5,
-                ""total"": 55
+                ""last_sold_on_date"": null
             }";
 
             await SetupAndRunRestApiTest(
-                primaryKeyRoute: "id/3",
+                primaryKeyRoute: "id/2",
                 queryString: string.Empty,
-                entityNameOrPath: _entityWithComputedField,
+                entityNameOrPath: _entityWithReadOnlyFields,
                 sqlQuery: string.Empty,
                 operationType: EntityActionOperation.Upsert,
                 exceptionExpected: true,
                 requestBody: requestBody,
-                expectedErrorMessage: "Field 'total' provided in request body cannot be assigned a value.",
+                expectedErrorMessage: "Field 'last_sold_on_date' provided in request body cannot be assigned a value.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );

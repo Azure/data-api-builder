@@ -57,10 +57,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _Composite_NonAutoGenPK_EntityPath = "commodities";
         protected static readonly string _integrationTypeEntity = "SupportedType";
         protected static readonly string _integrationTypeTable = "type_table";
-        protected static readonly string _entityWithComputedField = "Sales";
-        protected static readonly string _tableWithComputedField = "sales";
-        protected static readonly string _entityWithTimeStampField = "books_sold";
-        protected static readonly string _tableWithTimeStampField = "books_sold";
+        protected static readonly string _entityWithReadOnlyFields = "books_sold";
+        protected static readonly string _tableWithReadOnlyFields = "books_sold";
 
         public abstract string GetQuery(string key);
     }

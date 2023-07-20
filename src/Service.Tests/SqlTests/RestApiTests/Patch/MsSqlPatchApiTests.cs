@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
@@ -131,8 +132,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
             },
             {
                 "PatchOneUpdateWithComputedFieldMissingFromRequestBody",
-                $"SELECT * FROM { _tableWithReadOnlyFields } " +
+                $"SELECT * FROM { _tableWithComputedField } " +
                 $"WHERE [id] = 1 AND [item_name] = 'Shoes' AND [subtotal] = 100 AND [tax] = 50 AND [total] = 150" +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PatchOneUpdateWithTimestampFieldMissingFromRequestBody",
+                $"SELECT * FROM {_entityWithTimeStampField } WHERE [id] = 1 AND [book_name] = 'Another Awesome Book' " +
+                $"AND [copies_sold] = 100 AND [last_sold_on] is NULL " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PatchOneInsertWithTimestampFieldMissingFromRequestBody",
+                $"SELECT * FROM {_entityWithTimeStampField } WHERE [id] = 2 AND [book_name] = 'Best seller' " +
+                $"AND [copies_sold] = 100 AND [last_sold_on] is NULL AND [last_sold_on_date] is NULL " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
@@ -196,6 +209,87 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
             await base.PatchOneViewBadRequestTest(expectedErrorMessage);
         }
 
+        [TestMethod]
+        public async Task PatchOneWithTimestampFieldMissingFromRequestBody()
+        {
+            string requestBody = @"
+            {
+                ""book_name"": ""Another Awesome Book"",
+                ""copies_sold"": 100,
+                ""last_sold_on"": null
+            }";
+            string expectedLocationHeader = $"id/1";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: expectedLocationHeader,
+                    queryString: null,
+                    entityNameOrPath: _entityWithTimeStampField,
+                    sqlQuery: GetQuery("PatchOneUpdateWithTimestampFieldMissingFromRequestBody"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            requestBody = @"
+            {
+                ""book_name"": ""Best seller"",
+                ""copies_sold"": 100,
+                ""last_sold_on"": null
+            }";
+
+            expectedLocationHeader = $"id/2";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: expectedLocationHeader,
+                    queryString: null,
+                    entityNameOrPath: _entityWithTimeStampField,
+                    sqlQuery: GetQuery("PatchOneInsertWithTimestampFieldMissingFromRequestBody"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: expectedLocationHeader
+                );
+        }
+
+        [TestMethod]
+        public virtual async Task PatchOneWithTimestampFieldInRequestBody()
+        {
+            string requestBody = @"
+            {
+                ""row_version"": null
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/1",
+                queryString: string.Empty,
+                entityNameOrPath: _entityWithTimeStampField,
+                sqlQuery: string.Empty,
+                operationType: EntityActionOperation.UpsertIncremental,
+                exceptionExpected: true,
+                requestBody: requestBody,
+                expectedErrorMessage: "Field 'row_version' provided in request body cannot be assigned a value.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                );
+
+            requestBody = @"
+            {
+                ""row_version"": null
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/2",
+                queryString: string.Empty,
+                entityNameOrPath: _entityWithTimeStampField,
+                sqlQuery: string.Empty,
+                operationType: EntityActionOperation.UpsertIncremental,
+                exceptionExpected: true,
+                requestBody: requestBody,
+                expectedErrorMessage: "Field 'row_version' provided in request body cannot be assigned a value.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                );
+        }
         #region RestApiTestBase Overrides
 
         public override string GetQuery(string key)

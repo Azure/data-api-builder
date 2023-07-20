@@ -77,7 +77,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (sourceDefinition.Columns[backingColumn!].IsReadOnly)
                 {
                     throw new DataApiBuilderException(
-                        message: $"Field {param.Key} provided in request body cannot be assigned a value.",
+                        message: $"Field '{param.Key}' provided in request body cannot be assigned a value.",
                         statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }

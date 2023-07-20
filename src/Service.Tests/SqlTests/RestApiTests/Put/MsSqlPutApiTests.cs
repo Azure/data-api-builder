@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
@@ -86,8 +87,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             },
             {
                 "PutOneUpdateWithComputedFieldMissingFromRequestBody",
-                $"SELECT * FROM { _tableWithReadOnlyFields } " +
-                $"WHERE [id] = 1 AND [item_name] = 'Shoes' AND [subtotal] = 100 AND [tax] = 50 AND [total] = 150" +
+                $"SELECT * FROM { _tableWithComputedField } " +
+                $"WHERE [id] = 1 AND [item_name] = 'Shoes' AND [subtotal] = 100 AND [tax] = 50 AND [total] = 150 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PutOneUpdateWithTimestampFieldMissingFromRequestBody",
+                $"SELECT * FROM {_entityWithTimeStampField } WHERE [id] = 1 AND [book_name] = 'Another Awesome Book' " +
+                $"AND [copies_sold] = 100 AND [last_sold_on] is NULL AND [last_sold_on_date] is NULL " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PutOneInsertWithTimestampFieldMissingFromRequestBody",
+                $"SELECT * FROM {_entityWithTimeStampField } WHERE [id] = 2 AND [book_name] = 'Best seller' " +
+                $"AND [copies_sold] = 100 AND [last_sold_on] is NULL AND [last_sold_on_date] is NULL " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
@@ -239,6 +252,93 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             await base.PutOneInViewBadRequest(expectedErrorMessage);
         }
 
+        [TestMethod]
+        public async Task PutOneWithTimestampFieldMissingFromRequestBody()
+        {
+            string requestBody = @"
+            {
+                ""book_name"": ""Another Awesome Book"",
+                ""copies_sold"": 100,
+                ""last_sold_on"": null
+            }";
+            string expectedLocationHeader = $"id/1";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: expectedLocationHeader,
+                    queryString: null,
+                    entityNameOrPath: _entityWithTimeStampField,
+                    sqlQuery: GetQuery("PutOneUpdateWithTimestampFieldMissingFromRequestBody"),
+                    operationType: EntityActionOperation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            requestBody = @"
+            {
+                ""book_name"": ""Best seller"",
+                ""copies_sold"": 100,
+                ""last_sold_on"": null
+            }";
+
+            expectedLocationHeader = $"id/2";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: expectedLocationHeader,
+                    queryString: null,
+                    entityNameOrPath: _entityWithTimeStampField,
+                    sqlQuery: GetQuery("PutOneInsertWithTimestampFieldMissingFromRequestBody"),
+                    operationType: EntityActionOperation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: expectedLocationHeader
+                );
+        }
+
+        [TestMethod]
+        public virtual async Task PutOneWithTimestampFieldInRequestBody()
+        {
+            string requestBody = @"
+            {
+                ""book_name"": ""Another Awesome Book"",
+                ""copies_sold"": 100,
+                ""last_sold_on"": null,
+                ""row_version"": null
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/1",
+                queryString: string.Empty,
+                entityNameOrPath: _entityWithTimeStampField,
+                sqlQuery: string.Empty,
+                operationType: EntityActionOperation.Upsert,
+                exceptionExpected: true,
+                requestBody: requestBody,
+                expectedErrorMessage: "Field 'row_version' provided in request body cannot be assigned a value.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                );
+
+            requestBody = @"
+            {
+                ""book_name"": ""New book"",
+                ""copies_sold"": 100,
+                ""last_sold_on"": null,
+                ""row_version"": null
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/2",
+                queryString: string.Empty,
+                entityNameOrPath: _entityWithTimeStampField,
+                sqlQuery: string.Empty,
+                operationType: EntityActionOperation.Upsert,
+                exceptionExpected: true,
+                requestBody: requestBody,
+                expectedErrorMessage: "Field 'row_version' provided in request body cannot be assigned a value.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                );
+        }
         #region RestApiTestBase Overrides
 
         public override string GetQuery(string key)

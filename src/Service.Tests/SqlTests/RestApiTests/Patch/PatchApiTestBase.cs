@@ -313,7 +313,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: expectedLocationHeader,
                     queryString: null,
-                    entityNameOrPath: _entityWithReadOnlyField,
+                    entityNameOrPath: _entityWithComputedField,
                     sqlQuery: GetQuery("PatchOneUpdateWithComputedFieldMissingFromRequestBody"),
                     operationType: EntityActionOperation.UpsertIncremental,
                     requestBody: requestBody,
@@ -770,12 +770,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/1",
                 queryString: string.Empty,
-                entityNameOrPath: _entityWithReadOnlyField,
+                entityNameOrPath: _entityWithComputedField,
                 sqlQuery: string.Empty,
                 operationType: EntityActionOperation.UpsertIncremental,
                 exceptionExpected: true,
                 requestBody: requestBody,
-                expectedErrorMessage: "Field total provided in request body cannot be assigned a value.",
+                expectedErrorMessage: "Field 'total' provided in request body cannot be assigned a value.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
@@ -788,12 +788,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/3",
                 queryString: string.Empty,
-                entityNameOrPath: _entityWithReadOnlyField,
+                entityNameOrPath: _entityWithComputedField,
                 sqlQuery: string.Empty,
                 operationType: EntityActionOperation.UpsertIncremental,
                 exceptionExpected: true,
                 requestBody: requestBody,
-                expectedErrorMessage: "Field total provided in request body cannot be assigned a value.",
+                expectedErrorMessage: "Field 'total' provided in request body cannot be assigned a value.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );

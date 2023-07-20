@@ -41,6 +41,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 "
             },
             {
+                "InsertOneWithComputedFieldMissingInRequestBody",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, book_name, copies_sold, last_sold_on, last_sold_on_date
+                        FROM " + _tableWithReadOnlyFields + @"
+                        WHERE id = 2 AND book_name = 'Harry Potter' AND copies_sold = 50 AND last_sold_on is NULL AND last_sold_on_date is NULL
+                    ) AS subq
+                "
+            },
+            {
                 "InsertOneUniqueCharactersTest",
                 @"
                     SELECT json_agg(to_jsonb(subq)) AS data

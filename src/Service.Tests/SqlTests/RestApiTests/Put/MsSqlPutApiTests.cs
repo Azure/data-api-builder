@@ -92,6 +92,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "PutOneInsertWithComputedFieldMissingFromRequestBody",
+                $"SELECT * FROM { _tableWithReadOnlyFields } " +
+                $"WHERE [id] = 2 AND [book_name] = 'New book' AND [copies_sold] = 101 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
                 "PutOneUpdateWithTimestampFieldMissingFromRequestBody",
                 $"SELECT * FROM {_entityWithReadOnlyFields } WHERE [id] = 1 AND [book_name] = 'Another Awesome Book' " +
                 $"AND [copies_sold] = 100 AND [last_sold_on] is NULL AND [last_sold_on_date] is NULL " +

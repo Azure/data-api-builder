@@ -184,6 +184,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
 
         [TestMethod]
         [Ignore]
+        public override Task InsertOneWithComputedFieldMissingInRequestBody()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
         public override Task InsertOneWithComputedFieldInRequestBody()
         {
             throw new NotImplementedException();

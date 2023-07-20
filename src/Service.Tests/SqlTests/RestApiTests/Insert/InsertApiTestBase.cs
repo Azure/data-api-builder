@@ -87,6 +87,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             );
         }
 
+        [TestMethod]
+        public virtual async Task InsertOneWithComputedFieldMissingInRequestBody()
+        {
+            string requestBody = @"
+            {
+                ""id"": 2,
+                ""book_name"": ""Harry Potter"",
+                ""copies_sold"": 50
+            }";
+
+            string expectedLocationHeader = $"id/2";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _entityWithReadOnlyFields,
+                sqlQuery: GetQuery("InsertOneWithComputedFieldMissingInRequestBody"),
+                operationType: EntityActionOperation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+            );
+        }
+
         /// <summary>
         /// Tests insertion on simple/composite views.
         /// </summary>

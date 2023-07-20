@@ -413,7 +413,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         }
 
         [TestMethod]
-        public virtual async Task PutOneUpdateWithComputedFieldMissingFromRequestBody()
+        public virtual async Task PutOneWithComputedFieldMissingFromRequestBody()
         {
             string requestBody = @"
             {
@@ -430,6 +430,24 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     operationType: EntityActionOperation.Upsert,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
+                );
+
+            requestBody = @"
+            {
+                ""book_name"": ""New book"",
+                ""copies_sold"": 101
+            }";
+            expectedLocationHeader = $"id/2";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: expectedLocationHeader,
+                    queryString: null,
+                    entityNameOrPath: _entityWithReadOnlyFields,
+                    sqlQuery: GetQuery("PutOneInsertWithComputedFieldMissingFromRequestBody"),
+                    operationType: EntityActionOperation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: expectedLocationHeader
                 );
         }
 

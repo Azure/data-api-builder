@@ -37,6 +37,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "InsertOneWithComputedFieldMissingInRequestBody",
+                $"SELECT * FROM {_entityWithReadOnlyFields } WHERE [id] = 2 AND [book_name] = 'Harry Potter' " +
+                $"AND [copies_sold] = 50 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
                 "InsertOneInBooksViewAll",
                 $"SELECT [id], [title], [publisher_id] FROM { _simple_all_books } " +
                 $"WHERE [id] = { STARTING_ID_FOR_TEST_INSERTS } AND [title] = 'My New Book' " +
@@ -175,6 +181,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 $"SELECT table0.[id], table0.[title], table0.[publisher_id] FROM books AS table0 " +
                 $"JOIN (SELECT id FROM publishers WHERE name = 'Big Company') AS table1 " +
                 $"ON table0.[publisher_id] = table1.[id] "
+            },
+            {
+                "InsertOneWithTimestampFieldMissingFromRequestBody",
+                $"SELECT * FROM {_entityWithReadOnlyFields } WHERE [id] = 2 AND [book_name] = 'Another Awesome Book' " +
+                $"AND [copies_sold] = 100 AND [last_sold_on] is NULL AND [last_sold_on_date] is NULL " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             }
         };
 
@@ -260,6 +272,30 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         }
 
         #endregion
+
+        [TestMethod]
+        public async Task InsertOneWithTimestampFieldMissingFromRequestBody()
+        {
+            string requestBody = @"
+            {
+                ""id"": 2,
+                ""book_name"": ""Another Awesome Book"",
+                ""copies_sold"": 100,
+                ""last_sold_on"": null
+            }";
+            string expectedLocationHeader = $"id/2";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: null,
+                    queryString: null,
+                    entityNameOrPath: _entityWithReadOnlyFields,
+                    sqlQuery: GetQuery("InsertOneWithTimestampFieldMissingFromRequestBody"),
+                    operationType: EntityActionOperation.Insert,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: expectedLocationHeader
+                );
+        }
 
         [TestMethod]
         public async Task InsertOneInViewBadRequestTest()

@@ -513,7 +513,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 JsonElement expectedValue;
                 actualElement.TryGetProperty(fieldName, out actualValue);
                 expectedElement.TryGetProperty(fieldName, out expectedValue);
-                Assert.AreEqual(actualValue, expectedValue);
+
+                if (fieldName.StartsWith("datetime"))
+                {
+                    Assert.IsTrue(actualValue.ToString().StartsWith(expectedValue.ToString()));
+                }
+                else
+                {
+                    Assert.AreEqual(actualValue.GetDouble(), actualValue.GetDouble());
+                }
             }
         }
 

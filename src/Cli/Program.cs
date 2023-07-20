@@ -36,12 +36,12 @@ namespace Cli
             ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger);
             Utils.SetCliUtilsLogger(cliUtilsLogger);
             IFileSystem fileSystem = new FileSystem();
-            RuntimeConfigLoader loader = new(fileSystem);
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
 
             return Execute(args, cliLogger, fileSystem, loader);
         }
 
-        public static int Execute(string[] args, ILogger cliLogger, IFileSystem fileSystem, RuntimeConfigLoader loader)
+        public static int Execute(string[] args, ILogger cliLogger, IFileSystem fileSystem, FileSystemRuntimeConfigLoader loader)
         {
             // To know if `--help` or `--version` was requested.
             bool isHelpOrVersionRequested = false;

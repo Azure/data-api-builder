@@ -25,7 +25,8 @@
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.3.2" />
     <PackageVersion Include="Microsoft.OData.Edm" Version="7.12.5" />
     <PackageVersion Include="Microsoft.OData.Core" Version="7.12.5" />
-    <PackageVersion Include="Microsoft.OpenApi" Version="1.6.3" />
+    <PackageVersion Include="Microsoft.OpenApi" Version="1.6.5" />
+    <PackageVersion Include="Microsoft.OpenApi.Readers" Version="1.6.5" />
     <PackageVersion Include="Moq" Version="4.18.2" />
     <PackageVersion Include="MSTest.TestAdapter" Version="3.0.2" />
     <PackageVersion Include="MSTest.TestFramework" Version="3.0.2" />

@@ -18,14 +18,14 @@ namespace Azure.DataApiBuilder.Service.Tests
     {
         public static void SetupDatabaseEnvironment(string database)
         {
-            Environment.SetEnvironmentVariable(RuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, database);
+            Environment.SetEnvironmentVariable(FileSystemRuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, database);
         }
 
         public static void UnsetAllDABEnvironmentVariables()
         {
-            Environment.SetEnvironmentVariable(RuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, null);
-            Environment.SetEnvironmentVariable(RuntimeConfigLoader.ASP_NET_CORE_ENVIRONMENT_VAR_NAME, null);
-            Environment.SetEnvironmentVariable(RuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING, null);
+            Environment.SetEnvironmentVariable(FileSystemRuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, null);
+            Environment.SetEnvironmentVariable(FileSystemRuntimeConfigLoader.ASP_NET_CORE_ENVIRONMENT_VAR_NAME, null);
+            Environment.SetEnvironmentVariable(FileSystemRuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING, null);
         }
 
         /// <summary>
@@ -33,10 +33,10 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// </summary>
         /// <param name="environment"></param>
         /// <returns></returns>
-        public static RuntimeConfigLoader GetRuntimeConfigLoader()
+        public static FileSystemRuntimeConfigLoader GetRuntimeConfigLoader()
         {
             FileSystem fileSystem = new();
-            RuntimeConfigLoader runtimeConfigLoader = new(fileSystem);
+            FileSystemRuntimeConfigLoader runtimeConfigLoader = new(fileSystem);
             return runtimeConfigLoader;
         }
 
@@ -46,7 +46,7 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// </summary>
         /// <param name="loader"></param>
         /// <returns></returns>
-        public static RuntimeConfigProvider GetRuntimeConfigProvider(RuntimeConfigLoader loader)
+        public static RuntimeConfigProvider GetRuntimeConfigProvider(FileSystemRuntimeConfigLoader loader)
         {
             RuntimeConfigProvider runtimeConfigProvider = new(loader);
 
@@ -106,7 +106,7 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// for unit tests
         /// </summary>
         public const string SCHEMA_PROPERTY = @"
-          ""$schema"": """ + RuntimeConfigLoader.SCHEMA + @"""";
+          ""$schema"": """ + FileSystemRuntimeConfigLoader.SCHEMA + @"""";
 
         /// <summary>
         /// Data source property of the config json. This is used for constructing the required config json strings
@@ -115,10 +115,7 @@ namespace Azure.DataApiBuilder.Service.Tests
         public const string SAMPLE_SCHEMA_DATA_SOURCE = SCHEMA_PROPERTY + "," + @"
             ""data-source"": {
               ""database-type"": ""mssql"",
-              ""connection-string"": ""testconnectionstring"",
-              ""options"": {
-                ""set-session-context"": true
-                }
+              ""connection-string"": ""testconnectionstring""
             }
         ";
 
@@ -185,23 +182,24 @@ namespace Azure.DataApiBuilder.Service.Tests
         public static RuntimeConfigProvider GenerateInMemoryRuntimeConfigProvider(RuntimeConfig runtimeConfig)
         {
             MockFileSystem fileSystem = new();
-            fileSystem.AddFile(RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, runtimeConfig.ToJson());
-            RuntimeConfigLoader loader = new(fileSystem);
+            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, runtimeConfig.ToJson());
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider runtimeConfigProvider = new(loader);
             return runtimeConfigProvider;
         }
 
         /// <summary>
         /// Utility method that reads the config file for a given database type and constructs a
-        /// new config file with changes just in the host mode section.
+        /// new config file with custom changes as specified in the method parameters.
         /// </summary>
         /// <param name="configFileName">Name of the new config file to be constructed</param>
         /// <param name="hostModeType">HostMode for the engine</param>
         /// <param name="databaseType">Database type</param>
-        public static void ConstructNewConfigWithSpecifiedHostMode(string configFileName, HostMode hostModeType, string databaseType)
+        /// <param name="runtimeBaseRoute">Base route for API requests.</param>
+        public static void ConstructNewConfigWithSpecifiedHostMode(string configFileName, HostMode hostModeType, string databaseType, string runtimeBaseRoute = "/")
         {
-            TestHelper.SetupDatabaseEnvironment(databaseType);
-            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(TestHelper.GetRuntimeConfigLoader());
+            SetupDatabaseEnvironment(databaseType);
+            RuntimeConfigProvider configProvider = GetRuntimeConfigProvider(GetRuntimeConfigLoader());
             RuntimeConfig config = configProvider.GetConfig();
 
             RuntimeConfig configWithCustomHostMode =
@@ -213,7 +211,8 @@ namespace Azure.DataApiBuilder.Service.Tests
                     {
                         Host = config.Runtime.Host
                 with
-                        { Mode = hostModeType }
+                        { Mode = hostModeType },
+                        BaseRoute = runtimeBaseRoute
                     }
                 };
             File.WriteAllText(configFileName, configWithCustomHostMode.ToJson());

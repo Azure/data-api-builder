@@ -70,10 +70,7 @@ namespace Cli.Tests
         public const string SAMPLE_SCHEMA_DATA_SOURCE = SCHEMA_PROPERTY + "," + @"
             ""data-source"": {
               ""database-type"": ""mssql"",
-              ""connection-string"": ""testconnectionstring"",
-              ""options"":{
-                ""set-session-context"": true
-                }
+              ""connection-string"": ""testconnectionstring""
             }
         ";
 
@@ -849,52 +846,6 @@ namespace Cli.Tests
             }
         }";
 
-        public const string CONFIG_WITH_SINGLE_ENTITY =
-        @"{" +
-          @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
-          @"""data-source"": {
-          ""database-type"": ""mssql"",
-          ""connection-string"": ""localhost:5000"",
-          ""options"":{
-            ""set-session-context"": true
-          }
-        },
-        ""runtime"": {
-          ""rest"": {
-            ""path"": ""/api"",
-            ""enabled"": true
-          },
-          ""graphql"": {
-            ""path"": ""/graphql"",
-            ""enabled"": true,
-            ""allow-introspection"": true
-          },
-          ""host"": {
-            ""mode"": ""production"",
-            ""cors"": {
-              ""origins"": [],
-              ""allow-credentials"": false
-            },
-            ""authentication"": {
-              ""provider"": ""StaticWebApps""
-            }
-          }
-        },
-        ""entities"": {
-          ""book"": {
-            ""source"": ""s001.book"",
-            ""permissions"": [
-              {
-                ""role"": ""anonymous"",
-                ""actions"": [
-                  ""*""
-                ]
-              }
-            ]
-          }
-        }
-      }";
-
         public const string BASE_CONFIG =
           @"{" +
             @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
@@ -1095,5 +1046,25 @@ namespace Cli.Tests
           }
         }
       }";
+
+        /// <summary>
+        /// Creates basic initialization options for MS SQL config.
+        /// </summary>
+        /// <param name="config">Optional config file name.</param>
+        /// <returns>InitOptions</returns>
+        public static InitOptions CreateBasicInitOptionsForMsSqlWithConfig(string? config = null)
+        {
+            return new(
+                databaseType: DatabaseType.MSSQL,
+                connectionString: "testconnectionstring",
+                cosmosNoSqlDatabase: null,
+                cosmosNoSqlContainer: null,
+                graphQLSchemaPath: null,
+                setSessionContext: true,
+                hostMode: HostMode.Development,
+                corsOrigin: new List<string>(),
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                config: config);
+        }
     }
 }

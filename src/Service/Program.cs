@@ -172,7 +172,7 @@ namespace Azure.DataApiBuilder.Service
             string[] args)
         {
             configurationBuilder
-                .AddEnvironmentVariables(prefix: RuntimeConfigLoader.ENVIRONMENT_PREFIX)
+                .AddEnvironmentVariables(prefix: FileSystemRuntimeConfigLoader.ENVIRONMENT_PREFIX)
                 .AddCommandLine(args);
         }
     }

@@ -532,7 +532,7 @@ namespace Azure.DataApiBuilder.Core.Authorization
                 // User lacks a claim which is required to perform the operation.
                 throw new DataApiBuilderException(
                     message: "User does not possess all the claims required to perform this operation.",
-                    statusCode: System.Net.HttpStatusCode.Forbidden,
+                    statusCode: HttpStatusCode.Forbidden,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
                     );
             }

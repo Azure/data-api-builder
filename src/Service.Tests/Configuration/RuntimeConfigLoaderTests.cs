@@ -26,7 +26,7 @@ public class RuntimeConfigLoaderTests
 
         IFileSystem fs = new MockFileSystem(new Dictionary<string, MockFileData>() { { "dab-config.json", new MockFileData(fileContents) } });
 
-        RuntimeConfigLoader loader = new(fs);
+        FileSystemRuntimeConfigLoader loader = new(fs);
 
         Assert.IsTrue(loader.TryLoadConfig("dab-config.json", out RuntimeConfig _), "Failed to load config");
     }

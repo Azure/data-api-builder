@@ -1,11 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.IO.Abstractions;
-using System.IO.Abstractions.TestingHelpers;
-using Azure.DataApiBuilder.Config.ObjectModel;
-using Cli.Commands;
-
 namespace Cli.Tests
 {
     /// <summary>
@@ -16,14 +11,14 @@ namespace Cli.Tests
         : VerifyBase
     {
         private IFileSystem? _fileSystem;
-        private RuntimeConfigLoader? _runtimeConfigLoader;
+        private FileSystemRuntimeConfigLoader? _runtimeConfigLoader;
 
         [TestInitialize]
         public void TestInitialize()
         {
             _fileSystem = FileSystemUtils.ProvisionMockFileSystem();
 
-            _runtimeConfigLoader = new RuntimeConfigLoader(_fileSystem);
+            _runtimeConfigLoader = new FileSystemRuntimeConfigLoader(_fileSystem);
 
             ILoggerFactory loggerFactory = TestLoggerSupport.ProvisionLoggerFactory();
 

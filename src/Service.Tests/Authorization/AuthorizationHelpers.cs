@@ -35,8 +35,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         public static AuthorizationResolver InitAuthorizationResolver(RuntimeConfig runtimeConfig)
         {
             MockFileSystem fileSystem = new();
-            fileSystem.AddFile(RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new(runtimeConfig.ToJson()));
-            RuntimeConfigLoader loader = new(fileSystem);
+            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new(runtimeConfig.ToJson()));
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
 
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(loader);
             Mock<ISqlMetadataProvider> metadataProvider = new();

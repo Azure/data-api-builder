@@ -284,7 +284,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         {
             // Setup RuntimeConfigProvider object for the pipeline.
             MockFileSystem fileSystem = new();
-            RuntimeConfigLoader loader = new(fileSystem);
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider runtimeConfigProvider = new(loader);
 
             return await new HostBuilder()

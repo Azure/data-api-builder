@@ -9,7 +9,6 @@ using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Service.Exceptions;
 using Cli.Commands;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Core.Configurations.RuntimeConfigValidator;
@@ -184,35 +183,25 @@ namespace Cli
         }
 
         /// <summary>
-        /// Returns true if the api path contains any reserved characters like "[\.:\?#/\[\]@!$&'()\*\+,;=]+"
+        /// Checks whether the URI component conforms with the expected behavior and does not contain any reserved characters.
         /// </summary>
-        /// <param name="apiPath">path prefix for rest/graphql apis</param>
-        /// <param name="apiType">Either REST or GraphQL</param>
-        public static bool IsApiPathValid(string? apiPath, ApiType apiType)
+        /// <param name="uriComponent">Path prefix/base route for REST/GraphQL APIs.</param>
+        public static bool IsURIComponentValid(string? uriComponent)
         {
-            // apiPath is null only in case of cosmosDB and apiType=REST. For this case, validation is not required.
-            // Since, cosmosDB do not support REST calls.
-            if (apiPath is null)
+            // uriComponent is null only in case of cosmosDB and apiType=REST or when the runtime base-route is specified as null.
+            // For these cases, validation is not required.
+            if (uriComponent is null)
             {
                 return true;
             }
 
-            // removing leading '/' before checking for forbidden characters.
-            if (apiPath.StartsWith('/'))
+            // removing leading '/' before checking for reserved characters.
+            if (uriComponent.StartsWith('/'))
             {
-                apiPath = apiPath.Substring(1);
+                uriComponent = uriComponent.Substring(1);
             }
 
-            try
-            {
-                DoApiPathInvalidCharCheck(apiPath, apiType);
-                return true;
-            }
-            catch (DataApiBuilderException ex)
-            {
-                _logger.LogError(ex.Message);
-                return false;
-            }
+            return !DoesUriComponentContainReservedChars(uriComponent);
         }
 
         /// <summary>
@@ -388,7 +377,7 @@ namespace Cli
         /// In case of false, the runtimeConfigFile will be set to string.Empty.
         /// </summary>
         public static bool TryGetConfigFileBasedOnCliPrecedence(
-            RuntimeConfigLoader loader,
+            FileSystemRuntimeConfigLoader loader,
             string? userProvidedConfigFile,
             out string runtimeConfigFile)
         {

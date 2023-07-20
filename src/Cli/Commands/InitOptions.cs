@@ -30,6 +30,7 @@ namespace Cli.Commands
             string? audience = null,
             string? issuer = null,
             string restPath = RestRuntimeOptions.DEFAULT_PATH,
+            string? runtimeBaseRoute = null,
             bool restDisabled = false,
             string graphQLPath = GraphQLRuntimeOptions.DEFAULT_PATH,
             bool graphqlDisabled = false,
@@ -48,6 +49,7 @@ namespace Cli.Commands
             Audience = audience;
             Issuer = issuer;
             RestPath = restPath;
+            RuntimeBaseRoute = runtimeBaseRoute;
             RestDisabled = restDisabled;
             GraphQLPath = graphQLPath;
             GraphQLDisabled = graphqlDisabled;
@@ -89,6 +91,9 @@ namespace Cli.Commands
         [Option("rest.path", Default = RestRuntimeOptions.DEFAULT_PATH, Required = false, HelpText = "Specify the REST endpoint's default prefix.")]
         public string RestPath { get; }
 
+        [Option("runtime.base-route", Default = null, Required = false, HelpText = "Specifies the base route for API requests.")]
+        public string? RuntimeBaseRoute { get; }
+
         [Option("rest.disabled", Default = false, Required = false, HelpText = "Disables REST endpoint for all entities.")]
         public bool RestDisabled { get; }
 
@@ -98,7 +103,7 @@ namespace Cli.Commands
         [Option("graphql.disabled", Default = false, Required = false, HelpText = "Disables GraphQL endpoint for all entities.")]
         public bool GraphQLDisabled { get; }
 
-        public void Handler(ILogger logger, RuntimeConfigLoader loader, IFileSystem fileSystem)
+        public void Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             logger.LogInformation($"{PRODUCT_NAME} {ProductInfo.GetProductVersion()}");
             bool isSuccess = ConfigGenerator.TryGenerateConfig(this, loader, fileSystem);

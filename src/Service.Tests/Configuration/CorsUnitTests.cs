@@ -45,11 +45,11 @@ public class CorsUnitTests
     {
         IFileSystem fileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
         {
-            { RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(TestHelper.INITIAL_CONFIG) }
+            { FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(TestHelper.INITIAL_CONFIG) }
         });
 
-        RuntimeConfigLoader loader = new(fileSystem);
-        Assert.IsTrue(loader.TryLoadConfig(RuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, out RuntimeConfig runtimeConfig), "Load runtime config.");
+        FileSystemRuntimeConfigLoader loader = new(fileSystem);
+        Assert.IsTrue(loader.TryLoadConfig(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, out RuntimeConfig runtimeConfig), "Load runtime config.");
 
         Config.ObjectModel.HostOptions hostGlobalSettings = runtimeConfig.Runtime.Host;
         return Verify(hostGlobalSettings);

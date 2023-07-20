@@ -305,6 +305,7 @@ namespace Azure.DataApiBuilder.Core.Services
             foreach (DataRow row in parameterMetadata.Rows)
             {
                 // row["DATA_TYPE"] has value type string so a direct cast to System.Type is not supported.
+                // See https://learn.microsoft.com/en-us/dotnet/framework/data/adonet/sql-server-data-type-mappings
                 Type systemType = SqlToCLRType((string)row["DATA_TYPE"]);
                 // Add to parameters dictionary without the leading @ sign
                 storedProcedureDefinition.Parameters.TryAdd(((string)row["PARAMETER_NAME"])[1..],

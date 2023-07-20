@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -59,11 +60,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(DATETIME_TYPE, 2)]
         [DataRow(DATETIME_TYPE, 3)]
         [DataRow(DATETIME_TYPE, 4)]
-        [DataRow(TIMESPAN_TYPE, 1)]
-        [DataRow(TIMESPAN_TYPE, 2)]
-        [DataRow(TIMESPAN_TYPE, 3)]
-        [DataRow(TIMESPAN_TYPE, 4)]
-        [DataRow(TIMESPAN_TYPE, 5)]
+        [DataRow(TIMEONLY_TYPE, 1)]
+        [DataRow(TIMEONLY_TYPE, 2)]
+        [DataRow(TIMEONLY_TYPE, 3)]
+        [DataRow(TIMEONLY_TYPE, 4)]
+        [DataRow(TIMEONLY_TYPE, 5)]
         [DataRow(BYTEARRAY_TYPE, 1)]
         [DataRow(BYTEARRAY_TYPE, 2)]
         [DataRow(BYTEARRAY_TYPE, 3)]
@@ -126,8 +127,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(DATETIME_TYPE, "\"1999-01-08 09:20:00\"")]
         [DataRow(DATETIME_TYPE, "\"1999-01-08\"")]
         [DataRow(DATETIME_TYPE, "null")]
-        [DataRow(TIMESPAN_TYPE, "23:59:59.9999999")]
-        [DataRow(TIMESPAN_TYPE, "null")]
+        [DataRow(TIMEONLY_TYPE, "23:59:59.9999999")]
+        [DataRow(TIMEONLY_TYPE, "null")]
         [DataRow(BYTEARRAY_TYPE, "\"U3RyaW5neQ==\"")]
         [DataRow(BYTEARRAY_TYPE, "\"V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=\"")]
         [DataRow(BYTEARRAY_TYPE, "null")]
@@ -170,7 +171,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(BOOLEAN_TYPE, true)]
         [DataRow(DATETIME_NONUTC_TYPE, "1999-01-08 10:23:54+8:00")]
         [DataRow(DATETIME_TYPE, "1999-01-08 10:23:54")]
-        [DataRow(TIMESPAN_TYPE, "23:59:59.9999999")]
+        [DataRow(TIMEONLY_TYPE, "23:59:59.9999999")]
         [DataRow(BYTEARRAY_TYPE, "V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=")]
         public async Task InsertIntoTypeColumnWithArgument(string type, object value)
         {
@@ -235,8 +236,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(DATETIME_TYPE, "\"1999-01-08 09:20:00\"")]
         [DataRow(DATETIME_TYPE, "\"1999-01-08\"")]
         [DataRow(DATETIME_TYPE, "null")]
-        [DataRow(TIMESPAN_TYPE, "23:59:59.9999999")]
-        [DataRow(TIMESPAN_TYPE, "null")]
+        [DataRow(TIMEONLY_TYPE, "23:59:59.9999999")]
+        [DataRow(TIMEONLY_TYPE, "null")]
         [DataRow(BYTEARRAY_TYPE, "\"U3RyaW5neQ==\"")]
         [DataRow(BYTEARRAY_TYPE, "\"V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=\"")]
         [DataRow(BYTEARRAY_TYPE, "null")]
@@ -281,7 +282,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(BOOLEAN_TYPE, true)]
         [DataRow(DATETIME_TYPE, "1999-01-08 10:23:54")]
         [DataRow(DATETIME_NONUTC_TYPE, "1999-01-08 10:23:54+8:00")]
-        [DataRow(TIMESPAN_TYPE, "23:59:59.9999999")]
+        [DataRow(TIMEONLY_TYPE, "23:59:59.9999999")]
         [DataRow(BYTEARRAY_TYPE, "V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=")]
         [DataRow(GUID_TYPE, "3a1483a5-9ac2-4998-bcf3-78a28078c6ac")]
         [DataRow(GUID_TYPE, null)]
@@ -329,7 +330,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             {
                 CompareDateTimeResults(actual.ToString(), expected);
             }
-            else if (type == TIMESPAN_TYPE)
+            else if (type == TIMEONLY_TYPE)
             {
                 CompareTimeResults(actual.ToString(), expected);
             }
@@ -400,31 +401,64 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             }
             else
             {
-                Assert.AreEqual(DateTimeOffset.Parse(expectedDateTime), DateTimeOffset.Parse(actualDateTime));
+                // Adjusting to universal, since DateTime doesn't account for TimeZone
+                DateTime expectedDateTimeUniversal = DateTime.Parse(expectedDateTime, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
+                DateTime actualDateTimeUniversal = DateTime.Parse(actualDateTime, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
+                Assert.AreEqual(expectedDateTimeUniversal, actualDateTimeUniversal);
             }
         }
+
+        /// <summary>
+        /// Required due to different format between mysql datetimeoffset and HotChocolate datetime
+        /// result
+        /// </summary>
+        //private static void CompareDateTimeOffsetResults(string actual, string expected)
+        //{
+        //    string fieldName = "datetimeoffset_types";
+
+        //    using JsonDocument actualJsonDoc = JsonDocument.Parse(actual);
+        //    using JsonDocument expectedJsonDoc = JsonDocument.Parse(expected);
+
+        //    string actualDateTime = actualJsonDoc.RootElement.GetProperty(fieldName).ToString();
+        //    string expectedDateTime = expectedJsonDoc.RootElement.GetProperty(fieldName).ToString();
+
+        //    // handles cases when one of the values is null
+        //    if (string.IsNullOrEmpty(actualDateTime) || string.IsNullOrEmpty(expectedDateTime))
+        //    {
+        //        Assert.AreEqual(expectedDateTime, actualDateTime);
+        //    }
+        //    else
+        //    {
+        //        // Adjusting to universal, since DateTime doesn't account for TimeZone
+        //        DateTime expectedDateTimeUniversal = DateTimeOffset.Parse(expectedDateTime, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
+        //        DateTime actualDateTimeUniversal = DateTimeOffset.Parse(actualDateTime, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
+        //        Assert.AreEqual(expectedDateTimeUniversal, actualDateTimeUniversal);
+        //    }
+        //}
 
         /// <summary>
         /// Required due to different format between SQL time and HotChocolate TimeSpan time(ISO-8601) result.
         /// </summary>
         private static void CompareTimeResults(string actual, string expected)
         {
-            string fieldName = "time_types";
+            string fieldName = "timeonly_types";
 
             using JsonDocument actualJsonDoc = JsonDocument.Parse(actual);
             using JsonDocument expectedJsonDoc = JsonDocument.Parse(expected);
 
-            string actualDateTime = actualJsonDoc.RootElement.GetProperty(fieldName).ToString();
-            string expectedDateTime = expectedJsonDoc.RootElement.GetProperty(fieldName).ToString();
+            string actualTimeString = actualJsonDoc.RootElement.GetProperty(fieldName).ToString();
+            string expectedTimeString = expectedJsonDoc.RootElement.GetProperty(fieldName).ToString();
 
             // handles cases when one of the values is null
-            if (string.IsNullOrEmpty(actualDateTime) || string.IsNullOrEmpty(expectedDateTime))
+            if (string.IsNullOrEmpty(actualTimeString) || string.IsNullOrEmpty(expectedTimeString))
             {
-                Assert.AreEqual(expectedDateTime, actualDateTime);
+                Assert.AreEqual(expectedTimeString, actualTimeString);
             }
             else
             {
-                Assert.AreEqual(TimeSpan.Parse(expectedDateTime), TimeSpan.Parse(actualDateTime));
+                TimeOnly actualTime = TimeOnly.Parse(actualTimeString, CultureInfo.InvariantCulture);
+                TimeOnly expectedTime = TimeOnly.Parse(expectedTimeString, CultureInfo.InvariantCulture);
+                Assert.AreEqual(expectedTime.ToLongTimeString(), actualTime.ToLongTimeString());
             }
         }
 

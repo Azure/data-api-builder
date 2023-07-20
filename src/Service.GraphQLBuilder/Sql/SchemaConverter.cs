@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 using HotChocolate.Types;
@@ -231,7 +232,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 "DateTime" => DATETIME_TYPE,
                 "DateTimeOffset" => DATETIME_TYPE,
                 "Byte[]" => BYTEARRAY_TYPE,
-                "TimeOnly" => TIMESPAN_TYPE,
+                "TimeOnly" => TIMEONLY_TYPE,
+                "TimeSpan" => TIMEONLY_TYPE,
                 _ => throw new DataApiBuilderException(
                         message: $"Column type {type} not handled by case. Please add a case resolving {type} to the appropriate GraphQL type",
                         statusCode: HttpStatusCode.InternalServerError,
@@ -264,7 +266,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 decimal value => new ObjectValueNode(new ObjectFieldNode(DECIMAL_TYPE, new FloatValueNode(value))),
                 DateTimeOffset value => new ObjectValueNode(new ObjectFieldNode(DATETIME_TYPE, new DateTimeType().ParseValue(value))),
                 DateTime value => new ObjectValueNode(new ObjectFieldNode(DATETIME_TYPE, new DateTimeType().ParseResult(value))),
-                TimeSpan value => new ObjectValueNode(new ObjectFieldNode(TIMESPAN_TYPE, new TimeSpanType().ParseResult(value))),
+                TimeOnly value => new ObjectValueNode(new ObjectFieldNode(TIMEONLY_TYPE, new TimeOnlyType().ParseResult(value))),
                 byte[] value => new ObjectValueNode(new ObjectFieldNode(BYTEARRAY_TYPE, new ByteArrayType().ParseValue(value))),
                 _ => throw new DataApiBuilderException(
                     message: $"The type {metadataValue.GetType()} is not supported as a GraphQL default value",

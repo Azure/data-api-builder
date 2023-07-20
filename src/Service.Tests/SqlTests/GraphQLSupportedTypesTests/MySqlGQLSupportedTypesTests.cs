@@ -42,7 +42,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             return type switch
             {
                 GUID_TYPE => false,
-                TIMESPAN_TYPE => true,
+                TIMEONLY_TYPE => true,
                 _ => true
             };
         }

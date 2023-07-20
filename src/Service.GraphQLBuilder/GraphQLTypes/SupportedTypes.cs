@@ -22,7 +22,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes
         // since PostgreSQL doesn't support datetime values with a non-UTC time zone.
         public const string DATETIME_NONUTC_TYPE = "DateTimeNonUTC";
         public const string BYTEARRAY_TYPE = "ByteArray";
-        public const string TIMESPAN_TYPE = "TimeSpan";
+        public const string TIMEONLY_TYPE = "TimeOnly";
         public const string GUID_TYPE = "Guid";
     }
 }

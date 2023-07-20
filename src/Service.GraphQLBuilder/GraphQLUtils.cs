@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Sql;
 using HotChocolate.Language;
 using HotChocolate.Types;
@@ -54,7 +55,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                 BOOLEAN_TYPE,
                 DATETIME_TYPE,
                 BYTEARRAY_TYPE,
-                TIMESPAN_TYPE
+                TIMEONLY_TYPE
             };
             string name = typeNode.NamedType().Name.Value;
             return inBuiltTypes.Contains(name);
@@ -243,7 +244,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                     DECIMAL_TYPE => new(DECIMAL_TYPE, new FloatValueNode(decimal.Parse(defaultValueFromConfig))),
                     DATETIME_TYPE => new(DATETIME_TYPE, new DateTimeType().ParseResult(
                         DateTime.Parse(defaultValueFromConfig, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal))),
-                    TIMESPAN_TYPE => new(TIMESPAN_TYPE, new TimeSpanType().ParseResult(TimeSpan.Parse(defaultValueFromConfig))),
+                    TIMEONLY_TYPE => new(TIMEONLY_TYPE, new TimeOnlyType().ParseResult(TimeOnly.Parse(defaultValueFromConfig))),
                     BYTEARRAY_TYPE => new(BYTEARRAY_TYPE, new ByteArrayType().ParseValue(Convert.FromBase64String(defaultValueFromConfig))),
                     _ => throw new NotSupportedException(message: $"The {defaultValueFromConfig} parameter's value type [{paramValueType}] is not supported.")
                 };

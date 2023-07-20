@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using HotChocolate.Language;
 using HotChocolate.Types;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
@@ -190,19 +191,19 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                 }
             );
 
-        public static InputObjectTypeDefinitionNode TimeSpanInputType() =>
+        public static InputObjectTypeDefinitionNode TimeOnlyInputType() =>
             new(
                 location: null,
-                new NameNode("TimeSpanFilterInput"),
-                new StringValueNode("Input type for adding TimeSpan filters"),
+                new NameNode("TimeOnlyFilterInput"),
+                new StringValueNode("Input type for adding TimeOnly filters"),
                 new List<DirectiveNode>(),
                 new List<InputValueDefinitionNode> {
-                            new InputValueDefinitionNode(null, new NameNode("eq"), new StringValueNode("Equals"), new TimeSpanType().ToTypeNode(), null, new List<DirectiveNode>()),
-                            new InputValueDefinitionNode(null, new NameNode("gt"), new StringValueNode("Greater Than"), new TimeSpanType().ToTypeNode(), null, new List<DirectiveNode>()),
-                            new InputValueDefinitionNode(null, new NameNode("gte"), new StringValueNode("Greater Than or Equal To"), new TimeSpanType().ToTypeNode(), null, new List<DirectiveNode>()),
-                            new InputValueDefinitionNode(null, new NameNode("lt"), new StringValueNode("Less Than"), new TimeSpanType().ToTypeNode(), null, new List<DirectiveNode>()),
-                            new InputValueDefinitionNode(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new TimeSpanType().ToTypeNode(), null, new List<DirectiveNode>()),
-                            new InputValueDefinitionNode(null, new NameNode("neq"), new StringValueNode("Not Equals"), new TimeSpanType().ToTypeNode(), null, new List<DirectiveNode>()),
+                            new InputValueDefinitionNode(null, new NameNode("eq"), new StringValueNode("Equals"), new TimeOnlyType().ToTypeNode(), null, new List<DirectiveNode>()),
+                            new InputValueDefinitionNode(null, new NameNode("gt"), new StringValueNode("Greater Than"), new TimeOnlyType().ToTypeNode(), null, new List<DirectiveNode>()),
+                            new InputValueDefinitionNode(null, new NameNode("gte"), new StringValueNode("Greater Than or Equal To"), new TimeOnlyType().ToTypeNode(), null, new List<DirectiveNode>()),
+                            new InputValueDefinitionNode(null, new NameNode("lt"), new StringValueNode("Less Than"), new TimeOnlyType().ToTypeNode(), null, new List<DirectiveNode>()),
+                            new InputValueDefinitionNode(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new TimeOnlyType().ToTypeNode(), null, new List<DirectiveNode>()),
+                            new InputValueDefinitionNode(null, new NameNode("neq"), new StringValueNode("Not Equals"), new TimeOnlyType().ToTypeNode(), null, new List<DirectiveNode>()),
                             new InputValueDefinitionNode(null, new NameNode("isNull"), new StringValueNode("is null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
                 }
             );
@@ -232,7 +233,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             { STRING_TYPE, StringInputType() },
             { DATETIME_TYPE, DateTimeInputType() },
             { BYTEARRAY_TYPE, ByteArrayInputType() },
-            { TIMESPAN_TYPE, TimeSpanInputType() },
+            { TIMEONLY_TYPE, TimeOnlyInputType() },
         };
 
         /// <summary>

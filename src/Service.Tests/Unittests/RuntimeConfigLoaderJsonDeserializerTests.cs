@@ -143,7 +143,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             string exceptionMessage)
         {
             MockFileSystem fileSystem = new();
-            RuntimeConfigLoader loader = new(fileSystem);
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
 
             Assert.IsFalse(loader.TryLoadConfig(configFileName, out RuntimeConfig _));
         }

@@ -13,7 +13,7 @@ public class EndToEndTests
     : VerifyBase
 {
     private IFileSystem? _fileSystem;
-    private RuntimeConfigLoader? _runtimeConfigLoader;
+    private FileSystemRuntimeConfigLoader? _runtimeConfigLoader;
     private ILogger<Program>? _cliLogger;
 
     [TestInitialize]
@@ -26,7 +26,7 @@ public class EndToEndTests
 
         _fileSystem = fileSystem;
 
-        _runtimeConfigLoader = new RuntimeConfigLoader(_fileSystem);
+        _runtimeConfigLoader = new FileSystemRuntimeConfigLoader(_fileSystem);
 
         ILoggerFactory loggerFactory = TestLoggerSupport.ProvisionLoggerFactory();
 

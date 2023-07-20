@@ -111,7 +111,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                         throw new DataApiBuilderException(
                                message: "No primary key defined and conventions couldn't locate a fallback",
                                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
-                               statusCode: System.Net.HttpStatusCode.ServiceUnavailable);
+                               statusCode: HttpStatusCode.ServiceUnavailable);
                     }
 
                 }

@@ -1002,7 +1002,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 sourceDefinition,
                 columnsInTable);
 
-            if (_entities.TryGetValue(entityName, out Entity? currentEntity)
+            if (GetDatabaseType() is not DatabaseType.MySQL && _entities.TryGetValue(entityName, out Entity? currentEntity)
                 && currentEntity.Source.Type is EntitySourceType.Table)
             {
                 await PopulateColumnDefinitionWithReadOnlyFlag(tableName, schemaName, sourceDefinition);
@@ -1143,7 +1143,7 @@ namespace Azure.DataApiBuilder.Core.Services
             // The runtime config has a public setter so we check
             // here for empty connection string to ensure that
             // it was not set to an invalid state after initialization.
-             if (string.IsNullOrWhiteSpace(ConnectionString))
+            if (string.IsNullOrWhiteSpace(ConnectionString))
             {
                 throw new DataApiBuilderException(
                     DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE +

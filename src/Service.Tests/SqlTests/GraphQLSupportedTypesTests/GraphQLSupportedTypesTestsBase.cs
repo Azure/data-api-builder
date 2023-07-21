@@ -390,23 +390,23 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// </summary>
         private static void CompareDateTimeOffsetResults(string actual, string expected)
         {
-           string fieldName = "datetimeoffset_types";
+            string fieldName = "datetimeoffset_types";
 
-           using JsonDocument actualJsonDoc = JsonDocument.Parse(actual);
-           using JsonDocument expectedJsonDoc = JsonDocument.Parse(expected);
+            using JsonDocument actualJsonDoc = JsonDocument.Parse(actual);
+            using JsonDocument expectedJsonDoc = JsonDocument.Parse(expected);
 
-           string actualDateTimeOffset = actualJsonDoc.RootElement.GetProperty(fieldName).ToString();
-           string expectedDateTimeOffset = expectedJsonDoc.RootElement.GetProperty(fieldName).ToString();
+            string actualDateTimeOffset = actualJsonDoc.RootElement.GetProperty(fieldName).ToString();
+            string expectedDateTimeOffset = expectedJsonDoc.RootElement.GetProperty(fieldName).ToString();
 
-           // handles cases when one of the values is null
-           if (string.IsNullOrEmpty(actualDateTimeOffset) || string.IsNullOrEmpty(expectedDateTimeOffset))
-           {
-               Assert.AreEqual(expectedDateTimeOffset, actualDateTimeOffset);
-           }
-           else
-           {
+            // handles cases when one of the values is null
+            if (string.IsNullOrEmpty(actualDateTimeOffset) || string.IsNullOrEmpty(expectedDateTimeOffset))
+            {
+                Assert.AreEqual(expectedDateTimeOffset, actualDateTimeOffset);
+            }
+            else
+            {
                 Assert.AreEqual(DateTimeOffset.Parse(expectedDateTimeOffset), DateTimeOffset.Parse(actualDateTimeOffset));
-           }
+            }
         }
 
         /// <summary>

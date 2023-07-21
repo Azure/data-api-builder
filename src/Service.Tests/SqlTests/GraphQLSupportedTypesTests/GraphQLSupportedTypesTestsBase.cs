@@ -160,7 +160,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         }
 
         [DataTestMethod]
-        [DataRow(DATETIME_TYPE, "gt", "\'1999-01-08\'", "\"1999-01-08\"", " > ")]//
+        [DataRow(DATETIME_TYPE, "gt", "\'1999-01-08\'", "\"1999-01-08\"", " > ")]
         [DataRow(DATETIME_TYPE, "gte", "\'1999-01-08\'", "\"1999-01-08\"", " >= ")]
         [DataRow(DATETIME_TYPE, "lt", "\'0001-01-01\'", "\"0001-01-01\"", " < ")]
         [DataRow(DATETIME_TYPE, "lte", "\'0001-01-01\'", "\"0001-01-01\"", " <= ")]
@@ -442,15 +442,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             using JsonDocument actualJsonDoc = JsonDocument.Parse(actual);
             using JsonDocument expectedJsonDoc = JsonDocument.Parse(expected);
 
-            string actualFloat;
-            string expectedFloat;
-
             if (actualJsonDoc.RootElement.ValueKind is JsonValueKind.Array)
             {
                 ValidateArrayResults(actualJsonDoc, expectedJsonDoc, fieldName);
                 return;
             }
 
+            string actualFloat;
+            string expectedFloat;
             actualFloat = actualJsonDoc.RootElement.GetProperty(fieldName).ToString();
             expectedFloat = expectedJsonDoc.RootElement.GetProperty(fieldName).ToString();
 
@@ -559,6 +558,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             string filterField = "1",
             string orderBy = "id",
             string limit = "1");
+
         protected abstract string MakeQueryOnTypeTable(List<string> columnsToQuery, int id);
         protected virtual bool IsSupportedType(string type)
         {

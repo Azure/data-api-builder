@@ -36,9 +36,9 @@ public class TimeOnlyType : ScalarType<TimeSpan>
     /// <inheritdoc/>
     public override IValueNode ParseResult(object? resultValue)
     {
-        if (resultValue is TimeOnly timeSpan)
+        if (resultValue is TimeOnly timeOnly)
         {
-            return new StringValueNode(timeSpan.ToString(@"hh\:mm\:ss\.fff"));
+            return new StringValueNode(timeOnly.ToString(@"hh\:mm\:ss\.fff"));
         }
 
         throw new ArgumentException("Invalid TimeOnly value.");
@@ -54,6 +54,7 @@ public class TimeOnlyType : ScalarType<TimeSpan>
 
         throw new ArgumentException("Invalid TimeOnly value.");
     }
+
     /// <inheritdoc/>
     public override object Serialize(object? value)
     {

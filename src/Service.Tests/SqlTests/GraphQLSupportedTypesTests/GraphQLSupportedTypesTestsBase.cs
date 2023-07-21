@@ -123,11 +123,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(BOOLEAN_TYPE, "true")]
         [DataRow(BOOLEAN_TYPE, "false")]
         [DataRow(BOOLEAN_TYPE, "null")]
-        [DataRow(DATETIME_NONUTC_TYPE, "\"1999-01-08 10:23:54+8:00\"")]
+        [DataRow(DATETIMEOFFSET_TYPE, "\"1999-01-08 10:23:54+8:00\"")]
         [DataRow(DATETIME_TYPE, "\"1999-01-08 09:20:00\"")]
         [DataRow(DATETIME_TYPE, "\"1999-01-08\"")]
         [DataRow(DATETIME_TYPE, "null")]
-        [DataRow(TIMEONLY_TYPE, "23:59:59.9999999")]
+        [DataRow(TIMEONLY_TYPE, "\"23:59:59.9999999\"")]
         [DataRow(TIMEONLY_TYPE, "null")]
         [DataRow(BYTEARRAY_TYPE, "\"U3RyaW5neQ==\"")]
         [DataRow(BYTEARRAY_TYPE, "\"V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=\"")]
@@ -137,13 +137,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             if (!IsSupportedType(type))
             {
                 Assert.Inconclusive("Type not supported");
-            }
-
-            // Datetime non utc type is a characterization of the value added to the datetime type,
-            // so before executing the query reset it to mean the actually underlying type.
-            if (DATETIME_NONUTC_TYPE.Equals(type))
-            {
-                type = DATETIME_TYPE;
             }
 
             string field = $"{type.ToLowerInvariant()}_types";
@@ -169,7 +162,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(FLOAT_TYPE, -3.33)]
         [DataRow(DECIMAL_TYPE, 1222222.00000929292)]
         [DataRow(BOOLEAN_TYPE, true)]
-        [DataRow(DATETIME_NONUTC_TYPE, "1999-01-08 10:23:54+8:00")]
+        [DataRow(DATETIMEOFFSET_TYPE, "1999-01-08 10:23:54+8:00")]
         [DataRow(DATETIME_TYPE, "1999-01-08 10:23:54")]
         [DataRow(TIMEONLY_TYPE, "23:59:59.9999999")]
         [DataRow(BYTEARRAY_TYPE, "V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=")]
@@ -180,16 +173,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 Assert.Inconclusive("Type not supported");
             }
 
-            // Datetime non utc type is a characterization of the value added to the datetime type,
-            // so before executing the query reset it to mean the actually underlying type.
-            if (DATETIME_NONUTC_TYPE.Equals(type))
-            {
-                type = DATETIME_TYPE;
-            }
-
             string field = $"{type.ToLowerInvariant()}_types";
             string graphQLQueryName = "createSupportedType";
-            string gqlQuery = "mutation($param: " + type + "){ createSupportedType (item: {" + field + ": $param }){ " + field + " } }";
+            string gqlQuery = "mutation($param: " + TypeNameToGraphQLType(type) + "){ createSupportedType (item: {" + field + ": $param }){ " + field + " } }";
 
             string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id: 5001);
 
@@ -232,7 +218,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(BOOLEAN_TYPE, "true")]
         [DataRow(BOOLEAN_TYPE, "false")]
         [DataRow(BOOLEAN_TYPE, "null")]
-        [DataRow(DATETIME_NONUTC_TYPE, "\"1999-01-08 10:23:54+8:00\"")]
+        [DataRow(DATETIMEOFFSET_TYPE, "\"1999-01-08 10:23:54+8:00\"")]
         [DataRow(DATETIME_TYPE, "\"1999-01-08 09:20:00\"")]
         [DataRow(DATETIME_TYPE, "\"1999-01-08\"")]
         [DataRow(DATETIME_TYPE, "null")]
@@ -248,13 +234,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             if (!IsSupportedType(type))
             {
                 Assert.Inconclusive("Type not supported");
-            }
-
-            // Datetime non utc type is a characterization of the value added to the datetime type,
-            // so before executing the query reset it to mean the actually underlying type.
-            if (DATETIME_NONUTC_TYPE.Equals(type))
-            {
-                type = DATETIME_TYPE;
             }
 
             string field = $"{type.ToLowerInvariant()}_types";
@@ -281,7 +260,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(DECIMAL_TYPE, 1222222.00000929292)]
         [DataRow(BOOLEAN_TYPE, true)]
         [DataRow(DATETIME_TYPE, "1999-01-08 10:23:54")]
-        [DataRow(DATETIME_NONUTC_TYPE, "1999-01-08 10:23:54+8:00")]
+        [DataRow(DATETIMEOFFSET_TYPE, "1999-01-08 10:23:54+8:00")]
         [DataRow(TIMEONLY_TYPE, "23:59:59.9999999")]
         [DataRow(BYTEARRAY_TYPE, "V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=")]
         [DataRow(GUID_TYPE, "3a1483a5-9ac2-4998-bcf3-78a28078c6ac")]
@@ -291,13 +270,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             if (!IsSupportedType(type))
             {
                 Assert.Inconclusive("Type not supported");
-            }
-
-            // Datetime non utc type is a characterization of the value added to the datetime type,
-            // so before executing the query reset it to mean the actually underlying type.
-            if (DATETIME_NONUTC_TYPE.Equals(type))
-            {
-                type = DATETIME_TYPE;
             }
 
             string field = $"{type.ToLowerInvariant()}_types";
@@ -329,6 +301,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             else if (type == DATETIME_TYPE)
             {
                 CompareDateTimeResults(actual.ToString(), expected);
+            }
+            else if (type == DATETIMEOFFSET_TYPE)
+            {
+                CompareDateTimeOffsetResults(actual.ToString(), expected);
             }
             else if (type == TIMEONLY_TYPE)
             {
@@ -412,29 +388,26 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// Required due to different format between mysql datetimeoffset and HotChocolate datetime
         /// result
         /// </summary>
-        //private static void CompareDateTimeOffsetResults(string actual, string expected)
-        //{
-        //    string fieldName = "datetimeoffset_types";
+        private static void CompareDateTimeOffsetResults(string actual, string expected)
+        {
+           string fieldName = "datetimeoffset_types";
 
-        //    using JsonDocument actualJsonDoc = JsonDocument.Parse(actual);
-        //    using JsonDocument expectedJsonDoc = JsonDocument.Parse(expected);
+           using JsonDocument actualJsonDoc = JsonDocument.Parse(actual);
+           using JsonDocument expectedJsonDoc = JsonDocument.Parse(expected);
 
-        //    string actualDateTime = actualJsonDoc.RootElement.GetProperty(fieldName).ToString();
-        //    string expectedDateTime = expectedJsonDoc.RootElement.GetProperty(fieldName).ToString();
+           string actualDateTimeOffset = actualJsonDoc.RootElement.GetProperty(fieldName).ToString();
+           string expectedDateTimeOffset = expectedJsonDoc.RootElement.GetProperty(fieldName).ToString();
 
-        //    // handles cases when one of the values is null
-        //    if (string.IsNullOrEmpty(actualDateTime) || string.IsNullOrEmpty(expectedDateTime))
-        //    {
-        //        Assert.AreEqual(expectedDateTime, actualDateTime);
-        //    }
-        //    else
-        //    {
-        //        // Adjusting to universal, since DateTime doesn't account for TimeZone
-        //        DateTime expectedDateTimeUniversal = DateTimeOffset.Parse(expectedDateTime, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
-        //        DateTime actualDateTimeUniversal = DateTimeOffset.Parse(actualDateTime, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
-        //        Assert.AreEqual(expectedDateTimeUniversal, actualDateTimeUniversal);
-        //    }
-        //}
+           // handles cases when one of the values is null
+           if (string.IsNullOrEmpty(actualDateTimeOffset) || string.IsNullOrEmpty(expectedDateTimeOffset))
+           {
+               Assert.AreEqual(expectedDateTimeOffset, actualDateTimeOffset);
+           }
+           else
+           {
+                Assert.AreEqual(DateTimeOffset.Parse(expectedDateTimeOffset), DateTimeOffset.Parse(actualDateTimeOffset));
+           }
+        }
 
         /// <summary>
         /// Required due to different format between SQL time and HotChocolate TimeSpan time(ISO-8601) result.
@@ -471,6 +444,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             if (typeName is GUID_TYPE)
             {
                 return STRING_TYPE;
+            }
+            else if (typeName is DATETIMEOFFSET_TYPE)
+            {
+                return DATETIME_TYPE;
             }
 
             return typeName;

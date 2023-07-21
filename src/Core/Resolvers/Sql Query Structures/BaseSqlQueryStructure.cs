@@ -361,10 +361,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 "Double" => double.Parse(param),
                 "Decimal" => decimal.Parse(param),
                 "Boolean" => bool.Parse(param),
-                "DateTime" => DateTimeOffset.Parse(param, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal),
+                "DateTime" => DateTime.Parse(param, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal),
                 "DateTimeOffset" => DateTimeOffset.Parse(param),
                 "Date" => DateOnly.Parse(param),
                 "TimeOnly" => TimeOnly.Parse(param),
+                "TimeSpan" => TimeOnly.Parse(param),
                 "Guid" => Guid.Parse(param),
                 _ => throw new NotSupportedException($"{systemType.Name} is not supported")
             };

@@ -159,7 +159,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             PerformTestEqualsForExtendedTypes(type, expected, actual.GetProperty("items").ToString());
         }
 
-        [DataRow(DATETIME_TYPE, "gt", "\'1999-01-08\'", "\"1999-01-08\"", " > ")]
+        [DataRow(DATETIME_TYPE, "gt", "\'1999-01-08\'", "\"1999-01-08\"", " > ")]//
         [DataRow(DATETIME_TYPE, "gte", "\'1999-01-08\'", "\"1999-01-08\"", " >= ")]
         [DataRow(DATETIME_TYPE, "lt", "\'0001-01-01\'", "\"0001-01-01\"", " < ")]
         [DataRow(DATETIME_TYPE, "lte", "\'0001-01-01\'", "\"0001-01-01\"", " <= ")]
@@ -524,11 +524,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 {
                     DateTime actualDateTime = DateTime.Parse(actualValue.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None);
                     DateTime expectedDateTime = DateTime.Parse(expectedValue.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None);
-                    Assert.AreEqual(actualDateTime, expectedDateTime);
+                    Assert.AreEqual(expectedDateTime, actualDateTime);
+                }
+                else if (fieldName.StartsWith(SINGLE_TYPE.ToLower()))
+                {
+                    Assert.AreEqual(expectedValue.GetSingle(), actualValue.GetSingle());
                 }
                 else
                 {
-                    Assert.AreEqual(actualValue.GetDouble(), actualValue.GetDouble());
+                    Assert.AreEqual(expectedValue.GetDouble(), actualValue.GetDouble());
                 }
             }
         }

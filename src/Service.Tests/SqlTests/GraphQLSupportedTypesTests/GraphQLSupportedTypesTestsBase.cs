@@ -159,6 +159,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             PerformTestEqualsForExtendedTypes(type, expected, actual.GetProperty("items").ToString());
         }
 
+        [DataTestMethod]
         [DataRow(DATETIME_TYPE, "gt", "\'1999-01-08\'", "\"1999-01-08\"", " > ")]//
         [DataRow(DATETIME_TYPE, "gte", "\'1999-01-08\'", "\"1999-01-08\"", " >= ")]
         [DataRow(DATETIME_TYPE, "lt", "\'0001-01-01\'", "\"0001-01-01\"", " < ")]

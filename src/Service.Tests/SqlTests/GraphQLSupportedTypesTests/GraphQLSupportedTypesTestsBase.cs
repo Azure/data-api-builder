@@ -159,6 +159,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             PerformTestEqualsForExtendedTypes(type, expected, actual.GetProperty("items").ToString());
         }
 
+        /// <summary>
+        /// Separate test case for DateTime to allow overwrite for postgreSql.
+        /// Year 9998 used in test and data within test tables to avoid out of
+        /// date range error within GQL.
+        /// </summary>
         [DataTestMethod]
         [DataRow(DATETIME_TYPE, "gt", "\'1999-01-08\'", "\"1999-01-08\"", " > ")]
         [DataRow(DATETIME_TYPE, "gte", "\'1999-01-08\'", "\"1999-01-08\"", " >= ")]
@@ -515,10 +520,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             {
                 actualEnumerater.MoveNext();
                 JsonElement actualElement = actualEnumerater.Current;
-                JsonElement actualValue;
-                JsonElement expectedValue;
-                actualElement.TryGetProperty(fieldName, out actualValue);
-                expectedElement.TryGetProperty(fieldName, out expectedValue);
+                actualElement.TryGetProperty(fieldName, out JsonElement actualValue);
+                expectedElement.TryGetProperty(fieldName, out JsonElement expectedValue);
 
                 if (fieldName.StartsWith(DATETIME_TYPE.ToLower()))
                 {

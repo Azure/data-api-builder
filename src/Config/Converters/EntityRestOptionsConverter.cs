@@ -14,7 +14,7 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
     {
         if (reader.TokenType == JsonTokenType.StartObject)
         {
-            EntityRestOptions restOptions = new(Methods: Array.Empty<SupportedHttpVerb>(), Path: null, Enabled: true);
+            EntityRestOptions restOptions = new(Methods: null, Path: null, Enabled: true);
             while (reader.Read())
             {
                 if (reader.TokenType == JsonTokenType.EndObject)
@@ -78,14 +78,14 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
 
         if (reader.TokenType == JsonTokenType.String)
         {
-            return new EntityRestOptions(Array.Empty<SupportedHttpVerb>(), reader.DeserializeString(), true);
+            return new EntityRestOptions(Methods: null, Path: reader.DeserializeString(), Enabled: true);
         }
-
+        
         if (reader.TokenType == JsonTokenType.True || reader.TokenType == JsonTokenType.False)
         {
             bool enabled = reader.GetBoolean();
             return new EntityRestOptions(
-                Methods: Array.Empty<SupportedHttpVerb>(),
+                Methods: null,
                 Path: null,
                 Enabled: enabled);
         }
@@ -107,14 +107,21 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
         {
             writer.WriteNull("path");
         }
-
-        writer.WriteStartArray("methods");
-        foreach (SupportedHttpVerb method in value.Methods)
+        
+        if(value.Methods is not null)
         {
-            writer.WriteStringValue(JsonSerializer.SerializeToElement(method, options).GetString());
+            writer.WriteStartArray("methods");
+            foreach (SupportedHttpVerb method in value.Methods)
+            {
+                writer.WriteStringValue(JsonSerializer.SerializeToElement(method, options).GetString());
+            }
+            writer.WriteEndArray();
         }
-
-        writer.WriteEndArray();
+        else if (value.Methods is null && options.DefaultIgnoreCondition != JsonIgnoreCondition.WhenWritingNull)
+        {
+            writer.WriteNull("methods");
+        }
+        
         writer.WriteEndObject();
     }
 }

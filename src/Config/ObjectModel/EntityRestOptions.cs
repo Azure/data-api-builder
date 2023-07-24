@@ -16,7 +16,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// <param name="Methods">The HTTP verbs that are supported for this entity.</param>
 /// <param name="Enabled">Whether the entity is enabled for REST.</param>
 [JsonConverter(typeof(EntityRestOptionsConverter))]
-public record EntityRestOptions(SupportedHttpVerb[] Methods, string? Path = null, bool Enabled = true)
+public record EntityRestOptions(SupportedHttpVerb[]? Methods = null, string? Path = null, bool Enabled = true)
 {
     public static readonly SupportedHttpVerb[] DEFAULT_SUPPORTED_VERBS = new[] { SupportedHttpVerb.Get, SupportedHttpVerb.Post, SupportedHttpVerb.Put, SupportedHttpVerb.Patch, SupportedHttpVerb.Delete };
     public static readonly SupportedHttpVerb[] DEFAULT_HTTP_VERBS_ENABLED_FOR_SP = new[] { SupportedHttpVerb.Post };

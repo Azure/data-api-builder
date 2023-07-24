@@ -57,6 +57,7 @@ public class UtilsTests
         EntityRestOptions options = ConstructRestOptions("customPath", new[] { SupportedHttpVerb.Get, SupportedHttpVerb.Post }, false);
         Assert.AreEqual("/customPath", options.Path);
         Assert.IsTrue(options.Enabled);
+        Assert.IsNotNull(options.Methods);
         Assert.AreEqual(2, options.Methods.Length);
         Assert.IsTrue(options.Methods.Contains(SupportedHttpVerb.Get));
         Assert.IsTrue(options.Methods.Contains(SupportedHttpVerb.Post));

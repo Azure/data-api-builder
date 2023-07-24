@@ -525,6 +525,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
                 if (fieldName.StartsWith(DATETIME_TYPE.ToLower()))
                 {
+                    // MySql returns a format that will not directly parse into DateTime type so we use string here for parsing
                     DateTime actualDateTime = DateTime.Parse(actualValue.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None);
                     DateTime expectedDateTime = DateTime.Parse(expectedValue.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None);
                     Assert.AreEqual(expectedDateTime, actualDateTime);

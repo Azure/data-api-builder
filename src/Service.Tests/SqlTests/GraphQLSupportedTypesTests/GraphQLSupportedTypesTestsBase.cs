@@ -222,7 +222,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(DATETIME_TYPE, "\"1999-01-08 09:20:00\"")]
         [DataRow(DATETIME_TYPE, "\"1999-01-08\"")]
         [DataRow(DATETIME_TYPE, "null")]
-        [DataRow(TIMEONLY_TYPE, "23:59:59.9999999")]
+        [DataRow(TIMEONLY_TYPE, "\"23:59:59.9999999\"")]
         [DataRow(TIMEONLY_TYPE, "null")]
         [DataRow(BYTEARRAY_TYPE, "\"U3RyaW5neQ==\"")]
         [DataRow(BYTEARRAY_TYPE, "\"V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=\"")]

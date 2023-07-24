@@ -72,6 +72,28 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         }
 
         /// <summary>
+        /// Tests gte of TimeOnlyFilterInput where TimeOnly is a custom scalar Hotchocolate Type.
+        /// </summary>
+        [TestMethod]
+        public async Task TestTimeOnlyTypeFilter(string dbQuery)
+        {
+            string graphQLQueryName = "supportedTypes";
+            string gqlQuery = @"{
+                supportedTypes( " + QueryBuilder.FILTER_FIELD_NAME + @" : {timeonly_types: {gte: ""10:23:54.999""}})
+                {
+                    items {
+                        typeid
+                        timeonly_types
+                    }
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
         /// Tests neq of StringFilterInput
         /// </summary>
         [TestMethod]

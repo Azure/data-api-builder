@@ -5,7 +5,7 @@ using HotChocolate.Language;
 using HotChocolate.Types;
 
 namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
-public class TimeOnlyType : ScalarType<TimeSpan>
+public class TimeOnlyType : ScalarType<TimeOnly>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="TimeOnlyType"/> class.
@@ -26,11 +26,11 @@ public class TimeOnlyType : ScalarType<TimeSpan>
         {
             if (TimeSpan.TryParse(stringValueNode.Value, out TimeSpan timeSpan))
             {
-                return timeSpan;
+                return new TimeOnly(timeSpan.Hours, timeSpan.Minutes, timeSpan.Seconds, timeSpan.Milliseconds);
             }
         }
 
-        throw new ArgumentException("Invalid TimeOnly value.");
+        throw new ArgumentException("Invalid time value.");
     }
 
     /// <inheritdoc/>
@@ -38,7 +38,7 @@ public class TimeOnlyType : ScalarType<TimeSpan>
     {
         if (resultValue is TimeOnly timeOnly)
         {
-            return new StringValueNode(timeOnly.ToString(@"hh\:mm\:ss\.fff"));
+            return new StringValueNode(timeOnly.ToString(@"HH\:mm\:ss\.fff"));
         }
 
         throw new ArgumentException("Invalid TimeOnly value.");
@@ -47,9 +47,9 @@ public class TimeOnlyType : ScalarType<TimeSpan>
     /// <inheritdoc/>
     public override IValueNode ParseValue(object? value)
     {
-        if (value is TimeOnly timeSpan)
+        if (value is TimeOnly timeOnly)
         {
-            return new StringValueNode(timeSpan.ToString(@"hh\:mm\:ss\.fff"));
+            return new StringValueNode(timeOnly.ToString(@"HH\:mm\:ss\.fff"));
         }
 
         throw new ArgumentException("Invalid TimeOnly value.");
@@ -58,9 +58,9 @@ public class TimeOnlyType : ScalarType<TimeSpan>
     /// <inheritdoc/>
     public override object Serialize(object? value)
     {
-        if (value is TimeSpan timeSpan)
+        if (value is TimeOnly timeOnly)
         {
-            return timeSpan.ToString(@"hh\:mm\:ss\.fff");
+            return timeOnly.ToString(@"HH\:mm\:ss\.fff");
         }
 
         throw new ArgumentException("Invalid TimeOnly value.");

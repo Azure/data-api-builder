@@ -39,6 +39,7 @@ namespace Azure.DataApiBuilder.Core.Services
             [typeof(DateTime)] = DbType.DateTime,
             [typeof(DateTimeOffset)] = DbType.DateTimeOffset,
             [typeof(TimeOnly)] = DbType.Time,
+            [typeof(TimeSpan)] = DbType.Time,
             [typeof(object)] = DbType.Object
         };
 

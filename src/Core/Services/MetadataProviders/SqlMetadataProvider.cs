@@ -1157,7 +1157,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 schemaName = SqlQueryBuilder.QuoteIdentifier(schemaName);
             }
 
-            if(!string.IsNullOrEmpty(databaseName))
+            if (!string.IsNullOrEmpty(databaseName))
             {
                 // determine databaseName for prefix.
                 databaseName = SqlQueryBuilder.QuoteIdentifier(databaseName);

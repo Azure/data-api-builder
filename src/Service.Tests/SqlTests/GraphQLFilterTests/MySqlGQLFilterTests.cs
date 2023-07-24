@@ -73,6 +73,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             throw new System.NotImplementedException("Nested Filtering for MySQL is not yet implemented.");
         }
 
+        [Ignore]
+        [TestMethod]
+        public void TestTimeOnlyTypeFilter()
+        {
+            throw new System.NotImplementedException("Filtering TimeOnly Type for MySQL is not yet implemented.");
+        }
+
         [TestMethod]
         public async Task TestStringFiltersEqWithMappings()
         {

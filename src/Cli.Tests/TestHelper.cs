@@ -195,10 +195,7 @@ namespace Cli.Tests
                           ""read""
                       ]
                     }
-                  ],
-                  ""rest"": {
-                    ""enabled"": true
-                  },
+                  ]
                 }
               }
           }";

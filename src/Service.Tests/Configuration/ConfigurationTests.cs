@@ -1343,7 +1343,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
             Entity viewEntity = new(
                 Source: new("books_view_all", EntitySourceType.Table, null, null),
-                Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
+                Rest: new(Enabled: true),
                 GraphQL: new("", ""),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,
@@ -1539,7 +1539,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             Entity entity = new(
                 Source: new("graphql_incompatible", EntitySourceType.Table, null, null),
-                Rest: new(Array.Empty<SupportedHttpVerb>(), Enabled: false),
+                Rest: new(Enabled: false),
                 GraphQL: new("graphql_incompatible", "graphql_incompatibles", entityGraphQLEnabled),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,
@@ -1673,7 +1673,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             // file creation function.
             Entity requiredEntity = new(
                 Source: new("books", EntitySourceType.Table, null, null),
-                Rest: new(Array.Empty<SupportedHttpVerb>(), Enabled: false),
+                Rest: new(Enabled: false),
                 GraphQL: new("book", "books"),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,
@@ -1727,7 +1727,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             // Create the entities under test.
             Entity restEnabledEntity = new(
                 Source: new("books", EntitySourceType.Table, null, null),
-                Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
+                Rest: new(Enabled: true),
                 GraphQL: new("", "", false),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,
@@ -1735,7 +1735,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             Entity restDisabledEntity = new(
                 Source: new("publishers", EntitySourceType.Table, null, null),
-                Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS, Enabled: false),
+                Rest: new(Enabled: false),
                 GraphQL: new("publisher", "publishers", true),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,

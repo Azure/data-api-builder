@@ -110,7 +110,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Entity testEntity = new(
                 Source: entitySource,
-                Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
+                Rest: new(EntityRestOptions.DEFAULT_HTTP_VERBS_ENABLED_FOR_SP),
                 GraphQL: new(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ENTITY + "s"),
                 Permissions: permissionSettings.ToArray(),
                 Relationships: null,
@@ -1344,7 +1344,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Entity sampleEntity = new(
                 Source: new(source, EntitySourceType.Table, null, null),
-                Rest: restDetails ?? new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS, Enabled: false),
+                Rest: restDetails ?? new(Enabled: false),
                 GraphQL: graphQLDetails,
                 Permissions: new[] { permissionForEntity },
                 Relationships: relationshipMap,

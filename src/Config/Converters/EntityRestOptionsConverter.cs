@@ -80,7 +80,7 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
         {
             return new EntityRestOptions(Methods: null, Path: reader.DeserializeString(), Enabled: true);
         }
-        
+
         if (reader.TokenType == JsonTokenType.True || reader.TokenType == JsonTokenType.False)
         {
             bool enabled = reader.GetBoolean();
@@ -107,21 +107,22 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
         {
             writer.WriteNull("path");
         }
-        
-        if(value.Methods is not null)
+
+        if (value.Methods is not null)
         {
             writer.WriteStartArray("methods");
             foreach (SupportedHttpVerb method in value.Methods)
             {
                 writer.WriteStringValue(JsonSerializer.SerializeToElement(method, options).GetString());
             }
+
             writer.WriteEndArray();
         }
         else if (value.Methods is null && options.DefaultIgnoreCondition != JsonIgnoreCondition.WhenWritingNull)
         {
             writer.WriteNull("methods");
         }
-        
+
         writer.WriteEndObject();
     }
 }

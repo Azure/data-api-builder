@@ -419,10 +419,7 @@ namespace Cli.Tests
                           ""role"": ""anonymous"",
                           ""actions"": [""read"",""update""]
                           }
-                        ],
-                        ""rest"": {
-                            ""enabled"": true
-                        },
+                        ]
                     }
                 }
             }";

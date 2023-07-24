@@ -1151,21 +1151,25 @@ namespace Azure.DataApiBuilder.Core.Services
         private string GetTablePrefix(string databaseName, string schemaName)
         {
             StringBuilder tablePrefix = new();
-            if (!string.IsNullOrEmpty(schemaName))
-            {
-                // determine schemaName for prefix.
-                schemaName = SqlQueryBuilder.QuoteIdentifier(schemaName);
-            }
 
             if (!string.IsNullOrEmpty(databaseName))
             {
-                // determine databaseName for prefix.
+                // Determine databaseName for prefix.
                 databaseName = SqlQueryBuilder.QuoteIdentifier(databaseName);
                 tablePrefix.Append(databaseName);
-                tablePrefix.Append($".{schemaName}");
+
+                if (!string.IsNullOrEmpty(schemaName))
+                {
+                    // Determine schemaName for prefix.
+                    schemaName = SqlQueryBuilder.QuoteIdentifier(schemaName);
+                    tablePrefix.Append($".{schemaName}");
+                }
             }
-            else
+            else if (!string.IsNullOrEmpty(schemaName))
             {
+                // Determine schemaName for prefix.
+                schemaName = SqlQueryBuilder.QuoteIdentifier(schemaName);
+                // Database name is empty we just need the schema name.
                 tablePrefix.Append(schemaName);
             }
 

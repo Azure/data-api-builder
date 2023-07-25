@@ -72,18 +72,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         }
 
         /// <summary>
-        /// Tests gte of TimeOnlyFilterInput where TimeOnly is a custom scalar Hotchocolate Type.
+        /// Tests gte of LocalTimeFilterInput where LocalTime is a NodatTime Hotchocolate Type.
         /// </summary>
         [TestMethod]
-        public async Task TestTimeOnlyTypeFilter(string dbQuery)
+        public async Task TestLocalTimeTypeFilter(string dbQuery)
         {
             string graphQLQueryName = "supportedTypes";
             string gqlQuery = @"{
-                supportedTypes( " + QueryBuilder.FILTER_FIELD_NAME + @" : {timeonly_types: {gte: ""10:23:54.999""}})
+                supportedTypes( " + QueryBuilder.FILTER_FIELD_NAME + @" : {time_types: {gte: ""10:23:54.999""}})
                 {
                     items {
                         typeid
-                        timeonly_types
+                        time_types
                     }
                 }
             }";

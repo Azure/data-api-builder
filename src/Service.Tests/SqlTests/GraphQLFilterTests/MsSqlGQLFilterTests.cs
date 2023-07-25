@@ -59,17 +59,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         }
 
         [TestMethod]
-        public async Task TestTimeOnlyTypeFilter()
+        public async Task TestLocalTimeTypeFilter()
         {
             string msSqlQuery = @"
                 SELECT [id] AS [typeid],
-                CONVERT(VARCHAR(12), timeonly_types, 114) AS [timeonly_types]
+                [time_types]
                 FROM type_table
-                WHERE [timeonly_types] >= '10:23:54.999'
+                WHERE [time_types] >= '10:23:54.999'
                 ORDER BY [typeid] asc
                 FOR JSON PATH, INCLUDE_NULL_VALUES";
 
-            await TestTimeOnlyTypeFilter(msSqlQuery);
+            await TestLocalTimeTypeFilter(msSqlQuery);
         }
 
         /// <summary>

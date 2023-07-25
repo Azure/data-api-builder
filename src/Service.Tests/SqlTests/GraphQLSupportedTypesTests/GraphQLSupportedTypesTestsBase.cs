@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
@@ -60,11 +61,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(DATETIME_TYPE, 2)]
         [DataRow(DATETIME_TYPE, 3)]
         [DataRow(DATETIME_TYPE, 4)]
-        [DataRow(TIMEONLY_TYPE, 1)]
-        [DataRow(TIMEONLY_TYPE, 2)]
-        [DataRow(TIMEONLY_TYPE, 3)]
-        [DataRow(TIMEONLY_TYPE, 4)]
-        [DataRow(TIMEONLY_TYPE, 5)]
+        [DataRow(TIME_TYPE, 1)]
+        [DataRow(TIME_TYPE, 2)]
+        [DataRow(TIME_TYPE, 3)]
+        [DataRow(TIME_TYPE, 4)]
+        [DataRow(TIME_TYPE, 5)]
         [DataRow(BYTEARRAY_TYPE, 1)]
         [DataRow(BYTEARRAY_TYPE, 2)]
         [DataRow(BYTEARRAY_TYPE, 3)]
@@ -127,9 +128,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(DATETIME_TYPE, "\"1999-01-08 09:20:00\"")]
         [DataRow(DATETIME_TYPE, "\"1999-01-08\"")]
         [DataRow(DATETIME_TYPE, "null")]
-        [DataRow(TIMEONLY_TYPE, "\"23:59:59.9999999\"")]
-        [DataRow(TIMEONLY_TYPE, "null")]
         [DataRow(BYTEARRAY_TYPE, "\"U3RyaW5neQ==\"")]
+        [DataRow(TIME_TYPE, "\"23:59:59.9999999\"")]
+        [DataRow(TIME_TYPE, "\"23:59:59\"")]
+        [DataRow(TIME_TYPE, "null")]
         [DataRow(BYTEARRAY_TYPE, "\"V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=\"")]
         [DataRow(BYTEARRAY_TYPE, "null")]
         public async Task InsertIntoTypeColumn(string type, string value)
@@ -154,6 +156,26 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         }
 
         [DataTestMethod]
+        [DataRow(TIME_TYPE, "\"32:59:59.9999999\"")]
+        [DataRow(TIME_TYPE, "\"22:67:59.9999999\"")]
+        public async Task InsertInvalidIntoTypeColumn(string type, string value)
+        {
+            if (!IsSupportedType(type))
+            {
+                Assert.Inconclusive("Type not supported");
+            }
+
+            string field = $"{type.ToLowerInvariant()}_types";
+            string graphQLQueryName = "createSupportedType";
+            string gqlQuery = "mutation{ createSupportedType (item: {" + field + ": " + value + " }){ " + field + " } }";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
+            string responseMessage = Regex.Unescape(JsonSerializer.Serialize(response));
+            Assert.IsTrue(responseMessage.Contains($"{value} cannot be resolved as column \"{field}\" with type \"TimeSpan\"."));
+            await ResetDbStateAsync();
+        }
+
+        [DataTestMethod]
         [DataRow(BYTE_TYPE, 255)]
         [DataRow(SHORT_TYPE, 30000)]
         [DataRow(INT_TYPE, 9999)]
@@ -164,7 +186,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(BOOLEAN_TYPE, true)]
         [DataRow(DATETIMEOFFSET_TYPE, "1999-01-08 10:23:54+8:00")]
         [DataRow(DATETIME_TYPE, "1999-01-08 10:23:54")]
-        [DataRow(TIMEONLY_TYPE, "23:59:59.9999999")]
         [DataRow(BYTEARRAY_TYPE, "V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=")]
         public async Task InsertIntoTypeColumnWithArgument(string type, object value)
         {
@@ -222,8 +243,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(DATETIME_TYPE, "\"1999-01-08 09:20:00\"")]
         [DataRow(DATETIME_TYPE, "\"1999-01-08\"")]
         [DataRow(DATETIME_TYPE, "null")]
-        [DataRow(TIMEONLY_TYPE, "\"23:59:59.9999999\"")]
-        [DataRow(TIMEONLY_TYPE, "null")]
+        [DataRow(TIME_TYPE, "\"23:59:59.9999999\"")]
+        [DataRow(TIME_TYPE, "null")]
         [DataRow(BYTEARRAY_TYPE, "\"U3RyaW5neQ==\"")]
         [DataRow(BYTEARRAY_TYPE, "\"V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=\"")]
         [DataRow(BYTEARRAY_TYPE, "null")]
@@ -261,7 +282,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(BOOLEAN_TYPE, true)]
         [DataRow(DATETIME_TYPE, "1999-01-08 10:23:54")]
         [DataRow(DATETIMEOFFSET_TYPE, "1999-01-08 10:23:54+8:00")]
-        [DataRow(TIMEONLY_TYPE, "23:59:59.9999999")]
         [DataRow(BYTEARRAY_TYPE, "V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=")]
         [DataRow(GUID_TYPE, "3a1483a5-9ac2-4998-bcf3-78a28078c6ac")]
         [DataRow(GUID_TYPE, null)]
@@ -306,7 +326,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             {
                 CompareDateTimeOffsetResults(actual.ToString(), expected);
             }
-            else if (type == TIMEONLY_TYPE)
+            else if (type == TIME_TYPE)
             {
                 CompareTimeResults(actual.ToString(), expected);
             }
@@ -414,7 +434,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// </summary>
         private static void CompareTimeResults(string actual, string expected)
         {
-            string fieldName = "timeonly_types";
+            string fieldName = "time_types";
 
             using JsonDocument actualJsonDoc = JsonDocument.Parse(actual);
             using JsonDocument expectedJsonDoc = JsonDocument.Parse(expected);

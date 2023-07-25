@@ -51,6 +51,7 @@
         <PackageReference Include="HotChocolate" />
         <PackageReference Include="HotChocolate.AspNetCore" />
         <PackageReference Include="HotChocolate.AspNetCore.Authorization" />
+        <PackageReference Include="HotChocolate.Types.NodaTime" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
         <PackageReference Include="Microsoft.Azure.Cosmos" />
         <PackageReference Include="Microsoft.Data.SqlClient" />

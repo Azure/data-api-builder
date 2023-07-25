@@ -18,11 +18,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes
         public const string STRING_TYPE = "String";
         public const string BOOLEAN_TYPE = "Boolean";
         public const string DATETIME_TYPE = "DateTime";
-        // The DATETIME_NONUTC_TYPE constant is only used in testing
-        // since PostgreSQL doesn't support datetime values with a non-UTC time zone.
         public const string DATETIMEOFFSET_TYPE = "DateTimeOffset";
         public const string BYTEARRAY_TYPE = "ByteArray";
-        public const string TIMEONLY_TYPE = "TimeOnly";
         public const string GUID_TYPE = "Guid";
+        public const string LOCALTIME_TYPE = "LocalTime";
+        public const string TIME_TYPE = "Time";
     }
 }

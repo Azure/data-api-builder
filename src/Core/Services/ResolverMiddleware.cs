@@ -7,12 +7,13 @@ using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
-using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using HotChocolate.Execution;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
+using HotChocolate.Types.NodaTime;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
+using NodaTime.Text;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
 
 namespace Azure.DataApiBuilder.Core.Services
@@ -200,7 +201,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 SingleType => Single.Parse(leafJson),
                 DateTimeType => DateTimeOffset.Parse(leafJson, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal),
                 ByteArrayType => Convert.FromBase64String(leafJson),
-                TimeOnlyType => TimeOnly.Parse(leafJson, DateTimeFormatInfo.InvariantInfo),
+                LocalTimeType => LocalTimePattern.ExtendedIso.Parse(leafJson).Value,
                 _ => leafJson
             };
         }

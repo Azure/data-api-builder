@@ -3,6 +3,7 @@
 
 using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using HotChocolate.Types;
+using HotChocolate.Types.NodaTime;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
 
 namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes
@@ -24,7 +25,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes
             descriptor.Field(DECIMAL_TYPE).Type<DecimalType>();
             descriptor.Field(DATETIME_TYPE).Type<DateTimeType>();
             descriptor.Field(BYTEARRAY_TYPE).Type<ByteArrayType>();
-            descriptor.Field(TIMEONLY_TYPE).Type<TimeOnlyType>();
+            descriptor.Field(LOCALTIME_TYPE).Type<LocalTimeType>();
         }
     }
 }

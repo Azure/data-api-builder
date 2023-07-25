@@ -162,7 +162,7 @@ CREATE TABLE type_table(
     datetime2_types datetime2,
     datetimeoffset_types datetimeoffset,
     smalldatetime_types smalldatetime,
-    timeonly_types time,
+    time_types time,
     bytearray_types varbinary(max),
     guid_types uniqueidentifier DEFAULT newid()
 );
@@ -399,7 +399,7 @@ byte_types, short_types, int_types, long_types,
 string_types,
 single_types, float_types, decimal_types,
 boolean_types,
-date_types, datetime_types, datetime2_types, datetimeoffset_types, smalldatetime_types, timeonly_types,
+date_types, datetime_types, datetime2_types, datetimeoffset_types, smalldatetime_types, time_types,
 bytearray_types)
 VALUES
     (1, 1, 1, 1, 1, '', 0.33, 0.33, 0.333333, 1,

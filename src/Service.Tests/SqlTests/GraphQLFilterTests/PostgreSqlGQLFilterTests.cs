@@ -170,9 +170,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
 
         [Ignore]
         [TestMethod]
-        public void TestTimeOnlyTypeFilter()
+        public void TestLocalTimeTypeFilter()
         {
-            throw new System.NotImplementedException("Filtering TimeOnly Type for PGSQL is not yet implemented.");
+            throw new System.NotImplementedException("Filtering LocalTime Type for PGSQL is not yet implemented.");
         }
 
         /// <summary>

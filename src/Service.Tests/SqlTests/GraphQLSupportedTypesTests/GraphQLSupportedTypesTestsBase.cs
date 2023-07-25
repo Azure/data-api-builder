@@ -94,6 +94,115 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         }
 
         [DataTestMethod]
+        [DataRow(BYTE_TYPE, "gt", "0", "0", ">")]
+        [DataRow(BYTE_TYPE, "gte", "0", "0", ">=")]
+        [DataRow(BYTE_TYPE, "lt", "1", "1", "<")]
+        [DataRow(BYTE_TYPE, "lte", "1", "1", "<=")]
+        [DataRow(BYTE_TYPE, "neq", "0", "0", "!=")]
+        [DataRow(BYTE_TYPE, "eq", "1", "1", "=")]
+        [DataRow(SHORT_TYPE, "gt", "-1", "-1", ">")]
+        [DataRow(SHORT_TYPE, "gte", "-1", "-1", ">=")]
+        [DataRow(SHORT_TYPE, "lt", "1", "1", "<")]
+        [DataRow(SHORT_TYPE, "lte", "1", "1", "<=")]
+        [DataRow(SHORT_TYPE, "neq", "1", "1", "!=")]
+        [DataRow(SHORT_TYPE, "eq", "-1", "-1", "=")]
+        [DataRow(INT_TYPE, "gt", "-1", "-1", ">")]
+        [DataRow(INT_TYPE, "gte", "2147483647", "2147483647", " >= ")]
+        [DataRow(INT_TYPE, "lt", "1", "1", "<")]
+        [DataRow(INT_TYPE, "lte", "-2147483648", "-2147483648", " <= ")]
+        [DataRow(INT_TYPE, "neq", "1", "1", "!=")]
+        [DataRow(INT_TYPE, "eq", "-1", "-1", "=")]
+        [DataRow(LONG_TYPE, "gt", "-1", "-1", ">")]
+        [DataRow(LONG_TYPE, "gte", "9223372036854775807", "9223372036854775807", " >= ")]
+        [DataRow(LONG_TYPE, "lt", "1", "1", "<")]
+        [DataRow(LONG_TYPE, "lte", "-9223372036854775808", "-9223372036854775808", " <= ")]
+        [DataRow(LONG_TYPE, "neq", "1", "1", "!=")]
+        [DataRow(LONG_TYPE, "eq", "-1", "-1", "=")]
+        [DataRow(STRING_TYPE, "neq", "\'foo\'", "\"foo\"", "!=")]
+        [DataRow(STRING_TYPE, "eq", "\'lksa;jdflasdf;alsdflksdfkldj\'", "\"lksa;jdflasdf;alsdflksdfkldj\"", "=")]
+        [DataRow(SINGLE_TYPE, "gt", "-9.3", "-9.3", ">")]
+        [DataRow(SINGLE_TYPE, "gte", "-9.2", "-9.2", ">=")]
+        [DataRow(SINGLE_TYPE, "lt", ".33", "0.33", "<")]
+        [DataRow(SINGLE_TYPE, "lte", ".33", "0.33", "<=")]
+        [DataRow(SINGLE_TYPE, "neq", "9.2", "9.2", "!=")]
+        [DataRow(SINGLE_TYPE, "eq", "\'0.33\'", "0.33", "=")]
+        [DataRow(FLOAT_TYPE, "gt", "-9.2", "-9.2", ">")]
+        [DataRow(FLOAT_TYPE, "gte", "-9.2", "-9.2", ">=")]
+        [DataRow(FLOAT_TYPE, "lt", ".33", "0.33", "<")]
+        [DataRow(FLOAT_TYPE, "lte", ".33", "0.33", "<=")]
+        [DataRow(FLOAT_TYPE, "neq", "-9.2", "-9.2", "!=")]
+        [DataRow(FLOAT_TYPE, "eq", "-9.2", "-9.2", "=")]
+        [DataRow(DECIMAL_TYPE, "gt", "-9.292929", "-9.292929", " > ")]
+        [DataRow(DECIMAL_TYPE, "gte", "-9.292929", "-9.292929", " >= ")]
+        [DataRow(DECIMAL_TYPE, "lt", "0.333333", "0.333333", "<")]
+        [DataRow(DECIMAL_TYPE, "lte", "0.333333", "0.333333", " <= ")]
+        [DataRow(DECIMAL_TYPE, "neq", "0.0", "0.0", "!=")]
+        [DataRow(DECIMAL_TYPE, "eq", "-9.292929", "-9.292929", "=")]
+        [DataRow(BOOLEAN_TYPE, "neq", "\'false\'", "false", "!=")]
+        [DataRow(BOOLEAN_TYPE, "eq", "\'false\'", "false", "=")]
+        public async Task QueryTypeColumnFilterAndOrderBy(string type, string filterOperator, string sqlValue, string gqlValue, string queryOperator)
+        {
+            if (!IsSupportedType(type))
+            {
+                Assert.Inconclusive("Type not supported");
+            }
+
+            string field = $"{type.ToLowerInvariant()}_types";
+            string graphQLQueryName = "supportedTypes";
+            string gqlQuery = @"{
+                supportedTypes(first: 100 orderBy: { " + field + ": ASC } filter: { " + field + ": {" + filterOperator + ": " + gqlValue + @"} }) {
+                    items {
+                        " + field + @"
+                    }
+                }
+            }";
+
+            string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, filterValue: sqlValue, filterOperator: queryOperator, filterField: field, orderBy: field, limit: "100");
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            PerformTestEqualsForExtendedTypes(type, expected, actual.GetProperty("items").ToString());
+        }
+
+        /// <summary>
+        /// Separate test case for DateTime to allow overwrite for postgreSql.
+        /// Year 9998 used in test and data within test tables to avoid out of
+        /// date range error within GQL.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(DATETIME_TYPE, "gt", "\'1999-01-08\'", "\"1999-01-08\"", " > ")]
+        [DataRow(DATETIME_TYPE, "gte", "\'1999-01-08\'", "\"1999-01-08\"", " >= ")]
+        [DataRow(DATETIME_TYPE, "lt", "\'0001-01-01\'", "\"0001-01-01\"", " < ")]
+        [DataRow(DATETIME_TYPE, "lte", "\'0001-01-01\'", "\"0001-01-01\"", " <= ")]
+        [DataRow(DATETIME_TYPE, "neq", "\'0001-01-01\'", "\"0001-01-01\"", "!=")]
+        [DataRow(DATETIME_TYPE, "eq", "\'0001-01-01\'", "\"0001-01-01T01:01:01\"", "=")]
+        [DataRow(DATETIME_TYPE, "gt", "\'1999-01-08 10:23:00\'", "\"1999-01-08 10:23:00\"", " > ")]
+        [DataRow(DATETIME_TYPE, "gte", "\'1999-01-08 10:23:00\'", "\"1999-01-08 10:23:00\"", " >= ")]
+        [DataRow(DATETIME_TYPE, "lt", "\'9998-12-31 23:59:59\'", "\"9998-12-31 23:59:59\"", " < ")]
+        [DataRow(DATETIME_TYPE, "lte", "\'9998-12-31 23:59:59\'", "\"9998-12-31 23:59:59\"", " <= ")]
+        [DataRow(DATETIME_TYPE, "neq", "\'1999-01-08 10:23:00\'", "\"1999-01-08 10:23:00\"", "!=")]
+        [DataRow(DATETIME_TYPE, "eq", "\'1999-01-08 10:23:00\'", "\"1999-01-08 10:23:00\"", "=")]
+        [DataRow(DATETIME_TYPE, "gt", "\'1999-01-08 10:23:00.9999999\'", "\"1999-01-08 10:23:00.9999999\"", " > ")]
+        [DataRow(DATETIME_TYPE, "gte", "\'1999-01-08 10:23:00.9999999\'", "\"1999-01-08 10:23:00.9999999\"", " >= ")]
+        [DataRow(DATETIME_TYPE, "lt", "\'9998-12-31 23:59:59.9999999\'", "\"9998-12-31 23:59:59.9999999\"", " < ")]
+        [DataRow(DATETIME_TYPE, "lte", "\'9998-12-31 23:59:59.9999999\'", "\"9998-12-31 23:59:59.9999999\"", " <= ")]
+        [DataRow(DATETIME_TYPE, "neq", "\'1999-01-08 10:23:00.9999999\'", "\"1999-01-08 10:23:00.9999999\"", "!=")]
+        [DataRow(DATETIME_TYPE, "eq", "\'1999-01-08 10:23:00.9999999\'", "\"1999-01-08 10:23:00.9999999\"", "=")]
+        [DataRow(DATETIME_TYPE, "neq", "\'1999-01-08 10:23:54.9999999-14:00\'", "\"1999-01-08 10:23:54.9999999-14:00\"", "!=")]
+        [DataRow(DATETIME_TYPE, "eq", "\'1999-01-08 10:23:54.9999999-14:00\'", "\"1999-01-08 10:23:54.9999999-14:00\"", "=")]
+        [DataRow(DATETIME_TYPE, "gt", "\'1999-01-08 10:22:00\'", "\"1999-01-08 10:22:00\"", " > ")]
+        [DataRow(DATETIME_TYPE, "gte", "\'1999-01-08 10:23:54\'", "\"1999-01-08 10:23:54\"", " >= ")]
+        [DataRow(DATETIME_TYPE, "lt", "\'2079-06-06\'", "\"2079-06-06\"", " < ")]
+        [DataRow(DATETIME_TYPE, "lte", "\'2079-06-06\'", "\"2079-06-06\"", " <= ")]
+        [DataRow(DATETIME_TYPE, "neq", "\'1999-01-08 10:23:54\'", "\"1999-01-08 10:23:54\"", "!=")]
+        [DataRow(DATETIME_TYPE, "eq", "\'1999-01-08 10:23:54\'", "\"1999-01-08 10:23:54\"", "=")]
+        public async Task QueryTypeColumnFilterAndOrderByDateTime(string type, string filterOperator, string sqlValue, string gqlValue, string queryOperator)
+        {
+            await QueryTypeColumnFilterAndOrderBy(type, filterOperator, sqlValue, gqlValue, queryOperator);
+        }
+
+        [DataTestMethod]
         [DataRow(BYTE_TYPE, "255")]
         [DataRow(BYTE_TYPE, "0")]
         [DataRow(BYTE_TYPE, "null")]
@@ -349,8 +458,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             using JsonDocument actualJsonDoc = JsonDocument.Parse(actual);
             using JsonDocument expectedJsonDoc = JsonDocument.Parse(expected);
 
-            string actualFloat = actualJsonDoc.RootElement.GetProperty(fieldName).ToString();
-            string expectedFloat = expectedJsonDoc.RootElement.GetProperty(fieldName).ToString();
+            if (actualJsonDoc.RootElement.ValueKind is JsonValueKind.Array)
+            {
+                ValidateArrayResults(actualJsonDoc, expectedJsonDoc, fieldName);
+                return;
+            }
+
+            string actualFloat;
+            string expectedFloat;
+            actualFloat = actualJsonDoc.RootElement.GetProperty(fieldName).ToString();
+            expectedFloat = expectedJsonDoc.RootElement.GetProperty(fieldName).ToString();
 
             // handles cases when one of the values is null
             if (string.IsNullOrEmpty(actualFloat) || string.IsNullOrEmpty(expectedFloat))
@@ -386,6 +503,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             using JsonDocument actualJsonDoc = JsonDocument.Parse(actual);
             using JsonDocument expectedJsonDoc = JsonDocument.Parse(expected);
+
+            if (actualJsonDoc.RootElement.ValueKind is JsonValueKind.Array)
+            {
+                ValidateArrayResults(actualJsonDoc, expectedJsonDoc, fieldName);
+                return;
+            }
 
             string actualDateTime = actualJsonDoc.RootElement.GetProperty(fieldName).ToString();
             string expectedDateTime = expectedJsonDoc.RootElement.GetProperty(fieldName).ToString();
@@ -455,6 +578,34 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             }
         }
 
+        private static void ValidateArrayResults(JsonDocument actualJsonDoc, JsonDocument expectedJsonDoc, string fieldName)
+        {
+            JsonElement.ArrayEnumerator actualEnumerater = actualJsonDoc.RootElement.EnumerateArray();
+            foreach (JsonElement expectedElement in expectedJsonDoc.RootElement.EnumerateArray())
+            {
+                actualEnumerater.MoveNext();
+                JsonElement actualElement = actualEnumerater.Current;
+                actualElement.TryGetProperty(fieldName, out JsonElement actualValue);
+                expectedElement.TryGetProperty(fieldName, out JsonElement expectedValue);
+
+                if (fieldName.StartsWith(DATETIME_TYPE.ToLower()))
+                {
+                    // MySql returns a format that will not directly parse into DateTime type so we use string here for parsing
+                    DateTime actualDateTime = DateTime.Parse(actualValue.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None);
+                    DateTime expectedDateTime = DateTime.Parse(expectedValue.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None);
+                    Assert.AreEqual(expectedDateTime, actualDateTime);
+                }
+                else if (fieldName.StartsWith(SINGLE_TYPE.ToLower()))
+                {
+                    Assert.AreEqual(expectedValue.GetSingle(), actualValue.GetSingle());
+                }
+                else
+                {
+                    Assert.AreEqual(expectedValue.GetDouble(), actualValue.GetDouble());
+                }
+            }
+        }
+
         /// <summary>
         /// Needed to map the type name to a graphql type in argument tests
         /// where the argument type need to be specified.
@@ -472,6 +623,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             return typeName;
         }
+
+        protected abstract string MakeQueryOnTypeTable(
+            List<string> queriedColumns,
+            string filterValue = "1",
+            string filterOperator = "=",
+            string filterField = "1",
+            string orderBy = "id",
+            string limit = "1");
 
         protected abstract string MakeQueryOnTypeTable(List<string> columnsToQuery, int id);
         protected virtual bool IsSupportedType(string type)

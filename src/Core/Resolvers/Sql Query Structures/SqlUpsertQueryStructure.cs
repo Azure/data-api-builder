@@ -126,8 +126,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 foreach (KeyValuePair<string, object?> param in mutationParams)
                 {
-                    // since we have already validated mutationParams we know backing column exists
-                    MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
+                    if (!MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn))
+                    {
+                        // If no backing column exists, it means there is an extraneous field in the request body.
+                        // In that case, we would have hit this code only if extraneous fields were allowed in request body.
+                        // So, we don't add this field to the columns to be mutated.
+                        continue;
+                    }
                     // Create Parameter and map it to column for downstream logic to utilize.
                     string paramIdentifier;
                     if (param.Value is not null)

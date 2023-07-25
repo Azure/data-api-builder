@@ -31,6 +31,7 @@ namespace Azure.DataApiBuilder.Core.Authorization
         public const string ROLE_AUTHENTICATED = "authenticated";
 
         public Dictionary<string, EntityMetadata> EntityPermissionsMap { get; private set; } = new();
+        public bool IsRequestBodyStrictForRest = true;
 
         public AuthorizationResolver(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -40,6 +41,7 @@ namespace Azure.DataApiBuilder.Core.Authorization
             _metadataProvider = sqlMetadataProvider;
             if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
+                IsRequestBodyStrictForRest = runtimeConfig.Runtime.Rest.RequestBodyStrict;
                 // Datastructure constructor will pull required properties from metadataprovider.
                 SetEntityPermissionMap(runtimeConfig);
             }
@@ -48,6 +50,7 @@ namespace Azure.DataApiBuilder.Core.Authorization
                 runtimeConfigProvider.RuntimeConfigLoadedHandlers.Add((RuntimeConfigProvider sender, RuntimeConfig config) =>
                 {
                     SetEntityPermissionMap(config);
+                    IsRequestBodyStrictForRest = config.Runtime.Rest.RequestBodyStrict;
                     return Task.FromResult(true);
                 });
             }
@@ -155,7 +158,7 @@ namespace Azure.DataApiBuilder.Core.Authorization
                             return false;
                         }
                     }
-                    else
+                    else if(IsRequestBodyStrictForRest)
                     {
                         // This check will not be needed once exposedName mapping validation is added.
                         throw new DataApiBuilderException(

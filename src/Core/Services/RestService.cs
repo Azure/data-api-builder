@@ -123,9 +123,7 @@ namespace Azure.DataApiBuilder.Core.Services
                             operationType);
                         if (context.DatabaseObject.SourceType is EntitySourceType.Table)
                         {
-                            RequestValidator.ValidateInsertRequestContext(
-                            (InsertRequestContext)context,
-                            _sqlMetadataProvider);
+                            RequestValidator.ValidateInsertRequestContext((InsertRequestContext)context, _sqlMetadataProvider);
                         }
 
                         break;
@@ -148,8 +146,7 @@ namespace Azure.DataApiBuilder.Core.Services
                             operationType);
                         if (context.DatabaseObject.SourceType is EntitySourceType.Table)
                         {
-                            RequestValidator.
-                                ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
+                            RequestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
                         }
 
                         break;

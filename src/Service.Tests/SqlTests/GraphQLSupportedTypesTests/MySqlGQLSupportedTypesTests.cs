@@ -23,16 +23,31 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             await InitializeTestFixture(context);
         }
 
-        protected override string MakeQueryOnTypeTable(List<string> queriedColumns, int id)
+        protected override string MakeQueryOnTypeTable(List<string> columnsToQuery, int id)
         {
+            return MakeQueryOnTypeTable(columnsToQuery, filterValue: id.ToString(), filterField: "id");
+        }
+
+        protected override string MakeQueryOnTypeTable(
+            List<string> queriedColumns,
+            string filterValue = "1",
+            string filterOperator = "=",
+            string filterField = "1",
+            string orderBy = "id",
+            string limit = "1")
+        {
+            string columnsToQuery = string.Join(", ", queriedColumns.Select(c => $"\"{c}\" , {ProperlyFormatTypeTableColumn(c)}"));
+            string formattedSelect = limit.Equals("1") ? "SELECT JSON_OBJECT(" + columnsToQuery + @") AS `data`" :
+                "SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT(" + columnsToQuery + @")), '[]') AS `data`";
+
             return @"
-                SELECT JSON_OBJECT(" + string.Join(", ", queriedColumns.Select(c => $"\"{c}\" , {ProperlyFormatTypeTableColumn(c)}")) + @") AS `data`
+                " + formattedSelect + @"
                 FROM (
                     SELECT " + string.Join(", ", queriedColumns) + @"
                     FROM type_table AS `table0`
-                    WHERE id = " + id + @"
-                    ORDER BY id asc
-                    LIMIT 1
+                    WHERE " + filterField + " " + filterOperator + " " + filterValue + @"
+                    ORDER BY " + orderBy + @" asc
+                    LIMIT " + limit + @"
                     ) AS `subq3`
             ";
         }

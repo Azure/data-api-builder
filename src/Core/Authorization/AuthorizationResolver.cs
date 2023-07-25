@@ -232,7 +232,8 @@ namespace Azure.DataApiBuilder.Core.Authorization
                 bool isStoredProcedureEntity = entity.Source.Type is EntitySourceType.StoredProcedure;
                 if (isStoredProcedureEntity)
                 {
-                    SupportedHttpVerb[] methods = entity.Rest.Methods!; // Stored Procedure is guaranteed to have methods defined.
+                    // An entity backed by a stored procedure is guaranteed to have REST methods populated.
+                    SupportedHttpVerb[] methods = entity.Rest.Methods!;
 
                     entityToRoleMap.StoredProcedureHttpVerbs = new(methods);
                 }

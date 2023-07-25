@@ -334,7 +334,8 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 if (runtimeConfig.Entities.TryGetValue(entityName, out Entity? entity))
                 {
-                    SupportedHttpVerb[] methods = entity.Rest.Methods!; // Entity is a stored procedure, so methods is non-null
+                    // An entity backed by a stored procedure is guaranteed to have REST methods populated.
+                    SupportedHttpVerb[] methods = entity.Rest.Methods!;
                     httpVerbs = new(methods);
                     return true;
                 }

@@ -737,9 +737,6 @@ namespace Cli.Tests
                       ""name""
                   ]
                 },
-                ""rest"": {
-                  ""enabled"": true
-                },
                 ""permissions"": [
                   {
                     ""role"": ""anonymous"",

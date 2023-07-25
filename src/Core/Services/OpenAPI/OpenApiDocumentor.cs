@@ -451,7 +451,9 @@ namespace Azure.DataApiBuilder.Core.Services
             if (dbObject.SourceType == EntitySourceType.StoredProcedure)
             {
                 Entity entityTest = _runtimeConfig.Entities[entityName];
-                List<SupportedHttpVerb> spRestMethods = entityTest.Rest.Methods!.ToList(); // Stored Procedure is guaranteed to have a non-null Rest.Methods property
+
+                // An entity backed by a stored procedure is guaranteed to have REST methods populated.
+                List<SupportedHttpVerb> spRestMethods = entityTest.Rest.Methods!.ToList();
 
                 if (spRestMethods is null)
                 {

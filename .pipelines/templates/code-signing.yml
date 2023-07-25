@@ -16,7 +16,7 @@ parameters:
 # Same reason with nuget package signing. It is using different code.
 steps:
 - ${{ if eq(parameters.signNuget, false) }}:
-  - task: EsrpCodeSigning@1
+  - task: EsrpCodeSigning@2
     displayName: 'Code Signing Microsoft code'
     condition: and(succeeded(), eq(variables['isReleaseBuild'], 'true'))
     inputs:
@@ -51,7 +51,7 @@ steps:
       MaxConcurrency: '50'
       MaxRetryAttempts: '5'
 
-  - task: EsrpCodeSigning@1
+  - task: EsrpCodeSigning@2
     displayName: 'Code Signing OSS and Third party'
     condition: and(succeeded(), eq(variables['isReleaseBuild'], 'true'))
     inputs:
@@ -88,7 +88,7 @@ steps:
       MaxRetryAttempts: '5'
 
 - ${{ if eq(parameters.signNuget, true) }}:
-  - task: EsrpCodeSigning@1
+  - task: EsrpCodeSigning@2
     displayName: 'Code Signing Nuget package'
     condition: and(succeeded(), eq(variables['isReleaseBuild'], 'true'))
     inputs:

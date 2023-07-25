@@ -34,6 +34,7 @@ namespace Cli.Commands
             bool restDisabled = false,
             string graphQLPath = GraphQLRuntimeOptions.DEFAULT_PATH,
             bool graphqlDisabled = false,
+            bool restRequestBodyNotStrict = false,
             string? config = null)
             : base(config)
         {
@@ -53,6 +54,7 @@ namespace Cli.Commands
             RestDisabled = restDisabled;
             GraphQLPath = graphQLPath;
             GraphQLDisabled = graphqlDisabled;
+            RestRequestBodyNotStrict = restRequestBodyNotStrict;
         }
 
         [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmosdb_nosql, cosmosdb_postgresql, mysql, postgresql")]
@@ -102,6 +104,9 @@ namespace Cli.Commands
 
         [Option("graphql.disabled", Default = false, Required = false, HelpText = "Disables GraphQL endpoint for all entities.")]
         public bool GraphQLDisabled { get; }
+
+        [Option("rest.request-body-not-strict", Default = false, Required = false, HelpText = "When set to false, allows extraneous fields in the request body for REST.")]
+        public bool RestRequestBodyNotStrict { get; }
 
         public void Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

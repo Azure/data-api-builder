@@ -740,6 +740,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Current use by dab workflow")]
         public void ValidateStoredProceduresInConfig(RuntimeConfig runtimeConfig, ISqlMetadataProvider sqlMetadataProvider)
         {
+            RequestValidator requestValidator = new(sqlMetadataProvider, _runtimeConfigProvider);
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
                 // We are only doing this pre-check for GraphQL because for GraphQL we need the correct schema while making request
@@ -755,7 +756,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
                             EntityActionOperation.All);
                     try
                     {
-                        RequestValidator.ValidateStoredProcedureRequestContext(sqRequestContext, sqlMetadataProvider);
+                        requestValidator.ValidateStoredProcedureRequestContext(sqRequestContext);
                     }
                     catch (DataApiBuilderException e)
                     {

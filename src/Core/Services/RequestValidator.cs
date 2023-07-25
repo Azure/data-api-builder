@@ -5,6 +5,7 @@ using System.Net;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Service.Exceptions;
 
@@ -20,7 +21,19 @@ namespace Azure.DataApiBuilder.Core.Services
         public const string QUERY_STRING_INVALID_USAGE_ERR_MESSAGE = "Query string for this HTTP request type is an invalid URL.";
         public const string PRIMARY_KEY_INVALID_USAGE_ERR_MESSAGE = "Primary key for POST requests can't be specified in the request URL. Use request body instead.";
         public const string PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE = "Primary Key for this HTTP request type is required.";
-        public const bool IS_REQ_BODY_STRICT = false;
+
+        private readonly ISqlMetadataProvider _sqlMetadataProvider;
+        private readonly bool _isRequestBodyStrict = true;
+
+        public RequestValidator(ISqlMetadataProvider sqlMetadataProvider,
+            RuntimeConfigProvider runtimeConfigProvider)
+        {
+            _sqlMetadataProvider = sqlMetadataProvider;
+            if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
+            {
+                _isRequestBodyStrict = runtimeConfig.Runtime.Rest.RequestBodyStrict;
+            }
+        }
 
         /// <summary>
         /// Validates the given request by ensuring:
@@ -28,17 +41,14 @@ namespace Azure.DataApiBuilder.Core.Services
         /// - extra fields specified in the body, will be discarded.
         /// </summary>
         /// <param name="context">Request context containing the REST operation fields and their values.</param>
-        /// <param name="sqlMetadataProvider">SqlMetadata provider that enables referencing DB schema.</param>
         /// <exception cref="DataApiBuilderException"></exception>
-        public static void ValidateRequestContext(
-            RestRequestContext context,
-            ISqlMetadataProvider sqlMetadataProvider)
+        public void ValidateRequestContext(RestRequestContext context)
         {
-            SourceDefinition sourceDefinition = sqlMetadataProvider.GetSourceDefinition(context.EntityName);
+            SourceDefinition sourceDefinition = _sqlMetadataProvider.GetSourceDefinition(context.EntityName);
             foreach (string field in context.FieldsToBeReturned)
             {
                 // Get backing column and check that column is valid
-                if (!sqlMetadataProvider.TryGetBackingColumn(context.EntityName, field, out string? backingColumn) ||
+                if (!_sqlMetadataProvider.TryGetBackingColumn(context.EntityName, field, out string? backingColumn) ||
                     !sourceDefinition.Columns.ContainsKey(backingColumn!))
                 {
                     throw new DataApiBuilderException(
@@ -54,15 +64,10 @@ namespace Azure.DataApiBuilder.Core.Services
         /// definition in the configuration file.
         /// </summary>
         /// <param name="context">Request context containing the primary keys and their values.</param>
-        /// <param name="sqlMetadataProvider">To get the table definition.</param>
         /// <exception cref="DataApiBuilderException"></exception>
-        public static void ValidatePrimaryKey(
-            RestRequestContext context,
-            ISqlMetadataProvider sqlMetadataProvider)
+        public void ValidatePrimaryKey(RestRequestContext context)
         {
-            SourceDefinition sourceDefinition = TryGetSourceDefinition(
-                context.EntityName,
-                sqlMetadataProvider);
+            SourceDefinition sourceDefinition = TryGetSourceDefinition(context.EntityName);
 
             int countOfPrimaryKeysInSchema = sourceDefinition.PrimaryKey.Count;
             int countOfPrimaryKeysInRequest = context.PrimaryKeyValuePairs.Count;
@@ -78,7 +83,7 @@ namespace Azure.DataApiBuilder.Core.Services
             List<string> primaryKeysInRequest = new();
             foreach (string pk in context.PrimaryKeyValuePairs.Keys)
             {
-                if (!sqlMetadataProvider.TryGetBackingColumn(context.EntityName, pk, out string? backingColumn))
+                if (!_sqlMetadataProvider.TryGetBackingColumn(context.EntityName, pk, out string? backingColumn))
                 {
                     throw new DataApiBuilderException(
                     message: $"Primary key column: {pk} not found in the entity definition.",
@@ -126,12 +131,10 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Checks query string for Find operations, body for all other operations
         /// Defers type checking until parameterizing stage to prevent duplicating work
         /// </summary>
-        public static void ValidateStoredProcedureRequestContext(
-            StoredProcedureRequestContext spRequestCtx,
-            ISqlMetadataProvider sqlMetadataProvider)
+        public void ValidateStoredProcedureRequestContext(StoredProcedureRequestContext spRequestCtx)
         {
             StoredProcedureDefinition storedProcedureDefinition =
-                TryGetStoredProcedureDefinition(spRequestCtx.EntityName, sqlMetadataProvider);
+                TryGetStoredProcedureDefinition(spRequestCtx.EntityName, _sqlMetadataProvider);
 
             HashSet<string> missingFields = new();
             HashSet<string> extraFields = new(spRequestCtx.ResolvedParameters.Keys);
@@ -279,15 +282,12 @@ namespace Azure.DataApiBuilder.Core.Services
         /// and vice versa.
         /// </summary>
         /// <param name="insertRequestCtx">Insert Request context containing the request body.</param>
-        /// <param name="sqlMetadataProvider">To get the table definition.</param>
         /// <exception cref="DataApiBuilderException"></exception>
-        public static void ValidateInsertRequestContext(
-            InsertRequestContext insertRequestCtx,
-            ISqlMetadataProvider sqlMetadataProvider)
+        public void ValidateInsertRequestContext(InsertRequestContext insertRequestCtx)
         {
             IEnumerable<string> fieldsInRequestBody = insertRequestCtx.FieldValuePairsInBody.Keys;
             SourceDefinition sourceDefinition =
-                TryGetSourceDefinition(insertRequestCtx.EntityName, sqlMetadataProvider);
+                TryGetSourceDefinition(insertRequestCtx.EntityName);
 
             // Each field that is checked against the DB schema is removed
             // from the hash set of unvalidated fields.
@@ -296,7 +296,7 @@ namespace Azure.DataApiBuilder.Core.Services
             foreach (KeyValuePair<string, ColumnDefinition> column in sourceDefinition.Columns)
             {
                 // if column is not exposed we skip
-                if (!sqlMetadataProvider.TryGetExposedColumnName(
+                if (!_sqlMetadataProvider.TryGetExposedColumnName(
                     entityName: insertRequestCtx.EntityName,
                     backingFieldName: column.Key,
                     out string? exposedName))
@@ -330,7 +330,7 @@ namespace Azure.DataApiBuilder.Core.Services
             // There may be unvalidated fields remaining because of extraneous fields in request body
             // which are not mapped to the table. We throw an exception only when we operate in strict mode,
             // i.e. when extraneous fields are not allowed.
-            if (unvalidatedFields.Any() && IS_REQ_BODY_STRICT)
+            if (unvalidatedFields.Any() && _isRequestBodyStrict)
             {
                 throw new DataApiBuilderException(
                     message: $"Invalid request body. Contained unexpected fields in body: {string.Join(", ", unvalidatedFields)}",
@@ -345,16 +345,13 @@ namespace Azure.DataApiBuilder.Core.Services
         /// and vice versa.
         /// </summary>
         /// <param name="upsertRequestCtx">Upsert Request context containing the request body.</param>
-        /// <param name="sqlMetadataProvider">To get the table definition.</param>
         /// <exception cref="DataApiBuilderException"></exception>
-        public static void ValidateUpsertRequestContext(
-            UpsertRequestContext upsertRequestCtx,
-            ISqlMetadataProvider sqlMetadataProvider)
+        public void ValidateUpsertRequestContext(UpsertRequestContext upsertRequestCtx)
         {
             IEnumerable<string> fieldsInRequestBody = upsertRequestCtx.FieldValuePairsInBody.Keys;
 
             SourceDefinition sourceDefinition =
-                TryGetSourceDefinition(upsertRequestCtx.EntityName, sqlMetadataProvider);
+                TryGetSourceDefinition(upsertRequestCtx.EntityName);
 
             // Each field that is checked against the DB schema is removed
             // from the hash set of unvalidated fields.
@@ -364,7 +361,7 @@ namespace Azure.DataApiBuilder.Core.Services
             foreach (KeyValuePair<string, ColumnDefinition> column in sourceDefinition.Columns)
             {
                 // if column is not exposed we skip
-                if (!sqlMetadataProvider.TryGetExposedColumnName(
+                if (!_sqlMetadataProvider.TryGetExposedColumnName(
                     entityName: upsertRequestCtx.EntityName,
                     backingFieldName: column.Key,
                     out string? exposedName))
@@ -403,7 +400,7 @@ namespace Azure.DataApiBuilder.Core.Services
             // There may be unvalidated fields remaining because of extraneous fields in request body
             // which are not mapped to the table. We throw an exception only when we operate in strict mode,
             // i.e. when extraneous fields are not allowed.
-            if (unValidatedFields.Any() && IS_REQ_BODY_STRICT)
+            if (unValidatedFields.Any() && _isRequestBodyStrict)
             {
                 throw new DataApiBuilderException(
                     message: "Invalid request body. Either insufficient or extra fields supplied.",
@@ -419,7 +416,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="column">The column to be verified.</param>
         /// <param name="fieldsInRequestBody">The fields in the request body.</param>
         /// <returns>true if the column is validated.</returns>
-        private static bool ValidateColumn(ColumnDefinition column,
+        private bool ValidateColumn(ColumnDefinition column,
                                            string exposedName,
                                            IEnumerable<string> fieldsInRequestBody,
                                            bool isReplacementUpdate)
@@ -427,7 +424,7 @@ namespace Azure.DataApiBuilder.Core.Services
             string message;
             // Autogenerated values should never be present in a request body.
             // TODO: Add a similar check for read-only fields.
-            if (column.IsAutoGenerated && fieldsInRequestBody.Contains(exposedName) && IS_REQ_BODY_STRICT)
+            if (column.IsAutoGenerated && fieldsInRequestBody.Contains(exposedName) && _isRequestBodyStrict)
             {
                 // An autogenerated column cannot be present in request body if the request body is restricted to contain only
                 // columns that are actually present in the table.
@@ -455,10 +452,10 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Validates that the request denoted entity is defined in the runtime configuration.
         /// </summary>
         /// <param name="entityName">entity in the request.</param>
-        /// <param name="entities">collection of valid entities.</param>
         /// <exception cref="DataApiBuilderException"></exception>
-        public static void ValidateEntity(string entityName, IEnumerable<string> entities)
+        public void ValidateEntity(string entityName)
         {
+            IEnumerable<string> entities = _sqlMetadataProvider.EntityToDatabaseObject.Keys;
             if (!entities.Contains(entityName))
             {
                 throw new DataApiBuilderException(
@@ -476,14 +473,12 @@ namespace Azure.DataApiBuilder.Core.Services
         /// enables referencing DB schema.</param>
         /// <exception cref="DataApiBuilderException"></exception>
 
-        private static SourceDefinition TryGetSourceDefinition(
-            string entityName,
-            ISqlMetadataProvider sqlMetadataProvider)
+        private SourceDefinition TryGetSourceDefinition(string entityName)
         {
             try
             {
                 SourceDefinition sourceDefinition =
-                    sqlMetadataProvider.GetSourceDefinition(entityName);
+                    _sqlMetadataProvider.GetSourceDefinition(entityName);
                 return sourceDefinition;
             }
             catch (KeyNotFoundException ex)

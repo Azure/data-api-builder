@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 #nullable disable
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.IO.Abstractions.TestingHelpers;
@@ -929,10 +930,16 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Entities: new(entityMap)
                 );
 
+            MockFileSystem fileSystem = new();
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+            Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
+
             if (expectsException)
             {
                 DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
-                    action: () => RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig),
+                    action: () => configValidator.ValidateEntityConfiguration(runtimeConfig),
                     message: $"Entity name \"{entityNameFromConfig}\" incorrectly passed validation.");
 
                 Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
@@ -940,7 +947,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
             else
             {
-                RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig);
+                configValidator.ValidateEntityConfiguration(runtimeConfig);
             }
         }
 
@@ -1778,88 +1785,64 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Test to validate that the rest methods are correctly configured for entities in the config.
-        /// Rest methods can only be configured for stored procedures as an array of valid REST operations. 
+        /// Validates that a warning is logged when REST methods are configured for tables and views.
         /// </summary>
         /// <param name="sourceType">The source type of the entity.</param>
         /// <param name="methods">Value of the rest methods property configured for the entity.</param>
         /// <param name="exceptionExpected">Boolean value representing whether an exception is expected or not.</param>
         /// <param name="expectedErrorMessage">Expected error message when an exception is expected for the test run.</param>
-        [Ignore]
         [DataTestMethod]
-        [DataRow(EntitySourceType.Table, "[\"get\"]", true,
-            $"The rest property 'methods' is present for entity: HybridEntity of type: Table, but is only valid for type: StoredProcedure.",
-            DisplayName = "Rest methods specified for non-storedprocedure entity fail config validation.")]
-        [DataRow(EntitySourceType.StoredProcedure, "[\"Get\", \"post\", \"PUT\", \"paTch\", \"delete\"]", false,
-            DisplayName = "Valid rest operations specified in rest methods for stored procedure pass config validation.")]
+        [DataRow(EntitySourceType.Table, new SupportedHttpVerb[] { SupportedHttpVerb.Get, SupportedHttpVerb.Post }, true,
+            DisplayName = "Tables with REST Methods configured - Engine logs a warning during startup")]
+        [DataRow(EntitySourceType.StoredProcedure, new SupportedHttpVerb[] { SupportedHttpVerb.Get, SupportedHttpVerb.Post }, false,
+            DisplayName = "Stored Procedures with REST Methods configured - No warnings logged")]
         public void ValidateRestMethodsForEntityInConfig(
             EntitySourceType sourceType,
-            string methods,
-            bool exceptionExpected,
-            string expectedErrorMessage = "")
+            SupportedHttpVerb[] methods,
+            bool isWarningLogExpected)
         {
-            string runtimeConfigString = @"{
-                    " +
-                @"""$schema"": ""test_schema""," +
-                @"""data-source"": {
-                    ""database-type"": ""mssql"",
-                    ""connection-string"": ""testconnectionstring"",
-                    ""options"":{
-                        ""set-session-context"": false
-                    }
-                },
-                ""runtime"": {
-                    ""host"": {
-                    ""mode"": ""development"",
-                    ""authentication"": {
-                        ""provider"": ""StaticWebApps""
-                    }
-                  },
-                  ""rest"": {
-                    ""enabled"": true,
-                    ""path"": ""/api""
-                    },
-                  ""graphql"": {
-                       ""enabled"": true,
-                       ""path"": ""/graphql"",
-                       ""allow-introspection"": true
-                    }
-                },
-                ""entities"": {
-                    ""HybridEntity"":{
-                        ""source"": {
-                            ""object"": ""hybridSource"",
-                            ""type"":" + $"\"{sourceType}\"" + @"
-                        },
-                        ""permissions"": [
-                           {
-                            ""role"": ""anonymous"",
-                            ""actions"": [
-                               ""*""
-                            ]
-                           }
-                         ],
-                        ""rest"":{
-                            ""methods"":" + $"{methods}" + @"
-                         }
-                       }
-                    }
-                }";
+            Dictionary<string, Entity> entityMap = new();
+            string entityName = "EntityA";
+            // Sets REST method for the entity
+            Entity entity = new(Source: new("TEST_SOURCE", sourceType, null, null),
+                                 Rest: new(Methods: methods),
+                                 GraphQL: new(entityName, ""),
+                                 Permissions: Array.Empty<EntityPermission>(),
+                                 Relationships: new(),
+                                 Mappings: new());
+            entityMap.Add(entityName, entity);
 
-            RuntimeConfigLoader.TryParseConfig(runtimeConfigString, out RuntimeConfig runtimeConfig);
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, string.Empty, Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(null, null)),
+                Entities: new(entityMap));
 
-            // Perform validation on the entity in the config and assert the expected results.
-            if (exceptionExpected)
+            MockFileSystem fileSystem = new();
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            Mock<ILogger<RuntimeConfigValidator>> loggerMock = new();
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, loggerMock.Object);
+            Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
+
+            configValidator.ValidateEntityConfiguration(runtimeConfig);
+
+            if (isWarningLogExpected)
             {
-                DataApiBuilderException ex =
-                    Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig));
-                Assert.AreEqual(expectedErrorMessage, ex.Message);
-                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
-                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
-            }
-            else
-            {
-                RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig);
+                // Assert on the log message to verify the warning log
+                loggerMock.Verify(
+                    x => x.Log(
+                    LogLevel.Warning,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains($"Entity {entityName} has rest methods configured but is not a stored procedure. Values configured will be ignored and all 5 HTTP actions will be enabled.")),
+                    It.IsAny<Exception>(),
+                    (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()
+                    ),
+                    Times.Once
+                );
             }
         }
 
@@ -1914,17 +1897,23 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Entities: new(entityMap)
             );
 
+            MockFileSystem fileSystem = new();
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+            Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
+
             if (exceptionExpected)
             {
                 DataApiBuilderException dabException =
-                    Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig));
+                    Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidateEntityConfiguration(runtimeConfig));
                 Assert.AreEqual(expectedExceptionMessage, dabException.Message);
                 Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
                 Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
             }
             else
             {
-                RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig);
+                configValidator.ValidateEntityConfiguration(runtimeConfig);
             }
         }
 
@@ -1982,17 +1971,23 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Entities: new(entityMap)
             );
 
+            MockFileSystem fileSystem = new();
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+            Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
+
             if (exceptionExpected)
             {
                 DataApiBuilderException dabException =
-                    Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig));
+                    Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidateEntityConfiguration(runtimeConfig));
                 Assert.AreEqual(expectedExceptionMessage, dabException.Message);
                 Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
                 Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
             }
             else
             {
-                RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig);
+                configValidator.ValidateEntityConfiguration(runtimeConfig);
             }
         }
 

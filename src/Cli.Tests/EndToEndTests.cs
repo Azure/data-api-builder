@@ -770,7 +770,7 @@ public class EndToEndTests
         string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type", "mssql",
             "--connection-string", "localhost:5000" };
 
-        if (isRequestBodyNotStrict )
+        if (isRequestBodyNotStrict)
         {
             string[] requestBodyNotStrictFlag = { "--rest.request-body-not-strict" };
             initArgs = initArgs.Concat(requestBodyNotStrictFlag).ToArray();

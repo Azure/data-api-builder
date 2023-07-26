@@ -160,7 +160,8 @@ namespace Azure.DataApiBuilder.Core.Authorization
                     }
                     else if(IsRequestBodyStrictForRest)
                     {
-                        // This check will not be needed once exposedName mapping validation is added.
+                        // Throw exception when we are not allowed extraneous fields in the rest request body,
+                        // and no mapping exists for the given exposed field to a backing column.
                         throw new DataApiBuilderException(
                             message: "Invalid field name provided.",
                             statusCode: HttpStatusCode.BadRequest,

@@ -53,9 +53,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             List<string> columns = sourceDefinition.Columns.Keys.ToList();
             foreach (KeyValuePair<string, object?> param in mutationParams)
             {
+                if (!MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn))
+                {
+                    // This code block is only ever hit when we have extraneous fields which don't map to any column
+                    // in the table and we don't operate in rest request body strict mode.
+                    continue;
+                }
+
                 Predicate predicate = CreatePredicateForParam(param);
-                // since we have already validated mutationParams we know backing column exists
-                MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
                 // primary keys used as predicates
                 if (primaryKeys.Contains(backingColumn!))
                 {

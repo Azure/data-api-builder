@@ -824,7 +824,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     parameters = new(context.PrimaryKeyValuePairs!);
                     foreach (KeyValuePair<string, object?> pair in context.FieldValuePairsInBody)
                     {
-                        parameters.Add(pair.Key, pair.Value);
+                        // Use TryAdd because there can be duplicate primary key fields present in the request body
+                        // when we operate in non-strict mode for rest request body. In such a case, the duplicate fields
+                        // in the request body are ignored.
+                        parameters.TryAdd(pair.Key, pair.Value);
                     }
 
                     break;

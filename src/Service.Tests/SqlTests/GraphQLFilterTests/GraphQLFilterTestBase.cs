@@ -72,28 +72,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         }
 
         /// <summary>
-        /// Tests gte of LocalTimeFilterInput where LocalTime is a NodatTime Hotchocolate Type.
-        /// </summary>
-        [TestMethod]
-        public async Task TestLocalTimeTypeFilter(string dbQuery)
-        {
-            string graphQLQueryName = "supportedTypes";
-            string gqlQuery = @"{
-                supportedTypes( " + QueryBuilder.FILTER_FIELD_NAME + @" : {time_types: {gte: ""10:23:54.999""}})
-                {
-                    items {
-                        typeid
-                        time_types
-                    }
-                }
-            }";
-
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
-
-        /// <summary>
         /// Tests neq of StringFilterInput
         /// </summary>
         [TestMethod]

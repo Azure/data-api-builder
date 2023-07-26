@@ -202,6 +202,21 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             await QueryTypeColumnFilterAndOrderBy(type, filterOperator, sqlValue, gqlValue, queryOperator);
         }
 
+        /// <summary>
+        /// Test case for LocalTime filters.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(TIME_TYPE, "gt", "\'00:00:00.000\'", "\"00:00:00.000\"", " > ")]
+        [DataRow(TIME_TYPE, "gte", "\'10:13:14.123\'", "\"10:13:14.123\"", " >= ")]
+        [DataRow(TIME_TYPE, "lt", "\'23:59:59.999\'", "\"23:59:59.999\"", " < ")]
+        [DataRow(TIME_TYPE, "lte", "\'23:59:59.999\'", "\"23:59:59.999\"", " <= ")]
+        [DataRow(TIME_TYPE, "neq", "\'10:23:54.9999999\'", "\"10:23:54.9999999\"", "!=")]
+        [DataRow(TIME_TYPE, "eq", "\'10:23:54.9999999\'", "\"10:23:54.9999999\"", "=")]
+        public async Task QueryTypeColumnFilterAndOrderByLocalTime(string type, string filterOperator, string sqlValue, string gqlValue, string queryOperator)
+        {
+            await QueryTypeColumnFilterAndOrderBy(type, filterOperator, sqlValue, gqlValue, queryOperator);
+        }
+
         [DataTestMethod]
         [DataRow(BYTE_TYPE, "255")]
         [DataRow(BYTE_TYPE, "0")]
@@ -562,6 +577,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             using JsonDocument actualJsonDoc = JsonDocument.Parse(actual);
             using JsonDocument expectedJsonDoc = JsonDocument.Parse(expected);
 
+            if (actualJsonDoc.RootElement.ValueKind is JsonValueKind.Array)
+            {
+                ValidateArrayResults(actualJsonDoc, expectedJsonDoc, fieldName);
+                return;
+            }
+
             string actualTimeString = actualJsonDoc.RootElement.GetProperty(fieldName).ToString();
             string expectedTimeString = expectedJsonDoc.RootElement.GetProperty(fieldName).ToString();
 
@@ -598,6 +619,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 else if (fieldName.StartsWith(SINGLE_TYPE.ToLower()))
                 {
                     Assert.AreEqual(expectedValue.GetSingle(), actualValue.GetSingle());
+                }
+                else if (fieldName.StartsWith(TIME_TYPE.ToLower()))
+                {
+                    TimeOnly actualTime = TimeOnly.Parse(actualValue.ToString(), CultureInfo.InvariantCulture);
+                    TimeOnly expectedTime = TimeOnly.Parse(expectedValue.ToString(), CultureInfo.InvariantCulture);
+                    Assert.AreEqual(expectedTime.ToLongTimeString(), actualTime.ToLongTimeString());
                 }
                 else
                 {

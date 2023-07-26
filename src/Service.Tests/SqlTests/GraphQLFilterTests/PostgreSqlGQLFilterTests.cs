@@ -168,13 +168,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             await TestStringFiltersEqWithMappings(postgresQuery);
         }
 
-        [Ignore]
-        [TestMethod]
-        public void TestLocalTimeTypeFilter()
-        {
-            throw new System.NotImplementedException("Filtering LocalTime Type for PGSQL is not yet implemented.");
-        }
-
         /// <summary>
         /// Gets the default schema for
         /// PostgreSql.

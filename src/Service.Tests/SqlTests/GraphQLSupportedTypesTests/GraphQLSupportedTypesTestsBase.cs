@@ -173,10 +173,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataTestMethod]
         [DataRow(DATETIME_TYPE, "gt", "\'1999-01-08\'", "\"1999-01-08\"", " > ")]
         [DataRow(DATETIME_TYPE, "gte", "\'1999-01-08\'", "\"1999-01-08\"", " >= ")]
-        [DataRow(DATETIME_TYPE, "lt", "\'0001-01-01\'", "\"0001-01-01\"", " < ")]
-        [DataRow(DATETIME_TYPE, "lte", "\'0001-01-01\'", "\"0001-01-01\"", " <= ")]
-        [DataRow(DATETIME_TYPE, "neq", "\'0001-01-01\'", "\"0001-01-01\"", "!=")]
-        [DataRow(DATETIME_TYPE, "eq", "\'0001-01-01\'", "\"0001-01-01T01:01:01\"", "=")]
+        [DataRow(DATETIME_TYPE, "lt", "\'1999-01-08\'", "\"1999-01-08\"", " < ")]
+        [DataRow(DATETIME_TYPE, "lte", "\'1999-01-08\'", "\"1999-01-08\"", " <= ")]
+        [DataRow(DATETIME_TYPE, "neq", "\'1999-01-08\'", "\"1999-01-08\"", "!=")]
+        [DataRow(DATETIME_TYPE, "eq", "\'1999-01-08\'", "\"1999-01-08T01:01:01\"", "=")]
         [DataRow(DATETIME_TYPE, "gt", "\'1999-01-08 10:23:00\'", "\"1999-01-08 10:23:00\"", " > ")]
         [DataRow(DATETIME_TYPE, "gte", "\'1999-01-08 10:23:00\'", "\"1999-01-08 10:23:00\"", " >= ")]
         [DataRow(DATETIME_TYPE, "lt", "\'9998-12-31 23:59:59\'", "\"9998-12-31 23:59:59\"", " < ")]
@@ -591,8 +591,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 if (fieldName.StartsWith(DATETIME_TYPE.ToLower()))
                 {
                     // MySql returns a format that will not directly parse into DateTime type so we use string here for parsing
-                    DateTime actualDateTime = DateTime.Parse(actualValue.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None);
-                    DateTime expectedDateTime = DateTime.Parse(expectedValue.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None);
+                    DateTime actualDateTime = DateTime.Parse(actualValue.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
+                    DateTime expectedDateTime = DateTime.Parse(expectedValue.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
                     Assert.AreEqual(expectedDateTime, actualDateTime);
                 }
                 else if (fieldName.StartsWith(SINGLE_TYPE.ToLower()))

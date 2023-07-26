@@ -20,7 +20,7 @@ steps:
     displayName: 'Code Signing Microsoft code'
     condition: and(succeeded(), eq(variables['isReleaseBuild'], 'true'))
     inputs:
-      ConnectedServiceName: 'ESRP CodeSigning'
+      ConnectedServiceName: 'ESRP Official Codesigning'
       FolderPath: ${{ parameters.path }}
       Pattern: 'Microsoft.DataApiBuilder.dll, Microsoft.DataApiBuilder.exe, Azure.DataApiBuilder*.dll, Azure.DataApiBuilder*.exe'
       signConfigType: 'inlineSignParams'
@@ -55,7 +55,7 @@ steps:
     displayName: 'Code Signing OSS and Third party'
     condition: and(succeeded(), eq(variables['isReleaseBuild'], 'true'))
     inputs:
-      ConnectedServiceName: 'ESRP CodeSigning'
+      ConnectedServiceName: 'ESRP Official Codesigning'
       FolderPath: ${{ parameters.path }}
       Pattern: 'CommandLine.dll, GreenDonut.dll, HotChocolate*.dll, Humanizer*.dll, MySqlConnector.dll, Newtonsoft.Json.dll, Npgsql.dll'
       signConfigType: 'inlineSignParams'
@@ -92,7 +92,7 @@ steps:
     displayName: 'Code Signing Nuget package'
     condition: and(succeeded(), eq(variables['isReleaseBuild'], 'true'))
     inputs:
-      ConnectedServiceName: 'ESRP CodeSigning'
+      ConnectedServiceName: 'ESRP Official Codesigning'
       FolderPath: ${{ parameters.path }}
       Pattern: '*.nupkg'
       signConfigType: 'inlineSignParams'

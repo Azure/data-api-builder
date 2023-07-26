@@ -255,6 +255,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(BYTEARRAY_TYPE, "\"U3RyaW5neQ==\"")]
         [DataRow(TIME_TYPE, "\"23:59:59.9999999\"")]
         [DataRow(TIME_TYPE, "\"23:59:59\"")]
+        [DataRow(TIME_TYPE, "\"23:59:59.9\"")]
+        [DataRow(TIME_TYPE, "\"23:59\"")]
         [DataRow(TIME_TYPE, "null")]
         [DataRow(BYTEARRAY_TYPE, "\"V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=\"")]
         [DataRow(BYTEARRAY_TYPE, "null")]
@@ -310,6 +312,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(BOOLEAN_TYPE, true)]
         [DataRow(DATETIMEOFFSET_TYPE, "1999-01-08 10:23:54+8:00")]
         [DataRow(DATETIME_TYPE, "1999-01-08 10:23:54")]
+        [DataRow(TIME_TYPE, "\"23:59:59.9999999\"")]
+        [DataRow(TIME_TYPE, "null")]
         [DataRow(BYTEARRAY_TYPE, "V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=")]
         public async Task InsertIntoTypeColumnWithArgument(string type, object value)
         {

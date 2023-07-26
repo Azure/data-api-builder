@@ -158,7 +158,7 @@ namespace Azure.DataApiBuilder.Core.Authorization
                             return false;
                         }
                     }
-                    else if(IsRequestBodyStrictForRest)
+                    else if (IsRequestBodyStrictForRest)
                     {
                         // Throw exception when we are not allowed extraneous fields in the rest request body,
                         // and no mapping exists for the given exposed field to a backing column.

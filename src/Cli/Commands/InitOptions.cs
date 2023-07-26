@@ -105,7 +105,7 @@ namespace Cli.Commands
         [Option("graphql.disabled", Default = false, Required = false, HelpText = "Disables GraphQL endpoint for all entities.")]
         public bool GraphQLDisabled { get; }
 
-        [Option("rest.request-body-not-strict", Default = false, Required = false, HelpText = "When set to false, allows extraneous fields in the request body for REST.")]
+        [Option("rest.request-body-not-strict", Default = false, Required = false, HelpText = "When set to true, allows extraneous fields in the request body for REST.")]
         public bool RestRequestBodyNotStrict { get; }
 
         public void Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)

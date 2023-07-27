@@ -69,11 +69,14 @@ namespace Azure.DataApiBuilder.Core.Services
 
         private readonly ILogger<ISqlMetadataProvider> _logger;
 
+        private readonly IConnectionProvider<ConnectionT> _connectionProvider;
+
         public SqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,
             IQueryExecutor queryExecutor,
             IQueryBuilder queryBuilder,
-            ILogger<ISqlMetadataProvider> logger)
+            ILogger<ISqlMetadataProvider> logger,
+            IConnectionProvider<ConnectionT> connectionProvider)
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
             _runtimeConfigProvider = runtimeConfigProvider;
@@ -96,6 +99,8 @@ namespace Azure.DataApiBuilder.Core.Services
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;
             QueryExecutor = queryExecutor;
+            _connectionProvider = connectionProvider;
+            _connectionProvider.Create();
         }
 
         /// <inheritdoc />
@@ -273,7 +278,7 @@ namespace Azure.DataApiBuilder.Core.Services
             string storedProcedureSourceName,
             StoredProcedureDefinition storedProcedureDefinition)
         {
-            using ConnectionT conn = new();
+            using ConnectionT conn = _connectionProvider.Create();
             conn.ConnectionString = ConnectionString;
             await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
             await conn.OpenAsync();
@@ -1096,7 +1101,7 @@ namespace Azure.DataApiBuilder.Core.Services
             string schemaName,
             string tableName)
         {
-            using ConnectionT conn = new();
+            using ConnectionT conn = _connectionProvider.Create();
             // If connection string is set to empty string
             // we throw here to avoid having to sort out
             // complicated db specific exception messages.
@@ -1186,7 +1191,7 @@ namespace Azure.DataApiBuilder.Core.Services
             string schemaName,
             string tableName)
         {
-            using ConnectionT conn = new();
+            using ConnectionT conn = _connectionProvider.Create();
             conn.ConnectionString = ConnectionString;
             await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
             await conn.OpenAsync();

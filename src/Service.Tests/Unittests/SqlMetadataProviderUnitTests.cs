@@ -12,6 +12,7 @@ using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -84,6 +85,33 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// <code>Do: </code> Tests with different combinations of connection string to ensure
+        /// tableprefix generated is correct.
+        /// <code>Check: </code> Making sure no exception is thrown if there are no Foreign Keys.
+        /// </summary>
+        [TestMethod]
+        public async Task CheckTablePrefix()
+        {
+            DatabaseEngine = TestCategory.POSTGRESQL;
+            TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
+            RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
+            SetUpSQLMetadataProvider(runtimeConfigProvider);
+            Mock<SqlConnection> sqlConnectionMoq = new();
+            Mock<IConnectionProvider<SqlConnection>> connectionProvider = new();
+            sqlConnectionMoq.Setup(x => x.OpenAsync()).Returns(Task.CompletedTask);
+            connectionProvider.Setup(x => x.Create()).Returns(sqlConnectionMoq.Object);
+
+            MsSqlMetadataProvider provider =
+                        new(
+                            runtimeConfigProvider,
+                            _queryExecutor, _queryBuilder,
+                            _sqlMetadataLogger,
+                            connectionProvider.Object);
+            await _sqlMetadataProvider.InitializeAsync();
+        }
+
+        /// <summary>
         /// <code>Do: </code> Load runtimeConfig and set connection string and db type
         /// according to data row.
         /// <code>Check: </code>  Verify malformed connection string throws correct exception with MySQL as the database.
@@ -138,9 +166,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             ISqlMetadataProvider sqlMetadataProvider = databaseType switch
             {
-                TestCategory.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
-                TestCategory.MYSQL => new MySqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
-                TestCategory.POSTGRESQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
+                TestCategory.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger, new MsSqlConnectionProvider()),
+                TestCategory.MYSQL => new MySqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger, new MySqlConnectionProvider()),
+                TestCategory.POSTGRESQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger, new PostgreSqlConnectionProvider()),
                 _ => throw new ArgumentException($"Invalid database type: {databaseType}")
             };
 

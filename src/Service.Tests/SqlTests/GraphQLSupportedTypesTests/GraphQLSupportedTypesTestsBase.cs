@@ -289,6 +289,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataTestMethod]
         [DataRow(TIME_TYPE, "\"32:59:59.9999999\"")]
         [DataRow(TIME_TYPE, "\"22:67:59.9999999\"")]
+        [DataRow(TIME_TYPE, "\"-22:67:59.9999999\"")]
+        [DataRow(TIME_TYPE, "\"22:-67:59.9999999\"")]
+        [DataRow(TIME_TYPE, "\"22:67:59.-9999999\"")]
         public async Task InsertInvalidIntoTypeColumn(string type, string value)
         {
             if (!IsSupportedType(type))

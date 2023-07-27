@@ -167,8 +167,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
         /// <summary>
         /// Separate test case for DateTime to allow overwrite for postgreSql.
-        /// Year 9998 used in test and data within test tables to avoid out of
-        /// date range error within GQL.
         /// </summary>
         [DataTestMethod]
         [DataRow(DATETIME_TYPE, "gt", "\'1999-01-08\'", "\"1999-01-08\"", " > ")]
@@ -179,14 +177,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(DATETIME_TYPE, "eq", "\'1999-01-08\'", "\"1999-01-08T01:01:01\"", "=")]
         [DataRow(DATETIME_TYPE, "gt", "\'1999-01-08 10:23:00\'", "\"1999-01-08 10:23:00\"", " > ")]
         [DataRow(DATETIME_TYPE, "gte", "\'1999-01-08 10:23:00\'", "\"1999-01-08 10:23:00\"", " >= ")]
-        [DataRow(DATETIME_TYPE, "lt", "\'9998-12-31 23:59:59\'", "\"9998-12-31 23:59:59\"", " < ")]
-        [DataRow(DATETIME_TYPE, "lte", "\'9998-12-31 23:59:59\'", "\"9998-12-31 23:59:59\"", " <= ")]
+        [DataRow(DATETIME_TYPE, "lt", "\'9999-12-31 23:59:59\'", "\"9999-12-31 23:59:59\"", " < ")]
+        [DataRow(DATETIME_TYPE, "lte", "\'9999-12-31 23:59:59\'", "\"9999-12-31 23:59:59\"", " <= ")]
         [DataRow(DATETIME_TYPE, "neq", "\'1999-01-08 10:23:00\'", "\"1999-01-08 10:23:00\"", "!=")]
         [DataRow(DATETIME_TYPE, "eq", "\'1999-01-08 10:23:00\'", "\"1999-01-08 10:23:00\"", "=")]
         [DataRow(DATETIME_TYPE, "gt", "\'1999-01-08 10:23:00.9999999\'", "\"1999-01-08 10:23:00.9999999\"", " > ")]
         [DataRow(DATETIME_TYPE, "gte", "\'1999-01-08 10:23:00.9999999\'", "\"1999-01-08 10:23:00.9999999\"", " >= ")]
-        [DataRow(DATETIME_TYPE, "lt", "\'9998-12-31 23:59:59.9999999\'", "\"9998-12-31 23:59:59.9999999\"", " < ")]
-        [DataRow(DATETIME_TYPE, "lte", "\'9998-12-31 23:59:59.9999999\'", "\"9998-12-31 23:59:59.9999999\"", " <= ")]
+        [DataRow(DATETIME_TYPE, "lt", "\'9999-12-31 23:59:59.9999999\'", "\"9999-12-31 23:59:59.9999999\"", " < ")]
+        [DataRow(DATETIME_TYPE, "lte", "\'9999-12-31 23:59:59.9999999\'", "\"9999-12-31 23:59:59.9999999\"", " <= ")]
         [DataRow(DATETIME_TYPE, "neq", "\'1999-01-08 10:23:00.9999999\'", "\"1999-01-08 10:23:00.9999999\"", "!=")]
         [DataRow(DATETIME_TYPE, "eq", "\'1999-01-08 10:23:00.9999999\'", "\"1999-01-08 10:23:00.9999999\"", "=")]
         [DataRow(DATETIME_TYPE, "neq", "\'1999-01-08 10:23:54.9999999-14:00\'", "\"1999-01-08 10:23:54.9999999-14:00\"", "!=")]

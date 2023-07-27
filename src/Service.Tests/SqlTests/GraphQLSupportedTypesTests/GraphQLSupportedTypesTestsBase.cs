@@ -197,6 +197,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(DATETIME_TYPE, "eq", "\'1999-01-08 10:23:54\'", "\"1999-01-08 10:23:54\"", "=")]
         public async Task QueryTypeColumnFilterAndOrderByDateTime(string type, string filterOperator, string sqlValue, string gqlValue, string queryOperator)
         {
+            // In MySQL, the DATETIME data type supports a range from '1000-01-01 00:00:00.0000000' to '9999-12-31 23:59:59.0000000'
+            if (DatabaseEngine is TestCategory.MYSQL && sqlValue is "\'9999-12-31 23:59:59.9999999\'")
+            {
+                sqlValue = "\'9999-12-31 23:59:59.0000000\'";
+                gqlValue = "\"9999-12-31 23:59:59.0000000\"";
+            }
+
             await QueryTypeColumnFilterAndOrderBy(type, filterOperator, sqlValue, gqlValue, queryOperator);
         }
 

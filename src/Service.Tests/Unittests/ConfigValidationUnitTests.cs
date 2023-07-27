@@ -1837,7 +1837,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     x => x.Log(
                     LogLevel.Warning,
                     It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains($"Entity {entityName} has rest methods configured but is not a stored procedure. Values configured will be ignored and all 5 HTTP actions will be enabled.")),
+                    It.Is<It.IsAnyType>((o, t) => o.ToString()!.Equals($"Entity {entityName} has rest methods configured but is not a stored procedure. Values configured will be ignored and all 5 HTTP actions will be enabled.")),
                     It.IsAny<Exception>(),
                     (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()
                     ),

@@ -746,7 +746,6 @@
       },
       "rest": {
         "enabled": true
-        
       },
       "permissions": [
         {

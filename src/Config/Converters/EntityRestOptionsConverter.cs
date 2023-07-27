@@ -118,10 +118,6 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
 
             writer.WriteEndArray();
         }
-        else if (value.Methods is null && options.DefaultIgnoreCondition != JsonIgnoreCondition.WhenWritingNull)
-        {
-            writer.WriteNull("methods");
-        }
 
         writer.WriteEndObject();
     }

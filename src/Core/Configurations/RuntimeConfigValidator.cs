@@ -270,10 +270,9 @@ namespace Azure.DataApiBuilder.Core.Configurations
         }
 
         /// <summary>
-        /// Helper method to validate and let users know of properties without significance present in the REST field.
+        /// Helper method to validate and let users know whether insignificant properties are present in the REST field.
         /// Currently, it checks for the presence of Methods property when the entity type is table/view and logs a warning.
-        /// Methods property plays a role only in case of stored procedures. So, when it is configured for an entity backed
-        /// by a table/view, a warning is logged.
+        /// Methods property plays a role only in case of stored procedures.
         /// </summary>
         /// <param name="entity">Entity object for which validation is performed</param>
         /// <param name="entityName">Name of the entity</param>

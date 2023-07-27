@@ -171,8 +171,7 @@ namespace Cli
                 string[] map = item.Split(SEPARATOR);
                 if (map.Length != 2)
                 {
-                    _logger.LogError("Invalid format for --map. " +
-                        "Acceptable format --map \"backendName1:exposedName1,backendName2:exposedName2,...\".");
+                    _logger.LogError("Invalid format for --map. Acceptable format --map \"backendName1:exposedName1,backendName2:exposedName2,...\".");
                     return false;
                 }
 
@@ -384,14 +383,14 @@ namespace Cli
             if (!string.IsNullOrEmpty(userProvidedConfigFile))
             {
                 /// The existence of user provided config file is not checked here.
-                _logger.LogInformation($"User provided config file: {userProvidedConfigFile}");
+                _logger.LogInformation("User provided config file: {userProvidedConfigFile}", userProvidedConfigFile);
                 runtimeConfigFile = userProvidedConfigFile;
                 return true;
             }
             else
             {
                 _logger.LogInformation("Config not provided. Trying to get default config based on DAB_ENVIRONMENT...");
-                _logger.LogInformation("Environment variable DAB_ENVIRONMENT is {value}", Environment.GetEnvironmentVariable("DAB_ENVIRONMENT"));
+                _logger.LogInformation("Environment variable DAB_ENVIRONMENT is {environment}", Environment.GetEnvironmentVariable("DAB_ENVIRONMENT"));
                 runtimeConfigFile = loader.GetFileNameForEnvironment(null, considerOverrides: false);
             }
 
@@ -626,7 +625,7 @@ namespace Cli
             }
             catch (Exception e)
             {
-                _logger.LogError($"Failed to generate the config file, operation failed with exception:{e}.");
+                _logger.LogError("Failed to generate the config file, operation failed with exception: {e}.", e);
                 return false;
             }
         }
@@ -639,7 +638,7 @@ namespace Cli
             }
             catch (Exception e)
             {
-                _logger.LogError($"Failed to generate the config file, operation failed with exception:{e}.");
+                _logger.LogError("Failed to generate the config file, operation failed with exception:{e}.", e);
                 return false;
             }
 
@@ -705,7 +704,10 @@ namespace Cli
         {
             if (!Enum.TryParse(operation, ignoreCase: true, out graphQLOperation))
             {
-                _logger.LogError($"Invalid GraphQL Operation. Supported operations are {GraphQLOperation.Query.ToString()!.ToLower()} and {GraphQLOperation.Mutation.ToString()!.ToLower()!}.");
+                _logger.LogError(
+                    "Invalid GraphQL Operation. Supported operations are {queryName} and {mutationName}.",
+                    GraphQLOperation.Query,
+                    GraphQLOperation.Mutation);
                 return false;
             }
 
@@ -902,7 +904,7 @@ namespace Cli
         {
             if (string.IsNullOrWhiteSpace(entity))
             {
-                cliLogger.LogError($"Entity name is missing. Usage: dab {command} [entity-name] [{command}-options]");
+                cliLogger.LogError("Entity name is missing. Usage: dab {command} [entity-name] [{command}-options]", command, command);
                 return false;
             }
 

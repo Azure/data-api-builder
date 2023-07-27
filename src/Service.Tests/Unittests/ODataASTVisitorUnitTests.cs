@@ -59,9 +59,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DisplayName = "Equate date types.")]
         [DataRow("datetime_types eq  2023-01-24T12:51:59Z", "([datetime_types] = @param1)",
             DisplayName = "Equate datetime types.")]
-        [DataRow("datetime2_types eq  9998-12-31T21:59:59.99999Z", "([datetime2_types] = @param1)",
+        [DataRow("datetime2_types eq  9999-12-31T21:59:59.99999Z", "([datetime2_types] = @param1)",
             DisplayName = "Equate datetime2 types.")]
-        [DataRow("datetimeoffset_types eq 9998-12-31T21:59:59.99999-14:00",
+        [DataRow("datetimeoffset_types eq 9999-12-31T21:59:59.99999-14:00",
             "([datetimeoffset_types] = @param1)", DisplayName = "Equate datetimeoffset types.")]
         [DataRow("smalldatetime_types eq 2079-06-06", "([smalldatetime_types] = @param1)",
             DisplayName = "Equate smalldatetime types.")]

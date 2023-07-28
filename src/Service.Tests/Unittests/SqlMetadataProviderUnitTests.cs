@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
@@ -90,25 +91,23 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <code>Check: </code> Making sure no exception is thrown if there are no Foreign Keys.
         /// </summary>
         [TestMethod]
-        public async Task CheckTablePrefix()
+        [DataRow("","","")]
+        [DataRow("","model","[model]")]
+        [DataRow("TestDB","","[TestDB]")]
+        [DataRow("TestDB", "model","[TestDB].[model]")]
+        public void CheckTablePrefix(string databaseName, string schemaName, string expectedPrefix)
         {
-            DatabaseEngine = TestCategory.POSTGRESQL;
-            TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
-            RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
-            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
-            SetUpSQLMetadataProvider(runtimeConfigProvider);
-            Mock<SqlConnection> sqlConnectionMoq = new();
-            Mock<IConnectionProvider<SqlConnection>> connectionProvider = new();
-            sqlConnectionMoq.Setup(x => x.OpenAsync()).Returns(Task.CompletedTask);
-            connectionProvider.Setup(x => x.Create()).Returns(sqlConnectionMoq.Object);
+            TestHelper.SetupDatabaseEnvironment("MSSQL");
+            RuntimeConfig baseConfigFromDisk = SqlTestHelper.SetupRuntimeConfig();
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(baseConfigFromDisk);
 
-            MsSqlMetadataProvider provider =
-                        new(
-                            runtimeConfigProvider,
-                            _queryExecutor, _queryBuilder,
-                            _sqlMetadataLogger,
-                            connectionProvider.Object);
-            await _sqlMetadataProvider.InitializeAsync();
+            ILogger<ISqlMetadataProvider> sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
+            Mock<IQueryExecutor> queryExecutor = new();
+            IQueryBuilder queryBuilder = new MsSqlQueryBuilder();
+
+            SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand> provider = new MsSqlMetadataProvider(runtimeConfigProvider, queryExecutor.Object, queryBuilder, sqlMetadataLogger);
+            string tableprefix = provider.GetTablePrefix(databaseName, schemaName);
+            Assert.IsTrue(tableprefix.Equals(expectedPrefix));
         }
 
         /// <summary>
@@ -166,9 +165,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             ISqlMetadataProvider sqlMetadataProvider = databaseType switch
             {
-                TestCategory.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger, new MsSqlConnectionProvider()),
-                TestCategory.MYSQL => new MySqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger, new MySqlConnectionProvider()),
-                TestCategory.POSTGRESQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger, new PostgreSqlConnectionProvider()),
+                TestCategory.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
+                TestCategory.MYSQL => new MySqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
+                TestCategory.POSTGRESQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
                 _ => throw new ArgumentException($"Invalid database type: {databaseType}")
             };
 

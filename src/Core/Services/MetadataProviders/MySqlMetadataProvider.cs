@@ -23,9 +23,8 @@ namespace Azure.DataApiBuilder.Core.Services
             RuntimeConfigProvider runtimeConfigProvider,
             IQueryExecutor queryExecutor,
             IQueryBuilder sqlQueryBuilder,
-            ILogger<ISqlMetadataProvider> logger,
-            IConnectionProvider<MySqlConnection> connectionProvider)
-            : base(runtimeConfigProvider, queryExecutor, sqlQueryBuilder, logger, connectionProvider)
+            ILogger<ISqlMetadataProvider> logger)
+            : base(runtimeConfigProvider, queryExecutor, sqlQueryBuilder, logger)
         {
         }
 

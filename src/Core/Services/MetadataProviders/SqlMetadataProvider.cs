@@ -5,6 +5,7 @@ using System.Data;
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -18,6 +19,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 
+[assembly: InternalsVisibleTo("Azure.DataApiBuilder.Service.Tests")]
 namespace Azure.DataApiBuilder.Core.Services
 {
     /// <summary>
@@ -69,14 +71,11 @@ namespace Azure.DataApiBuilder.Core.Services
 
         private readonly ILogger<ISqlMetadataProvider> _logger;
 
-        private readonly IConnectionProvider<ConnectionT> _connectionProvider;
-
         public SqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,
             IQueryExecutor queryExecutor,
             IQueryBuilder queryBuilder,
-            ILogger<ISqlMetadataProvider> logger,
-            IConnectionProvider<ConnectionT> connectionProvider)
+            ILogger<ISqlMetadataProvider> logger)
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
             _runtimeConfigProvider = runtimeConfigProvider;
@@ -99,8 +98,6 @@ namespace Azure.DataApiBuilder.Core.Services
             EntitiesDataSet = new();
             SqlQueryBuilder = queryBuilder;
             QueryExecutor = queryExecutor;
-            _connectionProvider = connectionProvider;
-            _connectionProvider.Create();
         }
 
         /// <inheritdoc />
@@ -278,12 +275,10 @@ namespace Azure.DataApiBuilder.Core.Services
             string storedProcedureSourceName,
             StoredProcedureDefinition storedProcedureDefinition)
         {
-            using ConnectionT conn = _connectionProvider.Create();
+            using ConnectionT conn = new();
             conn.ConnectionString = ConnectionString;
             await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
             await conn.OpenAsync();
-
-            string tablePrefix = GetTablePrefix(conn.Database, schemaName);
 
             string[] procedureRestrictions = new string[NUMBER_OF_RESTRICTIONS];
 
@@ -1101,7 +1096,7 @@ namespace Azure.DataApiBuilder.Core.Services
             string schemaName,
             string tableName)
         {
-            using ConnectionT conn = _connectionProvider.Create();
+            using ConnectionT conn = new();
             // If connection string is set to empty string
             // we throw here to avoid having to sort out
             // complicated db specific exception messages.
@@ -1145,15 +1140,16 @@ namespace Azure.DataApiBuilder.Core.Services
             };
 
             string tablePrefix = GetTablePrefix(conn.Database, schemaName);
+            string queryprefix = string.IsNullOrEmpty(tablePrefix) ? string.Empty : $"{tablePrefix}.";
             selectCommand.CommandText
-                = $"SELECT * FROM {tablePrefix}.{SqlQueryBuilder.QuoteIdentifier(tableName)}";
+                = $"SELECT * FROM {queryprefix}{SqlQueryBuilder.QuoteIdentifier(tableName)}";
             adapterForTable.SelectCommand = selectCommand;
 
             DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, tableName);
             return dataTable[0];
         }
 
-        private string GetTablePrefix(string databaseName, string schemaName)
+        internal string GetTablePrefix(string databaseName, string schemaName)
         {
             StringBuilder tablePrefix = new();
 
@@ -1191,7 +1187,7 @@ namespace Azure.DataApiBuilder.Core.Services
             string schemaName,
             string tableName)
         {
-            using ConnectionT conn = _connectionProvider.Create();
+            using ConnectionT conn = new();
             conn.ConnectionString = ConnectionString;
             await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
             await conn.OpenAsync();

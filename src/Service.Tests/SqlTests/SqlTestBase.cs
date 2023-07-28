@@ -243,8 +243,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                             runtimeConfigProvider,
                             _queryExecutor,
                             _queryBuilder,
-                            _sqlMetadataLogger,
-                            new PostgreSqlConnectionProvider());
+                            _sqlMetadataLogger);
                     break;
                 case TestCategory.MSSQL:
                     Mock<ILogger<QueryExecutor<SqlConnection>>> msSqlQueryExecutorLogger = new();
@@ -260,8 +259,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                         new MsSqlMetadataProvider(
                             runtimeConfigProvider,
                             _queryExecutor, _queryBuilder,
-                            _sqlMetadataLogger,
-                            new MsSqlConnectionProvider());
+                            _sqlMetadataLogger
+                            );
                     break;
                 case TestCategory.MYSQL:
                     Mock<ILogger<MySqlQueryExecutor>> mySqlQueryExecutorLogger = new();
@@ -278,8 +277,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                              runtimeConfigProvider,
                              _queryExecutor,
                              _queryBuilder,
-                             _sqlMetadataLogger,
-                             new MySqlConnectionProvider());
+                             _sqlMetadataLogger
+                             );
                     break;
             }
         }

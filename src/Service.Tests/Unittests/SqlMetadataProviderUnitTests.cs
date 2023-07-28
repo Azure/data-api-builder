@@ -87,7 +87,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         /// <summary>
         /// <code>Do: </code> Tests with different combinations of connection string to ensure
-        /// tableprefix generated is correct.
+        /// tableprefix generated is correctly.
         /// <code>Check: </code> Making sure table prefix matches expected prefix.
         /// </summary>
         [TestMethod]

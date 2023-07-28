@@ -30,6 +30,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 "
             },
             {
+                "PutOneWithPKFieldsInRequestBody",
+                @"
+                    SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
+                                        'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE categoryid = 2 AND pieceid = 1 AND categoryName ='SciFi' AND piecesAvailable = 10
+                        AND piecesRequired = 5
+                    ) AS subq
+                "
+            },
+            {
                 "PutOneWithNonExistingFieldInRequestBody",
                 @"
                     SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
@@ -39,6 +52,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                         FROM " + _Composite_NonAutoGenPK_TableName + @"
                         WHERE categoryid = 2 AND pieceid = 1 AND categoryName ='SciFi' AND piecesAvailable = 10
                         AND piecesRequired = 5
+                    ) AS subq
+                "
+            },
+            {
+                "PatchOneWithPKFieldsInRequestBody",
+                @"
+                    SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
+                                        'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE categoryid = 1 AND pieceid = 1 AND categoryName ='SciFi' AND piecesAvailable is NULL
+                        AND piecesRequired = 0
                     ) AS subq
                 "
             },

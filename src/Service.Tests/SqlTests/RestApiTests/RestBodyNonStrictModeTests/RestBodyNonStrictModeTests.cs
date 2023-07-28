@@ -18,11 +18,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         #region Positive tests
 
         /// <summary>
-        /// Test to validate that extraneous fields are allowed in request body when we operate in rest.request-body-strict = false.
+        /// Test to validate that extraneous fields are allowed in request body when we operate in runtime.rest.request-body-strict = false.
         /// </summary>
         [TestMethod]
         public virtual async Task MutationsTestWithExtraneousFieldsInRequestBody()
         {
+            // Validate that when a field which does not map to any column (here 'non_existing_field')
+            // in the underlying table is included in the request body for POST operation,
+            // it is just ignored when we do not operate in strict mode for REST.
             string requestBody = @"
             {
                 ""categoryid"": ""3"",
@@ -44,12 +47,36 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     expectedLocationHeader: "categoryid/3/pieceid/1"
                 );
 
+            // Validate that when PK fields (here 'categoryid' and 'pieceid') are included in the request body for PUT operation,
+            // they are just ignored when we do not operate in strict mode for REST. The values of the fields from the URL is used.
             requestBody = @"
             {
                ""categoryName"":""SciFi"",
                ""piecesAvailable"":""10"",
                ""piecesRequired"":""5"",
-               ""non_existing_field"": 5
+               ""piecied"": 5,
+               ""categoryid"": 4
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/2/pieceid/1",
+                queryString: null,
+                entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                sqlQuery: GetQuery("PutOneWithPKFieldsInRequestBody"),
+                operationType: EntityActionOperation.Upsert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.OK
+                );
+
+            // Validate that when fields which do not map to any column (here 'non_existing_field')
+            // in the underlying table are included in the request body for PUT operation,
+            // they are just ignored when we do not operate in strict mode for REST.
+            requestBody = @"
+            {
+               ""categoryName"":""SciFi"",
+               ""piecesAvailable"":""10"",
+               ""piecesRequired"":""5"",
+               ""non_existing_field"": ""5""
             }";
 
             await SetupAndRunRestApiTest(
@@ -65,9 +92,31 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             requestBody = @"
             {
                 ""piecesAvailable"": null,
+                ""piecied"": 5,
+                ""categoryid"": 4
+            }";
+
+            // Validate that when PK fields (here 'categoryid' and 'pieceid') are included in the request body for PATCH operation,
+            // they are just ignored when we do not operate in strict mode for REST. The values of the fields from the URL is used.
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/1/pieceid/1",
+                    queryString: null,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    sqlQuery: GetQuery("PatchOneWithPKFieldsInRequestBody"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            requestBody = @"
+            {
+                ""piecesAvailable"": null,
                 ""non_existing_field"": ""5""
             }";
 
+            // Validate that when fields which do not map to any column (here 'non_existing_field')
+            // in the underlying table are included in the request body for PATCH operation,
+            // they are just ignored when we do not operate in strict mode for REST.
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: "categoryid/1/pieceid/1",
                     queryString: null,
@@ -83,7 +132,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         #region Negative tests
 
         /// <summary>
-        /// Test to validate that extraneous fields are not allowed in primary key even when we operate in rest.request-body-strict = false.
+        /// Test to validate that extraneous fields are not allowed in primary key even when we operate in runtime.rest.request-body-strict = false.
         /// </summary>
         [TestMethod]
         public virtual async Task MutationsTestWithExtraneousFieldsInPrimaryKey()

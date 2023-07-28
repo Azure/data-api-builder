@@ -48,7 +48,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             {
                ""categoryName"":""SciFi"",
                ""piecesAvailable"":""10"",
-               ""piecesRequired"":""5"",
+               ""piecesRequired"":""4"",
                ""non_existing_field"": 5
             }";
 
@@ -75,7 +75,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     sqlQuery: GetQuery("PatchOneWithNonExistingFieldInRequestBody"),
                     operationType: EntityActionOperation.UpsertIncremental,
                     requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.Created
+                    expectedStatusCode: HttpStatusCode.OK
                 );
         }
         #endregion Positive tests

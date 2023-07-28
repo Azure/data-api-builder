@@ -277,8 +277,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                              runtimeConfigProvider,
                              _queryExecutor,
                              _queryBuilder,
-                             _sqlMetadataLogger
-                             );
+                             _sqlMetadataLogger);
                     break;
             }
         }

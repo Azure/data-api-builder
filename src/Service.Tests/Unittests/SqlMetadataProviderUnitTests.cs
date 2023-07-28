@@ -88,7 +88,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <summary>
         /// <code>Do: </code> Tests with different combinations of connection string to ensure
         /// tableprefix generated is correct.
-        /// <code>Check: </code> Making sure no exception is thrown if there are no Foreign Keys.
+        /// <code>Check: </code> Making sure table prefix matches expected prefix.
         /// </summary>
         [TestMethod]
         [DataRow("","","")]

@@ -259,8 +259,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                         new MsSqlMetadataProvider(
                             runtimeConfigProvider,
                             _queryExecutor, _queryBuilder,
-                            _sqlMetadataLogger
-                            );
+                            _sqlMetadataLogger);
                     break;
                 case TestCategory.MYSQL:
                     Mock<ILogger<MySqlQueryExecutor>> mySqlQueryExecutorLogger = new();

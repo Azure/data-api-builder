@@ -85,10 +85,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             // Setting the rest request body strict flag as per the test fixtures.
             if (!isRestBodyStrict)
             {
-                runtimeConfig = runtimeConfig with
-                { Runtime = runtimeConfig.Runtime with
-                { Rest = runtimeConfig.Runtime.Rest with
-                { RequestBodyStrict = isRestBodyStrict} } };
+                runtimeConfig = runtimeConfig with { Runtime = runtimeConfig.Runtime with { Rest = runtimeConfig.Runtime.Rest with { RequestBodyStrict = isRestBodyStrict } } };
             }
 
             // Add magazines entity to the config

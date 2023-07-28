@@ -75,7 +75,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     sqlQuery: GetQuery("PatchOneWithNonExistingFieldInRequestBody"),
                     operationType: EntityActionOperation.UpsertIncremental,
                     requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.OK
+                    expectedStatusCode: HttpStatusCode.Created
                 );
         }
         #endregion Positive tests

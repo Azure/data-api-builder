@@ -31,6 +31,9 @@ namespace Azure.DataApiBuilder.Core.Authorization
         public const string ROLE_AUTHENTICATED = "authenticated";
 
         public Dictionary<string, EntityMetadata> EntityPermissionsMap { get; private set; } = new();
+
+        // Boolean variable indicating if extraneous fields are allowed in the request body for REST operations.
+        // By default, extraneous fields are not allowed.
         public bool IsRequestBodyStrictForRest = true;
 
         public AuthorizationResolver(

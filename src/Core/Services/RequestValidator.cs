@@ -23,6 +23,9 @@ namespace Azure.DataApiBuilder.Core.Services
         public const string PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE = "Primary Key for this HTTP request type is required.";
 
         private readonly ISqlMetadataProvider _sqlMetadataProvider;
+
+        // Boolean variable indicating if extraneous fields are allowed in the request body for REST operations.
+        // By default, extraneous fields are not allowed.
         private readonly bool _isRequestBodyStrict = true;
 
         public RequestValidator(ISqlMetadataProvider sqlMetadataProvider,
@@ -469,7 +472,6 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Tries to get the table definition for the given entity from the Metadata provider.
         /// </summary>
         /// <param name="entityName">Target entity name.</param>
-        /// <param name="sqlMetadataProvider">SqlMetadata provider that
         /// enables referencing DB schema.</param>
         /// <exception cref="DataApiBuilderException"></exception>
 

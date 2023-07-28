@@ -55,8 +55,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 if (!MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn))
                 {
-                    // This code block is only ever hit when we have extraneous fields which don't map to any column
-                    // in the table and we don't operate in rest request body strict mode.
+                    // This code block is only ever hit when we have extraneous fields which don't map to any backing column
+                    // in the table/view (possible only for REST). We skip creating predicate for such a field. 
                     continue;
                 }
 

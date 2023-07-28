@@ -58,7 +58,7 @@ namespace Cli.Commands
 
         public void Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
-            logger.LogInformation($"{PRODUCT_NAME} {ProductInfo.GetProductVersion()}");
+            logger.LogInformation("{productName} {version}", PRODUCT_NAME, ProductInfo.GetProductVersion());
             if (!IsEntityProvided(Entity, logger, command: "add"))
             {
                 return;
@@ -67,12 +67,12 @@ namespace Cli.Commands
             bool isSuccess = ConfigGenerator.TryAddEntityToConfigWithOptions(this, loader, fileSystem);
             if (isSuccess)
             {
-                logger.LogInformation($"Added new entity: {Entity} with source: {Source} and permissions: {string.Join(SEPARATOR, Permissions.ToArray())}.");
-                logger.LogInformation($"SUGGESTION: Use 'dab update [entity-name] [options]' to update any entities in your config.");
+                logger.LogInformation("Added new entity: {Entity} with source: {Source} and permissions: {permissions}.", Entity, Source, string.Join(SEPARATOR, Permissions));
+                logger.LogInformation("SUGGESTION: Use 'dab update [entity-name] [options]' to update any entities in your config.");
             }
             else
             {
-                logger.LogError($"Could not add entity: {Entity} with source: {Source} and permissions: {string.Join(SEPARATOR, Permissions.ToArray())}.");
+                logger.LogError("Could not add entity: {Entity} with source: {Source} and permissions: {permissions}.", Entity, Source, string.Join(SEPARATOR, Permissions));
             }
         }
     }

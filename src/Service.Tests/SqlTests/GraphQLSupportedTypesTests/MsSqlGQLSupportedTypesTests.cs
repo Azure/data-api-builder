@@ -21,16 +21,28 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             await InitializeTestFixture(context);
         }
 
-        protected override string MakeQueryOnTypeTable(List<string> queriedColumns, int id)
+        protected override string MakeQueryOnTypeTable(List<string> columnsToQuery, int id)
         {
+            return MakeQueryOnTypeTable(columnsToQuery, filterValue: id.ToString(), filterField: "id");
+        }
+
+        protected override string MakeQueryOnTypeTable(
+            List<string> queriedColumns,
+            string filterValue = "1",
+            string filterOperator = "=",
+            string filterField = "1",
+            string orderBy = "id",
+            string limit = "1")
+        {
+            string format = limit.Equals("1") ? "WITHOUT_ARRAY_WRAPPER, INCLUDE_NULL_VALUES" : "INCLUDE_NULL_VALUES";
             return @"
-                SELECT TOP 1 " + string.Join(", ", queriedColumns) + @"
+                SELECT TOP " + limit + " " + string.Join(", ", queriedColumns) + @"
                 FROM type_table AS [table0]
-                WHERE id = " + id + @"
-                ORDER BY id asc
+                WHERE " + filterField + " " + filterOperator + " " + filterValue + @"
+                ORDER BY " + orderBy + @" asc
                 FOR JSON PATH,
-                    WITHOUT_ARRAY_WRAPPER,
-                    INCLUDE_NULL_VALUES
+                " + format + @"
+                    
             ";
         }
     }

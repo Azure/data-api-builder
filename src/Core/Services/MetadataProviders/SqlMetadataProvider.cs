@@ -278,7 +278,7 @@ namespace Azure.DataApiBuilder.Core.Services
             string storedProcedureSourceName,
             StoredProcedureDefinition storedProcedureDefinition)
         {
-            using ConnectionT conn = _connectionProvider.Create();
+            using DbConnection conn = _connectionProvider.Create();
             conn.ConnectionString = ConnectionString;
             await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
             await conn.OpenAsync();
@@ -1101,7 +1101,7 @@ namespace Azure.DataApiBuilder.Core.Services
             string schemaName,
             string tableName)
         {
-            using ConnectionT conn = _connectionProvider.Create();
+            using DbConnection conn = _connectionProvider.Create();
             // If connection string is set to empty string
             // we throw here to avoid having to sort out
             // complicated db specific exception messages.
@@ -1191,7 +1191,7 @@ namespace Azure.DataApiBuilder.Core.Services
             string schemaName,
             string tableName)
         {
-            using ConnectionT conn = _connectionProvider.Create();
+            using DbConnection conn = _connectionProvider.Create();
             conn.ConnectionString = ConnectionString;
             await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
             await conn.OpenAsync();

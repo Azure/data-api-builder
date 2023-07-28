@@ -3,10 +3,9 @@
 
 using System.Data.Common;
 
-namespace Azure.DataApiBuilder.Core.Services
+namespace Azure.DataApiBuilder.Core.Services;
+
+public interface IConnectionProvider<TConnection>  where TConnection : DbConnection, new()
 {
-    public interface IConnectionProvider<ConnectionT>  where ConnectionT : DbConnection, new()
-    {
-        ConnectionT Create() => new();
-    }
+    DbConnection Create() => new TConnection();
 }

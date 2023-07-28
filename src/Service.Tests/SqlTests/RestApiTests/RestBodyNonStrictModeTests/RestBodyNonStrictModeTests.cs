@@ -48,7 +48,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             {
                ""categoryName"":""SciFi"",
                ""piecesAvailable"":""10"",
-               ""piecesRequired"":""4"",
+               ""piecesRequired"":""5"",
                ""non_existing_field"": 5
             }";
 

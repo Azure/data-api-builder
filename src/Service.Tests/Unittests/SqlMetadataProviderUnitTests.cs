@@ -91,10 +91,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <code>Check: </code> Making sure table prefix matches expected prefix.
         /// </summary>
         [TestMethod]
-        [DataRow("","","")]
-        [DataRow("","model","[model]")]
-        [DataRow("TestDB","","[TestDB]")]
-        [DataRow("TestDB", "model","[TestDB].[model]")]
+        [DataRow("", "", "")]
+        [DataRow("", "model", "[model]")]
+        [DataRow("TestDB", "", "[TestDB]")]
+        [DataRow("TestDB", "model", "[TestDB].[model]")]
         public void CheckTablePrefix(string databaseName, string schemaName, string expectedPrefix)
         {
             TestHelper.SetupDatabaseEnvironment("MSSQL");

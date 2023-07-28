@@ -73,8 +73,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             foreach (KeyValuePair<string, object?> param in mutationParams)
             {
-                MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
-                PopulateColumnsAndParams(backingColumn!, param.Value);
+                if (MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn))
+                {
+                    PopulateColumnsAndParams(backingColumn!, param.Value);
+                }
             }
 
             if (FieldsReferencedInDbPolicyForCreateAction.Count > 0)

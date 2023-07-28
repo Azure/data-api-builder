@@ -90,7 +90,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// tableprefix generated is correctly.
         /// <code>Check: </code> Making sure table prefix matches expected prefix.
         /// </summary>
-        [TestMethod]
+        [DataTestMethod]
         [DataRow("", "", "")]
         [DataRow("", "model", "[model]")]
         [DataRow("TestDB", "", "[TestDB]")]

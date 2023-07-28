@@ -110,16 +110,16 @@ namespace Cli.Commands
 
         public void Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
-            logger.LogInformation($"{PRODUCT_NAME} {ProductInfo.GetProductVersion()}");
+            logger.LogInformation("{productName} {version}", PRODUCT_NAME, ProductInfo.GetProductVersion());
             bool isSuccess = ConfigGenerator.TryGenerateConfig(this, loader, fileSystem);
             if (isSuccess)
             {
-                logger.LogInformation($"Config file generated.");
-                logger.LogInformation($"SUGGESTION: Use 'dab add [entity-name] [options]' to add new entities in your config.");
+                logger.LogInformation("Config file generated.");
+                logger.LogInformation("SUGGESTION: Use 'dab add [entity-name] [options]' to add new entities in your config.");
             }
             else
             {
-                logger.LogError($"Could not generate config file.");
+                logger.LogError("Could not generate config file.");
             }
         }
     }

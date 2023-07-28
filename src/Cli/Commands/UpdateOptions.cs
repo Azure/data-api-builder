@@ -98,7 +98,7 @@ namespace Cli.Commands
 
         public void Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
-            logger.LogInformation($"{PRODUCT_NAME} {ProductInfo.GetProductVersion()}");
+            logger.LogInformation("{productName} {version}", PRODUCT_NAME, ProductInfo.GetProductVersion());
             if (!IsEntityProvided(Entity, logger, command: "update"))
             {
                 return;
@@ -108,11 +108,11 @@ namespace Cli.Commands
 
             if (isSuccess)
             {
-                logger.LogInformation($"Updated the entity: {Entity}.");
+                logger.LogInformation("Updated the entity: {Entity}.", Entity);
             }
             else
             {
-                logger.LogError($"Could not update the entity: {Entity}.");
+                logger.LogError("Could not update the entity: {Entity}.", Entity);
             }
         }
     }

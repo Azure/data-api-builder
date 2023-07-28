@@ -97,7 +97,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("TestDB", "model", "[TestDB].[model]")]
         public void CheckTablePrefix(string databaseName, string schemaName, string expectedPrefix)
         {
-            TestHelper.SetupDatabaseEnvironment("MSSQL");
+            TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
             RuntimeConfig baseConfigFromDisk = SqlTestHelper.SetupRuntimeConfig();
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(baseConfigFromDisk);
 
@@ -107,7 +107,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand> provider = new MsSqlMetadataProvider(runtimeConfigProvider, queryExecutor.Object, queryBuilder, sqlMetadataLogger);
             string tableprefix = provider.GetTablePrefix(databaseName, schemaName);
-            Assert.IsTrue(tableprefix.Equals(expectedPrefix));
+            Assert.AreEqual(tableprefix, expectedPrefix);
         }
 
         /// <summary>

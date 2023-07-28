@@ -1140,9 +1140,9 @@ namespace Azure.DataApiBuilder.Core.Services
             };
 
             string tablePrefix = GetTablePrefix(conn.Database, schemaName);
-            string queryprefix = string.IsNullOrEmpty(tablePrefix) ? string.Empty : $"{tablePrefix}.";
+            string queryPrefix = string.IsNullOrEmpty(tablePrefix) ? string.Empty : $"{tablePrefix}.";
             selectCommand.CommandText
-                = $"SELECT * FROM {queryprefix}{SqlQueryBuilder.QuoteIdentifier(tableName)}";
+                = $"SELECT * FROM {queryPrefix}{SqlQueryBuilder.QuoteIdentifier(tableName)}";
             adapterForTable.SelectCommand = selectCommand;
 
             DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, tableName);

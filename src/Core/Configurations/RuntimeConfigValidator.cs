@@ -278,7 +278,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
         /// <param name="entityName">Name of the entity</param>
         private void ValidatePresenceOfExtraRestProperties(Entity entity, string entityName)
         {
-            if (entity.Source.Type != EntitySourceType.StoredProcedure && entity.Rest.Methods is not null && entity.Rest.Methods.Length > 0)
+            if (entity.Source.Type is not EntitySourceType.StoredProcedure && entity.Rest.Methods is not null && entity.Rest.Methods.Length > 0)
             {
                 _logger.LogWarning("Entity {entityName} has rest methods configured but is not a stored procedure. Values configured will be ignored and all 5 HTTP actions will be enabled.", entityName);
             }

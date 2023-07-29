@@ -124,10 +124,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             ) with
             { Entities = new(new Dictionary<string, Entity>() { { AuthorizationHelpers.TEST_ENTITY, testEntity } }) };
 
-            MockFileSystem fileSystem = new();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
             try
             {
@@ -163,10 +160,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: dbPolicy
                 );
-            MockFileSystem fileSystem = new();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
             // Assert that expected exception is thrown.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig));
@@ -260,10 +255,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Entities: new(entityMap)
             );
 
-            MockFileSystem fileSystem = new();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
             Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
 
             // Assert that expected exception is thrown. Entity used in relationship is Invalid
@@ -324,10 +316,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Entities: new(entityMap)
             );
 
-            MockFileSystem fileSystem = new();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
             Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
 
             // Exception should be thrown as we cannot use an entity (with graphQL disabled) in a relationship.
@@ -638,10 +627,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: dbPolicy
                 );
-            MockFileSystem fileSystem = new();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
             // Assert that expected exception is thrown.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
@@ -673,10 +660,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: policy
                 );
-            MockFileSystem fileSystem = new();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
             // Assert that expected exception is thrown.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
@@ -755,10 +740,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 operation: actionOp,
                 includedCols: new HashSet<string> { "*", "col2" }
                 );
-            MockFileSystem fileSystem = new();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
             // Assert that expected exception is thrown.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
@@ -781,10 +764,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 operation: actionOp,
                 excludedCols: new HashSet<string> { "*", "col1" }
                 );
-            MockFileSystem fileSystem = new();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
             // Assert that expected exception is thrown.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
@@ -855,10 +836,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 ),
                 Entities: new(entityMap));
 
-            MockFileSystem fileSystem = new();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+
             if (!exceptionExpected)
             {
                 RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
@@ -930,11 +909,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Entities: new(entityMap)
                 );
 
-            MockFileSystem fileSystem = new();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
-            Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
             if (expectsException)
             {
@@ -1667,10 +1642,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 }";
 
             RuntimeConfigLoader.TryParseConfig(runtimeConfigString, out RuntimeConfig runtimeConfig);
-            MockFileSystem fileSystem = new();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
             // Perform validation on the permissions in the config and assert the expected results.
             if (exceptionExpected)
@@ -1785,7 +1757,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Validates that a warning is logged when REST methods are configured for tables and views.
+        /// Validates that a warning is logged when REST methods are configured for tables and views. For stored procedures,
+        /// no warnings are logged.
         /// </summary>
         /// <param name="sourceType">The source type of the entity.</param>
         /// <param name="methods">Value of the rest methods property configured for the entity.</param>
@@ -1826,7 +1799,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfigProvider provider = new(loader);
             Mock<ILogger<RuntimeConfigValidator>> loggerMock = new();
             RuntimeConfigValidator configValidator = new(provider, fileSystem, loggerMock.Object);
-            Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
 
             configValidator.ValidateEntityConfiguration(runtimeConfig);
 
@@ -1897,11 +1869,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Entities: new(entityMap)
             );
 
-            MockFileSystem fileSystem = new();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
-            Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
             if (exceptionExpected)
             {
@@ -1971,11 +1939,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Entities: new(entityMap)
             );
 
-            MockFileSystem fileSystem = new();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
-            Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
             if (exceptionExpected)
             {
@@ -2050,6 +2014,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
                 Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
             }
+        }
+
+        private static RuntimeConfigValidator InitializeRuntimeConfigValidator()
+        {
+            MockFileSystem fileSystem = new();
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            return new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
         }
     }
 }

@@ -8,10 +8,12 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -81,6 +83,31 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             DatabaseEngine = TestCategory.MSSQL;
             await CheckExceptionForBadConnectionStringHelperAsync(DatabaseEngine, connectionString);
+        }
+
+        /// <summary>
+        /// <code>Do: </code> Tests with different combinations of connection string to ensure
+        /// tableprefix generated is correctly.
+        /// <code>Check: </code> Making sure table prefix matches expected prefix.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("", "", "")]
+        [DataRow("", "model", "[model]")]
+        [DataRow("TestDB", "", "[TestDB]")]
+        [DataRow("TestDB", "model", "[TestDB].[model]")]
+        public void CheckTablePrefix(string databaseName, string schemaName, string expectedPrefix)
+        {
+            TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
+            RuntimeConfig baseConfigFromDisk = SqlTestHelper.SetupRuntimeConfig();
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(baseConfigFromDisk);
+
+            ILogger<ISqlMetadataProvider> sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
+            Mock<IQueryExecutor> queryExecutor = new();
+            IQueryBuilder queryBuilder = new MsSqlQueryBuilder();
+
+            SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand> provider = new MsSqlMetadataProvider(runtimeConfigProvider, queryExecutor.Object, queryBuilder, sqlMetadataLogger);
+            string tableprefix = provider.GetTablePrefix(databaseName, schemaName);
+            Assert.AreEqual(tableprefix, expectedPrefix);
         }
 
         /// <summary>

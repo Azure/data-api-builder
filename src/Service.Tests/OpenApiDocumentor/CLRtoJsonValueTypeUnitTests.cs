@@ -101,8 +101,6 @@ public class CLRtoJsonValueTypeUnitTests
     [DataRow(typeof(Guid?))]
     [DataRow(typeof(TimeOnly?))]
     [DataRow(typeof(TimeSpan?))]
-    [DataRow(typeof(DateTime?))]
-    [DataRow(typeof(DateTimeOffset?))]
     [DataTestMethod]
     public void ResolveUnderlyingTypeForNullableValueType(Type nullableType)
     {

@@ -189,6 +189,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(DATETIME_TYPE, "eq", "\'1999-01-08 10:23:00.9999999\'", "\"1999-01-08 10:23:00.9999999\"", "=")]
         [DataRow(DATETIME_TYPE, "neq", "\'1999-01-08 10:23:54.9999999-14:00\'", "\"1999-01-08 10:23:54.9999999-14:00\"", "!=")]
         [DataRow(DATETIME_TYPE, "eq", "\'1999-01-08 10:23:54.9999999-14:00\'", "\"1999-01-08 10:23:54.9999999-14:00\"", "=")]
+        [DataRow(DATETIMEOFFSET_TYPE, "neq", "\'1999-01-08 10:23:54.9999999-14:00\'", "\"1999-01-08 10:23:54.9999999-14:00\"", "!=")]
+        [DataRow(DATETIMEOFFSET_TYPE, "eq", "\'1999-01-08 10:23:54.9999999-14:00\'", "\"1999-01-08 10:23:54.9999999-14:00\"", "=")]
         [DataRow(DATETIME_TYPE, "gt", "\'1999-01-08 10:22:00\'", "\"1999-01-08 10:22:00\"", " > ")]
         [DataRow(DATETIME_TYPE, "gte", "\'1999-01-08 10:23:54\'", "\"1999-01-08 10:23:54\"", " >= ")]
         [DataRow(DATETIME_TYPE, "lt", "\'2079-06-06\'", "\"2079-06-06\"", " < ")]
@@ -254,6 +256,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(BOOLEAN_TYPE, "false")]
         [DataRow(BOOLEAN_TYPE, "null")]
         [DataRow(DATETIMEOFFSET_TYPE, "\"1999-01-08 10:23:54+8:00\"")]
+        [DataRow(DATETIMEOFFSET_TYPE, "\"1999-01-08 10:23:54.671287+8:00\"")]
         [DataRow(DATETIME_TYPE, "\"1999-01-08 09:20:00\"")]
         [DataRow(DATETIME_TYPE, "\"1999-01-08\"")]
         [DataRow(DATETIME_TYPE, "null")]
@@ -286,9 +289,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             await ResetDbStateAsync();
         }
 
+        /// <summary>
+        /// Test case for invalid time, such as negative values or hours>24 or minutes/seconds>60.
+        /// </summary>
         [DataTestMethod]
         [DataRow(TIME_TYPE, "\"32:59:59.9999999\"")]
         [DataRow(TIME_TYPE, "\"22:67:59.9999999\"")]
+        [DataRow(TIME_TYPE, "\"14:12:99.9999999\"")]
         [DataRow(TIME_TYPE, "\"-22:67:59.9999999\"")]
         [DataRow(TIME_TYPE, "\"22:-67:59.9999999\"")]
         [DataRow(TIME_TYPE, "\"22:67:59.-9999999\"")]
@@ -306,7 +313,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             JsonElement response = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
             string responseMessage = Regex.Unescape(JsonSerializer.Serialize(response));
             Assert.IsTrue(responseMessage.Contains($"{value} cannot be resolved as column \"{field}\" with type \"TimeSpan\"."));
-            await ResetDbStateAsync();
         }
 
         [DataTestMethod]
@@ -555,7 +561,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         }
 
         /// <summary>
-        /// Required due to different format between mysql datetimeoffset and HotChocolate datetime
+        /// Required due to different format between sql datetimeoffset and HotChocolate datetime
         /// result
         /// </summary>
         private static void CompareDateTimeOffsetResults(string actual, string expected)
@@ -565,22 +571,32 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             using JsonDocument actualJsonDoc = JsonDocument.Parse(actual);
             using JsonDocument expectedJsonDoc = JsonDocument.Parse(expected);
 
-            string actualDateTimeOffset = actualJsonDoc.RootElement.GetProperty(fieldName).ToString();
-            string expectedDateTimeOffset = expectedJsonDoc.RootElement.GetProperty(fieldName).ToString();
+            if (actualJsonDoc.RootElement.ValueKind is JsonValueKind.Array)
+            {
+                ValidateArrayResults(actualJsonDoc, expectedJsonDoc, fieldName);
+                return;
+            }
+
+            string actualDateTimeOffsetString = actualJsonDoc.RootElement.GetProperty(fieldName).ToString();
+            string expectedDateTimeOffsetString = expectedJsonDoc.RootElement.GetProperty(fieldName).ToString();
 
             // handles cases when one of the values is null
-            if (string.IsNullOrEmpty(actualDateTimeOffset) || string.IsNullOrEmpty(expectedDateTimeOffset))
+            if (string.IsNullOrEmpty(actualDateTimeOffsetString) || string.IsNullOrEmpty(expectedDateTimeOffsetString))
             {
-                Assert.AreEqual(expectedDateTimeOffset, actualDateTimeOffset);
+                Assert.AreEqual(expectedDateTimeOffsetString, actualDateTimeOffsetString);
             }
             else
             {
-                Assert.AreEqual(DateTimeOffset.Parse(expectedDateTimeOffset), DateTimeOffset.Parse(actualDateTimeOffset));
+                DateTimeOffset actualDateTimeOffset = DateTimeOffset.Parse(actualDateTimeOffsetString, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal);
+                DateTimeOffset expectedDateTimeOffset = DateTimeOffset.Parse(expectedDateTimeOffsetString, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal);
+                Assert.AreEqual(actualDateTimeOffset.ToString(), expectedDateTimeOffset.ToString());
+                // Comparing for Miliseconds separetly since Hotcholate respond with only 3 decimal places.
+                Assert.AreEqual(actualDateTimeOffset.Millisecond, expectedDateTimeOffset.Millisecond);
             }
         }
 
         /// <summary>
-        /// Required due to different format between SQL time and HotChocolate TimeSpan time(ISO-8601) result.
+        /// Compares the value from SQL time and HotChocolate LocalTime.
         /// </summary>
         private static void CompareTimeResults(string actual, string expected)
         {
@@ -605,8 +621,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             }
             else
             {
-                TimeOnly actualTime = TimeOnly.Parse(actualTimeString, CultureInfo.InvariantCulture);
-                TimeOnly expectedTime = TimeOnly.Parse(expectedTimeString, CultureInfo.InvariantCulture);
+                TimeOnly actualTime = TimeOnly.Parse(actualTimeString);
+                TimeOnly expectedTime = TimeOnly.Parse(expectedTimeString);
                 Assert.AreEqual(expectedTime.ToLongTimeString(), actualTime.ToLongTimeString());
             }
         }
@@ -621,7 +637,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 actualElement.TryGetProperty(fieldName, out JsonElement actualValue);
                 expectedElement.TryGetProperty(fieldName, out JsonElement expectedValue);
 
-                if (fieldName.StartsWith(DATETIME_TYPE.ToLower()))
+                if (fieldName.StartsWith(DATETIMEOFFSET_TYPE.ToLower()))
+                {
+                    DateTimeOffset actualDateTimeOffset = DateTimeOffset.Parse(actualValue.ToString(), DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal);
+                    DateTimeOffset expectedDateTimeOffset = DateTimeOffset.Parse(expectedValue.ToString(), DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal);
+                    Assert.AreEqual(actualDateTimeOffset.ToString(), expectedDateTimeOffset.ToString());
+                    // Comparing for Miliseconds separetly since Hotcholate respond with only 3 decimal places.
+                    Assert.AreEqual(actualDateTimeOffset.Millisecond, expectedDateTimeOffset.Millisecond);
+                }
+                else if (fieldName.StartsWith(DATETIME_TYPE.ToLower()))
                 {
                     // MySql returns a format that will not directly parse into DateTime type so we use string here for parsing
                     DateTime actualDateTime = DateTime.Parse(actualValue.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
@@ -634,8 +658,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 }
                 else if (fieldName.StartsWith(TIME_TYPE.ToLower()))
                 {
-                    TimeOnly actualTime = TimeOnly.Parse(actualValue.ToString(), CultureInfo.InvariantCulture);
-                    TimeOnly expectedTime = TimeOnly.Parse(expectedValue.ToString(), CultureInfo.InvariantCulture);
+                    TimeOnly actualTime = TimeOnly.Parse(actualValue.ToString());
+                    TimeOnly expectedTime = TimeOnly.Parse(expectedValue.ToString());
                     Assert.AreEqual(expectedTime.ToLongTimeString(), actualTime.ToLongTimeString());
                 }
                 else

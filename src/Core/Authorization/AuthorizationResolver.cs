@@ -232,7 +232,16 @@ namespace Azure.DataApiBuilder.Core.Authorization
                 bool isStoredProcedureEntity = entity.Source.Type is EntitySourceType.StoredProcedure;
                 if (isStoredProcedureEntity)
                 {
-                    SupportedHttpVerb[] methods = (entity.Rest.Methods is not null) ? entity.Rest.Methods : Array.Empty<SupportedHttpVerb>();
+                    SupportedHttpVerb[] methods;
+                    if (entity.Rest.Methods is not null)
+                    {
+                        methods = entity.Rest.Methods;
+                    }
+                    else
+                    {
+                        methods = (entity.Rest.Enabled) ? new SupportedHttpVerb[] { SupportedHttpVerb.Post } : Array.Empty<SupportedHttpVerb>();
+                    }
+
                     entityToRoleMap.StoredProcedureHttpVerbs = new(methods);
                 }
 

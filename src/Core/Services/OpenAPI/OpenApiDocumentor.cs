@@ -452,7 +452,15 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 Entity entityTest = _runtimeConfig.Entities[entityName];
 
-                List<SupportedHttpVerb>? spRestMethods = (entityTest.Rest.Methods is not null) ? entityTest.Rest.Methods.ToList() : null;
+                List<SupportedHttpVerb>? spRestMethods;
+                if (entityTest.Rest.Methods is not null)
+                {
+                    spRestMethods = entityTest.Rest.Methods.ToList();
+                }
+                else
+                {
+                    spRestMethods = (entityTest.Rest.Enabled) ? new List<SupportedHttpVerb> { SupportedHttpVerb.Post } : null;
+                }
 
                 if (spRestMethods is null)
                 {

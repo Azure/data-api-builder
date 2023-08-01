@@ -128,9 +128,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     if (!MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn))
                     {
-                        // If no backing column exists, it means there is an extraneous field in the request body.
-                        // In that case, we would have hit this code only if extraneous fields were allowed in request body.
-                        // So, we don't add this field to the columns to be mutated.
+                        // This code block is only ever hit when we have extraneous fields which don't map to any backing column
+                        // in the table/view (possible only for REST). We skip creating processing such a field.
                         continue;
                     }
                     // Create Parameter and map it to column for downstream logic to utilize.

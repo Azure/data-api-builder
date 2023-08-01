@@ -2478,7 +2478,7 @@
         "bkname": "name"
       }
     },
-    "books_sold": {
+    "BooksSold": {
       "source": {
         "object": "books_sold",
         "type": "table"

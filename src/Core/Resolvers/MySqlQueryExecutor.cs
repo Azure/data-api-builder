@@ -121,8 +121,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <returns>True if valid, false otherwise.</returns>
         private bool IsDefaultAccessTokenValid()
         {
-            return _defaultAccessToken is not null &&
-                ((AccessToken)_defaultAccessToken).ExpiresOn.CompareTo(DateTimeOffset.Now) > 0;
+            return _defaultAccessToken is not null && ((AccessToken)_defaultAccessToken).ExpiresOn.CompareTo(DateTimeOffset.Now) > 0;
         }
 
         /// <summary>
@@ -136,15 +135,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             try
             {
-                _defaultAccessToken =
-                    await AzureCredential.GetTokenAsync(
-                        new TokenRequestContext(new[] { DATABASE_SCOPE }));
+                _defaultAccessToken = await AzureCredential.GetTokenAsync(new TokenRequestContext(new[] { DATABASE_SCOPE }));
             }
             catch (CredentialUnavailableException ex)
             {
-                QueryExecutorLogger.LogWarning($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContextAccessor.HttpContext)}" +
-                    $"Attempt to retrieve a managed identity access token using DefaultAzureCredential" +
-                    $" failed due to: \n{ex}");
+                string correlationId = HttpContextExtensions.GetLoggerCorrelationId(HttpContextAccessor.HttpContext);
+                QueryExecutorLogger.LogWarning("[{CorrelationId}] Failed to retrieve a managed identity access token using DefaultAzureCredential: {message}", correlationId, ex.Message);
             }
 
             return _defaultAccessToken?.Token;

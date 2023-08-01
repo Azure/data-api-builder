@@ -5,6 +5,7 @@ using System.Data;
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -18,6 +19,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 
+[assembly: InternalsVisibleTo("Azure.DataApiBuilder.Service.Tests")]
 namespace Azure.DataApiBuilder.Core.Services
 {
     /// <summary>
@@ -277,8 +279,6 @@ namespace Azure.DataApiBuilder.Core.Services
             conn.ConnectionString = ConnectionString;
             await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
             await conn.OpenAsync();
-
-            string tablePrefix = GetTablePrefix(conn.Database, schemaName);
 
             string[] procedureRestrictions = new string[NUMBER_OF_RESTRICTIONS];
 
@@ -1180,21 +1180,38 @@ namespace Azure.DataApiBuilder.Core.Services
             };
 
             string tablePrefix = GetTablePrefix(conn.Database, schemaName);
+            string queryPrefix = string.IsNullOrEmpty(tablePrefix) ? string.Empty : $"{tablePrefix}.";
             selectCommand.CommandText
-                = $"SELECT * FROM {tablePrefix}.{SqlQueryBuilder.QuoteIdentifier(tableName)}";
+                = $"SELECT * FROM {queryPrefix}{SqlQueryBuilder.QuoteIdentifier(tableName)}";
             adapterForTable.SelectCommand = selectCommand;
 
             DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, tableName);
             return dataTable[0];
         }
 
-        private string GetTablePrefix(string databaseName, string schemaName)
+        internal string GetTablePrefix(string databaseName, string schemaName)
         {
-            StringBuilder tablePrefix = new(SqlQueryBuilder.QuoteIdentifier(databaseName));
-            if (!string.IsNullOrEmpty(schemaName))
+            StringBuilder tablePrefix = new();
+
+            if (!string.IsNullOrEmpty(databaseName))
             {
+                // Determine databaseName for prefix.
+                databaseName = SqlQueryBuilder.QuoteIdentifier(databaseName);
+                tablePrefix.Append(databaseName);
+
+                if (!string.IsNullOrEmpty(schemaName))
+                {
+                    // Determine schemaName for prefix.
+                    schemaName = SqlQueryBuilder.QuoteIdentifier(schemaName);
+                    tablePrefix.Append($".{schemaName}");
+                }
+            }
+            else if (!string.IsNullOrEmpty(schemaName))
+            {
+                // Determine schemaName for prefix.
                 schemaName = SqlQueryBuilder.QuoteIdentifier(schemaName);
-                tablePrefix.Append($".{schemaName}");
+                // Database name is empty we just need the schema name.
+                tablePrefix.Append(schemaName);
             }
 
             return tablePrefix.ToString();

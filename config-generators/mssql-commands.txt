@@ -39,7 +39,7 @@ add InsertAndDisplayAllBooksUnderGivenPublisher --config "dab-config.MsSql.json"
 add GQLmappings --config "dab-config.MsSql.json" --source "GQLmappings" --permissions "anonymous:*" --rest true --graphql true
 add Bookmarks --config "dab-config.MsSql.json" --source "bookmarks" --permissions "anonymous:*" --rest true --graphql true
 add MappedBookmarks --config "dab-config.MsSql.json" --source "mappedbookmarks" --permissions "anonymous:*" --rest true --graphql true
-add books_sold --config "dab-config.MsSql.json" --source "books_sold" --rest true --graphql true --permissions "anonymous:*"
+add BooksSold --config "dab-config.MsSql.json" --source "books_sold" --rest true --graphql true --permissions "anonymous:*"
 update GQLmappings --config "dab-config.MsSql.json" --map "__column1:column1,__column2:column2" --permissions "authenticated:*"
 update Publisher --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship books --target.entity Book --cardinality many
 update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_01:create,delete"

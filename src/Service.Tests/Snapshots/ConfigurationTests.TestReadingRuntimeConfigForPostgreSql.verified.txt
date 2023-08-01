@@ -1934,8 +1934,8 @@
           Type: Table
         },
         GraphQL: {
-          Singular: books_sold,
-          Plural: books_solds,
+          Singular: BooksSold,
+          Plural: BooksSolds,
           Enabled: true
         },
         Rest: {

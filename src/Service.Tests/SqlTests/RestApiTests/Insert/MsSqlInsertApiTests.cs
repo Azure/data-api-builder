@@ -38,7 +38,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             },
             {
                 "InsertOneWithComputedFieldMissingInRequestBody",
-                $"SELECT * FROM {_entityWithReadOnlyFields } WHERE [id] = 2 AND [book_name] = 'Harry Potter' " +
+                $"SELECT * FROM {_tableWithReadOnlyFields } WHERE [id] = 2 AND [book_name] = 'Harry Potter' " +
                 $"AND [copies_sold] = 50 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
@@ -184,7 +184,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             },
             {
                 "InsertOneWithTimestampFieldMissingFromRequestBody",
-                $"SELECT * FROM {_entityWithReadOnlyFields } WHERE [id] = 2 AND [book_name] = 'Another Awesome Book' " +
+                $"SELECT * FROM {_tableWithReadOnlyFields } WHERE [id] = 2 AND [book_name] = 'Another Awesome Book' " +
                 $"AND [copies_sold] = 100 AND [last_sold_on] is NULL AND [last_sold_on_date] is NULL " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             }

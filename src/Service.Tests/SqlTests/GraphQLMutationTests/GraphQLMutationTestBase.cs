@@ -1021,6 +1021,58 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             Assert.AreEqual(dbResponseJson.RootElement.GetProperty("count").GetInt64(), 0);
         }
 
+        public async Task InsertWithReadOnlyFieldInRequest(string dbQuery, string readOnlyField)
+        {
+            string errorMessage = $"Field '{readOnlyField}' provided in request body cannot be assigned a value.";
+            string graphQLMutationName = "createBooksSold";
+            string graphQLMutation = @"
+                mutation {
+                    createBooksSold(item: {id: 2," + $"{readOnlyField}" + @": null, book_name: ""new book""}) {
+                        id " +
+                        $"{readOnlyField}" + @"
+                    }
+                }
+            ";
+
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+
+            SqlTestHelper.TestForErrorInGraphQLResponse(
+                result.ToString(),
+                message: errorMessage,
+                statusCode: $"{DataApiBuilderException.SubStatusCodes.BadRequest}"
+            );
+
+            string dbResponse = await GetDatabaseResultAsync(dbQuery);
+            using JsonDocument dbResponseJson = JsonDocument.Parse(dbResponse);
+            Assert.AreEqual(dbResponseJson.RootElement.GetProperty("count").GetInt64(), 0);
+        }
+
+        public async Task UpdateWithReadOnlyFieldInRequest(string dbQuery, string readOnlyField)
+        {
+            string errorMessage = $"Field '{readOnlyField}' provided in request body cannot be assigned a value.";
+            string graphQLMutationName = "updateBooksSold";
+            string graphQLMutation = @"
+                mutation {
+                    updateBooksSold(id: 1, item: {" + $"{readOnlyField}" + @": null, book_name: ""new book""}) {
+                        id " +
+                        $"{readOnlyField}" + @"
+                    }
+                }
+            ";
+
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+
+            SqlTestHelper.TestForErrorInGraphQLResponse(
+                result.ToString(),
+                message: errorMessage,
+                statusCode: $"{DataApiBuilderException.SubStatusCodes.BadRequest}"
+            );
+
+            string dbResponse = await GetDatabaseResultAsync(dbQuery);
+            using JsonDocument dbResponseJson = JsonDocument.Parse(dbResponse);
+            Assert.AreEqual(dbResponseJson.RootElement.GetProperty("count").GetInt64(), 0);
+        }
+
         /// <summary>
         /// <code>Do: </code>edit a book with an invalid foreign key
         /// <code>Check: </code>that GraphQL returns an error and the book has not been editted

@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
@@ -708,6 +709,84 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             ";
 
             await InsertWithInvalidForeignKey(msSqlQuery, expectedExceptionMessageSubString);
+        }
+
+        /// <summary>
+        /// <code>Do: </code>Insert a new record in books_sold specifying value of a computed field.
+        /// <code>Check: </code>that GraphQL returns an error and that a new record in book_sold has not actually been added
+        /// because it is not allowed to provide a value of computed field.
+        /// </summary>
+        [TestMethod]
+        public async Task InsertWithComputedFieldInRequest()
+        {
+            string msSqlQuery = @"
+                SELECT COUNT(*) AS count
+                FROM [books_sold]
+                WHERE [id] = 2 AND [last_sold_on_date] is NULL AND [book_name] = 'new book'
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            await InsertWithReadOnlyFieldInRequest(msSqlQuery, "last_sold_on_date");
+        }
+
+        /// <summary>
+        /// <code>Do: </code>Insert a new record in books_sold specifying value of a timestamp field.
+        /// <code>Check: </code>that GraphQL returns an error and that a new record in book_sold has not actually been added
+        /// because it is not allowed to provide a value of timestamp field.
+        /// </summary>
+        [TestMethod]
+        public async Task InsertWithTimestampFieldInRequest()
+        {
+            string msSqlQuery = @"
+                SELECT COUNT(*) AS count
+                FROM [books_sold]
+                WHERE [id] = 2 AND [row_version] is NULL AND [book_name] = 'new book'
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            await InsertWithReadOnlyFieldInRequest(msSqlQuery,"row_version");
+        }
+
+        /// <summary>
+        /// <code>Do: </code>Update a record in books_sold specifying value of a computed field.
+        /// <code>Check: </code>that GraphQL returns an error and that the record in book_sold has not actually been updated
+        /// because it is not allowed to provide a value of computed field.
+        [TestMethod]
+        public async Task UpdateWithComputedFieldInRequest()
+        {
+            string msSqlQuery = @"
+                SELECT COUNT(*) AS count
+                FROM [books_sold]
+                WHERE [id] = 1 AND [last_sold_on_date] is NULL AND [book_name] = 'new book'
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            await UpdateWithReadOnlyFieldInRequest(msSqlQuery, "last_sold_on_date");
+        }
+
+        /// <summary>
+        /// <code>Do: </code>Update a record in books_sold specifying value of a timestamp field.
+        /// <code>Check: </code>that GraphQL returns an error and that the record in book_sold has not actually been updated
+        /// because it is not allowed to provide a value of timestamp field.
+        [TestMethod]
+        public async Task UpdateWithTimestampFieldInRequest()
+        {
+            string msSqlQuery = @"
+                SELECT COUNT(*) AS count
+                FROM [books_sold]
+                WHERE [id] = 1 AND [row_version] is NULL AND [book_name] = 'new book'
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            await UpdateWithReadOnlyFieldInRequest(msSqlQuery, "row_version");
         }
 
         /// <summary>

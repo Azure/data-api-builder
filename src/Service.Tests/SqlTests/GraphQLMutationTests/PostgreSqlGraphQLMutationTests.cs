@@ -608,44 +608,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// <code>Do: </code>Insert a new record in books_sold specifying value of a computed field.
-        /// <code>Check: </code>that GraphQL returns an error and that a new record in book_sold has not actually been added
-        /// because it is not allowed to provide a value of computed field.
-        /// </summary>
-        [TestMethod]
-        public async Task InsertWithComputedFieldInRequest()
-        {
-            string postgresQuery = @"
-                SELECT to_jsonb(subq) AS DATA
-                FROM
-                  (SELECT COUNT(*) AS COUNT
-                   FROM books_sold
-                   WHERE id = 2 AND last_sold_on_date is NULL AND book_name = 'new book' ) AS subq
-            ";
-
-            await InsertWithReadOnlyFieldInRequest(postgresQuery, "last_sold_on_date");
-        }
-
-        /// <summary>
-        /// <code>Do: </code>Update a record in books_sold specifying value of a computed field.
-        /// <code>Check: </code>that GraphQL returns an error and that the record in book_sold has not actually been updated
-        /// because it is not allowed to provide a value of computed field.
-        /// </summary>
-        [TestMethod]
-        public async Task UpdateWithComputedFieldInRequest()
-        {
-            string postgresQuery = @"
-                SELECT to_jsonb(subq) AS DATA
-                FROM
-                  (SELECT COUNT(*) AS COUNT
-                   FROM books_sold
-                   WHERE id = 1 AND last_sold_on_date is NULL AND book_name = 'new book' ) AS subq
-            ";
-
-            await UpdateWithReadOnlyFieldInRequest(postgresQuery, "last_sold_on_date");
-        }
-
-        /// <summary>
         /// <code>Do: </code>edit a book with an invalid foreign key
         /// <code>Check: </code>that GraphQL returns an error and the book has not been editted
         /// </summary>

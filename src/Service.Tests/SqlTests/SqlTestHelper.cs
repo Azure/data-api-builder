@@ -80,7 +80,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
             if (message is not null)
             {
-                response = PreprocessResponse(response);
                 Console.WriteLine(response);
                 Assert.IsTrue(response.Contains(message), $"Message \"{message}\" not found in error");
             }

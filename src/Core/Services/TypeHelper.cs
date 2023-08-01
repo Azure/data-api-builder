@@ -134,7 +134,6 @@ namespace Azure.DataApiBuilder.Core.Services
                 "DateTime" => EdmPrimitiveTypeKind.DateTimeOffset,
                 "DateTimeOffset" => EdmPrimitiveTypeKind.DateTimeOffset,
                 "Date" => EdmPrimitiveTypeKind.Date,
-                "TimeOnly" => EdmPrimitiveTypeKind.TimeOfDay,
                 "TimeSpan" => EdmPrimitiveTypeKind.TimeOfDay,
                 _ => throw new ArgumentException($"Column type" +
                         $" {columnSystemType.Name} not yet supported.")

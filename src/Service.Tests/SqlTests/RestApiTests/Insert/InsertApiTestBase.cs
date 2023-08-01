@@ -486,7 +486,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 operationType: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 exceptionExpected: true,
-                expectedErrorMessage: "Invalid request body. Field not allowed in body: id.",
+                expectedErrorMessage: "Field 'id' provided in request body cannot be assigned a value.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }

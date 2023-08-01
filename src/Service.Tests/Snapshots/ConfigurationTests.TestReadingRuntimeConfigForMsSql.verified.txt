@@ -2367,7 +2367,7 @@
       }
     },
     {
-      books_sold: {
+      BooksSold: {
         Source: {
           Object: books_sold,
           Type: Table

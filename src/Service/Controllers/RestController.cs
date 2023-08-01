@@ -241,15 +241,15 @@ namespace Azure.DataApiBuilder.Service.Controllers
             }
             catch (DataApiBuilderException ex)
             {
-                _logger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}{ex.Message}");
-                _logger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}{ex.StackTrace}");
+                _logger.LogError("{correlationId}{message}", HttpContextExtensions.GetLoggerCorrelationId(HttpContext), ex.Message);
+                _logger.LogError("{correlationid}{stackTrace}", HttpContextExtensions.GetLoggerCorrelationId(HttpContext),ex.StackTrace);
                 Response.StatusCode = (int)ex.StatusCode;
                 return ErrorResponse(ex.SubStatusCode.ToString(), ex.Message, ex.StatusCode);
             }
             catch (Exception ex)
             {
-                _logger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}{ex.Message}");
-                _logger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}{ex.StackTrace}");
+                _logger.LogError("{correlationId}{message}", HttpContextExtensions.GetLoggerCorrelationId(HttpContext), ex.Message);
+                _logger.LogError("{correlationid}{stackTrace}", HttpContextExtensions.GetLoggerCorrelationId(HttpContext), ex.StackTrace);
                 Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                 return ErrorResponse(
                     DataApiBuilderException.SubStatusCodes.UnexpectedError.ToString(),

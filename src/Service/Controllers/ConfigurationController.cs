@@ -53,12 +53,12 @@ namespace Azure.DataApiBuilder.Service.Controllers
                 }
                 else
                 {
-                    _logger.LogError($"Failed to initialize configuration.");
+                    _logger.LogError("Failed to initialize configuration.");
                 }
             }
             catch (Exception e)
             {
-                _logger.LogError($"Exception during configuration initialization. {e}");
+                _logger.LogError("Exception during configuration initialization: {exception}", e);
             }
 
             return BadRequest();
@@ -92,12 +92,12 @@ namespace Azure.DataApiBuilder.Service.Controllers
                 }
                 else
                 {
-                    _logger.LogError($"Failed to initialize configuration.");
+                    _logger.LogError("Failed to initialize configuration.");
                 }
             }
             catch (Exception e)
             {
-                _logger.LogError($"Exception during configuration initialization. {e}");
+                _logger.LogError("Exception during configuration initialization. {exception}", e);
             }
 
             return BadRequest();

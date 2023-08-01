@@ -590,12 +590,17 @@ namespace Azure.DataApiBuilder.Service
                 GraphQLSchemaCreator graphQLSchemaCreator =
                     app.ApplicationServices.GetRequiredService<GraphQLSchemaCreator>();
 
+                if (graphQLSchemaCreator is null)
+                {
+                    _logger.LogError("GraphQLSchemaCreator service initialization failed.");
+                }
+
                 RestService restService =
                     app.ApplicationServices.GetRequiredService<RestService>();
 
-                if (graphQLSchemaCreator is null || restService is null)
+                if (restService is null)
                 {
-                    _logger.LogError($"Endpoint service initialization failed");
+                    _logger.LogError("RestService service initialization failed");
                 }
 
                 if (runtimeConfig.Runtime.Host.Mode == HostMode.Development)
@@ -617,15 +622,15 @@ namespace Azure.DataApiBuilder.Service
                 }
                 catch (DataApiBuilderException dabException)
                 {
-                    _logger.LogError($"{dabException.Message}");
+                    _logger.LogError("OpenAPI description document creation failure: {message}", dabException.Message);
                 }
 
-                _logger.LogInformation($"Successfully completed runtime initialization.");
+                _logger.LogInformation("Successfully completed runtime initialization.");
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Unable to complete runtime initialization. Refer to exception for error details.");
+                _logger.LogError(ex, "Runtime initialization failed because: {message}", ex.Message);
                 return false;
             }
         }

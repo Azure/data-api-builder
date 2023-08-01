@@ -53,8 +53,8 @@ namespace Azure.DataApiBuilder.Service
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     Startup.MinimumLogLevel = GetLogLevelFromCommandLineArgs(args, out Startup.IsLogLevelOverriddenByCli);
-                    ILoggerFactory? loggerFactory = GetLoggerFactoryForLogLevel(Startup.MinimumLogLevel);
-                    ILogger<Startup>? startupLogger = loggerFactory.CreateLogger<Startup>();
+                    ILoggerFactory loggerFactory = GetLoggerFactoryForLogLevel(Startup.MinimumLogLevel);
+                    ILogger<Startup> startupLogger = loggerFactory.CreateLogger<Startup>();
                     DisableHttpsRedirectionIfNeeded(args);
                     webBuilder.UseStartup(builder => new Startup(builder.Configuration, startupLogger));
                 });

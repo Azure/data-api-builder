@@ -4,7 +4,7 @@
 using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Service;
+using Azure.DataApiBuilder.Core;
 using CommandLine;
 using Microsoft.Extensions.Logging;
 using static Cli.Utils;

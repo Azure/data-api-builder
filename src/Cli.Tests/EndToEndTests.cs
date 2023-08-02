@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.DataApiBuilder.Service;
+using Azure.DataApiBuilder.Core;
 
 namespace Cli.Tests;
 

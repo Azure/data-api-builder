@@ -5,6 +5,7 @@ using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -59,6 +60,8 @@ public class RuntimeConfigProvider
     {
         if (_runtimeConfig is not null)
         {
+            // Add Application Name for telemetry
+            _runtimeConfig = UpdateConnectionStringWithApplicationName(_runtimeConfig);
             return _runtimeConfig;
         }
 
@@ -74,6 +77,9 @@ public class RuntimeConfigProvider
                 statusCode: HttpStatusCode.InternalServerError,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
         }
+
+        // Add Application Name for telemetry
+        _runtimeConfig = UpdateConnectionStringWithApplicationName(_runtimeConfig);
 
         return _runtimeConfig;
     }
@@ -210,6 +216,43 @@ public class RuntimeConfigProvider
 
         // Verify that all tasks succeeded.
         return results.All(x => x);
+    }
+
+    private static RuntimeConfig UpdateConnectionStringWithApplicationName(RuntimeConfig runtimeConfig)
+    {
+        DatabaseType databaseType = runtimeConfig.DataSource.DatabaseType;
+        string connectionString = runtimeConfig.DataSource.ConnectionString;
+
+        if (databaseType is not DatabaseType.MSSQL)
+        {
+            return runtimeConfig;
+        }
+
+        Console.WriteLine("databaseType: " + databaseType);
+        Console.WriteLine("connectionString: " + connectionString);
+        string applicationName = ProductInfo.GetDataApiBuilderUserAgent();
+
+        if (connectionString.Contains("Application Name", StringComparison.OrdinalIgnoreCase))
+        {
+            connectionString = Regex.Replace(connectionString, @"(?i)(application name.*?)(;|$)", $"$1,{applicationName}$2");
+        }
+        else if (connectionString.Contains("App", StringComparison.OrdinalIgnoreCase))
+        {
+            connectionString = Regex.Replace(connectionString, @"(?i)(app.*?)(;|$)", $"$1,{applicationName}$2");
+        }
+        else
+        {
+            connectionString += ";Application Name=" + applicationName;
+        }
+
+        return runtimeConfig with
+        {
+            DataSource = new DataSource(
+                runtimeConfig.DataSource.DatabaseType,
+                connectionString,
+                runtimeConfig.DataSource.Options
+            )
+        };
     }
 
     private static RuntimeConfig HandleCosmosNoSqlConfiguration(string? schema, RuntimeConfig runtimeConfig, string connectionString)

@@ -126,12 +126,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 foreach (KeyValuePair<string, object?> param in mutationParams)
                 {
-                    if (!MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn))
-                    {
-                        // This code block is only ever hit when we have extraneous fields which don't map to any backing column
-                        // in the table/view (possible only for REST). We skip creating processing such a field.
-                        continue;
-                    }
+                    // since we have already validated mutationParams we know backing column exists
+                    MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
                     // Create Parameter and map it to column for downstream logic to utilize.
                     string paramIdentifier;
                     if (param.Value is not null)

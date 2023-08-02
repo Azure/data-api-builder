@@ -73,12 +73,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             foreach (KeyValuePair<string, object?> param in mutationParams)
             {
-                if (MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn))
-                {
-                    // It might be the case that extraneous fields were allowed in the request body (in case of REST).
-                    // In such a case, only populate and param for the field if it maps to a backing column in the table/view.
-                    PopulateColumnsAndParams(backingColumn!, param.Value);
-                }
+                MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
+                PopulateColumnsAndParams(backingColumn!, param.Value);
             }
 
             if (FieldsReferencedInDbPolicyForCreateAction.Count > 0)

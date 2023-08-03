@@ -111,6 +111,15 @@ public abstract class RuntimeConfigLoader
         return options;
     }
 
+    /// <summary>
+    /// It adds or replaces a property in the connection string with `Application Name` property.
+    /// If the connection string already contains the property, it uses a regular expression to update the existing value
+    /// by adding the DataApiBuilder Application Name (dab_oss/dab_hosted). If not, it appends the property `Application Name` to the connection string.
+    /// This method only adds the `Application Name` property for MSSQL, as other DB's have different ways to specify the Application Name. 
+    /// </summary>
+    /// <param name="databaseType">Type of Database</param>
+    /// <param name="connectionString">Connection string for connecting to database.</param>
+    /// <returns></returns>Updated connection string with `Application Name` property<summary>
     public static string GetConnectionStringWithApplicationName(DatabaseType databaseType, string connectionString)
     {
         if (databaseType is not DatabaseType.MSSQL || string.IsNullOrWhiteSpace(connectionString))

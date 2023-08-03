@@ -448,7 +448,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// checks if the connection string provided in the config is correctly updated for MSSQL.
+        /// Checks if the connection string provided in the config is correctly updated for MSSQL.
+        /// If the connection string already contains the `Application Name` property, it should update the existing value along with the DataApiBuilder Application Name.
+        /// If not, it should appends the property `Application Name` to the connection string.
         /// </summary>
         /// <param name="databaseType">database type.</param>
         /// <param name="providedConnectionString">connection string provided in the config.</param>

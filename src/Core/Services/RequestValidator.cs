@@ -23,19 +23,12 @@ namespace Azure.DataApiBuilder.Core.Services
         public const string PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE = "Primary Key for this HTTP request type is required.";
 
         private readonly ISqlMetadataProvider _sqlMetadataProvider;
+        private readonly RuntimeConfigProvider _runtimeConfigProvider;
 
-        // Boolean variable indicating if extraneous fields are allowed in the request body for REST operations.
-        // By default, extraneous fields are not allowed.
-        private readonly bool _isRequestBodyStrict = true;
-
-        public RequestValidator(ISqlMetadataProvider sqlMetadataProvider,
-            RuntimeConfigProvider runtimeConfigProvider)
+        public RequestValidator(ISqlMetadataProvider sqlMetadataProvider, RuntimeConfigProvider runtimeConfigProvider)
         {
             _sqlMetadataProvider = sqlMetadataProvider;
-            if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
-            {
-                _isRequestBodyStrict = runtimeConfig.Runtime.Rest.RequestBodyStrict;
-            }
+            _runtimeConfigProvider = runtimeConfigProvider;
         }
 
         /// <summary>
@@ -333,7 +326,7 @@ namespace Azure.DataApiBuilder.Core.Services
             // There may be unvalidated fields remaining because of extraneous fields in request body
             // which are not mapped to the table. We throw an exception only when we operate in strict mode,
             // i.e. when extraneous fields are not allowed.
-            if (unvalidatedFields.Any() && _isRequestBodyStrict)
+            if (unvalidatedFields.Any() && IsRequestBodyStrict())
             {
                 throw new DataApiBuilderException(
                     message: $"Invalid request body. Contained unexpected fields in body: {string.Join(", ", unvalidatedFields)}",
@@ -353,8 +346,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             IEnumerable<string> fieldsInRequestBody = upsertRequestCtx.FieldValuePairsInBody.Keys;
 
-            SourceDefinition sourceDefinition =
-                TryGetSourceDefinition(upsertRequestCtx.EntityName);
+            SourceDefinition sourceDefinition = TryGetSourceDefinition(upsertRequestCtx.EntityName);
 
             // Each field that is checked against the DB schema is removed
             // from the hash set of unvalidated fields.
@@ -403,7 +395,7 @@ namespace Azure.DataApiBuilder.Core.Services
             // There may be unvalidated fields remaining because of extraneous fields in request body
             // which are not mapped to the table. We throw an exception only when we operate in strict mode,
             // i.e. when extraneous fields are not allowed.
-            if (unValidatedFields.Any() && _isRequestBodyStrict)
+            if (unValidatedFields.Any() && IsRequestBodyStrict())
             {
                 throw new DataApiBuilderException(
                     message: "Invalid request body. Either insufficient or extra fields supplied.",
@@ -477,8 +469,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             try
             {
-                SourceDefinition sourceDefinition =
-                    _sqlMetadataProvider.GetSourceDefinition(entityName);
+                SourceDefinition sourceDefinition = _sqlMetadataProvider.GetSourceDefinition(entityName);
                 return sourceDefinition;
             }
             catch (KeyNotFoundException ex)
@@ -513,7 +504,7 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// Helper function checks the $first query param
+        /// Helper method checks the $first query param
         /// to be sure that it can parse to a uint > 0
         /// </summary>
         /// <param name="first">String representing value associated with $first</param>
@@ -529,6 +520,20 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             return firstAsUint;
+        }
+
+        /// <summary>
+        /// Helper method to check if the request body for REST allows extra fields.
+        /// </summary>
+        /// <returns>true if extra fields are not allowed in REST request body.</returns>
+        private bool IsRequestBodyStrict()
+        {
+            if (_runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
+            {
+                return runtimeConfig.Runtime.Rest.RequestBodyStrict;
+            }
+
+            return true;
         }
     }
 }

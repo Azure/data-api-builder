@@ -119,12 +119,12 @@ namespace Cli
                     // rest is not supported for cosmosdb_nosql yet.
                     if (!RestRuntimeOptions.DEFAULT_PATH.Equals(restPath))
                     {
-                        _logger.LogWarning("Configuration option --rest.path is not honored for cosmosdb_nosql since it does not support REST.");
+                        _logger.LogWarning("Configuration option --rest.path is not honored for cosmosdb_nosql since CosmosDB does not support REST.");
                     }
 
                     if (options.RestRequestBodyNotStrict is true)
                     {
-                        _logger.LogWarning("Configuration option --rest.request-body-not-strict is not honored for cosmosdb_nosql since it does not support REST.");
+                        _logger.LogWarning("Configuration option --rest.request-body-not-strict is not honored for cosmosdb_nosql since CosmosDB does not support REST.");
                     }
 
                     restPath = null;

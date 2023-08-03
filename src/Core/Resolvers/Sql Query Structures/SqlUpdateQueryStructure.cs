@@ -136,14 +136,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             fieldBackingColumn = resolvedBackingColumn;
                         }
 
-                        if (sourceDefinition.Columns[fieldBackingColumn].IsReadOnly)
-                        {
-                            throw new DataApiBuilderException(
-                                message: $"Field '{field.Key}' provided in request body cannot be assigned a value.",
-                                statusCode: HttpStatusCode.BadRequest,
-                                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-                        }
-
                         if (columns.Contains(fieldBackingColumn))
                         {
                             UpdateOperations.Add(CreatePredicateForParam(new KeyValuePair<string, object?>(key: fieldBackingColumn, field.Value)));

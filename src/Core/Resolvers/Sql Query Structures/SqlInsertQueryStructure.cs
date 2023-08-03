@@ -70,18 +70,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             InsertColumns = new();
             Values = new();
             OutputColumns = GenerateOutputColumns();
-            SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();
             foreach (KeyValuePair<string, object?> param in mutationParams)
             {
                 MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
-                if (sourceDefinition.Columns[backingColumn!].IsReadOnly)
-                {
-                    throw new DataApiBuilderException(
-                        message: $"Field '{param.Key}' provided in request body cannot be assigned a value.",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-                }
-
                 PopulateColumnsAndParams(backingColumn!, param.Value);
             }
 

@@ -805,9 +805,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return newPrimaryKeyRoute.ToString();
         }
 
-        private static Dictionary<string, object?> PrepareParameters(RestRequestContext context)
+        private Dictionary<string, object?> PrepareParameters(RestRequestContext context)
         {
-            Dictionary<string, object?> parameters;
+            Dictionary<string, object?> parameters = new();
 
             switch (context.OperationType)
             {
@@ -822,18 +822,42 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     // Combine both PrimaryKey/Field ValuePairs
                     // because we create an update statement.
                     parameters = new(context.PrimaryKeyValuePairs!);
-                    foreach (KeyValuePair<string, object?> pair in context.FieldValuePairsInBody)
-                    {
-                        parameters.Add(pair.Key, pair.Value);
-                    }
-
+                    PopulateParamsFromRestContext(parameters, context);
                     break;
                 default:
-                    parameters = new(context.FieldValuePairsInBody);
+                    PopulateParamsFromRestContext(parameters, context);
                     break;
             }
 
             return parameters;
+        }
+
+        /// <summary>
+        /// Helper method to populate all the params from the Rest request's context into the paramaters dictionary.
+        /// An entry is added only for those parameters which actually map to a backing column in the table/view.
+        /// </summary>
+        /// <param name="parameters">Parameters dictionary to be populated.</param>
+        /// <param name="context">Rest request's context</param>
+        private void PopulateParamsFromRestContext(Dictionary<string, object?> parameters, RestRequestContext context)
+        {
+            SourceDefinition sourceDefinition = _sqlMetadataProvider.GetSourceDefinition(context.EntityName);
+            foreach (KeyValuePair<string, object?> pair in context.FieldValuePairsInBody)
+            {
+                if (_sqlMetadataProvider.TryGetBackingColumn(context.EntityName, pair.Key, out string? backingColumnName))
+                {
+                    if (sourceDefinition.Columns[backingColumnName].IsReadOnly)
+                    {
+                        throw new DataApiBuilderException(
+                            message: $"Field '{pair.Key}' provided in request body cannot be assigned a value.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    }
+                    // Use TryAdd because there can be primary key fields present in the request body as well
+                    // (in addition to request URL), when we operate in non-strict mode for REST.
+                    // In such a case, the duplicate PK fields in the request body are ignored.
+                    parameters.TryAdd(pair.Key, pair.Value);
+                }
+            }
         }
 
         /// <summary>

@@ -113,7 +113,7 @@ public abstract class RuntimeConfigLoader
 
     public static string GetConnectionStringWithApplicationName(DatabaseType databaseType, string connectionString)
     {
-        if (databaseType is not DatabaseType.MSSQL)
+        if (databaseType is not DatabaseType.MSSQL && string.IsNullOrWhiteSpace(connectionString))
         {
             return connectionString;
         }

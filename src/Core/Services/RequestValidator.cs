@@ -130,7 +130,7 @@ namespace Azure.DataApiBuilder.Core.Services
         public void ValidateStoredProcedureRequestContext(StoredProcedureRequestContext spRequestCtx)
         {
             StoredProcedureDefinition storedProcedureDefinition =
-                TryGetStoredProcedureDefinition(spRequestCtx.EntityName, _sqlMetadataProvider);
+                TryGetStoredProcedureDefinition(spRequestCtx.EntityName);
 
             HashSet<string> missingFields = new();
             HashSet<string> extraFields = new(spRequestCtx.ResolvedParameters.Keys);
@@ -487,11 +487,11 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Throws a DataApiBuilderException to return Bad Request to client instead of Unexpected Error
         /// Useful for accessing the definition within the request pipeline
         /// </summary>
-        private static StoredProcedureDefinition TryGetStoredProcedureDefinition(string entityName, ISqlMetadataProvider sqlMetadataProvider)
+        private StoredProcedureDefinition TryGetStoredProcedureDefinition(string entityName)
         {
             try
             {
-                return sqlMetadataProvider.GetStoredProcedureDefinition(entityName);
+                return _sqlMetadataProvider.GetStoredProcedureDefinition(entityName);
             }
             catch (InvalidCastException ex)
             {

@@ -1017,10 +1017,9 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="tableName">Name of the table.</param>
         /// <param name="schemaName">Schema of the table.</param>
         /// <param name="sourceDefinition">Table definition.</param>
-        /// <returns></returns>
         private async Task PopulateColumnDefinitionsWithReadOnlyFlag(string tableName, string schemaName, SourceDefinition sourceDefinition)
         {
-            string queryToGetReadOnlyColumns = SqlQueryBuilder.GetQueryToGetReadOnlyColumns();
+            string queryToGetReadOnlyColumns = SqlQueryBuilder.BuildQueryToGetReadOnlyColumns();
             Dictionary<string, DbConnectionParam> parameters = new()
             {
                 { $"{BaseQueryStructure.PARAM_NAME_PREFIX}param0", new(schemaName, DbType.String) },
@@ -1038,8 +1037,8 @@ namespace Azure.DataApiBuilder.Core.Services
             foreach (JsonElement element in sqlResult.RootElement.EnumerateArray())
             {
                 string column_name = element.GetProperty("column_name").ToString();
-                ColumnDefinition columnDef = sourceDefinition.Columns[column_name];
-                columnDef.IsReadOnly = true;
+                // Mark the column as read-only.
+                sourceDefinition.Columns[column_name].IsReadOnly = true;
             }
         }
 

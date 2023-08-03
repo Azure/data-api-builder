@@ -990,13 +990,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         }
 
         /// <summary>
-        /// Test to validate that whenever a computed field is included in the request body, we throw an appropriate exception
+        /// Test to validate that whenever a computed field is included in the request body, we throw a BadRequest exception
         /// as it is not allowed to provide value (to insert/update) for a computed field.
         /// </summary>
         [TestMethod]
         public virtual async Task PutOneWithComputedFieldInRequestBody()
         {
-            // Validate that appropriate exception is thrown for a PUT update when a computed field (here 'last_sold_on_date') is included in request body.
+            // Validate that a BadRequest exception is thrown for a PUT update when a computed field (here 'last_sold_on_date') is included in request body.
             string requestBody = @"
             {
                 ""last_sold_on_date"": null
@@ -1015,7 +1015,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
 
-            // Validate that appropriate exception is thrown for a PUT insert when a computed field (here 'last_sold_on_date') is included in request body.
+            // Validate that a BadRequest exception is thrown for a PUT insert when a computed field (here 'last_sold_on_date') is included in request body.
             requestBody = @"
             {
                 ""last_sold_on_date"": null

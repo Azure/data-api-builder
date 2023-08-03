@@ -265,13 +265,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         /// <summary>
-        /// Test to validate that whenever a timestamp field is included in the request body, we throw an appropriate exception
+        /// Test to validate that whenever a timestamp field is included in the request body, we throw a BadRequest exception
         /// as it is not allowed to provide value (to insert/update) for a timestamp field.
         /// </summary>
         [TestMethod]
         public virtual async Task PatchOneWithTimestampFieldInRequestBody()
         {
-            // Validate that appropriate exception is thrown for a PATCH update when a timestamp field is included in request body.
+            // Validate that a BadRequest exception is thrown for a PATCH update when a timestamp field is included in request body.
             string requestBody = @"
             {
                 ""row_version"": null
@@ -290,7 +290,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
 
-            // Validate that appropriate exception is thrown for a PATCH insert when a timestamp field is included in request body.
+            // Validate that a BadRequest exception is thrown for a PATCH insert when a timestamp field is included in request body.
             requestBody = @"
             {
                 ""row_version"": null

@@ -304,13 +304,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         }
 
         /// <summary>
-        /// Test to validate that whenever a timestamp field is included in the request body, we throw an appropriate exception
+        /// Test to validate that whenever a timestamp field is included in the request body, we throw a BadRequest exception
         /// as it is not allowed to provide value (to insert) for a timestamp field.
         /// </summary>
         [TestMethod]
         public async Task InsertOneWithTimestampFieldInRequestBody()
         {
-            // Validate that appropriate exception is thrown when a timestamp field (here 'row_version') is included in request body.
+            // Validate that a BadRequest exception is thrown when a timestamp field (here 'row_version') is included in request body.
             string requestBody = @"
             {
                 ""id"": 2,

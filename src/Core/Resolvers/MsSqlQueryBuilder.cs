@@ -258,7 +258,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc/>
-        public string GetQueryToGetReadOnlyColumns()
+        public string BuildQueryToGetReadOnlyColumns()
         {
             string query = "select ifsc.column_name from sys.columns as sc, information_schema.columns as ifsc " +
                 "where (sc.is_computed = 1 or ifsc.data_type = 'timestamp') " +

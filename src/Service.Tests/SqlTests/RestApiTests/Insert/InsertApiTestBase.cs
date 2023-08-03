@@ -322,7 +322,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         [TestMethod]
         public virtual async Task InsertOneWithComputedFieldInRequestBody()
         {
-            // Validate that appropriate exception is thrown for a POST request when a computed field (here 'last_sold_on_date') is included in request body.
+            // Validate that a BadRequest exception is thrown for a POST request when a computed field (here 'last_sold_on_date') is included in request body.
             string requestBody = @"
             {
                 ""id"": 2,

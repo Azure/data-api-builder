@@ -852,10 +852,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             statusCode: HttpStatusCode.BadRequest,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                     }
-                    // Use TryAdd because there can be primary key fields present in the request body as well
-                    // (in addition to request URL), when we operate in non-strict mode for REST.
-                    // In such a case, the duplicate PK fields in the request body are ignored.
-                    parameters.TryAdd(pair.Key, pair.Value);
+
+                    parameters.Add(pair.Key, pair.Value);
                 }
             }
         }

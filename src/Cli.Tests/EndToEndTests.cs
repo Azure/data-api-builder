@@ -106,7 +106,7 @@ public class EndToEndTests
     [TestMethod]
     public void TestInitializingRestAndGraphQLGlobalSettings()
     {
-        string[] args = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql", "--rest.path", "/rest-api", "--rest.disabled", "--graphql.path", "/graphql-api" };
+        string[] args = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--connection-string", "conn_str", "--database-type", "mssql", "--rest.path", "/rest-api", "--rest.disabled", "--graphql.path", "/graphql-api" };
         Program.Execute(args, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));

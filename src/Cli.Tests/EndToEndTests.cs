@@ -1,7 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.DataApiBuilder.Core;
+using Azure.DataApiBuilder.Product;
+using static Azure.DataApiBuilder.Config.ObjectModel.DataSource;
+using static Azure.DataApiBuilder.Product.ProductInfo;
 
 namespace Cli.Tests;
 
@@ -55,6 +57,7 @@ public class EndToEndTests
         Program.Execute(args, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+        Assert.IsTrue(runtimeConfig.DataSource.ConnectionString.Contains($"{CONN_STRING_APP_NAME_PROPERTY}={DEFAULT_APP_NAME}"));
 
         Assert.IsNotNull(runtimeConfig);
         Assert.IsTrue(runtimeConfig.Runtime.GraphQL.AllowIntrospection);

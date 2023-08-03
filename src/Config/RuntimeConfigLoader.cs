@@ -4,10 +4,13 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Product;
 using Microsoft.Extensions.Logging;
+using static Azure.DataApiBuilder.Config.ObjectModel.DataSource;
 
 namespace Azure.DataApiBuilder.Config;
 
@@ -52,10 +55,16 @@ public abstract class RuntimeConfigLoader
                 return false;
             }
 
+            string updatedConnectionString = config.DataSource.ConnectionString;
+
             if (!string.IsNullOrEmpty(connectionString))
             {
-                config = config with { DataSource = config.DataSource with { ConnectionString = connectionString } };
+                updatedConnectionString = connectionString;
             }
+
+            // Add Application Name for telemetry
+            updatedConnectionString = GetConnectionStringWithApplicationName(config.DataSource.DatabaseType, updatedConnectionString);
+            config = config with { DataSource = config.DataSource with { ConnectionString = updatedConnectionString } };
         }
         catch (JsonException ex)
         {
@@ -100,5 +109,35 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new EntityActionConverterFactory());
         options.Converters.Add(new StringJsonConverterFactory());
         return options;
+    }
+
+    public static string GetConnectionStringWithApplicationName(DatabaseType databaseType, string connectionString)
+    {
+        if (databaseType is not DatabaseType.MSSQL)
+        {
+            return connectionString;
+        }
+
+        string applicationName = ProductInfo.GetDataApiBuilderUserAgent();
+
+        if (connectionString.Contains(CONN_STRING_APP_NAME_PROPERTY, StringComparison.OrdinalIgnoreCase))
+        {
+            connectionString = Regex.Replace(connectionString, $@"(?i)({CONN_STRING_APP_NAME_PROPERTY}.*?)(;|$)", $"$1,{applicationName}$2");
+        }
+        else if (connectionString.Contains(CONN_STRING_APP_NAME_PROPERTY_SHORT, StringComparison.OrdinalIgnoreCase))
+        {
+            connectionString = Regex.Replace(connectionString, $@"(?i)({CONN_STRING_APP_NAME_PROPERTY_SHORT}.*?)(;|$)", $"$1,{applicationName}$2");
+        }
+        else
+        {
+            if (!connectionString.EndsWith(";"))
+            {
+                connectionString += ";";
+            }
+
+            connectionString += $"{CONN_STRING_APP_NAME_PROPERTY}=" + applicationName + ";";
+        }
+
+        return connectionString;
     }
 }

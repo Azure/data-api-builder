@@ -3,7 +3,7 @@
 
 using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Core;
+using Azure.DataApiBuilder.Product;
 using CommandLine;
 using Microsoft.Extensions.Logging;
 using static Cli.Utils;

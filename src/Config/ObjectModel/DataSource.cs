@@ -15,6 +15,10 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// <param name="Options">Custom options for the specific database. If there are no options, this could be null.</param>
 public record DataSource(DatabaseType DatabaseType, string ConnectionString, Dictionary<string, JsonElement>? Options)
 {
+
+    public const string CONN_STRING_APP_NAME_PROPERTY = "Application Name";
+    public const string CONN_STRING_APP_NAME_PROPERTY_SHORT = "App";
+
     /// <summary>
     /// Converts the <c>Options</c> dictionary into a typed options object.
     /// May return null if the dictionary is null.

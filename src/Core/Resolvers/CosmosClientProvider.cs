@@ -6,6 +6,7 @@ using System.IdentityModel.Tokens.Jwt;
 using Azure.Core;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Product;
 using Azure.Identity;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Fluent;

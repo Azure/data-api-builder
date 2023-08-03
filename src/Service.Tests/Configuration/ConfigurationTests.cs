@@ -24,6 +24,7 @@ using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
@@ -444,6 +445,54 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             {
                 Assert.AreEqual(EntitySourceType.Table, deserializedRuntimeConfig.Entities["MyEntity"].Source.Type);
             }
+        }
+
+        /// <summary>
+        /// checks if the connection string provided in the config is correctly updated for MSSQL.
+        /// </summary>
+        /// <param name="databaseType">database type.</param>
+        /// <param name="providedConnectionString">connection string provided in the config.</param>
+        /// <param name="expectedUpdatedConnectionString">Updated connection string with Application Name.</param>
+        /// <param name="isHostedScenario">If Dab is hosted or OSS.</param>
+        [DataTestMethod]
+        [DataRow(DatabaseType.MSSQL, "Something;", "Something;Application Name=dab_oss_1.0.0;", false, DisplayName = "[MSSQL]:Connection String doesn't contain Application name for DAB oss.")]
+        [DataRow(DatabaseType.MySQL, "Something;", "Something;", false, DisplayName = "[MYSQL]:Connection String doesn't contain Application name for DAB oss.")]
+        [DataRow(DatabaseType.PostgreSQL, "Something;", "Something;", false, DisplayName = "[PGSQL]:Connection String doesn't contain Application name for DAB oss.")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;", "Something;", false, DisplayName = "[COSMOSDB_PGSQL]:Connection String doesn't contain Application name for DAB oss.")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;", "Something;", false, DisplayName = "[COSMOSDB_NOSQL]:Connection String doesn't contain Application name for DAB oss.")]
+        [DataRow(DatabaseType.MSSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName,dab_oss_1.0.0;", false, DisplayName = "[MSSQL]:Connection String contains customer Application name for DAB oss.")]
+        [DataRow(DatabaseType.MSSQL, "Something1;Application Name=CustAppName;Something2;", "Something1;Application Name=CustAppName,dab_oss_1.0.0;Something2;", false, DisplayName = "[MSSQL2]:Connection String contains customer Application name for DAB oss.")]
+        [DataRow(DatabaseType.MySQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[MYSQL]:Connection String contains customer Application name for DAB oss.")]
+        [DataRow(DatabaseType.PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[PGSQL]:Connection String contains customer Application name for DAB oss.")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[COSMOSDB_PGSQL]:Connection String contains customer Application name for DAB oss.")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[COSMOSDB_NOSQL]:Connection String contains customer Application name for DAB oss.")]
+        [DataRow(DatabaseType.MSSQL, "Something;", "Something;Application Name=dab_hosted_1.0.0;", true, DisplayName = "[MSSQL]:Connection String doesn't contain Application name for DAB hosted.")]
+        [DataRow(DatabaseType.MySQL, "Something;", "Something;", true, DisplayName = "[MYSQL]:Connection String doesn't contain Application name for DAB hosted.")]
+        [DataRow(DatabaseType.PostgreSQL, "Something;", "Something;", true, DisplayName = "[PGSQL]:Connection String doesn't contain Application name for DAB hosted.")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;", "Something;", true, DisplayName = "[COSMOSDB_PGSQL]:Connection String doesn't contain Application name for DAB hosted.")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;", "Something;", true, DisplayName = "[COSMOSDB_NOSQL]:Connection String doesn't contain Application name for DAB hosted.")]
+        [DataRow(DatabaseType.MSSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName,dab_hosted_1.0.0;", true, DisplayName = "[MSSQL]:Connection String contains customer Application name for DAB hosted.")]
+        [DataRow(DatabaseType.MySQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true, DisplayName = "[MYSQL]:Connection String contains customer Application name for DAB hosted.")]
+        [DataRow(DatabaseType.PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true, DisplayName = "[PGSQL]:Connection String contains customer Application name for DAB hosted.")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true, DisplayName = "[COSMOSDB_PGSQL]:Connection String contains customer Application name for DAB hosted.")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true, DisplayName = "[COSMOSDB_NOSQL]:Connection String contains customer Application name for DAB hosted.")]
+        public void TestConnectionStringIsCorrectlyUpdatedWithApplicationName(
+            DatabaseType databaseType,
+            string providedConnectionString,
+            string expectedUpdatedConnectionString,
+            bool isHostedScenario)
+        {
+            if (isHostedScenario)
+            {
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, "dab_hosted_1.0.0");
+            }
+            else
+            {
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, null);
+            }
+
+            string actualUpdatedConnectionString = RuntimeConfigLoader.GetConnectionStringWithApplicationName(databaseType, providedConnectionString);
+            Assert.AreEqual(expectedUpdatedConnectionString, actualUpdatedConnectionString);
         }
 
         [TestMethod("Validates that once the configuration is set, the config controller isn't reachable."), TestCategory(TestCategory.COSMOSDBNOSQL)]

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
@@ -22,5 +22,9 @@
       <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
       <PackageReference Include="Humanizer" />
   </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Product\Azure.DataApiBuilder.Product.csproj" />
+    </ItemGroup>
 
 </Project>

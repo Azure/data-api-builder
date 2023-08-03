@@ -4,7 +4,7 @@
 using System.Diagnostics;
 using System.Reflection;
 
-namespace Azure.DataApiBuilder.Core;
+namespace Azure.DataApiBuilder.Product;
 
 public static class ProductInfo
 {

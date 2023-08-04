@@ -167,6 +167,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
         /// <summary>
         /// Separate test case for DateTime to allow overwrite for postgreSql.
+        /// The method constructs a GraphQL query to filter and order the datetime column based on the given parameters.
+        /// The test checks various datetime data types such as datetime, datetimeoffset, and time.
         /// </summary>
         [DataTestMethod]
         [DataRow(DATETIME_TYPE, "gt", "\'1999-01-08\'", "\"1999-01-08\"", " > ")]
@@ -210,7 +212,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         }
 
         /// <summary>
-        /// Test case for LocalTime filters.
+        /// Validates that usage of LocalTime values with comparison operators in GraphQL filters results in the expected filtered result set.
         /// </summary>
         [DataTestMethod]
         [DataRow(TIME_TYPE, "gt", "\'00:00:00.000\'", "\"00:00:00.000\"", " > ")]
@@ -224,6 +226,33 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             await QueryTypeColumnFilterAndOrderBy(type, filterOperator, sqlValue, gqlValue, queryOperator);
         }
 
+        /// <summary>
+        /// Validates that LocalTime values with X precision are handled correctly: precision of 7 decimal places used with eq (=) will 
+        /// not return result with only 3 decimal places i.e. 10:23:54.999 != 10:23:54.9999999
+        /// In the Database only one row exist with value 23:59:59.9999999
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("\"23:59:59.9999999\"", 1, DisplayName = "TimeType Precision Check with 7 decimal places")]
+        [DataRow("\"23:59:59.999\"", 0, DisplayName = "TimeType Precision Check with 3 decimal places")]
+        public async Task TestTimeTypePrecisionCheck(string gqlValue, int count)
+        {
+            string graphQLQueryName = "supportedTypes";
+            string gqlQuery = @"{
+                supportedTypes(first: 100 orderBy: { " + "time_types" + ": ASC } filter: { " + "time_types" + ": {" + "eq" + ": " + gqlValue + @"} }) {
+                    items {
+                        " + "time_types" + @"
+                    }
+                }
+            }";
+
+            JsonElement gqlResponse = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+            Assert.AreEqual(count, gqlResponse.GetProperty("items").GetArrayLength());
+        }
+
+        /// <summary>
+        /// the method constructs a GraphQL query to insert the value into the database table
+        /// and then executes the query and compares the expected result with the actual result to verify if different types are supported.
+        /// </summary>
         [DataTestMethod]
         [DataRow(BYTE_TYPE, "255")]
         [DataRow(BYTE_TYPE, "0")]
@@ -553,10 +582,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             }
             else
             {
-                // Adjusting to universal, since DateTime doesn't account for TimeZone
-                DateTime expectedDateTimeUniversal = DateTime.Parse(expectedDateTime, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
-                DateTime actualDateTimeUniversal = DateTime.Parse(actualDateTime, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
-                Assert.AreEqual(expectedDateTimeUniversal, actualDateTimeUniversal);
+                AssertOnFields(fieldName, actualDateTime, expectedDateTime);
             }
         }
 
@@ -587,11 +613,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             }
             else
             {
-                DateTimeOffset actualDateTimeOffset = DateTimeOffset.Parse(actualDateTimeOffsetString, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal);
-                DateTimeOffset expectedDateTimeOffset = DateTimeOffset.Parse(expectedDateTimeOffsetString, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal);
-                Assert.AreEqual(actualDateTimeOffset.ToString(), expectedDateTimeOffset.ToString());
-                // Comparing for Miliseconds separetly since Hotcholate respond with only 3 decimal places.
-                Assert.AreEqual(actualDateTimeOffset.Millisecond, expectedDateTimeOffset.Millisecond);
+                AssertOnFields(fieldName, actualDateTimeOffsetString, expectedDateTimeOffsetString);
             }
         }
 
@@ -621,9 +643,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             }
             else
             {
-                TimeOnly actualTime = TimeOnly.Parse(actualTimeString);
-                TimeOnly expectedTime = TimeOnly.Parse(expectedTimeString);
-                Assert.AreEqual(expectedTime.ToLongTimeString(), actualTime.ToLongTimeString());
+                AssertOnFields(fieldName, actualTimeString, expectedTimeString);
             }
         }
 
@@ -637,35 +657,43 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 actualElement.TryGetProperty(fieldName, out JsonElement actualValue);
                 expectedElement.TryGetProperty(fieldName, out JsonElement expectedValue);
 
-                if (fieldName.StartsWith(DATETIMEOFFSET_TYPE.ToLower()))
-                {
-                    DateTimeOffset actualDateTimeOffset = DateTimeOffset.Parse(actualValue.ToString(), DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal);
-                    DateTimeOffset expectedDateTimeOffset = DateTimeOffset.Parse(expectedValue.ToString(), DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal);
-                    Assert.AreEqual(actualDateTimeOffset.ToString(), expectedDateTimeOffset.ToString());
-                    // Comparing for Miliseconds separetly since Hotcholate respond with only 3 decimal places.
-                    Assert.AreEqual(actualDateTimeOffset.Millisecond, expectedDateTimeOffset.Millisecond);
-                }
-                else if (fieldName.StartsWith(DATETIME_TYPE.ToLower()))
-                {
-                    // MySql returns a format that will not directly parse into DateTime type so we use string here for parsing
-                    DateTime actualDateTime = DateTime.Parse(actualValue.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
-                    DateTime expectedDateTime = DateTime.Parse(expectedValue.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
-                    Assert.AreEqual(expectedDateTime, actualDateTime);
-                }
-                else if (fieldName.StartsWith(SINGLE_TYPE.ToLower()))
-                {
-                    Assert.AreEqual(expectedValue.GetSingle(), actualValue.GetSingle());
-                }
-                else if (fieldName.StartsWith(TIME_TYPE.ToLower()))
-                {
-                    TimeOnly actualTime = TimeOnly.Parse(actualValue.ToString());
-                    TimeOnly expectedTime = TimeOnly.Parse(expectedValue.ToString());
-                    Assert.AreEqual(expectedTime.ToLongTimeString(), actualTime.ToLongTimeString());
-                }
-                else
-                {
-                    Assert.AreEqual(expectedValue.GetDouble(), actualValue.GetDouble());
-                }
+                AssertOnFields(fieldName, actualValue.ToString(), expectedValue.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Compare given fields from actual and expected json.
+        /// </summary>
+        private static void AssertOnFields(string field, string actualElement, string expectedElement)
+        {
+            if (field.StartsWith(DATETIMEOFFSET_TYPE.ToLower()))
+            {
+                DateTimeOffset actualDateTimeOffset = DateTimeOffset.Parse(actualElement.ToString(), DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal);
+                DateTimeOffset expectedDateTimeOffset = DateTimeOffset.Parse(expectedElement.ToString(), DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal);
+                Assert.AreEqual(actualDateTimeOffset.ToString(), expectedDateTimeOffset.ToString());
+                // Comparing for milliseconds separately since HotChocolate time type is resolved only to 3 decimal places.
+                Assert.AreEqual(actualDateTimeOffset.Millisecond, expectedDateTimeOffset.Millisecond);
+            }
+            else if (field.StartsWith(DATETIME_TYPE.ToLower()))
+            {
+                // Adjusting to universal, since DateTime doesn't account for TimeZone
+                DateTime actualDateTime = DateTime.Parse(actualElement.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
+                DateTime expectedDateTime = DateTime.Parse(expectedElement.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
+                Assert.AreEqual(expectedDateTime, actualDateTime);
+            }
+            else if (field.StartsWith(SINGLE_TYPE.ToLower()))
+            {
+                Assert.AreEqual(float.Parse(expectedElement), float.Parse(actualElement));
+            }
+            else if (field.StartsWith(TIME_TYPE.ToLower()))
+            {
+                TimeOnly actualTime = TimeOnly.Parse(actualElement.ToString());
+                TimeOnly expectedTime = TimeOnly.Parse(expectedElement.ToString());
+                Assert.AreEqual(expectedTime.ToLongTimeString(), actualTime.ToLongTimeString());
+            }
+            else
+            {
+                Assert.AreEqual(double.Parse(expectedElement), double.Parse(actualElement));
             }
         }
 

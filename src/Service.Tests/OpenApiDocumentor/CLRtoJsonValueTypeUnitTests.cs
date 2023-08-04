@@ -76,7 +76,7 @@ public class CLRtoJsonValueTypeUnitTests
     /// Validates the behavior of TypeHelper.GetJsonDataTypeFromSystemType(Type type) by
     /// ensuring that a nullable value type like int? is resolved to its underlying type int.
     /// Consequently, the lookup in the _systemTypeToJsonDataTypeMap and _systemTypeToDbTypeMap
-    /// dictionary succeeds without requiring nullable value type be defined as keys.
+    /// dictionary succeeds without requiring nullable value types be defined as keys.
     /// Nullable value types are represented in runtime as Nullable<t>. Whereas
     /// nullable reference types do no have a standalone runtime representation.
     /// See csharplang discussion on why typeof(string?) (nullable reference type) is not valid,

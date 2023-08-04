@@ -203,6 +203,24 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Tests that we throw an exception when trying to use an invalid
+        /// Time with negative value or time > 24 hours.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("time_types eq 25:23:54.9999999", DisplayName = "Exception thrown with invalid time>24 hrs.")]
+        [DataRow("time_types eq -13:23:54.9999999", DisplayName = "Exception thrown with invalid time>24 hrs.")]
+        public void InvalidTimeTypeODataFilterTest(string filterExp)
+        {
+            Assert.ThrowsException<DataApiBuilderException>(() => PerformVisitorTest(
+                entityName: DEFAULT_ENTITY,
+                schemaName: DEFAULT_SCHEMA_NAME,
+                tableName: DEFAULT_TABLE_NAME,
+                filterString: $"?$filter={filterExp}",
+                expected: string.Empty
+                ));
+        }
+
+        /// <summary>
         /// Verifies that we throw an exception for values that can
         /// not be parsed into a valid Edm Type Kind. Create a constant
         /// node with a valid type and a value that cannot be parsed into

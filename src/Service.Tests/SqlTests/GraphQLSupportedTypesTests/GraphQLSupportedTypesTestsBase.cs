@@ -590,7 +590,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 DateTimeOffset actualDateTimeOffset = DateTimeOffset.Parse(actualDateTimeOffsetString, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal);
                 DateTimeOffset expectedDateTimeOffset = DateTimeOffset.Parse(expectedDateTimeOffsetString, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal);
                 Assert.AreEqual(actualDateTimeOffset.ToString(), expectedDateTimeOffset.ToString());
-                // Comparing for Miliseconds separetly since Hotcholate respond with only 3 decimal places.
+                // Comparing for milliseconds separately since HotChocolate time type is resolved only to 3 decimal places.
                 Assert.AreEqual(actualDateTimeOffset.Millisecond, expectedDateTimeOffset.Millisecond);
             }
         }

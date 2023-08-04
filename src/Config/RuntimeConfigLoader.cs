@@ -2,9 +2,10 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -12,6 +13,7 @@ using Azure.DataApiBuilder.Product;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Config.ObjectModel.DataSource;
 
+[assembly: InternalsVisibleTo("Azure.DataApiBuilder.Service.Tests")]
 namespace Azure.DataApiBuilder.Config;
 
 public abstract class RuntimeConfigLoader
@@ -62,8 +64,12 @@ public abstract class RuntimeConfigLoader
                 updatedConnectionString = connectionString;
             }
 
-            // Add Application Name for telemetry
-            updatedConnectionString = GetConnectionStringWithApplicationName(config.DataSource.DatabaseType, updatedConnectionString);
+            // Add Application Name for telemetry for MsSQL
+            if (config.DataSource.DatabaseType is DatabaseType.MSSQL)
+            {
+                updatedConnectionString = GetConnectionStringWithApplicationName(updatedConnectionString);
+            }
+
             config = config with { DataSource = config.DataSource with { ConnectionString = updatedConnectionString } };
         }
         catch (JsonException ex)
@@ -115,38 +121,52 @@ public abstract class RuntimeConfigLoader
     /// It adds or replaces a property in the connection string with `Application Name` property.
     /// If the connection string already contains the property, it uses a regular expression to update the existing value
     /// by adding the DataApiBuilder Application Name (dab_oss/dab_hosted). If not, it appends the property `Application Name` to the connection string.
-    /// This method only adds the `Application Name` property for MSSQL, as other DB's have different ways to specify the Application Name. 
+    /// This method only adds the `Application Name` property to specify DataApiBuilder Application Name.
     /// </summary>
-    /// <param name="databaseType">Type of Database</param>
     /// <param name="connectionString">Connection string for connecting to database.</param>
-    /// <returns></returns>Updated connection string with `Application Name` property<summary>
-    public static string GetConnectionStringWithApplicationName(DatabaseType databaseType, string connectionString)
+    /// <returns>Updated connection string with `Application Name` property.</returns>
+    internal static string GetConnectionStringWithApplicationName(string connectionString)
     {
-        if (databaseType is not DatabaseType.MSSQL || string.IsNullOrWhiteSpace(connectionString))
+        // If the connection string is null, empty, or whitespace, return it as is.
+        if (string.IsNullOrWhiteSpace(connectionString))
         {
             return connectionString;
         }
 
+        // Get the application name using ProductInfo.GetDataApiBuilderUserAgent().
         string applicationName = ProductInfo.GetDataApiBuilderUserAgent();
 
+        // Create a StringBuilder from the connection string.
+        StringBuilder stringBuilder = new(connectionString);
+
+        // If the connection string already contains the Application Name property, replace its value with the new value.
         if (connectionString.Contains(CONN_STRING_APP_NAME_PROPERTY, StringComparison.OrdinalIgnoreCase))
         {
-            connectionString = Regex.Replace(connectionString, $@"(?i)({CONN_STRING_APP_NAME_PROPERTY}.*?)(;|$)", $"$1,{applicationName}$2");
+            int index = connectionString.IndexOf(CONN_STRING_APP_NAME_PROPERTY, StringComparison.OrdinalIgnoreCase);
+            int endIndex = connectionString.IndexOf(';', index);
+            stringBuilder.Insert(endIndex, $",{applicationName}");
         }
+        // If the connection string contains the short version of the Application Name property, replace its value with the new value.
         else if (connectionString.Contains(CONN_STRING_APP_NAME_PROPERTY_SHORT, StringComparison.OrdinalIgnoreCase))
         {
-            connectionString = Regex.Replace(connectionString, $@"(?i)({CONN_STRING_APP_NAME_PROPERTY_SHORT}.*?)(;|$)", $"$1,{applicationName}$2");
+            int index = connectionString.IndexOf(CONN_STRING_APP_NAME_PROPERTY_SHORT, StringComparison.OrdinalIgnoreCase);
+            int endIndex = connectionString.IndexOf(';', index);
+            stringBuilder.Insert(endIndex, $",{applicationName}");
         }
+        // If the connection string doesn't contain the Application Name property, add it to the end of the connection string.
         else
         {
+            // If the connection string doesn't end with a semicolon, add one.
             if (!connectionString.EndsWith(";"))
             {
-                connectionString += ";";
+                stringBuilder.Append(";");
             }
 
-            connectionString += $"{CONN_STRING_APP_NAME_PROPERTY}=" + applicationName + ";";
+            // Add the Application Name property and its value to the end of the connection string.
+            stringBuilder.Append($"{CONN_STRING_APP_NAME_PROPERTY}={applicationName};");
         }
 
-        return connectionString;
+        // Return the updated connection string.
+        return stringBuilder.ToString();
     }
 }

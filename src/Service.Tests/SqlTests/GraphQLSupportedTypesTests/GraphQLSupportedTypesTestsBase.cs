@@ -236,6 +236,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow("\"23:59:59.999\"", 0, DisplayName = "TimeType Precision Check with 3 decimal places")]
         public async Task TestTimeTypePrecisionCheck(string gqlValue, int count)
         {
+            if (!IsSupportedType(TIME_TYPE))
+            {
+                Assert.Inconclusive("Type not supported");
+            }
+
             string graphQLQueryName = "supportedTypes";
             string gqlQuery = @"{
                 supportedTypes(first: 100 orderBy: { " + "time_types" + ": ASC } filter: { " + "time_types" + ": {" + "eq" + ": " + gqlValue + @"} }) {

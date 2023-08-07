@@ -257,7 +257,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
                             );
                     }
 
-                    ValidatePresenceOfExtraRestProperties(entity, entityName);
+                    ValidateRestMethods(entity, entityName);
                 }
 
                 // If GraphQL endpoint is enabled globally and at entity level, then only we perform the validations related to it.
@@ -276,7 +276,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
         /// </summary>
         /// <param name="entity">Entity object for which validation is performed</param>
         /// <param name="entityName">Name of the entity</param>
-        private void ValidatePresenceOfExtraRestProperties(Entity entity, string entityName)
+        private void ValidateRestMethods(Entity entity, string entityName)
         {
             if (entity.Source.Type is not EntitySourceType.StoredProcedure && entity.Rest.Methods is not null && entity.Rest.Methods.Length > 0)
             {

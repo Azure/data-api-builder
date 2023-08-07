@@ -108,7 +108,7 @@ internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
             writer.WriteNull("path");
         }
 
-        if (value.Methods is not null)
+        if (value.Methods is not null && value.Methods.Length > 0)
         {
             writer.WriteStartArray("methods");
             foreach (SupportedHttpVerb method in value.Methods)

@@ -394,6 +394,10 @@ namespace Azure.DataApiBuilder.Core.Services
             configuredRestRoute = null;
             return false;
         }
+
+        /// <summary>
+        /// Helper method to extract the configured base route
+        /// </summary>
         public string GetBaseRouteFromConfig()
         {
             if (_runtimeConfigProvider.TryGetConfig(out RuntimeConfig? config)

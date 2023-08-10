@@ -1385,7 +1385,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 if (entityType is not EntitySourceType.StoredProcedure)
                 {
                     string requestBody = @"{
-                        ""title"": ""title"",
+                        ""title"": ""Harry Potter and the Order of Phoenix"",
                         ""publisher_id"": 1234
                     }";
 
@@ -1403,7 +1403,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
                 string locationHeader = response.Headers.Location.AbsoluteUri;
 
-                // GET request performed using the Location header should be successful 
+                // GET request performed using the Location header should be successful.
                 HttpRequestMessage followUpRequest = new(HttpMethod.Get, response.Headers.Location);
                 HttpResponseMessage followUpResponse = await client.SendAsync(followUpRequest);
                 Assert.AreEqual(HttpStatusCode.OK, followUpResponse.StatusCode);
@@ -1476,7 +1476,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 if (entityType is not EntitySourceType.StoredProcedure)
                 {
                     string requestBody = @"{
-                        ""title"": ""title"",
+                        ""title"": ""Harry Potter and the Order of Phoenix"",
                         ""publisher_id"": 1234
                     }";
 

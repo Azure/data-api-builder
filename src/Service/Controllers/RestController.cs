@@ -224,11 +224,12 @@ namespace Azure.DataApiBuilder.Service.Controllers
 
                 if (result is CreatedResult)
                 {
-                    // Location is made up of two parts, the first being constructed
-                    // from the HttpRequest found in the HttpContext. The other part
-                    // is the primary key route, which has already been saved in the
+                    // Location is made up of three parts, the first being constructed
+                    // from the HttpRequest found in the HttpContext. The second part being the
+                    // base route configured in the config file.
+                    // The third part is the primary key route, which has already been saved in the
                     // Location of the created result. So we form the entire location
-                    // from appending the primary key route  already stored in the
+                    // from appending the base route and the primary key route  already stored in the
                     // created result to the url constructed from the HttpRequest. We
                     // then update the Location of the created result to this value.
                     CreatedResult createdResult = (result as CreatedResult)!;

@@ -394,6 +394,18 @@ namespace Azure.DataApiBuilder.Core.Services
             configuredRestRoute = null;
             return false;
         }
+        public string GetBaseRouteFromConfig()
+        {
+            if (_runtimeConfigProvider.TryGetConfig(out RuntimeConfig? config)
+                && config is not null
+                && config.Runtime is not null
+                && config.Runtime.BaseRoute is not null)
+            {
+                return config.Runtime.BaseRoute;
+            }
+
+            return string.Empty;
+        }
 
         /// <summary>
         /// Tries to get the Entity name and primary key route from the provided string

@@ -1332,6 +1332,177 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
+        /// Validates the Location header field returned as part of POST requests.
+        /// </summary>
+        /// <param name="entityType">Type of the entity</param>
+        /// <param name="requestPath">Request path for performing POST API requests on the entity</param>
+        /// <returns></returns>
+        [DataTestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        [DataRow(EntitySourceType.Table, "/api/Book", DisplayName = "Location Header - Tables, Base Route not configured")]
+        [DataRow(EntitySourceType.StoredProcedure, "/api/GetBooks", DisplayName = "Location Header - Stored Procedures, Base Route not configured")]
+        public async Task ValidateLocationHeaderFieldForPostRequests(EntitySourceType entityType, string requestPath)
+        {
+
+            GraphQLRuntimeOptions graphqlOptions = new(Enabled: true);
+            RestRuntimeOptions restRuntimeOptions = new(Enabled: true);
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            RuntimeConfig configuration;
+
+            if (entityType is EntitySourceType.StoredProcedure)
+            {
+                Entity entity = new(Source: new("get_books", EntitySourceType.StoredProcedure, null, null),
+                              Rest: new(new SupportedHttpVerb[] { SupportedHttpVerb.Get, SupportedHttpVerb.Post }),
+                              GraphQL: new(Singular: "GetBooks", Plural: "GetBooks"),
+                              Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                              Relationships: null,
+                              Mappings: null
+                             );
+
+                string entityName = "GetBooks";
+                configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, entity, entityName);
+            }
+            else
+            {
+                configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions);
+            }
+
+            const string CUSTOM_CONFIG = "custom-config.json";
+            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                HttpMethod httpMethod = SqlTestHelper.ConvertRestMethodToHttpMethod(SupportedHttpVerb.Post);
+                HttpRequestMessage request = new(httpMethod, requestPath);
+                if (entityType is not EntitySourceType.StoredProcedure)
+                {
+                    string requestBody = @"{
+                        ""title"": ""title"",
+                        ""publisher_id"": 1234
+                    }";
+
+                    JsonElement requestBodyElement = JsonDocument.Parse(requestBody).RootElement.Clone();
+                    request = new(httpMethod, requestPath)
+                    {
+                        Content = JsonContent.Create(requestBodyElement)
+                    };
+                }
+
+                HttpResponseMessage response = await client.SendAsync(request);
+
+                // Location header field is expected only when POST request results in the creation of a new item
+                Assert.AreEqual(HttpStatusCode.Created, response.StatusCode);
+
+                string locationHeader = response.Headers.Location.AbsoluteUri;
+
+                // GET request performed using the Location header should be successful 
+                HttpRequestMessage followUpRequest = new(HttpMethod.Get, response.Headers.Location);
+                HttpResponseMessage followUpResponse = await client.SendAsync(followUpRequest);
+                Assert.AreEqual(HttpStatusCode.OK, followUpResponse.StatusCode);
+            }
+        }
+
+        /// <summary>
+        /// Validates the Location header field returned as part of POST requests
+        /// </summary>
+        /// <param name="entityType">Type of the entity</param>
+        /// <param name="requestPath">Request path for performing POST API requests on the entity</param>
+        /// <param name="baseRoute">Configured base route</param>
+        /// <param name="expectedLocationHeader">Expected value for Location field in the response header</param>
+        /// <returns></returns>
+        [DataTestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        [DataRow(EntitySourceType.Table, "/api/Book", "/data-api", "http://localhost/data-api/api/Book/id/")]
+        [DataRow(EntitySourceType.StoredProcedure, "/api/GetBooks", "/data-api", "http://localhost/data-api/api/GetBooks")]
+        public async Task ValidateLocationHeaderWhenBaseRouteIsConfigured(EntitySourceType entityType,
+                                                                          string requestPath,
+                                                                          string baseRoute,
+                                                                          string expectedLocationHeader)
+        {
+            GraphQLRuntimeOptions graphqlOptions = new(Enabled: true);
+            RestRuntimeOptions restRuntimeOptions = new(Enabled: true);
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            RuntimeConfig configuration;
+
+            if (entityType is EntitySourceType.StoredProcedure)
+            {
+                Entity entity = new(Source: new("get_books", EntitySourceType.StoredProcedure, null, null),
+                              Rest: new(new SupportedHttpVerb[] { SupportedHttpVerb.Get, SupportedHttpVerb.Post }),
+                              GraphQL: new(Singular: "GetBooks", Plural: "GetBooks"),
+                              Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                              Relationships: null,
+                              Mappings: null
+                             );
+
+                string entityName = "GetBooks";
+                configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, entity, entityName);
+            }
+            else
+            {
+                configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions);
+            }
+
+            const string CUSTOM_CONFIG = "custom-config.json";
+
+            AuthenticationOptions AuthenticationOptions = new(Provider: EasyAuthType.StaticWebApps.ToString(), null);
+            HostOptions staticWebAppsHostOptions = new(null, AuthenticationOptions);
+
+            RuntimeOptions runtimeOptions = configuration.Runtime;
+            RuntimeOptions baseRouteEnabledRuntimeOptions = new(runtimeOptions.Rest, runtimeOptions.GraphQL, staticWebAppsHostOptions, "/data-api");
+            RuntimeConfig baseRouteEnabledConfig = configuration with { Runtime = baseRouteEnabledRuntimeOptions };
+            File.WriteAllText(CUSTOM_CONFIG, baseRouteEnabledConfig.ToJson());
+
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                HttpMethod httpMethod = SqlTestHelper.ConvertRestMethodToHttpMethod(SupportedHttpVerb.Post);
+                HttpRequestMessage request = new(httpMethod, requestPath);
+                if (entityType is not EntitySourceType.StoredProcedure)
+                {
+                    string requestBody = @"{
+                        ""title"": ""title"",
+                        ""publisher_id"": 1234
+                    }";
+
+                    JsonElement requestBodyElement = JsonDocument.Parse(requestBody).RootElement.Clone();
+                    request = new(httpMethod, requestPath)
+                    {
+                        Content = JsonContent.Create(requestBodyElement)
+                    };
+                }
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                Assert.AreEqual(HttpStatusCode.Created, response.StatusCode);
+
+                string locationHeader = response.Headers.Location.AbsoluteUri;
+                Assert.IsTrue(locationHeader.StartsWith(expectedLocationHeader));
+
+                string path = response.Headers.Location.AbsolutePath;
+                string completeUrl = "http://localhost" + path.Substring(baseRoute.Length - 1);
+
+                HttpRequestMessage followUpRequest = new(HttpMethod.Get, completeUrl);
+                HttpResponseMessage followUpResponse = await client.SendAsync(followUpRequest);
+                Assert.AreEqual(HttpStatusCode.OK, followUpResponse.StatusCode);
+            }
+        }
+
+        /// <summary>
         /// Engine supports config with some views that do not have keyfields specified in the config for MsSQL.
         /// This Test validates that support. It creates a custom config with a view and no keyfields specified.
         /// It checks both Rest and GraphQL queries are tested to return Success.

@@ -197,8 +197,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// <code>Do: </code> Inserts a new record on a table with trigger
-        /// <code>Check: </code> The record gets inserted correctly and the correct data after as it is after the trigger
+        /// <code>Do: </code> Insert a new record into a table with insert trigger enabled.
+        /// <code>Check: </code> The record gets inserted correctly and the correct data as it is after the trigger
         /// gets executed, is returned.
         [TestMethod]
         public async Task InsertMutationWithTrigger()
@@ -238,6 +238,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             await InsertMutationOnTableWithTriggerWithAutoGenPK(msSqlQuery);
         }
 
+        /// <summary>
+        /// <code>Do: </code> Update a record in a table with update trigger enabled.
+        /// <code>Check: </code> The record gets updated correctly and the correct data as it is after the trigger
+        /// gets executed, is returned.
         [TestMethod]
         public async Task UpdateMutationWithTrigger()
         {

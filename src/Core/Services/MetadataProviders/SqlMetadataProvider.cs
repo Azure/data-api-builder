@@ -350,6 +350,18 @@ namespace Azure.DataApiBuilder.Core.Services
         public abstract Type SqlToCLRType(string sqlType);
 
         /// <summary>
+        /// Helper method to populate metadata about whether insert/update DML triggers are enabled for a table.
+        /// This method is only called for tables in MsSql.
+        /// </summary>
+        /// <param name="schemaName">Name of the schema in which the table is present.</param>
+        /// <param name="tableName">Name of the table.</param>
+        /// <param name="sourceDefinition">Table definition.</param>
+        public virtual Task PopulateTriggerMetadataForTable(string schemaName, string tableName, SourceDefinition sourceDefinition)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
         /// Generates the map used to find a given entity based
         /// on the path that will be used for that entity.
         /// </summary>
@@ -1007,36 +1019,6 @@ namespace Azure.DataApiBuilder.Core.Services
             PopulateColumnDefinitionWithHasDefault(
                 sourceDefinition,
                 columnsInTable);
-        }
-
-        private async Task PopulateTriggerMetadataForTable(string schemaName, string tableName, SourceDefinition sourceDefinition)
-        {
-            string queryToGetNumberOfEnabledTriggers = SqlQueryBuilder.GetQueryToGetEnabledTriggers();
-            Dictionary<string, DbConnectionParam> parameters = new()
-            {
-                { $"{BaseQueryStructure.PARAM_NAME_PREFIX}param0", new(schemaName, DbType.String) },
-                { $"{BaseQueryStructure.PARAM_NAME_PREFIX}param1", new(tableName, DbType.String) }
-            };
-
-            JsonArray? resultArray = await QueryExecutor.ExecuteQueryAsync(
-                sqltext: queryToGetNumberOfEnabledTriggers,
-                parameters: parameters!,
-                dataReaderHandler: QueryExecutor.GetJsonArrayAsync);
-            using JsonDocument sqlResult = JsonDocument.Parse(resultArray!.ToJsonString());
-
-            foreach (JsonElement element in sqlResult.RootElement.EnumerateArray())
-            {
-                string type_desc = element.GetProperty("type_desc").ToString();
-                if ("UPDATE".Equals(type_desc))
-                {
-                    sourceDefinition.IsUpdateDMLTriggerEnabled = true;
-                }
-
-                if ("INSERT".Equals(type_desc))
-                {
-                    sourceDefinition.IsInsertDMLTriggerEnabled = true;
-                }
-            }
         }
 
         /// <summary>

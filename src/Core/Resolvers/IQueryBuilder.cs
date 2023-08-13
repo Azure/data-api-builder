@@ -65,6 +65,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName);
 
         /// <summary>
+        /// Builds the query to determine the number of enabled triggers on a database table.
+        /// Needed only for MsSql.
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        string GetQueryToGetEnabledTriggers() => throw new NotImplementedException();
+
+        /// <summary>
         /// Adds database specific quotes to string identifier
         /// </summary>
         public string QuoteIdentifier(string identifier);

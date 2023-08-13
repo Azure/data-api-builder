@@ -963,6 +963,12 @@ namespace Azure.DataApiBuilder.Core.Services
                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
+            _entities.TryGetValue(entityName, out Entity? entity);
+            if (GetDatabaseType() is DatabaseType.MSSQL && entity is not null && entity.Source.Type is EntitySourceType.Table)
+            {
+                await PopulateTriggerMetadataForTable(schemaName, tableName, sourceDefinition);
+            }
+
             using DataTableReader reader = new(dataTable);
             DataTable schemaTable = reader.GetSchemaTable();
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
@@ -971,7 +977,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 string columnName = columnInfoFromAdapter["ColumnName"].ToString()!;
 
                 if (runtimeConfig.Runtime.GraphQL.Enabled
-                    && _entities.TryGetValue(entityName, out Entity? entity)
+                    && entity is not null
                     && IsGraphQLReservedName(entity, columnName, graphQLEnabledGlobally: runtimeConfig.Runtime.GraphQL.Enabled))
                 {
                     throw new DataApiBuilderException(
@@ -1001,6 +1007,36 @@ namespace Azure.DataApiBuilder.Core.Services
             PopulateColumnDefinitionWithHasDefault(
                 sourceDefinition,
                 columnsInTable);
+        }
+
+        private async Task PopulateTriggerMetadataForTable(string schemaName, string tableName, SourceDefinition sourceDefinition)
+        {
+            string queryToGetNumberOfEnabledTriggers = SqlQueryBuilder.GetQueryToGetEnabledTriggers();
+            Dictionary<string, DbConnectionParam> parameters = new()
+            {
+                { $"{BaseQueryStructure.PARAM_NAME_PREFIX}param0", new(schemaName, DbType.String) },
+                { $"{BaseQueryStructure.PARAM_NAME_PREFIX}param1", new(tableName, DbType.String) }
+            };
+
+            JsonArray? resultArray = await QueryExecutor.ExecuteQueryAsync(
+                sqltext: queryToGetNumberOfEnabledTriggers,
+                parameters: parameters!,
+                dataReaderHandler: QueryExecutor.GetJsonArrayAsync);
+            using JsonDocument sqlResult = JsonDocument.Parse(resultArray!.ToJsonString());
+
+            foreach (JsonElement element in sqlResult.RootElement.EnumerateArray())
+            {
+                string type_desc = element.GetProperty("type_desc").ToString();
+                if ("UPDATE".Equals(type_desc))
+                {
+                    sourceDefinition.IsUpdateDMLTriggerEnabled = true;
+                }
+
+                if ("INSERT".Equals(type_desc))
+                {
+                    sourceDefinition.IsInsertDMLTriggerEnabled = true;
+                }
+            }
         }
 
         /// <summary>

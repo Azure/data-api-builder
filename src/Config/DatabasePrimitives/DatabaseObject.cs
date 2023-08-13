@@ -155,6 +155,16 @@ public class SourceDefinition
         new(StringComparer.InvariantCultureIgnoreCase);
 
     /// <summary>
+    /// Indicates whether there is an update trigger enabled on the table.
+    /// </summary>
+    public bool IsUpdateDMLTriggerEnabled;
+
+    /// <summary>
+    /// Indicates whether there is an insert trigger enabled on the table.
+    /// </summary>
+    public bool IsInsertDMLTriggerEnabled;
+
+    /// <summary>
     /// Given the list of column names to check, evaluates
     /// if any of them is a nullable column when matched with the columns in this source definition.
     /// </summary>

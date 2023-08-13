@@ -31,6 +31,76 @@
   },
   Entities: [
     {
+      InternData: {
+        Source: {
+          Object: intern_data,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: InternData,
+          Plural: InternDatas,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Create
+              },
+              {
+                Action: Read
+              },
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      FteData: {
+        Source: {
+          Object: fte_data,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: FteData,
+          Plural: FteDatas,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Create
+              },
+              {
+                Action: Read
+              },
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       Publisher: {
         Source: {
           Object: publishers,

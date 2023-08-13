@@ -258,12 +258,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc/>
-        public string BuildQueryToGetReadOnlyColumns()
+        public string BuildQueryToGetReadOnlyColumns(string schemaParamName, string tableParamName)
         {
-            string query = "select ifsc.column_name from sys.columns as sc, information_schema.columns as ifsc " +
-                "where (sc.is_computed = 1 or ifsc.data_type = 'timestamp') " +
-                "and sc.object_id = object_id(@param0+'.'+@param1) and ifsc.table_name = @param1 " +
-                "and ifsc.table_schema = @param0 and ifsc.column_name = sc.name;";
+            string query = "SELECT ifsc.column_name from sys.columns as sc INNER JOIN information_schema.columns as ifsc " +
+                "ON (sc.is_computed = 1 or ifsc.data_type = 'timestamp') " +
+                $"AND sc.object_id = object_id({schemaParamName}+'.'+{tableParamName}) and ifsc.table_name = {tableParamName} " +
+                $"AND ifsc.table_schema = {schemaParamName} and ifsc.column_name = sc.name;";
 
             return query;
         }

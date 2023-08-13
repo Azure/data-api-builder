@@ -325,7 +325,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     expectedStatusCode: HttpStatusCode.OK
                 );
 
-            // Validate successful execution of a PATCH insert when a computed field (here 'last_sold_on_update')
+            // Validate successful execution of a PATCH insert when a computed field (here 'last_sold_on_date')
             // is missing from the request body.
             requestBody = @"
             {

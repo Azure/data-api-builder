@@ -805,7 +805,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return newPrimaryKeyRoute.ToString();
         }
 
-        private Dictionary<string, object?> PrepareParameters(RestRequestContext context)
+        private static Dictionary<string, object?> PrepareParameters(RestRequestContext context)
         {
             Dictionary<string, object?> parameters = new();
 
@@ -813,7 +813,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 case EntityActionOperation.Delete:
                     // DeleteOne based off primary key in request.
-                    PopulateParamsFromRestPK(parameters, context);
+                    PopulateParamsFromRequest(parameters, context.PrimaryKeyValuePairs!);
                     break;
                 case EntityActionOperation.Upsert:
                 case EntityActionOperation.UpsertIncremental:
@@ -821,41 +821,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 case EntityActionOperation.UpdateIncremental:
                     // Combine both PrimaryKey/Field ValuePairs
                     // because we create an update statement.
-                    PopulateParamsFromRestPK(parameters, context);
-                    PopulateParamsFromRestRequestBody(parameters, context);
+                    PopulateParamsFromRequest(parameters, context.PrimaryKeyValuePairs!);
+                    PopulateParamsFromRequest(parameters, context.FieldValuePairsInBody);
                     break;
                 default:
-                    PopulateParamsFromRestRequestBody(parameters, context);
+                    PopulateParamsFromRequest(parameters, context.FieldValuePairsInBody);
                     break;
             }
 
             return parameters;
-        }
-
-        /// <summary>
-        /// Helper method to populate all the params from the Rest request's body into the paramaters dictionary.
-        /// An entry is added only for those parameters which actually map to a backing column in the table/view.
-        /// </summary>
-        /// <param name="parameters">Parameters dictionary to be populated.</param>
-        /// <param name="context">Rest request's context</param>
-        private void PopulateParamsFromRestRequestBody(Dictionary<string, object?> parameters, RestRequestContext context)
-        {
-            SourceDefinition sourceDefinition = _sqlMetadataProvider.GetSourceDefinition(context.EntityName);
-            foreach (KeyValuePair<string, object?> pair in context.FieldValuePairsInBody)
-            {
-                if (_sqlMetadataProvider.TryGetBackingColumn(context.EntityName, pair.Key, out string? backingColumnName))
-                {
-                    if (sourceDefinition.Columns[backingColumnName].IsReadOnly)
-                    {
-                        throw new DataApiBuilderException(
-                            message: $"Field '{pair.Key}' provided in request body cannot be assigned a value.",
-                            statusCode: HttpStatusCode.BadRequest,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-                    }
-
-                    parameters.Add(pair.Key, pair.Value);
-                }
-            }
         }
 
         /// <summary>
@@ -864,11 +838,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="parameters">Parameters dictionary to be populated.</param>
         /// <param name="context">Rest request's context</param>
-        private static void PopulateParamsFromRestPK(Dictionary<string, object?> parameters, RestRequestContext context)
+        private static void PopulateParamsFromRequest(Dictionary<string, object?> parameters, Dictionary<string, object?> fieldValuePairs)
         {
-            foreach (KeyValuePair<string, object> pair in context.PrimaryKeyValuePairs!)
+            foreach ((string field, object? value) in fieldValuePairs)
             {
-                parameters.Add(pair.Key, pair.Value);
+                parameters.Add(field, value);
             }
         }
 

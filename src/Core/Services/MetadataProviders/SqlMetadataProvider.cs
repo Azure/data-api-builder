@@ -1028,19 +1028,23 @@ namespace Azure.DataApiBuilder.Core.Services
                 { tableParamName, new(tableName, DbType.String) }
             };
 
-            JsonArray? resultArray = await QueryExecutor.ExecuteQueryAsync(
+            List<string>? readOnlyFields = await QueryExecutor.ExecuteQueryAsync(
                 sqltext: queryToGetReadOnlyColumns,
                 parameters: parameters!,
-                dataReaderHandler: QueryExecutor.GetJsonArrayAsync);
-            using JsonDocument sqlResult = JsonDocument.Parse(resultArray!.ToJsonString());
+                dataReaderHandler: SummarizeReadOnlyFieldsMetadata);
 
-            // Iterate through each row returned by the query which corresponds to
-            // one read only column in the table.
-            foreach (JsonElement element in sqlResult.RootElement.EnumerateArray())
+            if (readOnlyFields is null || readOnlyFields.Count == 0)
             {
-                string column_name = element.GetProperty("column_name").ToString();
-                // Mark the column as read-only.
-                sourceDefinition.Columns[column_name].IsReadOnly = true;
+                return;
+            }
+
+            foreach (string readOnlyField in readOnlyFields)
+            {
+                if (sourceDefinition.Columns.TryGetValue(readOnlyField, out ColumnDefinition? columnDefinition))
+                {
+                    // Mark the column as read-only.
+                    columnDefinition.IsReadOnly = true;
+                }
             }
         }
 
@@ -1437,6 +1441,33 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             return pairToFkDefinition;
+        }
+
+        /// <summary>
+        /// Helper method to get all the read-only fields name in a table by processing the DbDataReader instance
+        /// which contains the name of all the fields - one field per DbResult row.
+        /// </summary>
+        /// <param name="reader">The DbDataReader.</param>
+        /// <param name="args">Arguments to this function.</param>
+        /// <returns>List of read-only fields present in the table.</returns>
+        private async Task<List<string>>
+            SummarizeReadOnlyFieldsMetadata(DbDataReader reader, List<string>? args = null)
+        {
+            // Extract all the rows in the current Result Set of DbDataReader.
+            DbResultSet readOnlyFieldRowsWithProperties =
+                await QueryExecutor.ExtractResultSetFromDbDataReader(reader);
+
+            List<string> readOnlyFields = new();
+
+            foreach (DbResultSetRow readOnlyFieldRowWithProperties in readOnlyFieldRowsWithProperties.Rows)
+            {
+                Dictionary<string, object?> foreignKeyInfo = readOnlyFieldRowWithProperties.Columns;
+                string fieldName =
+                    (string)foreignKeyInfo["column_name"]!;
+                readOnlyFields.Add(fieldName);
+            }
+
+            return readOnlyFields;
         }
 
         /// <summary>

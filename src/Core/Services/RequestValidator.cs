@@ -303,7 +303,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     continue;
                 }
 
-                if (insertRequestCtx.FieldValuePairsInBody.ContainsKey(exposedName!) && sourceDefinition.Columns[column.Key].IsReadOnly)
+                if (insertRequestCtx.FieldValuePairsInBody.ContainsKey(exposedName!) && column.Value.IsReadOnly)
                 {
                     throw new DataApiBuilderException(
                             message: $"Field '{exposedName}' provided in request body cannot be assigned a value.",

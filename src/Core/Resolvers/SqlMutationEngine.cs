@@ -813,7 +813,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 case EntityActionOperation.Delete:
                     // DeleteOne based off primary key in request.
-                    PopulateParamsFromRestContext(parameters, context.PrimaryKeyValuePairs!, context.EntityName);
+                    PopulateParamsFromRestPK(parameters, context);
                     break;
                 case EntityActionOperation.Upsert:
                 case EntityActionOperation.UpsertIncremental:
@@ -821,11 +821,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 case EntityActionOperation.UpdateIncremental:
                     // Combine both PrimaryKey/Field ValuePairs
                     // because we create an update statement.
-                    PopulateParamsFromRestContext(parameters, context.PrimaryKeyValuePairs!, context.EntityName);
-                    PopulateParamsFromRestContext(parameters, context.FieldValuePairsInBody, context.EntityName);
+                    PopulateParamsFromRestPK(parameters, context);
+                    PopulateParamsFromRestRequestBody(parameters, context);
                     break;
                 default:
-                    PopulateParamsFromRestContext(parameters, context.FieldValuePairsInBody, context.EntityName);
+                    PopulateParamsFromRestRequestBody(parameters, context);
                     break;
             }
 
@@ -833,20 +833,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// Helper method to populate all the params from the Rest request's context into the paramaters dictionary.
+        /// Helper method to populate all the params from the Rest request's body into the paramaters dictionary.
         /// An entry is added only for those parameters which actually map to a backing column in the table/view.
         /// </summary>
         /// <param name="parameters">Parameters dictionary to be populated.</param>
-        /// <param name="fieldValuePairs">Field value pairs from URL(PK) and request body of Rest request.</param>
-        private void PopulateParamsFromRestContext(
-            Dictionary<string, object?> parameters,
-            Dictionary<string, object?> fieldValuePairs,
-            string entityName)
+        /// <param name="context">Rest request's context</param>
+        private void PopulateParamsFromRestRequestBody(Dictionary<string, object?> parameters, RestRequestContext context)
         {
-            SourceDefinition sourceDefinition = _sqlMetadataProvider.GetSourceDefinition(entityName);
-            foreach (KeyValuePair<string, object?> pair in fieldValuePairs)
+            SourceDefinition sourceDefinition = _sqlMetadataProvider.GetSourceDefinition(context.EntityName);
+            foreach (KeyValuePair<string, object?> pair in context.FieldValuePairsInBody)
             {
-                if (_sqlMetadataProvider.TryGetBackingColumn(entityName, pair.Key, out string? backingColumnName))
+                if (_sqlMetadataProvider.TryGetBackingColumn(context.EntityName, pair.Key, out string? backingColumnName))
                 {
                     if (sourceDefinition.Columns[backingColumnName].IsReadOnly)
                     {
@@ -858,6 +855,20 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                     parameters.Add(pair.Key, pair.Value);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Helper method to populate all the params from the Rest request's primary key into the paramaters dictionary.
+        /// An entry is added only for those parameters which actually map to a backing column in the table/view.
+        /// </summary>
+        /// <param name="parameters">Parameters dictionary to be populated.</param>
+        /// <param name="context">Rest request's context</param>
+        private static void PopulateParamsFromRestPK(Dictionary<string, object?> parameters, RestRequestContext context)
+        {
+            foreach (KeyValuePair<string, object> pair in context.PrimaryKeyValuePairs!)
+            {
+                parameters.Add(pair.Key, pair.Value);
             }
         }
 

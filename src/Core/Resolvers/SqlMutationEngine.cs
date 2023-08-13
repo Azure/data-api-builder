@@ -813,7 +813,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 case EntityActionOperation.Delete:
                     // DeleteOne based off primary key in request.
-                    parameters = new(context.PrimaryKeyValuePairs!);
+                    PopulateParamsFromRestContext(parameters, context.PrimaryKeyValuePairs!, context.EntityName);
                     break;
                 case EntityActionOperation.Upsert:
                 case EntityActionOperation.UpsertIncremental:
@@ -821,11 +821,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 case EntityActionOperation.UpdateIncremental:
                     // Combine both PrimaryKey/Field ValuePairs
                     // because we create an update statement.
-                    parameters = new(context.PrimaryKeyValuePairs!);
-                    PopulateParamsFromRestContext(parameters, context);
+                    PopulateParamsFromRestContext(parameters, context.PrimaryKeyValuePairs!, context.EntityName);
+                    PopulateParamsFromRestContext(parameters, context.FieldValuePairsInBody, context.EntityName);
                     break;
                 default:
-                    PopulateParamsFromRestContext(parameters, context);
+                    PopulateParamsFromRestContext(parameters, context.FieldValuePairsInBody, context.EntityName);
                     break;
             }
 
@@ -837,13 +837,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// An entry is added only for those parameters which actually map to a backing column in the table/view.
         /// </summary>
         /// <param name="parameters">Parameters dictionary to be populated.</param>
-        /// <param name="context">Rest request's context</param>
-        private void PopulateParamsFromRestContext(Dictionary<string, object?> parameters, RestRequestContext context)
+        /// <param name="fieldValuePairs">Field value pairs from URL(PK) and request body of Rest request.</param>
+        private void PopulateParamsFromRestContext(
+            Dictionary<string, object?> parameters,
+            Dictionary<string, object?> fieldValuePairs,
+            string entityName)
         {
-            SourceDefinition sourceDefinition = _sqlMetadataProvider.GetSourceDefinition(context.EntityName);
-            foreach (KeyValuePair<string, object?> pair in context.FieldValuePairsInBody)
+            SourceDefinition sourceDefinition = _sqlMetadataProvider.GetSourceDefinition(entityName);
+            foreach (KeyValuePair<string, object?> pair in fieldValuePairs)
             {
-                if (_sqlMetadataProvider.TryGetBackingColumn(context.EntityName, pair.Key, out string? backingColumnName))
+                if (_sqlMetadataProvider.TryGetBackingColumn(entityName, pair.Key, out string? backingColumnName))
                 {
                     if (sourceDefinition.Columns[backingColumnName].IsReadOnly)
                     {

@@ -1019,11 +1019,13 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="sourceDefinition">Table definition.</param>
         private async Task PopulateColumnDefinitionsWithReadOnlyFlag(string tableName, string schemaName, SourceDefinition sourceDefinition)
         {
-            string queryToGetReadOnlyColumns = SqlQueryBuilder.BuildQueryToGetReadOnlyColumns();
+            string schemaParamName = $"{BaseQueryStructure.PARAM_NAME_PREFIX}param0";
+            string tableParamName = $"{BaseQueryStructure.PARAM_NAME_PREFIX}param1";
+            string queryToGetReadOnlyColumns = SqlQueryBuilder.BuildQueryToGetReadOnlyColumns(schemaParamName, tableParamName);
             Dictionary<string, DbConnectionParam> parameters = new()
             {
-                { $"{BaseQueryStructure.PARAM_NAME_PREFIX}param0", new(schemaName, DbType.String) },
-                { $"{BaseQueryStructure.PARAM_NAME_PREFIX}param1", new(tableName, DbType.String) }
+                { schemaParamName, new(schemaName, DbType.String) },
+                { tableParamName, new(tableName, DbType.String) }
             };
 
             JsonArray? resultArray = await QueryExecutor.ExecuteQueryAsync(

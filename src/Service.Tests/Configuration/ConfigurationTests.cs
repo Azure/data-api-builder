@@ -479,7 +479,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true, DisplayName = "[COSMOSDB_PGSQL]:No Change in connectionString containg customer Application name for DAB hosted.")]
         [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true, DisplayName = "[COSMOSDB_NOSQL]:No Change in connectionString containg customer Application name for DAB hosted.")]
         [DataRow(DatabaseType.MSSQL, "Something1;App=CustAppName;Something2;", "Something1;App=CustAppName,dab_oss_1.0.0;Something2;", false, DisplayName = "[MSSQL]:Updating connectionString containing `App` for customer Application name with dab_oss app name.")]
-        [DataRow(DatabaseType.MySQL, "Something1;App=CustAppName;Something2;", "Something1;App=CustAppName;Something2;", false, DisplayName = "[MSSQL]:No updates for `App` preoperty in connectionString for DBs other than MSSQL.")]
+        [DataRow(DatabaseType.MySQL, "Something1;App=CustAppName;Something2;", "Something1;App=CustAppName;Something2;", false, DisplayName = "[MySQL]:No updates for `App` preoperty in connectionString for DBs other than MSSQL.")]
         [DataRow(DatabaseType.MySQL, "username=dabApp;App=CustAppName;Something2;", "username=dabApp;App=CustAppName;Something2;", false, DisplayName = "[MSSQL]:No updates for other properties in connectionString containing `App`.")]
         public void TestConnectionStringIsCorrectlyUpdatedWithApplicationName(
             DatabaseType databaseType,

@@ -19,7 +19,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Maps .NET Framework types to DbType enum
         /// Not Adding this hard mapping for System.DateTime/DateTimeOffset,
         /// since System.DateTime is used for both SqldbType.DateTime and SqldbType.DateTime2.
-        /// So no change required here as seperate logic exist which does the mapping
+        /// So no change required here as separate logic exist which does the mapping
         /// and also Hotchocolate only has Hotchocolate.Types.DateTime for SqlDbType.DateTime/DateTime2/DateTimeOffset.
         /// </summary>
         private static Dictionary<Type, DbType> _systemTypeToDbTypeMap = new()

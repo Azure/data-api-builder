@@ -3,15 +3,14 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Product;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
-using static Azure.DataApiBuilder.Config.ObjectModel.DataSource;
 
 [assembly: InternalsVisibleTo("Azure.DataApiBuilder.Service.Tests")]
 namespace Azure.DataApiBuilder.Config;
@@ -119,9 +118,8 @@ public abstract class RuntimeConfigLoader
 
     /// <summary>
     /// It adds or replaces a property in the connection string with `Application Name` property.
-    /// If the connection string already contains the property, it uses a regular expression to update the existing value
-    /// by adding the DataApiBuilder Application Name (dab_oss/dab_hosted). If not, it appends the property `Application Name` to the connection string.
-    /// This method only adds the `Application Name` property to specify DataApiBuilder Application Name.
+    /// If the connection string already contains the property, it appends the property `Application Name` to the connection string,
+    /// else add the Application Name property with DataApiBuilder Application Name based on hosted/oss platform.
     /// </summary>
     /// <param name="connectionString">Connection string for connecting to database.</param>
     /// <returns>Updated connection string with `Application Name` property.</returns>
@@ -137,36 +135,24 @@ public abstract class RuntimeConfigLoader
         string applicationName = ProductInfo.GetDataApiBuilderUserAgent();
 
         // Create a StringBuilder from the connection string.
-        StringBuilder stringBuilder = new(connectionString);
+        SqlConnectionStringBuilder connectionStringBuilder = new(connectionString);
+        string defaultApplicationName = new SqlConnectionStringBuilder().ApplicationName;
 
-        // If the connection string already contains the Application Name property, replace its value with the new value.
-        if (connectionString.Contains(CONN_STRING_APP_NAME_PROPERTY, StringComparison.OrdinalIgnoreCase))
+        // If the connection string does not contain the `Application Name` property, add it.
+        // or if the connection string contains the `Application Name` property with default SqlClient liberary value, replace it with
+        // the DataApiBuilder Application Name.
+        if (string.IsNullOrWhiteSpace(connectionStringBuilder.ApplicationName)
+            || connectionStringBuilder.ApplicationName.Equals(defaultApplicationName, StringComparison.OrdinalIgnoreCase))
         {
-            int index = connectionString.IndexOf(CONN_STRING_APP_NAME_PROPERTY, StringComparison.OrdinalIgnoreCase);
-            int endIndex = connectionString.IndexOf(';', index);
-            stringBuilder.Insert(endIndex, $",{applicationName}");
+            connectionStringBuilder.ApplicationName = applicationName;
         }
-        // If the connection string contains the short version of the Application Name property, replace its value with the new value.
-        else if (connectionString.Contains(CONN_STRING_APP_NAME_PROPERTY_SHORT, StringComparison.OrdinalIgnoreCase))
-        {
-            int index = connectionString.IndexOf(CONN_STRING_APP_NAME_PROPERTY_SHORT, StringComparison.OrdinalIgnoreCase);
-            int endIndex = connectionString.IndexOf(';', index);
-            stringBuilder.Insert(endIndex, $",{applicationName}");
-        }
-        // If the connection string doesn't contain the Application Name property, add it to the end of the connection string.
         else
         {
-            // If the connection string doesn't end with a semicolon, add one.
-            if (!connectionString.EndsWith(";"))
-            {
-                stringBuilder.Append(";");
-            }
-
-            // Add the Application Name property and its value to the end of the connection string.
-            stringBuilder.Append($"{CONN_STRING_APP_NAME_PROPERTY}={applicationName};");
+            // If the connection string contains the `Application Name` property with a value, update the value by adding the DataApiBuilder Application Name.
+            connectionStringBuilder.ApplicationName += $",{applicationName}";
         }
 
         // Return the updated connection string.
-        return stringBuilder.ToString();
+        return connectionStringBuilder.ConnectionString;
     }
 }

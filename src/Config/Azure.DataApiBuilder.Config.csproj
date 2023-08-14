@@ -15,6 +15,7 @@
   <ItemGroup>
       <PackageReference Include="Microsoft.AspNetCore.Authorization" />
       <PackageReference Include="System.IO.Abstractions" />
+      <PackageReference Include="Microsoft.Data.SqlClient" />
       <PackageReference Include="StyleCop.Analyzers">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

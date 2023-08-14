@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -9,6 +10,7 @@ using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Product;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 
@@ -135,7 +137,20 @@ public abstract class RuntimeConfigLoader
         string applicationName = ProductInfo.GetDataApiBuilderUserAgent();
 
         // Create a StringBuilder from the connection string.
-        SqlConnectionStringBuilder connectionStringBuilder = new(connectionString);
+        SqlConnectionStringBuilder connectionStringBuilder;
+        try
+        {
+            connectionStringBuilder = new SqlConnectionStringBuilder(connectionString);
+        }
+        catch (Exception ex)
+        {
+            throw new DataApiBuilderException(
+                message: DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE,
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
+                innerException: ex);
+        }
+
         string defaultApplicationName = new SqlConnectionStringBuilder().ApplicationName;
 
         // If the connection string does not contain the `Application Name` property, add it.

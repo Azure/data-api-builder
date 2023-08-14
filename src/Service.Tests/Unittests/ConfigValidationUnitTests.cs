@@ -8,6 +8,7 @@ using System.IO.Abstractions.TestingHelpers;
 using System.Linq;
 using System.Net;
 using System.Text.Json;
+using static Azure.DataApiBuilder.Service.Tests.TestHelper;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -1626,7 +1627,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 @"""$schema"": ""test_schema""," +
                 @"""data-source"": {
                     ""database-type"": ""mssql"",
-                    ""connection-string"": ""testconnectionstring"",
+                    ""connection-string"": """ + SAMPLE_TEST_CONN_STRING + @""",
                     ""options"":{
                         ""set-session-context"": false
                     }
@@ -1722,7 +1723,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 @"""$schema"": ""test_schema""," +
                 @"""data-source"": {
                     ""database-type"": ""mssql"",
-                    ""connection-string"": ""testconnectionstring"",
+                    ""connection-string"": """ + SAMPLE_TEST_CONN_STRING + @""",
                     ""options"":{
                         ""set-session-context"": false
                     }
@@ -1803,7 +1804,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 @"""$schema"": ""test_schema""," +
                 @"""data-source"": {
                     ""database-type"": ""mssql"",
-                    ""connection-string"": ""testconnectionstring"",
+                    ""connection-string"": """ + SAMPLE_TEST_CONN_STRING + @""",
                     ""options"":{
                         ""set-session-context"": false
                     }

@@ -108,6 +108,12 @@ namespace Azure.DataApiBuilder.Service.Tests
         public const string SCHEMA_PROPERTY = @"
           ""$schema"": """ + FileSystemRuntimeConfigLoader.SCHEMA + @"""";
 
+        
+        /// <summary>
+        /// A sample connection string for unit tests
+        /// </summary>
+        public const string SAMPLE_TEST_CONN_STRING = "Data Source=<>;Initial Catalog=<>;User ID=<>;Password=<>;";
+
         /// <summary>
         /// Data source property of the config json. This is used for constructing the required config json strings
         /// for unit tests
@@ -115,7 +121,7 @@ namespace Azure.DataApiBuilder.Service.Tests
         public const string SAMPLE_SCHEMA_DATA_SOURCE = SCHEMA_PROPERTY + "," + @"
             ""data-source"": {
               ""database-type"": ""mssql"",
-              ""connection-string"": ""testconnectionstring""
+              ""connection-string"": """ + SAMPLE_TEST_CONN_STRING + @"""
             }
         ";
 

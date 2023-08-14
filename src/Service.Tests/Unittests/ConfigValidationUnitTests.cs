@@ -8,7 +8,6 @@ using System.IO.Abstractions.TestingHelpers;
 using System.Linq;
 using System.Net;
 using System.Text.Json;
-using static Azure.DataApiBuilder.Service.Tests.TestHelper;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -23,6 +22,7 @@ using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using static Azure.DataApiBuilder.Service.Tests.TestHelper;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {

@@ -108,7 +108,6 @@ namespace Azure.DataApiBuilder.Service.Tests
         public const string SCHEMA_PROPERTY = @"
           ""$schema"": """ + FileSystemRuntimeConfigLoader.SCHEMA + @"""";
 
-        
         /// <summary>
         /// A sample connection string for unit tests
         /// </summary>

@@ -1336,11 +1336,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// </summary>
         /// <param name="entityType">Type of the entity</param>
         /// <param name="requestPath">Request path for performing POST API requests on the entity</param>
-        /// <returns></returns>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow(EntitySourceType.Table, "/api/Book", DisplayName = "Location Header - Tables, Base Route not configured")]
-        [DataRow(EntitySourceType.StoredProcedure, "/api/GetBooks", DisplayName = "Location Header - Stored Procedures, Base Route not configured")]
+        [DataRow(EntitySourceType.Table, "/api/Book", DisplayName = "Location Header validation - Table, Base Route not configured")]
+        [DataRow(EntitySourceType.StoredProcedure, "/api/GetBooks", DisplayName = "Location Header validation - Stored Procedures, Base Route not configured")]
         public async Task ValidateLocationHeaderFieldForPostRequests(EntitySourceType entityType, string requestPath)
         {
 
@@ -1417,11 +1416,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <param name="requestPath">Request path for performing POST API requests on the entity</param>
         /// <param name="baseRoute">Configured base route</param>
         /// <param name="expectedLocationHeader">Expected value for Location field in the response header</param>
-        /// <returns></returns>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow(EntitySourceType.Table, "/api/Book", "/data-api", "http://localhost/data-api/api/Book/id/")]
-        [DataRow(EntitySourceType.StoredProcedure, "/api/GetBooks", "/data-api", "http://localhost/data-api/api/GetBooks")]
+        [DataRow(EntitySourceType.Table, "/api/Book", "/data-api", "http://localhost/data-api/api/Book/id/", DisplayName = "Location Header validation - Table, Base Route configured")]
+        [DataRow(EntitySourceType.StoredProcedure, "/api/GetBooks", "/data-api", "http://localhost/data-api/api/GetBooks", DisplayName = "Location Header validation - Stored Procedure, Base Route configured")]
         public async Task ValidateLocationHeaderWhenBaseRouteIsConfigured(EntitySourceType entityType,
                                                                           string requestPath,
                                                                           string baseRoute,
@@ -1493,6 +1491,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 string locationHeader = response.Headers.Location.AbsoluteUri;
                 Assert.IsTrue(locationHeader.StartsWith(expectedLocationHeader));
 
+                // The URL to perform the GET request is constructed by skipping the base-route.
+                // Base Route field is applicable only in SWA-DAB integrated scenario. When DAB engine is run independently, all the
+                // APIs are hosted on /api. But, the returned Location header in this test will contain the configured base-route. So, this needs to be
+                // removed before performing a subsequent GET request.
                 string path = response.Headers.Location.AbsolutePath;
                 string completeUrl = "http://localhost" + path.Substring(baseRoute.Length - 1);
 

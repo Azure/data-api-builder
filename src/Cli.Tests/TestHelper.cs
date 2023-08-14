@@ -72,7 +72,7 @@ namespace Cli.Tests
         public const string SAMPLE_SCHEMA_DATA_SOURCE = SCHEMA_PROPERTY + "," + @"
             ""data-source"": {
               ""database-type"": ""mssql"",
-              ""connection-string"": """ + SAMPLE_TEST_CONN_STRING + @""",
+              ""connection-string"": """ + SAMPLE_TEST_CONN_STRING + @"""
             }
         ";
 

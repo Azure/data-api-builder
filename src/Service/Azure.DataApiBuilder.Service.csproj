@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
         <TargetFramework>net6.0</TargetFramework>
@@ -51,11 +51,14 @@
         <PackageReference Include="HotChocolate" />
         <PackageReference Include="HotChocolate.AspNetCore" />
         <PackageReference Include="HotChocolate.AspNetCore.Authorization" />
+        <PackageReference Include="Microsoft.ApplicationInsights" />
+        <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
         <PackageReference Include="Microsoft.Azure.Cosmos" />
         <PackageReference Include="Microsoft.Data.SqlClient" />
         <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
         <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
+        <PackageReference Include="Microsoft.Extensions.Logging.ApplicationInsights" />
         <PackageReference Include="Microsoft.OData.Edm" />
         <PackageReference Include="Microsoft.OData.Core" />
         <PackageReference Include="Microsoft.OpenApi" />
@@ -85,6 +88,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Core\Azure.DataApiBuilder.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="dab-config.MsSql.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

@@ -154,7 +154,7 @@ public abstract class RuntimeConfigLoader
         string defaultApplicationName = new SqlConnectionStringBuilder().ApplicationName;
 
         // If the connection string does not contain the `Application Name` property, add it.
-        // or if the connection string contains the `Application Name` property with default SqlClient liberary value, replace it with
+        // or if the connection string contains the `Application Name` property with default SqlClient library value, replace it with
         // the DataApiBuilder Application Name.
         if (string.IsNullOrWhiteSpace(connectionStringBuilder.ApplicationName)
             || connectionStringBuilder.ApplicationName.Equals(defaultApplicationName, StringComparison.OrdinalIgnoreCase))

@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 {
@@ -24,6 +25,26 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         protected override string MakeQueryOnTypeTable(List<string> columnsToQuery, int id)
         {
             return MakeQueryOnTypeTable(columnsToQuery, filterValue: id.ToString(), filterField: "id");
+        }
+
+        /// <summary>
+        /// Test to validate functioning of GraphQL query with filter and orderby with datetime2 column based on the given parameters.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(DATETIME2_TYPE, "gt", "\'0001-01-08 10:23:00.9999999\'", "\"0001-01-08 10:23:00.9999999\"", " > ")]
+        [DataRow(DATETIME2_TYPE, "gte", "\'0001-01-08 10:23:00.9999999\'", "\"0001-01-08 10:23:00.9999999\"", " >= ")]
+        [DataRow(DATETIME2_TYPE, "lt", "\'0002-06-06\'", "\"0002-06-06\"", " < ")]
+        [DataRow(DATETIME2_TYPE, "lte", "\'9999-12-31\'", "\"9999-12-31\"", " <= ")]
+        [DataRow(DATETIME2_TYPE, "neq", "\'9999-12-31 23:59:59\'", "\"9999-12-31 23:59:59\"", "!=")]
+        public async Task QueryTypeColumnFilterAndOrderByDateTime2(string type, string filterOperator, string sqlValue, string gqlValue, string queryOperator)
+        {
+            if (DatabaseEngine is TestCategory.MYSQL && sqlValue is "\'9999-12-31 23:59:59.9999999\'")
+            {
+                sqlValue = "\'9999-12-31 23:59:59.0000000\'";
+                gqlValue = "\"9999-12-31 23:59:59.0000000\"";
+            }
+
+            await QueryTypeColumnFilterAndOrderBy(type, filterOperator, sqlValue, gqlValue, queryOperator);
         }
 
         protected override string MakeQueryOnTypeTable(

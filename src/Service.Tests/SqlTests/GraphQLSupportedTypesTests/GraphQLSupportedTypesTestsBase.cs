@@ -199,11 +199,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(DATETIME_TYPE, "lte", "\'2079-06-06\'", "\"2079-06-06\"", " <= ")]
         [DataRow(DATETIME_TYPE, "neq", "\'1999-01-08 10:23:54\'", "\"1999-01-08 10:23:54\"", "!=")]
         [DataRow(DATETIME_TYPE, "eq", "\'1999-01-08 10:23:54\'", "\"1999-01-08 10:23:54\"", "=")]
-        [DataRow(DATETIME2_TYPE, "gt", "\'0001-01-08 10:23:00.9999999\'", "\"0001-01-08 10:23:00.9999999\"", " > ")]
-        [DataRow(DATETIME2_TYPE, "gte", "\'0001-01-08 10:23:00.9999999\'", "\"0001-01-08 10:23:00.9999999\"", " >= ")]
-        [DataRow(DATETIME2_TYPE, "lt", "\'0002-06-06\'", "\"0002-06-06\"", " < ")]
-        [DataRow(DATETIME2_TYPE, "lte", "\'9999-12-31\'", "\"9999-12-31\"", " <= ")]
-        [DataRow(DATETIME2_TYPE, "neq", "\'9999-12-31 23:59:59\'", "\"9999-12-31 23:59:59\"", "!=")]
         public async Task QueryTypeColumnFilterAndOrderByDateTime(string type, string filterOperator, string sqlValue, string gqlValue, string queryOperator)
         {
             // In MySQL, the DATETIME data type supports a range from '1000-01-01 00:00:00.0000000' to '9999-12-31 23:59:59.0000000'
@@ -495,29 +490,28 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// </summary>
         private static void PerformTestEqualsForExtendedTypes(string type, string expected, string actual)
         {
-            if (type == SINGLE_TYPE || type == FLOAT_TYPE || type == DECIMAL_TYPE)
+            switch (type)
             {
-                CompareFloatResults(type, actual.ToString(), expected);
-            }
-            else if (type == DATETIME_TYPE)
-            {
-                CompareDateTimeResults(actual.ToString(), expected);
-            }
-            else if (type == DATETIMEOFFSET_TYPE)
-            {
-                CompareDateTimeOffsetResults(actual.ToString(), expected);
-            }
-            else if(type == DATETIME2_TYPE)
-            {
-                CompareDateTime2Results(actual.ToString(), expected);
-            }
-            else if (type == TIME_TYPE)
-            {
-                CompareTimeResults(actual.ToString(), expected);
-            }
-            else
-            {
-                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+                case SINGLE_TYPE:
+                case FLOAT_TYPE:
+                case DECIMAL_TYPE:
+                    CompareFloatResults(type, actual.ToString(), expected);
+                    break;
+                case TIME_TYPE:
+                    CompareTimeResults(actual.ToString(), expected);
+                    break;
+                case DATETIME_TYPE:
+                    CompareDateTimeResults(actual.ToString(), expected);
+                    break;
+                case DATETIME2_TYPE:
+                    CompareDateTime2Results(actual.ToString(), expected);
+                    break;
+                case DATETIMEOFFSET_TYPE:
+                    CompareDateTimeOffsetResults(actual.ToString(), expected);
+                    break;
+                default:
+                    SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+                    break;
             }
         }
 

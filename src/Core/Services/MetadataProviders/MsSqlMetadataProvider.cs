@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Data;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Microsoft.Data.SqlClient;
@@ -26,6 +27,8 @@ namespace Azure.DataApiBuilder.Core.Services
         {
         }
 
+        public static readonly HashSet<string> DateTimeTypes = new() { "datetime", "smalldatetime", "datetime2", "datetimeoffset" };
+
         public override string GetDefaultSchemaName()
         {
             return "dbo";
@@ -39,6 +42,12 @@ namespace Azure.DataApiBuilder.Core.Services
         public override Type SqlToCLRType(string sqlType)
         {
             return TypeHelper.GetSystemTypeFromSqlDbType(sqlType);
+        }
+
+        /// <inheritdoc/>
+        public override DbType DatetimeSqlToDbype(string sqlType)
+        {
+            return TypeHelper.GetDbTypeFromSqlDbDateTimeType(sqlType);
         }
     }
 }

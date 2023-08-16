@@ -43,7 +43,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             DisplayName = "Test after token for decimal values.")]
         [DataRow("boolean_types", "false", "true", 2, 4,
             DisplayName = "Test after token for boolean values.")]
-        [DataRow("date_types", "\"0001-01-01\"",
+        [DataRow("date_types", "\"1753-01-01\"",
             "\"9998-12-31\"", 3, 4,
             DisplayName = "Test after token for date values.")]
         [DataRow("datetime_types", "\"1753-01-01T00:00:00.000\"",

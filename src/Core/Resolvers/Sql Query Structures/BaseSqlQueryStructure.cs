@@ -360,7 +360,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 "Double" => double.Parse(param),
                 "Decimal" => decimal.Parse(param),
                 "Boolean" => bool.Parse(param),
-                "DateTime" => DateTimeOffset.Parse(param),
+                "DateTime" => DateTime.Parse(param),
                 "DateTimeOffset" => DateTimeOffset.Parse(param),
                 "Date" => DateOnly.Parse(param),
                 "Guid" => Guid.Parse(param),

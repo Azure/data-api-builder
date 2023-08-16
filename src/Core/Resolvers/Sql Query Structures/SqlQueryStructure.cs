@@ -475,7 +475,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 column.TableAlias = SourceAlias;
                 column.ParamName = column.Value is not null ?
-                     MakeDbConnectionParam(GetParamAsSystemType(column.Value!.ToString()!, column.ColumnName, GetColumnSystemType(column.ColumnName))) :
+                     MakeDbConnectionParam(GetParamAsSystemType(column.Value!.ToString()!, column.ColumnName, GetColumnSystemType(column.ColumnName)), column.ColumnName) :
                      MakeDbConnectionParam(null, column.ColumnName);
             }
 

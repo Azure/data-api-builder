@@ -199,6 +199,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(DATETIME_TYPE, "lte", "\'2079-06-06\'", "\"2079-06-06\"", " <= ")]
         [DataRow(DATETIME_TYPE, "neq", "\'1999-01-08 10:23:54\'", "\"1999-01-08 10:23:54\"", "!=")]
         [DataRow(DATETIME_TYPE, "eq", "\'1999-01-08 10:23:54\'", "\"1999-01-08 10:23:54\"", "=")]
+        [DataRow(DATETIME2_TYPE, "gt", "\'0001-01-08 10:23:00.9999999\'", "\"0001-01-08 10:23:00.9999999\"", " > ")]
+        [DataRow(DATETIME2_TYPE, "gte", "\'0001-01-08 10:23:00.9999999\'", "\"0001-01-08 10:23:00.9999999\"", " >= ")]
+        [DataRow(DATETIME2_TYPE, "lt", "\'0002-06-06\'", "\"0002-06-06\"", " < ")]
+        [DataRow(DATETIME2_TYPE, "lte", "\'9999-12-31\'", "\"9999-12-31\"", " <= ")]
+        [DataRow(DATETIME2_TYPE, "neq", "\'9999-12-31 23:59:59\'", "\"9999-12-31 23:59:59\"", "!=")]
         public async Task QueryTypeColumnFilterAndOrderByDateTime(string type, string filterOperator, string sqlValue, string gqlValue, string queryOperator)
         {
             // In MySQL, the DATETIME data type supports a range from '1000-01-01 00:00:00.0000000' to '9999-12-31 23:59:59.0000000'
@@ -502,6 +507,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             {
                 CompareDateTimeOffsetResults(actual.ToString(), expected);
             }
+            else if(type == DATETIME2_TYPE)
+            {
+                CompareDateTime2Results(actual.ToString(), expected);
+            }
             else if (type == TIME_TYPE)
             {
                 CompareTimeResults(actual.ToString(), expected);
@@ -592,6 +601,37 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         }
 
         /// <summary>
+        /// Required due to different format between mysql datetime and HotChocolate datetime
+        /// result
+        /// </summary>
+        private static void CompareDateTime2Results(string actual, string expected)
+        {
+            string fieldName = "datetime2_types";
+
+            using JsonDocument actualJsonDoc = JsonDocument.Parse(actual);
+            using JsonDocument expectedJsonDoc = JsonDocument.Parse(expected);
+
+            if (actualJsonDoc.RootElement.ValueKind is JsonValueKind.Array)
+            {
+                ValidateArrayResults(actualJsonDoc, expectedJsonDoc, fieldName);
+                return;
+            }
+
+            string actualDateTime2 = actualJsonDoc.RootElement.GetProperty(fieldName).ToString();
+            string expectedDateTime2 = expectedJsonDoc.RootElement.GetProperty(fieldName).ToString();
+
+            // handles cases when one of the values is null
+            if (string.IsNullOrEmpty(actualDateTime2) || string.IsNullOrEmpty(expectedDateTime2))
+            {
+                Assert.AreEqual(expectedDateTime2, actualDateTime2);
+            }
+            else
+            {
+                AssertOnFields(fieldName, actualDateTime2, expectedDateTime2);
+            }
+        }
+
+        /// <summary>
         /// Required due to different format between sql datetimeoffset and HotChocolate datetime
         /// result
         /// </summary>
@@ -678,6 +718,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 Assert.AreEqual(actualDateTimeOffset.ToString(), expectedDateTimeOffset.ToString());
                 // Comparing for milliseconds separately since HotChocolate time type is resolved only to 3 decimal places.
                 Assert.AreEqual(actualDateTimeOffset.Millisecond, expectedDateTimeOffset.Millisecond);
+            }
+            else if (field.StartsWith(DATETIME2_TYPE.ToLower()))
+            {
+                // Adjusting to universal, since DateTime doesn't account for TimeZone
+                DateTime actualDateTime = DateTime.Parse(actualElement.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
+                DateTime expectedDateTime = DateTime.Parse(expectedElement.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
+                Assert.AreEqual(expectedDateTime.ToString(), actualDateTime.ToString());
+                // Comparing for milliseconds separately since HotChocolate datetime2 type is resolved only to 3 decimal places.
+                Assert.AreEqual(expectedDateTime.Millisecond, actualDateTime.Millisecond);
             }
             else if (field.StartsWith(DATETIME_TYPE.ToLower()))
             {

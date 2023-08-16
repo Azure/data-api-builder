@@ -18,6 +18,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes
         public const string STRING_TYPE = "String";
         public const string BOOLEAN_TYPE = "Boolean";
         public const string DATETIME_TYPE = "DateTime";
+        public const string DATETIME2_TYPE = "DateTime2";
         public const string DATETIMEOFFSET_TYPE = "DateTimeOffset";
         public const string BYTEARRAY_TYPE = "ByteArray";
         public const string GUID_TYPE = "Guid";

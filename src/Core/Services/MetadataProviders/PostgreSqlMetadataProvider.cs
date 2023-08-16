@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Data;
 using System.Net;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers;
@@ -69,6 +70,11 @@ namespace Azure.DataApiBuilder.Core.Services
         /// TODO: For PostgreSql stored procedure support, this needs to be implemented.
         /// </summary>
         public override Type SqlToCLRType(string sqlType)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override DbType DatetimeSqlToDbype(string sqlType)
         {
             throw new NotImplementedException();
         }

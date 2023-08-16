@@ -35,7 +35,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.ApplicationInsights.Extensibility;
 using CorsOptions = Azure.DataApiBuilder.Config.ObjectModel.CorsOptions;
-// using Microsoft.ApplicationInsights.AspNetCore.Extensions;
+using Microsoft.ApplicationInsights.AspNetCore.Extensions;
 
 namespace Azure.DataApiBuilder.Service
 {
@@ -79,17 +79,17 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<RuntimeConfigValidator>();
 
             // The following line enables Application Insights telemetry collection.
-            services.AddApplicationInsightsTelemetry();
-            services.AddSingleton<ITelemetryInitializer, MyTelemetryInitializer>();
-            // RuntimeConfig runtimeConfig = configProvider.GetConfig();
-            //     if (runtimeConfig.Runtime.Telemetry is not null && runtimeConfig.Runtime.Telemetry.ApplicationInsights.Enabled) {
-            //         services.AddApplicationInsightsTelemetry(new ApplicationInsightsServiceOptions
-            //     {
-            //         ConnectionString = runtimeConfig.Runtime.Telemetry.ApplicationInsights.ConnectionString
-            //     });
+            // services.AddApplicationInsightsTelemetry();
+            // services.AddSingleton<ITelemetryInitializer, MyTelemetryInitializer>();
+            RuntimeConfig runtimeConfig = configProvider.GetConfig();
+            if (runtimeConfig.Runtime.Telemetry is not null && runtimeConfig.Runtime.Telemetry.ApplicationInsights.Enabled) {
+                services.AddApplicationInsightsTelemetry(new ApplicationInsightsServiceOptions
+                {
+                    ConnectionString = runtimeConfig.Runtime.Telemetry.ApplicationInsights.ConnectionString
+                });
                 
-            //     services.AddSingleton<ITelemetryInitializer, MyTelemetryInitializer>();
-            // }
+                services.AddSingleton<ITelemetryInitializer, MyTelemetryInitializer>();
+            }
             
             services.AddSingleton<CosmosClientProvider>();
             services.AddHealthChecks();

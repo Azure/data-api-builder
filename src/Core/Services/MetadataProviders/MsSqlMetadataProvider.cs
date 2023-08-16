@@ -45,7 +45,7 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <inheritdoc/>
-        public override DbType DatetimeSqlToDbype(string sqlType)
+        public override DbType DatetimeSqlTypeToDbype(string sqlType)
         {
             return TypeHelper.GetDbTypeFromSqlDbDateTimeType(sqlType);
         }

@@ -307,14 +307,27 @@ namespace Azure.DataApiBuilder.Core.Services
                 // row["DATA_TYPE"] has value type string so a direct cast to System.Type is not supported.
                 // See https://learn.microsoft.com/en-us/dotnet/framework/data/adonet/sql-server-data-type-mappings
                 Type systemType = SqlToCLRType((string)row["DATA_TYPE"]);
-                // Add to parameters dictionary without the leading @ sign
-                storedProcedureDefinition.Parameters.TryAdd(((string)row["PARAMETER_NAME"])[1..],
-                    new()
+                ParameterDefinition paramDefinition = new()
+                {
+                    SystemType = systemType,
+                    DbType = TypeHelper.GetDbTypeFromSystemType(systemType)
+                };
+
+                if (GetDatabaseType() is DatabaseType.MSSQL)
+                {
+                    string sqlDataType = ((string)row["DATA_TYPE"]).ToLower();
+                    if (MsSqlMetadataProvider.DateTimeTypes.Contains(sqlDataType))
                     {
-                        SystemType = systemType,
-                        DbType = TypeHelper.GetDbTypeFromSystemType(systemType)
+                        // For MsSql, all the date time types i.e. smalldatetime, datetime, datetime2 map to System.DateTime system type.
+                        // Hence we cannot directly determine the DbType from the system type.
+                        // However, to make sure that the database correctly interprets these datatypes, it is necessary to correctly
+                        // populate the DbTypes.
+                        paramDefinition.DbType = DatetimeSqlTypeToDbype(sqlDataType);
                     }
-                );
+                }
+
+                // Add to parameters dictionary without the leading @ sign
+                storedProcedureDefinition.Parameters.TryAdd(((string)row["PARAMETER_NAME"])[1..], paramDefinition);
             }
 
             // Loop through parameters specified in config, throw error if not found in schema
@@ -352,7 +365,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Takes a string version of a sql data type and returns its corresponding DbType.
         /// </summary>
-        public abstract DbType DatetimeSqlToDbype(string sqlType);
+        public abstract DbType DatetimeSqlTypeToDbype(string sqlType);
 
         /// <summary>
         /// Generates the map used to find a given entity based
@@ -1239,14 +1252,13 @@ namespace Azure.DataApiBuilder.Core.Services
                     if (GetDatabaseType() is DatabaseType.MSSQL)
                     {
                         string sqlDataType = ((string)columnInfo["DATA_TYPE"]).ToLower();
-                        sqlDataType = sqlDataType.ToLower();
                         if (MsSqlMetadataProvider.DateTimeTypes.Contains(sqlDataType))
                         {
                             // For MsSql, all the date time types i.e. smalldatetime, datetime, datetime2 map to System.DateTime system type.
                             // Hence we cannot directly determine the DbType from the system type.
                             // However, to make sure that the database correctly interprets these datatypes, it is necessary to correctly
                             // populate the DbTypes.
-                            columnDefinition.DbType = DatetimeSqlToDbype(sqlDataType);
+                            columnDefinition.DbType = DatetimeSqlTypeToDbype(sqlDataType);
                         }
                     }
                 }

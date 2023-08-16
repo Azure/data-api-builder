@@ -118,7 +118,7 @@ namespace Azure.DataApiBuilder.Core.Services
             throw new NotImplementedException();
         }
 
-        public override DbType DatetimeSqlToDbype(string sqlType)
+        public override DbType DatetimeSqlTypeToDbype(string sqlType)
         {
             throw new NotImplementedException();
         }

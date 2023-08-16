@@ -401,8 +401,6 @@ namespace Azure.DataApiBuilder.Core.Services
         public string GetBaseRouteFromConfig()
         {
             if (_runtimeConfigProvider.TryGetConfig(out RuntimeConfig? config)
-                && config is not null
-                && config.Runtime is not null
                 && config.Runtime.BaseRoute is not null)
             {
                 return config.Runtime.BaseRoute;

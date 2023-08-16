@@ -225,7 +225,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
                 if (result is CreatedResult)
                 {
                     // Location is made up of three parts, the first being constructed
-                    // from the HttpRequest found in the HttpContext. The second part being the
+                    // from the Host property found in the HttpContext.Request. The second part being the
                     // base route configured in the config file.
                     // The third part is the primary key route, which has already been saved in the
                     // Location of the created result. So we form the entire location

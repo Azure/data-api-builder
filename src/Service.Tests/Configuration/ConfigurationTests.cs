@@ -1343,7 +1343,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         public async Task ValidateLocationHeaderFieldForPostRequests(EntitySourceType entityType, string requestPath)
         {
 
-            GraphQLRuntimeOptions graphqlOptions = new(Enabled: true);
+            GraphQLRuntimeOptions graphqlOptions = new(Enabled: false);
             RestRuntimeOptions restRuntimeOptions = new(Enabled: true);
 
             DataSource dataSource = new(DatabaseType.MSSQL,
@@ -1355,7 +1355,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             {
                 Entity entity = new(Source: new("get_books", EntitySourceType.StoredProcedure, null, null),
                               Rest: new(new SupportedHttpVerb[] { SupportedHttpVerb.Get, SupportedHttpVerb.Post }),
-                              GraphQL: new(Singular: "GetBooks", Plural: "GetBooks"),
+                              GraphQL: null,
                               Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                               Relationships: null,
                               Mappings: null
@@ -1406,6 +1406,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 HttpRequestMessage followUpRequest = new(HttpMethod.Get, response.Headers.Location);
                 HttpResponseMessage followUpResponse = await client.SendAsync(followUpRequest);
                 Assert.AreEqual(HttpStatusCode.OK, followUpResponse.StatusCode);
+
+                // Delete the new record created as part of this test
+                if (entityType is EntitySourceType.Table)
+                {
+                    HttpRequestMessage cleanupRequest = new(HttpMethod.Delete, locationHeader);
+                    await client.SendAsync(cleanupRequest);
+                }
             }
         }
 
@@ -1425,7 +1432,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                                                                           string baseRoute,
                                                                           string expectedLocationHeader)
         {
-            GraphQLRuntimeOptions graphqlOptions = new(Enabled: true);
+            GraphQLRuntimeOptions graphqlOptions = new(Enabled: false);
             RestRuntimeOptions restRuntimeOptions = new(Enabled: true);
 
             DataSource dataSource = new(DatabaseType.MSSQL,
@@ -1437,7 +1444,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             {
                 Entity entity = new(Source: new("get_books", EntitySourceType.StoredProcedure, null, null),
                               Rest: new(new SupportedHttpVerb[] { SupportedHttpVerb.Get, SupportedHttpVerb.Post }),
-                              GraphQL: new(Singular: "GetBooks", Plural: "GetBooks"),
+                              GraphQL: null,
                               Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                               Relationships: null,
                               Mappings: null
@@ -1501,6 +1508,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 HttpRequestMessage followUpRequest = new(HttpMethod.Get, completeUrl);
                 HttpResponseMessage followUpResponse = await client.SendAsync(followUpRequest);
                 Assert.AreEqual(HttpStatusCode.OK, followUpResponse.StatusCode);
+
+                // Delete the new record created as part of this test
+                if (entityType is EntitySourceType.Table)
+                {
+                    HttpRequestMessage cleanupRequest = new(HttpMethod.Delete, completeUrl);
+                    await client.SendAsync(cleanupRequest);
+                }
+
             }
         }
 

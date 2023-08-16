@@ -1254,7 +1254,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         string sqlDataType = ((string)columnInfo["DATA_TYPE"]).ToLower();
                         if (MsSqlMetadataProvider.DateTimeTypes.Contains(sqlDataType))
                         {
-                            // For MsSql, all the date time types i.e. smalldatetime, datetime, datetime2 map to System.DateTime system type.
+                            // For MsSql, all the date time types i.e. date, smalldatetime, datetime, datetime2 map to System.DateTime system type.
                             // Hence we cannot directly determine the DbType from the system type.
                             // However, to make sure that the database correctly interprets these datatypes, it is necessary to correctly
                             // populate the DbTypes.

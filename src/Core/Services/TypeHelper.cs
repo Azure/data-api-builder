@@ -118,6 +118,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
         private static Dictionary<string, DbType> _timeSqlDbTypeToDbType = new()
         {
+            ["date"] = DbType.Date,
             ["datetime"] = DbType.DateTime,
             ["smalldatetime"] = DbType.DateTime,
             ["datetime2"] = DbType.DateTime2,

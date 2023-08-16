@@ -27,7 +27,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
         }
 
-        public static readonly HashSet<string> DateTimeTypes = new() { "datetime", "smalldatetime", "datetime2", "datetimeoffset" };
+        public static readonly HashSet<string> DateTimeTypes = new() { "date", "smalldatetime", "datetime", "datetime2", "datetimeoffset" };
 
         public override string GetDefaultSchemaName()
         {

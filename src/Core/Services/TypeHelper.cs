@@ -5,6 +5,7 @@ using System.Data;
 using System.Net;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.OData.Edm;
 
 namespace Azure.DataApiBuilder.Core.Services
 {
@@ -16,6 +17,10 @@ namespace Azure.DataApiBuilder.Core.Services
     {
         /// <summary>
         /// Maps .NET Framework types to DbType enum
+        /// Not Adding this hard mapping for System.DateTime/DateTimeOffset,
+        /// since System.DateTime is used for both SqldbType.DateTime and SqldbType.DateTime2.
+        /// So no change required here as separate logic exist which does the mapping
+        /// and also Hotchocolate only has Hotchocolate.Types.DateTime for SqlDbType.DateTime/DateTime2/DateTimeOffset.
         /// </summary>
         private static Dictionary<Type, DbType> _systemTypeToDbTypeMap = new()
         {
@@ -35,20 +40,8 @@ namespace Azure.DataApiBuilder.Core.Services
             [typeof(char)] = DbType.StringFixedLength,
             [typeof(Guid)] = DbType.Guid,
             [typeof(byte[])] = DbType.Binary,
-            [typeof(byte?)] = DbType.Byte,
-            [typeof(sbyte?)] = DbType.SByte,
-            [typeof(short?)] = DbType.Int16,
-            [typeof(ushort?)] = DbType.UInt16,
-            [typeof(int?)] = DbType.Int32,
-            [typeof(uint?)] = DbType.UInt32,
-            [typeof(long?)] = DbType.Int64,
-            [typeof(ulong?)] = DbType.UInt64,
-            [typeof(float?)] = DbType.Single,
-            [typeof(double?)] = DbType.Double,
-            [typeof(decimal?)] = DbType.Decimal,
-            [typeof(bool?)] = DbType.Boolean,
-            [typeof(char?)] = DbType.StringFixedLength,
-            [typeof(Guid?)] = DbType.Guid,
+            [typeof(TimeOnly)] = DbType.Time,
+            [typeof(TimeSpan)] = DbType.Time,
             [typeof(object)] = DbType.Object
         };
 
@@ -77,6 +70,7 @@ namespace Azure.DataApiBuilder.Core.Services
             [typeof(Guid)] = JsonDataType.String,
             [typeof(byte[])] = JsonDataType.String,
             [typeof(TimeSpan)] = JsonDataType.String,
+            [typeof(TimeOnly)] = JsonDataType.String,
             [typeof(object)] = JsonDataType.Object,
             [typeof(DateTime)] = JsonDataType.String,
             [typeof(DateTimeOffset)] = JsonDataType.String
@@ -108,7 +102,7 @@ namespace Azure.DataApiBuilder.Core.Services
             [SqlDbType.SmallInt] = typeof(short),
             [SqlDbType.SmallMoney] = typeof(decimal),
             [SqlDbType.Text] = typeof(string),
-            [SqlDbType.Time] = typeof(TimeSpan),
+            [SqlDbType.Time] = typeof(TimeOnly),
             [SqlDbType.Timestamp] = typeof(byte[]),
             [SqlDbType.TinyInt] = typeof(byte),
             [SqlDbType.UniqueIdentifier] = typeof(Guid),
@@ -124,6 +118,43 @@ namespace Azure.DataApiBuilder.Core.Services
             ["datetime2"] = DbType.DateTime2,
             ["datetimeoffset"] = DbType.DateTimeOffset
         };
+
+        /// <summary>
+        /// Given the system type, returns the corresponding primitive type kind.
+        /// </summary>
+        /// <param name="columnSystemType">Type of the column.</param>
+        /// <returns>EdmPrimitiveTypeKind</returns>
+        /// <exception cref="ArgumentException">Throws when the column</exception>
+        public static EdmPrimitiveTypeKind GetEdmPrimitiveTypeFromSystemType(Type columnSystemType)
+        {
+            if (columnSystemType.IsArray)
+            {
+                columnSystemType = columnSystemType.GetElementType()!;
+            }
+
+            EdmPrimitiveTypeKind type = columnSystemType.Name switch
+            {
+                "String" => EdmPrimitiveTypeKind.String,
+                "Guid" => EdmPrimitiveTypeKind.Guid,
+                "Byte" => EdmPrimitiveTypeKind.Byte,
+                "Int16" => EdmPrimitiveTypeKind.Int16,
+                "Int32" => EdmPrimitiveTypeKind.Int32,
+                "Int64" => EdmPrimitiveTypeKind.Int64,
+                "Single" => EdmPrimitiveTypeKind.Single,
+                "Double" => EdmPrimitiveTypeKind.Double,
+                "Decimal" => EdmPrimitiveTypeKind.Decimal,
+                "Boolean" => EdmPrimitiveTypeKind.Boolean,
+                "DateTime" => EdmPrimitiveTypeKind.DateTimeOffset,
+                "DateTimeOffset" => EdmPrimitiveTypeKind.DateTimeOffset,
+                "Date" => EdmPrimitiveTypeKind.Date,
+                "TimeOnly" => EdmPrimitiveTypeKind.TimeOfDay,
+                "TimeSpan" => EdmPrimitiveTypeKind.TimeOfDay,
+                _ => throw new ArgumentException($"Column type" +
+                        $" {columnSystemType.Name} not yet supported.")
+            };
+
+            return type;
+        }
 
         /// <summary>
         /// Converts the .NET Framework (System/CLR) type to JsonDataType.
@@ -160,6 +191,15 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <returns>DbType for the given system type. Null when no mapping exists.</returns>
         public static DbType? GetDbTypeFromSystemType(Type systemType)
         {
+            // Get the underlying type argument if the 'systemType' argument is a nullable type.
+            Type? nullableUnderlyingType = Nullable.GetUnderlyingType(systemType);
+
+            // Will not be null when the input argument 'systemType' is a closed generic nullable type.
+            if (nullableUnderlyingType is not null)
+            {
+                systemType = nullableUnderlyingType;
+            }
+
             if (!_systemTypeToDbTypeMap.TryGetValue(systemType, out DbType dbType))
             {
                 return null;

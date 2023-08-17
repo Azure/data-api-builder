@@ -1638,7 +1638,7 @@ query {
 
             Entity clubEntity = new(
                 Source: new("clubs", EntitySourceType.Table, null, null),
-                Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
+                Rest: new(Enabled: true),
                 GraphQL: new("club", "clubs"),
                 Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,
@@ -1647,7 +1647,7 @@ query {
 
             Entity playerEntity = new(
                 Source: new("players", EntitySourceType.Table, null, null),
-                Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
+                Rest: new(Enabled: true),
                 GraphQL: new("player", "players"),
                 Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: new Dictionary<string, EntityRelationship>() { {"clubs", new (

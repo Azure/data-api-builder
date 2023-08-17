@@ -128,9 +128,10 @@ public record RuntimeEntities : IEnumerable<KeyValuePair<string, Entity>>
                     :
                     nameCorrectedEntity
                         with
-                    { Rest = new EntityRestOptions(EntityRestOptions.DEFAULT_SUPPORTED_VERBS) };
+                    // Unless explicilty configured through config file, REST endpoints are enabled for entities backed by tables/views.
+                    { Rest = new EntityRestOptions(Enabled: true) };
         }
-        else if (nameCorrectedEntity.Source.Type is EntitySourceType.StoredProcedure && nameCorrectedEntity.Rest.Methods.Length == 0)
+        else if (nameCorrectedEntity.Source.Type is EntitySourceType.StoredProcedure && (nameCorrectedEntity.Rest.Methods is null || nameCorrectedEntity.Rest.Methods.Length == 0))
         {
             // REST Method field is relevant only for stored procedures. For an entity backed by a table/view, all HTTP verbs are enabled by design
             // unless configured otherwise through the config file. An entity backed by a stored procedure also supports all HTTP verbs but only POST is 

@@ -14,6 +14,7 @@
     <PackageReference Include="Microsoft.ApplicationInsights" />
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" />
     <PackageReference Include="Microsoft.Extensions.Logging.ApplicationInsights" />
+    <PackageReference Include="HotChocolate.Types.NodaTime" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Microsoft.Azure.Cosmos" />
     <PackageReference Include="Microsoft.Data.SqlClient" />

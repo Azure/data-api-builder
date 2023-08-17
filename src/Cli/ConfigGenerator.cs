@@ -105,13 +105,13 @@ namespace Cli
                     string? graphQLSchemaPath = options.GraphQLSchemaPath;
                     if (string.IsNullOrEmpty(cosmosDatabase) || string.IsNullOrEmpty(graphQLSchemaPath))
                     {
-                        _logger.LogError($"Missing mandatory configuration option for CosmosDB_NoSql: --cosmosdb_nosql-database, and --graphql-schema");
+                        _logger.LogError("Missing mandatory configuration option for CosmosDB_NoSql: --cosmosdb_nosql-database, and --graphql-schema");
                         return false;
                     }
 
                     if (!fileSystem.File.Exists(graphQLSchemaPath))
                     {
-                        _logger.LogError($"GraphQL Schema File: {graphQLSchemaPath} not found.");
+                        _logger.LogError("GraphQL Schema File: {graphQLSchemaPath} not found.", graphQLSchemaPath);
                         return false;
                     }
 
@@ -151,19 +151,19 @@ namespace Cli
 
             if (!IsURIComponentValid(restPath))
             {
-                _logger.LogError($"{ApiType.REST} path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}");
+                _logger.LogError("{apiType} path {message}", ApiType.REST, RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG);
                 return false;
             }
 
             if (!IsURIComponentValid(options.GraphQLPath))
             {
-                _logger.LogError($"{ApiType.GraphQL} path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}");
+                _logger.LogError("{apiType} path {message}", ApiType.GraphQL, RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG);
                 return false;
             }
 
             if (!IsURIComponentValid(runtimeBaseRoute))
             {
-                _logger.LogError($"Runtime base-route {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}");
+                _logger.LogError("Runtime base-route {message}", RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG);
                 return false;
             }
 
@@ -171,14 +171,14 @@ namespace Cli
             {
                 if (!Enum.TryParse(options.AuthenticationProvider, ignoreCase: true, out EasyAuthType easyAuthMode) || easyAuthMode is not EasyAuthType.StaticWebApps)
                 {
-                    _logger.LogError($"Runtime base-route can only be specified when the authentication provider is Static Web Apps.");
+                    _logger.LogError("Runtime base-route can only be specified when the authentication provider is Static Web Apps.");
                     return false;
                 }
             }
 
             if (options.RestDisabled && options.GraphQLDisabled)
             {
-                _logger.LogError($"Both Rest and GraphQL cannot be disabled together.");
+                _logger.LogError("Both Rest and GraphQL cannot be disabled together.");
                 return false;
             }
 
@@ -234,7 +234,7 @@ namespace Cli
 
             if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
             {
-                _logger.LogError($"Failed to read the config file: {runtimeConfigFile}.");
+                _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
                 return false;
             }
 
@@ -262,7 +262,7 @@ namespace Cli
             //
             if (initialRuntimeConfig.Entities.ContainsKey(options.Entity))
             {
-                _logger.LogWarning($"Entity-{options.Entity} is already present. No new changes are added to Config.");
+                _logger.LogWarning("Entity '{entityName}' is already present. No new changes are added to Config.", options.Entity);
                 return false;
             }
 
@@ -303,7 +303,7 @@ namespace Cli
             }
 
             GraphQLOperation? graphQLOperationsForStoredProcedures = null;
-            SupportedHttpVerb[] SupportedRestMethods = EntityRestOptions.DEFAULT_SUPPORTED_VERBS;
+            SupportedHttpVerb[]? SupportedRestMethods = null;
             if (isStoredProcedure)
             {
                 if (CheckConflictingGraphQLConfigurationForStoredProcedures(options))
@@ -433,7 +433,7 @@ namespace Cli
             string? role, operations;
             if (!TryGetRoleAndOperationFromPermission(permissions, out role, out operations))
             {
-                _logger.LogError($"Failed to fetch the role and operation from the given permission string: {string.Join(SEPARATOR, permissions.ToArray())}.");
+                _logger.LogError("Failed to fetch the role and operation from the given permission string: {permissions}.", string.Join(SEPARATOR, permissions));
                 return null;
             }
 
@@ -470,7 +470,7 @@ namespace Cli
 
             if (!TryUpdateExistingEntity(options, runtimeConfig, out RuntimeConfig updatedConfig))
             {
-                _logger.LogError($"Failed to update the Entity: {options.Entity}.");
+                _logger.LogError("Failed to update the Entity: {entityName}.", options.Entity);
                 return false;
             }
 
@@ -489,9 +489,9 @@ namespace Cli
         {
             updatedConfig = initialConfig;
             // Check if Entity is present
-            if (!initialConfig.Entities.TryGetValue(options.Entity!, out Entity? entity))
+            if (!initialConfig.Entities.TryGetValue(options.Entity, out Entity? entity))
             {
-                _logger.LogError($"Entity:{options.Entity} not found. Please add the entity first.");
+                _logger.LogError("Entity: '{entityName}' not found. Please add the entity first.", options.Entity);
                 return false;
             }
 
@@ -557,7 +557,7 @@ namespace Cli
 
                 if (updatedPermissions is null)
                 {
-                    _logger.LogError($"Failed to update permissions.");
+                    _logger.LogError("Failed to update permissions.");
                     return false;
                 }
             }
@@ -567,13 +567,13 @@ namespace Cli
                 if (options.FieldsToInclude is not null && options.FieldsToInclude.Any()
                     || options.FieldsToExclude is not null && options.FieldsToExclude.Any())
                 {
-                    _logger.LogInformation($"--permissions is mandatory with --fields.include and --fields.exclude.");
+                    _logger.LogInformation("--permissions is mandatory with --fields.include and --fields.exclude.");
                     return false;
                 }
 
                 if (options.PolicyRequest is not null || options.PolicyDatabase is not null)
                 {
-                    _logger.LogInformation($"--permissions is mandatory with --policy-request and --policy-database.");
+                    _logger.LogInformation("--permissions is mandatory with --policy-request and --policy-database.");
                     return false;
                 }
 
@@ -793,9 +793,10 @@ namespace Cli
 
                 if (IsStoredProcedureConvertedToOtherTypes(entity, options) || IsEntityBeingConvertedToStoredProcedure(entity, options))
                 {
-                    _logger.LogWarning($"Stored procedures can be configured only with {EntityActionOperation.Execute} action whereas tables/views are configured with CRUD actions. Update the actions configured for all the roles for this entity.");
+                    _logger.LogWarning(
+                        "Stored procedures can be configured only with '{storedProcedureAction}' action whereas tables/views are configured with CRUD actions. Update the actions configured for all the roles for this entity.",
+                        EntityActionOperation.Execute);
                 }
-
             }
 
             // No need to validate parameter and key field usage when there are no changes to the source object defined in 'options'
@@ -883,7 +884,7 @@ namespace Cli
             // Both the source entity and target entity needs to present in config to establish relationship.
             if (!runtimeConfig.Entities.ContainsKey(targetEntity))
             {
-                _logger.LogError($"Entity:{targetEntity} is not present. Relationship cannot be added.");
+                _logger.LogError("Entity: '{targetEntity}' is not present. Relationship cannot be added.", targetEntity);
                 return false;
             }
 
@@ -891,14 +892,14 @@ namespace Cli
             if (!string.Equals(cardinality, Cardinality.One.ToString(), StringComparison.OrdinalIgnoreCase)
                 && !string.Equals(cardinality, Cardinality.Many.ToString(), StringComparison.OrdinalIgnoreCase))
             {
-                _logger.LogError($"Failed to parse the given cardinality : {cardinality}. Supported values are one/many.");
+                _logger.LogError("Failed to parse the given cardinality :'{cardinality}'. Supported values are 'one' or 'many'.", cardinality);
                 return false;
             }
 
             // If GraphQL is disabled, entity cannot be used in relationship
             if (!runtimeConfig.Entities[targetEntity].GraphQL.Enabled)
             {
-                _logger.LogError($"Entity: {targetEntity} cannot be used in relationship as it is disabled for GraphQL.");
+                _logger.LogError("Entity: '{targetEntity}' cannot be used in relationship as it is disabled for GraphQL.", targetEntity);
                 return false;
             }
 
@@ -948,7 +949,7 @@ namespace Cli
         /// It will use the config provided by the user, else based on the environment value
         /// it will either merge the config if base config and environmentConfig is present
         /// else it will choose a single config based on precedence (left to right) of
-        /// overrides < environmentConfig < defaultConfig
+        /// overrides &lt; environmentConfig &lt; defaultConfig
         /// Also preforms validation to check connection string is not null or empty.
         /// </summary>
         public static bool TryStartEngineWithOptions(StartOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
@@ -956,7 +957,7 @@ namespace Cli
             string? configToBeUsed = options.Config;
             if (string.IsNullOrEmpty(configToBeUsed) && ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, _logger, out configToBeUsed))
             {
-                _logger.LogInformation($"Using merged config file based on environment:{configToBeUsed}.");
+                _logger.LogInformation("Using merged config file based on environment: {configToBeUsed}.", configToBeUsed);
             }
 
             if (!TryGetConfigFileBasedOnCliPrecedence(loader, configToBeUsed, out string runtimeConfigFile))
@@ -976,7 +977,7 @@ namespace Cli
 
             if (string.IsNullOrWhiteSpace(deserializedRuntimeConfig.DataSource.ConnectionString))
             {
-                _logger.LogError($"Invalid connection-string provided in the config.");
+                _logger.LogError("Invalid connection-string provided in the config.");
                 return false;
             }
 
@@ -991,20 +992,21 @@ namespace Cli
             {
                 if (options.LogLevel is < LogLevel.Trace or > LogLevel.None)
                 {
-                    _logger.LogError($"LogLevel's valid range is 0 to 6, your value: {options.LogLevel}, see: " +
-                        $"https://learn.microsoft.com/en-us/dotnet/api/microsoft.extensions.logging.loglevel?view=dotnet-plat-ext-7.0");
+                    _logger.LogError(
+                        "LogLevel's valid range is 0 to 6, your value: {logLevel}, see: https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.loglevel?view=dotnet-plat-ext-6.0",
+                        options.LogLevel);
                     return false;
                 }
 
                 minimumLogLevel = (LogLevel)options.LogLevel;
-                _logger.LogInformation($"Setting minimum LogLevel: {minimumLogLevel}.");
+                _logger.LogInformation("Setting minimum LogLevel: {minimumLogLevel}.", minimumLogLevel);
             }
             else
             {
                 minimumLogLevel = Startup.GetLogLevelBasedOnMode(deserializedRuntimeConfig);
                 HostMode hostModeType = deserializedRuntimeConfig.Runtime.Host.Mode;
 
-                _logger.LogInformation($"Setting default minimum LogLevel: {minimumLogLevel} for {hostModeType} mode.");
+                _logger.LogInformation("Setting default minimum LogLevel: {minimumLogLevel} for {hostMode} mode.", minimumLogLevel, hostModeType);
             }
 
             args.Add("--LogLevel");
@@ -1082,7 +1084,7 @@ namespace Cli
         private static EntityRestOptions ConstructUpdatedRestDetails(Entity entity, EntityOptions options, bool isCosmosDbNoSql)
         {
             // Updated REST Route details
-            EntityRestOptions restPath = (options.RestRoute is not null) ? ConstructRestOptions(options.RestRoute, Array.Empty<SupportedHttpVerb>(), isCosmosDbNoSql) : entity.Rest;
+            EntityRestOptions restPath = (options.RestRoute is not null) ? ConstructRestOptions(restRoute: options.RestRoute, supportedHttpVerbs: null, isCosmosDbNoSql: isCosmosDbNoSql) : entity.Rest;
 
             // Updated REST Methods info for stored procedures
             SupportedHttpVerb[]? SupportedRestMethods;
@@ -1125,7 +1127,7 @@ namespace Cli
                 SupportedRestMethods = new SupportedHttpVerb[] { SupportedHttpVerb.Post };
             }
 
-            return restPath with { Methods = SupportedRestMethods ?? Array.Empty<SupportedHttpVerb>() };
+            return restPath with { Methods = SupportedRestMethods };
         }
 
         /// <summary>

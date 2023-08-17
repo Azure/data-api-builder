@@ -8,10 +8,12 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -84,6 +86,31 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// <code>Do: </code> Tests with different combinations of connection string to ensure
+        /// tableprefix generated is correctly.
+        /// <code>Check: </code> Making sure table prefix matches expected prefix.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("", "", "")]
+        [DataRow("", "model", "[model]")]
+        [DataRow("TestDB", "", "[TestDB]")]
+        [DataRow("TestDB", "model", "[TestDB].[model]")]
+        public void CheckTablePrefix(string databaseName, string schemaName, string expectedPrefix)
+        {
+            TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
+            RuntimeConfig baseConfigFromDisk = SqlTestHelper.SetupRuntimeConfig();
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(baseConfigFromDisk);
+
+            ILogger<ISqlMetadataProvider> sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
+            Mock<IQueryExecutor> queryExecutor = new();
+            IQueryBuilder queryBuilder = new MsSqlQueryBuilder();
+
+            SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand> provider = new MsSqlMetadataProvider(runtimeConfigProvider, queryExecutor.Object, queryBuilder, sqlMetadataLogger);
+            string tableprefix = provider.GetTablePrefix(databaseName, schemaName);
+            Assert.AreEqual(tableprefix, expectedPrefix);
+        }
+
+        /// <summary>
         /// <code>Do: </code> Load runtimeConfig and set connection string and db type
         /// according to data row.
         /// <code>Check: </code>  Verify malformed connection string throws correct exception with MySQL as the database.
@@ -136,16 +163,16 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             ILogger<ISqlMetadataProvider> sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
 
-            ISqlMetadataProvider sqlMetadataProvider = databaseType switch
-            {
-                TestCategory.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
-                TestCategory.MYSQL => new MySqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
-                TestCategory.POSTGRESQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
-                _ => throw new ArgumentException($"Invalid database type: {databaseType}")
-            };
-
             try
             {
+                ISqlMetadataProvider sqlMetadataProvider = databaseType switch
+                {
+                    TestCategory.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
+                    TestCategory.MYSQL => new MySqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
+                    TestCategory.POSTGRESQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
+                    _ => throw new ArgumentException($"Invalid database type: {databaseType}")
+                };
+
                 await sqlMetadataProvider.InitializeAsync();
             }
             catch (DataApiBuilderException ex)
@@ -238,7 +265,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Entity sampleEntity = new(
                 Source: new("sampleElement", EntitySourceType.Table, null, null),
-                Rest: new(Array.Empty<SupportedHttpVerb>(), Enabled: false),
+                Rest: new(Enabled: false),
                 GraphQL: new("", ""),
                 Permissions: new EntityPermission[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,

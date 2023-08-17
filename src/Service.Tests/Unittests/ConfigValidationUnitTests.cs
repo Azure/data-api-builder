@@ -23,6 +23,7 @@ using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using static Azure.DataApiBuilder.Service.Tests.TestHelper;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
@@ -1608,7 +1609,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 @"""$schema"": ""test_schema""," +
                 @"""data-source"": {
                     ""database-type"": ""mssql"",
-                    ""connection-string"": ""testconnectionstring"",
+                    ""connection-string"": """ + SAMPLE_TEST_CONN_STRING + @""",
                     ""options"":{
                         ""set-session-context"": false
                     }
@@ -1701,7 +1702,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 @"""$schema"": ""test_schema""," +
                 @"""data-source"": {
                     ""database-type"": ""mssql"",
-                    ""connection-string"": ""testconnectionstring"",
+                    ""connection-string"": """ + SAMPLE_TEST_CONN_STRING + @""",
                     ""options"":{
                         ""set-session-context"": false
                     }

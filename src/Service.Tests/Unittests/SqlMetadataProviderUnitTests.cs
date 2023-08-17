@@ -163,16 +163,16 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             ILogger<ISqlMetadataProvider> sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
 
-            ISqlMetadataProvider sqlMetadataProvider = databaseType switch
-            {
-                TestCategory.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
-                TestCategory.MYSQL => new MySqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
-                TestCategory.POSTGRESQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
-                _ => throw new ArgumentException($"Invalid database type: {databaseType}")
-            };
-
             try
             {
+                ISqlMetadataProvider sqlMetadataProvider = databaseType switch
+                {
+                    TestCategory.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
+                    TestCategory.MYSQL => new MySqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
+                    TestCategory.POSTGRESQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
+                    _ => throw new ArgumentException($"Invalid database type: {databaseType}")
+                };
+
                 await sqlMetadataProvider.InitializeAsync();
             }
             catch (DataApiBuilderException ex)

@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Core.Authorization
 
         // Boolean variable indicating if extraneous fields are allowed in the request body for REST operations.
         // By default, extraneous fields are not allowed.
-        public bool IsRequestBodyStrictForRest = true;
+        public bool IsRequestBodyFlexibleForRest = true;
 
         public AuthorizationResolver(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -44,7 +44,7 @@ namespace Azure.DataApiBuilder.Core.Authorization
             _metadataProvider = sqlMetadataProvider;
             if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
-                IsRequestBodyStrictForRest = runtimeConfig.Runtime.Rest.RequestBodyStrict;
+                IsRequestBodyFlexibleForRest = runtimeConfig.Runtime.Rest.RequestBodyFlexible;
                 // Datastructure constructor will pull required properties from metadataprovider.
                 SetEntityPermissionMap(runtimeConfig);
             }
@@ -53,7 +53,7 @@ namespace Azure.DataApiBuilder.Core.Authorization
                 runtimeConfigProvider.RuntimeConfigLoadedHandlers.Add((RuntimeConfigProvider sender, RuntimeConfig config) =>
                 {
                     SetEntityPermissionMap(config);
-                    IsRequestBodyStrictForRest = config.Runtime.Rest.RequestBodyStrict;
+                    IsRequestBodyFlexibleForRest = config.Runtime.Rest.RequestBodyFlexible;
                     return Task.FromResult(true);
                 });
             }
@@ -161,7 +161,7 @@ namespace Azure.DataApiBuilder.Core.Authorization
                             return false;
                         }
                     }
-                    else if (IsRequestBodyStrictForRest)
+                    else if (!IsRequestBodyFlexibleForRest)
                     {
                         // Throw exception when we are not allowed extraneous fields in the rest request body,
                         // and no mapping exists for the given exposed field to a backing column.

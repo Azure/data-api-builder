@@ -70,22 +70,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="context"></param>
         /// <param name="customQueries">Test specific queries to be executed on database.</param>
         /// <param name="customEntities">Test specific entities to be added to database.</param>
-        /// <param name="isRestBodyStrict">Whether request body for REST allows extraneous fields.</param>
+        /// <param name="isRestBodyFlexible">When true, allows extraneous fields in REST request body.</param>
         /// <returns></returns>
         protected async static Task InitializeTestFixture(
             TestContext context,
             List<string> customQueries = null,
             List<string[]> customEntities = null,
-            bool isRestBodyStrict = true)
+            bool isRestBodyFlexible = false)
         {
             TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
             // Get the base config file from disk
             RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
 
-            // Setting the rest request body strict flag as per the test fixtures.
-            if (!isRestBodyStrict)
+            // Setting the rest request body flexible flag as per the test fixtures.
+            if (isRestBodyFlexible)
             {
-                runtimeConfig = runtimeConfig with { Runtime = runtimeConfig.Runtime with { Rest = runtimeConfig.Runtime.Rest with { RequestBodyStrict = isRestBodyStrict } } };
+                runtimeConfig = runtimeConfig with { Runtime = runtimeConfig.Runtime with { Rest = runtimeConfig.Runtime.Rest with { RequestBodyFlexible = isRestBodyFlexible } } };
             }
 
             // Add magazines entity to the config

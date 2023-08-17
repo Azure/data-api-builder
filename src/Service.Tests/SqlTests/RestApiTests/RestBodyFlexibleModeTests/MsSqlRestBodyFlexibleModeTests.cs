@@ -8,11 +8,11 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
 {
     /// <summary>
-    /// Class containing integration tests for MsSql- to validate scenarios when we operate in non-strict mode for REST request body,
+    /// Class containing integration tests for MsSql- to validate scenarios when we operate in flexible mode for REST request body,
     /// i.e. we allow extraneous fields to be present in the request body.
     /// </summary>
     [TestClass, TestCategory(TestCategory.MSSQL)]
-    public class MsSqlRestBodyNonStrictModeTests : RestBodyNonStrictModeTests
+    public class MsSqlRestBodyFlexibleModeTests : RestBodyFlexibleModeTests
     {
         private static Dictionary<string, string> _queryMap = new()
         {
@@ -62,7 +62,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         public static async Task SetupDatabaseAsync(TestContext TestContext)
         {
             DatabaseEngine = TestCategory.MSSQL;
-            await InitializeTestFixture(context: null, isRestBodyStrict: false);
+            await InitializeTestFixture(context: null, isRestBodyFlexible: true);
         }
 
         [TestCleanup]

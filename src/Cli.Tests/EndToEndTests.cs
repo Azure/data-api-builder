@@ -762,28 +762,28 @@ public class EndToEndTests
     }
 
     /// <summary>
-    /// Test to validate that whenever the flag rest.request-body-not-strict is included in the init command,
+    /// Test to validate that whenever the flag rest.request-body-flexible is included in the init command,
     /// the runtimeconfig is initialized such that the runtime allows extraneous fields in the request body for REST.
     /// </summary>
-    /// <param name="isRequestBodyNotStrict">Boolean variable indicating whether or not to include the
-    /// rest.request-body-not-strict flag in the init command.</param>
+    /// <param name="isRequestBodyFlexible">Boolean variable indicating whether or not to include the
+    /// rest.request-body-flexible flag in the init command.</param>
     [DataTestMethod]
     [DataRow(true, DisplayName = "REST request body allows extraneous fields.")]
     [DataRow(false, DisplayName = "REST request body doesn't allow extraneous fields.")]
-    public void TestRestRequestBodyNotStrictMode(bool isRequestBodyNotStrict)
+    public void TestRestRequestBodyFlexibleMode(bool isRequestBodyFlexible)
     {
         string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type", "mssql",
-            "--connection-string", "localhost:5000" };
+            "--connection-string", SAMPLE_TEST_CONN_STRING };
 
-        if (isRequestBodyNotStrict)
+        if (isRequestBodyFlexible)
         {
-            string[] requestBodyNotStrictFlag = { "--rest.request-body-not-strict" };
-            initArgs = initArgs.Concat(requestBodyNotStrictFlag).ToArray();
+            string[] requestBodyFlexibleFlag = { "--rest.request-body-flexible" };
+            initArgs = initArgs.Concat(requestBodyFlexibleFlag).ToArray();
         }
 
         Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
-        Assert.AreEqual(isRequestBodyNotStrict, !runtimeConfig.Runtime.Rest.RequestBodyStrict);
+        Assert.AreEqual(isRequestBodyFlexible, runtimeConfig.Runtime.Rest.RequestBodyFlexible);
     }
 }

@@ -47,7 +47,7 @@ internal class RestRuntimeOptionsConverterFactory : JsonConverterFactory
             writer.WriteStartObject();
             writer.WriteBoolean("enabled", value.Enabled);
             writer.WriteString("path", value.Path);
-            writer.WriteBoolean("request-body-strict", value.RequestBodyStrict);
+            writer.WriteBoolean("request-body-flexible", value.RequestBodyFlexible);
             writer.WriteEndObject();
         }
     }

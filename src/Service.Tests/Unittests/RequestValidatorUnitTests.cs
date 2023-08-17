@@ -353,7 +353,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     Runtime: new(
                         Rest: new(Path: "/api"),
                         GraphQL: new(),
-                        Host: new(null, null)
+                        Host: new(Cors: null, Authentication: null)
                         ),
                     Entities: new(new Dictionary<string, Entity>())
                     );

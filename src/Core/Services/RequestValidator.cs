@@ -324,9 +324,9 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             // There may be unvalidated fields remaining because of extraneous fields in request body
-            // which are not mapped to the table. We throw an exception only when we operate in strict mode,
+            // which are not mapped to the table. We throw an exception only when we don't operate in flexible mode,
             // i.e. when extraneous fields are not allowed.
-            if (unvalidatedFields.Any() && IsRequestBodyStrict())
+            if (unvalidatedFields.Any() && !IsRequestBodyFlexible())
             {
                 throw new DataApiBuilderException(
                     message: $"Invalid request body. Contained unexpected fields in body: {string.Join(", ", unvalidatedFields)}",
@@ -393,9 +393,9 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             // There may be unvalidated fields remaining because of extraneous fields in request body
-            // which are not mapped to the table. We throw an exception only when we operate in strict mode,
+            // which are not mapped to the table. We throw an exception only when we don't operate in flexible mode,
             // i.e. when extraneous fields are not allowed.
-            if (unValidatedFields.Any() && IsRequestBodyStrict())
+            if (unValidatedFields.Any() && !IsRequestBodyFlexible())
             {
                 throw new DataApiBuilderException(
                     message: "Invalid request body. Either insufficient or extra fields supplied.",
@@ -526,14 +526,14 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Helper method to check if the request body for REST allows extra fields.
         /// </summary>
         /// <returns>true if extra fields are not allowed in REST request body.</returns>
-        private bool IsRequestBodyStrict()
+        private bool IsRequestBodyFlexible()
         {
             if (_runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
-                return runtimeConfig.Runtime.Rest.RequestBodyStrict;
+                return runtimeConfig.Runtime.Rest.RequestBodyFlexible;
             }
 
-            return true;
+            return false;
         }
     }
 }

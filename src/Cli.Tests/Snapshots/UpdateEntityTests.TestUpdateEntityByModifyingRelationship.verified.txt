@@ -6,7 +6,7 @@
     Rest: {
       Enabled: true,
       Path: /,
-      RequestBodyStrict: true
+      RequestBodyFlexible: false
     },
     GraphQL: {
       Enabled: true,

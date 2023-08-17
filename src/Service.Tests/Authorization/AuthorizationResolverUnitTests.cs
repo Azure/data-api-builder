@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 #nullable enable
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -1260,7 +1259,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         {
             Entity sampleEntity = new(
                 Source: new(entityName, EntitySourceType.Table, null, null),
-                Rest: new(Array.Empty<SupportedHttpVerb>()),
+                Rest: new(Enabled: true),
                 GraphQL: new("", ""),
                 Permissions: permissions,
                 Relationships: null,

@@ -450,8 +450,17 @@ namespace Azure.DataApiBuilder.Core.Services
 
             if (dbObject.SourceType == EntitySourceType.StoredProcedure)
             {
-                Entity entityTest = _runtimeConfig.Entities[entityName];
-                List<SupportedHttpVerb> spRestMethods = entityTest.Rest.Methods.ToList();
+                Entity entity = _runtimeConfig.Entities[entityName];
+
+                List<SupportedHttpVerb>? spRestMethods;
+                if (entity.Rest.Methods is not null)
+                {
+                    spRestMethods = entity.Rest.Methods.ToList();
+                }
+                else
+                {
+                    spRestMethods = new List<SupportedHttpVerb> { SupportedHttpVerb.Post };
+                }
 
                 if (spRestMethods is null)
                 {

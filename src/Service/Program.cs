@@ -119,6 +119,7 @@ namespace Azure.DataApiBuilder.Service
                     builder.AddFilter(category: "Microsoft", logLevel);
                     builder.AddFilter(category: "Azure", logLevel);
                     builder.AddFilter(category: "Default", logLevel);
+                    builder.AddApplicationInsights();
                     builder.AddConsole();
                 });
         }

@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using HotChocolate.Execution;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
+using Microsoft.ApplicationInsights;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
@@ -25,14 +26,17 @@ namespace Azure.DataApiBuilder.Core.Services
         internal readonly FieldDelegate _next;
         internal readonly IQueryEngine _queryEngine;
         internal readonly IMutationEngine _mutationEngine;
+        private readonly TelemetryClient _telemetryClient;
 
         public ResolverMiddleware(FieldDelegate next,
             IQueryEngine queryEngine,
-            IMutationEngine mutationEngine)
+            IMutationEngine mutationEngine,
+            TelemetryClient telemetryClient)
         {
             _next = next;
             _queryEngine = queryEngine;
             _mutationEngine = mutationEngine;
+            _telemetryClient = telemetryClient;
         }
 
         /// <summary>
@@ -59,6 +63,9 @@ namespace Azure.DataApiBuilder.Core.Services
 
             if (context.Selection.Field.Coordinate.TypeName.Value == "Mutation")
             {
+                // Track event when request is received
+                TrackEventForGraphQLRequests(context, _telemetryClient);
+
                 IDictionary<string, object?> parameters = GetParametersFromContext(context);
 
                 // Only Stored-Procedure has ListType as returnType for Mutation
@@ -78,6 +85,9 @@ namespace Azure.DataApiBuilder.Core.Services
             }
             else if (context.Selection.Field.Coordinate.TypeName.Value == "Query")
             {
+                // Track event when request is received
+                TrackEventForGraphQLRequests(context, _telemetryClient);
+
                 IDictionary<string, object?> parameters = GetParametersFromContext(context);
 
                 if (context.Selection.Type.IsListType())
@@ -364,6 +374,21 @@ namespace Azure.DataApiBuilder.Core.Services
         private static void SetNewMetadata(IMiddlewareContext context, IMetadata? metadata)
         {
             context.ScopedContextData = context.ScopedContextData.SetItem(_contextMetadata, metadata);
+        }
+
+        /// <summary>
+        /// Track event when GraphQL request is received and send EntityName, Operation and Description for Telemetry.
+        /// </summary>
+        private static void TrackEventForGraphQLRequests(IMiddlewareContext context, TelemetryClient _telemetryClient)
+        {
+            _telemetryClient.TrackEvent("GraphQLRequestReceived", new Dictionary<string, string>
+            {
+                { "EntityName", context.Selection.Field.Type.TypeName() },
+                { "RequestMethod", "POST" },
+                { "GraphQLOperation", context.Selection.Field.Coordinate.TypeName.Value },
+                { "GraphQLOperationName", context.Selection.Field.Name.Value },
+                { "Description", context.Selection.Field.Description ?? string.Empty },
+            });
         }
     }
 }

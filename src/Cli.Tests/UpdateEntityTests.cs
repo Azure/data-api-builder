@@ -1042,7 +1042,7 @@ namespace Cli.Tests
                         @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
                         @"""data-source"": {
                             ""database-type"": ""mssql"",
-                            ""connection-string"": ""testconnectionstring""
+                            ""connection-string"": """ + SAMPLE_TEST_CONN_STRING + @"""
                         },
                         ""runtime"": {
                             ""rest"": {

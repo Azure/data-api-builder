@@ -237,7 +237,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             string updateOperations = Build(structure.UpdateOperations, ", ");
             string columnsToBeReturned =
-                MakeOutputColumns(structure.OutputColumns, isUpdateTriggerEnabled ? "" : OutputQualifier.Inserted.ToString());
+                MakeOutputColumns(structure.OutputColumns, isUpdateTriggerEnabled ? string.Empty : OutputQualifier.Inserted.ToString());
             string queryToGetCountOfRecordWithPK = $"SELECT COUNT(*) as {COUNT_ROWS_WITH_GIVEN_PK} FROM {tableName} WHERE {pkPredicates}";
 
             // Query to get the number of records with a given PK.
@@ -289,16 +289,24 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 StringBuilder insertQuery = new($"INSERT INTO {tableName} ({insertColumns}) ");
 
                 bool isInsertTriggerEnabled = sourceDefinition.IsInsertDMLTriggerEnabled;
+                // We can only use OUTPUT clause to return inserted data when there is no trigger enabled on the entity.
                 if (!isInsertTriggerEnabled)
                 {
-                    // We can only use OUTPUT clause to return inserted data when there is no trigger enabled on the entity.
-                    columnsToBeReturned = MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted.ToString());
+                    if (isUpdateTriggerEnabled)
+                    {
+                        // This is just an optimisation. If update trigger was not enabled, then the columnsToBeReturned would
+                        // have already been created with Inserted prefix.
+                        columnsToBeReturned = MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted.ToString());
+                    }
+
                     insertQuery.Append($"OUTPUT {columnsToBeReturned}");
                 }
+                // If an insert trigger is enabled but there was no update trigger enabled,
+                // we need to generated columns to be returned without 'Inserted' prefix.
                 else if (!isUpdateTriggerEnabled)
                 {
-                    // If an insert trigger is enabled but there was no update trigger enabled,
-                    // we need to generated columns to be returned without 'Inserted' prefix.
+                    // This is again just an optimisation. If update trigger was enabled, then the columnsToBeReturned would
+                    // have already been created without any prefix.
                     columnsToBeReturned = MakeOutputColumns(structure.OutputColumns, string.Empty);
                 }
 

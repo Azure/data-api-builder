@@ -6,6 +6,7 @@ using System.IdentityModel.Tokens.Jwt;
 using Azure.Core;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Product;
 using Azure.Identity;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Fluent;
@@ -18,8 +19,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private string? _accountEndpoint;
         private string? _accountKey;
         private readonly string? _accessToken;
-        public const string DAB_APP_NAME_ENV = "DAB_APP_NAME_ENV";
-        public static readonly string DEFAULT_APP_NAME = $"dab_oss_{ProductInfo.GetProductVersion()}";
 
         public CosmosClient? Client { get; private set; }
         public CosmosClientProvider(RuntimeConfigProvider runtimeConfigProvider)
@@ -57,7 +56,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (string.IsNullOrEmpty(_connectionString) || configuration.DataSource.ConnectionString != _connectionString)
             {
-                string userAgent = GetCosmosUserAgent();
+                string userAgent = ProductInfo.GetDataApiBuilderUserAgent();
                 CosmosClientOptions options = new()
                 {
                     ApplicationName = userAgent
@@ -125,9 +124,5 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             _accountKey = dbConnectionStringBuilder.ContainsKey("AccountKey") ? (string)dbConnectionStringBuilder["AccountKey"] : null;
         }
 
-        private static string GetCosmosUserAgent()
-        {
-            return Environment.GetEnvironmentVariable(DAB_APP_NAME_ENV) ?? DEFAULT_APP_NAME;
-        }
     }
 }

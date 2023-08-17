@@ -1,9 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Text.Json.Serialization;
-using Azure.DataApiBuilder.Config.Converters;
-
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
 /// <summary>
@@ -15,7 +12,6 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// </param>
 /// <param name="Methods">The HTTP verbs that are supported for this entity.</param>
 /// <param name="Enabled">Whether the entity is enabled for REST.</param>
-[JsonConverter(typeof(EntityRestOptionsConverter))]
 public record EntityRestOptions(SupportedHttpVerb[] Methods, string? Path = null, bool Enabled = true)
 {
     public static readonly SupportedHttpVerb[] DEFAULT_SUPPORTED_VERBS = new[] { SupportedHttpVerb.Get, SupportedHttpVerb.Post, SupportedHttpVerb.Put, SupportedHttpVerb.Patch, SupportedHttpVerb.Delete };

@@ -39,9 +39,15 @@ public abstract class RuntimeConfigLoader
     /// <param name="json">JSON that represents the config file.</param>
     /// <param name="config">The parsed config, or null if it parsed unsuccessfully.</param>
     /// <returns>True if the config was parsed, otherwise false.</returns>
-    public static bool TryParseConfig(string json, [NotNullWhen(true)] out RuntimeConfig? config, ILogger? logger = null, string? connectionString = null)
+    /// <param name="replaceEnvVar">Whether to replace environment variable with its
+    /// value or not while deserializing. By default, no replacement happens.</param>
+    public static bool TryParseConfig(string json,
+        [NotNullWhen(true)] out RuntimeConfig? config,
+        ILogger? logger = null,
+        string? connectionString = null,
+        bool replaceEnvVar = false)
     {
-        JsonSerializerOptions options = GetSerializationOptions();
+        JsonSerializerOptions options = GetSerializationOptions(replaceEnvVar);
 
         try
         {
@@ -83,7 +89,9 @@ public abstract class RuntimeConfigLoader
     /// <summary>
     /// Get Serializer options for the config file.
     /// </summary>
-    public static JsonSerializerOptions GetSerializationOptions()
+    /// <param name="replaceEnvVar">Whether to replace environment variable with value or not while deserializing.
+    /// By default, no replacement happens.</param>
+    public static JsonSerializerOptions GetSerializationOptions(bool replaceEnvVar = false)
     {
         JsonSerializerOptions options = new()
         {
@@ -96,9 +104,11 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new EnumMemberJsonEnumConverterFactory());
         options.Converters.Add(new RestRuntimeOptionsConverterFactory());
         options.Converters.Add(new GraphQLRuntimeOptionsConverterFactory());
-        options.Converters.Add(new EntitySourceConverterFactory());
+        options.Converters.Add(new EntitySourceConverterFactory(replaceEnvVar));
+        options.Converters.Add(new EntityGraphQLOptionsConverterFactory(replaceEnvVar));
+        options.Converters.Add(new EntityRestOptionsConverterFactory(replaceEnvVar));
         options.Converters.Add(new EntityActionConverterFactory());
-        options.Converters.Add(new StringJsonConverterFactory());
+        options.Converters.Add(new StringJsonConverterFactory(replaceEnvVar));
         return options;
     }
 }

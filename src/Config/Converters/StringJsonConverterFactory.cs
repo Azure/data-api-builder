@@ -10,6 +10,10 @@ namespace Azure.DataApiBuilder.Config.Converters;
 
 public class StringJsonConverterFactory : JsonConverterFactory
 {
+    // Determines whether to replace environment variable with its
+    // value or not while deserializing.
+    private bool _replaceEnvVar;
+
     public override bool CanConvert(Type typeToConvert)
     {
         return typeToConvert.IsAssignableTo(typeof(string));
@@ -17,11 +21,20 @@ public class StringJsonConverterFactory : JsonConverterFactory
 
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
-        return new StringJsonConverter();
+        return new StringJsonConverter(_replaceEnvVar);
+    }
+
+    public StringJsonConverterFactory(bool replaceEnvVar)
+    {
+        _replaceEnvVar = replaceEnvVar;
     }
 
     class StringJsonConverter : JsonConverter<string>
     {
+        // Determines whether to replace environment variable with its
+        // value or not while deserializing.
+        private bool _replaceEnvVar;
+
         // @env\('  : match @env('
         // .*?      : lazy match any character except newline 0 or more times
         // (?='\))  : look ahead for ') which will combine with our lazy match
@@ -39,13 +52,25 @@ public class StringJsonConverterFactory : JsonConverterFactory
         // a valid environment variable name in certain shells.
         const string ENV_PATTERN = @"@env\('.*?(?='\))'\)";
 
+        public StringJsonConverter(bool replaceEnvVar)
+        {
+            _replaceEnvVar = replaceEnvVar;
+        }
+
         public override string? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             if (reader.TokenType == JsonTokenType.String)
             {
                 string? value = reader.GetString();
 
-                return Regex.Replace(reader.GetString()!, ENV_PATTERN, new MatchEvaluator(ReplaceMatchWithEnvVariable));
+                if (_replaceEnvVar)
+                {
+                    return Regex.Replace(value!, ENV_PATTERN, new MatchEvaluator(ReplaceMatchWithEnvVariable));
+                }
+                else
+                {
+                    return value;
+                }
             }
 
             if (reader.TokenType == JsonTokenType.Null)

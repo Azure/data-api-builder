@@ -12,6 +12,7 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 using HotChocolate.Types;
+using HotChocolate.Types.NodaTime;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLStoredProcedureBuilder;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
@@ -231,6 +232,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 "DateTime" => DATETIME_TYPE,
                 "DateTimeOffset" => DATETIME_TYPE,
                 "Byte[]" => BYTEARRAY_TYPE,
+                "TimeOnly" => LOCALTIME_TYPE,
+                "TimeSpan" => LOCALTIME_TYPE,
                 _ => throw new DataApiBuilderException(
                         message: $"Column type {type} not handled by case. Please add a case resolving {type} to the appropriate GraphQL type",
                         statusCode: HttpStatusCode.InternalServerError,
@@ -264,6 +267,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 DateTimeOffset value => new ObjectValueNode(new ObjectFieldNode(DATETIME_TYPE, new DateTimeType().ParseValue(value))),
                 DateTime value => new ObjectValueNode(new ObjectFieldNode(DATETIME_TYPE, new DateTimeType().ParseResult(value))),
                 byte[] value => new ObjectValueNode(new ObjectFieldNode(BYTEARRAY_TYPE, new ByteArrayType().ParseValue(value))),
+                TimeOnly value => new ObjectValueNode(new ObjectFieldNode(LOCALTIME_TYPE, new LocalTimeType().ParseResult(value))),
                 _ => throw new DataApiBuilderException(
                     message: $"The type {metadataValue.GetType()} is not supported as a GraphQL default value",
                     statusCode: HttpStatusCode.InternalServerError,

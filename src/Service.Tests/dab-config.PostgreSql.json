@@ -2051,13 +2051,7 @@
       },
       "rest": {
         "enabled": true,
-        "methods": [
-          "get",
-          "post",
-          "put",
-          "patch",
-          "delete"
-        ]
+        "methods": []
       },
       "permissions": [
         {

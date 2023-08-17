@@ -1006,6 +1006,11 @@ namespace Azure.DataApiBuilder.Core.Services
 
             if (GetDatabaseType() is not DatabaseType.MySQL && entity is not null && entity.Source.Type is EntitySourceType.Table)
             {
+                // For MySql, the way an update/insert query is generated, we cannot skip updating a read-only field without
+                // being unable to return it in the result. So, if we want to skip updating the field, then we cannot return it in the
+                // result. Hence, skipping this for MySql.
+                // This metadata is only populated for tables because the tables being queries to collect the metadata provide
+                // accurate data for tables only. For views, there is no straight forward way to collect this metadata.
                 await PopulateColumnDefinitionsWithReadOnlyFlag(tableName, schemaName, sourceDefinition);
             }
         }
@@ -1030,20 +1035,18 @@ namespace Azure.DataApiBuilder.Core.Services
 
             List<string>? readOnlyFields = await QueryExecutor.ExecuteQueryAsync(
                 sqltext: queryToGetReadOnlyColumns,
-                parameters: parameters!,
+                parameters: parameters,
                 dataReaderHandler: SummarizeReadOnlyFieldsMetadata);
 
-            if (readOnlyFields is null || readOnlyFields.Count == 0)
+            if (readOnlyFields is not null && readOnlyFields.Count > 0)
             {
-                return;
-            }
-
-            foreach (string readOnlyField in readOnlyFields)
-            {
-                if (sourceDefinition.Columns.TryGetValue(readOnlyField, out ColumnDefinition? columnDefinition))
+                foreach (string readOnlyField in readOnlyFields)
                 {
-                    // Mark the column as read-only.
-                    columnDefinition.IsReadOnly = true;
+                    if (sourceDefinition.Columns.TryGetValue(readOnlyField, out ColumnDefinition? columnDefinition))
+                    {
+                        // Mark the column as read-only.
+                        columnDefinition.IsReadOnly = true;
+                    }
                 }
             }
         }
@@ -1448,7 +1451,8 @@ namespace Azure.DataApiBuilder.Core.Services
         /// which contains the name of all the fields - one field per DbResult row.
         /// </summary>
         /// <param name="reader">The DbDataReader.</param>
-        /// <param name="args">Arguments to this function.</param>
+        /// <param name="args">Arguments to this function. This parameter is unused in this method.
+        /// This is added so that the method conforms with the Fucnc delegate's signature.</param>
         /// <returns>List of read-only fields present in the table.</returns>
         private async Task<List<string>>
             SummarizeReadOnlyFieldsMetadata(DbDataReader reader, List<string>? args = null)

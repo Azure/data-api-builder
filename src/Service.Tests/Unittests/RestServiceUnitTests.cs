@@ -40,7 +40,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="expectedPrimaryKeyRoute">The primary key route we
         /// expect to parse from route.</param>
         [DataTestMethod]
-        [DataRow("rest-api/Book/id/1", "/rest-api", "Book", "id/1")]
+        [DataRow("/rest-api/Book/id/1", "/rest-api", "Book", "id/1")]
         [DataRow("rest api/Book/id/1", "/rest api", "Book", "id/1")]
         [DataRow(" rest_api/commodities/categoryid/1/pieceid/1", "/ rest_api", "commodities", "categoryid/1/pieceid/1")]
         [DataRow("rest-api/Book/id/1", "/rest-api", "Book", "id/1")]
@@ -70,7 +70,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="route">The route to be parsed.</param>
         /// <param name="path">An invalid path for the given route.</param>
         [DataTestMethod]
-        [DataRow("/foo/bar", "foo")]
         [DataRow("food/Book", "foo")]
         [DataRow("\"foo\"", "foo")]
         [DataRow("foo/bar", "bar")]

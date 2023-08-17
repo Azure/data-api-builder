@@ -37,11 +37,7 @@
         },
         Rest: {
           Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
+            Post
           ],
           Enabled: true
         },

@@ -44,13 +44,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [

@@ -1003,7 +1003,7 @@ namespace Cli.Tests
 
             Entity sampleEntity1 = new(
                 Source: new("SOURCE1", EntitySourceType.Table, null, null),
-                Rest: new(Array.Empty<SupportedHttpVerb>()),
+                Rest: new(Enabled: true),
                 GraphQL: new("SOURCE1", "SOURCE1s"),
                 Permissions: new[] { permissionForEntity },
                 Relationships: null,
@@ -1013,7 +1013,7 @@ namespace Cli.Tests
             // entity with graphQL disabled
             Entity sampleEntity2 = new(
                 Source: new("SOURCE2", EntitySourceType.Table, null, null),
-                Rest: new(Array.Empty<SupportedHttpVerb>()),
+                Rest: new(Enabled: true),
                 GraphQL: new("SOURCE2", "SOURCE2s", false),
                 Permissions: new[] { permissionForEntity },
                 Relationships: null,

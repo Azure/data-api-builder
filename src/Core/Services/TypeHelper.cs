@@ -17,10 +17,10 @@ namespace Azure.DataApiBuilder.Core.Services
     {
         /// <summary>
         /// Maps .NET Framework types to DbType enum
-        /// Not Adding this hard mapping for System.DateTime/DateTimeOffset,
-        /// since System.DateTime is used for both SqldbType.DateTime and SqldbType.DateTime2.
-        /// So no change required here as separate logic exist which does the mapping
-        /// and also Hotchocolate only has Hotchocolate.Types.DateTime for SqlDbType.DateTime/DateTime2/DateTimeOffset.
+        /// Not Adding a hard mapping for System.DateTime to DbType.DateTime as 
+        /// Hotchocolate only has Hotchocolate.Types.DateTime for DbType.DateTime/DateTime2/DateTimeOffset,
+        /// which throws error when inserting/updating dateTime values due to type mismatch.
+        /// Therefore, seperate logic exists for proper mapping conversion in BaseSqlQueryStructure.
         /// </summary>
         private static Dictionary<Type, DbType> _systemTypeToDbTypeMap = new()
         {
@@ -39,6 +39,7 @@ namespace Azure.DataApiBuilder.Core.Services
             [typeof(string)] = DbType.String,
             [typeof(char)] = DbType.StringFixedLength,
             [typeof(Guid)] = DbType.Guid,
+            [typeof(DateTimeOffset)] = DbType.DateTimeOffset,
             [typeof(byte[])] = DbType.Binary,
             [typeof(TimeOnly)] = DbType.Time,
             [typeof(TimeSpan)] = DbType.Time,

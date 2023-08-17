@@ -18,35 +18,35 @@ public class UtilsTests
     [TestMethod]
     public void ConstructRestOptionsForCosmosDbNoSQLIgnoresOtherParamsAndDisables()
     {
-        EntityRestOptions options = ConstructRestOptions("true", Array.Empty<SupportedHttpVerb>(), true);
+        EntityRestOptions options = ConstructRestOptions(restRoute: "true", supportedHttpVerbs: null, isCosmosDbNoSql: true);
         Assert.IsFalse(options.Enabled);
     }
 
     [TestMethod]
     public void ConstructRestOptionsWithNullEnablesRest()
     {
-        EntityRestOptions options = ConstructRestOptions(null, Array.Empty<SupportedHttpVerb>(), false);
+        EntityRestOptions options = ConstructRestOptions(restRoute: null, supportedHttpVerbs: null, isCosmosDbNoSql: false);
         Assert.IsTrue(options.Enabled);
     }
 
     [TestMethod]
     public void ConstructRestOptionsWithTrueEnablesRest()
     {
-        EntityRestOptions options = ConstructRestOptions("true", Array.Empty<SupportedHttpVerb>(), false);
+        EntityRestOptions options = ConstructRestOptions(restRoute: "true", supportedHttpVerbs: null, isCosmosDbNoSql: false);
         Assert.IsTrue(options.Enabled);
     }
 
     [TestMethod]
     public void ConstructRestOptionsWithFalseDisablesRest()
     {
-        EntityRestOptions options = ConstructRestOptions("false", Array.Empty<SupportedHttpVerb>(), false);
+        EntityRestOptions options = ConstructRestOptions(restRoute: "false", supportedHttpVerbs: null, isCosmosDbNoSql: false);
         Assert.IsFalse(options.Enabled);
     }
 
     [TestMethod]
     public void ConstructRestOptionsWithCustomPathSetsPath()
     {
-        EntityRestOptions options = ConstructRestOptions("customPath", Array.Empty<SupportedHttpVerb>(), false);
+        EntityRestOptions options = ConstructRestOptions(restRoute: "customPath", supportedHttpVerbs: null, isCosmosDbNoSql: false);
         Assert.AreEqual("/customPath", options.Path);
         Assert.IsTrue(options.Enabled);
     }
@@ -57,6 +57,7 @@ public class UtilsTests
         EntityRestOptions options = ConstructRestOptions("customPath", new[] { SupportedHttpVerb.Get, SupportedHttpVerb.Post }, false);
         Assert.AreEqual("/customPath", options.Path);
         Assert.IsTrue(options.Enabled);
+        Assert.IsNotNull(options.Methods);
         Assert.AreEqual(2, options.Methods.Length);
         Assert.IsTrue(options.Methods.Contains(SupportedHttpVerb.Get));
         Assert.IsTrue(options.Methods.Contains(SupportedHttpVerb.Post));

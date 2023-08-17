@@ -303,7 +303,7 @@ namespace Cli
             }
 
             GraphQLOperation? graphQLOperationsForStoredProcedures = null;
-            SupportedHttpVerb[] SupportedRestMethods = EntityRestOptions.DEFAULT_SUPPORTED_VERBS;
+            SupportedHttpVerb[]? SupportedRestMethods = null;
             if (isStoredProcedure)
             {
                 if (CheckConflictingGraphQLConfigurationForStoredProcedures(options))
@@ -1084,7 +1084,7 @@ namespace Cli
         private static EntityRestOptions ConstructUpdatedRestDetails(Entity entity, EntityOptions options, bool isCosmosDbNoSql)
         {
             // Updated REST Route details
-            EntityRestOptions restPath = (options.RestRoute is not null) ? ConstructRestOptions(options.RestRoute, Array.Empty<SupportedHttpVerb>(), isCosmosDbNoSql) : entity.Rest;
+            EntityRestOptions restPath = (options.RestRoute is not null) ? ConstructRestOptions(restRoute: options.RestRoute, supportedHttpVerbs: null, isCosmosDbNoSql: isCosmosDbNoSql) : entity.Rest;
 
             // Updated REST Methods info for stored procedures
             SupportedHttpVerb[]? SupportedRestMethods;
@@ -1127,7 +1127,7 @@ namespace Cli
                 SupportedRestMethods = new SupportedHttpVerb[] { SupportedHttpVerb.Post };
             }
 
-            return restPath with { Methods = SupportedRestMethods ?? Array.Empty<SupportedHttpVerb>() };
+            return restPath with { Methods = SupportedRestMethods };
         }
 
         /// <summary>

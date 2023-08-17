@@ -43,10 +43,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(
             new string[] { "@env(')", "@env()", "@env(')'@env('()", "@env('@env()'", "@@eennvv((''''))" },
             new string[] { "@env(')", "@env()", "@env(')'@env('()", "@env('@env()'", "@@eennvv((''''))" },
+            true,
             DisplayName = "Replacement strings that won't match.")]
         [DataRow(
             new string[] { "@env('envVarName')", "@env(@env('envVarName'))", "@en@env('envVarName')", "@env'()@env'@env('envVarName')')')" },
             new string[] { "envVarValue", "@env(envVarValue)", "@enenvVarValue", "@env'()@env'envVarValue')')" },
+            false,
             DisplayName = "Replacement strings that match.")]
         //  since we match strings surrounded by single quotes,
         //  the following are environment variable names set to the
@@ -57,14 +59,23 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(
             new string[] { "@env(')", "@env()", "@env('envVarName')", "@env(''envVarName')", "@env('envVarName'')", "@env(''envVarName'')" },
             new string[] { "@env(')", "@env()", "envVarValue", "_envVarValue", "envVarValue_", "_envVarValue_" },
+            false,
             DisplayName = "Replacement strings with some matches.")]
-        public void CheckConfigEnvParsingTest(string[] repKeys, string[] repValues)
+        public void CheckConfigEnvParsingTest(string[] repKeys, string[] repValues, bool exceptionThrown)
         {
             SetEnvVariables();
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(GetModifiedJsonString(repValues), out RuntimeConfig expectedConfig), "Should read the expected config");
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(GetModifiedJsonString(repKeys), out RuntimeConfig actualConfig), "Should read actual config");
+            try
+            {
+                Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(GetModifiedJsonString(repValues), out RuntimeConfig expectedConfig), "Should read the expected config");
+                Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(GetModifiedJsonString(repKeys), out RuntimeConfig actualConfig), "Should read actual config");
 
-            Assert.AreEqual(expectedConfig.ToJson(), actualConfig.ToJson());
+                Assert.AreEqual(expectedConfig.ToJson(), actualConfig.ToJson());
+            }
+            catch (Exception ex)
+            {
+                Assert.IsTrue(exceptionThrown);
+                Assert.AreEqual("A valid Connection String should be provided.", ex.Message);
+            }
         }
 
         /// <summary>

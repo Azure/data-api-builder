@@ -67,6 +67,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DisplayName = "Equate smalldatetime types.")]
         [DataRow("bytearray_types eq 1000", "([bytearray_types] = @param1)", DisplayName = "Equate bytearray types.")]
         [DataRow("guid_types eq 9A19103F-16F7-4668-BE54-9A1E7A4F7556", "([guid_types] = @param1)", DisplayName = "Equate guid types.")]
+        [DataRow("time_types eq 10:23:54.9999999", "([time_types] = @param1)", DisplayName = "Equate time types.")]
+        [DataRow("time_types eq null", "([time_types] IS NULL)", DisplayName = "Equate time types for null.")]
         [TestMethod]
         public void VisitorLeftFieldRightConstantFilterTest(string filterExp, string expectedPredicate)
         {
@@ -198,6 +200,24 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             ConstantNode nodeIn = CreateConstantNode(constantValue: string.Empty, literalText: "text", EdmPrimitiveTypeKind.Geography);
             ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY, DEFAULT_SCHEMA_NAME, DEFAULT_TABLE_NAME);
             Assert.ThrowsException<NotSupportedException>(() => visitor.Visit(nodeIn));
+        }
+
+        /// <summary>
+        /// Tests that we throw an exception when trying to use an invalid
+        /// Time with negative value or time > 24 hours.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("time_types eq 25:23:54.9999999", DisplayName = "Exception thrown with invalid time>24 hrs.")]
+        [DataRow("time_types eq -13:23:54.9999999", DisplayName = "Exception thrown with invalid time>24 hrs.")]
+        public void InvalidTimeTypeODataFilterTest(string filterExp)
+        {
+            Assert.ThrowsException<DataApiBuilderException>(() => PerformVisitorTest(
+                entityName: DEFAULT_ENTITY,
+                schemaName: DEFAULT_SCHEMA_NAME,
+                tableName: DEFAULT_TABLE_NAME,
+                filterString: $"?$filter={filterExp}",
+                expected: string.Empty
+                ));
         }
 
         /// <summary>

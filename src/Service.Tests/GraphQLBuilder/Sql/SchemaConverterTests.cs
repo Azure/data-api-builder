@@ -230,6 +230,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         [DataRow(typeof(DateTimeOffset), DATETIME_TYPE)]
         [DataRow(typeof(byte[]), BYTEARRAY_TYPE)]
         [DataRow(typeof(Guid), STRING_TYPE)]
+        [DataRow(typeof(TimeOnly), LOCALTIME_TYPE)]
         public void SystemTypeMapsToCorrectGraphQLType(Type systemType, string graphQLType)
         {
             SourceDefinition table = new();
@@ -742,7 +743,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         {
             return new Entity(
                 Source: new($"{SCHEMA_NAME}.{TABLE_NAME}", EntitySourceType.Table, null, null),
-                Rest: new(new SupportedHttpVerb[] { }),
+                Rest: new(Enabled: true),
                 GraphQL: new(entityName, ""),
                 Permissions: Array.Empty<EntityPermission>(),
                 Relationships: new(),

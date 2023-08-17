@@ -459,7 +459,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 }
                 else
                 {
-                    spRestMethods = (entity.Rest.Enabled) ? new List<SupportedHttpVerb> { SupportedHttpVerb.Post } : null;
+                    spRestMethods = new List<SupportedHttpVerb> { SupportedHttpVerb.Post };
                 }
 
                 if (spRestMethods is null)

@@ -24,8 +24,10 @@ public abstract class RuntimeConfigLoader
     /// Returns RuntimeConfig.
     /// </summary>
     /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
+    /// <param name="replaceEnvVar">Whether to replace environment variable with its
+    /// value or not while deserializing.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
-    public abstract bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config);
+    public abstract bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false);
 
     /// <summary>
     /// Returns the link to the published draft schema.

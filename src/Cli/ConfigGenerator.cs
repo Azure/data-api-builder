@@ -969,7 +969,8 @@ namespace Cli
             loader.UpdateBaseConfigFileName(runtimeConfigFile);
 
             // Validates that config file has data and follows the correct json schema
-            if (!loader.TryLoadKnownConfig(out RuntimeConfig? deserializedRuntimeConfig))
+            // replace all the environment variables while deserializing.
+            if (!loader.TryLoadKnownConfig(out RuntimeConfig? deserializedRuntimeConfig, replaceEnvVar: true))
             {
                 _logger.LogError("Failed to parse the config file: {configFile}.", runtimeConfigFile);
                 return false;

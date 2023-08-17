@@ -24,6 +24,8 @@ public class StringJsonConverterFactory : JsonConverterFactory
         return new StringJsonConverter(_replaceEnvVar);
     }
 
+    /// <param name="replaceEnvVar">Whether to replace environment variable with its
+    /// value or not while deserializing.</param>
     public StringJsonConverterFactory(bool replaceEnvVar)
     {
         _replaceEnvVar = replaceEnvVar;

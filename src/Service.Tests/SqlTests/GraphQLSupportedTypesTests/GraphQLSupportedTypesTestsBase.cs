@@ -349,34 +349,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             Assert.IsTrue(responseMessage.Contains($"{value} cannot be resolved as column \"{field}\" with type \"TimeSpan\"."));
         }
 
-        /// <summary>
-        /// The code contains test rows that are used to test the insertion of various data types into a database table using GraphQL,
-        /// where the parameter values are passed as GraphQL request Variables. The test supports various data types such as byte, short,
-        /// int, long, string, float, decimal, boolean, datetimeoffset, datetime, time, and bytearray.
-        /// </summary>
-        [DataTestMethod]
-        [DataRow(TIME_TYPE, "\"32:59:59.9999999\"")]
-        [DataRow(TIME_TYPE, "\"22:67:59.9999999\"")]
-        [DataRow(TIME_TYPE, "\"14:12:99.9999999\"")]
-        [DataRow(TIME_TYPE, "\"-22:67:59.9999999\"")]
-        [DataRow(TIME_TYPE, "\"22:-67:59.9999999\"")]
-        [DataRow(TIME_TYPE, "\"22:67:59.-9999999\"")]
-        public async Task InsertInvalidIntoTypeColumn(string type, string value)
-        {
-            if (!IsSupportedType(type))
-            {
-                Assert.Inconclusive("Type not supported");
-            }
-
-            string field = $"{type.ToLowerInvariant()}_types";
-            string graphQLQueryName = "createSupportedType";
-            string gqlQuery = "mutation{ createSupportedType (item: {" + field + ": " + value + " }){ " + field + " } }";
-
-            JsonElement response = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
-            string responseMessage = Regex.Unescape(JsonSerializer.Serialize(response));
-            Assert.IsTrue(responseMessage.Contains($"{value} cannot be resolved as column \"{field}\" with type \"TimeSpan\"."));
-        }
-
         [DataTestMethod]
         [DataRow(BYTE_TYPE, 255)]
         [DataRow(SHORT_TYPE, 30000)]

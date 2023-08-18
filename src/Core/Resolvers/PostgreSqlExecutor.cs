@@ -29,7 +29,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// The managed identity Access Token string obtained
         /// from the configuration controller.
         /// </summary>
-        private readonly Dictionary<string,string?> _accessTokenFromController;
+        private readonly Dictionary<string, string?> _accessTokenFromController;
 
         public DefaultAzureCredential AzureCredential { get; set; } = new();
 

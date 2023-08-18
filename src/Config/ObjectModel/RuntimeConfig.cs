@@ -48,14 +48,14 @@ public record RuntimeConfig
         }
     }
 
-    public RuntimeConfig(string Schema, Dictionary<string,DataSource> dataSourceDict, Dictionary<string, string> entityNameToDataSourceDict, RuntimeOptions Runtime, RuntimeEntities Entities)
+    public RuntimeConfig(string Schema, Dictionary<string, DataSource> dataSourceDict, Dictionary<string, string> entityNameToDataSourceDict, RuntimeOptions Runtime, RuntimeEntities Entities)
     {
         this.Schema = Schema;
         this.DatasourceNameToDataSource = dataSourceDict;
         this.EntityNameToDataSourceName = entityNameToDataSourceDict;
         this.Runtime = Runtime;
         this.Entities = Entities;
-        KeyValuePair<string,DataSource> keyValuePair = dataSourceDict.First();
+        KeyValuePair<string, DataSource> keyValuePair = dataSourceDict.First();
         this.DefaultDBName = keyValuePair.Key;
         this.DataSource = keyValuePair.Value;
     }

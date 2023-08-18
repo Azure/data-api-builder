@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// The managed identity Access Token string obtained
         /// from the configuration controller.
         /// </summary>
-        private readonly Dictionary<string,string?> _accessTokenFromController;
+        private readonly Dictionary<string, string?> _accessTokenFromController;
 
         /// <summary>
         /// The MySql specific connection string builder.
@@ -50,9 +50,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         private AccessToken? _defaultAccessToken;
 
-        private Dictionary<string,bool> _attemptToSetAccessToken;
+        private Dictionary<string, bool> _attemptToSetAccessToken;
 
-        private Dictionary<string,bool> _isSessionContextEnabled;
+        private Dictionary<string, bool> _isSessionContextEnabled;
 
         public MsSqlQueryExecutor(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -66,12 +66,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                   runtimeConfigProvider.GetConfig().DefaultDBName)
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
-            IEnumerable<KeyValuePair<string,DataSource>> mssqldbs = runtimeConfig.DatasourceNameToDataSource.Where(x => x.Value.DatabaseType == DatabaseType.MSSQL);
-            _attemptToSetAccessToken = new Dictionary<string,bool>();
-            _isSessionContextEnabled = new Dictionary<string,bool>();
+            IEnumerable<KeyValuePair<string, DataSource>> mssqldbs = runtimeConfig.DatasourceNameToDataSource.Where(x => x.Value.DatabaseType == DatabaseType.MSSQL);
+            _attemptToSetAccessToken = new Dictionary<string, bool>();
+            _isSessionContextEnabled = new Dictionary<string, bool>();
             _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
 
-            foreach (KeyValuePair<string,DataSource> dataSourcePair in mssqldbs)
+            foreach (KeyValuePair<string, DataSource> dataSourcePair in mssqldbs)
             {
                 string dataSourceName = dataSourcePair.Key;
                 DataSource dataSource = dataSourcePair.Value;

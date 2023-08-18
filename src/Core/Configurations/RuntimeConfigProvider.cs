@@ -38,7 +38,7 @@ public class RuntimeConfigProvider
     /// <summary>
     /// The access tokens representing a Managed Identity to connect to the database.
     /// </summary>
-    public Dictionary<string,string?> ManagedIdentityAccessToken { get; private set; } = new Dictionary<string,string?>();
+    public Dictionary<string, string?> ManagedIdentityAccessToken { get; private set; } = new Dictionary<string, string?>();
 
     public RuntimeConfigLoader ConfigLoader { get; private set; }
 
@@ -145,7 +145,7 @@ public class RuntimeConfigProvider
 
             if (firstDataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL)
             {
-                Dictionary<string, string> cosmosDbNameToConnectionString = new ();
+                Dictionary<string, string> cosmosDbNameToConnectionString = new();
                 cosmosDbNameToConnectionString[runtimeConfig.DefaultDBName] = firstDataSource.ConnectionString;
                 _runtimeConfig = HandleCosmosNoSqlConfiguration(schema, _runtimeConfig, cosmosDbNameToConnectionString);
             }

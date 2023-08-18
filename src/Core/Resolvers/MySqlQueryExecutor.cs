@@ -35,7 +35,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// The MySql specific connection string builder.
         /// </summary>
-        public override IDictionary<string,DbConnectionStringBuilder> ConnectionStringBuilders
+        public override IDictionary<string, DbConnectionStringBuilder> ConnectionStringBuilders
             => base.ConnectionStringBuilders;
 
         /// <summary>
@@ -44,7 +44,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         private AccessToken? _defaultAccessToken;
 
-        private Dictionary<string,bool> _attemptToSetAccessToken;
+        private Dictionary<string, bool> _attemptToSetAccessToken;
 
         public MySqlQueryExecutor(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -59,9 +59,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             _attemptToSetAccessToken = new Dictionary<string, bool>();
             _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
-            IEnumerable<KeyValuePair<string,DataSource>> mysqldbs =runtimeConfigProvider.GetConfig().DatasourceNameToDataSource.Where(x => x.Value.DatabaseType == DatabaseType.MySQL);
+            IEnumerable<KeyValuePair<string, DataSource>> mysqldbs = runtimeConfigProvider.GetConfig().DatasourceNameToDataSource.Where(x => x.Value.DatabaseType == DatabaseType.MySQL);
 
-            foreach (KeyValuePair<string,DataSource> dataSourcePair in mysqldbs)
+            foreach (KeyValuePair<string, DataSource> dataSourcePair in mysqldbs)
             {
                 string dataSourceName = dataSourcePair.Key;
                 DataSource dataSource = dataSourcePair.Value;

@@ -16,12 +16,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     {
         private string? _accountEndpoint;
         private string? _accountKey;
-        private readonly Dictionary<string,string?> _accessToken;
+        private readonly Dictionary<string, string?> _accessToken;
         public const string DAB_APP_NAME_ENV = "DAB_APP_NAME_ENV";
         public static readonly string DEFAULT_APP_NAME = $"dab_oss_{ProductInfo.GetProductVersion()}";
         public string _defaultDbName = "";
 
-        public Dictionary<string,CosmosClient?> Clients { get; private set; }
+        public Dictionary<string, CosmosClient?> Clients { get; private set; }
 
         public CosmosClientProvider(RuntimeConfigProvider runtimeConfigProvider)
         {
@@ -57,7 +57,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 throw new InvalidOperationException("We shouldn't need a CosmosClientProvider if we're not accessing a CosmosDb");
             }
 
-            IEnumerable<KeyValuePair<string,DataSource>> cosmosDb = configuration.DatasourceNameToDataSource.Where(x => x.Value.DatabaseType == DatabaseType.CosmosDB_NoSQL);
+            IEnumerable<KeyValuePair<string, DataSource>> cosmosDb = configuration.DatasourceNameToDataSource.Where(x => x.Value.DatabaseType == DatabaseType.CosmosDB_NoSQL);
 
             foreach (KeyValuePair<string, DataSource> dataSourcePair in cosmosDb)
             {

@@ -546,7 +546,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
                         string entityDataSourceName = runtimeConfig.EntityNameToDataSourceName[entityName];
                         DataSource entityDataSource = runtimeConfig.DatasourceNameToDataSource[entityDataSourceName];
 
-                        if ( entityDataSource.DatabaseType is not DatabaseType.MSSQL && !IsValidDatabasePolicyForAction(action))
+                        if (entityDataSource.DatabaseType is not DatabaseType.MSSQL && !IsValidDatabasePolicyForAction(action))
                         {
                             throw new DataApiBuilderException(
                                 message: $"The Create action does not support defining a database policy." +

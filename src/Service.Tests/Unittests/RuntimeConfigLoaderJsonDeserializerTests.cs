@@ -76,18 +76,18 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             if (replaceEnvVar)
             {
                 Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
-                    GetModifiedJsonString(repValues), out expectedConfig, replaceEnvVar: replaceEnvVar),
+                    GetModifiedJsonString(repValues, @"""mssql"""), out expectedConfig, replaceEnvVar: replaceEnvVar),
                     "Should read the expected config");
             }
             else
             {
                 Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
-                    GetModifiedJsonString(repKeys), out expectedConfig, replaceEnvVar: replaceEnvVar),
+                    GetModifiedJsonString(repKeys, @"""@env('enumVarName')"""), out expectedConfig, replaceEnvVar: replaceEnvVar),
                     "Should read the expected config");
             }
 
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
-                GetModifiedJsonString(repKeys), out RuntimeConfig actualConfig, replaceEnvVar: replaceEnvVar),
+                GetModifiedJsonString(repKeys, @"""@env('enumVarName')"""), out RuntimeConfig actualConfig, replaceEnvVar: replaceEnvVar),
                 "Should read actual config");
             Assert.AreEqual(expectedConfig.ToJson(), actualConfig.ToJson());
         }
@@ -136,7 +136,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             string json = @"{ ""foo"" : ""@env('envVarName'), @env('" + invalidEnvVarName + @"')"" }";
             SetEnvVariables();
-            StringJsonConverterFactory stringConverterFactory = new();
+            StringJsonConverterFactory stringConverterFactory = new(replaceEnvVar: true);
             JsonSerializerOptions options = new() { PropertyNameCaseInsensitive = true };
             options.Converters.Add(stringConverterFactory);
             Assert.ThrowsException<DataApiBuilderException>(() => JsonSerializer.Deserialize<StubJsonType>(json, options));
@@ -186,6 +186,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Environment.SetEnvironmentVariable($"'envVarName", $"_envVarValue");
             Environment.SetEnvironmentVariable($"envVarName'", $"envVarValue_");
             Environment.SetEnvironmentVariable($"'envVarName'", $"_envVarValue_");
+            Environment.SetEnvironmentVariable($"enumVarName", $"mssql");
         }
 
         /// <summary>
@@ -195,7 +196,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// </summary>
         /// <param name="reps">Replacement strings.</param>
         /// <returns>Json string with replacements.</returns>
-        public static string GetModifiedJsonString(string[] reps)
+        public static string GetModifiedJsonString(string[] reps, string enumString)
         {
             int index = 0;
             return
@@ -206,7 +207,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     ""patch"": 1
   },
   ""data-source"": {
-    ""database-type"": ""mssql"",
+    ""database-type"": " + enumString + @",
     ""connection-string"": ""server=dataapibuilder;database=" + reps[++index % reps.Length] + @";uid=" + reps[++index % reps.Length] + @";Password=" + reps[++index % reps.Length] + @";"",
     ""resolver-config-file"": """ + reps[++index % reps.Length] + @"""
   },

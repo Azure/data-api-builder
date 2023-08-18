@@ -25,7 +25,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     {
         protected DbExceptionParser DbExceptionParser { get; }
         protected ILogger<IQueryExecutor> QueryExecutorLogger { get; }
-        private RuntimeConfigProvider ConfigProvider { get; }
+        protected RuntimeConfigProvider ConfigProvider { get; }
         protected IHttpContextAccessor HttpContextAccessor { get; }
 
         // The maximum number of attempts that can be made to execute the query successfully in addition to the first attempt.
@@ -34,18 +34,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         private AsyncRetryPolicy _retryPolicy;
 
-        /// <summary>
-        /// Default db Name of first database in list used to maintain backward compatibility for methods.
-        /// </summary>
-        protected string _defaultDbName;
-
         public virtual IDictionary<string, DbConnectionStringBuilder> ConnectionStringBuilders { get; set; }
 
         public QueryExecutor(DbExceptionParser dbExceptionParser,
                              ILogger<IQueryExecutor> logger,
                              RuntimeConfigProvider configProvider,
-                             IHttpContextAccessor httpContextAccessor,
-                             string defaultdbName)
+                             IHttpContextAccessor httpContextAccessor)
         {
             DbExceptionParser = dbExceptionParser;
             QueryExecutorLogger = logger;
@@ -62,7 +56,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     QueryExecutorLogger.LogError(exception.Message);
                     QueryExecutorLogger.LogError(exception.StackTrace);
                 });
-            _defaultDbName = defaultdbName;
         }
 
         /// <inheritdoc/>
@@ -76,7 +69,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             if (string.IsNullOrEmpty(dbName))
             {
-                dbName = _defaultDbName;
+                dbName = ConfigProvider.GetConfig().DefaultDBName;
             }
 
             if (!ConnectionStringBuilders.ContainsKey(dbName))
@@ -204,7 +197,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc />
-        public virtual string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, DbConnectionParam> parameters, string dbName = "")
+        public virtual string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, DbConnectionParam> parameters, string? datasourceName = null)
         {
             return string.Empty;
         }
@@ -217,7 +210,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc />
-        public virtual async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn)
+        public virtual async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, string? datasourceName = null)
         {
             // no-op in the base class.
             await Task.Yield();

@@ -121,9 +121,9 @@ public class RuntimeConfigProvider
     /// <param name="accessToken">The string representation of a managed identity access token</param>
     /// <returns>true if the initialization succeeded, false otherwise.</returns>
     public async Task<bool> Initialize(
-         string configuration,
-         string? schema,
-         string? accessToken)
+        string configuration,
+        string? schema,
+        string? accessToken)
     {
         if (string.IsNullOrEmpty(configuration))
         {
@@ -212,8 +212,13 @@ public class RuntimeConfigProvider
         return results.All(x => x);
     }
 
-    private static RuntimeConfig HandleCosmosNoSqlConfiguration(string? schema, RuntimeConfig runtimeConfig, string connectionString)
+    private static RuntimeConfig HandleCosmosNoSqlConfiguration(string? schema, RuntimeConfig runtimeConfig, string connectionString, string? databaseName = null)
     {
+        if (string.IsNullOrEmpty(databaseName))
+        {
+            databaseName = runtimeConfig.DefaultDBName;
+        }
+
         DbConnectionStringBuilder dbConnectionStringBuilder = new()
         {
             ConnectionString = connectionString
@@ -226,10 +231,12 @@ public class RuntimeConfigProvider
 
         HyphenatedNamingPolicy namingPolicy = new();
 
+        DataSource dataSource = runtimeConfig.DatasourceNameToDataSource[databaseName];
+
         Dictionary<string, JsonElement> options;
-        if (runtimeConfig.DataSource.Options is not null)
+        if (dataSource.Options is not null)
         {
-            options = new(runtimeConfig.DataSource.Options)
+            options = new(dataSource.Options)
             {
                 // push the "raw" GraphQL schema into the options to pull out later when requested
                 { namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.GraphQLSchema)), JsonSerializer.SerializeToElement(schema) }
@@ -249,9 +256,17 @@ public class RuntimeConfigProvider
             options[namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database))] = JsonSerializer.SerializeToElement(database);
         }
 
+        dataSource = dataSource with { Options = options, ConnectionString = connectionString };
+
         // Update the connection string in the parsed config with the one that was provided to the controller
-        runtimeConfig = runtimeConfig with { DataSource = runtimeConfig.DataSource with { Options = options, ConnectionString = connectionString } };
-        runtimeConfig.DatasourceNameToDataSource[runtimeConfig.DefaultDBName] = runtimeConfig.DataSource;
+        if (databaseName == runtimeConfig.DefaultDBName)
+        {
+            // update default db.
+            runtimeConfig = runtimeConfig with { DataSource = dataSource };
+        }
+
+        // update dictionary
+        runtimeConfig.DatasourceNameToDataSource[databaseName] = dataSource;
 
         return runtimeConfig;
     }

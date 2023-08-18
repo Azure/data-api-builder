@@ -54,8 +54,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             : base(dbExceptionParser,
                   logger,
                   runtimeConfigProvider,
-                  httpContextAccessor,
-                  runtimeConfigProvider.GetConfig().DefaultDBName)
+                  httpContextAccessor)
         {
             _attemptToSetAccessToken = new Dictionary<string, bool>();
             _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
@@ -81,9 +80,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 _attemptToSetAccessToken[dataSourceName] = ShouldManagedIdentityAccessBeAttempted(builder);
             }
 
-            if (!_accessTokenFromController.ContainsKey(_defaultDbName))
+            if (!_accessTokenFromController.ContainsKey(runtimeConfigProvider.GetConfig().DefaultDBName))
             {
-                _accessTokenFromController[_defaultDbName] = null;
+                _accessTokenFromController[runtimeConfigProvider.GetConfig().DefaultDBName] = null;
             }
         }
 
@@ -94,16 +93,21 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// provided in the runtime configuration.
         /// </summary>
         /// <param name="conn">The supplied connection to modify for managed identity access.</param>
-        public override async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn)
+        public override async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, string? datasourceName = null)
         {
+            if (string.IsNullOrEmpty(datasourceName))
+            {
+                datasourceName = ConfigProvider.GetConfig().DefaultDBName;
+            }
+
             // Only attempt to get the access token if the connection string is in the appropriate format
-            if (_attemptToSetAccessToken[_defaultDbName])
+            if (_attemptToSetAccessToken[datasourceName])
             {
                 // If the configuration controller provided a managed identity access token use that,
                 // else use the default saved access token if still valid.
                 // Get a new token only if the saved token is null or expired.
 
-                string? accessToken = _accessTokenFromController[_defaultDbName] ??
+                string? accessToken = _accessTokenFromController[datasourceName] ??
                     (IsDefaultAccessTokenValid() ?
                         ((AccessToken)_defaultAccessToken!).Token :
                         await GetAccessTokenAsync());

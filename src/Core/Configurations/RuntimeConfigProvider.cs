@@ -188,7 +188,7 @@ public class RuntimeConfigProvider
                 _ => runtimeConfig with { DataSource = runtimeConfig.DataSource with { ConnectionString = connectionString } }
             };
             ManagedIdentityAccessToken[_runtimeConfig.DefaultDBName] = accessToken;
-            _runtimeConfig.DatasourceNameToDataSource[_runtimeConfig.DefaultDBName] = runtimeConfig.DataSource;
+            _runtimeConfig.DatasourceNameToDataSource[_runtimeConfig.DefaultDBName] = _runtimeConfig.DataSource;
 
             return await InvokeConfigLoadedHandlersAsync();
         }

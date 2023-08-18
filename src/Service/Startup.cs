@@ -68,16 +68,6 @@ namespace Azure.DataApiBuilder.Service
             FileSystemRuntimeConfigLoader configLoader = new(fileSystem, configFileName, connectionString);
             RuntimeConfigProvider configProvider = new(configLoader);
 
-            services.AddSingleton(fileSystem);
-            services.AddSingleton(configProvider);
-            services.AddSingleton(configLoader);
-            services.AddSingleton(implementationFactory: (serviceProvider) =>
-            {
-                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
-                return loggerFactory.CreateLogger<RuntimeConfigValidator>();
-            });
-            services.AddSingleton<RuntimeConfigValidator>();
-
             // The following line enables Application Insights telemetry collection.
             // services.AddApplicationInsightsTelemetry();
             // services.AddSingleton<ITelemetryInitializer, MyTelemetryInitializer>();
@@ -90,6 +80,16 @@ namespace Azure.DataApiBuilder.Service
                 
                 services.AddSingleton<ITelemetryInitializer, MyTelemetryInitializer>();
             }
+
+            services.AddSingleton(fileSystem);
+            services.AddSingleton(configProvider);
+            services.AddSingleton(configLoader);
+            services.AddSingleton(implementationFactory: (serviceProvider) =>
+            {
+                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
+                return loggerFactory.CreateLogger<RuntimeConfigValidator>();
+            });
+            services.AddSingleton<RuntimeConfigValidator>();
             
             services.AddSingleton<CosmosClientProvider>();
             services.AddHealthChecks();

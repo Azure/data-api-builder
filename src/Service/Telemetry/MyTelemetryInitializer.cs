@@ -1,14 +1,14 @@
 using System;
-using Azure.DataApiBuilder.Service;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.Extensibility;
 using System.Collections.Generic;
+using Azure.DataApiBuilder.Product;
 
 public class MyTelemetryInitializer : ITelemetryInitializer
 {
     public static readonly IReadOnlyDictionary<string, string> GlobalProperties = new Dictionary<string, string>
     {
-        { "ApplicationName", $"dab_oss_{ProductInfo.GetProductVersion()}" },
+        { "ApplicationName", $"{ProductInfo.GetDataApiBuilderUserAgent()}" },
         // Add more custom properties here
     };
 

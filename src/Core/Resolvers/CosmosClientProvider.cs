@@ -18,8 +18,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private string? _accountEndpoint;
         private string? _accountKey;
         private readonly Dictionary<string, string?> _accessToken;
-        public const string DAB_APP_NAME_ENV = "DAB_APP_NAME_ENV";
-        public static readonly string DEFAULT_APP_NAME = $"dab_oss_{ProductInfo.GetProductVersion()}";
         public string _defaultDbName = "";
 
         public Dictionary<string, CosmosClient?> Clients { get; private set; }
@@ -67,7 +65,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (!Clients.ContainsKey(dataSourceName))
                 {
                     CosmosClient client;
-                    string userAgent = GetCosmosUserAgent();
+                    string userAgent = ProductInfo.GetDataApiBuilderUserAgent();
                     CosmosClientOptions options = new()
                     {
                         ApplicationName = userAgent

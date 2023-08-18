@@ -99,7 +99,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
             foreach (DataSource dataSource in runtimeConfig.DatasourceNameToDataSource.Values)
             {
                 // Connection string can't be null or empty
-                if (string.IsNullOrWhiteSpace(dataSource.ConnectionString))
+                if (string.IsNullOrEmpty(dataSource.ConnectionString))
                 {
                     throw new DataApiBuilderException(
                         message: DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE,

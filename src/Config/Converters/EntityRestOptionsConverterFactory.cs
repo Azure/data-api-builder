@@ -16,7 +16,7 @@ internal class EntityRestOptionsConverterFactory : JsonConverterFactory
     /// <inheritdoc/>
     public override bool CanConvert(Type typeToConvert)
     {
-        return typeToConvert.IsAssignableTo(typeof(EntitySource));
+        return typeToConvert.IsAssignableTo(typeof(EntityRestOptions));
     }
 
     /// <inheritdoc/>

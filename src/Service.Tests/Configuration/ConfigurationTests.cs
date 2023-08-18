@@ -1390,7 +1390,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// Validates the Location header field returned as part of POST requests.
+        /// Validates the Location header field returned for a POST request when a 201 response is returned. The idea behind returning
+        /// a Location header is to provide a URL against which a GET request can be performed to fetch the details of the new item.
+        /// Base Route is not configured in the config file used for this test. If base-route is configured, the Location header URL should contain the base-route.
+        /// This test performs a POST request, and in the event that it results in a 201 response, it performs a subsequent GET request
+        /// with the Location header to validate the correctness of the URL.
         /// </summary>
         /// <param name="entityType">Type of the entity</param>
         /// <param name="requestPath">Request path for performing POST API requests on the entity</param>
@@ -1475,12 +1479,20 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// Validates the Location header field returned as part of POST requests
+        /// Validates the Location header field returned for a POST request when it results in a 201 response. The idea behind returning
+        /// a Location header is to provide a URL against which a GET request can be performed to fetch the details of the new item.
+        /// Base Route is configured in the config file used for this test. So, it is expected that the Location header returned will contain the base-route.
+        /// This test performs a POST request, and checks if it results in a 201 response. If so, the test validates the correctness of the Location header in two steps.
+        /// Since, base-route has significance only in the SWA-DAB integrated scenario and this test is executed against DAB running independently,
+        /// a subsequent GET request against the Location header will result in an error. So, the correctness of the base-route returned is validated with the help of
+        /// an expected location header value. The correctness of the PK part of the Location string is validated by performing a GET request after stripping off
+        /// the base-route from the Location URL.
         /// </summary>
         /// <param name="entityType">Type of the entity</param>
         /// <param name="requestPath">Request path for performing POST API requests on the entity</param>
         /// <param name="baseRoute">Configured base route</param>
-        /// <param name="expectedLocationHeader">Expected value for Location field in the response header</param>
+        /// <param name="expectedLocationHeader">Expected value for Location field in the response header. Since, the PK of the new record is not known beforehand,
+        /// the expectedLocationHeader excludes the PK. Because of this, the actual location header is validated by checking if it starts with the expectedLocationHeader.</param>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
         [DataRow(EntitySourceType.Table, "/api/Book", "/data-api", "http://localhost/data-api/api/Book/id/", DisplayName = "Location Header validation - Table, Base Route configured")]

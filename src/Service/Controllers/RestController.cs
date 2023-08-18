@@ -233,12 +233,12 @@ namespace Azure.DataApiBuilder.Service.Controllers
                     // created result to the url constructed from the HttpRequest. We
                     // then update the Location of the created result to this value.
                     CreatedResult createdResult = (result as CreatedResult)!;
-                    string baseURL = UriHelper.BuildAbsolute(
+                    string locationURL = UriHelper.BuildAbsolute(
                                         scheme: HttpContext.Request.Scheme,
                                         host: HttpContext.Request.Host,
                                         pathBase: _restService.GetBaseRouteFromConfig(),
                                         path: HttpContext.Request.Path);
-                    createdResult.Location = baseURL.EndsWith('/') ? baseURL + createdResult.Location : baseURL + "/" + createdResult.Location;
+                    createdResult.Location = locationURL.EndsWith('/') ? locationURL + createdResult.Location : locationURL + "/" + createdResult.Location;
                     result = createdResult;
                 }
 

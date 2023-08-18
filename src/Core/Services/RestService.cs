@@ -373,12 +373,6 @@ namespace Azure.DataApiBuilder.Core.Services
             // forward slash '/'.
             configuredRestPathBase = configuredRestPathBase.Substring(1);
 
-            // Consider a typical URL of the form: <scheme>://<domain-name>/<path_to_the_resource>.
-            // The variable route contains the value of <path-to-resource> section.   
-            // Since, <scheme>://<domain-name>//<path_to_the_resource> is a valid URL, leading slashses are removed before comparing it with
-            // incoming request's path.
-            route = route.TrimStart('/');
-
             if (!route.StartsWith(configuredRestPathBase))
             {
                 throw new DataApiBuilderException(

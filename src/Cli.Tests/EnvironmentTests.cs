@@ -148,7 +148,7 @@ public class EnvironmentTests
     /// I feel confident that the overarching scenario is covered through other testing
     /// so disabling temporarily while we investigate should be acceptable.
     /// </summary>
-    [TestMethod, Ignore]
+    [TestMethod]
     public async Task FailureToStartEngineWhenEnvVarNamedWrong()
     {
         BootstrapTestEnvironment("COMM_STRINX=test_connection_string");

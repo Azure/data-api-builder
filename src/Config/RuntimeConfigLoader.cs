@@ -71,7 +71,16 @@ public abstract class RuntimeConfigLoader
                 updatedConnectionString = GetConnectionStringWithApplicationName(updatedConnectionString);
             }
 
-            config = config with { DataSource = config.DataSource with { ConnectionString = updatedConnectionString } };
+            if (datasourceName == null || datasourceName == config.DefaultDBName)
+            {
+                // single database scenario - default db is set.
+                config = config with { DataSource = config.DataSource with { ConnectionString = updatedConnectionString } };
+                config.DatasourceNameToDataSource[config.DefaultDBName] = config.DataSource;
+            }
+            else
+            {
+                config.DatasourceNameToDataSource[datasourceName] = config.DatasourceNameToDataSource[datasourceName] with { ConnectionString = updatedConnectionString };
+            }
         }
         catch (JsonException ex)
         {

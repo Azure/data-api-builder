@@ -90,7 +90,6 @@ namespace Azure.DataApiBuilder.Service
                 RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
                 RuntimeConfig runtimeConfig = configProvider.GetConfig();
 
-                // TODO: Named dependency injection for multiple database support.
                 return runtimeConfig.DataSource.DatabaseType switch
                 {
                     DatabaseType.CosmosDB_NoSQL => ActivatorUtilities.GetServiceOrCreateInstance<CosmosQueryEngine>(serviceProvider),
@@ -104,7 +103,6 @@ namespace Azure.DataApiBuilder.Service
                 RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
                 RuntimeConfig runtimeConfig = configProvider.GetConfig();
 
-                // TODO: Named dependency injection for multiple database support.
                 return runtimeConfig.DataSource.DatabaseType switch
                 {
                     DatabaseType.CosmosDB_NoSQL => ActivatorUtilities.GetServiceOrCreateInstance<CosmosMutationEngine>(serviceProvider),
@@ -123,7 +121,6 @@ namespace Azure.DataApiBuilder.Service
                 RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
                 RuntimeConfig runtimeConfig = configProvider.GetConfig();
 
-                // TODO: Named dependency injection for multiple database support.
                 return runtimeConfig.DataSource.DatabaseType switch
                 {
                     DatabaseType.CosmosDB_NoSQL => null!,
@@ -139,7 +136,6 @@ namespace Azure.DataApiBuilder.Service
                 RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
                 RuntimeConfig runtimeConfig = configProvider.GetConfig();
 
-                // TODO: Named dependency injection for multiple database support.
                 return runtimeConfig.DataSource.DatabaseType switch
                 {
                     DatabaseType.CosmosDB_NoSQL => null!,
@@ -161,7 +157,6 @@ namespace Azure.DataApiBuilder.Service
                 RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
                 RuntimeConfig runtimeConfig = configProvider.GetConfig();
 
-                // TODO: Named dependency injection for multiple database support.
                 return runtimeConfig.DataSource.DatabaseType switch
                 {
                     DatabaseType.CosmosDB_NoSQL => ActivatorUtilities.GetServiceOrCreateInstance<CosmosSqlMetadataProvider>(serviceProvider),
@@ -177,7 +172,6 @@ namespace Azure.DataApiBuilder.Service
                 RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
                 RuntimeConfig runtimeConfig = configProvider.GetConfig();
 
-                // TODO: Named dependency injection for multiple database support.
                 return runtimeConfig.DataSource.DatabaseType switch
                 {
                     DatabaseType.CosmosDB_NoSQL => null!,

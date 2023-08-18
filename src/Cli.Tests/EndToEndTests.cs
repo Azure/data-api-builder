@@ -60,7 +60,7 @@ public class EndToEndTests
 
         Assert.IsNotNull(runtimeConfig);
         Assert.IsTrue(runtimeConfig.Runtime.GraphQL.AllowIntrospection);
-        Assert.AreEqual(DatabaseType.CosmosDB_NoSQL, runtimeConfig.DataSource!.DatabaseType);
+        Assert.AreEqual(DatabaseType.CosmosDB_NoSQL, runtimeConfig.DataSource.DatabaseType);
         CosmosDbNoSQLDataSourceOptions? cosmosDataSourceOptions = runtimeConfig.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>();
         Assert.IsNotNull(cosmosDataSourceOptions);
         Assert.AreEqual("graphqldb", cosmosDataSourceOptions.Database);
@@ -88,7 +88,7 @@ public class EndToEndTests
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
 
         Assert.IsNotNull(runtimeConfig);
-        Assert.AreEqual(DatabaseType.CosmosDB_PostgreSQL, runtimeConfig.DataSource!.DatabaseType);
+        Assert.AreEqual(DatabaseType.CosmosDB_PostgreSQL, runtimeConfig.DataSource.DatabaseType);
         Assert.IsNotNull(runtimeConfig.Runtime);
         Assert.AreEqual("/rest-api", runtimeConfig.Runtime.Rest.Path);
         Assert.IsTrue(runtimeConfig.Runtime.Rest.Enabled);
@@ -115,7 +115,7 @@ public class EndToEndTests
         Assert.AreEqual(DEFAULT_APP_NAME, builder.ApplicationName);
 
         Assert.IsNotNull(runtimeConfig);
-        Assert.AreEqual(DatabaseType.MSSQL, runtimeConfig.DataSource!.DatabaseType);
+        Assert.AreEqual(DatabaseType.MSSQL, runtimeConfig.DataSource.DatabaseType);
         Assert.IsNotNull(runtimeConfig.Runtime);
         Assert.AreEqual("/rest-api", runtimeConfig.Runtime.Rest.Path);
         Assert.IsFalse(runtimeConfig.Runtime.Rest.Enabled);

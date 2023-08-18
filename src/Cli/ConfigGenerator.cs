@@ -269,7 +269,7 @@ namespace Cli
             // Try to get the source object as string or DatabaseObjectSource for new Entity
             if (!TryCreateSourceObjectForNewEntity(
                 options,
-                initialRuntimeConfig.DataSource!.DatabaseType == DatabaseType.CosmosDB_NoSQL,
+                initialRuntimeConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL,
                 out EntitySource? source))
             {
                 _logger.LogError("Unable to create the source object.");
@@ -535,7 +535,7 @@ namespace Cli
                 }
             }
 
-            EntityRestOptions updatedRestDetails = ConstructUpdatedRestDetails(entity, options, initialConfig.DataSource!.DatabaseType == DatabaseType.CosmosDB_NoSQL);
+            EntityRestOptions updatedRestDetails = ConstructUpdatedRestDetails(entity, options, initialConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL);
             EntityGraphQLOptions updatedGraphQLDetails = ConstructUpdatedGraphQLDetails(entity, options);
             EntityPermission[]? updatedPermissions = entity!.Permissions;
             Dictionary<string, EntityRelationship>? updatedRelationships = entity.Relationships;
@@ -861,7 +861,7 @@ namespace Cli
         public static bool VerifyCanUpdateRelationship(RuntimeConfig runtimeConfig, string? cardinality, string? targetEntity)
         {
             // CosmosDB doesn't support Relationship
-            if (runtimeConfig.DataSource!.DatabaseType.Equals(DatabaseType.CosmosDB_NoSQL))
+            if (runtimeConfig.DataSource.DatabaseType.Equals(DatabaseType.CosmosDB_NoSQL))
             {
                 _logger.LogError("Adding/updating Relationships is currently not supported in CosmosDB.");
                 return false;
@@ -975,7 +975,7 @@ namespace Cli
                 return false;
             }
 
-            if (string.IsNullOrWhiteSpace(deserializedRuntimeConfig.DataSource!.ConnectionString))
+            if (string.IsNullOrWhiteSpace(deserializedRuntimeConfig.DataSource.ConnectionString))
             {
                 _logger.LogError("Invalid connection-string provided in the config.");
                 return false;

@@ -3,6 +3,7 @@
 
 using System;
 using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Product;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,14 +20,14 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             CosmosClientProvider cosmosClientProvider = _application.Services.GetService<CosmosClientProvider>();
             CosmosClient client = cosmosClientProvider.Clients[cosmosClientProvider._defaultDbName];
             // Validate results
-            Assert.AreEqual(client.ClientOptions.ApplicationName, CosmosClientProvider.DEFAULT_APP_NAME);
+            Assert.AreEqual(client.ClientOptions.ApplicationName, ProductInfo.DEFAULT_APP_NAME);
         }
 
         [TestMethod]
         public void CosmosClientEnvUserAgent()
         {
             string appName = "gql_dab_cosmos";
-            Environment.SetEnvironmentVariable(CosmosClientProvider.DAB_APP_NAME_ENV, appName);
+            Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, appName);
 
             // We need to create a new application factory to pick up the environment variable
             WebApplicationFactory<Startup> application = SetupTestApplicationFactory();
@@ -40,7 +41,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         [TestCleanup]
         public void Cleanup()
         {
-            Environment.SetEnvironmentVariable(CosmosClientProvider.DAB_APP_NAME_ENV, null);
+            Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, null);
         }
     }
 }

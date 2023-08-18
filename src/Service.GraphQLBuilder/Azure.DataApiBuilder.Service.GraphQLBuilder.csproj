@@ -20,6 +20,7 @@
   <ItemGroup>
     <PackageReference Include="HotChocolate" />
     <PackageReference Include="HotChocolate.AspNetCore.Authorization" />
+    <PackageReference Include="HotChocolate.Types.NodaTime" />
     <PackageReference Include="Humanizer" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="StyleCop.Analyzers">

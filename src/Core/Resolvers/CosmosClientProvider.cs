@@ -6,6 +6,7 @@ using System.IdentityModel.Tokens.Jwt;
 using Azure.Core;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Product;
 using Azure.Identity;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Fluent;
@@ -138,9 +139,5 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             _accountKey = dbConnectionStringBuilder.ContainsKey("AccountKey") ? (string)dbConnectionStringBuilder["AccountKey"] : null;
         }
 
-        private static string GetCosmosUserAgent()
-        {
-            return Environment.GetEnvironmentVariable(DAB_APP_NAME_ENV) ?? DEFAULT_APP_NAME;
-        }
     }
 }

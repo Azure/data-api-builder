@@ -241,7 +241,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
         /// </summary>
         /// <seealso cref="https://spec.graphql.org/October2021/#Name"/>
         /// <param name="runtimeConfig">The runtime configuration.</param>
-        public static void ValidateEntityConfiguration(RuntimeConfig runtimeConfig)
+        public void ValidateEntityConfiguration(RuntimeConfig runtimeConfig)
         {
             // Stores the unique rest paths configured for different entities present in the config.
             HashSet<string> restPathsForEntities = new();
@@ -262,6 +262,8 @@ namespace Azure.DataApiBuilder.Core.Configurations
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
                             );
                     }
+
+                    ValidateRestMethods(entity, entityName);
                 }
 
                 // If GraphQL endpoint is enabled globally and at entity level, then only we perform the validations related to it.
@@ -270,6 +272,21 @@ namespace Azure.DataApiBuilder.Core.Configurations
                     ValidateNameRequirements(entity.GraphQL.Singular);
                     ValidateNameRequirements(entity.GraphQL.Plural);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Helper method to validate and let users know whether insignificant properties are present in the REST field.
+        /// Currently, it checks for the presence of Methods property when the entity type is table/view and logs a warning.
+        /// Methods property plays a role only in case of stored procedures.
+        /// </summary>
+        /// <param name="entity">Entity object for which validation is performed</param>
+        /// <param name="entityName">Name of the entity</param>
+        private void ValidateRestMethods(Entity entity, string entityName)
+        {
+            if (entity.Source.Type is not EntitySourceType.StoredProcedure && entity.Rest.Methods is not null && entity.Rest.Methods.Length > 0)
+            {
+                _logger.LogWarning("Entity {entityName} has rest methods configured but is not a stored procedure. Values configured will be ignored and all 5 HTTP actions will be enabled.", entityName);
             }
         }
 

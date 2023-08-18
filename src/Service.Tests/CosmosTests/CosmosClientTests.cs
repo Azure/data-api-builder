@@ -16,7 +16,8 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         [TestMethod]
         public void CosmosClientDefaultUserAgent()
         {
-            CosmosClient client = _application.Services.GetService<CosmosClientProvider>().Client;
+            CosmosClientProvider cosmosClientProvider = _application.Services.GetService<CosmosClientProvider>();
+            CosmosClient client = cosmosClientProvider.Clients[cosmosClientProvider._defaultDbName];
             // Validate results
             Assert.AreEqual(client.ClientOptions.ApplicationName, CosmosClientProvider.DEFAULT_APP_NAME);
         }
@@ -30,7 +31,8 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             // We need to create a new application factory to pick up the environment variable
             WebApplicationFactory<Startup> application = SetupTestApplicationFactory();
 
-            CosmosClient client = application.Services.GetService<CosmosClientProvider>().Client;
+            CosmosClientProvider cosmosClientProvider = application.Services.GetService<CosmosClientProvider>();
+            CosmosClient client = cosmosClientProvider.Clients[cosmosClientProvider._defaultDbName];
             // Validate results
             Assert.AreEqual(client.ClientOptions.ApplicationName, appName);
         }

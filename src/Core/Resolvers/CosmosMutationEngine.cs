@@ -36,7 +36,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             _authorizationResolver = authorizationResolver;
         }
 
-        private async Task<JObject> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> queryArgs, CosmosOperationMetadata resolver)
+        private async Task<JObject> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> queryArgs, CosmosOperationMetadata resolver, string dbName = "")
         {
             // TODO: add support for all mutation types
             // we only support CreateOrUpdate (Upsert) for now
@@ -47,7 +47,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 throw new ArgumentNullException(nameof(queryArgs));
             }
 
-            CosmosClient? client = _clientProvider.Client;
+            if (string.IsNullOrEmpty(dbName))
+            {
+                dbName = _clientProvider._defaultDbName;
+            }
+
+            CosmosClient? client = _clientProvider.Clients[dbName];
             if (client is null)
             {
                 throw new DataApiBuilderException(

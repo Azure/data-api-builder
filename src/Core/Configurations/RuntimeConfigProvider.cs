@@ -36,9 +36,9 @@ public class RuntimeConfigProvider
     public bool IsLateConfigured { get; set; }
 
     /// <summary>
-    /// The access token representing a Managed Identity to connect to the database.
+    /// The access tokens representing a Managed Identity to connect to the database.
     /// </summary>
-    public string? ManagedIdentityAccessToken { get; private set; }
+    public Dictionary<string,string?> ManagedIdentityAccessToken { get; private set; } = new Dictionary<string,string?>();
 
     public RuntimeConfigLoader ConfigLoader { get; private set; }
 
@@ -114,6 +114,7 @@ public class RuntimeConfigProvider
     /// This initialization method is used when the configuration is sent to the ConfigurationController
     /// in the form of a string instead of reading the configuration from a configuration file.
     /// This method assumes the connection string is provided as part of the configuration.
+    /// Initialzed the first database within the datasource list.
     /// </summary>
     /// <param name="configuration">The engine configuration.</param>
     /// <param name="schema">The GraphQL Schema. Can be left null for SQL configurations.</param>
@@ -135,18 +136,27 @@ public class RuntimeConfigProvider
         {
             _runtimeConfig = runtimeConfig;
 
-            if (string.IsNullOrEmpty(runtimeConfig.DataSource.ConnectionString))
+            DataSource firstDataSource = runtimeConfig.DataSource;
+
+            if (string.IsNullOrEmpty(firstDataSource.ConnectionString))
             {
-                throw new ArgumentException($"'{nameof(runtimeConfig.DataSource.ConnectionString)}' cannot be null or empty.", nameof(runtimeConfig.DataSource.ConnectionString));
+                throw new ArgumentException($"'{nameof(firstDataSource.ConnectionString)}' cannot be null or empty.", nameof(firstDataSource.ConnectionString));
             }
 
-            if (_runtimeConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL)
+            if (firstDataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL)
             {
-                _runtimeConfig = HandleCosmosNoSqlConfiguration(schema, _runtimeConfig, _runtimeConfig.DataSource.ConnectionString);
+                Dictionary<string, string> cosmosDbNameToConnectionString = new ();
+                cosmosDbNameToConnectionString[runtimeConfig.DefaultDBName] = firstDataSource.ConnectionString;
+                _runtimeConfig = HandleCosmosNoSqlConfiguration(schema, _runtimeConfig, cosmosDbNameToConnectionString);
             }
+
+            if (ManagedIdentityAccessToken == null)
+            {
+                ManagedIdentityAccessToken = new();
+            }
+
+            ManagedIdentityAccessToken[runtimeConfig.DefaultDBName] = accessToken;
         }
-
-        ManagedIdentityAccessToken = accessToken;
 
         bool configLoadSucceeded = await InvokeConfigLoadedHandlersAsync();
 
@@ -177,18 +187,21 @@ public class RuntimeConfigProvider
             throw new ArgumentException($"'{nameof(jsonConfig)}' cannot be null or empty.", nameof(jsonConfig));
         }
 
-        ManagedIdentityAccessToken = accessToken;
-
         IsLateConfigured = true;
 
-        if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig))
+        Dictionary<string, string> cosmosDatabaseNameToConnectionString = new();
+        if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig, null, connectionString))
         {
-            _runtimeConfig = runtimeConfig.DataSource.DatabaseType switch
-            {
-                DatabaseType.CosmosDB_NoSQL => HandleCosmosNoSqlConfiguration(graphQLSchema, runtimeConfig, connectionString),
-                _ => runtimeConfig with { DataSource = runtimeConfig.DataSource with { ConnectionString = connectionString } }
-            };
 
+            DataSource singleDataSource = runtimeConfig.DataSource;
+            cosmosDatabaseNameToConnectionString[runtimeConfig.DefaultDBName] = connectionString;
+            ManagedIdentityAccessToken[runtimeConfig.DefaultDBName] = accessToken;
+
+            _runtimeConfig = singleDataSource.DatabaseType switch
+            {
+                DatabaseType.CosmosDB_NoSQL => HandleCosmosNoSqlConfiguration(graphQLSchema, runtimeConfig, cosmosDatabaseNameToConnectionString),
+                _ => runtimeConfig
+            };
             return await InvokeConfigLoadedHandlersAsync();
         }
 
@@ -212,50 +225,55 @@ public class RuntimeConfigProvider
         return results.All(x => x);
     }
 
-    private static RuntimeConfig HandleCosmosNoSqlConfiguration(string? schema, RuntimeConfig runtimeConfig, string connectionString)
+    private static RuntimeConfig HandleCosmosNoSqlConfiguration(string? schema, RuntimeConfig runtimeConfig, Dictionary<string, string> databaseNameToConnectionStringMapping)
     {
-        DbConnectionStringBuilder dbConnectionStringBuilder = new()
+        foreach (KeyValuePair<string, string> keyValuePair in databaseNameToConnectionStringMapping)
         {
-            ConnectionString = connectionString
-        };
-
-        if (string.IsNullOrEmpty(schema))
-        {
-            throw new ArgumentException($"'{nameof(schema)}' cannot be null or empty.", nameof(schema));
-        }
-
-        HyphenatedNamingPolicy namingPolicy = new();
-
-        Dictionary<string, JsonElement> options;
-        if (runtimeConfig.DataSource.Options is not null)
-        {
-            options = new(runtimeConfig.DataSource.Options)
+            if (runtimeConfig.DatasourceNameToDataSource.ContainsKey(keyValuePair.Key))
             {
-                // push the "raw" GraphQL schema into the options to pull out later when requested
-                { namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.GraphQLSchema)), JsonSerializer.SerializeToElement(schema) }
-            };
-        }
-        else
-        {
-            throw new ArgumentException($"'{nameof(CosmosDbNoSQLDataSourceOptions)}' cannot be null or empty.", nameof(CosmosDbNoSQLDataSourceOptions));
-        }
+                DbConnectionStringBuilder dbConnectionStringBuilder = new()
+                {
+                    ConnectionString = databaseNameToConnectionStringMapping[keyValuePair.Key]
+                };
 
-        // SWA may provide CosmosDB database name in connectionString
-        string? database = dbConnectionStringBuilder.ContainsKey("Database") ? (string)dbConnectionStringBuilder["Database"] : null;
+                if (string.IsNullOrEmpty(schema))
+                {
+                    throw new ArgumentException($"'{nameof(schema)}' cannot be null or empty.", nameof(schema));
+                }
 
-        if (database is not null)
-        {
-            // Add or update the options to contain the parsed database
-            options[namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database))] = JsonSerializer.SerializeToElement(database);
+                HyphenatedNamingPolicy namingPolicy = new();
+
+                Dictionary<string, JsonElement> options;
+
+                DataSource dataSource = runtimeConfig.DatasourceNameToDataSource[keyValuePair.Key];
+
+                if (dataSource.Options is not null)
+                {
+                    options = new(dataSource.Options)
+                    {
+                        // push the "raw" GraphQL schema into the options to pull out later when requested
+                        { namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.GraphQLSchema)), JsonSerializer.SerializeToElement(schema) }
+                    };
+                }
+                else
+                {
+                    throw new ArgumentException($"'{nameof(CosmosDbNoSQLDataSourceOptions)}' cannot be null or empty.", nameof(CosmosDbNoSQLDataSourceOptions));
+                }
+
+                // SWA may provide CosmosDB database name in connectionString
+                string? database = dbConnectionStringBuilder.ContainsKey("Database") ? (string)dbConnectionStringBuilder["Database"] : null;
+
+                if (database is not null)
+                {
+                    // Add or update the options to contain the parsed database
+                    options[namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database))] = JsonSerializer.SerializeToElement(database);
+                }
+
+                dataSource = dataSource with { Options = options, ConnectionString = databaseNameToConnectionStringMapping[keyValuePair.Key] };
+                runtimeConfig.DatasourceNameToDataSource[keyValuePair.Key] = dataSource;
+            }
         }
-
         // Update the connection string in the parsed config with the one that was provided to the controller
-        return runtimeConfig
-            with
-        {
-            DataSource = runtimeConfig.DataSource
-            with
-            { Options = options, ConnectionString = connectionString }
-        };
+        return runtimeConfig;
     }
 }

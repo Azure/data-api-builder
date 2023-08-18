@@ -96,13 +96,16 @@ namespace Azure.DataApiBuilder.Core.Configurations
             IFileSystem fileSystem,
             ILogger logger)
         {
-            // Connection string can't be null or empty
-            if (string.IsNullOrWhiteSpace(runtimeConfig.DataSource.ConnectionString))
+            foreach (DataSource dataSource in runtimeConfig.DatasourceNameToDataSource.Values)
             {
-                throw new DataApiBuilderException(
-                    message: DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE,
-                    statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                // Connection string can't be null or empty
+                if (string.IsNullOrWhiteSpace(dataSource.ConnectionString))
+                {
+                    throw new DataApiBuilderException(
+                        message: DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE,
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                }
             }
 
             ValidateDatabaseType(runtimeConfig, fileSystem, logger);
@@ -119,26 +122,29 @@ namespace Azure.DataApiBuilder.Core.Configurations
         {
             // Schema file should be present in the directory if not specified in the config
             // when using CosmosDB_NoSQL database.
-            if (runtimeConfig.DataSource.DatabaseType is DatabaseType.CosmosDB_NoSQL)
+            foreach (DataSource dataSource in runtimeConfig.DatasourceNameToDataSource.Values)
             {
-                CosmosDbNoSQLDataSourceOptions? cosmosDbNoSql =
-                    runtimeConfig.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>() ??
-                    throw new DataApiBuilderException(
-                        "CosmosDB_NoSql is specified but no CosmosDB_NoSql configuration information has been provided.",
-                        HttpStatusCode.ServiceUnavailable,
-                        DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-
-                if (string.IsNullOrEmpty(cosmosDbNoSql.Schema))
+                if (dataSource.DatabaseType is DatabaseType.CosmosDB_NoSQL)
                 {
-                    throw new DataApiBuilderException(
-                        "No GraphQL schema file has been provided for CosmosDB_NoSql. Ensure you provide a GraphQL schema containing the GraphQL object types to expose.",
-                        HttpStatusCode.ServiceUnavailable,
-                        DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-                }
+                    CosmosDbNoSQLDataSourceOptions? cosmosDbNoSql =
+                        dataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>() ??
+                        throw new DataApiBuilderException(
+                            "CosmosDB_NoSql is specified but no CosmosDB_NoSql configuration information has been provided.",
+                            HttpStatusCode.ServiceUnavailable,
+                            DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
 
-                if (!fileSystem.File.Exists(cosmosDbNoSql.Schema))
-                {
-                    throw new FileNotFoundException($"The GraphQL schema file at '{cosmosDbNoSql.Schema}' could not be found. Ensure that it is a path relative to the runtime.");
+                    if (string.IsNullOrEmpty(cosmosDbNoSql.Schema))
+                    {
+                        throw new DataApiBuilderException(
+                            "No GraphQL schema file has been provided for CosmosDB_NoSql. Ensure you provide a GraphQL schema containing the GraphQL object types to expose.",
+                            HttpStatusCode.ServiceUnavailable,
+                            DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                    }
+
+                    if (!fileSystem.File.Exists(cosmosDbNoSql.Schema))
+                    {
+                        throw new FileNotFoundException($"The GraphQL schema file at '{cosmosDbNoSql.Schema}' could not be found. Ensure that it is a path relative to the runtime.");
+                    }
                 }
             }
         }
@@ -373,19 +379,22 @@ namespace Azure.DataApiBuilder.Core.Configurations
         /// <param name="runtimeConfig"></param>
         public static void ValidateRestURI(RuntimeConfig runtimeConfig)
         {
-            // CosmosDB_NoSQL does not support rest. No need to do any validations.
-            if (runtimeConfig.DataSource.DatabaseType is DatabaseType.CosmosDB_NoSQL)
+            foreach (DataSource dataSource in runtimeConfig.DatasourceNameToDataSource.Values)
             {
-                return;
-            }
+                // CosmosDB_NoSQL does not support rest. No need to do any validations.
+                if (dataSource.DatabaseType is DatabaseType.CosmosDB_NoSQL)
+                {
+                    return;
+                }
 
-            string restPath = runtimeConfig.Runtime.Rest.Path;
-            if (!TryValidateUriComponent(restPath, out string exceptionMsgSuffix))
-            {
-                throw new DataApiBuilderException(
-                    message: $"{ApiType.REST} path {exceptionMsgSuffix}",
-                    statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                string restPath = runtimeConfig.Runtime.Rest.Path;
+                if (!TryValidateUriComponent(restPath, out string exceptionMsgSuffix))
+                {
+                    throw new DataApiBuilderException(
+                        message: $"{ApiType.REST} path {exceptionMsgSuffix}",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                }
             }
         }
 
@@ -534,7 +543,10 @@ namespace Azure.DataApiBuilder.Core.Configurations
                             }
                         }
 
-                        if (runtimeConfig.DataSource.DatabaseType is not DatabaseType.MSSQL && !IsValidDatabasePolicyForAction(action))
+                        string entityDataSourceName = runtimeConfig.EntityNameToDataSourceName[entityName];
+                        DataSource entityDataSource = runtimeConfig.DatasourceNameToDataSource[entityDataSourceName];
+
+                        if ( entityDataSource.DatabaseType is not DatabaseType.MSSQL && !IsValidDatabasePolicyForAction(action))
                         {
                             throw new DataApiBuilderException(
                                 message: $"The Create action does not support defining a database policy." +

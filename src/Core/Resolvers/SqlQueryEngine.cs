@@ -61,7 +61,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="context">HotChocolate Request Pipeline context containing request metadata</param>
         /// <param name="parameters">GraphQL Query Parameters from schema retrieved from ResolverMiddleware.GetParametersFromSchemaAndQueryFields()</param>
-        public async Task<Tuple<JsonDocument?, IMetadata?>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> parameters)
+        public async Task<Tuple<JsonDocument?, IMetadata?>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> parameters, string dbName = "")
         {
             SqlQueryStructure structure = new(
                 context,
@@ -89,7 +89,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Executes the given IMiddlewareContext of the GraphQL and expecting result of stored-procedure execution as
         /// list of Jsons and the relevant pagination metadata back.
         /// </summary>
-        public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata?>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object?> parameters)
+        public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata?>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object?> parameters, string dbName = "")
         {
             if (_sqlMetadataProvider.GraphQLStoredProcedureExposedNameToEntityNameMap.TryGetValue(context.Selection.Field.Name.Value, out string? entityName))
             {

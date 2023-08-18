@@ -63,7 +63,8 @@ query ($id: ID, $partitionKeyValue: String) {
         [TestInitialize]
         public void TestFixtureSetup()
         {
-            CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
+            CosmosClientProvider cosmosClientProvider = _application.Services.GetService<CosmosClientProvider>();
+            CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider._defaultDbName];
             cosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
             cosmosClient.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
             _idList = CreateItems(DATABASE_NAME, _containerName, TOTAL_ITEM_COUNT);
@@ -508,7 +509,8 @@ query {
         [TestCleanup]
         public void TestFixtureTearDown()
         {
-            CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
+            CosmosClientProvider cosmosClientProvider = _application.Services.GetService<CosmosClientProvider>();
+            CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider._defaultDbName];
             cosmosClient.GetDatabase(DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();
         }
     }

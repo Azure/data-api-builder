@@ -3,6 +3,7 @@
 
 using System.Data.Common;
 using Azure.Core;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.Identity;
@@ -28,15 +29,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// The managed identity Access Token string obtained
         /// from the configuration controller.
         /// </summary>
-        private readonly string? _accessTokenFromController;
+        private readonly Dictionary<string,string?> _accessTokenFromController;
 
         public DefaultAzureCredential AzureCredential { get; set; } = new();
 
         /// <summary>
-        /// The PostgreSql specific connection string builder.
+        /// The MySql specific connection string builder.
         /// </summary>
-        public override NpgsqlConnectionStringBuilder ConnectionStringBuilder
-            => (NpgsqlConnectionStringBuilder)base.ConnectionStringBuilder;
+        public override IDictionary<string, DbConnectionStringBuilder> ConnectionStringBuilders
+            => base.ConnectionStringBuilders;
 
         /// <summary>
         /// The saved cached access token obtained from DefaultAzureCredentials
@@ -44,7 +45,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         private AccessToken? _defaultAccessToken;
 
-        private bool _attemptToSetAccessToken;
+        private Dictionary<string, bool> _attemptToSetAccessToken;
 
         public PostgreSqlQueryExecutor(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -53,17 +54,33 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IHttpContextAccessor httpContextAccessor)
             : base(dbExceptionParser,
                   logger,
-                  new NpgsqlConnectionStringBuilder(runtimeConfigProvider.GetConfig().DataSource.ConnectionString),
                   runtimeConfigProvider,
-                  httpContextAccessor)
+                  httpContextAccessor,
+                  runtimeConfigProvider.GetConfig().DefaultDBName)
         {
+            IEnumerable<KeyValuePair<string, DataSource>> mysqldbs = runtimeConfigProvider.GetConfig().DatasourceNameToDataSource.Where(x => x.Value.DatabaseType == DatabaseType.PostgreSQL);
+            _attemptToSetAccessToken = new Dictionary<string, bool>();
             _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
-            _attemptToSetAccessToken =
-                ShouldManagedIdentityAccessBeAttempted();
 
-            if (runtimeConfigProvider.IsLateConfigured)
+            foreach (KeyValuePair<string, DataSource> dataSourcePair in mysqldbs)
             {
-                ConnectionStringBuilder.SslMode = SslMode.VerifyFull;
+                string dataSourceName = dataSourcePair.Key;
+                DataSource dataSource = dataSourcePair.Value;
+                NpgsqlConnectionStringBuilder builder = new(dataSource.ConnectionString);
+
+                if (runtimeConfigProvider.IsLateConfigured)
+                {
+                    builder.SslMode = SslMode.VerifyFull;
+                }
+
+                base.ConnectionStringBuilders.Add(dataSourceName, builder);
+                MsSqlOptions? msSqlOptions = dataSource.GetTypedOptions<MsSqlOptions>();
+                _attemptToSetAccessToken[dataSourceName] = ShouldManagedIdentityAccessBeAttempted(builder);
+            }
+
+            if (!_accessTokenFromController.ContainsKey(_defaultDbName))
+            {
+                _accessTokenFromController[_defaultDbName] = null;
             }
         }
 
@@ -76,14 +93,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public override async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn)
         {
             // Only attempt to get the access token if the connection string is in the appropriate format
-            if (_attemptToSetAccessToken)
+            if (_attemptToSetAccessToken[_defaultDbName])
             {
                 NpgsqlConnection sqlConn = (NpgsqlConnection)conn;
 
                 // If the configuration controller provided a managed identity access token use that,
                 // else use the default saved access token if still valid.
                 // Get a new token only if the saved token is null or expired.
-                string? accessToken = _accessTokenFromController ??
+                string? accessToken = _accessTokenFromController[_defaultDbName] ??
                     (IsDefaultAccessTokenValid() ?
                         ((AccessToken)_defaultAccessToken!).Token :
                         await GetAccessTokenAsync());
@@ -103,9 +120,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Determines if managed identity access should be attempted or not.
         /// It should only be attempted if the password is not provided
         /// </summary>
-        private bool ShouldManagedIdentityAccessBeAttempted()
+        private static bool ShouldManagedIdentityAccessBeAttempted(NpgsqlConnectionStringBuilder builder)
         {
-            return string.IsNullOrEmpty(ConnectionStringBuilder.Password);
+            return string.IsNullOrEmpty(builder.Password);
         }
 
         /// <summary>
@@ -160,7 +177,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // has a valid connection string without a password in it
                 if (firstAttemptAtDefaultAccessToken)
                 {
-                    _attemptToSetAccessToken = false;
+                    _attemptToSetAccessToken[_defaultDbName] = false;
                 }
             }
 

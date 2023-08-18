@@ -34,13 +34,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// The managed identity Access Token string obtained
         /// from the configuration controller.
         /// </summary>
-        private readonly string? _accessTokenFromController;
+        private readonly Dictionary<string,string?> _accessTokenFromController;
 
         /// <summary>
-        /// The MsSql specific connection string builder.
+        /// The MySql specific connection string builder.
         /// </summary>
-        public override SqlConnectionStringBuilder ConnectionStringBuilder
-            => (SqlConnectionStringBuilder)base.ConnectionStringBuilder;
+        public override IDictionary<string, DbConnectionStringBuilder> ConnectionStringBuilders
+            => base.ConnectionStringBuilders;
 
         public DefaultAzureCredential AzureCredential { get; set; } = new();
 
@@ -50,9 +50,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         private AccessToken? _defaultAccessToken;
 
-        private bool _attemptToSetAccessToken;
+        private Dictionary<string,bool> _attemptToSetAccessToken;
 
-        private bool _isSessionContextEnabled;
+        private Dictionary<string,bool> _isSessionContextEnabled;
 
         public MsSqlQueryExecutor(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -61,22 +61,38 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IHttpContextAccessor httpContextAccessor)
             : base(dbExceptionParser,
                   logger,
-                  new SqlConnectionStringBuilder(runtimeConfigProvider.GetConfig().DataSource.ConnectionString),
                   runtimeConfigProvider,
-                  httpContextAccessor)
+                  httpContextAccessor,
+                  runtimeConfigProvider.GetConfig().DefaultDBName)
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
+            IEnumerable<KeyValuePair<string,DataSource>> mssqldbs = runtimeConfig.DatasourceNameToDataSource.Where(x => x.Value.DatabaseType == DatabaseType.MSSQL);
+            _attemptToSetAccessToken = new Dictionary<string,bool>();
+            _isSessionContextEnabled = new Dictionary<string,bool>();
+            _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
 
-            if (runtimeConfigProvider.IsLateConfigured)
+            foreach (KeyValuePair<string,DataSource> dataSourcePair in mssqldbs)
             {
-                ConnectionStringBuilder.Encrypt = SqlConnectionEncryptOption.Mandatory;
-                ConnectionStringBuilder.TrustServerCertificate = false;
+                string dataSourceName = dataSourcePair.Key;
+                DataSource dataSource = dataSourcePair.Value;
+                SqlConnectionStringBuilder builder = new(dataSource.ConnectionString);
+
+                if (runtimeConfigProvider.IsLateConfigured)
+                {
+                    builder.Encrypt = SqlConnectionEncryptOption.Mandatory;
+                    builder.TrustServerCertificate = false;
+                }
+
+                ConnectionStringBuilders.Add(dataSourceName, builder);
+                MsSqlOptions? msSqlOptions = dataSource.GetTypedOptions<MsSqlOptions>();
+                _isSessionContextEnabled[dataSourceName] = msSqlOptions is null ? false : msSqlOptions.SetSessionContext;
+                _attemptToSetAccessToken[dataSourceName] = ShouldManagedIdentityAccessBeAttempted(builder);
             }
 
-            MsSqlOptions? msSqlOptions = runtimeConfig.DataSource.GetTypedOptions<MsSqlOptions>();
-            _isSessionContextEnabled = msSqlOptions is null ? false : msSqlOptions.SetSessionContext;
-            _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
-            _attemptToSetAccessToken = ShouldManagedIdentityAccessBeAttempted();
+            if (!_accessTokenFromController.ContainsKey(_defaultDbName))
+            {
+                _accessTokenFromController[_defaultDbName] = null;
+            }
         }
 
         /// <summary>
@@ -89,14 +105,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public override async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn)
         {
             // Only attempt to get the access token if the connection string is in the appropriate format
-            if (_attemptToSetAccessToken)
+            // using default for first db - maintaining backward compatibility for single db scenario.
+            if (_attemptToSetAccessToken[_defaultDbName])
             {
                 SqlConnection sqlConn = (SqlConnection)conn;
 
                 // If the configuration controller provided a managed identity access token use that,
                 // else use the default saved access token if still valid.
                 // Get a new token only if the saved token is null or expired.
-                string? accessToken = _accessTokenFromController ??
+                string? accessToken = _accessTokenFromController[_defaultDbName] ??
                     (IsDefaultAccessTokenValid() ?
                         ((AccessToken)_defaultAccessToken!).Token :
                         await GetAccessTokenAsync());
@@ -117,12 +134,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// a System.InvalidOperationException.
         /// 2. It is NOT a Windows Integrated Security scenario.
         /// </summary>
-        private bool ShouldManagedIdentityAccessBeAttempted()
+        private static bool ShouldManagedIdentityAccessBeAttempted(SqlConnectionStringBuilder builder)
         {
-            return string.IsNullOrEmpty(ConnectionStringBuilder.UserID) &&
-                string.IsNullOrEmpty(ConnectionStringBuilder.Password) &&
-                ConnectionStringBuilder.Authentication == SqlAuthenticationMethod.NotSpecified &&
-                !ConnectionStringBuilder.IntegratedSecurity;
+            return string.IsNullOrEmpty(builder.UserID) &&
+                string.IsNullOrEmpty(builder.Password) &&
+                builder.Authentication == SqlAuthenticationMethod.NotSpecified &&
+                !builder.IntegratedSecurity;
         }
 
         /// <summary>
@@ -168,9 +185,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="parameters">Dictionary of parameters/value required to execute the query.</param>
         /// <returns>empty string / query to set session parameters for the connection.</returns>
         /// <seealso cref="https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-set-session-context-transact-sql?view=sql-server-ver16"/>
-        public override string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, DbConnectionParam> parameters)
+        public override string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, DbConnectionParam> parameters, string dbName = "")
         {
-            if (httpContext is null || !_isSessionContextEnabled)
+            if (string.IsNullOrEmpty(dbName))
+            {
+                dbName = _defaultDbName;
+            }
+
+            if (httpContext is null || !_isSessionContextEnabled[dbName])
             {
                 return string.Empty;
             }

@@ -7,6 +7,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -661,7 +662,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual(expected: HttpStatusCode.OK, actual: authorizedResponse.StatusCode);
             CosmosClientProvider cosmosClientProvider = server.Services.GetService(typeof(CosmosClientProvider)) as CosmosClientProvider;
             Assert.IsNotNull(cosmosClientProvider);
-            Assert.IsNotNull(cosmosClientProvider.Client);
+            Assert.IsNotNull(cosmosClientProvider.Clients);
+            Assert.IsTrue(cosmosClientProvider.Clients.Any());
         }
 
         [TestMethod("Validates that local MsSql settings can be loaded and the correct classes are in the service provider."), TestCategory(TestCategory.MSSQL)]
@@ -2189,7 +2191,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             CosmosClientProvider cosmosClientProvider = server.Services.GetService(typeof(CosmosClientProvider)) as CosmosClientProvider;
             Assert.IsNotNull(cosmosClientProvider);
-            Assert.IsNotNull(cosmosClientProvider.Client);
+            Assert.IsNotNull(cosmosClientProvider.Clients);
+            Assert.IsTrue(cosmosClientProvider.Clients.Any());
         }
 
         private bool HandleException<T>(Exception e) where T : Exception

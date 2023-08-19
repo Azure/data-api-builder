@@ -67,30 +67,9 @@ namespace Azure.DataApiBuilder.Core.Parsers
                     // each column represents a property of the current entity we are adding
                     foreach (string column in sourceDefinition.Columns.Keys)
                     {
-                        // need to convert our column system type to an Edm type
                         Type columnSystemType = sourceDefinition.Columns[column].SystemType;
-                        EdmPrimitiveTypeKind type = EdmPrimitiveTypeKind.None;
-                        if (columnSystemType.IsArray)
-                        {
-                            columnSystemType = columnSystemType.GetElementType()!;
-                        }
-
-                        type = columnSystemType.Name switch
-                        {
-                            "String" => EdmPrimitiveTypeKind.String,
-                            "Guid" => EdmPrimitiveTypeKind.Guid,
-                            "Byte" => EdmPrimitiveTypeKind.Byte,
-                            "Int16" => EdmPrimitiveTypeKind.Int16,
-                            "Int32" => EdmPrimitiveTypeKind.Int32,
-                            "Int64" => EdmPrimitiveTypeKind.Int64,
-                            "Single" => EdmPrimitiveTypeKind.Single,
-                            "Double" => EdmPrimitiveTypeKind.Double,
-                            "Decimal" => EdmPrimitiveTypeKind.Decimal,
-                            "Boolean" => EdmPrimitiveTypeKind.Boolean,
-                            "DateTime" or "DateTimeOffset" => EdmPrimitiveTypeKind.DateTimeOffset,
-                            "Date" => EdmPrimitiveTypeKind.Date,
-                            _ => throw new ArgumentException($"Column type {columnSystemType.Name} not yet supported."),
-                        };
+                        // need to convert our column system type to an Edm type
+                        EdmPrimitiveTypeKind type = TypeHelper.GetEdmPrimitiveTypeFromSystemType(columnSystemType);
 
                         // The mapped (aliased) field name defined in the runtime config is used to create a representative
                         // OData StructuralProperty. The created property is then added to the EdmEntityType.

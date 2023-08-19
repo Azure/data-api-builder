@@ -815,12 +815,12 @@ namespace Cli
         /// <param name="supportedHttpVerbs">Supported HTTP verbs for the entity.</param>
         /// <param name="isCosmosDbNoSql">True when the entity is a CosmosDB NoSQL entity, and if it is true, REST is disabled.</param>
         /// <returns>Constructed REST options for the entity.</returns>
-        public static EntityRestOptions ConstructRestOptions(string? restRoute, SupportedHttpVerb[] supportedHttpVerbs, bool isCosmosDbNoSql)
+        public static EntityRestOptions ConstructRestOptions(string? restRoute, SupportedHttpVerb[]? supportedHttpVerbs, bool isCosmosDbNoSql)
         {
             // REST is not supported for CosmosDB NoSQL, so we'll forcibly disable it.
             if (isCosmosDbNoSql)
             {
-                return new(Array.Empty<SupportedHttpVerb>(), Enabled: false);
+                return new(Enabled: false);
             }
 
             EntityRestOptions restOptions = new(supportedHttpVerbs);

@@ -24,6 +24,7 @@ using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
@@ -444,6 +445,63 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             {
                 Assert.AreEqual(EntitySourceType.Table, deserializedRuntimeConfig.Entities["MyEntity"].Source.Type);
             }
+        }
+
+        /// <summary>
+        /// Checks if the connection string provided in the config is correctly updated for MSSQL.
+        /// If the connection string already contains the `Application Name` property, it should append the DataApiBuilder Application Name to the existing value.
+        /// If not, it should append the property `Application Name` to the connection string.
+        /// </summary>
+        /// <param name="databaseType">database type.</param>
+        /// <param name="providedConnectionString">connection string provided in the config.</param>
+        /// <param name="expectedUpdatedConnectionString">Updated connection string with Application Name.</param>
+        /// <param name="isHostedScenario">If Dab is hosted or OSS.</param>
+        [DataTestMethod]
+        [DataRow(DatabaseType.MSSQL, "Data Source=<>;", "Data Source=<>;Application Name=dab_oss_1.0.0", false, DisplayName = "[MSSQL]:Adding Application Name property to connectionString with dab_oss app name.")]
+        [DataRow(DatabaseType.MySQL, "Something;", "Something;", false, DisplayName = "[MYSQL]:No Change in connectionString without Application name for DAB oss.")]
+        [DataRow(DatabaseType.PostgreSQL, "Something;", "Something;", false, DisplayName = "[PGSQL]:No Change in connectionString without Application name for DAB oss.")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;", "Something;", false, DisplayName = "[COSMOSDB_PGSQL]:No Change in connectionString without Application name for DAB oss.")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;", "Something;", false, DisplayName = "[COSMOSDB_NOSQL]:No Change in connectionString without Application name for DAB oss.")]
+        [DataRow(DatabaseType.MSSQL, "Data Source=<>;Application Name=CustAppName;", "Data Source=<>;Application Name=CustAppName,dab_oss_1.0.0", false, DisplayName = "[MSSQL]:Updating connectionString containing customer Application name with dab_oss app name.")]
+        [DataRow(DatabaseType.MSSQL, "Data Source=<>;Application Name=CustAppName;User ID=<>", "Data Source=<>;User ID=<>;Application Name=CustAppName,dab_oss_1.0.0", false, DisplayName = "[MSSQL2]:Updating connectionString containing customer Application name with dab_oss app name.")]
+        [DataRow(DatabaseType.MySQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[MYSQL]:No Change in connectionString containing customer Application name for DAB oss.")]
+        [DataRow(DatabaseType.PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[PGSQL]:No Change in connectionString containing customer Application name for DAB oss.")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[COSMOSDB_PGSQL]:No Change in connectionString containing customer Application name for DAB oss.")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[COSMOSDB_NOSQL]:No Change in connectionString containg customer Application name for DAB oss.")]
+        [DataRow(DatabaseType.MSSQL, "Data Source=<>;", "Data Source=<>;Application Name=dab_hosted_1.0.0", true, DisplayName = "[MSSQL]:Adding Application Name property to connectionString with dab_hosted app.")]
+        [DataRow(DatabaseType.MySQL, "Something;", "Something;", true, DisplayName = "[MYSQL]:No Change in connectionString without Application name for DAB hosted.")]
+        [DataRow(DatabaseType.PostgreSQL, "Something;", "Something;", true, DisplayName = "[PGSQL]:No Change in connectionString without Application name for DAB hosted.")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;", "Something;", true, DisplayName = "[COSMOSDB_PGSQL]:No Change in connectionString without Application name for DAB hosted.")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;", "Something;", true, DisplayName = "[COSMOSDB_NOSQL]:No Change in connectionString without Application name for DAB hosted.")]
+        [DataRow(DatabaseType.MSSQL, "Data Source=<>;Application Name=CustAppName;", "Data Source=<>;Application Name=CustAppName,dab_hosted_1.0.0", true, DisplayName = "[MSSQL]:Updating connectionString containing customer Application name with dab_hosted app name.")]
+        [DataRow(DatabaseType.MySQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true, DisplayName = "[MYSQL]:No Change in connectionString containing customer Application name for DAB hosted.")]
+        [DataRow(DatabaseType.PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true, DisplayName = "[PGSQL]:No Change in connectionString containing customer Application name for DAB hosted.")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true, DisplayName = "[COSMOSDB_PGSQL]:No Change in connectionString containing customer Application name for DAB hosted.")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true, DisplayName = "[COSMOSDB_NOSQL]:No Change in connectionString containing customer Application name for DAB hosted.")]
+        [DataRow(DatabaseType.MSSQL, "Data Source=<>;App=CustAppName;User ID=<>", "Data Source=<>;User ID=<>;Application Name=CustAppName,dab_oss_1.0.0", false, DisplayName = "[MSSQL]:Updating connectionString containing `App` for customer Application name with dab_oss app name.")]
+        [DataRow(DatabaseType.MySQL, "Something1;App=CustAppName;Something2;", "Something1;App=CustAppName;Something2;", false, DisplayName = "[MySQL]:No updates for `App` preoperty in connectionString for DBs other than MSSQL.")]
+        [DataRow(DatabaseType.MySQL, "username=dabApp;App=CustAppName;Something2;", "username=dabApp;App=CustAppName;Something2;", false, DisplayName = "[MySQL]:No updates for other properties in connectionString containing `App`.")]
+        public void TestConnectionStringIsCorrectlyUpdatedWithApplicationName(
+            DatabaseType databaseType,
+            string providedConnectionString,
+            string expectedUpdatedConnectionString,
+            bool isHostedScenario)
+        {
+            if (isHostedScenario)
+            {
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, "dab_hosted_1.0.0");
+            }
+            else
+            {
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, null);
+            }
+
+            RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(databaseType, providedConnectionString);
+
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(runtimeConfig.ToJson(), out RuntimeConfig updatedRuntimeConfig));
+
+            string actualUpdatedConnectionString = updatedRuntimeConfig.DataSource.ConnectionString;
+            Assert.AreEqual(expectedUpdatedConnectionString, actualUpdatedConnectionString);
         }
 
         [TestMethod("Validates that once the configuration is set, the config controller isn't reachable."), TestCategory(TestCategory.COSMOSDBNOSQL)]
@@ -1343,7 +1401,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
             Entity viewEntity = new(
                 Source: new("books_view_all", EntitySourceType.Table, null, null),
-                Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
+                Rest: new(Enabled: true),
                 GraphQL: new("", ""),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,
@@ -1539,7 +1597,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             Entity entity = new(
                 Source: new("graphql_incompatible", EntitySourceType.Table, null, null),
-                Rest: new(Array.Empty<SupportedHttpVerb>(), Enabled: false),
+                Rest: new(Enabled: false),
                 GraphQL: new("graphql_incompatible", "graphql_incompatibles", entityGraphQLEnabled),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,
@@ -1673,7 +1731,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             // file creation function.
             Entity requiredEntity = new(
                 Source: new("books", EntitySourceType.Table, null, null),
-                Rest: new(Array.Empty<SupportedHttpVerb>(), Enabled: false),
+                Rest: new(Enabled: false),
                 GraphQL: new("book", "books"),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,
@@ -1727,7 +1785,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             // Create the entities under test.
             Entity restEnabledEntity = new(
                 Source: new("books", EntitySourceType.Table, null, null),
-                Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
+                Rest: new(Enabled: true),
                 GraphQL: new("", "", false),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,
@@ -1735,7 +1793,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             Entity restDisabledEntity = new(
                 Source: new("publishers", EntitySourceType.Table, null, null),
-                Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS, Enabled: false),
+                Rest: new(Enabled: false),
                 GraphQL: new("publisher", "publishers", true),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,
@@ -2190,6 +2248,30 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             CosmosClientProvider cosmosClientProvider = server.Services.GetService(typeof(CosmosClientProvider)) as CosmosClientProvider;
             Assert.IsNotNull(cosmosClientProvider);
             Assert.IsNotNull(cosmosClientProvider.Client);
+        }
+
+        /// <summary>
+        /// Create basic runtime config with given DatabaseType and connectionString with no entity.
+        /// </summary>
+        /// <returns></returns>
+        private static RuntimeConfig CreateBasicRuntimeConfigWithNoEntity(
+            DatabaseType dbType = DatabaseType.MSSQL,
+            string connectionString = "")
+        {
+            DataSource dataSource = new(dbType, connectionString, new());
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "testSchema.json",
+                DataSource: dataSource,
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(null, null)
+                ),
+                Entities: new(new Dictionary<string, Entity>())
+            );
+
+            return runtimeConfig;
         }
 
         private bool HandleException<T>(Exception e) where T : Exception

@@ -44,10 +44,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             new string[] { "@env(')", "@env()", "@env(')'@env('()", "@env('@env()'", "@@eennvv((''''))" },
             new string[] { "@env(')", "@env()", "@env(')'@env('()", "@env('@env()'", "@@eennvv((''''))" },
             true,
+            true,
             DisplayName = "Replacement strings that won't match.")]
         [DataRow(
             new string[] { "@env('envVarName')", "@env(@env('envVarName'))", "@en@env('envVarName')", "@env'()@env'@env('envVarName')')')" },
             new string[] { "envVarValue", "@env(envVarValue)", "@enenvVarValue", "@env'()@env'envVarValue')')" },
+            false,
             true,
             DisplayName = "Replacement strings that match.")]
         //  since we match strings surrounded by single quotes,
@@ -59,37 +61,48 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(
             new string[] { "@env(')", "@env()", "@env('envVarName')", "@env(''envVarName')", "@env('envVarName'')", "@env(''envVarName'')" },
             new string[] { "@env(')", "@env()", "envVarValue", "_envVarValue", "envVarValue_", "_envVarValue_" },
+            false,
             true,
             DisplayName = "Replacement strings with some matches.")]
         [DataRow(
             new string[] { "@env('envVarName')", "@env(@env('envVarName'))", "@en@env('envVarName')", "@env'()@env'@env('envVarName')')')" },
             new string[] { "envVarValue", "@env(envVarValue)", "@enenvVarValue", "@env'()@env'envVarValue')')" },
             false,
+            false,
             DisplayName = "Replacement strings that match, but shouldn't be replaced.")]
         public void CheckConfigEnvParsingTest(
             string[] repKeys,
             string[] repValues,
+            bool exceptionThrown,
             bool replaceEnvVar)
         {
             SetEnvVariables();
-            RuntimeConfig expectedConfig;
-            if (replaceEnvVar)
+            try
             {
-                Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
-                    GetModifiedJsonString(repValues, @"""mssql"""), out expectedConfig, replaceEnvVar: replaceEnvVar),
-                    "Should read the expected config");
-            }
-            else
-            {
-                Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
-                    GetModifiedJsonString(repKeys, @"""@env('enumVarName')"""), out expectedConfig, replaceEnvVar: replaceEnvVar),
-                    "Should read the expected config");
-            }
+                RuntimeConfig expectedConfig;
+                if (replaceEnvVar)
+                {
+                    Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
+                        GetModifiedJsonString(repValues, @"""mssql"""), out expectedConfig, replaceEnvVar: replaceEnvVar),
+                        "Should read the expected config");
+                }
+                else
+                {
+                    Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
+                        GetModifiedJsonString(repKeys, @"""@env('enumVarName')"""), out expectedConfig, replaceEnvVar: replaceEnvVar),
+                        "Should read the expected config");
+                }
 
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
-                GetModifiedJsonString(repKeys, @"""@env('enumVarName')"""), out RuntimeConfig actualConfig, replaceEnvVar: replaceEnvVar),
-                "Should read actual config");
-            Assert.AreEqual(expectedConfig.ToJson(), actualConfig.ToJson());
+                Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
+                    GetModifiedJsonString(repKeys, @"""@env('enumVarName')"""), out RuntimeConfig actualConfig, replaceEnvVar: replaceEnvVar),
+                    "Should read actual config");
+                Assert.AreEqual(expectedConfig.ToJson(), actualConfig.ToJson());
+            }
+            catch (Exception ex)
+             {
+                Assert.IsTrue(exceptionThrown);
+                Assert.AreEqual("A valid Connection String should be provided.", ex.Message);
+            }
         }
 
         /// <summary>

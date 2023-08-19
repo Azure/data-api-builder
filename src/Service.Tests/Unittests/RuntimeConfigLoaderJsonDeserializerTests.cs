@@ -99,7 +99,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Assert.AreEqual(expectedConfig.ToJson(), actualConfig.ToJson());
             }
             catch (Exception ex)
-             {
+            {
                 Assert.IsTrue(exceptionThrown);
                 Assert.AreEqual("A valid Connection String should be provided.", ex.Message);
             }

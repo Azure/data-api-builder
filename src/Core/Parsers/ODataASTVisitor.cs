@@ -143,6 +143,8 @@ namespace Azure.DataApiBuilder.Core.Parsers
                         return DateTimeOffset.Parse(param);
                     case EdmPrimitiveTypeKind.String:
                         return param;
+                    case EdmPrimitiveTypeKind.TimeOfDay:
+                        return TimeOnly.Parse(param);
                     default:
                         // should never happen due to the config being validated for correct types
                         throw new NotSupportedException($"{edmType} is not supported");

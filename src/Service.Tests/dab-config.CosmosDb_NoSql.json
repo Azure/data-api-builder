@@ -45,8 +45,7 @@
     }
   },
   "rest": {
-    "enabled": false,
-    "methods": []
+    "enabled": false
   },
   "permissions": [
     {
@@ -103,8 +102,7 @@
     }
   },
   "rest": {
-    "enabled": false,
-    "methods": []
+    "enabled": false
   },
   "permissions": [
     {
@@ -138,8 +136,7 @@
     }
   },
   "rest": {
-    "enabled": false,
-    "methods": []
+    "enabled": false
   },
   "permissions": [
     {
@@ -190,8 +187,7 @@
     }
   },
   "rest": {
-    "enabled": false,
-    "methods": []
+    "enabled": false
   },
   "permissions": [
     {
@@ -225,8 +221,7 @@
     }
   },
   "rest": {
-    "enabled": false,
-    "methods": []
+    "enabled": false
   },
   "permissions": [
     {
@@ -277,8 +272,7 @@
     }
   },
   "rest": {
-    "enabled": false,
-    "methods": []
+    "enabled": false
   },
   "permissions": [
     {
@@ -351,8 +345,7 @@
     }
   },
   "rest": {
-    "enabled": false,
-    "methods": []
+    "enabled": false
   },
   "permissions": [
     {

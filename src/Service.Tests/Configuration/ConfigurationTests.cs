@@ -1483,7 +1483,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// a Location header is to provide a URL against which a GET request can be performed to fetch the details of the new item.
         /// Base Route is configured in the config file used for this test. So, it is expected that the Location header returned will contain the base-route.
         /// This test performs a POST request, and checks if it results in a 201 response. If so, the test validates the correctness of the Location header in two steps.
-        /// Since, base-route has significance only in the SWA-DAB integrated scenario and this test is executed against DAB running independently,
+        /// Since base-route has significance only in the SWA-DAB integrated scenario and this test is executed against DAB running independently,
         /// a subsequent GET request against the Location header will result in an error. So, the correctness of the base-route returned is validated with the help of
         /// an expected location header value. The correctness of the PK part of the Location string is validated by performing a GET request after stripping off
         /// the base-route from the Location URL.
@@ -1497,10 +1497,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestCategory(TestCategory.MSSQL)]
         [DataRow(EntitySourceType.Table, "/api/Book", "/data-api", "http://localhost/data-api/api/Book/id/", DisplayName = "Location Header validation - Table, Base Route configured")]
         [DataRow(EntitySourceType.StoredProcedure, "/api/GetBooks", "/data-api", "http://localhost/data-api/api/GetBooks", DisplayName = "Location Header validation - Stored Procedure, Base Route configured")]
-        public async Task ValidateLocationHeaderWhenBaseRouteIsConfigured(EntitySourceType entityType,
-                                                                          string requestPath,
-                                                                          string baseRoute,
-                                                                          string expectedLocationHeader)
+        public async Task ValidateLocationHeaderWhenBaseRouteIsConfigured(
+            EntitySourceType entityType,
+            string requestPath,
+            string baseRoute,
+            string expectedLocationHeader)
         {
             GraphQLRuntimeOptions graphqlOptions = new(Enabled: false);
             RestRuntimeOptions restRuntimeOptions = new(Enabled: true);
@@ -1573,7 +1574,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 // APIs are hosted on /api. But, the returned Location header in this test will contain the configured base-route. So, this needs to be
                 // removed before performing a subsequent GET request.
                 string path = response.Headers.Location.AbsolutePath;
-                string completeUrl = "http://localhost" + path.Substring(baseRoute.Length - 1);
+                string completeUrl = path.Substring(baseRoute.Length);
 
                 HttpRequestMessage followUpRequest = new(HttpMethod.Get, completeUrl);
                 HttpResponseMessage followUpResponse = await client.SendAsync(followUpRequest);

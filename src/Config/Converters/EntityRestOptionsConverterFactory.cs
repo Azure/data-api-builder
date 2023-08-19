@@ -144,13 +144,18 @@ internal class EntityRestOptionsConverterFactory : JsonConverterFactory
                 writer.WriteNull("path");
             }
 
-            writer.WriteStartArray("methods");
-            foreach (SupportedHttpVerb method in value.Methods)
+            if (value.Methods is not null && value.Methods.Length > 0)
             {
-                writer.WriteStringValue(JsonSerializer.SerializeToElement(method, options).GetString());
+
+                writer.WriteStartArray("methods");
+                foreach (SupportedHttpVerb method in value.Methods)
+                {
+                    writer.WriteStringValue(JsonSerializer.SerializeToElement(method, options).GetString());
+                }
+
+                writer.WriteEndArray();
             }
 
-            writer.WriteEndArray();
             writer.WriteEndObject();
         }
     }

@@ -27,6 +27,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   ) AS subq"
             },
             {
+                "FindByDateTimePKTest",
+                @"
+                  SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'instant', instant,
+                                        'price', price, 'is_wholesale_price', is_wholesale_price) AS data
+                  FROM (
+                      SELECT categoryid, pieceid, instant, price, if(is_wholesale_price = 1, cast(TRUE as json), cast(FALSE as json)) AS is_wholesale_price
+                      FROM " + _tableWithDateTimePK + @"
+                       WHERE categoryid = 2 AND pieceid = 1 AND instant = '2023-08-21 15:11:04'
+                      LIMIT 1
+                  ) AS subq"
+            },
+            {
                 "FindEmptyTable",
                 @"
                     SELECT JSON_OBJECT('id', id) AS data

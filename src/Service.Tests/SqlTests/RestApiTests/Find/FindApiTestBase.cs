@@ -29,13 +29,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         /// Tests the REST Api for FindById operation without a query string.
         /// </summary>
         [TestMethod]
-        public async Task FindByIdTest()
+        public async Task FindByPKTest()
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/2",
                 queryString: string.Empty,
                 entityNameOrPath: _integrationEntityName,
-                sqlQuery: GetQuery(nameof(FindByIdTest))
+                sqlQuery: GetQuery("FindByIdTest")
+            );
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/2/pieceid/1/instant/2023-08-21T15:11:04",
+                queryString: string.Empty,
+                entityNameOrPath: _entityWithDateTimePK,
+                sqlQuery: GetQuery("FindByDateTimePKTest")
             );
         }
 

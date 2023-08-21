@@ -16,8 +16,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
     [TestClass]
     public abstract class GraphQLSupportedTypesTestBase : SqlTestBase
     {
-        protected const string TYPE_TABLE = "TypeTable";
-
         #region Tests
 
         [DataTestMethod]

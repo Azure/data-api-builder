@@ -322,6 +322,7 @@ INSERT INTO comics(id, title, "categoryName", series_id)
 VALUES (1, 'Star Trek', 'SciFi', NULL), (2, 'Cinderella', 'Tales', 3001),(3,'Únknown','', 3002), (4, 'Alexander the Great', 'Historical', NULL);INSERT INTO stocks(categoryid, pieceid, "categoryName") VALUES (1, 1, 'SciFi'), (2, 1, 'Tales'),(0,1,''),(100, 99, 'Historical');
 INSERT INTO brokers("ID Number", "First Name", "Last Name") VALUES (1, 'Michael', 'Burry'), (2, 'Jordan', 'Belfort');
 INSERT INTO stocks_price(categoryid, pieceid, price, is_wholesale_price) VALUES (2, 1, 100.57, True), (1, 1, 42.75, False);
+INSERT INTO stocks_price(categoryid, pieceid, instant, price, is_wholesale_price) VALUES (2, 1, '2023-08-21 15:11:04', 100.57, True);
 INSERT INTO type_table(id, short_types, int_types, long_types, string_types, single_types, float_types, decimal_types, boolean_types, datetime_types, bytearray_types) VALUES
     (1, 1, 1, 1, '', 0.33, 0.33, 0.333333, true, '1999-01-08 10:23:54', '\xABCDEF0123'),
     (2, -1, -1, -1, 'lksa;jdflasdf;alsdflksdfkldj', -9.2, -9.2, -9.292929, false, '19990108 10:23:00', '\x98AB7511AABB1234'),

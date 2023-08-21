@@ -486,7 +486,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// Utility function to do special comparisons for some of the extended types
         /// if json compare doesn't suffice
         /// </summary>
-        public static void PerformTestEqualsForExtendedTypes(string type, string expected, string actual)
+        private static void PerformTestEqualsForExtendedTypes(string type, string expected, string actual)
         {
             switch (type)
             {
@@ -501,10 +501,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 case DATE_TYPE:
                 case SMALLDATETIME_TYPE:
                 case DATETIME_TYPE:
-                    CompareDateTimeResults(actual.ToString(), expected, type);
-                    break;
                 case DATETIME2_TYPE:
-                    CompareDateTime2Results(actual.ToString(), expected);
+                    CompareDateTimeResults(actual.ToString(), expected, type);
                     break;
                 case DATETIMEOFFSET_TYPE:
                     CompareDateTimeOffsetResults(actual.ToString(), expected);
@@ -591,37 +589,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             else
             {
                 AssertOnFields(fieldName, actualDateTime, expectedDateTime);
-            }
-        }
-
-        /// <summary>
-        /// Required due to different format between mysql datetime and HotChocolate datetime
-        /// result
-        /// </summary>
-        private static void CompareDateTime2Results(string actual, string expected)
-        {
-            string fieldName = "datetime2_types";
-
-            using JsonDocument actualJsonDoc = JsonDocument.Parse(actual);
-            using JsonDocument expectedJsonDoc = JsonDocument.Parse(expected);
-
-            if (actualJsonDoc.RootElement.ValueKind is JsonValueKind.Array)
-            {
-                ValidateArrayResults(actualJsonDoc, expectedJsonDoc, fieldName);
-                return;
-            }
-
-            string actualDateTime2 = actualJsonDoc.RootElement.GetProperty(fieldName).ToString();
-            string expectedDateTime2 = expectedJsonDoc.RootElement.GetProperty(fieldName).ToString();
-
-            // handles cases when one of the values is null
-            if (string.IsNullOrEmpty(actualDateTime2) || string.IsNullOrEmpty(expectedDateTime2))
-            {
-                Assert.AreEqual(expectedDateTime2, actualDateTime2);
-            }
-            else
-            {
-                AssertOnFields(fieldName, actualDateTime2, expectedDateTime2);
             }
         }
 

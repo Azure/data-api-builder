@@ -1084,7 +1084,7 @@
         }
       },
       "rest": {
-        "enabled": false
+        "enabled": true
       },
       "permissions": [
         {

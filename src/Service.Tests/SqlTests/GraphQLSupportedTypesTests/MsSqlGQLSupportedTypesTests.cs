@@ -28,7 +28,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         }
 
         /// <summary>
-        /// Test to validate functioning of GraphQL query with filter and orderby with datetime2 column based on the given parameters.
+        /// Test to validate functioning of GraphQL query with filter and orderby with datetime column types specific to MsSql
+        /// i.e. smalldatetime, datetime2.
         /// </summary>
         [DataTestMethod]
         [DataRow(DATE_TYPE, "eq", "\'1999-01-08\'", "\"1999-01-08\"", "=", DisplayName = "date type filter and orderby test with eq operator")]

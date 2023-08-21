@@ -1210,6 +1210,14 @@
       },
       "permissions": [
         {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "read"
+            }
+          ]
+        },
+        {
           "role": "authenticated",
           "actions": [
             {

@@ -74,8 +74,8 @@ public abstract class RuntimeConfigLoader
             }
 
             // Add Application Name for telemetry for MsSQL
-            // Do this only when environment variables have been replaced since it parsing
-            // the connection string will result in an exception.
+            // Do this only when environment variables have been replaced since
+            // otherwise parsing the connection string may result in an exception
             if (config.DataSource.DatabaseType is DatabaseType.MSSQL && replaceEnvVar)
             {
                 updatedConnectionString = GetConnectionStringWithApplicationName(updatedConnectionString);

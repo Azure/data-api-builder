@@ -1152,6 +1152,14 @@
             ]
           },
           {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Read
+              }
+            ]
+          },
+          {
             Role: TestNestedFilterFieldIsNull_ColumnForbidden,
             Actions: [
               {

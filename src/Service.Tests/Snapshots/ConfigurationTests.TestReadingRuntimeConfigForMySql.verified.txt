@@ -1007,7 +1007,7 @@
           Enabled: true
         },
         Rest: {
-          Enabled: false
+          Enabled: true
         },
         Permissions: [
           {

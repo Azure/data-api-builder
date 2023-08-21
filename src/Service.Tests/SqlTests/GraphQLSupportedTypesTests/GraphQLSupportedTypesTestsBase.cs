@@ -30,6 +30,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(BOOLEAN_TYPE, 1, DisplayName = "Query by PK test selecting only boolean_types.")]
         [DataRow(DATETIME_TYPE, 2, DisplayName = "Query by PK test selecting only datetime_types.")]
         [DataRow(DATETIME2_TYPE, 3, DisplayName = "Query by PK test selecting only datetime2_types.")]
+        [DataRow(DATETIMEOFFSET_TYPE, 4, DisplayName = "Query by PK test selecting only datetimeoffset_types.")]
         [DataRow(SMALLDATETIME_TYPE, 4, DisplayName = "Query by PK test selecting only smalldatetime_types.")]
         [DataRow(DATE_TYPE, 1, DisplayName = "Query by PK test selecting only date_types.")]
         [DataRow(TIME_TYPE, 2, DisplayName = "Query by PK test selecting only time_types.")]
@@ -132,34 +133,60 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// The test checks various datetime data types such as datetime, datetimeoffset, and time.
         /// </summary>
         [DataTestMethod]
-        [DataRow(DATETIME_TYPE, "gt", "\'1999-01-08\'", "\"1999-01-08\"", " > ")]
-        [DataRow(DATETIME_TYPE, "gte", "\'1999-01-08\'", "\"1999-01-08\"", " >= ")]
-        [DataRow(DATETIME_TYPE, "lt", "\'1753-01-01\'", "\"1753-01-01\"", " < ")]
-        [DataRow(DATETIME_TYPE, "lte", "\'1753-01-01\'", "\"1753-01-01\"", " <= ")]
-        [DataRow(DATETIME_TYPE, "neq", "\'1753-01-01\'", "\"1753-01-01\"", "!=")]
-        [DataRow(DATETIME_TYPE, "eq", "\'1753-01-01\'", "\"1753-01-01\"", "=")]
-        [DataRow(DATETIME_TYPE, "gt", "\'1999-01-08 10:23:00\'", "\"1999-01-08 10:23:00\"", " > ")]
-        [DataRow(DATETIME_TYPE, "gte", "\'1999-01-08 10:23:00\'", "\"1999-01-08 10:23:00\"", " >= ")]
-        [DataRow(DATETIME_TYPE, "lt", "\'9999-12-31 23:59:59\'", "\"9999-12-31 23:59:59\"", " < ")]
-        [DataRow(DATETIME_TYPE, "lte", "\'9999-12-31 23:59:59\'", "\"9999-12-31 23:59:59\"", " <= ")]
-        [DataRow(DATETIME_TYPE, "neq", "\'1999-01-08 10:23:00\'", "\"1999-01-08 10:23:00\"", "!=")]
-        [DataRow(DATETIME_TYPE, "eq", "\'1999-01-08 10:23:00\'", "\"1999-01-08 10:23:00\"", "=")]
-        [DataRow(DATETIME_TYPE, "gt", "\'1999-01-08 10:23:00.9999999\'", "\"1999-01-08 10:23:00.9999999\"", " > ")]
-        [DataRow(DATETIME_TYPE, "gte", "\'1999-01-08 10:23:00.9999999\'", "\"1999-01-08 10:23:00.9999999\"", " >= ")]
-        [DataRow(DATETIME_TYPE, "lt", "\'9999-12-31 23:59:59.9999999\'", "\"9999-12-31 23:59:59.9999999\"", " < ")]
-        [DataRow(DATETIME_TYPE, "lte", "\'9999-12-31 23:59:59.9999999\'", "\"9999-12-31 23:59:59.9999999\"", " <= ")]
-        [DataRow(DATETIME_TYPE, "neq", "\'1999-01-08 10:23:00.9999999\'", "\"1999-01-08 10:23:00.9999999\"", "!=")]
-        [DataRow(DATETIME_TYPE, "eq", "\'1999-01-08 10:23:00.9999999\'", "\"1999-01-08 10:23:00.9999999\"", "=")]
-        [DataRow(DATETIME_TYPE, "neq", "\'1999-01-08 10:23:54.9999999-14:00\'", "\"1999-01-08 10:23:54.9999999-14:00\"", "!=")]
-        [DataRow(DATETIME_TYPE, "eq", "\'1999-01-08 10:23:54.9999999-14:00\'", "\"1999-01-08 10:23:54.9999999-14:00\"", "=")]
-        [DataRow(DATETIMEOFFSET_TYPE, "neq", "\'1999-01-08 10:23:54.9999999-14:00\'", "\"1999-01-08 10:23:54.9999999-14:00\"", "!=")]
-        [DataRow(DATETIMEOFFSET_TYPE, "eq", "\'1999-01-08 10:23:54.9999999-14:00\'", "\"1999-01-08 10:23:54.9999999-14:00\"", "=")]
-        [DataRow(DATETIME_TYPE, "gt", "\'1999-01-08 10:22:00\'", "\"1999-01-08 10:22:00\"", " > ")]
-        [DataRow(DATETIME_TYPE, "gte", "\'1999-01-08 10:23:54\'", "\"1999-01-08 10:23:54\"", " >= ")]
-        [DataRow(DATETIME_TYPE, "lt", "\'2079-06-06\'", "\"2079-06-06\"", " < ")]
-        [DataRow(DATETIME_TYPE, "lte", "\'2079-06-06\'", "\"2079-06-06\"", " <= ")]
-        [DataRow(DATETIME_TYPE, "neq", "\'1999-01-08 10:23:54\'", "\"1999-01-08 10:23:54\"", "!=")]
-        [DataRow(DATETIME_TYPE, "eq", "\'1999-01-08 10:23:54\'", "\"1999-01-08 10:23:54\"", "=")]
+        [DataRow(DATETIME_TYPE, "eq", "'1999-01-08'", "\"1999-01-08\"", " = ",
+            DisplayName = "datetime type filter and orderby test with eq operator and specific value '1999-01-08'.")]
+        [DataRow(DATETIME_TYPE, "lt", "'1753-01-01'", "\"1753-01-01\"", " < ",
+            DisplayName = "datetime type filter and orderby test with lt operator and specific value '1753-01-01'.")]
+        [DataRow(DATETIME_TYPE, "lte", "'1753-01-01'", "\"1753-01-01\"", " <= ",
+            DisplayName = "datetime type filter and orderby test with lte operator and specific value '1753-01-01'.")]
+        [DataRow(DATETIME_TYPE, "neq", "'1753-01-01'", "\"1753-01-01\"", "!=",
+            DisplayName = "datetime type filter and orderby test with neq operator and specific value '1753-01-01'.")]
+        [DataRow(DATETIME_TYPE, "eq", "'1753-01-01'", "\"1753-01-01\"", "=",
+            DisplayName = "datetime type filter and orderby test with eq operator and specific value '1753-01-01'.")]
+        [DataRow(DATETIME_TYPE, "gt", "'1999-01-08 10:23:00'", "\"1999-01-08 10:23:00\"", " > ",
+            DisplayName = "datetime type filter and orderby test with gt operator and specific value '1999-01-08 10:23:00'.")]
+        [DataRow(DATETIME_TYPE, "gte", "'1999-01-08 10:23:00'", "\"1999-01-08 10:23:00\"", " >= ",
+            DisplayName = "datetime type filter and orderby test with gte operator and specific value '1999-01-08 10:23:00'.")]
+        [DataRow(DATETIME_TYPE, "lt", "'9999-12-31 23:59:59'", "\"9999-12-31 23:59:59\"", " < ",
+            DisplayName = "datetime type filter and orderby test with lt operator and specific value '9999-12-31 23:59:59'.")]
+        [DataRow(DATETIME_TYPE, "lte", "'9999-12-31 23:59:59'", "\"9999-12-31 23:59:59\"", " <= ",
+            DisplayName = "datetime type filter and orderby test with lte operator and specific value '9999-12-31 23:59:59'.")]
+        [DataRow(DATETIME_TYPE, "neq", "'1999-01-08 10:23:00'", "\"1999-01-08 10:23:00\"", "!=",
+            DisplayName = "datetime type filter and orderby test with neq operator and specific value '1999-01-08 10:23:00'.")]
+        [DataRow(DATETIME_TYPE, "eq", "'1999-01-08 10:23:00'", "\"1999-01-08 10:23:00\"", "=",
+            DisplayName = "datetime type filter and orderby test with eq operator and specific value '1999-01-08 10:23:00'.")]
+        [DataRow(DATETIME_TYPE, "lte", "'2079-06-06'", "\"2079-06-06\"", " <= ",
+            DisplayName = "datetime type filter and orderby test with lte operator and specific value '2079-06-06'.")]
+        [DataRow(DATETIME_TYPE, "neq", "'1999-01-08 10:23:54'", "\"1999-01-08 10:23:54\"", "!=",
+            DisplayName = "datetime type filter and orderby test with neq operator and specific value '1999-01-08 10:23:54'.")]
+        [DataRow(DATETIMEOFFSET_TYPE, "neq", "'1999-01-08 10:23:54.9999999-14:00'", "\"1999-01-08 10:23:54.9999999-14:00\"", "!=",
+            DisplayName = "datetimeoffset type filter and orderby test with neq operator")]
+        [DataRow(DATETIMEOFFSET_TYPE, "eq", "'1999-01-08 10:23:54.9999999-14:00'", "\"1999-01-08 10:23:54.9999999-14:00\"", "=",
+            DisplayName = "datetimeoffset type filter and orderby test with eq operator")]
+        [DataRow(DATE_TYPE, "eq", "'1999-01-08'", "\"1999-01-08\"", "=",
+            DisplayName = "date type filter and orderby test with eq operator")]
+        [DataRow(DATE_TYPE, "gte", "'1999-01-08'", "\"1999-01-08\"", ">=",
+            DisplayName = "date type filter test and orderby  with gte operator")]
+        [DataRow(DATE_TYPE, "neq", "'9998-12-31'", "\"9998-12-31\"", "!=",
+            DisplayName = "date type filter test and orderby  with ne operator")]
+        [DataRow(SMALLDATETIME_TYPE, "eq", "'1999-01-08 10:24:00'", "\"1999-01-08 10:24:00\"", "=",
+            DisplayName = "smalldatetime type filter and orderby test with eq operator")]
+        [DataRow(SMALLDATETIME_TYPE, "gte", "'1999-01-08 10:24:00'", "\"1999-01-08 10:24:00\"", ">=",
+            DisplayName = "smalldatetime type filter and orderby test with gte operator")]
+        [DataRow(SMALLDATETIME_TYPE, "neq", "'1999-01-08 10:24:00'", "\"1999-01-08 10:24:00\"", "!=",
+            DisplayName = "smalldatetime type filter and orderby test with neq operator")]
+        [DataRow(DATETIME2_TYPE, "eq", "'1999-01-08 10:23:00.9999999'", "\"1999-01-08 10:23:00.9999999\"", "=",
+            DisplayName = "datetime2 type filter and orderby test with eq operator")]
+        [DataRow(DATETIME2_TYPE, "gt", "'0001-01-08 10:23:00.9999999'", "\"0001-01-08 10:23:00.9999999\"", " > ",
+            DisplayName = "datetime2 type filter and orderby test with gt operator")]
+        [DataRow(DATETIME2_TYPE, "gte", "'0001-01-08 10:23:00.9999999'", "\"0001-01-08 10:23:00.9999999\"", " >= ",
+            DisplayName = "datetime2 type filter and orderby test with gte operator")]
+        [DataRow(DATETIME2_TYPE, "lt", "'0002-06-06'", "\"0002-06-06\"", " < ",
+            DisplayName = "datetime2 type filter and orderby test with lt operator")]
+        [DataRow(DATETIME2_TYPE, "lte", "'9999-12-31'", "\"9999-12-31\"", " <= ",
+            DisplayName = "datetime2 type filter and orderby test with lte operator")]
+        [DataRow(DATETIME2_TYPE, "neq", "'9999-12-31 23:59:59'", "\"9999-12-31 23:59:59\"", "!=",
+            DisplayName = "datetime2 type filter and orderby test with neq operator")]
         public async Task QueryTypeColumnFilterAndOrderByDateTime(string type, string filterOperator, string sqlValue, string gqlValue, string queryOperator)
         {
             // In MySQL, the DATETIME data type supports a range from '1000-01-01 00:00:00.0000000' to '9999-12-31 23:59:59.0000000'

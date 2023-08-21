@@ -139,7 +139,7 @@ namespace Azure.DataApiBuilder.Core.Authorization
             // to enable include/excluded column permissions lookups.
             if (roleMetadata.OperationToColumnMap.TryGetValue(operation, out OperationMetadata? operationToColumnMap) && operationToColumnMap is not null)
             {
-                _runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig)
+                _runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig);
                 // Each column present in the request is an "exposedColumn".
                 // Authorization permissions reference "backingColumns"
                 // Resolve backingColumn name to check authorization.

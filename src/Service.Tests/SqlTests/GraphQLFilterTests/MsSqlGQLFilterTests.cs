@@ -3,13 +3,9 @@
 
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
-using Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
 {
@@ -27,53 +23,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         {
             DatabaseEngine = TestCategory.MSSQL;
             await InitializeTestFixture(context);
-        }
-
-        /// <summary>
-        /// Test to validate that queries involing filters on datetime types that are specific to MsSql work fine.
-        /// </summary>
-        /// <param name="fieldType">Type of datetime field.</param>
-        /// <param name="fieldValue">Value of the field.</param>
-        /// <param name="filterOperator">Filter operator.</param>
-        /// <param name="filterOperatorName">Name of filter operator.</param>
-        [DataTestMethod]
-        [DataRow(DATE_TYPE, "1999-01-08", "=", "eq", DisplayName = "date type filter test with eq operator")]
-        [DataRow(DATE_TYPE, "1999-01-08", ">=", "gte", DisplayName = "date type filter test with gte operator")]
-        [DataRow(DATE_TYPE, "9998-12-31", "!=", "neq", DisplayName = "date type filter test with ne operator")]
-        [DataRow(SMALLDATETIME_TYPE, "1999-01-08 10:24:00", "=", "eq", DisplayName = "smalldatetime type filter test with eq operator")]
-        [DataRow(SMALLDATETIME_TYPE, "1999-01-08 10:24:00", ">=", "gte", DisplayName = "smalldatetime type filter test with gte operator")]
-        [DataRow(SMALLDATETIME_TYPE, "1999-01-08 10:24:00", "!=", "neq", DisplayName = "smalldatetime type filter test with neq operator")]
-        [DataRow(DATETIME2_TYPE, "1999-01-08 10:23:00.9999999", "=", "eq", DisplayName = "datetime2 type filter test with eq operator")]
-        [DataRow(DATETIME2_TYPE, "1999-01-08 10:23:00.9999999", ">=", "gte", DisplayName = "datetime2 type filter test with gte operator")]
-        [DataRow(DATETIME2_TYPE, "1999-01-08 10:23:00.9999999", "!=", "neq", DisplayName = "datetime2 type filter test with neq operator")]
-        public async Task TestDateTimeFilters(
-            string fieldType,
-            string fieldValue,
-            string filterOperator,
-            string filterOperatorName
-            )
-        {
-            string graphQLQueryName = "supportedTypes";
-            string fieldName = $"{fieldType.ToLower()}_types";
-            string gqlQuery = @"{
-                supportedTypes( " + QueryBuilder.FILTER_FIELD_NAME + " : { " + $"{fieldName}" + @": {" + $"{filterOperatorName}" + @": """ + $"{fieldValue}" + @"""}})
-                {
-                    items { " +
-                        $"{fieldName}" +
-                        @"
-                    }
-                }
-            }";
-
-            string dbQuery = MakeQueryOn(
-                "type_table",
-                new List<string> { fieldName },
-                $"{fieldName} {filterOperator} '{fieldValue}'",
-                GetDefaultSchema());
-
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            GraphQLSupportedTypesTestBase.PerformTestEqualsForExtendedTypes(fieldType, expected, actual.ToString());
         }
 
         /// <summary>

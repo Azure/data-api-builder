@@ -124,7 +124,7 @@ public class EnvironmentTests
     public void TestStartWithEnvFileIsSuccessful()
     {
         string expectedEnvVarName = "CONN_STRING";
-        BootstrapTestEnvironment("=test_connection_string", expectedEnvVarName);
+        BootstrapTestEnvironment(expectedEnvVarName + "=test_connection_string", expectedEnvVarName);
 
         // Trying to start the runtime engine
         using Process process = ExecuteDabCommand(

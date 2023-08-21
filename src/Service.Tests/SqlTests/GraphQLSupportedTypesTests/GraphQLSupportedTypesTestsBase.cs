@@ -80,14 +80,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(LONG_TYPE, "lte", "-9223372036854775808", "-9223372036854775808", " <= ")]
         [DataRow(LONG_TYPE, "neq", "1", "1", "!=")]
         [DataRow(LONG_TYPE, "eq", "-1", "-1", "=")]
-        [DataRow(STRING_TYPE, "neq", "\'foo\'", "\"foo\"", "!=")]
-        [DataRow(STRING_TYPE, "eq", "\'lksa;jdflasdf;alsdflksdfkldj\'", "\"lksa;jdflasdf;alsdflksdfkldj\"", "=")]
+        [DataRow(STRING_TYPE, "neq", "'foo'", "\"foo\"", "!=")]
+        [DataRow(STRING_TYPE, "eq", "'lksa;jdflasdf;alsdflksdfkldj'", "\"lksa;jdflasdf;alsdflksdfkldj\"", "=")]
         [DataRow(SINGLE_TYPE, "gt", "-9.3", "-9.3", ">")]
         [DataRow(SINGLE_TYPE, "gte", "-9.2", "-9.2", ">=")]
         [DataRow(SINGLE_TYPE, "lt", ".33", "0.33", "<")]
         [DataRow(SINGLE_TYPE, "lte", ".33", "0.33", "<=")]
         [DataRow(SINGLE_TYPE, "neq", "9.2", "9.2", "!=")]
-        [DataRow(SINGLE_TYPE, "eq", "\'0.33\'", "0.33", "=")]
+        [DataRow(SINGLE_TYPE, "eq", "'0.33'", "0.33", "=")]
         [DataRow(FLOAT_TYPE, "gt", "-9.2", "-9.2", ">")]
         [DataRow(FLOAT_TYPE, "gte", "-9.2", "-9.2", ">=")]
         [DataRow(FLOAT_TYPE, "lt", ".33", "0.33", "<")]
@@ -100,8 +100,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(DECIMAL_TYPE, "lte", "0.333333", "0.333333", " <= ")]
         [DataRow(DECIMAL_TYPE, "neq", "0.0", "0.0", "!=")]
         [DataRow(DECIMAL_TYPE, "eq", "-9.292929", "-9.292929", "=")]
-        [DataRow(BOOLEAN_TYPE, "neq", "\'false\'", "false", "!=")]
-        [DataRow(BOOLEAN_TYPE, "eq", "\'false\'", "false", "=")]
+        [DataRow(BOOLEAN_TYPE, "neq", "'false'", "false", "!=")]
+        [DataRow(BOOLEAN_TYPE, "eq", "'false'", "false", "=")]
         public async Task QueryTypeColumnFilterAndOrderBy(string type, string filterOperator, string sqlValue, string gqlValue, string queryOperator)
         {
             if (!IsSupportedType(type))
@@ -190,9 +190,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         public async Task QueryTypeColumnFilterAndOrderByDateTime(string type, string filterOperator, string sqlValue, string gqlValue, string queryOperator)
         {
             // In MySQL, the DATETIME data type supports a range from '1000-01-01 00:00:00.0000000' to '9999-12-31 23:59:59.0000000'
-            if (DatabaseEngine is TestCategory.MYSQL && sqlValue is "\'9999-12-31 23:59:59.9999999\'")
+            if (DatabaseEngine is TestCategory.MYSQL && sqlValue is "'9999-12-31 23:59:59.9999999'")
             {
-                sqlValue = "\'9999-12-31 23:59:59.0000000\'";
+                sqlValue = "'9999-12-31 23:59:59.0000000'";
                 gqlValue = "\"9999-12-31 23:59:59.0000000\"";
             }
 
@@ -203,12 +203,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// Validates that usage of LocalTime values with comparison operators in GraphQL filters results in the expected filtered result set.
         /// </summary>
         [DataTestMethod]
-        [DataRow(TIME_TYPE, "gt", "\'00:00:00.000\'", "\"00:00:00.000\"", " > ")]
-        [DataRow(TIME_TYPE, "gte", "\'10:13:14.123\'", "\"10:13:14.123\"", " >= ")]
-        [DataRow(TIME_TYPE, "lt", "\'23:59:59.999\'", "\"23:59:59.999\"", " < ")]
-        [DataRow(TIME_TYPE, "lte", "\'23:59:59.999\'", "\"23:59:59.999\"", " <= ")]
-        [DataRow(TIME_TYPE, "neq", "\'10:23:54.9999999\'", "\"10:23:54.9999999\"", "!=")]
-        [DataRow(TIME_TYPE, "eq", "\'10:23:54.9999999\'", "\"10:23:54.9999999\"", "=")]
+        [DataRow(TIME_TYPE, "gt", "'00:00:00.000'", "\"00:00:00.000\"", " > ")]
+        [DataRow(TIME_TYPE, "gte", "'10:13:14.123'", "\"10:13:14.123\"", " >= ")]
+        [DataRow(TIME_TYPE, "lt", "'23:59:59.999'", "\"23:59:59.999\"", " < ")]
+        [DataRow(TIME_TYPE, "lte", "'23:59:59.999'", "\"23:59:59.999\"", " <= ")]
+        [DataRow(TIME_TYPE, "neq", "'10:23:54.9999999'", "\"10:23:54.9999999\"", "!=")]
+        [DataRow(TIME_TYPE, "eq", "'10:23:54.9999999'", "\"10:23:54.9999999\"", "=")]
         public async Task QueryTypeColumnFilterAndOrderByLocalTime(string type, string filterOperator, string sqlValue, string gqlValue, string queryOperator)
         {
             await QueryTypeColumnFilterAndOrderBy(type, filterOperator, sqlValue, gqlValue, queryOperator);

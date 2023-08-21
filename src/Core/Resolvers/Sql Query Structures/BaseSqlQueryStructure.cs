@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Data;
-using System.Globalization;
 using System.Net;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;

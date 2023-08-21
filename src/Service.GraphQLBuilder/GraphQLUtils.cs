@@ -46,6 +46,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             {
                 "ID",
                 BYTE_TYPE,
+                GUID_TYPE,
                 SHORT_TYPE,
                 INT_TYPE,
                 LONG_TYPE,

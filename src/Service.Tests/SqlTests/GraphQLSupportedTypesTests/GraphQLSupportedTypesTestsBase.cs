@@ -140,6 +140,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(DECIMAL_TYPE, "eq", "-9.292929", "-9.292929", "=")]
         [DataRow(BOOLEAN_TYPE, "neq", "\'false\'", "false", "!=")]
         [DataRow(BOOLEAN_TYPE, "eq", "\'false\'", "false", "=")]
+        [DataRow(GUID_TYPE, "eq", "'D1D021A8-47B4-4AE4-B718-98E89C41A161'", "\"D1D021A8-47B4-4AE4-B718-98E89C41A161\"", "=")]
+        [DataRow(GUID_TYPE, "neq", "'D1D021A8-47B4-4AE4-B718-98E89C41A161'", "\"D1D021A8-47B4-4AE4-B718-98E89C41A161\"", "!=")]
         public async Task QueryTypeColumnFilterAndOrderBy(string type, string filterOperator, string sqlValue, string gqlValue, string queryOperator)
         {
             if (!IsSupportedType(type))
@@ -715,7 +717,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         {
             if (typeName is GUID_TYPE)
             {
-                return STRING_TYPE;
+                return "ID";
             }
             else if (typeName is DATETIMEOFFSET_TYPE)
             {

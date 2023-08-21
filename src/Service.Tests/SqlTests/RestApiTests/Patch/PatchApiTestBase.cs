@@ -590,7 +590,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         /// <summary>
-        /// Verifies that we throw an exception when field provided in the request body for PATCH operation
+        /// Verifies that we throw an exception when an extraneous field provided in the request body for a PATCH operation
         /// does not map to a valid backing column in the table.
         /// </summary>
         [TestMethod]

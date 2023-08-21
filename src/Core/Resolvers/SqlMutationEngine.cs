@@ -833,7 +833,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// Helper method to populate all the params from the Rest request's context into the paramaters dictionary.
+        /// Helper method to populate all the params from the Rest request's context into the parameters dictionary.
         /// An entry is added only for those parameters which actually map to a backing column in the table/view.
         /// </summary>
         /// <param name="parameters">Parameters dictionary to be populated.</param>

@@ -31,10 +31,7 @@ namespace Azure.DataApiBuilder.Core.Authorization
         public const string ROLE_AUTHENTICATED = "authenticated";
 
         public Dictionary<string, EntityMetadata> EntityPermissionsMap { get; private set; } = new();
-
-        // Boolean variable indicating if extraneous fields are allowed in the request body for REST operations.
-        // By default, extraneous fields are not allowed.
-        public bool IsRequestBodyFlexibleForRest = true;
+        private readonly RuntimeConfigProvider _runtimeConfigProvider;
 
         public AuthorizationResolver(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -42,9 +39,9 @@ namespace Azure.DataApiBuilder.Core.Authorization
             )
         {
             _metadataProvider = sqlMetadataProvider;
+            _runtimeConfigProvider = runtimeConfigProvider;
             if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
-                IsRequestBodyFlexibleForRest = runtimeConfig.Runtime.Rest.RequestBodyFlexible;
                 // Datastructure constructor will pull required properties from metadataprovider.
                 SetEntityPermissionMap(runtimeConfig);
             }
@@ -53,7 +50,6 @@ namespace Azure.DataApiBuilder.Core.Authorization
                 runtimeConfigProvider.RuntimeConfigLoadedHandlers.Add((RuntimeConfigProvider sender, RuntimeConfig config) =>
                 {
                     SetEntityPermissionMap(config);
-                    IsRequestBodyFlexibleForRest = config.Runtime.Rest.RequestBodyFlexible;
                     return Task.FromResult(true);
                 });
             }
@@ -143,6 +139,7 @@ namespace Azure.DataApiBuilder.Core.Authorization
             // to enable include/excluded column permissions lookups.
             if (roleMetadata.OperationToColumnMap.TryGetValue(operation, out OperationMetadata? operationToColumnMap) && operationToColumnMap is not null)
             {
+                _runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig)
                 // Each column present in the request is an "exposedColumn".
                 // Authorization permissions reference "backingColumns"
                 // Resolve backingColumn name to check authorization.
@@ -161,7 +158,7 @@ namespace Azure.DataApiBuilder.Core.Authorization
                             return false;
                         }
                     }
-                    else if (!IsRequestBodyFlexibleForRest)
+                    else if (runtimeConfig is not null && !runtimeConfig.Runtime.Rest.RequestBodyFlexible)
                     {
                         // Throw exception when we are not allowed extraneous fields in the rest request body,
                         // and no mapping exists for the given exposed field to a backing column.

@@ -243,7 +243,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         }
 
         /// <summary>
-        /// the method constructs a GraphQL query to insert the value into the database table
+        /// The method constructs a GraphQL query to insert the value into the database table
         /// and then executes the query and compares the expected result with the actual result to verify if different types are supported.
         /// </summary>
         [DataTestMethod]
@@ -277,19 +277,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(BOOLEAN_TYPE, "true")]
         [DataRow(BOOLEAN_TYPE, "false")]
         [DataRow(BOOLEAN_TYPE, "null")]
-        [DataRow(DATETIMEOFFSET_TYPE, "\"1999-01-08 10:23:54+8:00\"")]
-        [DataRow(DATETIMEOFFSET_TYPE, "\"1999-01-08 10:23:54.671287+8:00\"")]
-        [DataRow(DATETIME_TYPE, "\"1999-01-08 09:20:00\"")]
-        [DataRow(DATETIME_TYPE, "\"1999-01-08\"")]
-        [DataRow(DATETIME_TYPE, "null")]
         [DataRow(BYTEARRAY_TYPE, "\"U3RyaW5neQ==\"")]
+        [DataRow(BYTEARRAY_TYPE, "\"V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=\"")]
+        [DataRow(BYTEARRAY_TYPE, "null")]
         [DataRow(TIME_TYPE, "\"23:59:59.9999999\"")]
         [DataRow(TIME_TYPE, "\"23:59:59\"")]
         [DataRow(TIME_TYPE, "\"23:59:59.9\"")]
         [DataRow(TIME_TYPE, "\"23:59\"")]
         [DataRow(TIME_TYPE, "null")]
-        [DataRow(BYTEARRAY_TYPE, "\"V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=\"")]
-        [DataRow(BYTEARRAY_TYPE, "null")]
+        [DataRow(DATETIME_TYPE, "\"1999-01-08 09:20:00\"")]
+        [DataRow(DATETIME_TYPE, "\"1999-01-08\"")]
+        [DataRow(DATETIME_TYPE, "null")]
+        [DataRow(SMALLDATETIME_TYPE, "\"1900-01-01\"")]
+        [DataRow(SMALLDATETIME_TYPE, "\"2079-06-06\"")]
+        [DataRow(DATETIME2_TYPE, "\"0001-01-01 00:00:00.0000000\"")]
+        [DataRow(DATETIME2_TYPE, "\"9999-12-31 23:59:59.9999999\"")]
+        [DataRow(DATE_TYPE, "\"0001-01-01\"")]
+        [DataRow(DATE_TYPE, "\"9999-12-31\"")]
+        [DataRow(DATETIMEOFFSET_TYPE, "\"1999-01-08 10:23:54+8:00\"")]
+        [DataRow(DATETIMEOFFSET_TYPE, "\"1999-01-08 10:23:54.671287+8:00\"")]
         public async Task InsertIntoTypeColumn(string type, string value)
         {
             if (!IsSupportedType(type))

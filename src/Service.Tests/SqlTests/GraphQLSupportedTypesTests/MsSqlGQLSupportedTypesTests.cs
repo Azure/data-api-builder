@@ -38,12 +38,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(DATETIME2_TYPE, "neq", "\'9999-12-31 23:59:59\'", "\"9999-12-31 23:59:59\"", "!=")]
         public async Task QueryTypeColumnFilterAndOrderByDateTime2(string type, string filterOperator, string sqlValue, string gqlValue, string queryOperator)
         {
-            if (DatabaseEngine is TestCategory.MYSQL && sqlValue is "\'9999-12-31 23:59:59.9999999\'")
-            {
-                sqlValue = "\'9999-12-31 23:59:59.0000000\'";
-                gqlValue = "\"9999-12-31 23:59:59.0000000\"";
-            }
-
             await QueryTypeColumnFilterAndOrderBy(type, filterOperator, sqlValue, gqlValue, queryOperator);
         }
 

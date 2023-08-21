@@ -488,7 +488,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// Utility function to do special comparisons for some of the extended types
         /// if json compare doesn't suffice
         /// </summary>
-        private static void PerformTestEqualsForExtendedTypes(string type, string expected, string actual)
+        public static void PerformTestEqualsForExtendedTypes(string type, string expected, string actual)
         {
             switch (type)
             {
@@ -500,8 +500,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 case TIME_TYPE:
                     CompareTimeResults(actual.ToString(), expected);
                     break;
+                case DATE_TYPE:
+                case SMALLDATETIME_TYPE:
                 case DATETIME_TYPE:
-                    CompareDateTimeResults(actual.ToString(), expected);
+                    CompareDateTimeResults(actual.ToString(), expected, type);
                     break;
                 case DATETIME2_TYPE:
                     CompareDateTime2Results(actual.ToString(), expected);
@@ -564,12 +566,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         }
 
         /// <summary>
-        /// Required due to different format between mysql datetime and HotChocolate datetime
+        /// Required due to different format between sql datetime and HotChocolate datetime
         /// result
         /// </summary>
-        private static void CompareDateTimeResults(string actual, string expected)
+        private static void CompareDateTimeResults(string actual, string expected, string fieldType)
         {
-            string fieldName = "datetime_types";
+            string fieldName = $"{fieldType.ToLower()}_types";
 
             using JsonDocument actualJsonDoc = JsonDocument.Parse(actual);
             using JsonDocument expectedJsonDoc = JsonDocument.Parse(expected);
@@ -722,7 +724,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 // Comparing for milliseconds separately since HotChocolate datetime2 type is resolved only to 3 decimal places.
                 Assert.AreEqual(expectedDateTime.Millisecond, actualDateTime.Millisecond);
             }
-            else if (field.StartsWith(DATETIME_TYPE.ToLower()))
+            else if (field.StartsWith(DATE_TYPE.ToLower()) || field.StartsWith(SMALLDATETIME_TYPE.ToLower()) || field.StartsWith(DATETIME_TYPE.ToLower()))
             {
                 // Adjusting to universal, since DateTime doesn't account for TimeZone
                 DateTime actualDateTime = DateTime.Parse(actualElement.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);

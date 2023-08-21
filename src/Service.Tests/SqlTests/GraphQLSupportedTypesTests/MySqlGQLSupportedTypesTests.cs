@@ -57,6 +57,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             return type switch
             {
                 GUID_TYPE => false,
+                DATE_TYPE => false,
+                SMALLDATETIME_TYPE => false,
+                DATETIME2_TYPE => false,
                 DATETIMEOFFSET_TYPE => false,
                 TIME_TYPE => false,
                 _ => true

@@ -222,7 +222,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         public static Dictionary<string, InputObjectTypeDefinitionNode> InputTypes = new()
         {
             { "ID", IdInputType() },
-            { GUID_TYPE, IdInputType() },
             { BYTE_TYPE, ByteInputType() },
             { SHORT_TYPE, ShortInputType() },
             { INT_TYPE, IntInputType() },

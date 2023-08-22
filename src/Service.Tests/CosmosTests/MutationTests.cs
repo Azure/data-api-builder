@@ -38,7 +38,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public void TestFixtureSetup()
         {
             CosmosClientProvider cosmosClientProvider = _application.Services.GetService<CosmosClientProvider>();
-            CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider._defaultDbName];
+            CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider._defaultDataSourceName];
             cosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
             cosmosClient.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
             CreateItems(DATABASE_NAME, _containerName, 10);
@@ -397,7 +397,7 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdateEarthInput!) {
         public void TestFixtureTearDown()
         {
             CosmosClientProvider cosmosClientProvider = _application.Services.GetService<CosmosClientProvider>();
-            CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider._defaultDbName];
+            CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider._defaultDataSourceName];
             cosmosClient.GetDatabase(DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();
         }
     }

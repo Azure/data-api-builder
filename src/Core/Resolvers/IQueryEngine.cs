@@ -20,7 +20,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <returns>
         /// returns the json result and a metadata object required to resolve the Json.
         /// </returns>
-        public Task<Tuple<JsonDocument?, IMetadata?>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> parameters, string dbName = "");
+        public Task<Tuple<JsonDocument?, IMetadata?>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> parameters, string dataSourceName = "");
 
         /// <summary>
         /// Executes the given IMiddlewareContext of the GraphQL and expecting a
@@ -29,7 +29,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <returns>
         /// returns the list of jsons result and a metadata object required to resolve the Json.
         /// </returns>
-        public Task<Tuple<IEnumerable<JsonDocument>, IMetadata?>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object?> parameters, string dbName = "");
+        public Task<Tuple<IEnumerable<JsonDocument>, IMetadata?>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object?> parameters, string dataSourceName = "");
 
         /// <summary>
         /// Given the RestRequestContext, obtains the query text and executes it against the backend.

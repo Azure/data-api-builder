@@ -146,7 +146,7 @@ public class RuntimeConfigProvider
                 _runtimeConfig = HandleCosmosNoSqlConfiguration(schema, _runtimeConfig, _runtimeConfig.DataSource.ConnectionString);
             }
 
-            ManagedIdentityAccessToken[_runtimeConfig.DefaultDBName] = accessToken;
+            ManagedIdentityAccessToken[_runtimeConfig.DefaultDataSourceName] = accessToken;
         }
 
         bool configLoadSucceeded = await InvokeConfigLoadedHandlersAsync();
@@ -187,8 +187,8 @@ public class RuntimeConfigProvider
                 DatabaseType.CosmosDB_NoSQL => HandleCosmosNoSqlConfiguration(graphQLSchema, runtimeConfig, connectionString),
                 _ => runtimeConfig with { DataSource = runtimeConfig.DataSource with { ConnectionString = connectionString } }
             };
-            ManagedIdentityAccessToken[_runtimeConfig.DefaultDBName] = accessToken;
-            _runtimeConfig.DatasourceNameToDataSource[_runtimeConfig.DefaultDBName] = _runtimeConfig.DataSource;
+            ManagedIdentityAccessToken[_runtimeConfig.DefaultDataSourceName] = accessToken;
+            _runtimeConfig.DatasourceNameToDataSource[_runtimeConfig.DefaultDataSourceName] = _runtimeConfig.DataSource;
 
             return await InvokeConfigLoadedHandlersAsync();
         }
@@ -217,7 +217,7 @@ public class RuntimeConfigProvider
     {
         if (string.IsNullOrEmpty(databaseName))
         {
-            databaseName = runtimeConfig.DefaultDBName;
+            databaseName = runtimeConfig.DefaultDataSourceName;
         }
 
         DbConnectionStringBuilder dbConnectionStringBuilder = new()
@@ -260,7 +260,7 @@ public class RuntimeConfigProvider
         dataSource = dataSource with { Options = options, ConnectionString = connectionString };
 
         // Update the connection string in the parsed config with the one that was provided to the controller
-        if (databaseName == runtimeConfig.DefaultDBName)
+        if (databaseName == runtimeConfig.DefaultDataSourceName)
         {
             // update default db.
             runtimeConfig = runtimeConfig with { DataSource = dataSource };

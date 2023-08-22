@@ -25,8 +25,8 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.DatasourceNameToDataSource);
         // Ignore the EntityNameToDataSourceName array as its not exposed to customer.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.EntityNameToDataSourceName);
-        // Ignore the DefaultDBName array as its not exposed to customer.
-        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.DefaultDBName);
+        // Ignore the DefaultDataSourceName array as its not exposed to customer.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.DefaultDataSourceName);
         // Ignore the message as that's not serialized in our config file anyway.
         VerifierSettings.IgnoreMember<DataSource>(dataSource => dataSource.DatabaseTypeNotSupportedMessage);
         // Customise the path where we store snapshots, so they are easier to locate in a PR review.

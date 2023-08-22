@@ -154,7 +154,7 @@ type Sun @model(name:""Sun"") {
     {
         List<string> idList = new();
         CosmosClientProvider cosmosClientProvider = _application.Services.GetService<CosmosClientProvider>();
-        CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider._defaultDbName];
+        CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider._defaultDataSourceName];
         for (int i = 0; i < numItems; i++)
         {
             string uid = Guid.NewGuid().ToString();
@@ -187,7 +187,7 @@ type Sun @model(name:""Sun"") {
             MaxItemCount = pageSize,
         };
         CosmosClientProvider cosmosClientProvider = _application.Services.GetService<CosmosClientProvider>();
-        CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider._defaultDbName];
+        CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider._defaultDataSourceName];
         Container c = cosmosClient.GetContainer(DATABASE_NAME, containerName);
         QueryDefinition queryDef = new(query);
         FeedIterator<JObject> resultSetIterator = c.GetItemQueryIterator<JObject>(queryDef, continuationToken, options);

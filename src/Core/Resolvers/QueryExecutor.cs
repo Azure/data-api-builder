@@ -65,14 +65,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             Func<DbDataReader, List<string>?, Task<TResult>>? dataReaderHandler,
             HttpContext? httpContext = null,
             List<string>? args = null,
-            string dbName = "")
+            string dataSourceName = "")
         {
-            if (string.IsNullOrEmpty(dbName))
+            if (string.IsNullOrEmpty(dataSourceName))
             {
-                dbName = ConfigProvider.GetConfig().DefaultDBName;
+                dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
             }
 
-            if (!ConnectionStringBuilders.ContainsKey(dbName))
+            if (!ConnectionStringBuilders.ContainsKey(dataSourceName))
             {
                 throw new Exception("Query execution failed. Could not find datasource to execute query against");
             }
@@ -80,7 +80,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             int retryAttempt = 0;
             using TConnection conn = new()
             {
-                ConnectionString = ConnectionStringBuilders[dbName].ConnectionString,
+                ConnectionString = ConnectionStringBuilders[dataSourceName].ConnectionString,
             };
 
             await SetManagedIdentityAccessTokenIfAnyAsync(conn);

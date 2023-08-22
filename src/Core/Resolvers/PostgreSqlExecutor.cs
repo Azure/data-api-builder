@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public DefaultAzureCredential AzureCredential { get; set; } = new();
 
         /// <summary>
-        /// The MySql specific connection string builder.
+        /// The postgresql specific connection string builder.
         /// </summary>
         public override IDictionary<string, DbConnectionStringBuilder> ConnectionStringBuilders
             => base.ConnectionStringBuilders;
@@ -61,10 +61,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             _attemptToSetAccessToken = new Dictionary<string, bool>();
             _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
 
-            foreach (KeyValuePair<string, DataSource> dataSourcePair in mysqldbs)
+            foreach ((string dataSourceName, DataSource dataSource) in mysqldbs)
             {
-                string dataSourceName = dataSourcePair.Key;
-                DataSource dataSource = dataSourcePair.Value;
                 NpgsqlConnectionStringBuilder builder = new(dataSource.ConnectionString);
 
                 if (runtimeConfigProvider.IsLateConfigured)
@@ -77,9 +75,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 _attemptToSetAccessToken[dataSourceName] = ShouldManagedIdentityAccessBeAttempted(builder);
             }
 
-            if (!_accessTokenFromController.ContainsKey(runtimeConfigProvider.GetConfig().DefaultDBName))
+            if (!_accessTokenFromController.ContainsKey(runtimeConfigProvider.GetConfig().DefaultDataSourceName))
             {
-                _accessTokenFromController[runtimeConfigProvider.GetConfig().DefaultDBName] = null;
+                _accessTokenFromController[runtimeConfigProvider.GetConfig().DefaultDataSourceName] = null;
             }
         }
 
@@ -93,7 +91,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             if (string.IsNullOrEmpty(datasourceName))
             {
-                datasourceName = ConfigProvider.GetConfig().DefaultDBName;
+                datasourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
             }
 
             // Only attempt to get the access token if the connection string is in the appropriate format
@@ -181,7 +179,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // has a valid connection string without a password in it
                 if (firstAttemptAtDefaultAccessToken)
                 {
-                    _attemptToSetAccessToken[ConfigProvider.GetConfig().DefaultDBName] = false;
+                    _attemptToSetAccessToken[ConfigProvider.GetConfig().DefaultDataSourceName] = false;
                 }
             }
 

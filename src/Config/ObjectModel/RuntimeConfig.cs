@@ -18,7 +18,7 @@ public record RuntimeConfig
     public RuntimeEntities Entities;
 
     [JsonIgnore]
-    public string DefaultDBName;
+    public string DefaultDataSourceName;
 
     [JsonIgnore]
     public Dictionary<string, DataSource> DatasourceNameToDataSource { get; set; }
@@ -36,14 +36,14 @@ public record RuntimeConfig
         this.DatasourceNameToDataSource = new Dictionary<string, DataSource>();
         this.EntityNameToDataSourceName = new Dictionary<string, string>();
 
-        this.DefaultDBName = Guid.NewGuid().ToString();
-        this.DatasourceNameToDataSource.Add(this.DefaultDBName, this.DataSource);
+        this.DefaultDataSourceName = Guid.NewGuid().ToString();
+        this.DatasourceNameToDataSource.Add(this.DefaultDataSourceName, this.DataSource);
 
         if (Entities != null)
         {
             foreach (KeyValuePair<string, Entity> entity in Entities)
             {
-                EntityNameToDataSourceName.Add(entity.Key, DefaultDBName);
+                EntityNameToDataSourceName.Add(entity.Key, DefaultDataSourceName);
             }
         }
     }
@@ -56,7 +56,7 @@ public record RuntimeConfig
         this.Runtime = Runtime;
         this.Entities = Entities;
         KeyValuePair<string, DataSource> keyValuePair = dataSourceDict.First();
-        this.DefaultDBName = keyValuePair.Key;
+        this.DefaultDataSourceName = keyValuePair.Key;
         this.DataSource = keyValuePair.Value;
     }
 

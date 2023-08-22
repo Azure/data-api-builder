@@ -37,7 +37,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private readonly Dictionary<string, string?> _accessTokenFromController;
 
         /// <summary>
-        /// The MySql specific connection string builder.
+        /// The MsSql specific connection string builder.
         /// </summary>
         public override IDictionary<string, DbConnectionStringBuilder> ConnectionStringBuilders
             => base.ConnectionStringBuilders;
@@ -70,10 +70,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             _isSessionContextEnabled = new Dictionary<string, bool>();
             _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
 
-            foreach (KeyValuePair<string, DataSource> dataSourcePair in mssqldbs)
+            foreach ((string dataSourceName, DataSource dataSource) in mssqldbs)
             {
-                string dataSourceName = dataSourcePair.Key;
-                DataSource dataSource = dataSourcePair.Value;
                 SqlConnectionStringBuilder builder = new(dataSource.ConnectionString);
 
                 if (runtimeConfigProvider.IsLateConfigured)
@@ -88,9 +86,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 _attemptToSetAccessToken[dataSourceName] = ShouldManagedIdentityAccessBeAttempted(builder);
             }
 
-            if (!_accessTokenFromController.ContainsKey(runtimeConfig.DefaultDBName))
+            if (!_accessTokenFromController.ContainsKey(runtimeConfig.DefaultDataSourceName))
             {
-                _accessTokenFromController[runtimeConfig.DefaultDBName] = null;
+                _accessTokenFromController[runtimeConfig.DefaultDataSourceName] = null;
             }
         }
 
@@ -105,7 +103,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             if (string.IsNullOrEmpty(datasourceName))
             {
-                datasourceName = ConfigProvider.GetConfig().DefaultDBName;
+                datasourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
             }
             // Only attempt to get the access token if the connection string is in the appropriate format
             // using default for first db - maintaining backward compatibility for single db scenario.
@@ -192,7 +190,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             if (string.IsNullOrEmpty(datasourceName))
             {
-                datasourceName = ConfigProvider.GetConfig().DefaultDBName;
+                datasourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
             }
 
             if (httpContext is null || !_isSessionContextEnabled[datasourceName])

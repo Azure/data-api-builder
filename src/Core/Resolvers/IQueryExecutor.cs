@@ -109,7 +109,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="httpContext">Current user httpContext.</param>
         /// <param name="parameters">Dictionary of parameters/value required to execute the query.</param>
-        /// <param name="dbName"> Db for which to generate query.</param>
+        /// <param name="datasourceName"> Db for which to generate query.</param>
         /// <returns>empty string / query to set session parameters for the connection.</returns>
         public string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, DbConnectionParam> parameters, string? datasourceName = null);
 

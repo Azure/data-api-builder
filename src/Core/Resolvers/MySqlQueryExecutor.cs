@@ -60,10 +60,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
             IEnumerable<KeyValuePair<string, DataSource>> mysqldbs = runtimeConfigProvider.GetConfig().DatasourceNameToDataSource.Where(x => x.Value.DatabaseType == DatabaseType.MySQL);
 
-            foreach (KeyValuePair<string, DataSource> dataSourcePair in mysqldbs)
+            foreach ((string dataSourceName, DataSource dataSource) in mysqldbs)
             {
-                string dataSourceName = dataSourcePair.Key;
-                DataSource dataSource = dataSourcePair.Value;
 
                 MySqlConnectionStringBuilder builder = new(dataSource.ConnectionString)
                 {
@@ -80,9 +78,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 _attemptToSetAccessToken[dataSourceName] = ShouldManagedIdentityAccessBeAttempted(builder);
             }
 
-            if (!_accessTokenFromController.ContainsKey(runtimeConfigProvider.GetConfig().DefaultDBName))
+            if (!_accessTokenFromController.ContainsKey(runtimeConfigProvider.GetConfig().DefaultDataSourceName))
             {
-                _accessTokenFromController[runtimeConfigProvider.GetConfig().DefaultDBName] = null;
+                _accessTokenFromController[runtimeConfigProvider.GetConfig().DefaultDataSourceName] = null;
             }
         }
 
@@ -97,7 +95,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             if (string.IsNullOrEmpty(datasourceName))
             {
-                datasourceName = ConfigProvider.GetConfig().DefaultDBName;
+                datasourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
             }
 
             // Only attempt to get the access token if the connection string is in the appropriate format

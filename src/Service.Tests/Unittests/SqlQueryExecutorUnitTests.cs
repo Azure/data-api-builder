@@ -168,7 +168,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Dictionary<string, DbConnectionStringBuilder> dictionary = new()
             {
-                { provider.GetConfig().DefaultDBName, new SqlConnectionStringBuilder(provider.GetConfig().DataSource.ConnectionString) }
+                { provider.GetConfig().DefaultDataSourceName, new SqlConnectionStringBuilder(provider.GetConfig().DataSource.ConnectionString) }
             };
 
             queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());
@@ -228,7 +228,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Dictionary<string, DbConnectionStringBuilder> dictionary = new()
             {
-                { provider.GetConfig().DefaultDBName, new SqlConnectionStringBuilder(provider.GetConfig().DataSource.ConnectionString) }
+                { provider.GetConfig().DefaultDataSourceName, new SqlConnectionStringBuilder(provider.GetConfig().DataSource.ConnectionString) }
             };
 
             queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());

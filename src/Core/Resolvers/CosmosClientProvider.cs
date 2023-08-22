@@ -18,7 +18,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private string? _accountEndpoint;
         private string? _accountKey;
         private readonly Dictionary<string, string?> _accessToken;
-        public string _defaultDbName = "";
+        public string _defaultDataSourceName = "";
 
         public Dictionary<string, CosmosClient?> Clients { get; private set; }
 
@@ -93,7 +93,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
             }
 
-            _defaultDbName = configuration.DefaultDBName;
+            _defaultDataSourceName = configuration.DefaultDataSourceName;
         }
 
         private class AADTokenCredential : ManagedIdentityCredential

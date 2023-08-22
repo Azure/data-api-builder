@@ -120,7 +120,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
         public override DbType? GetDbTypeForDateTimeTypes(string sqlDateTimeType)
         {
-            throw new NotImplementedException();
+            return null;
         }
     }
 }

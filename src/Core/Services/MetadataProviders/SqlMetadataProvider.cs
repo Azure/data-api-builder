@@ -312,6 +312,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     SystemType = systemType,
                     DbType = TypeHelper.GetDbTypeFromSystemType(systemType)
                 };
+
                 DbType? dbTypeForMsSqlDateTimeType = GetDbTypeForDateTimeTypes((string)row["DATA_TYPE"]);
                 if (dbTypeForMsSqlDateTimeType is not null)
                 {

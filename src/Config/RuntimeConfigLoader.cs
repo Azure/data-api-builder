@@ -134,7 +134,7 @@ public abstract class RuntimeConfigLoader
                     // Add Application Name for telemetry for MsSQL
                     if (ds.DatabaseType is DatabaseType.MSSQL)
                     {
-                       updatedConnectionString= GetConnectionStringWithApplicationName(connectionString);
+                        updatedConnectionString = GetConnectionStringWithApplicationName(connectionString);
                     }
 
                     ds = ds with { ConnectionString = updatedConnectionString };

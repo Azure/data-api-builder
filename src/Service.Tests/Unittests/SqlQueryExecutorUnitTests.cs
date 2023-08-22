@@ -166,12 +166,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<MsSqlQueryExecutor> queryExecutor
                 = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
 
-            Dictionary<string, DbConnectionStringBuilder> dictionary = new()
+            Dictionary<string, DbConnectionStringBuilder> connectionStringBuilder= new()
             {
                 { provider.GetConfig().DefaultDataSourceName, new SqlConnectionStringBuilder(provider.GetConfig().DataSource.ConnectionString) }
             };
 
-            queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());
+            queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(connectionStringBuilder);
 
             // Mock the ExecuteQueryAgainstDbAsync to throw a transient exception.
             queryExecutor.Setup(x => x.ExecuteQueryAgainstDbAsync(

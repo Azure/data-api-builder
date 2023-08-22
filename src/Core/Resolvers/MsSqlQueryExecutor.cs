@@ -101,12 +101,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="conn">The supplied connection to modify for managed identity access.</param>
         public override async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, string? datasourceName = null)
         {
+            // using default datasource name for first db - maintaining backward compatibility for single db scenario.
             if (string.IsNullOrEmpty(datasourceName))
             {
                 datasourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
             }
+
             // Only attempt to get the access token if the connection string is in the appropriate format
-            // using default for first db - maintaining backward compatibility for single db scenario.
             if (_attemptToSetAccessToken[datasourceName])
             {
                 SqlConnection sqlConn = (SqlConnection)conn;

@@ -111,7 +111,7 @@ namespace Azure.DataApiBuilder.Core.Services
             [SqlDbType.VarChar] = typeof(string)
         };
 
-        private static Dictionary<string, DbType> _timeSqlDbTypeToDbType = new()
+        public static Dictionary<string, DbType> DateTimeMsSqlTypeToDbType = new()
         {
             ["date"] = DbType.Date,
             ["datetime"] = DbType.DateTime,
@@ -236,25 +236,6 @@ namespace Azure.DataApiBuilder.Core.Services
 
             throw new DataApiBuilderException(
                 message: $"Tried to convert unsupported data type: {sqlDbTypeName}",
-                statusCode: HttpStatusCode.ServiceUnavailable,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
-        }
-
-        /// <summary>
-        /// Helper method to find the DbType for the given datetime data types in Sql Server.
-        /// </summary>
-        /// <param name="sqlDbTypeName">Data type of the datetime column in Sql Server.</param>
-        /// <returns>Corresponding DbType for the column.</returns>
-        /// <exception cref="DataApiBuilderException"></exception>
-        public static DbType GetDbTypeFromSqlDbDateTimeType(string sqlDbTypeName)
-        {
-            if (_timeSqlDbTypeToDbType.TryGetValue(sqlDbTypeName, out DbType value))
-            {
-                return value;
-            }
-
-            throw new DataApiBuilderException(
-                message: $"Unexpected datetime data type: {sqlDbTypeName} encountered.",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
         }

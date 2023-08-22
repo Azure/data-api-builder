@@ -209,6 +209,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             DisplayName = "datetime type filter and orderby test with neq operator and specific value '1999-01-08 10:23:54'.")]
         [DataRow(DATETIMEOFFSET_TYPE, "neq", "'1999-01-08 10:23:54.9999999-14:00'", "\"1999-01-08 10:23:54.9999999-14:00\"", "!=",
             DisplayName = "datetimeoffset type filter and orderby test with neq operator")]
+        [DataRow(DATETIMEOFFSET_TYPE, "lt", "'9999-12-31 23:59:59.9999999'", "\"9999-12-31 23:59:59.9999999\"", "<",
+            DisplayName = "datetimeoffset type filter and orderby test with lt operator and max value for datetimeoffset.")]
         [DataRow(DATETIMEOFFSET_TYPE, "eq", "'1999-01-08 10:23:54.9999999-14:00'", "\"1999-01-08 10:23:54.9999999-14:00\"", "=",
             DisplayName = "datetimeoffset type filter and orderby test with eq operator")]
         [DataRow(DATE_TYPE, "eq", "'1999-01-08'", "\"1999-01-08\"", "=",
@@ -333,8 +335,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(TIME_TYPE, "\"23:59:59.9\"")]
         [DataRow(TIME_TYPE, "\"23:59\"")]
         [DataRow(TIME_TYPE, "null")]
-        [DataRow(DATETIME_TYPE, "\"1999-01-08 09:20:00\"")]
-        [DataRow(DATETIME_TYPE, "\"1999-01-08\"")]
+        [DataRow(DATETIME_TYPE, "\"1753-01-01 00:00:00.000\"")]
+        [DataRow(DATETIME_TYPE, "\"9999-12-31 23:59:59.997\"")]
         [DataRow(DATETIME_TYPE, "null")]
         [DataRow(SMALLDATETIME_TYPE, "\"1900-01-01\"")]
         [DataRow(SMALLDATETIME_TYPE, "\"2079-06-06\"")]
@@ -342,8 +344,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(DATETIME2_TYPE, "\"9999-12-31 23:59:59.9999999\"")]
         [DataRow(DATE_TYPE, "\"0001-01-01\"")]
         [DataRow(DATE_TYPE, "\"9999-12-31\"")]
-        [DataRow(DATETIMEOFFSET_TYPE, "\"1999-01-08 10:23:54+8:00\"")]
-        [DataRow(DATETIMEOFFSET_TYPE, "\"1999-01-08 10:23:54.671287+8:00\"")]
+        [DataRow(DATETIMEOFFSET_TYPE, "\"0001-01-01 00:00:00.0000000\"")]
+        [DataRow(DATETIMEOFFSET_TYPE, "\"9999-12-31 23:59:59.9999999\"")]
         public async Task InsertIntoTypeColumn(string type, string value)
         {
             if (!IsSupportedType(type))

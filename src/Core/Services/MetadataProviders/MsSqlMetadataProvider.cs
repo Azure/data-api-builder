@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Data;
-using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Microsoft.Data.SqlClient;

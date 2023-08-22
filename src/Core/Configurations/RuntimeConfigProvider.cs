@@ -114,7 +114,7 @@ public class RuntimeConfigProvider
     /// This initialization method is used when the configuration is sent to the ConfigurationController
     /// in the form of a string instead of reading the configuration from a configuration file.
     /// This method assumes the connection string is provided as part of the configuration.
-    /// Initialzed the first database within the datasource list.
+    /// Initialize the first database within the datasource list.
     /// </summary>
     /// <param name="configuration">The engine configuration.</param>
     /// <param name="schema">The GraphQL Schema. Can be left null for SQL configurations.</param>

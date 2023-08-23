@@ -9,13 +9,13 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 public record RuntimeConfig
 {
     [JsonPropertyName("$schema")]
-    public string Schema;
+    public string Schema { get; init; }
 
-    public DataSource DataSource;
+    public DataSource DataSource { get; init; }
 
-    public RuntimeOptions Runtime;
+    public RuntimeOptions Runtime { get; init; }
 
-    public RuntimeEntities Entities;
+    public RuntimeEntities Entities { get; init; }
 
     public string DefaultDataSourceName;
 
@@ -30,41 +30,21 @@ public record RuntimeConfig
     /// <param name="DataSource">Default datasource.</param>
     /// <param name="Runtime">Runtime settings.</param>
     /// <param name="Entities">Entities</param>
-    /// <param name="DataSourceDict">DataSourceDictionary mapping.</param>
-    /// <param name="EntityNameToDataSourceDict">EntityNameToDataSourceDictionary mapping.</param>
-    public RuntimeConfig(string Schema, DataSource DataSource, RuntimeOptions Runtime, RuntimeEntities Entities, Dictionary<string, DataSource>? DataSourceDict = null, Dictionary<string, string>? EntityNameToDataSourceDict = null)
+    [JsonConstructor]
+    public RuntimeConfig(string Schema, DataSource DataSource, RuntimeOptions Runtime, RuntimeEntities Entities)
     {
         this.Schema = Schema;
         this.DataSource = DataSource;
         this.Runtime = Runtime;
         this.Entities = Entities;
+        this.DataSourceNameToDataSource = new Dictionary<string, DataSource>();
+        this.DefaultDataSourceName = Guid.NewGuid().ToString();
+        this.DataSourceNameToDataSource.Add(this.DefaultDataSourceName, this.DataSource);
 
-        if (DataSourceDict is not null)
+        this.EntityNameToDataSourceName = new Dictionary<string, string>();
+        foreach (KeyValuePair<string, Entity> entity in Entities)
         {
-            // already supplied with datasource mapping - multiple db scenario.
-            this.DataSourceNameToDataSource = DataSourceDict;
-            // set the first db to default - not relevant for multiple db scenario.
-            this.DefaultDataSourceName = DataSourceDict.Keys.First();
-        }
-        else
-        {
-            this.DataSourceNameToDataSource = new Dictionary<string, DataSource>();
-            this.DefaultDataSourceName = Guid.NewGuid().ToString();
-            this.DataSourceNameToDataSource.Add(this.DefaultDataSourceName, this.DataSource);
-        }
-
-        if (EntityNameToDataSourceDict is not null)
-        {
-            this.EntityNameToDataSourceName = EntityNameToDataSourceDict;
-        }
-        else
-        {
-            // if no entity name mapping provided - all entities will map to the default datasource.
-            this.EntityNameToDataSourceName = new Dictionary<string, string>();
-            foreach (KeyValuePair<string, Entity> entity in Entities)
-            {
-                EntityNameToDataSourceName.TryAdd(entity.Key, this.DefaultDataSourceName);
-            }
+            EntityNameToDataSourceName.TryAdd(entity.Key, this.DefaultDataSourceName);
         }
 
     }

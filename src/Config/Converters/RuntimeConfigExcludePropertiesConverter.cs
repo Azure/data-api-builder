@@ -23,14 +23,20 @@ internal class RuntimeConfigConditionalConverter : JsonConverter<RuntimeConfig>
 
     public override RuntimeConfig? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
+
+        // Remove the converter so we don't recurse.
+        JsonSerializerOptions innerOptions = new(options);
+        innerOptions.Converters.Remove(innerOptions.Converters.First(c => c is RuntimeConfigConditionalConverter));
+
         // Use default implementation for deserialization
-        return JsonSerializer.Deserialize<RuntimeConfig>(ref reader, options);
+        return JsonSerializer.Deserialize<RuntimeConfig>(ref reader, innerOptions);
     }
 
     /// <inheritdoc/>
     public override void Write(Utf8JsonWriter writer, RuntimeConfig value, JsonSerializerOptions options)
     {
         writer.WriteStartObject();
+        writer.WriteString("$schema", value.Schema);
 
         PropertyInfo[] properties = typeof(RuntimeConfig).GetProperties();
 
@@ -38,7 +44,7 @@ internal class RuntimeConfigConditionalConverter : JsonConverter<RuntimeConfig>
         {
             if (!_propertiesToExclude.Contains(property.Name))
             {
-                writer.WritePropertyName(property.Name);
+                writer.WritePropertyName(RuntimeConfigLoader.GenerateHyphenatedName(property.Name));
                 JsonSerializer.Serialize(writer, property.GetValue(value), options);
             }
         }

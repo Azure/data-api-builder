@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
-using System.Text.RegularExpressions;
 
 namespace Azure.DataApiBuilder.Config.NamingPolicies;
 
@@ -26,11 +25,6 @@ public sealed class HyphenatedNamingPolicy : JsonNamingPolicy
     /// <inheritdoc />
     public override string ConvertName(string name)
     {
-        if (string.Equals(name, "graphql", StringComparison.OrdinalIgnoreCase))
-        {
-            return name.ToLower();
-        }
-
-        return string.Join("-", Regex.Split(name, @"(?<!^)(?=[A-Z])", RegexOptions.Compiled)).ToLower();
+        return RuntimeConfigLoader.GenerateHyphenatedName(name);
     }
 }

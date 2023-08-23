@@ -2223,7 +2223,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 null,
                 new DataSource(DatabaseType.CosmosDB_NoSQL, $"AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==;Database={COSMOS_DATABASE_NAME}", new()),
                 null,
-                null);
+                new(new Dictionary<string, Entity>()));
 
             return new(
                 File.ReadAllText(cosmosFile),
@@ -2255,7 +2255,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
             else if (configurationEndpoint == CONFIGURATION_ENDPOINT_V2)
             {
-                RuntimeConfig overrides = new(null, new DataSource(DatabaseType.MSSQL, connectionString, new()), null, null);
+                RuntimeConfig overrides = new(null, new DataSource(DatabaseType.MSSQL, connectionString, new()), null, new(new Dictionary<string, Entity>()));
 
                 ConfigurationPostParametersV2 returnParams = new(
                     Configuration: serializedConfiguration,

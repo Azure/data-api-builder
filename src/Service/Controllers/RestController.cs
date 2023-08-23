@@ -11,7 +11,6 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.ApplicationInsights;
-using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
@@ -256,8 +255,6 @@ namespace Azure.DataApiBuilder.Service.Controllers
             }
             catch (DataApiBuilderException ex)
             {
-                // Track trace and event when DataApiBuilderException is caught
-                _telemetryClient.TrackTrace($"DataApiBuilderException caught: {ex.Message}", SeverityLevel.Error);
                 _logger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}{ex.Message}");
                 _logger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}{ex.StackTrace}");
                 Response.StatusCode = (int)ex.StatusCode;
@@ -265,8 +262,6 @@ namespace Azure.DataApiBuilder.Service.Controllers
             }
             catch (Exception ex)
             {
-                // Track trace and event when DataApiBuilderException is caught
-                _telemetryClient.TrackTrace($"Unexpected Exception caught: {ex.Message}", SeverityLevel.Error);
                 _logger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}{ex.Message}");
                 _logger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}{ex.StackTrace}");
                 Response.StatusCode = (int)HttpStatusCode.InternalServerError;

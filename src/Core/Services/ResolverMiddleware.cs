@@ -387,7 +387,6 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             _telemetryClient.TrackEvent("GraphQLRequestReceived", new Dictionary<string, string>
             {
-                { "EntityName", context.Selection.Field.Type.TypeName() },
                 { "RequestMethod", "POST" },
                 { "GraphQLOperation", context.Selection.Field.Coordinate.TypeName.Value },
                 { "GraphQLOperationName", context.Selection.Field.Name.Value },

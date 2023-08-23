@@ -47,6 +47,8 @@ namespace Azure.DataApiBuilder.Service
 
         public static bool IsLogLevelOverriddenByCli;
 
+        public static ApplicationInsightsOptions _applicationInsightsOptions = new();
+
         public const string NO_HTTPS_REDIRECT_FLAG = "--no-https-redirect";
 
         public Startup(IConfiguration configuration, ILogger<Startup> logger)
@@ -69,13 +71,18 @@ namespace Azure.DataApiBuilder.Service
             RuntimeConfigProvider configProvider = new(configLoader);
 
             // The following line enables Application Insights telemetry collection.
-            // services.AddApplicationInsightsTelemetry();
-            // services.AddSingleton<ITelemetryInitializer, MyTelemetryInitializer>();
             RuntimeConfig runtimeConfig = configProvider.GetConfig();
             if (runtimeConfig.Runtime.Telemetry is not null && runtimeConfig.Runtime.Telemetry.ApplicationInsights.Enabled) {
+                _applicationInsightsOptions = runtimeConfig.Runtime.Telemetry.ApplicationInsights;
+
+                if (string.IsNullOrWhiteSpace(_applicationInsightsOptions.ConnectionString))
+                {
+                    _logger.LogError("Logs won't be sent to Application Insights as connection string is not set in the runtime config.");
+                }
+
                 services.AddApplicationInsightsTelemetry(new ApplicationInsightsServiceOptions
                 {
-                    ConnectionString = runtimeConfig.Runtime.Telemetry.ApplicationInsights.ConnectionString
+                    ConnectionString = _applicationInsightsOptions.ConnectionString
                 });
                 
                 services.AddSingleton<ITelemetryInitializer, MyTelemetryInitializer>();

@@ -8,7 +8,7 @@ public class MyTelemetryInitializer : ITelemetryInitializer
 {
     public static readonly IReadOnlyDictionary<string, string> GlobalProperties = new Dictionary<string, string>
     {
-        { "ApplicationName", $"{ProductInfo.GetDataApiBuilderUserAgent()}" },
+        { "UserAgent", $"{ProductInfo.GetDataApiBuilderUserAgent()}" },
         // Add more custom properties here
     };
 
@@ -18,7 +18,6 @@ public class MyTelemetryInitializer : ITelemetryInitializer
         telemetry.Context.Session.Id = Guid.NewGuid().ToString();
         telemetry.Context.Component.Version = ProductInfo.GetProductVersion();
         telemetry.Context.Device.OperatingSystem = Environment.OSVersion.ToString();
-        telemetry.Context.Device.Type = "Container";
         telemetry.Context.User.Id = $"{ Environment.MachineName }_{ Environment.UserName }";
         
         foreach (KeyValuePair<string, string> property in GlobalProperties)

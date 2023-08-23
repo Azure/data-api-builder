@@ -280,7 +280,7 @@ WHERE
         private string MakeUpsertSelections(SqlUpsertQueryStructure structure)
         {
             List<string> selections = new();
-            Dictionary<string, string> insertColumnsToParamNameDictionary = structure.InsertColumns.Zip(structure.Values, (colName, paramName)
+            Dictionary<string, string> insertColumnsToParamName = structure.InsertColumns.Zip(structure.Values, (colName, paramName)
                 => new { Key = colName, Value = paramName }).ToDictionary(kv => kv.Key, kv => kv.Value);
 
             List<LabelledColumn> fields = structure.OutputColumns;
@@ -289,7 +289,7 @@ WHERE
             {
                 string quotedColName = QuoteIdentifier(column.Label);
                 ColumnDefinition columnDefinition = structure.GetColumnDefinition(column.ColumnName);
-                if (insertColumnsToParamNameDictionary.TryGetValue(column.ColumnName, out string? paramName))
+                if (insertColumnsToParamName.TryGetValue(column.ColumnName, out string? paramName))
                 {
                     selections.Add($"{paramName} AS {quotedColName}");
                 }

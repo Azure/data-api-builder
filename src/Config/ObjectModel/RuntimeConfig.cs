@@ -17,53 +17,66 @@ public record RuntimeConfig
 
     public RuntimeEntities Entities;
 
-    [JsonIgnore]
     public string DefaultDataSourceName;
 
-    [JsonIgnore]
     public Dictionary<string, DataSource> DataSourceNameToDataSource { get; set; }
 
-    [JsonIgnore]
     public Dictionary<string, string> EntityNameToDataSourceName { get; set; }
 
-    [JsonConstructor]
-    public RuntimeConfig(string Schema, DataSource DataSource, RuntimeOptions Runtime, RuntimeEntities Entities)
+    /// <summary>
+    /// Constructor for runtimeConfig.
+    /// </summary>
+    /// <param name="Schema">schema.</param>
+    /// <param name="DataSource">Default datasource.</param>
+    /// <param name="Runtime">Runtime settings.</param>
+    /// <param name="Entities">Entities</param>
+    /// <param name="DataSourceDict">DataSourceDictionary mapping.</param>
+    /// <param name="EntityNameToDataSourceDict">EntityNameToDataSourceDictionary mapping.</param>
+    public RuntimeConfig(string Schema, DataSource DataSource, RuntimeOptions Runtime, RuntimeEntities Entities, Dictionary<string, DataSource>? DataSourceDict = null, Dictionary<string, string>? EntityNameToDataSourceDict = null)
     {
         this.Schema = Schema;
         this.DataSource = DataSource;
         this.Runtime = Runtime;
         this.Entities = Entities;
-        this.DataSourceNameToDataSource = new Dictionary<string, DataSource>();
-        this.EntityNameToDataSourceName = new Dictionary<string, string>();
 
-        this.DefaultDataSourceName = Guid.NewGuid().ToString();
-        this.DataSourceNameToDataSource.Add(this.DefaultDataSourceName, this.DataSource);
-
-        foreach (KeyValuePair<string, Entity> entity in Entities)
+        if (DataSourceDict is not null)
         {
-            EntityNameToDataSourceName.Add(entity.Key, DefaultDataSourceName);
+            // already supplied with datasource mapping - multiple db scenario.
+            this.DataSourceNameToDataSource = DataSourceDict;
+            // set the first db to default - not relevant for multiple db scenario.
+            this.DefaultDataSourceName = DataSourceDict.Keys.First();
+        }
+        else
+        {
+            this.DataSourceNameToDataSource = new Dictionary<string, DataSource>();
+            this.DefaultDataSourceName = Guid.NewGuid().ToString();
+            this.DataSourceNameToDataSource.Add(this.DefaultDataSourceName, this.DataSource);
         }
 
-    }
+        if (EntityNameToDataSourceDict is not null)
+        {
+            this.EntityNameToDataSourceName = EntityNameToDataSourceDict;
+        }
+        else
+        {
+            // if no entity name mapping provided - all entities will map to the default datasource.
+            this.EntityNameToDataSourceName = new Dictionary<string, string>();
+            foreach (KeyValuePair<string, Entity> entity in Entities)
+            {
+                EntityNameToDataSourceName.TryAdd(entity.Key, this.DefaultDataSourceName);
+            }
+        }
 
-    public RuntimeConfig(string schema, Dictionary<string, DataSource> dataSourceDict, Dictionary<string, string> entityNameToDataSourceDict, RuntimeOptions runtime, RuntimeEntities entities)
-    {
-        this.Schema = schema;
-        this.DataSourceNameToDataSource = dataSourceDict;
-        this.EntityNameToDataSourceName = entityNameToDataSourceDict;
-        this.Runtime = runtime;
-        this.Entities = entities;
-        KeyValuePair<string, DataSource> keyValuePair = dataSourceDict.First();
-        this.DefaultDataSourceName = keyValuePair.Key;
-        this.DataSource = keyValuePair.Value;
     }
 
     /// <summary>
     /// Serializes the RuntimeConfig object to JSON for writing to file.
     /// </summary>
     /// <returns></returns>
-    public string ToJson()
+    public string ToJson(JsonSerializerOptions? jsonSerializerOptions = null)
     {
-        return JsonSerializer.Serialize(this, RuntimeConfigLoader.GetSerializationOptions());
+        // get default serializer options if none provided.
+        jsonSerializerOptions = jsonSerializerOptions ?? RuntimeConfigLoader.GetSerializationOptions();
+        return JsonSerializer.Serialize(this, jsonSerializerOptions);
     }
 }

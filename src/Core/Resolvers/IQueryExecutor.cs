@@ -22,9 +22,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="parameters">The parameters used to execute the SQL text.</param>
         /// <param name="dataReaderHandler">The function to invoke to handle the results
         /// in the DbDataReader obtained after executing the query.</param>
-        /// <param name="dataSourceName">dataSourceName against which to run query.</param>
         /// <param name="httpContext">Current request httpContext.</param>
         /// <param name="args">List of string arguments to the DbDataReader handler.</param>
+        /// <param name="dataSourceName">dataSourceName against which to run query.</param>
         /// <returns>An object formed using the results of the query as returned by the given handler.</returns>
         public Task<TResult?> ExecuteQueryAsync<TResult>(
             string sqltext,

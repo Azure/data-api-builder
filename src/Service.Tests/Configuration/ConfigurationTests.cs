@@ -2170,7 +2170,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     // exception. To prevent this, CosmosClientProvider parses the token and retrieves the "exp" property
                     // from the token, if it's not valid, then we will throw an exception from our code before it
                     // initiating a client. Uses a valid fake JWT access token for testing purposes.
-                    RuntimeConfig overrides = new(null, new DataSource(DatabaseType.CosmosDB_NoSQL, "AccountEndpoint=https://localhost:8081/;", new()), null, null);
+                    RuntimeConfig overrides = new(null, new DataSource(DatabaseType.CosmosDB_NoSQL, "AccountEndpoint=https://localhost:8081/;", new()), null, new(new Dictionary<string, Entity>()));
 
                     configParams = configParams with
                     {

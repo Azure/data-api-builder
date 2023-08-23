@@ -33,8 +33,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// The managed identity Access Token string obtained
         /// from the configuration controller.
+        /// Key: datasource name, Value: access token for this datasource from configuration.
         /// </summary>
-        private readonly Dictionary<string, string?> _accessTokenFromController;
+        private readonly Dictionary<string, string?> _accessTokensFromConfiguration;
 
         /// <summary>
         /// The MsSql specific connection string builder.
@@ -68,7 +69,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IEnumerable<KeyValuePair<string, DataSource>> mssqldbs = runtimeConfig.DataSourceNameToDataSource.Where(x => x.Value.DatabaseType == DatabaseType.MSSQL);
             _attemptToSetAccessToken = new Dictionary<string, bool>();
             _isSessionContextEnabled = new Dictionary<string, bool>();
-            _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
+            _accessTokensFromConfiguration = runtimeConfigProvider.ManagedIdentityAccessToken;
 
             foreach ((string dataSourceName, DataSource dataSource) in mssqldbs)
             {
@@ -84,11 +85,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 MsSqlOptions? msSqlOptions = dataSource.GetTypedOptions<MsSqlOptions>();
                 _isSessionContextEnabled[dataSourceName] = msSqlOptions is null ? false : msSqlOptions.SetSessionContext;
                 _attemptToSetAccessToken[dataSourceName] = ShouldManagedIdentityAccessBeAttempted(builder);
-            }
-
-            if (!_accessTokenFromController.ContainsKey(runtimeConfig.DefaultDataSourceName))
-            {
-                _accessTokenFromController[runtimeConfig.DefaultDataSourceName] = null;
             }
         }
 
@@ -107,15 +103,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
             }
 
+            _attemptToSetAccessToken.TryGetValue(dataSourceName, out bool setAccessToken);
+
             // Only attempt to get the access token if the connection string is in the appropriate format
-            if (_attemptToSetAccessToken[dataSourceName])
+            if (setAccessToken)
             {
                 SqlConnection sqlConn = (SqlConnection)conn;
 
                 // If the configuration controller provided a managed identity access token use that,
                 // else use the default saved access token if still valid.
                 // Get a new token only if the saved token is null or expired.
-                string? accessToken = _accessTokenFromController[dataSourceName] ??
+                _accessTokensFromConfiguration.TryGetValue(dataSourceName, out string? accessTokenFromController);
+                string? accessToken = accessTokenFromController ??
                     (IsDefaultAccessTokenValid() ?
                         ((AccessToken)_defaultAccessToken!).Token :
                         await GetAccessTokenAsync());

@@ -28,8 +28,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// The managed identity Access Token string obtained
         /// from the configuration controller.
+        /// Key: datasource name, Value: access token for this datasource from controller.
         /// </summary>
-        private readonly Dictionary<string, string?> _accessTokenFromController;
+        private readonly Dictionary<string, string?> _accessTokensFromConfiguration;
 
         public DefaultAzureCredential AzureCredential { get; set; } = new();
 
@@ -59,7 +60,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             IEnumerable<KeyValuePair<string, DataSource>> mysqldbs = runtimeConfigProvider.GetConfig().DataSourceNameToDataSource.Where(x => x.Value.DatabaseType == DatabaseType.PostgreSQL);
             _attemptToSetAccessToken = new Dictionary<string, bool>();
-            _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
+            _accessTokensFromConfiguration = runtimeConfigProvider.ManagedIdentityAccessToken;
 
             foreach ((string dataSourceName, DataSource dataSource) in mysqldbs)
             {
@@ -73,11 +74,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 base.ConnectionStringBuilders.Add(dataSourceName, builder);
                 MsSqlOptions? msSqlOptions = dataSource.GetTypedOptions<MsSqlOptions>();
                 _attemptToSetAccessToken[dataSourceName] = ShouldManagedIdentityAccessBeAttempted(builder);
-            }
-
-            if (!_accessTokenFromController.ContainsKey(runtimeConfigProvider.GetConfig().DefaultDataSourceName))
-            {
-                _accessTokenFromController[runtimeConfigProvider.GetConfig().DefaultDataSourceName] = null;
             }
         }
 
@@ -95,15 +91,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
             }
 
+            _attemptToSetAccessToken.TryGetValue(dataSourceName, out bool setAccessToken);
+
             // Only attempt to get the access token if the connection string is in the appropriate format
-            if (_attemptToSetAccessToken[dataSourceName])
+            if (setAccessToken)
             {
                 NpgsqlConnection sqlConn = (NpgsqlConnection)conn;
 
                 // If the configuration controller provided a managed identity access token use that,
                 // else use the default saved access token if still valid.
                 // Get a new token only if the saved token is null or expired.
-                string? accessToken = _accessTokenFromController[dataSourceName] ??
+                _accessTokensFromConfiguration.TryGetValue(dataSourceName, out string? accessTokenFromController);
+                string? accessToken = accessTokenFromController ??
                     (IsDefaultAccessTokenValid() ?
                         ((AccessToken)_defaultAccessToken!).Token :
                         await GetAccessTokenAsync());

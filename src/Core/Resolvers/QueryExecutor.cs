@@ -34,6 +34,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         private AsyncRetryPolicy _retryPolicy;
 
+        /// <summary>
+        /// Dictionary that stored DbName to its corresponding connection string builder.
+        /// </summary>
         public virtual IDictionary<string, DbConnectionStringBuilder> ConnectionStringBuilders { get; set; }
 
         public QueryExecutor(DbExceptionParser dbExceptionParser,
@@ -74,7 +77,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (!ConnectionStringBuilders.ContainsKey(dataSourceName))
             {
-                throw new Exception("Query execution failed. Could not find datasource to execute query against");
+                throw new DataApiBuilderException("Query execution failed. Could not find datasource to execute query against", HttpStatusCode.InternalServerError, DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
 
             int retryAttempt = 0;

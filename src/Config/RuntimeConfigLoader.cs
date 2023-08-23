@@ -179,11 +179,19 @@ public abstract class RuntimeConfigLoader
 
         return true;
     }
+
     /// <summary>
     /// Get Serializer options for the config file.
     /// </summary>
     public static JsonSerializerOptions GetSerializationOptions()
     {
+        List<String> propertiesToExcludeForSerialization = new ()
+        {
+            "DefaultDataSourceName",
+            "DataSourceNameToDataSource",
+            "EntityNameToDataSourceName"
+        };
+
         JsonSerializerOptions options = new()
         {
             PropertyNameCaseInsensitive = false,
@@ -199,6 +207,8 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new EntitySourceConverterFactory());
         options.Converters.Add(new EntityActionConverterFactory());
         options.Converters.Add(new StringJsonConverterFactory());
+        options.Converters.Add(new RuntimeConfigConditionalConverter(propertiesToExcludeForSerialization));
+
         return options;
     }
 

@@ -99,7 +99,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
             foreach (DataSource dataSource in runtimeConfig.DataSourceNameToDataSource.Values)
             {
                 // Connection string can't be null or empty
-                if (string.IsNullOrEmpty(dataSource.ConnectionString))
+                if (string.IsNullOrWhiteSpace(dataSource.ConnectionString))
                 {
                     throw new DataApiBuilderException(
                         message: DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE,
@@ -396,23 +396,22 @@ namespace Azure.DataApiBuilder.Core.Configurations
         /// <param name="runtimeConfig"></param>
         public static void ValidateRestURI(RuntimeConfig runtimeConfig)
         {
-            foreach (DataSource dataSource in runtimeConfig.DataSourceNameToDataSource.Values)
+            if (runtimeConfig.DataSourceNameToDataSource.Values.Any(x => x.DatabaseType is DatabaseType.CosmosDB_NoSQL))
             {
-                // CosmosDB_NoSQL does not support rest. No need to do any validations.
-                if (dataSource.DatabaseType is DatabaseType.CosmosDB_NoSQL)
-                {
-                    return;
-                }
-
-                string restPath = runtimeConfig.Runtime.Rest.Path;
-                if (!TryValidateUriComponent(restPath, out string exceptionMsgSuffix))
-                {
-                    throw new DataApiBuilderException(
-                        message: $"{ApiType.REST} path {exceptionMsgSuffix}",
-                        statusCode: HttpStatusCode.ServiceUnavailable,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
-                }
+                // if we have a cosmos db even in multiple db scenario - no rest support.
+                return;
             }
+
+            // validate the rest path.
+            string restPath = runtimeConfig.Runtime.Rest.Path;
+            if (!TryValidateUriComponent(restPath, out string exceptionMsgSuffix))
+            {
+                throw new DataApiBuilderException(
+                    message: $"{ApiType.REST} path {exceptionMsgSuffix}",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+            }
+
         }
 
         /// <summary>

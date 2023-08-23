@@ -71,7 +71,7 @@ public abstract class RuntimeConfigLoader
                 updatedConnectionString = GetConnectionStringWithApplicationName(updatedConnectionString);
             }
 
-            if (dataSourceName is null null || string.Equals(dataSourceName, config.DefaultDataSourceName, StringComparison.OrdinalIgnoreCase))
+            if (dataSourceName is null || string.Equals(dataSourceName, config.DefaultDataSourceName, StringComparison.OrdinalIgnoreCase))
             {
                 // single database scenario - default db is set.
                 config = config with { DataSource = config.DataSource with { ConnectionString = updatedConnectionString } };
@@ -136,9 +136,9 @@ public abstract class RuntimeConfigLoader
             {
                 foreach ((string dataSourceName, string connectionString) in datasourceNameToConnectionString)
                 {
-                    if (config.DataSourceNameToDataSource.ContainsKey(dataSourceName))
+                    config.DataSourceNameToDataSource.TryGetValue(dataSourceName, out DataSource? ds);
+                    if (ds is not null)
                     {
-                        DataSource ds = config.DataSourceNameToDataSource[dataSourceName];
                         string updatedConnectionString = connectionString;
 
                         // Add Application Name for telemetry for MsSQL

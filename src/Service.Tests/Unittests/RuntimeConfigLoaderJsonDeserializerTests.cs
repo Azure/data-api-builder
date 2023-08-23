@@ -94,7 +94,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                                             ""set-session-context"": true
                                         },
                                     ""connection-string"": ""Server=tcp:127.0.0.1,1433;Persist Security Info=False;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=False;Connection Timeout=5;""
-                                    }
+                                    },
+                                    ""entities"":{ }
                                 }";
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(actualJson, out RuntimeConfig _), "Should not fail to parse with comments");
         }

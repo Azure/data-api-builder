@@ -46,6 +46,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         private AccessToken? _defaultAccessToken;
 
+        /// <summary>
+        /// DatasourceName to boolean value indicating if access token should be set for db.
+        /// </summary>
         private Dictionary<string, bool> _attemptToSetAccessToken;
 
         public PostgreSqlQueryExecutor(
@@ -58,11 +61,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                   runtimeConfigProvider,
                   httpContextAccessor)
         {
-            IEnumerable<KeyValuePair<string, DataSource>> mysqldbs = runtimeConfigProvider.GetConfig().DataSourceNameToDataSource.Where(x => x.Value.DatabaseType == DatabaseType.PostgreSQL);
+            IEnumerable<KeyValuePair<string, DataSource>> postgresqldbs = runtimeConfigProvider.GetConfig().DataSourceNameToDataSource.Where(x => x.Value.DatabaseType == DatabaseType.PostgreSQL);
             _attemptToSetAccessToken = new Dictionary<string, bool>();
             _accessTokensFromConfiguration = runtimeConfigProvider.ManagedIdentityAccessToken;
 
-            foreach ((string dataSourceName, DataSource dataSource) in mysqldbs)
+            foreach ((string dataSourceName, DataSource dataSource) in postgresqldbs)
             {
                 NpgsqlConnectionStringBuilder builder = new(dataSource.ConnectionString);
 
@@ -71,7 +74,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     builder.SslMode = SslMode.VerifyFull;
                 }
 
-                base.ConnectionStringBuilders.Add(dataSourceName, builder);
+                ConnectionStringBuilders.Add(dataSourceName, builder);
                 MsSqlOptions? msSqlOptions = dataSource.GetTypedOptions<MsSqlOptions>();
                 _attemptToSetAccessToken[dataSourceName] = ShouldManagedIdentityAccessBeAttempted(builder);
             }
@@ -83,6 +86,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// connection needs to be replaced with the default access token.
         /// </summary>
         /// <param name="conn">The supplied connection to modify for managed identity access.</param>
+        /// <param name="dataSourceName">Name of datasource for which to set access token. Default dbName taken from config if null</param>
         public override async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, string? dataSourceName = null)
         {
             // using default datasource name for first db - maintaining backward compatibility for single db scenario.

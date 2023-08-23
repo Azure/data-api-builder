@@ -51,8 +51,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         private AccessToken? _defaultAccessToken;
 
+        /// <summary>
+        /// DatasourceName to boolean value indicating if access token should be set for db.
+        /// </summary>
         private Dictionary<string, bool> _attemptToSetAccessToken;
 
+        /// <summary>
+        /// DatasourceName to boolean value indicating if session context should be set for db.
+        /// </summary>
         private Dictionary<string, bool> _isSessionContextEnabled;
 
         public MsSqlQueryExecutor(
@@ -95,6 +101,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// provided in the runtime configuration.
         /// </summary>
         /// <param name="conn">The supplied connection to modify for managed identity access.</param>
+        /// <param name="dataSourceName">Name of datasource for which to set access token. Default dbName taken from config if null</param>
         public override async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, string? dataSourceName = null)
         {
             // using default datasource name for first db - maintaining backward compatibility for single db scenario.
@@ -184,6 +191,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="httpContext">Current user httpContext.</param>
         /// <param name="parameters">Dictionary of parameters/value required to execute the query.</param>
+        /// <param name="dataSourceName">Name of datasource for which to set access token. Default dbName taken from config if null</param>
         /// <returns>empty string / query to set session parameters for the connection.</returns>
         /// <seealso cref="https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-set-session-context-transact-sql?view=sql-server-ver16"/>
         public override string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, DbConnectionParam> parameters, string? dataSourceName = null)

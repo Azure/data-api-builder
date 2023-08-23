@@ -61,6 +61,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="context">HotChocolate Request Pipeline context containing request metadata</param>
         /// <param name="parameters">GraphQL Query Parameters from schema retrieved from ResolverMiddleware.GetParametersFromSchemaAndQueryFields()</param>
+        /// <param name="dataSourceName">Name of datasource for which to set access token. Default dbName taken from config if null</param>
         public async Task<Tuple<JsonDocument?, IMetadata?>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> parameters, string dataSourceName = "")
         {
             SqlQueryStructure structure = new(
@@ -74,13 +75,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (structure.PaginationMetadata.IsPaginated)
             {
                 return new Tuple<JsonDocument?, IMetadata?>(
-                    SqlPaginationUtil.CreatePaginationConnectionFromJsonDocument(await ExecuteAsync(structure), structure.PaginationMetadata),
+                    SqlPaginationUtil.CreatePaginationConnectionFromJsonDocument(await ExecuteAsync(structure, dataSourceName), structure.PaginationMetadata),
                     structure.PaginationMetadata);
             }
             else
             {
                 return new Tuple<JsonDocument?, IMetadata?>(
-                    await ExecuteAsync(structure),
+                    await ExecuteAsync(structure, dataSourceName),
                     structure.PaginationMetadata);
             }
         }
@@ -101,7 +102,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     parameters);
 
                 return new Tuple<IEnumerable<JsonDocument>, IMetadata?>(
-                        FormatStoredProcedureResultAsJsonList(await ExecuteAsync(sqlExecuteStructure)),
+                        FormatStoredProcedureResultAsJsonList(await ExecuteAsync(sqlExecuteStructure, dataSourceName)),
                         PaginationMetadata.MakeEmptyPaginationMetadata());
             }
             else
@@ -117,10 +118,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 string queryString = _queryBuilder.Build(structure);
                 List<JsonDocument>? jsonListResult =
                     await _queryExecutor.ExecuteQueryAsync(
-                        queryString,
-                        structure.Parameters,
-                        _queryExecutor.GetJsonResultAsync<List<JsonDocument>>,
-                        _httpContextAccessor.HttpContext!);
+                        sqltext: queryString,
+                        parameters: structure.Parameters,
+                        dataReaderHandler: _queryExecutor.GetJsonResultAsync<List<JsonDocument>>,
+                        httpContext: _httpContextAccessor.HttpContext!,
+                        args: null,
+                        dataSourceName: dataSourceName);
 
                 if (jsonListResult is null)
                 {
@@ -136,7 +139,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         // <summary>
         // Given the FindRequestContext, obtains the query text and executes it against the backend. Useful for REST API scenarios.
         // </summary>
-        public async Task<IActionResult> ExecuteAsync(FindRequestContext context)
+        public async Task<IActionResult> ExecuteAsync(FindRequestContext context, string datasourceName = "")
         {
             SqlQueryStructure structure = new(
                 context,
@@ -145,7 +148,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 _runtimeConfigProvider,
                 _gQLFilterParser,
                 _httpContextAccessor.HttpContext!);
-            using JsonDocument? queryJson = await ExecuteAsync(structure);
+            using JsonDocument? queryJson = await ExecuteAsync(structure, datasourceName);
             // queryJson is null if dbreader had no rows to return
             // If no rows/empty table, return an empty json array
             return queryJson is null ? FormatFindResult(JsonDocument.Parse("[]"), context) :
@@ -156,7 +159,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Given the StoredProcedureRequestContext, obtains the query text and executes it against the backend. Useful for REST API scenarios.
         /// Only the first result set will be returned, regardless of the contents of the stored procedure.
         /// </summary>
-        public async Task<IActionResult> ExecuteAsync(StoredProcedureRequestContext context)
+        public async Task<IActionResult> ExecuteAsync(StoredProcedureRequestContext context, string dataSourceName = "")
         {
             SqlExecuteStructure structure = new(
                 context.EntityName,
@@ -164,7 +167,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 _authorizationResolver,
                 _gQLFilterParser,
                 context.ResolvedParameters);
-            using JsonDocument? queryJson = await ExecuteAsync(structure);
+            using JsonDocument? queryJson = await ExecuteAsync(structure, dataSourceName);
             // queryJson is null if dbreader had no rows to return
             // If no rows/empty result set, return an empty json array
             return queryJson is null ? OkResponse(JsonDocument.Parse("[]").RootElement.Clone()) :
@@ -309,16 +312,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         // <summary>
         // Given the SqlQueryStructure structure, obtains the query text and executes it against the backend.
         // </summary>
-        private async Task<JsonDocument?> ExecuteAsync(SqlQueryStructure structure)
+        private async Task<JsonDocument?> ExecuteAsync(SqlQueryStructure structure, string dataSourceName = "")
         {
             // Open connection and execute query using _queryExecutor
             string queryString = _queryBuilder.Build(structure);
             JsonDocument? jsonDocument =
                 await _queryExecutor.ExecuteQueryAsync(
-                    queryString,
-                    structure.Parameters,
-                    _queryExecutor.GetJsonResultAsync<JsonDocument>,
-                    _httpContextAccessor.HttpContext!);
+                    sqltext: queryString,
+                    parameters: structure.Parameters,
+                    dataReaderHandler: _queryExecutor.GetJsonResultAsync<JsonDocument>,
+                    httpContext: _httpContextAccessor.HttpContext!,
+                    args: null,
+                    dataSourceName: dataSourceName);
             return jsonDocument;
         }
 
@@ -327,16 +332,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         // Unlike a normal query, result from database may not be JSON. Instead we treat output as SqlMutationEngine does (extract by row).
         // As such, this could feasibly be moved to the mutation engine. 
         // </summary>
-        private async Task<JsonDocument?> ExecuteAsync(SqlExecuteStructure structure)
+        private async Task<JsonDocument?> ExecuteAsync(SqlExecuteStructure structure, string dataSourceName = "")
         {
             string queryString = _queryBuilder.Build(structure);
 
             JsonArray? resultArray =
                 await _queryExecutor.ExecuteQueryAsync(
-                    queryString,
-                    structure.Parameters,
-                    _queryExecutor.GetJsonArrayAsync,
-                    _httpContextAccessor.HttpContext!);
+                    sqltext: queryString,
+                    parameters: structure.Parameters,
+                    dataReaderHandler: _queryExecutor.GetJsonArrayAsync,
+                    httpContext: _httpContextAccessor.HttpContext!,
+                    args: null,
+                    dataSourceName: dataSourceName);
 
             JsonDocument? jsonDocument = null;
 

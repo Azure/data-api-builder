@@ -82,11 +82,11 @@ public abstract class RuntimeConfigLoader
                 config.DataSourceNameToDataSource.TryGetValue(config.DefaultDataSourceName, out DataSource? ds);
                 if (ds is not null)
                 {
-                    config.DataSourceNameToDataSource[dataSourceName] = config.DataSourceNameToDataSource[dataSourceName] with { ConnectionString = updatedConnectionString };
+                    config.DataSourceNameToDataSource[dataSourceName] = ds with { ConnectionString = updatedConnectionString };
                 }
                 else
                 {
-                    throw new ArgumentException($"{nameof(dataSourceName)} could not be found within the config");
+                    throw new DataApiBuilderException($"{nameof(dataSourceName)} could not be found within the config", HttpStatusCode.InternalServerError, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
                 }
             }
         }
@@ -152,7 +152,7 @@ public abstract class RuntimeConfigLoader
                     }
                     else
                     {
-                        throw new ArgumentException($"{nameof(dataSourceName)} could not be found within the config");
+                        throw new DataApiBuilderException($"{nameof(dataSourceName)} could not be found within the config", HttpStatusCode.InternalServerError, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
                     }
                 }
             }
@@ -185,7 +185,7 @@ public abstract class RuntimeConfigLoader
     /// </summary>
     public static JsonSerializerOptions GetSerializationOptions()
     {
-        List<String> propertiesToExcludeForSerialization = new ()
+        List<String> propertiesToExcludeForSerialization = new()
         {
             "DefaultDataSourceName",
             "DataSourceNameToDataSource",

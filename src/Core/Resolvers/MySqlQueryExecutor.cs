@@ -45,6 +45,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         private AccessToken? _defaultAccessToken;
 
+        /// <summary>
+        /// DatasourceName to boolean value indicating if access token should be set for db.
+        /// </summary>
         private Dictionary<string, bool> _attemptToSetAccessToken;
 
         public MySqlQueryExecutor(
@@ -87,6 +90,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// provided in the runtime configuration.
         /// </summary>
         /// <param name="conn">The supplied connection to modify for managed identity access.</param>
+        /// <param name="dataSourceName">Name of datasource for which to set access token. Default dbName taken from config if null</param>
         public override async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, string? dataSourceName = null)
         {
             // using default datasource name for first db - maintaining backward compatibility for single db scenario.

@@ -174,13 +174,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc />
-        public Task<IActionResult> ExecuteAsync(FindRequestContext context)
+        public Task<IActionResult> ExecuteAsync(FindRequestContext context, string dataSourceName = "")
         {
             throw new NotImplementedException();
         }
 
         /// <inheritdoc />
-        public Task<IActionResult> ExecuteAsync(StoredProcedureRequestContext context)
+        public Task<IActionResult> ExecuteAsync(StoredProcedureRequestContext context, string dataSourceName = "")
         {
             throw new NotImplementedException();
         }

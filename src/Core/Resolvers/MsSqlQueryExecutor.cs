@@ -65,7 +65,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                   httpContextAccessor)
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
-            IEnumerable<KeyValuePair<string, DataSource>> mssqldbs = runtimeConfig.DatasourceNameToDataSource.Where(x => x.Value.DatabaseType == DatabaseType.MSSQL);
+            IEnumerable<KeyValuePair<string, DataSource>> mssqldbs = runtimeConfig.DataSourceNameToDataSource.Where(x => x.Value.DatabaseType == DatabaseType.MSSQL);
             _attemptToSetAccessToken = new Dictionary<string, bool>();
             _isSessionContextEnabled = new Dictionary<string, bool>();
             _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
@@ -99,23 +99,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// provided in the runtime configuration.
         /// </summary>
         /// <param name="conn">The supplied connection to modify for managed identity access.</param>
-        public override async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, string? datasourceName = null)
+        public override async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, string? dataSourceName = null)
         {
             // using default datasource name for first db - maintaining backward compatibility for single db scenario.
-            if (string.IsNullOrEmpty(datasourceName))
+            if (string.IsNullOrEmpty(dataSourceName))
             {
-                datasourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
+                dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
             }
 
             // Only attempt to get the access token if the connection string is in the appropriate format
-            if (_attemptToSetAccessToken[datasourceName])
+            if (_attemptToSetAccessToken[dataSourceName])
             {
                 SqlConnection sqlConn = (SqlConnection)conn;
 
                 // If the configuration controller provided a managed identity access token use that,
                 // else use the default saved access token if still valid.
                 // Get a new token only if the saved token is null or expired.
-                string? accessToken = _accessTokenFromController[datasourceName] ??
+                string? accessToken = _accessTokenFromController[dataSourceName] ??
                     (IsDefaultAccessTokenValid() ?
                         ((AccessToken)_defaultAccessToken!).Token :
                         await GetAccessTokenAsync());
@@ -187,14 +187,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="parameters">Dictionary of parameters/value required to execute the query.</param>
         /// <returns>empty string / query to set session parameters for the connection.</returns>
         /// <seealso cref="https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-set-session-context-transact-sql?view=sql-server-ver16"/>
-        public override string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, DbConnectionParam> parameters, string? datasourceName = null)
+        public override string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, DbConnectionParam> parameters, string? dataSourceName = null)
         {
-            if (string.IsNullOrEmpty(datasourceName))
+            if (string.IsNullOrEmpty(dataSourceName))
             {
-                datasourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
+                dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
             }
 
-            if (httpContext is null || !_isSessionContextEnabled[datasourceName])
+            if (httpContext is null || !_isSessionContextEnabled[dataSourceName])
             {
                 return string.Empty;
             }

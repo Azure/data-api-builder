@@ -37,6 +37,7 @@ public class RuntimeConfigProvider
 
     /// <summary>
     /// The access tokens representing a Managed Identity to connect to the database.
+    /// The key is the unique datasource name and the value is the access token.
     /// </summary>
     public Dictionary<string, string?> ManagedIdentityAccessToken { get; private set; } = new Dictionary<string, string?>();
 
@@ -188,7 +189,7 @@ public class RuntimeConfigProvider
                 _ => runtimeConfig with { DataSource = runtimeConfig.DataSource with { ConnectionString = connectionString } }
             };
             ManagedIdentityAccessToken[_runtimeConfig.DefaultDataSourceName] = accessToken;
-            _runtimeConfig.DatasourceNameToDataSource[_runtimeConfig.DefaultDataSourceName] = _runtimeConfig.DataSource;
+            _runtimeConfig.DataSourceNameToDataSource[_runtimeConfig.DefaultDataSourceName] = _runtimeConfig.DataSource;
 
             return await InvokeConfigLoadedHandlersAsync();
         }
@@ -213,11 +214,11 @@ public class RuntimeConfigProvider
         return results.All(x => x);
     }
 
-    private static RuntimeConfig HandleCosmosNoSqlConfiguration(string? schema, RuntimeConfig runtimeConfig, string connectionString, string? databaseName = null)
+    private static RuntimeConfig HandleCosmosNoSqlConfiguration(string? schema, RuntimeConfig runtimeConfig, string connectionString, string? dataSourceName = null)
     {
-        if (string.IsNullOrEmpty(databaseName))
+        if (string.IsNullOrEmpty(dataSourceName))
         {
-            databaseName = runtimeConfig.DefaultDataSourceName;
+            dataSourceName = runtimeConfig.DefaultDataSourceName;
         }
 
         DbConnectionStringBuilder dbConnectionStringBuilder = new()
@@ -232,7 +233,7 @@ public class RuntimeConfigProvider
 
         HyphenatedNamingPolicy namingPolicy = new();
 
-        DataSource dataSource = runtimeConfig.DatasourceNameToDataSource[databaseName];
+        DataSource dataSource = runtimeConfig.DataSourceNameToDataSource[dataSourceName];
 
         Dictionary<string, JsonElement> options;
         if (dataSource.Options is not null)
@@ -260,14 +261,14 @@ public class RuntimeConfigProvider
         dataSource = dataSource with { Options = options, ConnectionString = connectionString };
 
         // Update the connection string in the parsed config with the one that was provided to the controller
-        if (databaseName == runtimeConfig.DefaultDataSourceName)
+        if (dataSourceName == runtimeConfig.DefaultDataSourceName)
         {
             // update default db.
             runtimeConfig = runtimeConfig with { DataSource = dataSource };
         }
 
         // update dictionary
-        runtimeConfig.DatasourceNameToDataSource[databaseName] = dataSource;
+        runtimeConfig.DataSourceNameToDataSource[dataSourceName] = dataSource;
 
         return runtimeConfig;
     }

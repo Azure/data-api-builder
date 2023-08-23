@@ -22,7 +22,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="parameters">The parameters used to execute the SQL text.</param>
         /// <param name="dataReaderHandler">The function to invoke to handle the results
         /// in the DbDataReader obtained after executing the query.</param>
-        /// <param name="datasourceName">datasourceName against which to run query.</param>
+        /// <param name="dataSourceName">dataSourceName against which to run query.</param>
         /// <param name="httpContext">Current request httpContext.</param>
         /// <param name="args">List of string arguments to the DbDataReader handler.</param>
         /// <returns>An object formed using the results of the query as returned by the given handler.</returns>
@@ -101,7 +101,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Modified the properties of the supplied connection to support managed identity access.
         /// </summary>
-        public Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, string? datasourceName = null);
+        public Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, string? dataSourceName = null);
 
         /// <summary>
         /// Method to generate the query to send user data to the underlying database which might be used
@@ -109,9 +109,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="httpContext">Current user httpContext.</param>
         /// <param name="parameters">Dictionary of parameters/value required to execute the query.</param>
-        /// <param name="datasourceName"> Db for which to generate query.</param>
+        /// <param name="dataSourceName"> Db for which to generate query.</param>
         /// <returns>empty string / query to set session parameters for the connection.</returns>
-        public string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, DbConnectionParam> parameters, string? datasourceName = null);
+        public string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, DbConnectionParam> parameters, string? dataSourceName = null);
 
         /// <summary>
         /// Helper method to populate DbType for parameter. Currently DbTypes for parameters are only populated for MsSql.

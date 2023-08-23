@@ -96,7 +96,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
             IFileSystem fileSystem,
             ILogger logger)
         {
-            foreach (DataSource dataSource in runtimeConfig.DatasourceNameToDataSource.Values)
+            foreach (DataSource dataSource in runtimeConfig.DataSourceNameToDataSource.Values)
             {
                 // Connection string can't be null or empty
                 if (string.IsNullOrEmpty(dataSource.ConnectionString))
@@ -122,7 +122,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
         {
             // Schema file should be present in the directory if not specified in the config
             // when using CosmosDB_NoSQL database.
-            foreach (DataSource dataSource in runtimeConfig.DatasourceNameToDataSource.Values)
+            foreach (DataSource dataSource in runtimeConfig.DataSourceNameToDataSource.Values)
             {
                 if (dataSource.DatabaseType is DatabaseType.CosmosDB_NoSQL)
                 {
@@ -396,7 +396,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
         /// <param name="runtimeConfig"></param>
         public static void ValidateRestURI(RuntimeConfig runtimeConfig)
         {
-            foreach (DataSource dataSource in runtimeConfig.DatasourceNameToDataSource.Values)
+            foreach (DataSource dataSource in runtimeConfig.DataSourceNameToDataSource.Values)
             {
                 // CosmosDB_NoSQL does not support rest. No need to do any validations.
                 if (dataSource.DatabaseType is DatabaseType.CosmosDB_NoSQL)
@@ -561,7 +561,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
                         }
 
                         string entityDataSourceName = runtimeConfig.EntityNameToDataSourceName[entityName];
-                        DataSource entityDataSource = runtimeConfig.DatasourceNameToDataSource[entityDataSourceName];
+                        DataSource entityDataSource = runtimeConfig.DataSourceNameToDataSource[entityDataSourceName];
 
                         if (entityDataSource.DatabaseType is not DatabaseType.MSSQL && !IsValidDatabasePolicyForAction(action))
                         {

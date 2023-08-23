@@ -21,7 +21,7 @@ public record RuntimeConfig
     public string DefaultDataSourceName;
 
     [JsonIgnore]
-    public Dictionary<string, DataSource> DatasourceNameToDataSource { get; set; }
+    public Dictionary<string, DataSource> DataSourceNameToDataSource { get; set; }
 
     [JsonIgnore]
     public Dictionary<string, string> EntityNameToDataSourceName { get; set; }
@@ -33,28 +33,26 @@ public record RuntimeConfig
         this.DataSource = DataSource;
         this.Runtime = Runtime;
         this.Entities = Entities;
-        this.DatasourceNameToDataSource = new Dictionary<string, DataSource>();
+        this.DataSourceNameToDataSource = new Dictionary<string, DataSource>();
         this.EntityNameToDataSourceName = new Dictionary<string, string>();
 
         this.DefaultDataSourceName = Guid.NewGuid().ToString();
-        this.DatasourceNameToDataSource.Add(this.DefaultDataSourceName, this.DataSource);
+        this.DataSourceNameToDataSource.Add(this.DefaultDataSourceName, this.DataSource);
 
-        if (Entities != null)
+        foreach (KeyValuePair<string, Entity> entity in Entities)
         {
-            foreach (KeyValuePair<string, Entity> entity in Entities)
-            {
-                EntityNameToDataSourceName.Add(entity.Key, DefaultDataSourceName);
-            }
+            EntityNameToDataSourceName.Add(entity.Key, DefaultDataSourceName);
         }
+
     }
 
-    public RuntimeConfig(string Schema, Dictionary<string, DataSource> dataSourceDict, Dictionary<string, string> entityNameToDataSourceDict, RuntimeOptions Runtime, RuntimeEntities Entities)
+    public RuntimeConfig(string schema, Dictionary<string, DataSource> dataSourceDict, Dictionary<string, string> entityNameToDataSourceDict, RuntimeOptions runtime, RuntimeEntities entities)
     {
-        this.Schema = Schema;
-        this.DatasourceNameToDataSource = dataSourceDict;
+        this.Schema = schema;
+        this.DataSourceNameToDataSource = dataSourceDict;
         this.EntityNameToDataSourceName = entityNameToDataSourceDict;
-        this.Runtime = Runtime;
-        this.Entities = Entities;
+        this.Runtime = runtime;
+        this.Entities = entities;
         KeyValuePair<string, DataSource> keyValuePair = dataSourceDict.First();
         this.DefaultDataSourceName = keyValuePair.Key;
         this.DataSource = keyValuePair.Value;

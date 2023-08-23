@@ -51,12 +51,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     "Cannot initialize a CosmosClientProvider without the runtime config.");
             }
 
-            if (!configuration.DatasourceNameToDataSource.Values.Any(x => x.DatabaseType is DatabaseType.CosmosDB_NoSQL))
+            if (!configuration.DataSourceNameToDataSource.Values.Any(x => x.DatabaseType is DatabaseType.CosmosDB_NoSQL))
             {
                 throw new InvalidOperationException("We shouldn't need a CosmosClientProvider if we're not accessing a CosmosDb");
             }
 
-            IEnumerable<KeyValuePair<string, DataSource>> cosmosDb = configuration.DatasourceNameToDataSource.Where(x => x.Value.DatabaseType == DatabaseType.CosmosDB_NoSQL);
+            IEnumerable<KeyValuePair<string, DataSource>> cosmosDb = configuration.DataSourceNameToDataSource.Where(x => x.Value.DatabaseType == DatabaseType.CosmosDB_NoSQL);
 
             foreach (KeyValuePair<string, DataSource> dataSourcePair in cosmosDb)
             {

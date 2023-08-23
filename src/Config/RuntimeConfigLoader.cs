@@ -45,7 +45,7 @@ public abstract class RuntimeConfigLoader
     /// <param name="json">JSON that represents the config file.</param>
     /// <param name="config">The parsed config, or null if it parsed unsuccessfully.</param>
     /// <returns>True if the config was parsed, otherwise false.</returns>
-    public static bool TryParseConfig(string json, [NotNullWhen(true)] out RuntimeConfig? config, ILogger? logger = null, string? connectionString = null, string? datasourceName = null)
+    public static bool TryParseConfig(string json, [NotNullWhen(true)] out RuntimeConfig? config, ILogger? logger = null, string? connectionString = null, string? dataSourceName = null)
     {
         JsonSerializerOptions options = GetSerializationOptions();
 
@@ -71,15 +71,23 @@ public abstract class RuntimeConfigLoader
                 updatedConnectionString = GetConnectionStringWithApplicationName(updatedConnectionString);
             }
 
-            if (datasourceName == null || string.Equals(datasourceName, config.DefaultDataSourceName, StringComparison.OrdinalIgnoreCase))
+            if (dataSourceName == null || string.Equals(dataSourceName, config.DefaultDataSourceName, StringComparison.OrdinalIgnoreCase))
             {
                 // single database scenario - default db is set.
                 config = config with { DataSource = config.DataSource with { ConnectionString = updatedConnectionString } };
-                config.DatasourceNameToDataSource[config.DefaultDataSourceName] = config.DataSource;
+                config.DataSourceNameToDataSource[config.DefaultDataSourceName] = config.DataSource;
             }
             else
             {
-                config.DatasourceNameToDataSource[datasourceName] = config.DatasourceNameToDataSource[datasourceName] with { ConnectionString = updatedConnectionString };
+                config.DataSourceNameToDataSource.TryGetValue(config.DefaultDataSourceName, out DataSource? ds);
+                if (ds != null)
+                {
+                    config.DataSourceNameToDataSource[dataSourceName] = config.DataSourceNameToDataSource[dataSourceName] with { ConnectionString = updatedConnectionString };
+                }
+                else
+                {
+                    throw new ArgumentException($"{nameof(dataSourceName)} could not be found within the config");
+                }
             }
         }
         catch (JsonException ex)
@@ -128,17 +136,24 @@ public abstract class RuntimeConfigLoader
             {
                 foreach ((string dataSourceName, string connectionString) in datasourceNameToConnectionString)
                 {
-                    DataSource ds = config.DatasourceNameToDataSource[dataSourceName];
-                    string updatedConnectionString = connectionString;
-
-                    // Add Application Name for telemetry for MsSQL
-                    if (ds.DatabaseType is DatabaseType.MSSQL)
+                    if (config.DataSourceNameToDataSource.ContainsKey(dataSourceName))
                     {
-                        updatedConnectionString = GetConnectionStringWithApplicationName(connectionString);
-                    }
+                        DataSource ds = config.DataSourceNameToDataSource[dataSourceName];
+                        string updatedConnectionString = connectionString;
 
-                    ds = ds with { ConnectionString = updatedConnectionString };
-                    config.DatasourceNameToDataSource[dataSourceName] = ds;
+                        // Add Application Name for telemetry for MsSQL
+                        if (ds.DatabaseType is DatabaseType.MSSQL)
+                        {
+                            updatedConnectionString = GetConnectionStringWithApplicationName(connectionString);
+                        }
+
+                        ds = ds with { ConnectionString = updatedConnectionString };
+                        config.DataSourceNameToDataSource[dataSourceName] = ds;
+                    }
+                    else
+                    {
+                        throw new ArgumentException($"{nameof(dataSourceName)} could not be found within the config");
+                    }
                 }
             }
         }

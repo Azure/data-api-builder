@@ -44,9 +44,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         {
             HashSet<string> inBuiltTypes = new()
             {
-                "ID",
+                ID_TYPE,
                 BYTE_TYPE,
-                GUID_TYPE,
                 SHORT_TYPE,
                 INT_TYPE,
                 LONG_TYPE,

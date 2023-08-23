@@ -134,6 +134,11 @@ namespace Azure.DataApiBuilder.Core.Services
             return databaseObject!.SchemaName;
         }
 
+        /// <summary>
+        /// Gets the database name. This method is only relevant for MySql where the terms schema and database are used interchangeably.
+        /// </summary>
+        public virtual string GetDatabaseName() => string.Empty;
+
         /// <inheritdoc />
         public string GetDatabaseObjectName(string entityName)
         {
@@ -1004,14 +1009,11 @@ namespace Azure.DataApiBuilder.Core.Services
                 sourceDefinition,
                 columnsInTable);
 
-            if (GetDatabaseType() is not DatabaseType.MySQL && entity is not null && entity.Source.Type is EntitySourceType.Table)
+            if (entity is not null && entity.Source.Type is EntitySourceType.Table)
             {
-                // For MySql, the way an update/insert query is generated, we cannot skip updating a read-only field without
-                // being unable to return it in the result. So, if we want to skip updating the field, then we cannot return it in the
-                // result. Hence, skipping this for MySql.
-                // This metadata is only populated for tables because the tables being queries to collect the metadata provide
-                // accurate data for tables only. For views, there is no straight forward way to collect this metadata.
-                await PopulateColumnDefinitionsWithReadOnlyFlag(tableName, schemaName, sourceDefinition);
+                // For MySql, database name is equivalent of schema name.
+                string schemaOrDatabaseName = GetDatabaseType() is DatabaseType.MySQL ? GetDatabaseName() : schemaName;
+                await PopulateColumnDefinitionsWithReadOnlyFlag(tableName, schemaOrDatabaseName, sourceDefinition);
             }
         }
 
@@ -1020,16 +1022,16 @@ namespace Azure.DataApiBuilder.Core.Services
         /// whether the column can be updated or not.
         /// </summary>
         /// <param name="tableName">Name of the table.</param>
-        /// <param name="schemaName">Schema of the table.</param>
+        /// <param name="schemaOrDatabaseName">Name of the schema (for MsSql/PgSql)/database (for MySql) of the table.</param>
         /// <param name="sourceDefinition">Table definition.</param>
-        private async Task PopulateColumnDefinitionsWithReadOnlyFlag(string tableName, string schemaName, SourceDefinition sourceDefinition)
+        private async Task PopulateColumnDefinitionsWithReadOnlyFlag(string tableName, string schemaOrDatabaseName, SourceDefinition sourceDefinition)
         {
-            string schemaParamName = $"{BaseQueryStructure.PARAM_NAME_PREFIX}param0";
+            string schemaOrDatabaseParamName = $"{BaseQueryStructure.PARAM_NAME_PREFIX}param0";
             string tableParamName = $"{BaseQueryStructure.PARAM_NAME_PREFIX}param1";
-            string queryToGetReadOnlyColumns = SqlQueryBuilder.BuildQueryToGetReadOnlyColumns(schemaParamName, tableParamName);
+            string queryToGetReadOnlyColumns = SqlQueryBuilder.BuildQueryToGetReadOnlyColumns(schemaOrDatabaseParamName, tableParamName);
             Dictionary<string, DbConnectionParam> parameters = new()
             {
-                { schemaParamName, new(schemaName, DbType.String) },
+                { schemaOrDatabaseParamName, new(schemaOrDatabaseName, DbType.String) },
                 { tableParamName, new(tableName, DbType.String) }
             };
 
@@ -1465,9 +1467,8 @@ namespace Azure.DataApiBuilder.Core.Services
 
             foreach (DbResultSetRow readOnlyFieldRowWithProperties in readOnlyFieldRowsWithProperties.Rows)
             {
-                Dictionary<string, object?> foreignKeyInfo = readOnlyFieldRowWithProperties.Columns;
-                string fieldName =
-                    (string)foreignKeyInfo["column_name"]!;
+                Dictionary<string, object?> readOnlyFieldInfo = readOnlyFieldRowWithProperties.Columns;
+                string fieldName = (string)readOnlyFieldInfo["column_name"]!;
                 readOnlyFields.Add(fieldName);
             }
 

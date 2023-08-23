@@ -97,7 +97,7 @@ namespace Azure.DataApiBuilder.Service
                 return loggerFactory.CreateLogger<RuntimeConfigValidator>();
             });
             services.AddSingleton<RuntimeConfigValidator>();
-            
+
             services.AddSingleton<CosmosClientProvider>();
             services.AddHealthChecks();
 

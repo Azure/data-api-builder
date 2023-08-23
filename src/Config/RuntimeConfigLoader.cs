@@ -71,7 +71,7 @@ public abstract class RuntimeConfigLoader
                 updatedConnectionString = GetConnectionStringWithApplicationName(updatedConnectionString);
             }
 
-            if (dataSourceName == null || string.Equals(dataSourceName, config.DefaultDataSourceName, StringComparison.OrdinalIgnoreCase))
+            if (dataSourceName is null null || string.Equals(dataSourceName, config.DefaultDataSourceName, StringComparison.OrdinalIgnoreCase))
             {
                 // single database scenario - default db is set.
                 config = config with { DataSource = config.DataSource with { ConnectionString = updatedConnectionString } };
@@ -80,7 +80,7 @@ public abstract class RuntimeConfigLoader
             else
             {
                 config.DataSourceNameToDataSource.TryGetValue(config.DefaultDataSourceName, out DataSource? ds);
-                if (ds != null)
+                if (ds is not null)
                 {
                     config.DataSourceNameToDataSource[dataSourceName] = config.DataSourceNameToDataSource[dataSourceName] with { ConnectionString = updatedConnectionString };
                 }
@@ -132,7 +132,7 @@ public abstract class RuntimeConfigLoader
                 return false;
             }
 
-            if (datasourceNameToConnectionString != null)
+            if (datasourceNameToConnectionString is not null)
             {
                 foreach ((string dataSourceName, string connectionString) in datasourceNameToConnectionString)
                 {

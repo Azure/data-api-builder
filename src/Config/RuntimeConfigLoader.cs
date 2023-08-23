@@ -128,7 +128,12 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new EntityGraphQLOptionsConverterFactory(replaceEnvVar));
         options.Converters.Add(new EntityRestOptionsConverterFactory(replaceEnvVar));
         options.Converters.Add(new EntityActionConverterFactory());
-        options.Converters.Add(new StringJsonConverterFactory(replaceEnvVar));
+
+        if (replaceEnvVar)
+        {
+            options.Converters.Add(new StringJsonConverterFactory());
+        }
+
         return options;
     }
 

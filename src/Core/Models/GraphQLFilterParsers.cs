@@ -551,7 +551,7 @@ namespace Azure.DataApiBuilder.Core.Models
                 predicates.Push(new PredicateOperand(new Predicate(
                     new PredicateOperand(column),
                     op,
-                    new PredicateOperand(processLiteral ? $"{processLiterals(value, column.ColumnName)}" : value.ToString()))
+                    new PredicateOperand(processLiteral ? $"{processLiterals(value, null)}" : value.ToString()))
                 ));
             }
 

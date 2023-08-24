@@ -313,7 +313,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     DbType = TypeHelper.GetDbTypeFromSystemType(systemType)
                 };
 
-                DbType? dbTypeForMsSqlDateTimeType = GetDbTypeForDateTimeTypes((string)row["DATA_TYPE"]);
+                DbType? dbTypeForMsSqlDateTimeType = SqlDbTypeToDbType((string)row["DATA_TYPE"]);
                 if (dbTypeForMsSqlDateTimeType is not null)
                 {
                     paramDefinition.DbType = dbTypeForMsSqlDateTimeType;
@@ -359,8 +359,8 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Takes a string version of a sql date/time type and returns its corresponding DbType.
         /// Returns null when the provided sql type is not a date/time type.
         /// </summary>
-        /// <param name="sqlDateTimeType">sql date/time/datetime type.</param>
-        public abstract DbType? GetDbTypeForDateTimeTypes(string sqlDateTimeType);
+        /// <param name="sqlDbTypeName">Name of the SqlDb type.</param>
+        public virtual DbType? SqlDbTypeToDbType(string sqlDbTypeName) => null;
 
         /// <summary>
         /// Generates the map used to find a given entity based
@@ -1243,7 +1243,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     }
 
                     columnDefinition.DbType = TypeHelper.GetDbTypeFromSystemType(columnDefinition.SystemType);
-                    DbType? dbTypeForMsSqlDateTimeType = GetDbTypeForDateTimeTypes((string)columnInfo["DATA_TYPE"]);
+                    DbType? dbTypeForMsSqlDateTimeType = SqlDbTypeToDbType((string)columnInfo["DATA_TYPE"]);
 
                     if (dbTypeForMsSqlDateTimeType is not null)
                     {

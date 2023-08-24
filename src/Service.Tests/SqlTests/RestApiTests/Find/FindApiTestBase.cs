@@ -41,7 +41,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "categoryid/2/pieceid/1/instant/2023-08-21T15:11:04",
                 queryString: string.Empty,
-                entityNameOrPath: _entityWithDateTimePK,
+                entityNameOrPath: _tableWithDateTimePK,
                 sqlQuery: GetQuery("FindByDateTimePKTest")
             );
         }

@@ -45,17 +45,18 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <inheritdoc/>
-        public override DbType? GetDbTypeForDateTimeTypes(string sqlDateTimeType)
+        public override DbType? SqlDbTypeToDbType(string sqlDbTypeName)
         {
-            if (TypeHelper.DateTimeMsSqlTypeToDbType.TryGetValue(sqlDateTimeType, out DbType dbType))
+            if (Enum.TryParse(sqlDbTypeName, ignoreCase: true, out SqlDbType sqlDbType))
             {
                 // For MsSql, all the date time types i.e. date, smalldatetime, datetime, datetime2 map to System.DateTime system type.
                 // Hence we cannot directly determine the DbType from the system type.
                 // However, to make sure that the database correctly interprets these datatypes, it is necessary to correctly
                 // populate the DbTypes.
-                return dbType;
+                return TypeHelper.GetDbTypeFromSqlDbType(sqlDbType);
             }
 
+            // This code should never be hit because every sqlDbTypeName must have a corresponding sqlDbType.
             return null;
         }
     }

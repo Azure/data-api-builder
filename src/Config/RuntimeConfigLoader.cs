@@ -163,8 +163,7 @@ public abstract class RuntimeConfigLoader
             PropertyNamingPolicy = new HyphenatedNamingPolicy(),
             ReadCommentHandling = JsonCommentHandling.Skip,
             WriteIndented = true,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-            IncludeFields = true,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         };
         options.Converters.Add(new EnumMemberJsonEnumConverterFactory());
         options.Converters.Add(new RestRuntimeOptionsConverterFactory());

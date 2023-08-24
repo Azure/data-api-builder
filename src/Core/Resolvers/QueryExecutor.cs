@@ -77,7 +77,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (!ConnectionStringBuilders.ContainsKey(dataSourceName))
             {
-                throw new DataApiBuilderException("Query execution failed. Could not find datasource to execute query against", HttpStatusCode.InternalServerError, DataApiBuilderException.SubStatusCodes.EntityNotFound);
+                throw new DataApiBuilderException("Query execution failed. Could not find datasource to execute query against", HttpStatusCode.InternalServerError, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
             }
 
             int retryAttempt = 0;

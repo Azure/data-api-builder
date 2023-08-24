@@ -396,7 +396,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
         /// <param name="runtimeConfig"></param>
         public static void ValidateRestURI(RuntimeConfig runtimeConfig)
         {
-            if (runtimeConfig.DataSourceNameToDataSource.Values.Any(x => x.DatabaseType is DatabaseType.CosmosDB_NoSQL))
+            if (!runtimeConfig.DataSourceNameToDataSource.Values.Any(x => x.DatabaseType is DatabaseType.CosmosDB_NoSQL))
             {
                 // if we have a cosmos db even in multiple db scenario - no rest support.
                 return;

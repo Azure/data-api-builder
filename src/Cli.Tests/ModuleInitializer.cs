@@ -21,7 +21,7 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<DataSource>(dataSource => dataSource.ConnectionString);
         // Ignore the JSON schema path as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.Schema);
-        // Ignore the databaseNameToDataSource array as its not exposed to customer.
+        // Ignore the dataSourceNameToDataSource array as its not exposed to customer.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.DataSourceNameToDataSource);
         // Ignore the EntityNameToDataSourceName array as its not exposed to customer.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.EntityNameToDataSourceName);

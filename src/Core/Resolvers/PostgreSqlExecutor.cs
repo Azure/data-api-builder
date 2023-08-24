@@ -28,14 +28,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// The managed identity Access Token string obtained
         /// from the configuration controller.
-        /// Key: datasource name, Value: access token for this datasource from controller.
+        /// Key: datasource name, Value: access token for this datasource.
         /// </summary>
         private readonly Dictionary<string, string?> _accessTokensFromConfiguration;
 
         public DefaultAzureCredential AzureCredential { get; set; } = new();
 
         /// <summary>
-        /// The postgresql specific connection string builder.
+        /// The PostgreSql specific connection string builders.
+        /// Key: datasource name, Value: connection string builder for this datasource.
         /// </summary>
         public override IDictionary<string, DbConnectionStringBuilder> ConnectionStringBuilders
             => base.ConnectionStringBuilders;

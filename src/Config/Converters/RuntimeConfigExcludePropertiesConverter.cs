@@ -8,6 +8,9 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 
 namespace Azure.DataApiBuilder.Config.Converters;
 
+/// <summary>
+/// This class is used to exclude properties from the RuntimeConfig when serializing.
+/// </summary>
 internal class RuntimeConfigConditionalConverter : JsonConverter<RuntimeConfig>
 {
     private readonly List<string> _propertiesToExclude;

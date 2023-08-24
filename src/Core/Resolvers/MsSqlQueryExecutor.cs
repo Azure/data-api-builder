@@ -33,12 +33,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// The managed identity Access Token string obtained
         /// from the configuration controller.
-        /// Key: datasource name, Value: access token for this datasource from configuration.
+        /// Key: datasource name, Value: access token for this datasource.
         /// </summary>
         private readonly Dictionary<string, string?> _accessTokensFromConfiguration;
 
         /// <summary>
-        /// The MsSql specific connection string builder.
+        /// The MsSql specific connection string builders.
+        /// Key: datasource name, Value: connection string builder for this datasource.
         /// </summary>
         public override IDictionary<string, DbConnectionStringBuilder> ConnectionStringBuilders
             => base.ConnectionStringBuilders;

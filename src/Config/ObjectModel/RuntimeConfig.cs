@@ -17,7 +17,7 @@ public record RuntimeConfig
 
     public RuntimeEntities Entities { get; init; }
 
-    public string DefaultDataSourceName;
+    public string DefaultDataSourceName { get; set; }
 
     public Dictionary<string, DataSource> DataSourceNameToDataSource { get; set; }
 

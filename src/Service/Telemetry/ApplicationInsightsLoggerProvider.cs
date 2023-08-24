@@ -1,7 +1,7 @@
-using Microsoft.Extensions.Logging;
-using Microsoft.ApplicationInsights;
 using System;
 using System.Collections.Generic;
+using Microsoft.ApplicationInsights;
+using Microsoft.Extensions.Logging;
 
 public class ApplicationInsightsLoggerProvider : ILoggerProvider
 {

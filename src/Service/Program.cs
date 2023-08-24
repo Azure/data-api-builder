@@ -127,7 +127,7 @@ namespace Azure.DataApiBuilder.Service
                     {
                         TelemetryConfiguration telemetryConfiguration = TelemetryConfiguration.CreateDefault();
                         telemetryConfiguration.ConnectionString = Startup._applicationInsightsOptions.ConnectionString;
-                        TelemetryClient telemetryClient = new (telemetryConfiguration);
+                        TelemetryClient telemetryClient = new(telemetryConfiguration);
                         builder.AddApplicationInsights(configureTelemetryConfiguration: (config) =>
                             config.ConnectionString = telemetryConfiguration.ConnectionString,
                             configureApplicationInsightsLoggerOptions: (options) => { }

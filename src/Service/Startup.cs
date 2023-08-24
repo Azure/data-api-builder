@@ -23,6 +23,8 @@ using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using HotChocolate.AspNetCore;
+using Microsoft.ApplicationInsights.AspNetCore.Extensions;
+using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -33,9 +35,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.ApplicationInsights.Extensibility;
 using CorsOptions = Azure.DataApiBuilder.Config.ObjectModel.CorsOptions;
-using Microsoft.ApplicationInsights.AspNetCore.Extensions;
 
 namespace Azure.DataApiBuilder.Service
 {
@@ -72,7 +72,8 @@ namespace Azure.DataApiBuilder.Service
 
             // The following line enables Application Insights telemetry collection.
             RuntimeConfig runtimeConfig = configProvider.GetConfig();
-            if (runtimeConfig.Runtime.Telemetry is not null && runtimeConfig.Runtime.Telemetry.ApplicationInsights.Enabled) {
+            if (runtimeConfig.Runtime.Telemetry is not null && runtimeConfig.Runtime.Telemetry.ApplicationInsights.Enabled)
+            {
                 _applicationInsightsOptions = runtimeConfig.Runtime.Telemetry.ApplicationInsights;
 
                 if (string.IsNullOrWhiteSpace(_applicationInsightsOptions.ConnectionString))
@@ -84,7 +85,7 @@ namespace Azure.DataApiBuilder.Service
                 {
                     ConnectionString = _applicationInsightsOptions.ConnectionString
                 });
-                
+
                 services.AddSingleton<ITelemetryInitializer, MyTelemetryInitializer>();
             }
 

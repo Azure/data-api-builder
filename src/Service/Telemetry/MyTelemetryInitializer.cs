@@ -1,8 +1,8 @@
 using System;
-using Microsoft.ApplicationInsights.Channel;
-using Microsoft.ApplicationInsights.Extensibility;
 using System.Collections.Generic;
 using Azure.DataApiBuilder.Product;
+using Microsoft.ApplicationInsights.Channel;
+using Microsoft.ApplicationInsights.Extensibility;
 
 public class MyTelemetryInitializer : ITelemetryInitializer
 {
@@ -18,8 +18,8 @@ public class MyTelemetryInitializer : ITelemetryInitializer
         telemetry.Context.Session.Id = Guid.NewGuid().ToString();
         telemetry.Context.Component.Version = ProductInfo.GetProductVersion();
         telemetry.Context.Device.OperatingSystem = Environment.OSVersion.ToString();
-        telemetry.Context.User.Id = $"{ Environment.MachineName }_{ Environment.UserName }";
-        
+        telemetry.Context.User.Id = $"{Environment.MachineName}_{Environment.UserName}";
+
         foreach (KeyValuePair<string, string> property in GlobalProperties)
         {
             telemetry.Context.GlobalProperties.Add(property.Key, property.Value);

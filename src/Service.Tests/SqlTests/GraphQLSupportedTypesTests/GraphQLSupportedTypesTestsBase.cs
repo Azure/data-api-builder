@@ -717,7 +717,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         {
             if (typeName is GUID_TYPE)
             {
-                return ID_TYPE;
+                return UUID_TYPE;
             }
             else if (typeName is DATETIMEOFFSET_TYPE)
             {

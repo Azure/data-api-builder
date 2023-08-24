@@ -220,7 +220,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             return type.Name switch
             {
                 "String" => STRING_TYPE,
-                "Guid" => ID_TYPE,
+                "Guid" => UUID_TYPE,
                 "Byte" => BYTE_TYPE,
                 "Int16" => SHORT_TYPE,
                 "Int32" => INT_TYPE,
@@ -258,7 +258,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 short value => new ObjectValueNode(new ObjectFieldNode(SHORT_TYPE, new IntValueNode(value))),
                 int value => new ObjectValueNode(new ObjectFieldNode(INT_TYPE, value)),
                 long value => new ObjectValueNode(new ObjectFieldNode(LONG_TYPE, new IntValueNode(value))),
-                Guid value => new ObjectValueNode(new ObjectFieldNode(GUID_TYPE, value.ToString())),
+                Guid value => new ObjectValueNode(new ObjectFieldNode(UUID_TYPE, new UuidType().ParseValue(value))),
                 string value => new ObjectValueNode(new ObjectFieldNode(STRING_TYPE, value)),
                 bool value => new ObjectValueNode(new ObjectFieldNode(BOOLEAN_TYPE, value)),
                 float value => new ObjectValueNode(new ObjectFieldNode(SINGLE_TYPE, new SingleType().ParseValue(value))),

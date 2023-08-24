@@ -23,6 +23,7 @@ using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using HotChocolate.AspNetCore;
+using HotChocolate.Types;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -240,6 +241,7 @@ namespace Azure.DataApiBuilder.Service
         private void AddGraphQLService(IServiceCollection services)
         {
             services.AddGraphQLServer()
+                    .AddType(new UuidType())
                     .AddHttpRequestInterceptor<DefaultHttpRequestInterceptor>()
                     .ConfigureSchema((serviceProvider, schemaBuilder) =>
                     {

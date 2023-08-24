@@ -8,7 +8,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes
     /// </summary>
     public static class SupportedTypes
     {
-        public const string ID_TYPE = "ID";
+        public const string UUID_TYPE = "UuidType";
         public const string BYTE_TYPE = "Byte";
         public const string SHORT_TYPE = "Short";
         public const string INT_TYPE = "Int";

@@ -398,7 +398,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
         {
             if (runtimeConfig.DataSourceNameToDataSource.Values.All(x => x.DatabaseType is DatabaseType.CosmosDB_NoSQL))
             {
-                // if we have a cosmos db even in multiple db scenario - no rest support.
+                // if all db's are cosmos no rest support.
                 return;
             }
 

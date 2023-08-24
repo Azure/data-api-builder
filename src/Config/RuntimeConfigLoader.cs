@@ -30,8 +30,10 @@ public abstract class RuntimeConfigLoader
     /// Returns RuntimeConfig.
     /// </summary>
     /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
+    /// <param name="replaceEnvVar">Whether to replace environment variable with its
+    /// value or not while deserializing.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
-    public abstract bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config);
+    public abstract bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false);
 
     /// <summary>
     /// Returns the link to the published draft schema.
@@ -45,9 +47,15 @@ public abstract class RuntimeConfigLoader
     /// <param name="json">JSON that represents the config file.</param>
     /// <param name="config">The parsed config, or null if it parsed unsuccessfully.</param>
     /// <returns>True if the config was parsed, otherwise false.</returns>
-    public static bool TryParseConfig(string json, [NotNullWhen(true)] out RuntimeConfig? config, ILogger? logger = null, string? connectionString = null)
+    /// <param name="replaceEnvVar">Whether to replace environment variable with its
+    /// value or not while deserializing. By default, no replacement happens.</param>
+    public static bool TryParseConfig(string json,
+        [NotNullWhen(true)] out RuntimeConfig? config,
+        ILogger? logger = null,
+        string? connectionString = null,
+        bool replaceEnvVar = false)
     {
-        JsonSerializerOptions options = GetSerializationOptions();
+        JsonSerializerOptions options = GetSerializationOptions(replaceEnvVar);
 
         try
         {
@@ -66,7 +74,9 @@ public abstract class RuntimeConfigLoader
             }
 
             // Add Application Name for telemetry for MsSQL
-            if (config.DataSource.DatabaseType is DatabaseType.MSSQL)
+            // Do this only when environment variables have been replaced since
+            // otherwise parsing the connection string may result in an exception
+            if (config.DataSource.DatabaseType is DatabaseType.MSSQL && replaceEnvVar)
             {
                 updatedConnectionString = GetConnectionStringWithApplicationName(updatedConnectionString);
             }
@@ -99,7 +109,9 @@ public abstract class RuntimeConfigLoader
     /// <summary>
     /// Get Serializer options for the config file.
     /// </summary>
-    public static JsonSerializerOptions GetSerializationOptions()
+    /// <param name="replaceEnvVar">Whether to replace environment variable with value or not while deserializing.
+    /// By default, no replacement happens.</param>
+    public static JsonSerializerOptions GetSerializationOptions(bool replaceEnvVar = false)
     {
         JsonSerializerOptions options = new()
         {
@@ -112,9 +124,16 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new EnumMemberJsonEnumConverterFactory());
         options.Converters.Add(new RestRuntimeOptionsConverterFactory());
         options.Converters.Add(new GraphQLRuntimeOptionsConverterFactory());
-        options.Converters.Add(new EntitySourceConverterFactory());
+        options.Converters.Add(new EntitySourceConverterFactory(replaceEnvVar));
+        options.Converters.Add(new EntityGraphQLOptionsConverterFactory(replaceEnvVar));
+        options.Converters.Add(new EntityRestOptionsConverterFactory(replaceEnvVar));
         options.Converters.Add(new EntityActionConverterFactory());
-        options.Converters.Add(new StringJsonConverterFactory());
+
+        if (replaceEnvVar)
+        {
+            options.Converters.Add(new StringJsonConverterFactory());
+        }
+
         return options;
     }
 

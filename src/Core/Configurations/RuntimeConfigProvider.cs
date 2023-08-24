@@ -54,6 +54,7 @@ public class RuntimeConfigProvider
     /// is known by the loader.
     /// </summary>
     /// <returns>The RuntimeConfig instance.</returns>
+    /// <remark>Dont use this method if environment variable references need to be retained.</remark>
     /// <exception cref="DataApiBuilderException">Thrown when the loader is unable to load an instance of the config from its known location.</exception>
     public RuntimeConfig GetConfig()
     {
@@ -62,7 +63,8 @@ public class RuntimeConfigProvider
             return _runtimeConfig;
         }
 
-        if (ConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config))
+        // While loading the config file, replace all the environment variables with their values.
+        if (ConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config, replaceEnvVar: true))
         {
             _runtimeConfig = config;
         }
@@ -87,7 +89,7 @@ public class RuntimeConfigProvider
     {
         if (_runtimeConfig is null)
         {
-            if (ConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config))
+            if (ConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config, replaceEnvVar: true))
             {
                 _runtimeConfig = config;
             }
@@ -131,7 +133,8 @@ public class RuntimeConfigProvider
 
         if (RuntimeConfigLoader.TryParseConfig(
                 configuration,
-                out RuntimeConfig? runtimeConfig))
+                out RuntimeConfig? runtimeConfig,
+                replaceEnvVar: true))
         {
             _runtimeConfig = runtimeConfig;
 
@@ -181,7 +184,7 @@ public class RuntimeConfigProvider
 
         IsLateConfigured = true;
 
-        if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig))
+        if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig, replaceEnvVar: true))
         {
             _runtimeConfig = runtimeConfig.DataSource.DatabaseType switch
             {

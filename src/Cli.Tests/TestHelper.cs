@@ -8,6 +8,9 @@ namespace Cli.Tests
         // Config file name for tests
         public const string TEST_RUNTIME_CONFIG_FILE = "dab-config-test.json";
 
+        public const string TEST_CONNECTION_STRING = "testconnectionstring";
+        public const string TEST_ENV_CONN_STRING = "@env('connection-string')";
+
         public const string SAMPLE_TEST_CONN_STRING = "Data Source=<>;Initial Catalog=<>;User ID=<>;Password=<>;";
 
         // test schema for cosmosDB
@@ -41,6 +44,7 @@ namespace Cli.Tests
                 StartInfo =
                 {
                     FileName = @"./Microsoft.DataApiBuilder",
+                    CreateNoWindow = true,
                     Arguments = $"{command} {flags}",
                     WindowStyle = ProcessWindowStyle.Hidden,
                     UseShellExecute = false,

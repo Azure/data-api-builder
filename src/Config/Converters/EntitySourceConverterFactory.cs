@@ -9,6 +9,10 @@ namespace Azure.DataApiBuilder.Config.Converters;
 
 internal class EntitySourceConverterFactory : JsonConverterFactory
 {
+    // Determines whether to replace environment variable with its
+    // value or not while deserializing.
+    private bool _replaceEnvVar;
+
     /// <inheritdoc/>
     public override bool CanConvert(Type typeToConvert)
     {
@@ -18,16 +22,34 @@ internal class EntitySourceConverterFactory : JsonConverterFactory
     /// <inheritdoc/>
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
-        return new EntitySourceConverter();
+        return new EntitySourceConverter(_replaceEnvVar);
+    }
+
+    /// <param name="replaceEnvVar">Whether to replace environment variable with its
+    /// value or not while deserializing.</param>
+    internal EntitySourceConverterFactory(bool replaceEnvVar)
+    {
+        _replaceEnvVar = replaceEnvVar;
     }
 
     private class EntitySourceConverter : JsonConverter<EntitySource>
     {
+        // Determines whether to replace environment variable with its
+        // value or not while deserializing.
+        private bool _replaceEnvVar;
+
+        /// <param name="replaceEnvVar">Whether to replace environment variable with its
+        /// value or not while deserializing.</param>
+        public EntitySourceConverter(bool replaceEnvVar)
+        {
+            _replaceEnvVar = replaceEnvVar;
+        }
+
         public override EntitySource? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             if (reader.TokenType == JsonTokenType.String)
             {
-                string? obj = reader.DeserializeString();
+                string? obj = reader.DeserializeString(_replaceEnvVar);
                 return new EntitySource(obj ?? string.Empty, EntitySourceType.Table, new(), Array.Empty<string>());
             }
 

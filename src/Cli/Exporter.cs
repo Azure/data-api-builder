@@ -26,7 +26,10 @@ namespace Cli
                 return;
             }
 
-            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig) || runtimeConfig is null)
+            if (!loader.TryLoadConfig(
+                    runtimeConfigFile,
+                    out RuntimeConfig? runtimeConfig,
+                    replaceEnvVar: true) || runtimeConfig is null)
             {
                 logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
                 return;

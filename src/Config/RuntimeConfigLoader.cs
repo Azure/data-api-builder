@@ -46,7 +46,7 @@ public abstract class RuntimeConfigLoader
     /// <param name="json">JSON that represents the config file.</param>
     /// <param name="config">The parsed config, or null if it parsed unsuccessfully.</param>
     /// <returns>True if the config was parsed, otherwise false.</returns>
-    public static bool TryParseConfig(string json, [NotNullWhen(true)] out RuntimeConfig? config, ILogger? logger = null, string? connectionString = null, string? dataSourceName = null)
+    public static bool TryParseConfig(string json, [NotNullWhen(true)] out RuntimeConfig? config, ILogger? logger = null, string? connectionString = null, string? dataSourceName = null, Dictionary<string, string>? datasourceNameToConnectionString = null)
     {
         JsonSerializerOptions options = GetSerializationOptions();
 
@@ -59,102 +59,48 @@ public abstract class RuntimeConfigLoader
                 return false;
             }
 
+            // retreive current connection string from config
             string updatedConnectionString = config.DataSource.ConnectionString;
+
+            // set dataSourceName to default if not provided
+            dataSourceName = dataSourceName ?? config.DefaultDataSourceName;
 
             if (!string.IsNullOrEmpty(connectionString))
             {
+                // update connection string if provided.
                 updatedConnectionString = connectionString;
             }
 
-            // Add Application Name for telemetry for MsSQL
-            if (config.DataSource.DatabaseType is DatabaseType.MSSQL)
+            if (datasourceNameToConnectionString is null)
             {
-                updatedConnectionString = GetConnectionStringWithApplicationName(updatedConnectionString);
+                // single db scenario. 
+                datasourceNameToConnectionString = new Dictionary<string, string>
+                {
+                    // add default db values to this
+                    { dataSourceName, updatedConnectionString }
+                };
             }
 
-            if (dataSourceName is null || string.Equals(dataSourceName, config.DefaultDataSourceName, StringComparison.OrdinalIgnoreCase))
+            // iterate over dictionary and update runtime config with connection strings.
+            foreach ((string dataSourceKey, string connectionValue) in datasourceNameToConnectionString)
             {
-                // single database scenario - default db is set.
-                config = config with { DataSource = config.DataSource with { ConnectionString = updatedConnectionString } };
-                config.DataSourceNameToDataSource[config.DefaultDataSourceName] = config.DataSource;
-            }
-            else
-            {
-                config.DataSourceNameToDataSource.TryGetValue(config.DefaultDataSourceName, out DataSource? ds);
+                config.DataSourceNameToDataSource.TryGetValue(dataSourceKey, out DataSource? ds);
                 if (ds is not null)
                 {
-                    config.DataSourceNameToDataSource[dataSourceName] = ds with { ConnectionString = updatedConnectionString };
+                    string updatedConnection = connectionValue;
+
+                    // Add Application Name for telemetry for MsSQL
+                    if (ds.DatabaseType is DatabaseType.MSSQL)
+                    {
+                        updatedConnection = GetConnectionStringWithApplicationName(connectionValue);
+                    }
+
+                    ds = ds with { ConnectionString = updatedConnection };
+                    config.DataSourceNameToDataSource[dataSourceKey] = ds;
                 }
                 else
                 {
-                    throw new DataApiBuilderException($"{nameof(dataSourceName)} could not be found within the config", HttpStatusCode.InternalServerError, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
-                }
-            }
-        }
-        catch (JsonException ex)
-        {
-            string errorMessage = $"Deserialization of the configuration file failed.\n" +
-                        $"Message:\n {ex.Message}\n" +
-                        $"Stack Trace:\n {ex.StackTrace}";
-
-            if (logger is null)
-            {
-                // logger can be null when called from CLI
-                Console.Error.WriteLine(errorMessage);
-            }
-            else
-            {
-                logger.LogError(ex, errorMessage);
-            }
-
-            config = null;
-            return false;
-        }
-
-        return true;
-    }
-
-    /// <summary>
-    /// Parses a JSON string into a <c>RuntimeConfig</c> object for multiple database scenario.
-    /// </summary>
-    /// <param name="json">JSON that represents the config file.Json expected to contain Datasources dictionary.</param>
-    /// <param name="config">The parsed config, or null if it parsed unsuccessfully.</param>
-    /// <returns>True if the config was parsed, otherwise false.</returns>
-    public static bool TryParseConfigMultipleDatabase(string json, [NotNullWhen(true)] out RuntimeConfig? config, ILogger? logger = null, Dictionary<string, string>? datasourceNameToConnectionString = null)
-    {
-        JsonSerializerOptions options = GetSerializationOptions();
-
-        try
-        {
-            config = JsonSerializer.Deserialize<RuntimeConfig>(json, options);
-
-            if (config is null)
-            {
-                return false;
-            }
-
-            if (datasourceNameToConnectionString is not null)
-            {
-                foreach ((string dataSourceName, string connectionString) in datasourceNameToConnectionString)
-                {
-                    config.DataSourceNameToDataSource.TryGetValue(dataSourceName, out DataSource? ds);
-                    if (ds is not null)
-                    {
-                        string updatedConnectionString = connectionString;
-
-                        // Add Application Name for telemetry for MsSQL
-                        if (ds.DatabaseType is DatabaseType.MSSQL)
-                        {
-                            updatedConnectionString = GetConnectionStringWithApplicationName(connectionString);
-                        }
-
-                        ds = ds with { ConnectionString = updatedConnectionString };
-                        config.DataSourceNameToDataSource[dataSourceName] = ds;
-                    }
-                    else
-                    {
-                        throw new DataApiBuilderException($"{nameof(dataSourceName)} could not be found within the config", HttpStatusCode.InternalServerError, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
-                    }
+                    throw new DataApiBuilderException($"{nameof(dataSourceKey)} could not be found within the config", HttpStatusCode.InternalServerError, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
                 }
             }
         }

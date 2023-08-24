@@ -18,7 +18,7 @@ namespace Azure.DataApiBuilder.Core.Services
     {
         public const string MYSQL_INVALID_CONNECTION_STRING_MESSAGE = "Format of the initialization string";
         public const string MYSQL_INVALID_CONNECTION_STRING_OPTIONS = "GetOptionForKey";
-        private readonly string _databaseName;
+        private readonly string _databaseName = "mysql";
 
         public MySqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -27,8 +27,15 @@ namespace Azure.DataApiBuilder.Core.Services
             ILogger<ISqlMetadataProvider> logger)
             : base(runtimeConfigProvider, queryExecutor, sqlQueryBuilder, logger)
         {
-            using MySqlConnection conn = new(ConnectionString);
-            _databaseName = conn.Database;
+            try
+            {
+                using MySqlConnection conn = new(ConnectionString);
+                _databaseName = conn.Database;
+            }
+            catch
+            {
+                logger.LogWarning("Could not determine database name from the connection string. Defaulting it to 'mysql'.");
+            }
         }
 
         /// </inheritdoc>

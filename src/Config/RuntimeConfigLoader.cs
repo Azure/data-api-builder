@@ -31,8 +31,10 @@ public abstract class RuntimeConfigLoader
     /// Returns RuntimeConfig.
     /// </summary>
     /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
+    /// <param name="replaceEnvVar">Whether to replace environment variable with its
+    /// value or not while deserializing.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
-    public abstract bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config);
+    public abstract bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false);
 
     /// <summary>
     /// Returns the link to the published draft schema.
@@ -46,9 +48,15 @@ public abstract class RuntimeConfigLoader
     /// <param name="json">JSON that represents the config file.</param>
     /// <param name="config">The parsed config, or null if it parsed unsuccessfully.</param>
     /// <returns>True if the config was parsed, otherwise false.</returns>
-    public static bool TryParseConfig(string json, [NotNullWhen(true)] out RuntimeConfig? config, ILogger? logger = null, string? connectionString = null, string? dataSourceName = null, Dictionary<string, string>? datasourceNameToConnectionString = null)
+    /// <param name="replaceEnvVar">Whether to replace environment variable with its
+    /// value or not while deserializing. By default, no replacement happens.</param>
+    /// <param name="connectionString">connectionString to add to config if specified</param>
+    /// <param name="dataSourceName"> datasource name for which to add connection string</param>
+    /// <param name="datasourceNameToConnectionString"> dictionary of datasource name to connection string</param>
+    /// <param name="logger">logger to log messages</param>
+    public static bool TryParseConfig(string json, [NotNullWhen(true)] out RuntimeConfig? config, ILogger? logger = null, string? connectionString = null, bool replaceEnvVar = false, string? dataSourceName = null, Dictionary<string, string>? datasourceNameToConnectionString = null)
     {
-        JsonSerializerOptions options = GetSerializationOptions();
+        JsonSerializerOptions options = GetSerializationOptions(replaceEnvVar);
 
         try
         {
@@ -71,15 +79,21 @@ public abstract class RuntimeConfigLoader
                 updatedConnectionString = connectionString;
             }
 
+            // Add Application Name for telemetry for MsSQL
+            // Do this only when environment variables have been replaced since
+            // otherwise parsing the connection string may result in an exception
+            if (config.DataSource.DatabaseType is DatabaseType.MSSQL && replaceEnvVar)
+            {
+                updatedConnectionString = GetConnectionStringWithApplicationName(updatedConnectionString);
+            }
+
             if (datasourceNameToConnectionString is null)
             {
-                // single db scenario. 
-                datasourceNameToConnectionString = new Dictionary<string, string>
-                {
-                    // add default db values to this
-                    { dataSourceName, updatedConnectionString }
-                };
+                datasourceNameToConnectionString = new Dictionary<string, string>();
             }
+
+            // add to dictionary if datasourceName is present (will either be the default or the one provided)
+            datasourceNameToConnectionString.TryAdd(dataSourceName, updatedConnectionString);
 
             // iterate over dictionary and update runtime config with connection strings.
             foreach ((string dataSourceKey, string connectionValue) in datasourceNameToConnectionString)
@@ -130,7 +144,9 @@ public abstract class RuntimeConfigLoader
     /// <summary>
     /// Get Serializer options for the config file.
     /// </summary>
-    public static JsonSerializerOptions GetSerializationOptions()
+    /// <param name="replaceEnvVar">Whether to replace environment variable with value or not while deserializing.
+    /// By default, no replacement happens.</param>
+    public static JsonSerializerOptions GetSerializationOptions(bool replaceEnvVar = false)
     {
         List<String> propertiesToExcludeForSerialization = new()
         {
@@ -151,8 +167,16 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new EnumMemberJsonEnumConverterFactory());
         options.Converters.Add(new RestRuntimeOptionsConverterFactory());
         options.Converters.Add(new GraphQLRuntimeOptionsConverterFactory());
-        options.Converters.Add(new EntitySourceConverterFactory());
+        options.Converters.Add(new EntitySourceConverterFactory(replaceEnvVar));
+        options.Converters.Add(new EntityGraphQLOptionsConverterFactory(replaceEnvVar));
+        options.Converters.Add(new EntityRestOptionsConverterFactory(replaceEnvVar));
         options.Converters.Add(new EntityActionConverterFactory());
+
+        if (replaceEnvVar)
+        {
+            options.Converters.Add(new StringJsonConverterFactory());
+        }
+
         options.Converters.Add(new StringJsonConverterFactory());
         options.Converters.Add(new RuntimeConfigConditionalConverter(propertiesToExcludeForSerialization));
         return options;

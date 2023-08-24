@@ -498,7 +498,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(databaseType, providedConnectionString);
 
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(runtimeConfig.ToJson(), out RuntimeConfig updatedRuntimeConfig));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
+                runtimeConfig.ToJson(),
+                out RuntimeConfig updatedRuntimeConfig,
+                replaceEnvVar: true));
 
             string actualUpdatedConnectionString = updatedRuntimeConfig.DataSource.ConnectionString;
             Assert.AreEqual(expectedUpdatedConnectionString, actualUpdatedConnectionString);
@@ -2430,7 +2433,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             string sqlFile = new FileSystemRuntimeConfigLoader(fileSystem).GetFileNameForEnvironment(environment, considerOverrides: true);
             string configPayload = File.ReadAllText(sqlFile);
 
-            RuntimeConfigLoader.TryParseConfig(configPayload, out RuntimeConfig runtimeConfig);
+            RuntimeConfigLoader.TryParseConfig(configPayload, out RuntimeConfig runtimeConfig, replaceEnvVar: true);
 
             return runtimeConfig.DataSource.ConnectionString;
         }

@@ -969,7 +969,8 @@ namespace Cli
             loader.UpdateBaseConfigFileName(runtimeConfigFile);
 
             // Validates that config file has data and follows the correct json schema
-            if (!loader.TryLoadKnownConfig(out RuntimeConfig? deserializedRuntimeConfig))
+            // Replaces all the environment variables while deserializing when starting DAB.
+            if (!loader.TryLoadKnownConfig(out RuntimeConfig? deserializedRuntimeConfig, replaceEnvVar: true))
             {
                 _logger.LogError("Failed to parse the config file: {configFile}.", runtimeConfigFile);
                 return false;

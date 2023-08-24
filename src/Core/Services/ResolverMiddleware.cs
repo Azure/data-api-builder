@@ -266,7 +266,9 @@ namespace Azure.DataApiBuilder.Core.Services
                 FLOAT_TYPE => ((FloatValueNode)value).ToDouble(),
                 DECIMAL_TYPE => ((FloatValueNode)value).ToDecimal(),
                 // If we reach here, we can be sure that the value will not be null.
-                ID_TYPE => Guid.Parse(value.Value!.ToString()!),
+                // ID type can store int, string or Guid. First we try to parse the value as Guid.
+                // If the value is not a Guid, we just return the value.
+                ID_TYPE => Guid.TryParse(value.Value!.ToString(), out Guid guidValue) ? guidValue : value.Value,
                 _ => value.Value
             };
         }

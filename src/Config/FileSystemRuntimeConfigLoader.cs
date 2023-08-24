@@ -56,13 +56,18 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// </summary>
     /// <param name="path">The path to the dab-config.json file.</param>
     /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
+    /// <param name="replaceEnvVar">Whether to replace environment variable with its
+    /// value or not while deserializing.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
-    public bool TryLoadConfig(string path, [NotNullWhen(true)] out RuntimeConfig? config)
+    public bool TryLoadConfig(
+        string path,
+        [NotNullWhen(true)] out RuntimeConfig? config,
+        bool replaceEnvVar = false)
     {
         if (_fileSystem.File.Exists(path))
         {
             string json = _fileSystem.File.ReadAllText(path);
-            return TryParseConfig(json, out config, connectionString: _connectionString);
+            return TryParseConfig(json, out config, connectionString: _connectionString, replaceEnvVar: replaceEnvVar);
         }
 
         config = null;
@@ -73,10 +78,12 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// Tries to load the config file using the filename known to the RuntimeConfigLoader and for the default environment.
     /// </summary>
     /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
+    /// <param name="replaceEnvVar">Whether to replace environment variable with its
+    /// value or not while deserializing.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
-    public override bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config)
+    public override bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false)
     {
-        return TryLoadConfig(ConfigFileName, out config);
+        return TryLoadConfig(ConfigFileName, out config, replaceEnvVar);
     }
 
     /// <summary>

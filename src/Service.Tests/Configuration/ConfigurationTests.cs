@@ -2171,7 +2171,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             string sqlFile = new FileSystemRuntimeConfigLoader(fileSystem).GetFileNameForEnvironment(environment, considerOverrides: true);
             string configPayload = File.ReadAllText(sqlFile);
 
-            RuntimeConfigLoader.TryParseConfig(configPayload, out RuntimeConfig runtimeConfig);
+            RuntimeConfigLoader.TryParseConfig(configPayload, out RuntimeConfig runtimeConfig, replaceEnvVar: true);
 
             return runtimeConfig.DataSource.ConnectionString;
         }

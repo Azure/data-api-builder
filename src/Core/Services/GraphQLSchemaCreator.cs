@@ -55,7 +55,7 @@ namespace Azure.DataApiBuilder.Core.Services
             IMutationEngine mutationEngine,
             ISqlMetadataProvider sqlMetadataProvider,
             IAuthorizationResolver authorizationResolver,
-            TelemetryClient? telemetryClient=null)
+            TelemetryClient? telemetryClient = null)
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
 

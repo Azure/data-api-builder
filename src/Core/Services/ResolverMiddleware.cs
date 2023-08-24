@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Core.Services
         public ResolverMiddleware(FieldDelegate next,
             IQueryEngine queryEngine,
             IMutationEngine mutationEngine,
-            TelemetryClient? telemetryClient=null)
+            TelemetryClient? telemetryClient = null)
         {
             _next = next;
             _queryEngine = queryEngine;

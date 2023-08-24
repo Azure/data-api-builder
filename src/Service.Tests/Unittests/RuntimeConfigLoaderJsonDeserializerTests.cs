@@ -209,7 +209,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// </summary>
         /// <param name="reps">Replacement strings.</param>
         /// <param name="enumString">Replacement string to use for a test enum.</param>
-        /// <param>
         /// <returns>Json string with replacements.</returns>
         public static string GetModifiedJsonString(string[] reps, string enumString)
         {

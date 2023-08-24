@@ -54,7 +54,13 @@ public abstract class RuntimeConfigLoader
     /// <param name="dataSourceName"> datasource name for which to add connection string</param>
     /// <param name="datasourceNameToConnectionString"> dictionary of datasource name to connection string</param>
     /// <param name="logger">logger to log messages</param>
-    public static bool TryParseConfig(string json, [NotNullWhen(true)] out RuntimeConfig? config, ILogger? logger = null, string? connectionString = null, bool replaceEnvVar = false, string? dataSourceName = null, Dictionary<string, string>? datasourceNameToConnectionString = null)
+    public static bool TryParseConfig(string json,
+        [NotNullWhen(true)] out RuntimeConfig? config,
+        ILogger? logger = null,
+        string? connectionString = null,
+        bool replaceEnvVar = false,
+        string? dataSourceName = null,
+        Dictionary<string, string>? datasourceNameToConnectionString = null)
     {
         JsonSerializerOptions options = GetSerializationOptions(replaceEnvVar);
 
@@ -103,13 +109,18 @@ public abstract class RuntimeConfigLoader
                     string updatedConnection = connectionValue;
 
                     // Add Application Name for telemetry for MsSQL
-                    if (ds.DatabaseType is DatabaseType.MSSQL)
+                    if (ds.DatabaseType is DatabaseType.MSSQL && replaceEnvVar)
                     {
                         updatedConnection = GetConnectionStringWithApplicationName(connectionValue);
                     }
 
                     ds = ds with { ConnectionString = updatedConnection };
                     config.DataSourceNameToDataSource[dataSourceKey] = ds;
+
+                    if (string.Equals(dataSourceKey, config.DefaultDataSourceName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        config = config with { DataSource = ds };
+                    }
                 }
                 else
                 {
@@ -170,14 +181,13 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new EntityGraphQLOptionsConverterFactory(replaceEnvVar));
         options.Converters.Add(new EntityRestOptionsConverterFactory(replaceEnvVar));
         options.Converters.Add(new EntityActionConverterFactory());
+        options.Converters.Add(new RuntimeConfigConditionalConverter(propertiesToExcludeForSerialization));
 
         if (replaceEnvVar)
         {
             options.Converters.Add(new StringJsonConverterFactory());
         }
 
-        options.Converters.Add(new StringJsonConverterFactory());
-        options.Converters.Add(new RuntimeConfigConditionalConverter(propertiesToExcludeForSerialization));
         return options;
     }
 

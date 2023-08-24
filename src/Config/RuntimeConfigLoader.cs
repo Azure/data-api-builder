@@ -98,8 +98,7 @@ public abstract class RuntimeConfigLoader
             // iterate over dictionary and update runtime config with connection strings.
             foreach ((string dataSourceKey, string connectionValue) in datasourceNameToConnectionString)
             {
-                config.DataSourceNameToDataSource.TryGetValue(dataSourceKey, out DataSource? ds);
-                if (ds is not null)
+                if (config.DataSourceNameToDataSource.TryGetValue(dataSourceKey, out DataSource? ds))
                 {
                     string updatedConnection = connectionValue;
 

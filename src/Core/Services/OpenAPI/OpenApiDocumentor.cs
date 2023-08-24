@@ -673,8 +673,8 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// Resolves any REST path overrides present for the provided entity in the runtime config.
-        /// If no overrides exist, returns the passed in entity name.
+        /// Attempts to resolve the REST path override set for an entity in the runtime config.
+        /// If no override exists, this method returns the passed in entity name.
         /// </summary>
         /// <param name="entityName">Name of the entity.</param>
         /// <returns>Returns the REST path name for the provided entity.</returns>
@@ -683,10 +683,10 @@ namespace Azure.DataApiBuilder.Core.Services
             string entityRestPath = entityName;
             EntityRestOptions entityRestSettings = _runtimeConfig.Entities[entityName].Rest;
 
-            if (!string.IsNullOrEmpty(entityRestSettings.Path) && entityRestSettings.Path.StartsWith('/'))
+            if (!string.IsNullOrEmpty(entityRestSettings.Path))
             {
-                // Remove slash from start of rest path.
-                entityRestPath = entityRestPath.Substring(1);
+                // Remove slash from start of REST path.
+                entityRestPath = entityRestSettings.Path.TrimStart('/');
             }
 
             return entityRestPath;

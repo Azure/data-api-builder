@@ -238,7 +238,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Entity sampleEntity = new(
                 Source: new("sampleElement", EntitySourceType.Table, null, null),
-                Rest: new(Array.Empty<SupportedHttpVerb>(), Enabled: false),
+                Rest: new(Enabled: false),
                 GraphQL: new("", ""),
                 Permissions: new EntityPermission[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,

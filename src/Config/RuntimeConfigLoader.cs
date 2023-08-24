@@ -150,9 +150,9 @@ public abstract class RuntimeConfigLoader
     {
         List<String> propertiesToExcludeForSerialization = new()
         {
-            "DefaultDataSourceName",
-            "DataSourceNameToDataSource",
-            "EntityNameToDataSourceName"
+            nameof(RuntimeConfig.DefaultDataSourceName),
+            nameof(RuntimeConfig.DataSourceNameToDataSource),
+            nameof(RuntimeConfig.EntityNameToDataSourceName)
         };
 
         JsonSerializerOptions options = new()

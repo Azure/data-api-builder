@@ -261,9 +261,9 @@ public class RuntimeConfigProvider
             options[namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database))] = JsonSerializer.SerializeToElement(database);
         }
 
+        // Update the connection string in the datasource with the one that was provided to the controller
         dataSource = dataSource with { Options = options, ConnectionString = connectionString };
 
-        // Update the connection string in the parsed config with the one that was provided to the controller
         if (dataSourceName == runtimeConfig.DefaultDataSourceName)
         {
             // update default db.

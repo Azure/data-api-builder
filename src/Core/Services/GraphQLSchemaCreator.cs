@@ -39,7 +39,7 @@ namespace Azure.DataApiBuilder.Core.Services
         private readonly DatabaseType _databaseType;
         private readonly RuntimeEntities _entities;
         private readonly IAuthorizationResolver _authorizationResolver;
-        private readonly TelemetryClient _telemetryClient;
+        private readonly TelemetryClient? _telemetryClient;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="GraphQLSchemaCreator"/> class.
@@ -55,7 +55,7 @@ namespace Azure.DataApiBuilder.Core.Services
             IMutationEngine mutationEngine,
             ISqlMetadataProvider sqlMetadataProvider,
             IAuthorizationResolver authorizationResolver,
-            TelemetryClient telemetryClient)
+            TelemetryClient? telemetryClient=null)
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
 

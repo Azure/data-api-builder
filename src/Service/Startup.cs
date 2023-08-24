@@ -70,28 +70,13 @@ namespace Azure.DataApiBuilder.Service
             FileSystemRuntimeConfigLoader configLoader = new(fileSystem, configFileName, connectionString);
             RuntimeConfigProvider configProvider = new(configLoader);
 
-            // The following line enables Application Insights telemetry collection.
-            RuntimeConfig runtimeConfig = configProvider.GetConfig();
-            if (runtimeConfig.Runtime.Telemetry is not null && runtimeConfig.Runtime.Telemetry.ApplicationInsights.Enabled)
-            {
-                _applicationInsightsOptions = runtimeConfig.Runtime.Telemetry.ApplicationInsights;
-
-                if (string.IsNullOrWhiteSpace(_applicationInsightsOptions.ConnectionString))
-                {
-                    _logger.LogError("Logs won't be sent to Application Insights as connection string is not set in the runtime config.");
-                }
-
-                services.AddApplicationInsightsTelemetry(new ApplicationInsightsServiceOptions
-                {
-                    ConnectionString = _applicationInsightsOptions.ConnectionString
-                });
-
-                services.AddSingleton<ITelemetryInitializer, MyTelemetryInitializer>();
-            }
-
             services.AddSingleton(fileSystem);
             services.AddSingleton(configProvider);
             services.AddSingleton(configLoader);
+
+            // The following line enables Application Insights telemetry collection.
+            ConfigureApplicationInsightsTelemetry(services, configProvider);
+
             services.AddSingleton(implementationFactory: (serviceProvider) =>
             {
                 ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
@@ -559,6 +544,34 @@ namespace Azure.DataApiBuilder.Service
                 // Sets EasyAuth as the default authentication scheme when runtime configuration
                 // is not present.
                 SetStaticWebAppsAuthentication(services);
+            }
+        }
+
+        /// <summary>
+        /// Configure Application Insights Telemetry based on the loaded runtime configuration. If Application Insights
+        /// is enabled, we can track different events and metrics.
+        /// </summary>
+        /// <param name="services">The service collection where authentication services are added.</param>
+        /// <param name="runtimeConfigurationProvider">The provider used to load runtime configuration.</param>
+        /// <seealso cref="https://docs.microsoft.com/en-us/azure/azure-monitor/app/asp-net-core#enable-application-insights-telemetry-collection"/>
+        private void ConfigureApplicationInsightsTelemetry(IServiceCollection services, RuntimeConfigProvider runtimeConfigurationProvider)
+        {
+            if (runtimeConfigurationProvider.TryGetConfig(out RuntimeConfig? runtimeConfig) && runtimeConfig.Runtime.Telemetry is not null
+                && runtimeConfig.Runtime.Telemetry.ApplicationInsights.Enabled)
+            {
+                _applicationInsightsOptions = runtimeConfig.Runtime.Telemetry.ApplicationInsights;
+
+                if (string.IsNullOrWhiteSpace(_applicationInsightsOptions.ConnectionString))
+                {
+                    _logger.LogError("Logs won't be sent to Application Insights as connection string is not set in the runtime config.");
+                }
+
+                services.AddApplicationInsightsTelemetry(new ApplicationInsightsServiceOptions
+                {
+                    ConnectionString = _applicationInsightsOptions.ConnectionString
+                });
+
+                services.AddSingleton<ITelemetryInitializer, MyTelemetryInitializer>();
             }
         }
 

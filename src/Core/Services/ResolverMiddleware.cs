@@ -29,12 +29,12 @@ namespace Azure.DataApiBuilder.Core.Services
         internal readonly FieldDelegate _next;
         internal readonly IQueryEngine _queryEngine;
         internal readonly IMutationEngine _mutationEngine;
-        private readonly TelemetryClient _telemetryClient;
+        private readonly TelemetryClient? _telemetryClient;
 
         public ResolverMiddleware(FieldDelegate next,
             IQueryEngine queryEngine,
             IMutationEngine mutationEngine,
-            TelemetryClient telemetryClient)
+            TelemetryClient? telemetryClient=null)
         {
             _next = next;
             _queryEngine = queryEngine;
@@ -67,7 +67,10 @@ namespace Azure.DataApiBuilder.Core.Services
             if (context.Selection.Field.Coordinate.TypeName.Value == "Mutation")
             {
                 // Track event when request is received
-                TrackEventForGraphQLRequests(context, _telemetryClient);
+                if (_telemetryClient is not null)
+                {
+                    TrackEventForGraphQLRequests(context, _telemetryClient);
+                }
 
                 IDictionary<string, object?> parameters = GetParametersFromContext(context);
 
@@ -89,7 +92,10 @@ namespace Azure.DataApiBuilder.Core.Services
             else if (context.Selection.Field.Coordinate.TypeName.Value == "Query")
             {
                 // Track event when request is received
-                TrackEventForGraphQLRequests(context, _telemetryClient);
+                if (_telemetryClient is not null)
+                {
+                    TrackEventForGraphQLRequests(context, _telemetryClient);
+                }
 
                 IDictionary<string, object?> parameters = GetParametersFromContext(context);
 

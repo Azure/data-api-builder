@@ -49,12 +49,12 @@ namespace Azure.DataApiBuilder.Service.Controllers
         public const string REDIRECTED_ROUTE = "favicon.ico";
 
         private readonly ILogger<RestController> _logger;
-        private readonly TelemetryClient _telemetryClient;
+        private readonly TelemetryClient? _telemetryClient;
 
         /// <summary>
         /// Constructor.
         /// </summary>
-        public RestController(RestService restService, IOpenApiDocumentor openApiDocumentor, ILogger<RestController> logger, TelemetryClient telemetryClient)
+        public RestController(RestService restService, IOpenApiDocumentor openApiDocumentor, ILogger<RestController> logger, TelemetryClient? telemetryClient = null)
         {
             _restService = restService;
             _openApiDocumentor = openApiDocumentor;
@@ -217,14 +217,17 @@ namespace Azure.DataApiBuilder.Service.Controllers
                 (string entityName, string primaryKeyRoute) = _restService.GetEntityNameAndPrimaryKeyRouteFromRoute(routeAfterPathBase);
 
                 // Track event when request is received
-                _telemetryClient.TrackEvent("RestRequestReceived", new Dictionary<string, string>
+                if (_telemetryClient is not null)
                 {
-                    { "EntityName", entityName },
-                    { "RequestMethod", "GET" },
-                    { "EntityActionOperation", operationType.ToString() },
-                    { "Route", route },
-                    { "RequestId", HttpContext.TraceIdentifier }
-                });
+                    _telemetryClient.TrackEvent("RestRequestReceived", new Dictionary<string, string>
+                    {
+                        { "EntityName", entityName },
+                        { "RequestMethod", "GET" },
+                        { "EntityActionOperation", operationType.ToString() },
+                        { "Route", route },
+                        { "RequestId", HttpContext.TraceIdentifier }
+                    });
+                }
 
                 IActionResult? result = await _restService.ExecuteAsync(entityName, operationType, primaryKeyRoute);
 

@@ -370,7 +370,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 operationType: EntityActionOperation.Execute,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
-                expectedLocationHeader: _integrationProcedureInsertOneAndDisplay_EntityName,
+                expectedLocationHeader: string.Empty,
                 expectJson: expectJson
             );
         }

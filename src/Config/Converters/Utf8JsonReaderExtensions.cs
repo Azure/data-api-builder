@@ -13,9 +13,11 @@ static internal class Utf8JsonReaderExtensions
     /// substitution is applied.
     /// </summary>
     /// <param name="reader">The reader that we want to pull the string from.</param>
+    /// <param name="replaceEnvVar">Whether to replace environment variable with its
+    /// value or not while deserializing.</param>
     /// <returns>The result of deserialization.</returns>
     /// <exception cref="JsonException">Thrown if the <see cref="JsonTokenType"/> is not String.</exception>
-    public static string? DeserializeString(this Utf8JsonReader reader)
+    public static string? DeserializeString(this Utf8JsonReader reader, bool replaceEnvVar)
     {
         if (reader.TokenType is JsonTokenType.Null)
         {
@@ -29,7 +31,11 @@ static internal class Utf8JsonReaderExtensions
 
         // Add the StringConverterFactory so that we can do environment variable substitution.
         JsonSerializerOptions options = new();
-        options.Converters.Add(new StringJsonConverterFactory());
+        if (replaceEnvVar)
+        {
+            options.Converters.Add(new StringJsonConverterFactory());
+        }
+
         return JsonSerializer.Deserialize<string>(ref reader, options);
     }
 }

@@ -1,9 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Text.Json.Serialization;
-using Azure.DataApiBuilder.Config.Converters;
-
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
 /// <summary>
@@ -14,5 +11,4 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// <param name="Enabled">Indicates if GraphQL is enabled for the entity.</param>
 /// <param name="Operation">When the entity maps to a stored procedure, this represents the GraphQL operation to use, otherwise it will be null.</param>
 /// <seealso cref="<https://engdic.org/singular-and-plural-noun-rules-definitions-examples/"/>
-[JsonConverter(typeof(EntityGraphQLOptionsConverter))]
 public record EntityGraphQLOptions(string Singular, string Plural, bool Enabled = true, GraphQLOperation? Operation = null);

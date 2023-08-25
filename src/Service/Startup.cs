@@ -241,7 +241,6 @@ namespace Azure.DataApiBuilder.Service
         private void AddGraphQLService(IServiceCollection services)
         {
             services.AddGraphQLServer()
-                    .AddType(new UuidType())
                     .AddHttpRequestInterceptor<DefaultHttpRequestInterceptor>()
                     .ConfigureSchema((serviceProvider, schemaBuilder) =>
                     {

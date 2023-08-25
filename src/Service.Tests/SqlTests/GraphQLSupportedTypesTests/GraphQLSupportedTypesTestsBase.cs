@@ -513,7 +513,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             {
                 CompareTimeResults(actual.ToString(), expected);
             }
-            else if(type == GUID_TYPE)
+            else if (type == GUID_TYPE)
             {
                 CompareGuidResults(actual.ToString(), expected);
             }

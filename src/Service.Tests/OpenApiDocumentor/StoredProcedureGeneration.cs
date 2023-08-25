@@ -2,18 +2,12 @@
 // Licensed under the MIT License.
 
 using System.Collections.Generic;
-using System.IO;
-using System.IO.Abstractions;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Services;
-using Microsoft.AspNetCore.TestHost;
 using Microsoft.OpenApi.Models;
-using Microsoft.OpenApi.Readers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
@@ -38,7 +32,7 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
         private static RuntimeEntities _runtimeEntities;
 
         /// <summary>
-        /// Bootstraps test server once using a single runtime config file so
+        /// Bootstraps a single test server instance using one runtime config file so
         /// each test need not boot the entire server to generate a description doc.
         /// Each test validates the OpenAPI description generated for a distinct entity.
         /// </summary>
@@ -46,41 +40,11 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
         [ClassInitialize]
         public static async Task ClassInitialize(TestContext context)
         {
-            TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
-            FileSystem fileSystem = new();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            loader.TryLoadKnownConfig(out RuntimeConfig config);
             CreateEntities();
-
-            RuntimeConfig configWithCustomHostMode = config with
-            {
-                Runtime = config.Runtime with
-                {
-                    Host = config.Runtime.Host with { Mode = HostMode.Production }
-                },
-                Entities = _runtimeEntities
-            };
-
-            File.WriteAllText(CUSTOM_CONFIG, configWithCustomHostMode.ToJson());
-            string[] args = new[]
-            {
-                $"--ConfigFileName={CUSTOM_CONFIG}"
-            };
-
-            using TestServer server = new(Program.CreateWebHostBuilder(args));
-            using HttpClient client = server.CreateClient();
-            {
-                HttpRequestMessage request = new(HttpMethod.Get, "/api/openapi");
-
-                HttpResponseMessage response = await client.SendAsync(request);
-                Stream responseStream = await response.Content.ReadAsStreamAsync();
-
-                // Read V3 as YAML
-                OpenApiDocument openApiDocument = new OpenApiStreamReader().Read(responseStream, out OpenApiDiagnostic diagnostic);
-                _openApiDocument = openApiDocument;
-
-                TestHelper.UnsetAllDABEnvironmentVariables();
-            }
+            _openApiDocument = await OpenApiTestBootstrap.GenerateOpenApiDocument(
+                runtimeEntities: _runtimeEntities,
+                configFileName: CUSTOM_CONFIG,
+                databaseEnvironment: MSSQL_ENVIRONMENT);
         }
 
         /// <summary>
@@ -93,7 +57,7 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
                 Source: new(Object: "insert_and_display_all_books_for_given_publisher", EntitySourceType.StoredProcedure, null, null),
                 GraphQL: new(Singular: null, Plural: null, Enabled: false),
                 Rest: new(Methods: EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
-                Permissions: CreateBasicPermissions(),
+                Permissions: OpenApiTestBootstrap.CreateBasicPermissions(),
                 Mappings: null,
                 Relationships: null);
 
@@ -103,28 +67,6 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
             };
 
             _runtimeEntities = new(entities);
-        }
-
-        /// <summary>
-        /// Creates basic permissions collection with the anonymous and authenticated roles
-        /// where all actions are permitted.
-        /// </summary>
-        /// <returns>Array of EntityPermission objects.</returns>
-        private static EntityPermission[] CreateBasicPermissions()
-        {
-            List<EntityPermission> permissions = new()
-            {
-                new EntityPermission("anonymous", new EntityAction[]
-                {
-                    new(EntityActionOperation.Execute, null, new())
-                }),
-                new EntityPermission("authenticated", new EntityAction[]
-                {
-                    new(EntityActionOperation.Execute, null, new())
-                })
-            };
-
-            return permissions.ToArray();
         }
 
         /// <summary>

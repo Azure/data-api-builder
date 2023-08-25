@@ -43,8 +43,7 @@ namespace Azure.DataApiBuilder.Core.Services
             [typeof(byte[])] = DbType.Binary,
             [typeof(TimeOnly)] = DbType.Time,
             [typeof(TimeSpan)] = DbType.Time,
-            [typeof(object)] = DbType.Object,
-            [typeof(Guid)] = DbType.Guid
+            [typeof(object)] = DbType.Object
         };
 
         /// <summary>

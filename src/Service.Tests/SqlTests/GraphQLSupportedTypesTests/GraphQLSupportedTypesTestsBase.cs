@@ -513,9 +513,40 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             {
                 CompareTimeResults(actual.ToString(), expected);
             }
+            else if(type == GUID_TYPE)
+            {
+                CompareGuidResults(actual.ToString(), expected);
+            }
             else
             {
                 SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+            }
+        }
+
+        private static void CompareGuidResults(string actual, string expected)
+        {
+            string fieldName = "guid_types";
+
+            using JsonDocument actualJsonDoc = JsonDocument.Parse(actual);
+            using JsonDocument expectedJsonDoc = JsonDocument.Parse(expected);
+
+            if (actualJsonDoc.RootElement.ValueKind is JsonValueKind.Array)
+            {
+                ValidateArrayResults(actualJsonDoc, expectedJsonDoc, fieldName);
+                return;
+            }
+
+            string actualGuidString = actualJsonDoc.RootElement.GetProperty(fieldName).ToString();
+            string expectedGuidString = expectedJsonDoc.RootElement.GetProperty(fieldName).ToString();
+
+            // handles cases when one of the values is null
+            if (string.IsNullOrEmpty(actualGuidString) || string.IsNullOrEmpty(expectedGuidString))
+            {
+                Assert.AreEqual(expectedGuidString, actualGuidString);
+            }
+            else
+            {
+                AssertOnFields(fieldName, actualGuidString, expectedGuidString);
             }
         }
 
@@ -702,6 +733,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 TimeOnly actualTime = TimeOnly.Parse(actualElement.ToString());
                 TimeOnly expectedTime = TimeOnly.Parse(expectedElement.ToString());
                 Assert.AreEqual(expectedTime.ToLongTimeString(), actualTime.ToLongTimeString());
+            }
+            else if (field.StartsWith(GUID_TYPE.ToLower()))
+            {
+                Guid actualValue = Guid.Parse(actualElement.ToString());
+                Guid expectedValue = Guid.Parse(expectedElement.ToString());
+                Assert.AreEqual(actualValue, expectedValue);
             }
             else
             {

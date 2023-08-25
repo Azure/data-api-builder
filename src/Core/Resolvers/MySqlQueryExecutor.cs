@@ -49,7 +49,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// DatasourceName to boolean value indicating if access token should be set for db.
         /// </summary>
-        private Dictionary<string, bool> _attemptToSetAccessToken;
+        private Dictionary<string, bool> _dataSourceAccessTokenUsage;
 
         public MySqlQueryExecutor(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -61,7 +61,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                   runtimeConfigProvider,
                   httpContextAccessor)
         {
-            _attemptToSetAccessToken = new Dictionary<string, bool>();
+            _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
             _accessTokensFromConfiguration = runtimeConfigProvider.ManagedIdentityAccessToken;
             IEnumerable<KeyValuePair<string, DataSource>> mysqldbs = runtimeConfigProvider.GetConfig().DataSourceNameToDataSource.Where(x => x.Value.DatabaseType == DatabaseType.MySQL);
 
@@ -80,7 +80,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
 
                 ConnectionStringBuilders.Add(dataSourceName, builder);
-                _attemptToSetAccessToken[dataSourceName] = ShouldManagedIdentityAccessBeAttempted(builder);
+                _dataSourceAccessTokenUsage[dataSourceName] = ShouldManagedIdentityAccessBeAttempted(builder);
             }
         }
 
@@ -100,7 +100,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
             }
 
-            _attemptToSetAccessToken.TryGetValue(dataSourceName, out bool setAccessToken);
+            _dataSourceAccessTokenUsage.TryGetValue(dataSourceName, out bool setAccessToken);
 
             // Only attempt to get the access token if the connection string is in the appropriate format
             if (setAccessToken)

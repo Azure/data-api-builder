@@ -55,12 +55,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// DatasourceName to boolean value indicating if access token should be set for db.
         /// </summary>
-        private Dictionary<string, bool> _attemptToSetAccessToken;
+        private Dictionary<string, bool> _dataSourceAccessTokenUsage;
 
         /// <summary>
         /// DatasourceName to boolean value indicating if session context should be set for db.
         /// </summary>
-        private Dictionary<string, bool> _isSessionContextEnabled;
+        private Dictionary<string, bool> _dataSourceToSessionContextUsage;
 
         public MsSqlQueryExecutor(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -74,8 +74,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
             IEnumerable<KeyValuePair<string, DataSource>> mssqldbs = runtimeConfig.DataSourceNameToDataSource.Where(x => x.Value.DatabaseType == DatabaseType.MSSQL);
-            _attemptToSetAccessToken = new Dictionary<string, bool>();
-            _isSessionContextEnabled = new Dictionary<string, bool>();
+            _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
+            _dataSourceToSessionContextUsage = new Dictionary<string, bool>();
             _accessTokensFromConfiguration = runtimeConfigProvider.ManagedIdentityAccessToken;
 
             foreach ((string dataSourceName, DataSource dataSource) in mssqldbs)
@@ -90,8 +90,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 ConnectionStringBuilders.Add(dataSourceName, builder);
                 MsSqlOptions? msSqlOptions = dataSource.GetTypedOptions<MsSqlOptions>();
-                _isSessionContextEnabled[dataSourceName] = msSqlOptions is null ? false : msSqlOptions.SetSessionContext;
-                _attemptToSetAccessToken[dataSourceName] = ShouldManagedIdentityAccessBeAttempted(builder);
+                _dataSourceToSessionContextUsage[dataSourceName] = msSqlOptions is null ? false : msSqlOptions.SetSessionContext;
+                _dataSourceAccessTokenUsage[dataSourceName] = ShouldManagedIdentityAccessBeAttempted(builder);
             }
         }
 
@@ -111,7 +111,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
             }
 
-            _attemptToSetAccessToken.TryGetValue(dataSourceName, out bool setAccessToken);
+            _dataSourceAccessTokenUsage.TryGetValue(dataSourceName, out bool setAccessToken);
 
             // Only attempt to get the access token if the connection string is in the appropriate format
             if (setAccessToken)
@@ -202,7 +202,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
             }
 
-            if (httpContext is null || !_isSessionContextEnabled[dataSourceName])
+            if (httpContext is null || !_dataSourceToSessionContextUsage[dataSourceName])
             {
                 return string.Empty;
             }

@@ -116,7 +116,7 @@ public abstract class RuntimeConfigLoader
                 }
                 else
                 {
-                    throw new DataApiBuilderException($"{nameof(dataSourceKey)} could not be found within the config", HttpStatusCode.InternalServerError, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
+                    throw new DataApiBuilderException($"{nameof(dataSourceKey)} could not be found within the config", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
                 }
             }
         }

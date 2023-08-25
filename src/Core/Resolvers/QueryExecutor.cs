@@ -35,7 +35,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private AsyncRetryPolicy _retryPolicy;
 
         /// <summary>
-        /// Dictionary that stored DbName to its corresponding connection string builder.
+        /// Dictionary that stores DbName to its corresponding connection string builder.
         /// </summary>
         public virtual IDictionary<string, DbConnectionStringBuilder> ConnectionStringBuilders { get; set; }
 

@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT id as typeid, short_types, int_types, long_types, string_types, single_types,
-                        float_types, decimal_types, boolean_types, datetime_types, bytearray_types, guid_types
+                        float_types, decimal_types, boolean_types, datetime_types, bytearray_types, uuid_types
                         FROM " + _integrationTypeTable + @"
                         WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @"
                     ) AS subq

@@ -6,6 +6,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes
     /// <summary>
     /// Only used to group the supported type names under a class with a relevant name.
     /// The type names mentioned here are Hotchocolate scalar built in types.
+    /// The corresponding SQL type name may be different for e.g. UUID maps to Guid as the SQL type.
     /// </summary>
     public static class SupportedTypes
     {

@@ -515,7 +515,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             }
             else if (type == UUID_TYPE)
             {
-                CompareGuidResults(actual.ToString(), expected);
+                CompareUuidResults(actual.ToString(), expected);
             }
             else
             {
@@ -523,7 +523,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             }
         }
 
-        private static void CompareGuidResults(string actual, string expected)
+        private static void CompareUuidResults(string actual, string expected)
         {
             string fieldName = "uuid_types";
 
@@ -536,17 +536,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 return;
             }
 
-            string actualGuidString = actualJsonDoc.RootElement.GetProperty(fieldName).ToString();
-            string expectedGuidString = expectedJsonDoc.RootElement.GetProperty(fieldName).ToString();
+            string actualUuidString = actualJsonDoc.RootElement.GetProperty(fieldName).ToString();
+            string expectedUuidString = expectedJsonDoc.RootElement.GetProperty(fieldName).ToString();
 
             // handles cases when one of the values is null
-            if (string.IsNullOrEmpty(actualGuidString) || string.IsNullOrEmpty(expectedGuidString))
+            if (string.IsNullOrEmpty(actualUuidString) || string.IsNullOrEmpty(expectedUuidString))
             {
-                Assert.AreEqual(expectedGuidString, actualGuidString);
+                Assert.AreEqual(expectedUuidString, actualUuidString);
             }
             else
             {
-                AssertOnFields(fieldName, actualGuidString, expectedGuidString);
+                AssertOnFields(fieldName, actualUuidString, expectedUuidString);
             }
         }
 

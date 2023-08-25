@@ -402,7 +402,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string field = $"{type.ToLowerInvariant()}_types";
             string graphQLQueryName = "updateSupportedType";
-            string gqlQuery = "mutation($param: " + TypeNameToGraphQLType(type) + "){ updateSupportedType (typeid: 1, item: {" + field + ": $param }){ " + field + " } }";
+            string gqlQuery = "mutation($param: " + type + "){ updateSupportedType (typeid: 1, item: {" + field + ": $param }){ " + field + " } }";
 
             string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id: 1);
 
@@ -463,7 +463,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             }
             else
             {
-                AssertOnFields(fieldName, actualUuidString, expectedUuidString);
+                Guid actualGuidValue = Guid.Parse(actualUuidString);
+                Guid expectedGuidValue = Guid.Parse(expectedUuidString);
+                Assert.AreEqual(actualGuidValue, expectedGuidValue);
             }
         }
 
@@ -563,11 +565,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                     DateTime expectedDateTime = DateTime.Parse(expectedValue.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None);
                     Assert.AreEqual(expectedDateTime, actualDateTime);
                 }
-                else if (field.StartsWith(UUID_TYPE.ToLower()))
+                else if (fieldName.StartsWith(UUID_TYPE.ToLower()))
                 {
-                    Guid actualValue = Guid.Parse(actualElement.ToString());
-                    Guid expectedValue = Guid.Parse(expectedElement.ToString());
-                    Assert.AreEqual(actualValue, expectedValue);
+                    Guid actualGuidValue = Guid.Parse(actualElement.ToString());
+                    Guid expectedGuidValue = Guid.Parse(expectedElement.ToString());
+                    Assert.AreEqual(actualGuidValue, expectedGuidValue);
                 }
                 else if (fieldName.StartsWith(SINGLE_TYPE.ToLower()))
                 {
@@ -578,20 +580,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                     Assert.AreEqual(expectedValue.GetDouble(), actualValue.GetDouble());
                 }
             }
-        }
-
-        /// <summary>
-        /// Needed to map the type name to a graphql type in argument tests
-        /// where the argument type need to be specified.
-        /// </summary>
-        private static string TypeNameToGraphQLType(string typeName)
-        {
-            if (typeName is GUID_TYPE)
-            {
-                return STRING_TYPE;
-            }
-
-            return typeName;
         }
 
         protected abstract string MakeQueryOnTypeTable(

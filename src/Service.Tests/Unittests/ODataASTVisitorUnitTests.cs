@@ -144,7 +144,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         // Constant on left side and OData EDM object on right side of binary operator. (L->R)
         [DataRow("'1' eq int_types", false, DisplayName = "L->R: Cast token claim of type string to integer")]
         [DataRow("12.24 eq float_types", false, DisplayName = "L->R: Cast token claim of type single to type double (CLR) which maps to (SQL) float")]
-        [DataRow("'13B4F4EC-C45B-46EC-99F2-77BC22A256A7' eq UUID_TYPEs", false, DisplayName = "L->R: Cast token claim of type string to GUID")]
+        [DataRow("'13B4F4EC-C45B-46EC-99F2-77BC22A256A7' eq uuid_types", false, DisplayName = "L->R: Cast token claim of type string to GUID")]
         [DataRow("'true' eq boolean_types", false, DisplayName = "L->R: Cast token claim of type string to bool (true)")]
         [DataRow("'false' eq boolean_types", false, DisplayName = "L->R: Cast token claim of type string to bool (false)")]
         [DataRow("1 eq string_types", false, DisplayName = "L->R: Cast token claim of type int to string")]
@@ -152,15 +152,15 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         // Constant on right side and OData EDM object on left side of binary operator. (R->L)
         [DataRow("int_types eq '1'", false, DisplayName = "R->L: Cast token claim of type string to integer")]
         [DataRow("float_types eq 12.24", false, DisplayName = "R->L: Cast token claim of type single to type double (CLR) which maps to (SQL) float")]
-        [DataRow("UUID_TYPEs eq '13B4F4EC-C45B-46EC-99F2-77BC22A256A7'", false, DisplayName = "R->L: Cast token claim of type string to GUID")]
+        [DataRow("uuid_types eq '13B4F4EC-C45B-46EC-99F2-77BC22A256A7'", false, DisplayName = "R->L: Cast token claim of type string to GUID")]
         [DataRow("boolean_types eq 'true'", false, DisplayName = "R->L: Cast token claim of type string to bool (true)")]
         [DataRow("boolean_types eq 'false'", false, DisplayName = "R->L: Cast token claim of type string to bool (false)")]
         [DataRow("string_types eq 1", false, DisplayName = "R->L: Cast token claim of type int to string")]
         [DataRow("string_types eq true", false, DisplayName = "R->L: Cast token claim of type bool to string")]
         // Comparisons expected to fail due to inability to cast
         [DataRow("boolean_types eq 2", true, DisplayName = "Fail to cast arbitrary int to bool")]
-        [DataRow("UUID_TYPEs eq 1", true, DisplayName = "Fail to cast arbitrary int to GUID")]
-        [DataRow("UUID_TYPEs eq 'stringConstant'", true, DisplayName = "Fail to cast arbitrary string to GUID")]
+        [DataRow("uuid_types eq 1", true, DisplayName = "Fail to cast arbitrary int to GUID")]
+        [DataRow("uuid_types eq 'stringConstant'", true, DisplayName = "Fail to cast arbitrary string to GUID")]
         public void CustomODataUriParserResolverTest(string resolvedAuthZPolicyText, bool errorExpected)
         {
             // Arrange

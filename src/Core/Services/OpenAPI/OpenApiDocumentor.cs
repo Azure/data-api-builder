@@ -677,7 +677,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// If no override exists, this method returns the passed in entity name.
         /// </summary>
         /// <param name="entityName">Name of the entity.</param>
-        /// <returns>Returns the REST path name for the provided entity.</returns>
+        /// <returns>Returns the REST path name for the provided entity with no starting slash: {entityName} or {entityRestPath}.</returns>
         private string GetEntityRestPath(string entityName)
         {
             string entityRestPath = entityName;

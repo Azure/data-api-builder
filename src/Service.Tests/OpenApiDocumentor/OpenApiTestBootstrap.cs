@@ -78,13 +78,13 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
         {
             List<EntityPermission> permissions = new()
             {
-                new EntityPermission("anonymous", new EntityAction[]
+                new EntityPermission(Role: "anonymous", Actions: new EntityAction[]
                 {
-                    new(EntityActionOperation.All, null, new())
+                    new(Action: EntityActionOperation.All, Fields: null, Policy: new())
                 }),
-                new EntityPermission("authenticated", new EntityAction[]
+                new EntityPermission(Role: "authenticated", Actions: new EntityAction[]
                 {
-                    new(EntityActionOperation.All, null, new())
+                    new(Action: EntityActionOperation.All, Fields: null, Policy: new())
                 })
             };
 

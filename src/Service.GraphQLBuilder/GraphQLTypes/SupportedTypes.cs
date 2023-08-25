@@ -4,7 +4,8 @@
 namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes
 {
     /// <summary>
-    /// Only used to group the supported type names under a class with a relevant name
+    /// Only used to group the supported type names under a class with a relevant name.
+    /// The type names mentioned here are Hotchocolate scalar built in types.
     /// </summary>
     public static class SupportedTypes
     {
@@ -19,9 +20,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes
         public const string STRING_TYPE = "String";
         public const string BOOLEAN_TYPE = "Boolean";
         public const string DATETIME_TYPE = "DateTime";
-        public const string DATETIMEOFFSET_TYPE = "DateTimeOffset";
         public const string BYTEARRAY_TYPE = "ByteArray";
-        public const string GUID_TYPE = "Guid";
+        public const string DATETIMEOFFSET_TYPE = "DateTimeOffset";
         public const string LOCALTIME_TYPE = "LocalTime";
         public const string TIME_TYPE = "Time";
     }

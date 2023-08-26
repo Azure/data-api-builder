@@ -70,10 +70,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(BYTEARRAY_TYPE, 2)]
         [DataRow(BYTEARRAY_TYPE, 3)]
         [DataRow(BYTEARRAY_TYPE, 4)]
-        [DataRow(GUID_TYPE, 1)]
-        [DataRow(GUID_TYPE, 2)]
-        [DataRow(GUID_TYPE, 3)]
-        [DataRow(GUID_TYPE, 4)]
+        [DataRow(UUID_TYPE, 1)]
+        [DataRow(UUID_TYPE, 2)]
+        [DataRow(UUID_TYPE, 3)]
+        [DataRow(UUID_TYPE, 4)]
         public async Task QueryTypeColumn(string type, int id)
         {
             if (!IsSupportedType(type))
@@ -140,6 +140,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(DECIMAL_TYPE, "eq", "-9.292929", "-9.292929", "=")]
         [DataRow(BOOLEAN_TYPE, "neq", "\'false\'", "false", "!=")]
         [DataRow(BOOLEAN_TYPE, "eq", "\'false\'", "false", "=")]
+        [DataRow(UUID_TYPE, "eq", "'D1D021A8-47B4-4AE4-B718-98E89C41A161'", "\"D1D021A8-47B4-4AE4-B718-98E89C41A161\"", "=")]
+        [DataRow(UUID_TYPE, "neq", "'D1D021A8-47B4-4AE4-B718-98E89C41A161'", "\"D1D021A8-47B4-4AE4-B718-98E89C41A161\"", "!=")]
         public async Task QueryTypeColumnFilterAndOrderBy(string type, string filterOperator, string sqlValue, string gqlValue, string queryOperator)
         {
             if (!IsSupportedType(type))
@@ -429,8 +431,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(BYTEARRAY_TYPE, "\"U3RyaW5neQ==\"")]
         [DataRow(BYTEARRAY_TYPE, "\"V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=\"")]
         [DataRow(BYTEARRAY_TYPE, "null")]
-        [DataRow(GUID_TYPE, "\"3a1483a5-9ac2-4998-bcf3-78a28078c6ac\"")]
-        [DataRow(GUID_TYPE, "null")]
+        [DataRow(UUID_TYPE, "\"3a1483a5-9ac2-4998-bcf3-78a28078c6ac\"")]
+        [DataRow(UUID_TYPE, "null")]
         public async Task UpdateTypeColumn(string type, string value)
         {
             if (!IsSupportedType(type))
@@ -464,8 +466,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(DATETIME_TYPE, "1999-01-08 10:23:54")]
         [DataRow(DATETIMEOFFSET_TYPE, "1999-01-08 10:23:54+8:00")]
         [DataRow(BYTEARRAY_TYPE, "V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=")]
-        [DataRow(GUID_TYPE, "3a1483a5-9ac2-4998-bcf3-78a28078c6ac")]
-        [DataRow(GUID_TYPE, null)]
+        [DataRow(UUID_TYPE, "3a1483a5-9ac2-4998-bcf3-78a28078c6ac")]
+        [DataRow(UUID_TYPE, null)]
         public async Task UpdateTypeColumnWithArgument(string type, object value)
         {
             if (!IsSupportedType(type))
@@ -511,9 +513,40 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             {
                 CompareTimeResults(actual.ToString(), expected);
             }
+            else if (type == UUID_TYPE)
+            {
+                CompareUuidResults(actual.ToString(), expected);
+            }
             else
             {
                 SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+            }
+        }
+
+        private static void CompareUuidResults(string actual, string expected)
+        {
+            string fieldName = "uuid_types";
+
+            using JsonDocument actualJsonDoc = JsonDocument.Parse(actual);
+            using JsonDocument expectedJsonDoc = JsonDocument.Parse(expected);
+
+            if (actualJsonDoc.RootElement.ValueKind is JsonValueKind.Array)
+            {
+                ValidateArrayResults(actualJsonDoc, expectedJsonDoc, fieldName);
+                return;
+            }
+
+            string actualUuidString = actualJsonDoc.RootElement.GetProperty(fieldName).ToString();
+            string expectedUuidString = expectedJsonDoc.RootElement.GetProperty(fieldName).ToString();
+
+            // handles cases when one of the values is null
+            if (string.IsNullOrEmpty(actualUuidString) || string.IsNullOrEmpty(expectedUuidString))
+            {
+                Assert.AreEqual(expectedUuidString, actualUuidString);
+            }
+            else
+            {
+                AssertOnFields(fieldName, actualUuidString, expectedUuidString);
             }
         }
 
@@ -701,6 +734,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 TimeOnly expectedTime = TimeOnly.Parse(expectedElement.ToString());
                 Assert.AreEqual(expectedTime.ToLongTimeString(), actualTime.ToLongTimeString());
             }
+            else if (field.StartsWith(UUID_TYPE.ToLower()))
+            {
+                Guid actualValue = Guid.Parse(actualElement.ToString());
+                Guid expectedValue = Guid.Parse(expectedElement.ToString());
+                Assert.AreEqual(actualValue, expectedValue);
+            }
             else
             {
                 Assert.AreEqual(double.Parse(expectedElement), double.Parse(actualElement));
@@ -713,11 +752,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// </summary>
         private static string TypeNameToGraphQLType(string typeName)
         {
-            if (typeName is GUID_TYPE)
-            {
-                return STRING_TYPE;
-            }
-            else if (typeName is DATETIMEOFFSET_TYPE)
+            if (typeName is DATETIMEOFFSET_TYPE)
             {
                 return DATETIME_TYPE;
             }

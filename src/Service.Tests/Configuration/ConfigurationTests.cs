@@ -505,7 +505,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 replaceEnvVar: true));
 
             string actualUpdatedConnectionString = updatedRuntimeConfig.DataSource.ConnectionString;
-            Assert.AreEqual(expectedUpdatedConnectionString, actualUpdatedConnectionString);
+
+            // SourceLink appends the commit ID to the assembly metadata. The application name is extracted from the
+            // assembly metadata. So, the connection string after appending the application name will be of the form
+            // dab_oss_1.0.0+<commit-id> or dab_hosted_1.0.0+<commit-id> depending on oss or hosted scenario respectively.
+            // So, the updated connection string is validated to check if it starts with dab_oss_1.0.0 or dab_hosted_1.0.0.
+            Assert.IsTrue(actualUpdatedConnectionString.StartsWith(expectedUpdatedConnectionString));
         }
 
         [TestMethod("Validates that once the configuration is set, the config controller isn't reachable."), TestCategory(TestCategory.COSMOSDBNOSQL)]

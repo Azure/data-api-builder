@@ -169,7 +169,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     new InputValueDefinitionNode(null, new NameNode("endsWith"), new StringValueNode("Ends With"), new StringType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new InputValueDefinitionNode(null, new NameNode("neq"), new StringValueNode("Not Equals"), new StringType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new InputValueDefinitionNode(null, new NameNode("caseInsensitive"), new StringValueNode("Case Insensitive"), new BooleanType().ToTypeNode(), new BooleanValueNode(false), new List<DirectiveNode>()),
-                    new InputValueDefinitionNode(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
+                    new InputValueDefinitionNode(null, new NameNode("isNull"), new StringValueNode("Is null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
                 }
             );
 
@@ -197,13 +197,32 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                 new StringValueNode("Input type for adding ByteArray filters"),
                 new List<DirectiveNode>(),
                 new List<InputValueDefinitionNode> {
-                    new InputValueDefinitionNode(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
+                    new InputValueDefinitionNode(null, new NameNode("isNull"), new StringValueNode("Is null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
+                }
+            );
+
+        public static InputObjectTypeDefinitionNode UuidInputType() =>
+            new(
+                location: null,
+                new NameNode("UuidFilterInput"),
+                new StringValueNode("Input type for adding Uuid filters"),
+                new List<DirectiveNode>(),
+                new List<InputValueDefinitionNode> {
+                    new InputValueDefinitionNode(null, new NameNode("eq"), new StringValueNode("Equals"), new UuidType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("contains"), new StringValueNode("Contains"), new UuidType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("notContains"), new StringValueNode("Not Contains"), new UuidType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("startsWith"), new StringValueNode("Starts With"), new UuidType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("endsWith"), new StringValueNode("Ends With"), new UuidType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("neq"), new StringValueNode("Not Equals"), new UuidType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("caseInsensitive"), new StringValueNode("Case Insensitive"), new BooleanType().ToTypeNode(), new BooleanValueNode(false), new List<DirectiveNode>()),
+                    new InputValueDefinitionNode(null, new NameNode("isNull"), new StringValueNode("Is null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
                 }
             );
 
         public static Dictionary<string, InputObjectTypeDefinitionNode> InputTypes = new()
         {
             { "ID", IdInputType() },
+            { UUID_TYPE, UuidInputType() },
             { BYTE_TYPE, ByteInputType() },
             { SHORT_TYPE, ShortInputType() },
             { INT_TYPE, IntInputType() },

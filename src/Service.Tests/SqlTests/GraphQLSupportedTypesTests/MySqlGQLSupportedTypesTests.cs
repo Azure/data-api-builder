@@ -56,7 +56,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         {
             return type switch
             {
-                GUID_TYPE => false,
+                UUID_TYPE => false,
                 _ => true
             };
         }

@@ -163,7 +163,7 @@ CREATE TABLE type_table(
     datetimeoffset_types datetimeoffset,
     smalldatetime_types smalldatetime,
     bytearray_types varbinary(max),
-    guid_types uniqueidentifier DEFAULT newid()
+    uuid_types uniqueidentifier DEFAULT newid()
 );
 
 CREATE TABLE trees (
@@ -414,6 +414,7 @@ VALUES
     '9998-12-31', '9998-12-31 23:59:59', '9998-12-31 23:59:59.9999999', '9998-12-31 23:59:59.9999999+00:00', '2079-06-06',
     0xFFFFFFFF),
     (5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO type_table(id, uuid_types) values(10, 'D1D021A8-47B4-4AE4-B718-98E89C41A161');
 SET IDENTITY_INSERT type_table OFF
 
 SET IDENTITY_INSERT sales ON

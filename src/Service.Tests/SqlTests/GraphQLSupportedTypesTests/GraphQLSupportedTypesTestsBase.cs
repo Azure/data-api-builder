@@ -567,10 +567,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 }
                 else if (fieldName.StartsWith(UUID_TYPE.ToLower()))
                 {
-                    Console.WriteLine(actualElement);
-                    Console.WriteLine(expectedElement);
-                    Guid actualGuidValue = Guid.Parse(actualElement.ToString());
-                    Guid expectedGuidValue = Guid.Parse(expectedElement.ToString());
+                    Guid actualGuidValue = Guid.Parse(actualValue.ToString());
+                    Guid expectedGuidValue = Guid.Parse(expectedValue.ToString());
                     Assert.AreEqual(expectedGuidValue, actualGuidValue);
                 }
                 else if (fieldName.StartsWith(SINGLE_TYPE.ToLower()))

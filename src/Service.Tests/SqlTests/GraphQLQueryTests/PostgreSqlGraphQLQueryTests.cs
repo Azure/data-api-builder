@@ -5,45 +5,44 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
+namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests;
+
+[TestClass, TestCategory(TestCategory.POSTGRESQL)]
+public class PostgreSqlGraphQLQueryTests : GraphQLQueryTestBase
 {
-
-    [TestClass, TestCategory(TestCategory.POSTGRESQL)]
-    public class PostgreSqlGraphQLQueryTests : GraphQLQueryTestBase
+    /// <summary>
+    /// Set the database engine for the tests
+    /// </summary>
+    [ClassInitialize]
+    public static async Task SetupAsync(TestContext context)
     {
-        /// <summary>
-        /// Set the database engine for the tests
-        /// </summary>
-        [ClassInitialize]
-        public static async Task SetupAsync(TestContext context)
-        {
-            DatabaseEngine = TestCategory.POSTGRESQL;
-            await InitializeTestFixture(context);
-        }
+        DatabaseEngine = TestCategory.POSTGRESQL;
+        await InitializeTestFixture(context);
+    }
 
-        #region Tests
-        [TestMethod]
-        public async Task MultipleResultQuery()
-        {
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id asc LIMIT 100) as table0";
-            await MultipleResultQuery(postgresQuery);
-        }
+    #region Tests
+    [TestMethod]
+    public async Task MultipleResultQuery()
+    {
+        string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id asc LIMIT 100) as table0";
+        await MultipleResultQuery(postgresQuery);
+    }
 
-        [TestMethod]
-        public async Task MultipleResultQueryWithMappings()
-        {
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT __column1 AS column1, __column2 AS column2 FROM GQLMappings ORDER BY __column1 asc LIMIT 100) as table0";
-            await MultipleResultQueryWithMappings(postgresQuery);
-        }
+    [TestMethod]
+    public async Task MultipleResultQueryWithMappings()
+    {
+        string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT __column1 AS column1, __column2 AS column2 FROM GQLMappings ORDER BY __column1 asc LIMIT 100) as table0";
+        await MultipleResultQueryWithMappings(postgresQuery);
+    }
 
-        /// <summary>
-        /// Gets array of results for querying a table containing computed columns.
-        /// </summary>
-        /// <check>rows from sales table</check>
-        [TestMethod]
-        public async Task MultipleResultQueryContainingComputedColumns()
-        {
-            string postgresQuery = @"SELECT json_agg(to_jsonb(table0)) FROM
+    /// <summary>
+    /// Gets array of results for querying a table containing computed columns.
+    /// </summary>
+    /// <check>rows from sales table</check>
+    [TestMethod]
+    public async Task MultipleResultQueryContainingComputedColumns()
+    {
+        string postgresQuery = @"SELECT json_agg(to_jsonb(table0)) FROM
                 (SELECT
                     id,
                     item_name,
@@ -51,24 +50,24 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                     tax,
                     total
                 FROM sales ORDER BY id asc LIMIT 100) as table0";
-            await MultipleResultQueryContainingComputedColumns(postgresQuery);
-        }
+        await MultipleResultQueryContainingComputedColumns(postgresQuery);
+    }
 
-        [TestMethod]
-        public async Task MultipleResultQueryWithVariables()
-        {
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id asc LIMIT 100) as table0";
-            await MultipleResultQueryWithVariables(postgresQuery);
-        }
+    [TestMethod]
+    public async Task MultipleResultQueryWithVariables()
+    {
+        string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id asc LIMIT 100) as table0";
+        await MultipleResultQueryWithVariables(postgresQuery);
+    }
 
-        /// <summary>
-        /// Test One-To-One relationship both directions
-        /// (book -> website placement, website placememnt -> book)
-        /// <summary>
-        [TestMethod]
-        public async Task OneToOneJoinQuery()
-        {
-            string postgresQuery = @"
+    /// <summary>
+    /// Test One-To-One relationship both directions
+    /// (book -> website placement, website placememnt -> book)
+    /// <summary>
+    [TestMethod]
+    public async Task OneToOneJoinQuery()
+    {
+        string postgresQuery = @"
 SELECT
   to_jsonb(""subq12"") AS ""data""
 FROM
@@ -123,13 +122,13 @@ FROM
   ) AS ""subq12""
             ";
 
-            await OneToOneJoinQuery(postgresQuery);
-        }
+        await OneToOneJoinQuery(postgresQuery);
+    }
 
-        [TestMethod]
-        public async Task QueryWithSingleColumnPrimaryKey()
-        {
-            string postgresQuery = @"
+    [TestMethod]
+    public async Task QueryWithSingleColumnPrimaryKey()
+    {
+        string postgresQuery = @"
                 SELECT to_jsonb(subq) AS data
                 FROM (
                     SELECT table0.title AS title
@@ -140,13 +139,13 @@ FROM
                 ) AS subq
             ";
 
-            await QueryWithSingleColumnPrimaryKey(postgresQuery);
-        }
+        await QueryWithSingleColumnPrimaryKey(postgresQuery);
+    }
 
-        [TestMethod]
-        public async Task QueryWithSingleColumnPrimaryKeyAndMappings()
-        {
-            string postgresQuery = @"
+    [TestMethod]
+    public async Task QueryWithSingleColumnPrimaryKeyAndMappings()
+    {
+        string postgresQuery = @"
                 SELECT to_jsonb(subq) AS data
                 FROM (
                     SELECT table0.__column1 AS column1
@@ -157,13 +156,13 @@ FROM
                 ) AS subq
             ";
 
-            await QueryWithSingleColumnPrimaryKeyAndMappings(postgresQuery);
-        }
+        await QueryWithSingleColumnPrimaryKeyAndMappings(postgresQuery);
+    }
 
-        [TestMethod]
-        public async Task QueryWithMultipleColumnPrimaryKey()
-        {
-            string postgresQuery = @"
+    [TestMethod]
+    public async Task QueryWithMultipleColumnPrimaryKey()
+    {
+        string postgresQuery = @"
                 SELECT to_jsonb(subq) AS data
                 FROM (
                     SELECT table0.content AS content
@@ -174,13 +173,13 @@ FROM
                 ) AS subq
             ";
 
-            await QueryWithMultipleColumnPrimaryKey(postgresQuery);
-        }
+        await QueryWithMultipleColumnPrimaryKey(postgresQuery);
+    }
 
-        [TestMethod]
-        public async Task QueryWithNullableForeignKey()
-        {
-            string postgresQuery = @"
+    [TestMethod]
+    public async Task QueryWithNullableForeignKey()
+    {
+        string postgresQuery = @"
             SELECT to_jsonb(subq7) AS data
             FROM
               (SELECT table0.title AS title,
@@ -198,39 +197,39 @@ FROM
                ORDER BY table0.id ASC
                LIMIT 1) AS subq7";
 
-            await QueryWithNullableForeignKey(postgresQuery);
-        }
+        await QueryWithNullableForeignKey(postgresQuery);
+    }
 
-        /// <summary>
-        /// Get all instances of a type with nullable interger fields
-        /// </summary>
-        [TestMethod]
-        public async Task TestQueryingTypeWithNullableIntFields()
-        {
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title, \"issue_number\" FROM foo.magazines ORDER BY id asc LIMIT 100) as table0";
-            await TestQueryingTypeWithNullableIntFields(postgresQuery);
+    /// <summary>
+    /// Get all instances of a type with nullable interger fields
+    /// </summary>
+    [TestMethod]
+    public async Task TestQueryingTypeWithNullableIntFields()
+    {
+        string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title, \"issue_number\" FROM foo.magazines ORDER BY id asc LIMIT 100) as table0";
+        await TestQueryingTypeWithNullableIntFields(postgresQuery);
 
-        }
+    }
 
-        /// <summary>
-        /// Get all instances of a type with nullable string fields
-        /// </summary>
-        [TestMethod]
-        public async Task TestQueryingTypeWithNullableStringFields()
-        {
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, username FROM website_users ORDER BY id asc LIMIT 100) as table0";
-            await TestQueryingTypeWithNullableStringFields(postgresQuery);
-        }
+    /// <summary>
+    /// Get all instances of a type with nullable string fields
+    /// </summary>
+    [TestMethod]
+    public async Task TestQueryingTypeWithNullableStringFields()
+    {
+        string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, username FROM website_users ORDER BY id asc LIMIT 100) as table0";
+        await TestQueryingTypeWithNullableStringFields(postgresQuery);
+    }
 
-        /// <summary>
-        /// Test to check graphQL support for aliases(arbitrarily set by user while making request).
-        /// book_id and book_title are aliases used for corresponding query fields.
-        /// The response for the query will contain the alias instead of raw db field.
-        /// </summary>
-        [TestMethod]
-        public async Task TestAliasSupportForGraphQLQueryFields()
-        {
-            string postgresQuery = @"
+    /// <summary>
+    /// Test to check graphQL support for aliases(arbitrarily set by user while making request).
+    /// book_id and book_title are aliases used for corresponding query fields.
+    /// The response for the query will contain the alias instead of raw db field.
+    /// </summary>
+    [TestMethod]
+    public async Task TestAliasSupportForGraphQLQueryFields()
+    {
+        string postgresQuery = @"
 SELECT
   json_agg(to_jsonb(table0))
 FROM
@@ -244,18 +243,18 @@ FROM
       id asc
     LIMIT 2
   ) as table0";
-            await TestAliasSupportForGraphQLQueryFields(postgresQuery);
-        }
+        await TestAliasSupportForGraphQLQueryFields(postgresQuery);
+    }
 
-        /// <summary>
-        /// Test to check graphQL support for aliases(arbitrarily set by user while making request).
-        /// book_id is an alias, while title is the raw db field.
-        /// The response for the query will use the alias where it is provided in the query.
-        /// </summary>
-        [TestMethod]
-        public async Task TestSupportForMixOfRawDbFieldFieldAndAlias()
-        {
-            string postgresQuery = @"
+    /// <summary>
+    /// Test to check graphQL support for aliases(arbitrarily set by user while making request).
+    /// book_id is an alias, while title is the raw db field.
+    /// The response for the query will use the alias where it is provided in the query.
+    /// </summary>
+    [TestMethod]
+    public async Task TestSupportForMixOfRawDbFieldFieldAndAlias()
+    {
+        string postgresQuery = @"
                 SELECT
                   json_agg(to_jsonb(table0))
                 FROM
@@ -270,105 +269,104 @@ FROM
                     LIMIT
                       2
                   ) as table0";
-            await TestSupportForMixOfRawDbFieldFieldAndAlias(postgresQuery);
-        }
-
-        /// <summary>
-        /// Tests orderBy on a list query
-        /// </summary>
-        [TestMethod]
-        public async Task TestOrderByInListQuery()
-        {
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY title DESC, id ASC LIMIT 100) as table0";
-            await TestOrderByInListQuery(postgresQuery);
-        }
-
-        /// <summary>
-        /// Use multiple order options and order an entity with a composite pk
-        /// </summary>
-        [TestMethod]
-        public async Task TestOrderByInListQueryOnCompPkType()
-        {
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, content FROM reviews ORDER BY content ASC, id DESC, book_id ASC LIMIT 100) as table0";
-            await TestOrderByInListQueryOnCompPkType(postgresQuery);
-        }
-
-        /// <summary>
-        /// Tests null fields in orderBy are ignored
-        /// meaning that null pk columns are included in the ORDER BY clause
-        /// as ASC by default while null non-pk columns are completely ignored
-        /// </summary>
-        [TestMethod]
-        public async Task TestNullFieldsInOrderByAreIgnored()
-        {
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY title DESC, id ASC LIMIT 100) as table0";
-            await TestNullFieldsInOrderByAreIgnored(postgresQuery);
-        }
-
-        /// <summary>
-        /// Tests that an orderBy with only null fields results in default pk sorting
-        /// </summary>
-        [TestMethod]
-        public async Task TestOrderByWithOnlyNullFieldsDefaultsToPkSorting()
-        {
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id ASC LIMIT 100) as table0";
-            await TestOrderByWithOnlyNullFieldsDefaultsToPkSorting(postgresQuery);
-        }
-
-        [TestMethod]
-        public async Task TestSettingOrderByOrderUsingVariable()
-        {
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id DESC LIMIT 4) as table0";
-            await TestSettingOrderByOrderUsingVariable(postgresQuery);
-        }
-
-        [TestMethod]
-        public async Task TestSettingComplexArgumentUsingVariables()
-        {
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id ASC LIMIT 100) as table0";
-            await base.TestSettingComplexArgumentUsingVariables(postgresQuery);
-        }
-
-        [TestMethod]
-        public async Task TestQueryWithExplicitlyNullArguments()
-        {
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id asc LIMIT 100) as table0";
-            await TestQueryWithExplicitlyNullArguments(postgresQuery);
-        }
-
-        [TestMethod]
-        public async Task TestQueryOnBasicView()
-        {
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books_view_all ORDER BY id ASC LIMIT 5) as table0";
-            await base.TestQueryOnBasicView(postgresQuery);
-        }
-
-        [TestMethod]
-        public async Task TestQueryOnCompositeView()
-        {
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, name FROM books_publishers_view_composite ORDER BY id ASC LIMIT 5) as table0";
-            await base.TestQueryOnCompositeView(postgresQuery);
-        }
-
-        /// <inheritdoc />
-        [DataTestMethod]
-        [DataRow(null, null, 1113, "Real Madrid", DisplayName = "No Overriding of existing relationship fields in DB.")]
-        [DataRow(new string[] { "new_club_id" }, new string[] { "id" }, 1111, "Manchester United", DisplayName = "Overriding existing relationship fields in DB.")]
-        public async Task TestConfigTakesPrecedenceForRelationshipFieldsOverDB(
-            string[] sourceFields,
-            string[] targetFields,
-            int club_id,
-            string club_name)
-        {
-            await TestConfigTakesPrecedenceForRelationshipFieldsOverDB(
-                sourceFields,
-                targetFields,
-                club_id,
-                club_name,
-                DatabaseType.PostgreSQL,
-                TestCategory.POSTGRESQL);
-        }
-
-        #endregion
+        await TestSupportForMixOfRawDbFieldFieldAndAlias(postgresQuery);
     }
+
+    /// <summary>
+    /// Tests orderBy on a list query
+    /// </summary>
+    [TestMethod]
+    public async Task TestOrderByInListQuery()
+    {
+        string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY title DESC, id ASC LIMIT 100) as table0";
+        await TestOrderByInListQuery(postgresQuery);
+    }
+
+    /// <summary>
+    /// Use multiple order options and order an entity with a composite pk
+    /// </summary>
+    [TestMethod]
+    public async Task TestOrderByInListQueryOnCompPkType()
+    {
+        string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, content FROM reviews ORDER BY content ASC, id DESC, book_id ASC LIMIT 100) as table0";
+        await TestOrderByInListQueryOnCompPkType(postgresQuery);
+    }
+
+    /// <summary>
+    /// Tests null fields in orderBy are ignored
+    /// meaning that null pk columns are included in the ORDER BY clause
+    /// as ASC by default while null non-pk columns are completely ignored
+    /// </summary>
+    [TestMethod]
+    public async Task TestNullFieldsInOrderByAreIgnored()
+    {
+        string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY title DESC, id ASC LIMIT 100) as table0";
+        await TestNullFieldsInOrderByAreIgnored(postgresQuery);
+    }
+
+    /// <summary>
+    /// Tests that an orderBy with only null fields results in default pk sorting
+    /// </summary>
+    [TestMethod]
+    public async Task TestOrderByWithOnlyNullFieldsDefaultsToPkSorting()
+    {
+        string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id ASC LIMIT 100) as table0";
+        await TestOrderByWithOnlyNullFieldsDefaultsToPkSorting(postgresQuery);
+    }
+
+    [TestMethod]
+    public async Task TestSettingOrderByOrderUsingVariable()
+    {
+        string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id DESC LIMIT 4) as table0";
+        await TestSettingOrderByOrderUsingVariable(postgresQuery);
+    }
+
+    [TestMethod]
+    public async Task TestSettingComplexArgumentUsingVariables()
+    {
+        string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id ASC LIMIT 100) as table0";
+        await base.TestSettingComplexArgumentUsingVariables(postgresQuery);
+    }
+
+    [TestMethod]
+    public async Task TestQueryWithExplicitlyNullArguments()
+    {
+        string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books ORDER BY id asc LIMIT 100) as table0";
+        await TestQueryWithExplicitlyNullArguments(postgresQuery);
+    }
+
+    [TestMethod]
+    public async Task TestQueryOnBasicView()
+    {
+        string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books_view_all ORDER BY id ASC LIMIT 5) as table0";
+        await base.TestQueryOnBasicView(postgresQuery);
+    }
+
+    [TestMethod]
+    public async Task TestQueryOnCompositeView()
+    {
+        string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, name FROM books_publishers_view_composite ORDER BY id ASC LIMIT 5) as table0";
+        await base.TestQueryOnCompositeView(postgresQuery);
+    }
+
+    /// <inheritdoc />
+    [DataTestMethod]
+    [DataRow(null, null, 1113, "Real Madrid", DisplayName = "No Overriding of existing relationship fields in DB.")]
+    [DataRow(new string[] { "new_club_id" }, new string[] { "id" }, 1111, "Manchester United", DisplayName = "Overriding existing relationship fields in DB.")]
+    public async Task TestConfigTakesPrecedenceForRelationshipFieldsOverDB(
+        string[] sourceFields,
+        string[] targetFields,
+        int club_id,
+        string club_name)
+    {
+        await TestConfigTakesPrecedenceForRelationshipFieldsOverDB(
+            sourceFields,
+            targetFields,
+            club_id,
+            club_name,
+            DatabaseType.PostgreSQL,
+            TestCategory.POSTGRESQL);
+    }
+
+    #endregion
 }

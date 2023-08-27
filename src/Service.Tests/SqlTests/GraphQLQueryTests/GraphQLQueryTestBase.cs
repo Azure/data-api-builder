@@ -16,23 +16,23 @@ using Azure.DataApiBuilder.Service.Tests.Configuration;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
+namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests;
+
+/// <summary>
+/// Base class for GraphQL Query tests targetting Sql databases.
+/// </summary>
+[TestClass]
+public abstract class GraphQLQueryTestBase : SqlTestBase
 {
+    #region Tests
     /// <summary>
-    /// Base class for GraphQL Query tests targetting Sql databases.
+    /// Gets array of results for querying more than one item.
     /// </summary>
-    [TestClass]
-    public abstract class GraphQLQueryTestBase : SqlTestBase
+    /// <returns></returns>
+    public async Task MultipleResultQuery(string dbQuery)
     {
-        #region Tests
-        /// <summary>
-        /// Gets array of results for querying more than one item.
-        /// </summary>
-        /// <returns></returns>
-        public async Task MultipleResultQuery(string dbQuery)
-        {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"{
+        string graphQLQueryName = "books";
+        string graphQLQuery = @"{
                 books(first: 100) {
                     items {
                         id
@@ -41,17 +41,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: true);
-            string expected = await GetDatabaseResultAsync(dbQuery);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: true);
+        string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
-        }
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+    }
 
-        [TestMethod]
-        public async Task MultipleResultQueryWithVariables(string dbQuery)
-        {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"query ($first: Int!) {
+    [TestMethod]
+    public async Task MultipleResultQueryWithVariables(string dbQuery)
+    {
+        string graphQLQueryName = "books";
+        string graphQLQuery = @"query ($first: Int!) {
                 books(first: $first) {
                     items {
                         id
@@ -60,25 +60,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false, new() { { "first", 100 } });
-            string expected = await GetDatabaseResultAsync(dbQuery);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false, new() { { "first", 100 } });
+        string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
-        }
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+    }
 
-        /// <summary>
-        /// Tests that the following "Find Many" query is properly handled by the engine given that it references
-        /// mapped column names "column1" and "column2" and NOT "__column1" nor "__column2"
-        /// and that the two mapped names are present in the result set.
-        /// </summary>
-        /// <param name="dbQuery"></param>
-        [TestMethod]
-        public async Task MultipleResultQueryWithMappings(string dbQuery)
-        {
-            string graphQLQueryName = "gQLmappings";
+    /// <summary>
+    /// Tests that the following "Find Many" query is properly handled by the engine given that it references
+    /// mapped column names "column1" and "column2" and NOT "__column1" nor "__column2"
+    /// and that the two mapped names are present in the result set.
+    /// </summary>
+    /// <param name="dbQuery"></param>
+    [TestMethod]
+    public async Task MultipleResultQueryWithMappings(string dbQuery)
+    {
+        string graphQLQueryName = "gQLmappings";
 
-            // "4" references the number of records in the GQLmappings table.
-            string graphQLQuery = @"{
+        // "4" references the number of records in the GQLmappings table.
+        string graphQLQuery = @"{
                 gQLmappings(first: 4) {
                     items {
                         column1
@@ -87,20 +87,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: true);
-            string expected = await GetDatabaseResultAsync(dbQuery);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: true);
+        string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
-        }
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+    }
 
-        /// <summary>
-        /// Gets array of results for querying a table containing computed columns.
-        /// </summary>
-        /// <returns>rows from sales table</returns>
-        public async Task MultipleResultQueryContainingComputedColumns(string dbQuery)
-        {
-            string graphQLQueryName = "sales";
-            string graphQLQuery = @"{
+    /// <summary>
+    /// Gets array of results for querying a table containing computed columns.
+    /// </summary>
+    /// <returns>rows from sales table</returns>
+    public async Task MultipleResultQueryContainingComputedColumns(string dbQuery)
+    {
+        string graphQLQueryName = "sales";
+        string graphQLQuery = @"{
                 sales(first: 10) {
                     items {
                         id
@@ -112,21 +112,21 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
-        }
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+    }
 
-        /// <summary>
-        /// Gets array of results for querying more than one item.
-        /// </summary>
-        /// <returns></returns>
-        [TestMethod]
-        public virtual async Task MultipleResultJoinQuery()
-        {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"{
+    /// <summary>
+    /// Gets array of results for querying more than one item.
+    /// </summary>
+    /// <returns></returns>
+    [TestMethod]
+    public virtual async Task MultipleResultJoinQuery()
+    {
+        string graphQLQueryName = "books";
+        string graphQLQuery = @"{
                 books(first: 12) {
                     items {
                         id
@@ -152,7 +152,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            string expected = @"
+        string expected = @"
 [
   {
     ""id"": 1,
@@ -382,91 +382,91 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
 }
 ]";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
-        }
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+    }
 
-        /// <summary>
-        /// Validates that a list query with only __typename in the selection set
-        /// returns the right types
-        /// </summary>
-        [TestMethod]
-        public async Task ListQueryWithoutItemSelectionButWithTypename()
-        {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"{
+    /// <summary>
+    /// Validates that a list query with only __typename in the selection set
+    /// returns the right types
+    /// </summary>
+    [TestMethod]
+    public async Task ListQueryWithoutItemSelectionButWithTypename()
+    {
+        string graphQLQueryName = "books";
+        string graphQLQuery = @"{
                 books{
                     __typename
                 }
             }";
 
-            string expected = @"
+        string expected = @"
                 {
                   ""__typename"": ""bookConnection""
                 }
             ";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Validates that a list query against a table with composite Pk
-        /// with only __typename in the selection set returns the right types
-        /// </summary>
-        [TestMethod]
-        public async Task ListQueryWithoutItemSelectionButOnlyTypenameAgainstTableWithCompositePK()
-        {
-            string graphQLQueryName = "stocks";
-            string graphQLQuery = @"{
+    /// <summary>
+    /// Validates that a list query against a table with composite Pk
+    /// with only __typename in the selection set returns the right types
+    /// </summary>
+    [TestMethod]
+    public async Task ListQueryWithoutItemSelectionButOnlyTypenameAgainstTableWithCompositePK()
+    {
+        string graphQLQueryName = "stocks";
+        string graphQLQuery = @"{
                 stocks{
                     __typename
                 }
             }";
 
-            string expected = @"
+        string expected = @"
                 {
                   ""__typename"": ""StockConnection""
                 }
             ";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: true);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: true);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Validates that a point query with only __typename field in the selection set
-        /// returns the right type
-        /// </summary>
-        [TestMethod]
-        public async Task PointQueryWithTypenameInSelectionSet()
-        {
-            string graphQLQueryName = "book_by_pk";
-            string graphQLQuery = @"{
+    /// <summary>
+    /// Validates that a point query with only __typename field in the selection set
+    /// returns the right type
+    /// </summary>
+    [TestMethod]
+    public async Task PointQueryWithTypenameInSelectionSet()
+    {
+        string graphQLQueryName = "book_by_pk";
+        string graphQLQuery = @"{
                 book_by_pk(id: 3) {
                     __typename
                 }
             }";
 
-            string expected = @"
+        string expected = @"
                 {
                     ""__typename"": ""book""
                 }
             ";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Validates that a list query with only __typename field in the items section returns the right types
-        /// </summary>
-        [TestMethod]
-        public async Task ListQueryWithOnlyTypenameInSelectionSet()
-        {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"{
+    /// <summary>
+    /// Validates that a list query with only __typename field in the items section returns the right types
+    /// </summary>
+    [TestMethod]
+    public async Task ListQueryWithOnlyTypenameInSelectionSet()
+    {
+        string graphQLQueryName = "books";
+        string graphQLQuery = @"{
                 books(first: 3) {
                     items {
                         __typename
@@ -474,29 +474,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            string typename = @"
+        string typename = @"
                 {
                     ""__typename"": ""book""
                 }
             ";
 
-            // Since the first 3 elements are fetched, we expect the response to contain 3 items
-            // with just the __typename field.
-            string expected = SqlTestHelper.ConstructGQLTypenameResponseNTimes(typename: typename, times: 3);
+        // Since the first 3 elements are fetched, we expect the response to contain 3 items
+        // with just the __typename field.
+        string expected = SqlTestHelper.ConstructGQLTypenameResponseNTimes(typename: typename, times: 3);
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+    }
 
-        /// <summary>
-        /// Validates that a nested point query with only __typename field in each selection set
-        /// returns the right types
-        /// </summary>
-        [TestMethod]
-        public async Task NestedPointQueryWithOnlyTypenameInEachSelectionSet()
-        {
-            string graphQLQueryName = "book_by_pk";
-            string graphQLQuery = @"{
+    /// <summary>
+    /// Validates that a nested point query with only __typename field in each selection set
+    /// returns the right types
+    /// </summary>
+    [TestMethod]
+    public async Task NestedPointQueryWithOnlyTypenameInEachSelectionSet()
+    {
+        string graphQLQueryName = "book_by_pk";
+        string graphQLQuery = @"{
                 book_by_pk(id: 3) {
                     __typename
                     publishers {
@@ -508,7 +508,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }     
             }";
 
-            string expected = @"
+        string expected = @"
                 {
                   ""__typename"": ""book"",
                   ""publishers"": {
@@ -520,44 +520,44 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             ";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Validates that querying a SP with only __typename field in the selection set
-        /// returns the right type(s)
-        /// </summary>
-        public async Task QueryAgainstSPWithOnlyTypenameInSelectionSet(string dbQuery)
-        {
-            string graphQLQueryName = "executeGetBooks";
-            string graphQLQuery = @"{
+    /// <summary>
+    /// Validates that querying a SP with only __typename field in the selection set
+    /// returns the right type(s)
+    /// </summary>
+    public async Task QueryAgainstSPWithOnlyTypenameInSelectionSet(string dbQuery)
+    {
+        string graphQLQueryName = "executeGetBooks";
+        string graphQLQuery = @"{
                 executeGetBooks{
                     __typename
                 }     
             }";
 
-            string typename = @"
+        string typename = @"
                 {
                     ""__typename"": ""GetBooks""
                 }";
 
-            string bookCountFromDB = await GetDatabaseResultAsync(dbQuery, expectJson: false);
-            int expectedCount = JsonSerializer.Deserialize<List<Dictionary<string, int>>>(bookCountFromDB)[0]["count"];
-            string expected = SqlTestHelper.ConstructGQLTypenameResponseNTimes(typename: typename, times: expectedCount);
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        string bookCountFromDB = await GetDatabaseResultAsync(dbQuery, expectJson: false);
+        int expectedCount = JsonSerializer.Deserialize<List<Dictionary<string, int>>>(bookCountFromDB)[0]["count"];
+        string expected = SqlTestHelper.ConstructGQLTypenameResponseNTimes(typename: typename, times: expectedCount);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Test One-To-One relationship both directions
-        /// (book -> website placement, website placememnt -> book)
-        /// <summary>
-        [TestMethod]
-        public async Task OneToOneJoinQuery(string dbQuery)
-        {
-            string graphQLQueryName = "book_by_pk";
-            string graphQLQuery = @"query {
+    /// <summary>
+    /// Test One-To-One relationship both directions
+    /// (book -> website placement, website placememnt -> book)
+    /// <summary>
+    [TestMethod]
+    public async Task OneToOneJoinQuery(string dbQuery)
+    {
+        string graphQLQueryName = "book_by_pk";
+        string graphQLQuery = @"query {
                 book_by_pk(id: 1) {
                   id
                   websiteplacement {
@@ -570,22 +570,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            JsonElement actual = await base.ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
+        JsonElement actual = await base.ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// This deeply nests a many-to-one/one-to-many join multiple times to
-        /// show that it still results in a valid query.
-        /// </summary>
-        /// <returns></returns>
-        [TestMethod]
-        public virtual async Task DeeplyNestedManyToOneJoinQuery()
-        {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"{
+    /// <summary>
+    /// This deeply nests a many-to-one/one-to-many join multiple times to
+    /// show that it still results in a valid query.
+    /// </summary>
+    /// <returns></returns>
+    [TestMethod]
+    public virtual async Task DeeplyNestedManyToOneJoinQuery()
+    {
+        string graphQLQueryName = "books";
+        string graphQLQuery = @"{
               books(first: 100) {
                 items {
                   title
@@ -612,22 +612,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
               }
             }";
 
-            // Too big of a result to check for the exact contents.
-            // For correctness of results, we use different tests.
-            // This test is only to validate we can handle deeply nested graphql queries.
-            await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-        }
+        // Too big of a result to check for the exact contents.
+        // For correctness of results, we use different tests.
+        // This test is only to validate we can handle deeply nested graphql queries.
+        await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+    }
 
-        /// <summary>
-        /// This deeply nests a many-to-many join multiple times to show that
-        /// it still results in a valid query.
-        /// </summary>
-        /// <returns></returns>
-        [TestMethod]
-        public virtual async Task DeeplyNestedManyToManyJoinQuery()
-        {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"
+    /// <summary>
+    /// This deeply nests a many-to-many join multiple times to show that
+    /// it still results in a valid query.
+    /// </summary>
+    /// <returns></returns>
+    [TestMethod]
+    public virtual async Task DeeplyNestedManyToManyJoinQuery()
+    {
+        string graphQLQueryName = "books";
+        string graphQLQuery = @"
 {
     books(first: 100) {
         items {
@@ -651,19 +651,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
     }
 }";
 
-            await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-        }
+        await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+    }
 
-        /// <summary>
-        /// This deeply nests a many-to-many join multiple times to show that
-        /// it still results in a valid query.
-        /// </summary>
-        /// <returns></returns>
-        [TestMethod]
-        public virtual async Task DeeplyNestedManyToManyJoinQueryWithVariables()
-        {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"
+    /// <summary>
+    /// This deeply nests a many-to-many join multiple times to show that
+    /// it still results in a valid query.
+    /// </summary>
+    /// <returns></returns>
+    [TestMethod]
+    public virtual async Task DeeplyNestedManyToManyJoinQueryWithVariables()
+    {
+        string graphQLQueryName = "books";
+        string graphQLQuery = @"
             query ($first: Int) {
                 books(first: $first) {
                     items {
@@ -687,79 +687,79 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false, new() { { "first", 100 } });
-        }
+        await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false, new() { { "first", 100 } });
+    }
 
-        [TestMethod]
-        public async Task QueryWithSingleColumnPrimaryKey(string dbQuery)
-        {
-            string graphQLQueryName = "book_by_pk";
-            string graphQLQuery = @"{
+    [TestMethod]
+    public async Task QueryWithSingleColumnPrimaryKey(string dbQuery)
+    {
+        string graphQLQueryName = "book_by_pk";
+        string graphQLQuery = @"{
                 book_by_pk(id: 2) {
                     title
                 }
             }";
 
-            JsonElement actual = await base.ExecuteGraphQLRequestAsync(
-                graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
+        JsonElement actual = await base.ExecuteGraphQLRequestAsync(
+            graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        [TestMethod]
-        public async Task QueryWithSingleColumnPrimaryKeyAndMappings(string dbQuery)
-        {
-            string graphQLQueryName = "gQLmappings_by_pk";
-            string graphQLQuery = @"{
+    [TestMethod]
+    public async Task QueryWithSingleColumnPrimaryKeyAndMappings(string dbQuery)
+    {
+        string graphQLQueryName = "gQLmappings_by_pk";
+        string graphQLQuery = @"{
                 gQLmappings_by_pk(column1: 1) {
                     column1
                 }
             }";
 
-            JsonElement actual = await base.ExecuteGraphQLRequestAsync(
-                graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
+        JsonElement actual = await base.ExecuteGraphQLRequestAsync(
+            graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        [TestMethod]
-        public async Task QueryWithMultipleColumnPrimaryKey(string dbQuery)
-        {
-            string graphQLQueryName = "review_by_pk";
-            string graphQLQuery = @"{
+    [TestMethod]
+    public async Task QueryWithMultipleColumnPrimaryKey(string dbQuery)
+    {
+        string graphQLQueryName = "review_by_pk";
+        string graphQLQuery = @"{
                 review_by_pk(id: 568, book_id: 1) {
                     content
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        [TestMethod]
-        public virtual async Task QueryWithNullResult()
-        {
-            string graphQLQueryName = "book_by_pk";
-            string graphQLQuery = @"{
+    [TestMethod]
+    public virtual async Task QueryWithNullResult()
+    {
+        string graphQLQueryName = "book_by_pk";
+        string graphQLQuery = @"{
                 book_by_pk(id: -9999) {
                     title
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
 
-            Assert.IsNull(actual.GetString());
-        }
+        Assert.IsNull(actual.GetString());
+    }
 
-        [TestMethod]
-        public async Task QueryWithNullableForeignKey(string dbQuery)
-        {
-            string graphQLQueryName = "comic_by_pk";
-            string graphQLQuery = @"{
+    [TestMethod]
+    public async Task QueryWithNullableForeignKey(string dbQuery)
+    {
+        string graphQLQueryName = "comic_by_pk";
+        string graphQLQuery = @"{
                 comic_by_pk(id: 1) {
                     title
                     myseries {
@@ -768,20 +768,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: true);
-            string expected = await GetDatabaseResultAsync(dbQuery);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: true);
+        string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <sumary>
-        /// Test if first param successfully limits list quries
-        /// </summary>
-        [TestMethod]
-        public virtual async Task TestFirstParamForListQueries()
-        {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"{
+    /// <sumary>
+    /// Test if first param successfully limits list quries
+    /// </summary>
+    [TestMethod]
+    public virtual async Task TestFirstParamForListQueries()
+    {
+        string graphQLQueryName = "books";
+        string graphQLQuery = @"{
                 books(first: 1) {
                     items {
                         title
@@ -797,7 +797,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            string expected = @"
+        string expected = @"
 [
   {
     ""title"": ""Awesome book"",
@@ -820,18 +820,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 ]";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+    }
 
-        /// <sumary>
-        /// Test if filter param successfully filters the query results
-        /// </summary>
-        [TestMethod]
-        public virtual async Task TestFilterParamForListQueries()
-        {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"{
+    /// <sumary>
+    /// Test if filter param successfully filters the query results
+    /// </summary>
+    [TestMethod]
+    public virtual async Task TestFilterParamForListQueries()
+    {
+        string graphQLQueryName = "books";
+        string graphQLQuery = @"{
                 books( " + QueryBuilder.FILTER_FIELD_NAME + @": {id: {gte: 1} and: [{id: {lte: 4}}]}) {
                     items {
                         id
@@ -846,7 +846,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            string expected = @"
+        string expected = @"
 [
   {
     ""id"": 1,
@@ -916,18 +916,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
 }
 ]";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+    }
 
-        /// <summary>
-        /// Get all instances of a type with nullable interger fields
-        /// </summary>
-        [TestMethod]
-        public async Task TestQueryingTypeWithNullableIntFields(string dbQuery)
-        {
-            string graphQLQueryName = "magazines";
-            string graphQLQuery = @"{
+    /// <summary>
+    /// Get all instances of a type with nullable interger fields
+    /// </summary>
+    [TestMethod]
+    public async Task TestQueryingTypeWithNullableIntFields(string dbQuery)
+    {
+        string graphQLQueryName = "magazines";
+        string graphQLQuery = @"{
                 magazines {
                     items {
                         id
@@ -937,20 +937,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
-        }
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+    }
 
-        /// <summary>
-        /// Get all instances of a type with nullable string fields
-        /// </summary>
-        [TestMethod]
-        public async Task TestQueryingTypeWithNullableStringFields(string dbQuery)
-        {
-            string graphQLQueryName = "websiteUsers";
-            string graphQLQuery = @"{
+    /// <summary>
+    /// Get all instances of a type with nullable string fields
+    /// </summary>
+    [TestMethod]
+    public async Task TestQueryingTypeWithNullableStringFields(string dbQuery)
+    {
+        string graphQLQueryName = "websiteUsers";
+        string graphQLQuery = @"{
                 websiteUsers {
                     items {
                         id
@@ -959,22 +959,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
-        }
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+    }
 
-        /// <summary>
-        /// Test to check graphQL support for aliases(arbitrarily set by user while making request).
-        /// book_id and book_title are aliases used for corresponding query fields.
-        /// The response for the query will contain the alias instead of raw db column.
-        /// </summary>
-        [TestMethod]
-        public async Task TestAliasSupportForGraphQLQueryFields(string dbQuery)
-        {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"{
+    /// <summary>
+    /// Test to check graphQL support for aliases(arbitrarily set by user while making request).
+    /// book_id and book_title are aliases used for corresponding query fields.
+    /// The response for the query will contain the alias instead of raw db column.
+    /// </summary>
+    [TestMethod]
+    public async Task TestAliasSupportForGraphQLQueryFields(string dbQuery)
+    {
+        string graphQLQueryName = "books";
+        string graphQLQuery = @"{
                 books(first: 2) {
                     items {
                         book_id: id
@@ -983,22 +983,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
-        }
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+    }
 
-        /// <summary>
-        /// Test to check graphQL support for aliases(arbitrarily set by user while making request).
-        /// book_id is an alias, while title is the raw db field.
-        /// The response for the query will use the alias where it is provided in the query.
-        /// </summary>
-        [TestMethod]
-        public async Task TestSupportForMixOfRawDbFieldFieldAndAlias(string dbQuery)
-        {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"{
+    /// <summary>
+    /// Test to check graphQL support for aliases(arbitrarily set by user while making request).
+    /// book_id is an alias, while title is the raw db field.
+    /// The response for the query will use the alias where it is provided in the query.
+    /// </summary>
+    [TestMethod]
+    public async Task TestSupportForMixOfRawDbFieldFieldAndAlias(string dbQuery)
+    {
+        string graphQLQueryName = "books";
+        string graphQLQuery = @"{
                 books(first: 2) {
                     items {
                         book_id: id
@@ -1007,20 +1007,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
-        }
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+    }
 
-        /// <summary>
-        /// Tests orderBy on a list query
-        /// </summary>
-        [TestMethod]
-        public async Task TestOrderByInListQuery(string dbQuery)
-        {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"{
+    /// <summary>
+    /// Tests orderBy on a list query
+    /// </summary>
+    [TestMethod]
+    public async Task TestOrderByInListQuery(string dbQuery)
+    {
+        string graphQLQueryName = "books";
+        string graphQLQuery = @"{
                 books(first: 100 orderBy: {title: DESC}) {
                     items {
                         id
@@ -1029,20 +1029,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
-        }
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+    }
 
-        /// <summary>
-        /// Use multiple order options and order an entity with a composite pk
-        /// </summary>
-        [TestMethod]
-        public async Task TestOrderByInListQueryOnCompPkType(string dbQuery)
-        {
-            string graphQLQueryName = "reviews";
-            string graphQLQuery = @"{
+    /// <summary>
+    /// Use multiple order options and order an entity with a composite pk
+    /// </summary>
+    [TestMethod]
+    public async Task TestOrderByInListQueryOnCompPkType(string dbQuery)
+    {
+        string graphQLQueryName = "reviews";
+        string graphQLQuery = @"{
                 reviews(orderBy: {content: ASC id: DESC}) {
                     items {
                         id
@@ -1051,22 +1051,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
-        }
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+    }
 
-        /// <summary>
-        /// Tests null fields in orderBy are ignored
-        /// meaning that null pk columns are included in the ORDER BY clause
-        /// as ASC by default while null non-pk columns are completely ignored
-        /// </summary>
-        [TestMethod]
-        public async Task TestNullFieldsInOrderByAreIgnored(string dbQuery)
-        {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"{
+    /// <summary>
+    /// Tests null fields in orderBy are ignored
+    /// meaning that null pk columns are included in the ORDER BY clause
+    /// as ASC by default while null non-pk columns are completely ignored
+    /// </summary>
+    [TestMethod]
+    public async Task TestNullFieldsInOrderByAreIgnored(string dbQuery)
+    {
+        string graphQLQueryName = "books";
+        string graphQLQuery = @"{
                 books(first: 100 orderBy: {title: DESC id: null publisher_id: null}) {
                     items {
                         id
@@ -1075,20 +1075,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
-        }
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+    }
 
-        /// <summary>
-        /// Tests that an orderBy with only null fields results in default pk sorting
-        /// </summary>
-        [TestMethod]
-        public async Task TestOrderByWithOnlyNullFieldsDefaultsToPkSorting(string dbQuery)
-        {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"{
+    /// <summary>
+    /// Tests that an orderBy with only null fields results in default pk sorting
+    /// </summary>
+    [TestMethod]
+    public async Task TestOrderByWithOnlyNullFieldsDefaultsToPkSorting(string dbQuery)
+    {
+        string graphQLQueryName = "books";
+        string graphQLQuery = @"{
                 books(first: 100 orderBy: {title: null}) {
                     items {
                         id
@@ -1097,20 +1097,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
-        }
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+    }
 
-        /// <summary>
-        /// Tests that orderBy order can be set using variable
-        /// </summary>
-        [TestMethod]
-        public async Task TestSettingOrderByOrderUsingVariable(string dbQuery)
-        {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"query($order: OrderBy)
+    /// <summary>
+    /// Tests that orderBy order can be set using variable
+    /// </summary>
+    [TestMethod]
+    public async Task TestSettingOrderByOrderUsingVariable(string dbQuery)
+    {
+        string graphQLQueryName = "books";
+        string graphQLQuery = @"query($order: OrderBy)
             {
                 books(first: 4 orderBy: {id: $order}) {
                     items {
@@ -1120,20 +1120,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false, new() { { "order", "DESC" } });
-            string expected = await GetDatabaseResultAsync(dbQuery);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false, new() { { "order", "DESC" } });
+        string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
-        }
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+    }
 
-        /// <summary>
-        /// Tests setting complex types using variable shows an appropriate error
-        /// </summary>
-        [TestMethod]
-        public virtual async Task TestSettingComplexArgumentUsingVariables(string dbQuery)
-        {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"query($orderBy: bookOrderByInput)
+    /// <summary>
+    /// Tests setting complex types using variable shows an appropriate error
+    /// </summary>
+    [TestMethod]
+    public virtual async Task TestSettingComplexArgumentUsingVariables(string dbQuery)
+    {
+        string graphQLQueryName = "books";
+        string graphQLQuery = @"query($orderBy: bookOrderByInput)
             {
                 books(first: 100 orderBy: $orderBy) {
                     items {
@@ -1143,20 +1143,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false, new() { { "orderBy", new { id = "ASC" } } });
-            string expected = await GetDatabaseResultAsync(dbQuery);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false, new() { { "orderBy", new { id = "ASC" } } });
+        string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
-        }
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+    }
 
-        /// <summary>
-        /// Set query arguments to null explicitly and test t
-        /// </summary>
-        [TestMethod]
-        public virtual async Task TestQueryWithExplicitlyNullArguments(string dbQuery)
-        {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"{
+    /// <summary>
+    /// Set query arguments to null explicitly and test t
+    /// </summary>
+    [TestMethod]
+    public virtual async Task TestQueryWithExplicitlyNullArguments(string dbQuery)
+    {
+        string graphQLQueryName = "books";
+        string graphQLQuery = @"{
                 books(first: null, after: null, orderBy: null, " + QueryBuilder.FILTER_FIELD_NAME + @": null) {
                     items {
                         id
@@ -1165,20 +1165,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
-        }
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+    }
 
-        /// <summary>
-        /// Query a simple view (contains columns from one table)
-        /// </summary>
-        [TestMethod]
-        public virtual async Task TestQueryOnBasicView(string dbQuery)
-        {
-            string graphQLQueryName = "books_view_alls";
-            string graphQLQuery = @"{
+    /// <summary>
+    /// Query a simple view (contains columns from one table)
+    /// </summary>
+    [TestMethod]
+    public virtual async Task TestQueryOnBasicView(string dbQuery)
+    {
+        string graphQLQueryName = "books_view_alls";
+        string graphQLQuery = @"{
                 books_view_alls(first: 5) {
                     items {
                         id
@@ -1187,38 +1187,38 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
-        }
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+    }
 
-        /// <summary>
-        /// Simple Stored Procedure to check SELECT query returning single row
-        /// </summary>
-        public async Task TestStoredProcedureQueryForGettingSingleRow(string dbQuery)
-        {
-            string graphQLQueryName = "executeGetPublisher";
-            string graphQLQuery = @"mutation {
+    /// <summary>
+    /// Simple Stored Procedure to check SELECT query returning single row
+    /// </summary>
+    public async Task TestStoredProcedureQueryForGettingSingleRow(string dbQuery)
+    {
+        string graphQLQueryName = "executeGetPublisher";
+        string graphQLQuery = @"mutation {
                 executeGetPublisher(id: 1234) {
                     id
                     name
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery, expectJson: false);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery, expectJson: false);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Simple Stored Procedure to check SELECT query returning multiple rows
-        /// </summary>
-        public async Task TestStoredProcedureQueryForGettingMultipleRows(string dbQuery)
-        {
-            string graphQLQueryName = "executeGetBooks";
-            string graphQLQuery = @"{
+    /// <summary>
+    /// Simple Stored Procedure to check SELECT query returning multiple rows
+    /// </summary>
+    public async Task TestStoredProcedureQueryForGettingMultipleRows(string dbQuery)
+    {
+        string graphQLQueryName = "executeGetBooks";
+        string graphQLQuery = @"{
                 executeGetBooks {
                     id
                     title
@@ -1226,39 +1226,39 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery, expectJson: false);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery, expectJson: false);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Simple Stored Procedure to check COUNT operation
-        /// </summary>
-        public async Task TestStoredProcedureQueryForGettingTotalNumberOfRows(string dbQuery)
-        {
-            string graphQLQueryName = "executeCountBooks";
-            string graphQLQuery = @"mutation {
+    /// <summary>
+    /// Simple Stored Procedure to check COUNT operation
+    /// </summary>
+    public async Task TestStoredProcedureQueryForGettingTotalNumberOfRows(string dbQuery)
+    {
+        string graphQLQueryName = "executeCountBooks";
+        string graphQLQuery = @"mutation {
                 executeCountBooks {
                     total_books
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery, expectJson: false);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery, expectJson: false);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Test to verify Stored Procedure can handle nullable result columns
-        /// The result will contain a row which has columns containing null value.
-        /// Columns:[first_publish_year and total_books_published] in the result set are nullable.
-        /// </summary>
-        public async Task TestStoredProcedureQueryWithResultsContainingNull(string dbQuery)
-        {
-            string graphQLQueryName = "executeSearchAuthorByFirstName";
-            string graphQLQuery = @"mutation {
+    /// <summary>
+    /// Test to verify Stored Procedure can handle nullable result columns
+    /// The result will contain a row which has columns containing null value.
+    /// Columns:[first_publish_year and total_books_published] in the result set are nullable.
+    /// </summary>
+    public async Task TestStoredProcedureQueryWithResultsContainingNull(string dbQuery)
+    {
+        string graphQLQueryName = "executeSearchAuthorByFirstName";
+        string graphQLQuery = @"mutation {
                 executeSearchAuthorByFirstName(firstName: ""Aaron"") {
                     author_name
                     first_publish_year
@@ -1266,20 +1266,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery, expectJson: false);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery, expectJson: false);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Query a composite view (contains columns from multiple tables)
-        /// </summary>
-        [TestMethod]
-        public virtual async Task TestQueryOnCompositeView(string dbQuery)
-        {
-            string graphQLQueryName = "books_publishers_view_composites";
-            string graphQLQuery = @"{
+    /// <summary>
+    /// Query a composite view (contains columns from multiple tables)
+    /// </summary>
+    [TestMethod]
+    public virtual async Task TestQueryOnCompositeView(string dbQuery)
+    {
+        string graphQLQueryName = "books_publishers_view_composites";
+        string graphQLQuery = @"{
                 books_publishers_view_composites(first: 5) {
                     items {
                         id
@@ -1288,51 +1288,51 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
-        }
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+    }
 
-        /// <summary>
-        /// Validates the presence of a resolved __typename in a GraphQL query result payload.
-        /// __typename should not be resolved as a database field and should not result in a database error.
-        /// </summary>
-        [TestMethod]
-        public async Task SingleItemQueryWithIntrospectionFields()
-        {
+    /// <summary>
+    /// Validates the presence of a resolved __typename in a GraphQL query result payload.
+    /// __typename should not be resolved as a database field and should not result in a database error.
+    /// </summary>
+    [TestMethod]
+    public async Task SingleItemQueryWithIntrospectionFields()
+    {
 
-            string graphQLQueryName = "book_by_pk";
-            string graphQLQuery = @"query {
+        string graphQLQueryName = "book_by_pk";
+        string graphQLQuery = @"query {
                 book_by_pk(id: 1) {
                   id,
                   __typename
                 }
             }";
 
-            string expected = @"
+        string expected = @"
             {
                 ""id"": 1,
                 ""__typename"": ""book""
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Validates the presence of a resolved __typename in a GraphQL query result payload where there
-        /// are nested fields. This query returns the __typename of publishers (PublisherConnection) and the
-        /// __typename of the items collection (Publisher).
-        /// Including the __typename field for items should not result in a database error because __typename
-        /// should not be resolved as a field for the Publisher table.
-        /// </summary>
-        [TestMethod]
-        public async Task ListQueryWithIntrospectionFields()
-        {
+    /// <summary>
+    /// Validates the presence of a resolved __typename in a GraphQL query result payload where there
+    /// are nested fields. This query returns the __typename of publishers (PublisherConnection) and the
+    /// __typename of the items collection (Publisher).
+    /// Including the __typename field for items should not result in a database error because __typename
+    /// should not be resolved as a field for the Publisher table.
+    /// </summary>
+    [TestMethod]
+    public async Task ListQueryWithIntrospectionFields()
+    {
 
-            string graphQLQueryName = "publishers";
-            string graphQLQuery = @"query {
+        string graphQLQueryName = "publishers";
+        string graphQLQuery = @"query {
                 publishers {
                   __typename,
                   items {
@@ -1342,7 +1342,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            string expected = @"
+        string expected = @"
             {
               ""__typename"": ""PublisherConnection"",
               ""items"": [
@@ -1377,14 +1377,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
               ]
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        [TestMethod]
-        public async Task CollectionQueryWithInlineFragmentOverlappingFields()
-        {
-            string query = @"
+    [TestMethod]
+    public async Task CollectionQueryWithInlineFragmentOverlappingFields()
+    {
+        string query = @"
 query {
     books(first: 10) {
         __typename
@@ -1397,15 +1397,15 @@ query {
 }
             ";
 
-            JsonElement response = await ExecuteGraphQLRequestAsync(query, "books", false);
+        JsonElement response = await ExecuteGraphQLRequestAsync(query, "books", false);
 
-            Assert.AreEqual(10, response.GetProperty("items").GetArrayLength());
-        }
+        Assert.AreEqual(10, response.GetProperty("items").GetArrayLength());
+    }
 
-        [TestMethod]
-        public async Task CollectionQueryWithInlineFragmentNonOverlappingFields()
-        {
-            string query = @"
+    [TestMethod]
+    public async Task CollectionQueryWithInlineFragmentNonOverlappingFields()
+    {
+        string query = @"
 query {
     books(first: 10) {
         __typename
@@ -1417,15 +1417,15 @@ query {
 }
             ";
 
-            JsonElement response = await ExecuteGraphQLRequestAsync(query, "books", false);
+        JsonElement response = await ExecuteGraphQLRequestAsync(query, "books", false);
 
-            Assert.AreEqual(10, response.GetProperty("items").GetArrayLength());
-        }
+        Assert.AreEqual(10, response.GetProperty("items").GetArrayLength());
+    }
 
-        [TestMethod]
-        public async Task CollectionQueryWithFragmentOverlappingFields()
-        {
-            string query = @"
+    [TestMethod]
+    public async Task CollectionQueryWithFragmentOverlappingFields()
+    {
+        string query = @"
 query {
     books(first: 10) {
         __typename
@@ -1440,15 +1440,15 @@ query {
 fragment b on book { id }
             ";
 
-            JsonElement response = await ExecuteGraphQLRequestAsync(query, "books", false);
+        JsonElement response = await ExecuteGraphQLRequestAsync(query, "books", false);
 
-            Assert.AreEqual(10, response.GetProperty("items").GetArrayLength());
-        }
+        Assert.AreEqual(10, response.GetProperty("items").GetArrayLength());
+    }
 
-        [TestMethod]
-        public async Task CollectionQueryWithFragmentNonOverlappingFields()
-        {
-            string query = @"
+    [TestMethod]
+    public async Task CollectionQueryWithFragmentNonOverlappingFields()
+    {
+        string query = @"
 query {
     books(first: 10) {
         __typename
@@ -1462,15 +1462,15 @@ query {
 fragment b on book { id }
             ";
 
-            JsonElement response = await ExecuteGraphQLRequestAsync(query, "books", false);
+        JsonElement response = await ExecuteGraphQLRequestAsync(query, "books", false);
 
-            Assert.AreEqual(10, response.GetProperty("items").GetArrayLength());
-        }
+        Assert.AreEqual(10, response.GetProperty("items").GetArrayLength());
+    }
 
-        [TestMethod]
-        public async Task QueryWithInlineFragmentOverlappingFields()
-        {
-            string query = @"
+    [TestMethod]
+    public async Task QueryWithInlineFragmentOverlappingFields()
+    {
+        string query = @"
 query {
     book_by_pk(id: 1) {
         __typename
@@ -1481,15 +1481,15 @@ query {
 }
             ";
 
-            JsonElement response = await ExecuteGraphQLRequestAsync(query, "book_by_pk", false);
+        JsonElement response = await ExecuteGraphQLRequestAsync(query, "book_by_pk", false);
 
-            Assert.AreEqual(1, response.GetProperty("id").GetInt32());
-        }
+        Assert.AreEqual(1, response.GetProperty("id").GetInt32());
+    }
 
-        [TestMethod]
-        public async Task QueryWithInlineFragmentNonOverlappingFields()
-        {
-            string query = @"
+    [TestMethod]
+    public async Task QueryWithInlineFragmentNonOverlappingFields()
+    {
+        string query = @"
 query {
     book_by_pk(id: 1) {
         __typename
@@ -1499,15 +1499,15 @@ query {
 }
             ";
 
-            JsonElement response = await ExecuteGraphQLRequestAsync(query, "book_by_pk", false);
+        JsonElement response = await ExecuteGraphQLRequestAsync(query, "book_by_pk", false);
 
-            Assert.AreEqual(1, response.GetProperty("id").GetInt32());
-        }
+        Assert.AreEqual(1, response.GetProperty("id").GetInt32());
+    }
 
-        [TestMethod]
-        public async Task QueryWithFragmentOverlappingFields()
-        {
-            string query = @"
+    [TestMethod]
+    public async Task QueryWithFragmentOverlappingFields()
+    {
+        string query = @"
 query {
     book_by_pk(id: 1) {
         __typename
@@ -1519,15 +1519,15 @@ query {
 
 fragment p on book { id }
             ";
-            JsonElement response = await ExecuteGraphQLRequestAsync(query, "book_by_pk", false);
+        JsonElement response = await ExecuteGraphQLRequestAsync(query, "book_by_pk", false);
 
-            Assert.AreEqual(1, response.GetProperty("id").GetInt32());
-        }
+        Assert.AreEqual(1, response.GetProperty("id").GetInt32());
+    }
 
-        [TestMethod]
-        public async Task QueryWithFragmentNonOverlappingFields()
-        {
-            string query = @"
+    [TestMethod]
+    public async Task QueryWithFragmentNonOverlappingFields()
+    {
+        string query = @"
 query {
     book_by_pk(id: 1) {
         __typename
@@ -1539,15 +1539,15 @@ query {
 fragment p on book { id }
             ";
 
-            JsonElement response = await ExecuteGraphQLRequestAsync(query, "book_by_pk", false);
+        JsonElement response = await ExecuteGraphQLRequestAsync(query, "book_by_pk", false);
 
-            Assert.AreEqual(1, response.GetProperty("id").GetInt32());
-        }
+        Assert.AreEqual(1, response.GetProperty("id").GetInt32());
+    }
 
-        [TestMethod]
-        public async Task GraphQLQueryWithMultipleOfTheSameFieldReturnsFieldOnce()
-        {
-            string query = @"
+    [TestMethod]
+    public async Task GraphQLQueryWithMultipleOfTheSameFieldReturnsFieldOnce()
+    {
+        string query = @"
 query {
     books(first: 10) {
         items {
@@ -1558,21 +1558,21 @@ query {
 }
             ";
 
-            JsonElement response = await ExecuteGraphQLRequestAsync(query, "books", false);
+        JsonElement response = await ExecuteGraphQLRequestAsync(query, "books", false);
 
-            Assert.AreEqual(10, response.GetProperty("items").GetArrayLength());
-            Assert.AreEqual(1, response.GetProperty("items").EnumerateArray().First().GetProperty("id").GetInt32());
-        }
+        Assert.AreEqual(10, response.GetProperty("items").GetArrayLength());
+        Assert.AreEqual(1, response.GetProperty("items").EnumerateArray().First().GetProperty("id").GetInt32());
+    }
 
-        #endregion
+    #endregion
 
-        #region Negative Tests
+    #region Negative Tests
 
-        [TestMethod]
-        public virtual async Task TestInvalidFirstParamQuery()
-        {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"{
+    [TestMethod]
+    public virtual async Task TestInvalidFirstParamQuery()
+    {
+        string graphQLQueryName = "books";
+        string graphQLQuery = @"{
                 books(first: -1) {
                     items {
                         id
@@ -1581,17 +1581,17 @@ query {
                 }
             }";
 
-            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataApiBuilderException.SubStatusCodes.BadRequest}");
-        }
+        JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataApiBuilderException.SubStatusCodes.BadRequest}");
+    }
 
-        /// <summary>
-        /// Checks failure on providing invalid arguments in graphQL Query
-        /// </summary>
-        public async Task TestStoredProcedureQueryWithInvalidArgumentType()
-        {
-            string graphQLQueryName = "GetBook";
-            string graphQLQuery = @"{
+    /// <summary>
+    /// Checks failure on providing invalid arguments in graphQL Query
+    /// </summary>
+    public async Task TestStoredProcedureQueryWithInvalidArgumentType()
+    {
+        string graphQLQueryName = "GetBook";
+        string graphQLQuery = @"{
                 GetBook(id: ""3"") {
                     id
                     title
@@ -1599,15 +1599,15 @@ query {
                 }
             }";
 
-            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), message: "The specified argument value does not match the argument type.");
-        }
+        JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), message: "The specified argument value does not match the argument type.");
+    }
 
-        [TestMethod]
-        public virtual async Task TestInvalidFilterParamQuery()
-        {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"{
+    [TestMethod]
+    public virtual async Task TestInvalidFilterParamQuery()
+    {
+        string graphQLQueryName = "books";
+        string graphQLQuery = @"{
                 books( " + QueryBuilder.FILTER_FIELD_NAME + @": ""INVALID"") {
                     items {
                         id
@@ -1616,73 +1616,73 @@ query {
                 }
             }";
 
-            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString());
-        }
+        JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+        SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString());
+    }
 
-        /// <summary>
-        /// Test to check that sourceFields and targetFields for relationship provided in the config
-        /// overrides relationship fields defined in DB.
-        /// In this Test the result changes when we override the source and target fields in the config.
-        /// </summary>
-        [TestMethod]
-        public async Task TestConfigTakesPrecedenceForRelationshipFieldsOverDB(
-            string[] sourceFields,
-            string[] targetFields,
-            int club_id,
-            string club_name,
-            DatabaseType dbType,
-            string testEnvironment)
+    /// <summary>
+    /// Test to check that sourceFields and targetFields for relationship provided in the config
+    /// overrides relationship fields defined in DB.
+    /// In this Test the result changes when we override the source and target fields in the config.
+    /// </summary>
+    [TestMethod]
+    public async Task TestConfigTakesPrecedenceForRelationshipFieldsOverDB(
+        string[] sourceFields,
+        string[] targetFields,
+        int club_id,
+        string club_name,
+        DatabaseType dbType,
+        string testEnvironment)
+    {
+        RuntimeConfig configuration = SqlTestHelper.InitBasicRuntimeConfigWithNoEntity(dbType, testEnvironment);
+
+        Entity clubEntity = new(
+            Source: new("clubs", EntitySourceType.Table, null, null),
+            Rest: new(Enabled: true),
+            GraphQL: new("club", "clubs"),
+            Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+            Relationships: null,
+            Mappings: null
+        );
+
+        Entity playerEntity = new(
+            Source: new("players", EntitySourceType.Table, null, null),
+            Rest: new(Enabled: true),
+            GraphQL: new("player", "players"),
+            Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+            Relationships: new Dictionary<string, EntityRelationship>() { {"clubs", new (
+                Cardinality: Cardinality.One,
+                TargetEntity: "Club",
+                SourceFields: sourceFields,
+                TargetFields: targetFields,
+                LinkingObject: null,
+                LinkingSourceFields: null,
+                LinkingTargetFields: null
+            )}},
+            Mappings: null
+        );
+
+        Dictionary<string, Entity> entities = new(configuration.Entities) {
+            { "Club", clubEntity },
+            { "Player", playerEntity }
+        };
+
+        RuntimeConfig updatedConfig = configuration
+            with
+        { Entities = new(entities) };
+
+        const string CUSTOM_CONFIG = "custom-config.json";
+        File.WriteAllText(CUSTOM_CONFIG, updatedConfig.ToJson());
+
+        string[] args = new[]
         {
-            RuntimeConfig configuration = SqlTestHelper.InitBasicRuntimeConfigWithNoEntity(dbType, testEnvironment);
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+        };
 
-            Entity clubEntity = new(
-                Source: new("clubs", EntitySourceType.Table, null, null),
-                Rest: new(Enabled: true),
-                GraphQL: new("club", "clubs"),
-                Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
-                Relationships: null,
-                Mappings: null
-            );
-
-            Entity playerEntity = new(
-                Source: new("players", EntitySourceType.Table, null, null),
-                Rest: new(Enabled: true),
-                GraphQL: new("player", "players"),
-                Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
-                Relationships: new Dictionary<string, EntityRelationship>() { {"clubs", new (
-                    Cardinality: Cardinality.One,
-                    TargetEntity: "Club",
-                    SourceFields: sourceFields,
-                    TargetFields: targetFields,
-                    LinkingObject: null,
-                    LinkingSourceFields: null,
-                    LinkingTargetFields: null
-                )}},
-                Mappings: null
-            );
-
-            Dictionary<string, Entity> entities = new(configuration.Entities) {
-                { "Club", clubEntity },
-                { "Player", playerEntity }
-            };
-
-            RuntimeConfig updatedConfig = configuration
-                with
-            { Entities = new(entities) };
-
-            const string CUSTOM_CONFIG = "custom-config.json";
-            File.WriteAllText(CUSTOM_CONFIG, updatedConfig.ToJson());
-
-            string[] args = new[]
-            {
-                    $"--ConfigFileName={CUSTOM_CONFIG}"
-            };
-
-            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
-            using (HttpClient client = server.CreateClient())
-            {
-                string query = @"{
+        using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+        using (HttpClient client = server.CreateClient())
+        {
+            string query = @"{
                     player_by_pk(id: 1) {
                         name,
                         clubs {
@@ -1692,24 +1692,23 @@ query {
                     }
                 }";
 
-                object payload = new { query };
+            object payload = new { query };
 
-                HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
-                {
-                    Content = JsonContent.Create(payload)
-                };
+            HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
+            {
+                Content = JsonContent.Create(payload)
+            };
 
-                HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
-                Assert.AreEqual(System.Net.HttpStatusCode.OK, graphQLResponse.StatusCode);
+            HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
+            Assert.AreEqual(System.Net.HttpStatusCode.OK, graphQLResponse.StatusCode);
 
-                string body = await graphQLResponse.Content.ReadAsStringAsync();
-                JsonElement graphQLResult = JsonSerializer.Deserialize<JsonElement>(body);
-                Assert.AreEqual(club_id, graphQLResult.GetProperty("data").GetProperty("player_by_pk").GetProperty("clubs").GetProperty("id").GetDouble());
-                Assert.AreEqual(club_name, graphQLResult.GetProperty("data").GetProperty("player_by_pk").GetProperty("clubs").GetProperty("name").ToString());
-            }
+            string body = await graphQLResponse.Content.ReadAsStringAsync();
+            JsonElement graphQLResult = JsonSerializer.Deserialize<JsonElement>(body);
+            Assert.AreEqual(club_id, graphQLResult.GetProperty("data").GetProperty("player_by_pk").GetProperty("clubs").GetProperty("id").GetDouble());
+            Assert.AreEqual(club_name, graphQLResult.GetProperty("data").GetProperty("player_by_pk").GetProperty("clubs").GetProperty("name").ToString());
         }
-
-        #endregion
     }
+
+    #endregion
 }
 

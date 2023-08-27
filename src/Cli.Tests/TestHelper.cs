@@ -1,105 +1,105 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Cli.Tests
+namespace Cli.Tests;
+
+public static class TestHelper
 {
-    public static class TestHelper
+    // Config file name for tests
+    public const string TEST_RUNTIME_CONFIG_FILE = "dab-config-test.json";
+
+    public const string TEST_CONNECTION_STRING = "testconnectionstring";
+    public const string TEST_ENV_CONN_STRING = "@env('connection-string')";
+
+    public const string SAMPLE_TEST_CONN_STRING = "Data Source=<>;Initial Catalog=<>;User ID=<>;Password=<>;";
+
+    // test schema for cosmosDB
+    public const string TEST_SCHEMA_FILE = "test-schema.gql";
+    public const string DAB_DRAFT_SCHEMA_TEST_PATH = "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json";
+
+    /// <summary>
+    /// Adds the entity properties to the configuration and returns the updated configuration json as a string.
+    /// </summary>
+    /// <param name="configuration">Configuration Json.</param>
+    /// <param name="entityProperties">Entity properties to be added to the configuration.</param>
+    public static string AddPropertiesToJson(string configuration, string entityProperties)
     {
-        // Config file name for tests
-        public const string TEST_RUNTIME_CONFIG_FILE = "dab-config-test.json";
+        JObject configurationJson = JObject.Parse(configuration);
+        JObject entityPropertiesJson = JObject.Parse(entityProperties);
 
-        public const string TEST_CONNECTION_STRING = "testconnectionstring";
-        public const string TEST_ENV_CONN_STRING = "@env('connection-string')";
-
-        public const string SAMPLE_TEST_CONN_STRING = "Data Source=<>;Initial Catalog=<>;User ID=<>;Password=<>;";
-
-        // test schema for cosmosDB
-        public const string TEST_SCHEMA_FILE = "test-schema.gql";
-        public const string DAB_DRAFT_SCHEMA_TEST_PATH = "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json";
-
-        /// <summary>
-        /// Adds the entity properties to the configuration and returns the updated configuration json as a string.
-        /// </summary>
-        /// <param name="configuration">Configuration Json.</param>
-        /// <param name="entityProperties">Entity properties to be added to the configuration.</param>
-        public static string AddPropertiesToJson(string configuration, string entityProperties)
+        configurationJson.Merge(entityPropertiesJson, new JsonMergeSettings
         {
-            JObject configurationJson = JObject.Parse(configuration);
-            JObject entityPropertiesJson = JObject.Parse(entityProperties);
+            MergeArrayHandling = MergeArrayHandling.Union
+        });
+        return configurationJson.ToString();
+    }
 
-            configurationJson.Merge(entityPropertiesJson, new JsonMergeSettings
-            {
-                MergeArrayHandling = MergeArrayHandling.Union
-            });
-            return configurationJson.ToString();
-        }
-
-        /// <summary>
-        /// Returns a new dab Process with the given command and flags
-        /// </summary>
-        public static Process ExecuteDabCommand(string command, string flags)
+    /// <summary>
+    /// Returns a new dab Process with the given command and flags
+    /// </summary>
+    public static Process ExecuteDabCommand(string command, string flags)
+    {
+        Process process = new()
         {
-            Process process = new()
+            StartInfo =
             {
-                StartInfo =
-                {
-                    FileName = @"./Microsoft.DataApiBuilder",
-                    CreateNoWindow = true,
-                    Arguments = $"{command} {flags}",
-                    WindowStyle = ProcessWindowStyle.Hidden,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                }
-            };
+                FileName = @"./Microsoft.DataApiBuilder",
+                CreateNoWindow = true,
+                Arguments = $"{command} {flags}",
+                WindowStyle = ProcessWindowStyle.Hidden,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+            }
+        };
 
-            // Asserting that a new process has been started and no existing process is reused.
-            Assert.IsTrue(process.Start());
+        // Asserting that a new process has been started and no existing process is reused.
+        Assert.IsTrue(process.Start());
 
-            // The new process should not be exited after triggering the start command.
-            Assert.IsFalse(process.HasExited);
+        // The new process should not be exited after triggering the start command.
+        Assert.IsFalse(process.HasExited);
 
-            return process;
-        }
+        return process;
+    }
 
-        /// <summary>
-        /// Schema property of the config json. This is used for constructing the required config json strings
-        /// for unit tests
-        /// </summary>
-        public const string SCHEMA_PROPERTY = @"
+    /// <summary>
+    /// Schema property of the config json. This is used for constructing the required config json strings
+    /// for unit tests
+    /// </summary>
+    public const string SCHEMA_PROPERTY = @"
           ""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""";
 
-        /// <summary>
-        /// Data source property of the config json. This is used for constructing the required config json strings
-        /// for unit tests
-        /// </summary>
-        public const string SAMPLE_SCHEMA_DATA_SOURCE = SCHEMA_PROPERTY + "," + @"
+    /// <summary>
+    /// Data source property of the config json. This is used for constructing the required config json strings
+    /// for unit tests
+    /// </summary>
+    public const string SAMPLE_SCHEMA_DATA_SOURCE = SCHEMA_PROPERTY + "," + @"
             ""data-source"": {
               ""database-type"": ""mssql"",
               ""connection-string"": """ + SAMPLE_TEST_CONN_STRING + @"""
             }
         ";
 
-        /// <summary>
-        /// Data source property of the config json with an invalid connection string. This is used for
-        /// constructing the required config json strings for unit tests. Config json constructed using
-        /// this data source element will fail validations as empty connection string
-        /// is not allowed
-        /// </summary>
-        public const string SAMPLE_SCHEMA_DATA_SOURCE_WITH_INVALID_CONNSTRING = SCHEMA_PROPERTY + "," + @"
+    /// <summary>
+    /// Data source property of the config json with an invalid connection string. This is used for
+    /// constructing the required config json strings for unit tests. Config json constructed using
+    /// this data source element will fail validations as empty connection string
+    /// is not allowed
+    /// </summary>
+    public const string SAMPLE_SCHEMA_DATA_SOURCE_WITH_INVALID_CONNSTRING = SCHEMA_PROPERTY + "," + @"
             ""data-source"": {
               ""database-type"": ""mssql"",
               ""connection-string"": """"
             }
         ";
 
-        /// <summary>
-        /// A minimal valid config json without any entities. This config string is used in unit tests.
-        /// </summary>
-        public const string INITIAL_CONFIG =
-          "{" +
-            SAMPLE_SCHEMA_DATA_SOURCE + "," +
-            @"
+    /// <summary>
+    /// A minimal valid config json without any entities. This config string is used in unit tests.
+    /// </summary>
+    public const string INITIAL_CONFIG =
+      "{" +
+        SAMPLE_SCHEMA_DATA_SOURCE + "," +
+        @"
             ""runtime"": {
               ""rest"": {
                 ""path"": ""/api"",
@@ -122,15 +122,15 @@ namespace Cli.Tests
               }
             },
             ""entities"": {}" +
-          "}";
+      "}";
 
-        /// <summary>
-        /// A minimal config json without any entities. This config is invalid as it contains an empty connection
-        /// string. This config is used in tests to verify validation failures.
-        /// </summary>
-        public const string INVALID_INTIAL_CONFIG = "{" +
-            SAMPLE_SCHEMA_DATA_SOURCE_WITH_INVALID_CONNSTRING + "," +
-            @"
+    /// <summary>
+    /// A minimal config json without any entities. This config is invalid as it contains an empty connection
+    /// string. This config is used in tests to verify validation failures.
+    /// </summary>
+    public const string INVALID_INTIAL_CONFIG = "{" +
+        SAMPLE_SCHEMA_DATA_SOURCE_WITH_INVALID_CONNSTRING + "," +
+        @"
             ""runtime"": {
               ""rest"": {
                 ""path"": ""/api"",
@@ -153,9 +153,9 @@ namespace Cli.Tests
               }
             },
             ""entities"": {}" +
-          "}";
+      "}";
 
-        public const string SINGLE_ENTITY = @"
+    public const string SINGLE_ENTITY = @"
           {
               ""entities"": {
                   ""MyEntity"": {
@@ -172,7 +172,7 @@ namespace Cli.Tests
               }
           }";
 
-        public const string BASIC_ENTITY_WITH_ANONYMOUS_ROLE = @"
+    public const string BASIC_ENTITY_WITH_ANONYMOUS_ROLE = @"
           {
               ""entities"": {
                   ""MyEntity"": {
@@ -189,7 +189,7 @@ namespace Cli.Tests
               }
           }";
 
-        public const string SINGLE_ENTITY_WITH_ONLY_READ_PERMISSION = @"
+    public const string SINGLE_ENTITY_WITH_ONLY_READ_PERMISSION = @"
           {
               ""entities"": {
                 ""MyEntity"": {
@@ -206,10 +206,10 @@ namespace Cli.Tests
               }
           }";
 
-        /// <summary>
-        /// Entity containing invalid graphQL type
-        /// </summary>
-        public const string SINGLE_ENTITY_WITH_INVALID_GRAPHQL_TYPE = @"
+    /// <summary>
+    /// Entity containing invalid graphQL type
+    /// </summary>
+    public const string SINGLE_ENTITY_WITH_INVALID_GRAPHQL_TYPE = @"
           {
               ""entities"": {
                   ""MyEntity"": {
@@ -229,7 +229,7 @@ namespace Cli.Tests
               }
           }";
 
-        public const string SINGLE_ENTITY_WITH_STORED_PROCEDURE = @"
+    public const string SINGLE_ENTITY_WITH_STORED_PROCEDURE = @"
           {
               ""entities"": {
               ""MyEntity"": {
@@ -262,7 +262,7 @@ namespace Cli.Tests
                   }
           }";
 
-        public const string SP_DEFAULT_REST_METHODS_GRAPHQL_OPERATION = @"{
+    public const string SP_DEFAULT_REST_METHODS_GRAPHQL_OPERATION = @"{
               ""entities"": {
               ""MyEntity"": {
                 ""source"": {
@@ -289,7 +289,7 @@ namespace Cli.Tests
                   }
           }";
 
-        public const string SP_GRAPHQL_ENABLED = @"{
+    public const string SP_GRAPHQL_ENABLED = @"{
               ""entities"": {
               ""MyEntity"": {
                 ""source"": {
@@ -317,7 +317,7 @@ namespace Cli.Tests
                   }
           }";
 
-        public const string SP_GRAPHQL_CUSTOM_TYPE = @"{
+    public const string SP_GRAPHQL_CUSTOM_TYPE = @"{
               ""entities"": {
               ""MyEntity"": {
                 ""source"": {
@@ -348,7 +348,7 @@ namespace Cli.Tests
                   }
           }";
 
-        public const string SP_GRAPHQL_ENABLED_WITH_CUSTOM_OPERATION = @"{
+    public const string SP_GRAPHQL_ENABLED_WITH_CUSTOM_OPERATION = @"{
               ""entities"": {
               ""MyEntity"": {
                 ""source"": {
@@ -376,7 +376,7 @@ namespace Cli.Tests
                   }
           }";
 
-        public const string SP_GRAPHQL_ENABLED_WITH_CUSTOM_TYPE_OPERATION = @"{
+    public const string SP_GRAPHQL_ENABLED_WITH_CUSTOM_TYPE_OPERATION = @"{
               ""entities"": {
               ""MyEntity"": {
                 ""source"": {
@@ -407,7 +407,7 @@ namespace Cli.Tests
                   }
           }";
 
-        public const string SP_REST_GRAPHQL_ENABLED = @"{
+    public const string SP_REST_GRAPHQL_ENABLED = @"{
               ""entities"": {
               ""MyEntity"": {
                 ""source"": {
@@ -436,7 +436,7 @@ namespace Cli.Tests
                   }
           }";
 
-        public const string SP_REST_GRAPHQL_DISABLED = @"{
+    public const string SP_REST_GRAPHQL_DISABLED = @"{
               ""entities"": {
               ""MyEntity"": {
                 ""source"": {
@@ -457,7 +457,7 @@ namespace Cli.Tests
               }
           }";
 
-        public const string SP_CUSTOM_REST_METHOD_GRAPHQL_OPERATION = @"{
+    public const string SP_CUSTOM_REST_METHOD_GRAPHQL_OPERATION = @"{
               ""entities"": {
               ""MyEntity"": {
                 ""source"": {
@@ -486,7 +486,7 @@ namespace Cli.Tests
                   }
           }";
 
-        public const string SP_CUSTOM_REST_GRAPHQL_ALL = @"{
+    public const string SP_CUSTOM_REST_GRAPHQL_ALL = @"{
               ""entities"": {
               ""MyEntity"": {
                 ""source"": {
@@ -520,7 +520,7 @@ namespace Cli.Tests
                   }
           }";
 
-        public const string SP_DEFAULT_REST_ENABLED = @"{
+    public const string SP_DEFAULT_REST_ENABLED = @"{
               ""entities"": {
               ""MyEntity"": {
                 ""source"": {
@@ -548,7 +548,7 @@ namespace Cli.Tests
                   }
           }";
 
-        public const string SP_CUSTOM_REST_PATH = @"{
+    public const string SP_CUSTOM_REST_PATH = @"{
               ""entities"": {
               ""MyEntity"": {
                 ""source"": {
@@ -576,7 +576,7 @@ namespace Cli.Tests
                   }
           }";
 
-        public const string SP_CUSTOM_REST_METHODS = @"{
+    public const string SP_CUSTOM_REST_METHODS = @"{
               ""entities"": {
               ""MyEntity"": {
                 ""source"": {
@@ -605,7 +605,7 @@ namespace Cli.Tests
                   }
           }";
 
-        public const string SP_REST_ENABLED_WITH_CUSTOM_REST_METHODS = @"{
+    public const string SP_REST_ENABLED_WITH_CUSTOM_REST_METHODS = @"{
               ""entities"": {
               ""MyEntity"": {
                 ""source"": {
@@ -635,7 +635,7 @@ namespace Cli.Tests
                   }
           }";
 
-        public const string SP_CUSTOM_REST_PATH_WITH_CUSTOM_REST_METHODS = @"{
+    public const string SP_CUSTOM_REST_PATH_WITH_CUSTOM_REST_METHODS = @"{
               ""entities"": {
               ""MyEntity"": {
                 ""source"": {
@@ -665,7 +665,7 @@ namespace Cli.Tests
                   }
           }";
 
-        public const string STORED_PROCEDURE_WITH_BOTH_REST_METHODS_GRAPHQL_OPERATION = @"
+    public const string STORED_PROCEDURE_WITH_BOTH_REST_METHODS_GRAPHQL_OPERATION = @"
           {
               ""entities"": {
               ""MyEntity"": {
@@ -700,7 +700,7 @@ namespace Cli.Tests
                   }
           }";
 
-        public const string STORED_PROCEDURE_WITH_REST_GRAPHQL_CONFIG = @"
+    public const string STORED_PROCEDURE_WITH_REST_GRAPHQL_CONFIG = @"
           {
               ""entities"": {
               ""MyEntity"": {
@@ -731,7 +731,7 @@ namespace Cli.Tests
                   }
           }";
 
-        public const string SINGLE_ENTITY_WITH_SOURCE_AS_TABLE = @"
+    public const string SINGLE_ENTITY_WITH_SOURCE_AS_TABLE = @"
           {
               ""entities"": {
               ""MyEntity"": {
@@ -755,7 +755,7 @@ namespace Cli.Tests
             }
           }";
 
-        public const string SINGLE_ENTITY_WITH_SOURCE_AS_VIEW = @"
+    public const string SINGLE_ENTITY_WITH_SOURCE_AS_VIEW = @"
           {
               ""entities"": {
               ""MyEntity"": {
@@ -779,7 +779,7 @@ namespace Cli.Tests
             }
           }";
 
-        public const string ENTITY_CONFIG_WITH_POLICY = @"
+    public const string ENTITY_CONFIG_WITH_POLICY = @"
           {
             ""entities"": {
                 ""MyEntity"": {
@@ -802,7 +802,7 @@ namespace Cli.Tests
             }
         }";
 
-        public const string ENTITY_CONFIG_WITH_ACTION_FIELDS = @"
+    public const string ENTITY_CONFIG_WITH_ACTION_FIELDS = @"
           {
             ""entities"": {
                 ""MyEntity"": {
@@ -825,7 +825,7 @@ namespace Cli.Tests
             }
         }";
 
-        public const string ENTITY_CONFIG_WITH_POLCIY_AND_ACTION_FIELDS = @"
+    public const string ENTITY_CONFIG_WITH_POLCIY_AND_ACTION_FIELDS = @"
           {
             ""entities"": {
                 ""MyEntity"": {
@@ -852,10 +852,10 @@ namespace Cli.Tests
             }
         }";
 
-        public const string BASE_CONFIG =
-          @"{" +
-            @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
-            @"""data-source"": {
+    public const string BASE_CONFIG =
+      @"{" +
+        @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+        @"""data-source"": {
           ""database-type"": ""mssql"",
           ""connection-string"": """",
           ""options"":{
@@ -909,10 +909,10 @@ namespace Cli.Tests
         }
       }";
 
-        public const string ENV_BASED_CONFIG =
-          @"{" +
-            @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
-            @"""data-source"": {
+    public const string ENV_BASED_CONFIG =
+      @"{" +
+        @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+        @"""data-source"": {
           ""database-type"": ""mssql"",
           ""connection-string"": ""localhost:5000;User ID={USER_NAME};Password={USER_PASSWORD};MultipleActiveResultSets=False;""
         },
@@ -972,10 +972,10 @@ namespace Cli.Tests
         }
       }";
 
-        public const string MERGED_CONFIG =
-          @"{" +
-            @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
-            @"""data-source"": {
+    public const string MERGED_CONFIG =
+      @"{" +
+        @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+        @"""data-source"": {
           ""database-type"": ""mssql"",
           ""connection-string"": ""localhost:5000;User ID={USER_NAME};Password={USER_PASSWORD};MultipleActiveResultSets=False;"",
           ""options"":{
@@ -1053,24 +1053,23 @@ namespace Cli.Tests
         }
       }";
 
-        /// <summary>
-        /// Creates basic initialization options for MS SQL config.
-        /// </summary>
-        /// <param name="config">Optional config file name.</param>
-        /// <returns>InitOptions</returns>
-        public static InitOptions CreateBasicInitOptionsForMsSqlWithConfig(string? config = null)
-        {
-            return new(
-                databaseType: DatabaseType.MSSQL,
-                connectionString: "testconnectionstring",
-                cosmosNoSqlDatabase: null,
-                cosmosNoSqlContainer: null,
-                graphQLSchemaPath: null,
-                setSessionContext: true,
-                hostMode: HostMode.Development,
-                corsOrigin: new List<string>(),
-                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                config: config);
-        }
+    /// <summary>
+    /// Creates basic initialization options for MS SQL config.
+    /// </summary>
+    /// <param name="config">Optional config file name.</param>
+    /// <returns>InitOptions</returns>
+    public static InitOptions CreateBasicInitOptionsForMsSqlWithConfig(string? config = null)
+    {
+        return new(
+            databaseType: DatabaseType.MSSQL,
+            connectionString: "testconnectionstring",
+            cosmosNoSqlDatabase: null,
+            cosmosNoSqlContainer: null,
+            graphQLSchemaPath: null,
+            setSessionContext: true,
+            hostMode: HostMode.Development,
+            corsOrigin: new List<string>(),
+            authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+            config: config);
     }
 }

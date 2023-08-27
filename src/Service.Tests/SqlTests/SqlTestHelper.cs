@@ -20,339 +20,339 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json.Linq;
 using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationTests;
 
-namespace Azure.DataApiBuilder.Service.Tests.SqlTests
+namespace Azure.DataApiBuilder.Service.Tests.SqlTests;
+
+public static class SqlTestHelper
 {
-    public static class SqlTestHelper
+    // This is is the key which holds all the rows in the response
+    // for REST requests.
+    public static readonly string jsonResultTopLevelKey = "value";
+
+    // Exception properties to put assertions when verifying results of SqlTests which expect exception.
+    private const string PROPERTY_MESSAGE = "message";
+    private const string PROPERTY_STATUS = "status";
+    private const string PROPERTY_CODE = "code";
+
+    public static RuntimeConfig RemoveAllRelationshipBetweenEntities(RuntimeConfig runtimeConfig)
     {
-        // This is is the key which holds all the rows in the response
-        // for REST requests.
-        public static readonly string jsonResultTopLevelKey = "value";
-
-        // Exception properties to put assertions when verifying results of SqlTests which expect exception.
-        private const string PROPERTY_MESSAGE = "message";
-        private const string PROPERTY_STATUS = "status";
-        private const string PROPERTY_CODE = "code";
-
-        public static RuntimeConfig RemoveAllRelationshipBetweenEntities(RuntimeConfig runtimeConfig)
+        return runtimeConfig with
         {
-            return runtimeConfig with
-            {
-                Entities = new(runtimeConfig.Entities.ToDictionary(item => item.Key, item => item.Value with { Relationships = null }))
-            };
-        }
+            Entities = new(runtimeConfig.Entities.ToDictionary(item => item.Key, item => item.Value with { Relationships = null }))
+        };
+    }
 
-        /// <summary>
-        /// Converts strings to JSON objects and does a deep compare
-        /// </summary>
-        /// <remarks>
-        /// This method of comparing JSON-s provides:
-        /// <list type="number">
-        /// <item> Insensitivity to spaces in the JSON formatting </item>
-        /// <item> Insensitivity to order for elements in dictionaries. E.g. {"a": 1, "b": 2} = {"b": 2, "a": 1} </item>
-        /// <item> Sensitivity to order for elements in lists. E.g. [{"a": 1}, {"b": 2}] ~= [{"b": 2}, {"a": 1}] </item>
-        /// </list>
-        /// In contrast, string comparing does not provide 1 and 2.
-        /// </remarks>
-        /// <param name="jsonString1"></param>
-        /// <param name="jsonString2"></param>
-        /// <returns>True if JSON objects are the same</returns>
-        public static bool JsonStringsDeepEqual(string jsonString1, string jsonString2)
-        {
-            return string.IsNullOrEmpty(jsonString1) && string.IsNullOrEmpty(jsonString2) ||
-                JToken.DeepEquals(JToken.Parse(jsonString1), JToken.Parse(jsonString2));
-        }
+    /// <summary>
+    /// Converts strings to JSON objects and does a deep compare
+    /// </summary>
+    /// <remarks>
+    /// This method of comparing JSON-s provides:
+    /// <list type="number">
+    /// <item> Insensitivity to spaces in the JSON formatting </item>
+    /// <item> Insensitivity to order for elements in dictionaries. E.g. {"a": 1, "b": 2} = {"b": 2, "a": 1} </item>
+    /// <item> Sensitivity to order for elements in lists. E.g. [{"a": 1}, {"b": 2}] ~= [{"b": 2}, {"a": 1}] </item>
+    /// </list>
+    /// In contrast, string comparing does not provide 1 and 2.
+    /// </remarks>
+    /// <param name="jsonString1"></param>
+    /// <param name="jsonString2"></param>
+    /// <returns>True if JSON objects are the same</returns>
+    public static bool JsonStringsDeepEqual(string jsonString1, string jsonString2)
+    {
+        return string.IsNullOrEmpty(jsonString1) && string.IsNullOrEmpty(jsonString2) ||
+            JToken.DeepEquals(JToken.Parse(jsonString1), JToken.Parse(jsonString2));
+    }
 
-        /// <summary>
-        /// Adds a useful failure message around the expected == actual operation.
-        /// <summary>
-        public static void PerformTestEqualJsonStrings(string expected, string actual)
-        {
-            Assert.IsTrue(JsonStringsDeepEqual(expected, actual),
-            $"\nExpected:<{expected}>\nActual:<{actual}>");
-        }
+    /// <summary>
+    /// Adds a useful failure message around the expected == actual operation.
+    /// <summary>
+    public static void PerformTestEqualJsonStrings(string expected, string actual)
+    {
+        Assert.IsTrue(JsonStringsDeepEqual(expected, actual),
+        $"\nExpected:<{expected}>\nActual:<{actual}>");
+    }
 
-        /// <summary>
-        /// Tests for different aspects of the error in a GraphQL response
-        /// </summary>
-        public static void TestForErrorInGraphQLResponse(string response, string message = null, string statusCode = null, string path = null)
+    /// <summary>
+    /// Tests for different aspects of the error in a GraphQL response
+    /// </summary>
+    public static void TestForErrorInGraphQLResponse(string response, string message = null, string statusCode = null, string path = null)
+    {
+        Console.WriteLine(response);
+
+        if (message is not null)
         {
             Console.WriteLine(response);
-
-            if (message is not null)
-            {
-                Console.WriteLine(response);
-                Assert.IsTrue(response.Contains(message), $"Message \"{message}\" not found in error");
-            }
-
-            if (statusCode != null)
-            {
-                Assert.IsTrue(response.Contains($"\"code\":\"{statusCode}\""), $"Status code \"{statusCode}\" not found in error");
-            }
-
-            if (path is not null)
-            {
-                Console.WriteLine(response);
-                Assert.IsTrue(response.Contains(path), $"Path \"{path}\" not found in error");
-            }
+            Assert.IsTrue(response.Contains(message), $"Message \"{message}\" not found in error");
         }
 
-        /// <summary>
-        /// Instantiate basic runtime config with no entity.
-        /// </summary>
-        /// <returns></returns>
-        public static RuntimeConfig InitBasicRuntimeConfigWithNoEntity(
-            DatabaseType dbType = DatabaseType.MSSQL,
-            string testCategory = TestCategory.MSSQL)
+        if (statusCode != null)
         {
-            DataSource dataSource = new(dbType, GetConnectionStringFromEnvironmentConfig(environment: testCategory), new());
-
-            RuntimeConfig runtimeConfig = new(
-                Schema: "IntegrationTestMinimalSchema",
-                DataSource: dataSource,
-                Runtime: new(
-                    Rest: new(),
-                    GraphQL: new(),
-                    Host: new(null, null)
-                ),
-                Entities: new(new Dictionary<string, Entity>())
-            );
-
-            return runtimeConfig;
+            Assert.IsTrue(response.Contains($"\"code\":\"{statusCode}\""), $"Status code \"{statusCode}\" not found in error");
         }
 
-        /// <summary>
-        /// Verifies the ActionResult is as expected with the expected status code.
-        /// </summary>
-        /// <param name="expected">Expected result of the query execution.</param>
-        /// <param name="request">The HttpRequestMessage sent to the engine via HttpClient.</param>
-        /// <param name="response">The HttpResponseMessage returned by the engine.</param>
-        /// <param name="exceptionExpected">Boolean value indicating whether an exception is expected as
-        /// a result of executing the request on the engine.</param>
-        /// <param name="httpMethod">The http method specified in the request.</param>
-        /// <param name="expectedLocationHeader">The expected location header in the response(if any).</param>
-        /// <param name="verifyNumRecords"></param>
-        /// <param name="isExpectedErrorMsgSubstr">When set to true, will look for a substring 'expectedErrorMessage'
-        /// in the actual exception message to verify the test result. This is helpful when the actual error message is dynamic and changes
-        /// on every single run of the test.</param>
-        /// <returns></returns>
-        public static async Task VerifyResultAsync(
-            string expected,
-            HttpRequestMessage request,
-            HttpResponseMessage response,
-            bool exceptionExpected,
-            HttpMethod httpMethod,
-            string expectedLocationHeader,
-            int verifyNumRecords,
-            bool isExpectedErrorMsgSubstr = false)
+        if (path is not null)
         {
-            string responseBody = await response.Content.ReadAsStringAsync();
-            if (!exceptionExpected)
+            Console.WriteLine(response);
+            Assert.IsTrue(response.Contains(path), $"Path \"{path}\" not found in error");
+        }
+    }
+
+    /// <summary>
+    /// Instantiate basic runtime config with no entity.
+    /// </summary>
+    /// <returns></returns>
+    public static RuntimeConfig InitBasicRuntimeConfigWithNoEntity(
+        DatabaseType dbType = DatabaseType.MSSQL,
+        string testCategory = TestCategory.MSSQL)
+    {
+        DataSource dataSource = new(dbType, GetConnectionStringFromEnvironmentConfig(environment: testCategory), new());
+
+        RuntimeConfig runtimeConfig = new(
+            Schema: "IntegrationTestMinimalSchema",
+            DataSource: dataSource,
+            Runtime: new(
+                Rest: new(),
+                GraphQL: new(),
+                Host: new(null, null)
+            ),
+            Entities: new(new Dictionary<string, Entity>())
+        );
+
+        return runtimeConfig;
+    }
+
+    /// <summary>
+    /// Verifies the ActionResult is as expected with the expected status code.
+    /// </summary>
+    /// <param name="expected">Expected result of the query execution.</param>
+    /// <param name="request">The HttpRequestMessage sent to the engine via HttpClient.</param>
+    /// <param name="response">The HttpResponseMessage returned by the engine.</param>
+    /// <param name="exceptionExpected">Boolean value indicating whether an exception is expected as
+    /// a result of executing the request on the engine.</param>
+    /// <param name="httpMethod">The http method specified in the request.</param>
+    /// <param name="expectedLocationHeader">The expected location header in the response(if any).</param>
+    /// <param name="verifyNumRecords"></param>
+    /// <param name="isExpectedErrorMsgSubstr">When set to true, will look for a substring 'expectedErrorMessage'
+    /// in the actual exception message to verify the test result. This is helpful when the actual error message is dynamic and changes
+    /// on every single run of the test.</param>
+    /// <returns></returns>
+    public static async Task VerifyResultAsync(
+        string expected,
+        HttpRequestMessage request,
+        HttpResponseMessage response,
+        bool exceptionExpected,
+        HttpMethod httpMethod,
+        string expectedLocationHeader,
+        int verifyNumRecords,
+        bool isExpectedErrorMsgSubstr = false)
+    {
+        string responseBody = await response.Content.ReadAsStringAsync();
+        if (!exceptionExpected)
+        {
+            // Assert that the expectedLocation and actualLocation are equal in case of
+            // POST operation.
+            if (!string.IsNullOrEmpty(expectedLocationHeader))
             {
-                // Assert that the expectedLocation and actualLocation are equal in case of
-                // POST operation.
-                if (!string.IsNullOrEmpty(expectedLocationHeader))
-                {
-                    // Find the actual location using the response and request uri.
-                    // Response LocalPath = Request LocalPath + "/" + actualLocationPath
-                    // For eg. POST Request LocalPath: /api/Review
-                    // 201 Created Response LocalPath: /api/Review/book_id/1/id/5001
-                    // therefore, actualLocation = book_id/1/id/5001
-                    string responseLocalPath = (response.Headers.Location.LocalPath);
-                    string requestLocalPath = request.RequestUri.LocalPath;
-                    string actualLocationPath = responseLocalPath.Substring(requestLocalPath.Length + 1);
-                    Assert.AreEqual(expectedLocationHeader, actualLocationPath);
-                }
-
-                // Assert the number of records received is equal to expected number of records.
-                if (response.StatusCode is HttpStatusCode.OK && verifyNumRecords >= 0)
-                {
-                    Dictionary<string, JsonElement[]> actualAsDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement[]>>(responseBody);
-                    Assert.AreEqual(actualAsDict[jsonResultTopLevelKey].Length, verifyNumRecords);
-                }
-
-                PerformTestEqualJsonStrings(expected, responseBody);
-            }
-            else
-            {
-                // Json Property in error response which holds the actual exception properties.
-                string PARENT_PROPERTY_ERROR = "error";
-
-                //Generate expected error object
-                JsonElement expectedErrorObj = JsonDocument.Parse(expected).RootElement.GetProperty(PARENT_PROPERTY_ERROR);
-                string expectedStatusCode = expectedErrorObj.GetProperty(PROPERTY_STATUS).ToString();
-                string expectedSubStatusCode = expectedErrorObj.GetProperty(PROPERTY_CODE).ToString();
-
-                // Quote(") has to be treated differently than other unicode characters
-                // as it has to be added with a preceding backslash.
-                responseBody = Regex.Replace(responseBody, @"\\u0022", @"\\""");
-
-                // Remove all carriage returns and new lines from the response body.
-                responseBody = Regex.Replace(responseBody, @"\\n|\\r", "");
-
-                // Convert the escaped characters into their unescaped form.
-                responseBody = Regex.Unescape(responseBody);
-
-                // Generate actual error object
-                JsonElement actualErrorObj = JsonDocument.Parse(responseBody).RootElement.GetProperty(PARENT_PROPERTY_ERROR);
-                string actualStatusCode = actualErrorObj.GetProperty(PROPERTY_STATUS).ToString();
-                string actualSubStatusCode = actualErrorObj.GetProperty(PROPERTY_CODE).ToString();
-
-                // Assert that the expected and actual subStatusCodes/statusCodes are equal.
-                Assert.AreEqual(expectedStatusCode, actualStatusCode);
-                Assert.AreEqual(expectedSubStatusCode, actualSubStatusCode);
-
-                // Assert that the actual and expected error messages are same (if needed by the test),
-                // or the expectedErrorMessage is present as a substring in the actual error message.
-                string actualErrorMsg = actualErrorObj.GetProperty(PROPERTY_MESSAGE).ToString();
-                string expectedErrorMsg = expectedErrorObj.GetProperty(PROPERTY_MESSAGE).ToString();
-                if (isExpectedErrorMsgSubstr)
-                {
-                    Assert.IsTrue(actualErrorMsg.Contains(expectedErrorMsg, StringComparison.OrdinalIgnoreCase));
-                    return;
-                }
-
-                Assert.AreEqual(expectedErrorMsg, actualErrorMsg);
-            }
-        }
-
-        /// <summary>
-        /// Helper method to get the HttpMethod based on the operation type.
-        /// </summary>
-        /// <param name="operationType">The operation to be executed on the entity.</param>
-        /// <returns>HttpMethod representing the passed in operationType.</returns>
-        /// <exception cref="DataApiBuilderException"></exception>
-        public static HttpMethod GetHttpMethodFromOperation(EntityActionOperation operationType, SupportedHttpVerb? restMethod = null) => operationType switch
-        {
-            EntityActionOperation.Read => HttpMethod.Get,
-            EntityActionOperation.Insert => HttpMethod.Post,
-            EntityActionOperation.Delete => HttpMethod.Delete,
-            EntityActionOperation.Upsert => HttpMethod.Put,
-            EntityActionOperation.UpsertIncremental => HttpMethod.Patch,
-            EntityActionOperation.Execute => ConvertRestMethodToHttpMethod(restMethod),
-            _ => throw new DataApiBuilderException(
-                                    message: "Operation not supported for the request.",
-                                    statusCode: HttpStatusCode.BadRequest,
-                                    subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported),
-        };
-
-        /// <summary>
-        /// Converts the provided RestMethod to the corresponding HttpMethod
-        /// </summary>
-        /// <param name="restMethod"></param>
-        /// <returns>HttpMethod corresponding the RestMethod provided as input.</returns>
-        public static HttpMethod ConvertRestMethodToHttpMethod(SupportedHttpVerb? restMethod) => restMethod switch
-        {
-            SupportedHttpVerb.Get => HttpMethod.Get,
-            SupportedHttpVerb.Put => HttpMethod.Put,
-            SupportedHttpVerb.Patch => HttpMethod.Patch,
-            SupportedHttpVerb.Delete => HttpMethod.Delete,
-            _ => HttpMethod.Post,
-        };
-
-        /// <summary>
-        /// Helper function handles the loading of the runtime config.
-        /// </summary>
-        public static RuntimeConfig SetupRuntimeConfig()
-        {
-            FileSystemRuntimeConfigLoader configPath = TestHelper.GetRuntimeConfigLoader();
-            RuntimeConfigProvider provider = new(configPath);
-
-            return provider.GetConfig();
-        }
-
-        /// <summary>
-        /// Method to create our custom exception of type SqlException (which is a sealed class).
-        /// using Reflection.
-        /// </summary>
-        /// <param name="number">Number to be populated in SqlException.Number</param>
-        /// <param name="message">Message to be populated in SqlException.Message</param>
-        /// <returns>custom SqlException</returns>
-        public static SqlException CreateSqlException(int number, string message = "")
-        {
-            // Get all the available non-public,non-static constructors for SqlErrorCollection class.
-            ConstructorInfo[] constructorsArray = typeof(SqlErrorCollection).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance);
-
-            // Invoke the only constructor to create an object of SqlErrorCollection class.
-            SqlErrorCollection errors = constructorsArray[0].Invoke(null) as SqlErrorCollection;
-            List<object> errorList =
-                errors
-                .GetType()
-                .GetField("_errors", BindingFlags.Instance | BindingFlags.NonPublic)
-                .GetValue(errors) as List<object>;
-
-            // Get all the available non-public,non-static constructors for SqlError class.
-            constructorsArray = typeof(SqlError).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance);
-
-            // At this point the ConstructorInfo[] for SqlError has 2 entries: One constructor with 8 parameters,
-            // and one with 9 parameters. We can choose either of them to create an object of SqlError type.
-            ConstructorInfo nineParamsConstructor = constructorsArray.FirstOrDefault(c => c.GetParameters().Length == 9);
-
-            // Create SqlError object.
-            // For details on what the parameters stand for please refer:
-            // https://learn.microsoft.com/en-us/dotnet/api/system.data.sqlclient.sqlerror.number?view=dotnet-plat-ext-6.0#examples
-            SqlError sqlError = (nineParamsConstructor
-                .Invoke(new object[] { number, (byte)0, (byte)0, "", "", "", (int)0, (uint)0, null }) as SqlError)!;
-            errorList.Add(sqlError);
-
-            // Create SqlException object
-            SqlException e =
-                Activator.CreateInstance(
-                    typeof(SqlException),
-                    BindingFlags.NonPublic | BindingFlags.Instance,
-                    null,
-                    new object[] { message, errors, null, Guid.NewGuid() },
-                    null)
-                as SqlException;
-            return e;
-        }
-
-        /// <summary>
-        /// Helper method to construct GraphQL responses when only __typename is queried
-        /// </summary>
-        /// <param name="typename">A json string of the format { __typename : entity_typename }  </param>
-        /// <param name="times">Number of times to repeat typename in the response</param>
-        /// <returns>A string representation of an array of typename json strings</returns>
-        public static string ConstructGQLTypenameResponseNTimes(string typename, int times)
-        {
-            StringBuilder typenameResponseBuilder = new("[");
-            for (int i = 0; i < times; i++)
-            {
-                typenameResponseBuilder.Append(typename);
-                if (i != times - 1)
-                {
-                    typenameResponseBuilder.Append(",");
-                }
-
+                // Find the actual location using the response and request uri.
+                // Response LocalPath = Request LocalPath + "/" + actualLocationPath
+                // For eg. POST Request LocalPath: /api/Review
+                // 201 Created Response LocalPath: /api/Review/book_id/1/id/5001
+                // therefore, actualLocation = book_id/1/id/5001
+                string responseLocalPath = (response.Headers.Location.LocalPath);
+                string requestLocalPath = request.RequestUri.LocalPath;
+                string actualLocationPath = responseLocalPath.Substring(requestLocalPath.Length + 1);
+                Assert.AreEqual(expectedLocationHeader, actualLocationPath);
             }
 
-            typenameResponseBuilder.Append("]");
-            return typenameResponseBuilder.ToString();
-        }
-
-        /// <summary>
-        /// For testing we use a JSON string that represents
-        /// the runtime config that would otherwise be generated
-        /// by the client for use by the runtime. This makes it
-        /// easier to test with different configurations, and allows
-        /// for different formats between database types.
-        /// </summary>
-        /// <param name="dbType"> the database type associated with this config.</param>
-        /// <returns></returns>
-        public static string GetRuntimeConfigJsonString(string dbType)
-        {
-            string magazinesSource = string.Empty;
-            switch (dbType)
+            // Assert the number of records received is equal to expected number of records.
+            if (response.StatusCode is HttpStatusCode.OK && verifyNumRecords >= 0)
             {
-                case TestCategory.MSSQL:
-                case TestCategory.POSTGRESQL:
-                    magazinesSource = "\"foo.magazines\"";
-                    break;
-                case TestCategory.MYSQL:
-                    magazinesSource = "\"magazines\"";
-                    break;
+                Dictionary<string, JsonElement[]> actualAsDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement[]>>(responseBody);
+                Assert.AreEqual(actualAsDict[jsonResultTopLevelKey].Length, verifyNumRecords);
             }
 
-            return
+            PerformTestEqualJsonStrings(expected, responseBody);
+        }
+        else
+        {
+            // Json Property in error response which holds the actual exception properties.
+            string PARENT_PROPERTY_ERROR = "error";
+
+            //Generate expected error object
+            JsonElement expectedErrorObj = JsonDocument.Parse(expected).RootElement.GetProperty(PARENT_PROPERTY_ERROR);
+            string expectedStatusCode = expectedErrorObj.GetProperty(PROPERTY_STATUS).ToString();
+            string expectedSubStatusCode = expectedErrorObj.GetProperty(PROPERTY_CODE).ToString();
+
+            // Quote(") has to be treated differently than other unicode characters
+            // as it has to be added with a preceding backslash.
+            responseBody = Regex.Replace(responseBody, @"\\u0022", @"\\""");
+
+            // Remove all carriage returns and new lines from the response body.
+            responseBody = Regex.Replace(responseBody, @"\\n|\\r", "");
+
+            // Convert the escaped characters into their unescaped form.
+            responseBody = Regex.Unescape(responseBody);
+
+            // Generate actual error object
+            JsonElement actualErrorObj = JsonDocument.Parse(responseBody).RootElement.GetProperty(PARENT_PROPERTY_ERROR);
+            string actualStatusCode = actualErrorObj.GetProperty(PROPERTY_STATUS).ToString();
+            string actualSubStatusCode = actualErrorObj.GetProperty(PROPERTY_CODE).ToString();
+
+            // Assert that the expected and actual subStatusCodes/statusCodes are equal.
+            Assert.AreEqual(expectedStatusCode, actualStatusCode);
+            Assert.AreEqual(expectedSubStatusCode, actualSubStatusCode);
+
+            // Assert that the actual and expected error messages are same (if needed by the test),
+            // or the expectedErrorMessage is present as a substring in the actual error message.
+            string actualErrorMsg = actualErrorObj.GetProperty(PROPERTY_MESSAGE).ToString();
+            string expectedErrorMsg = expectedErrorObj.GetProperty(PROPERTY_MESSAGE).ToString();
+            if (isExpectedErrorMsgSubstr)
+            {
+                Assert.IsTrue(actualErrorMsg.Contains(expectedErrorMsg, StringComparison.OrdinalIgnoreCase));
+                return;
+            }
+
+            Assert.AreEqual(expectedErrorMsg, actualErrorMsg);
+        }
+    }
+
+    /// <summary>
+    /// Helper method to get the HttpMethod based on the operation type.
+    /// </summary>
+    /// <param name="operationType">The operation to be executed on the entity.</param>
+    /// <returns>HttpMethod representing the passed in operationType.</returns>
+    /// <exception cref="DataApiBuilderException"></exception>
+    public static HttpMethod GetHttpMethodFromOperation(EntityActionOperation operationType, SupportedHttpVerb? restMethod = null) => operationType switch
+    {
+        EntityActionOperation.Read => HttpMethod.Get,
+        EntityActionOperation.Insert => HttpMethod.Post,
+        EntityActionOperation.Delete => HttpMethod.Delete,
+        EntityActionOperation.Upsert => HttpMethod.Put,
+        EntityActionOperation.UpsertIncremental => HttpMethod.Patch,
+        EntityActionOperation.Execute => ConvertRestMethodToHttpMethod(restMethod),
+        _ => throw new DataApiBuilderException(
+                                message: "Operation not supported for the request.",
+                                statusCode: HttpStatusCode.BadRequest,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported),
+    };
+
+    /// <summary>
+    /// Converts the provided RestMethod to the corresponding HttpMethod
+    /// </summary>
+    /// <param name="restMethod"></param>
+    /// <returns>HttpMethod corresponding the RestMethod provided as input.</returns>
+    public static HttpMethod ConvertRestMethodToHttpMethod(SupportedHttpVerb? restMethod) => restMethod switch
+    {
+        SupportedHttpVerb.Get => HttpMethod.Get,
+        SupportedHttpVerb.Put => HttpMethod.Put,
+        SupportedHttpVerb.Patch => HttpMethod.Patch,
+        SupportedHttpVerb.Delete => HttpMethod.Delete,
+        _ => HttpMethod.Post,
+    };
+
+    /// <summary>
+    /// Helper function handles the loading of the runtime config.
+    /// </summary>
+    public static RuntimeConfig SetupRuntimeConfig()
+    {
+        FileSystemRuntimeConfigLoader configPath = TestHelper.GetRuntimeConfigLoader();
+        RuntimeConfigProvider provider = new(configPath);
+
+        return provider.GetConfig();
+    }
+
+    /// <summary>
+    /// Method to create our custom exception of type SqlException (which is a sealed class).
+    /// using Reflection.
+    /// </summary>
+    /// <param name="number">Number to be populated in SqlException.Number</param>
+    /// <param name="message">Message to be populated in SqlException.Message</param>
+    /// <returns>custom SqlException</returns>
+    public static SqlException CreateSqlException(int number, string message = "")
+    {
+        // Get all the available non-public,non-static constructors for SqlErrorCollection class.
+        ConstructorInfo[] constructorsArray = typeof(SqlErrorCollection).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance);
+
+        // Invoke the only constructor to create an object of SqlErrorCollection class.
+        SqlErrorCollection errors = constructorsArray[0].Invoke(null) as SqlErrorCollection;
+        List<object> errorList =
+            errors
+            .GetType()
+            .GetField("_errors", BindingFlags.Instance | BindingFlags.NonPublic)
+            .GetValue(errors) as List<object>;
+
+        // Get all the available non-public,non-static constructors for SqlError class.
+        constructorsArray = typeof(SqlError).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance);
+
+        // At this point the ConstructorInfo[] for SqlError has 2 entries: One constructor with 8 parameters,
+        // and one with 9 parameters. We can choose either of them to create an object of SqlError type.
+        ConstructorInfo nineParamsConstructor = constructorsArray.FirstOrDefault(c => c.GetParameters().Length == 9);
+
+        // Create SqlError object.
+        // For details on what the parameters stand for please refer:
+        // https://learn.microsoft.com/en-us/dotnet/api/system.data.sqlclient.sqlerror.number?view=dotnet-plat-ext-6.0#examples
+        SqlError sqlError = (nineParamsConstructor
+            .Invoke(new object[] { number, (byte)0, (byte)0, "", "", "", (int)0, (uint)0, null }) as SqlError)!;
+        errorList.Add(sqlError);
+
+        // Create SqlException object
+        SqlException e =
+            Activator.CreateInstance(
+                typeof(SqlException),
+                BindingFlags.NonPublic | BindingFlags.Instance,
+                null,
+                new object[] { message, errors, null, Guid.NewGuid() },
+                null)
+            as SqlException;
+        return e;
+    }
+
+    /// <summary>
+    /// Helper method to construct GraphQL responses when only __typename is queried
+    /// </summary>
+    /// <param name="typename">A json string of the format { __typename : entity_typename }  </param>
+    /// <param name="times">Number of times to repeat typename in the response</param>
+    /// <returns>A string representation of an array of typename json strings</returns>
+    public static string ConstructGQLTypenameResponseNTimes(string typename, int times)
+    {
+        StringBuilder typenameResponseBuilder = new("[");
+        for (int i = 0; i < times; i++)
+        {
+            typenameResponseBuilder.Append(typename);
+            if (i != times - 1)
+            {
+                typenameResponseBuilder.Append(",");
+            }
+
+        }
+
+        typenameResponseBuilder.Append("]");
+        return typenameResponseBuilder.ToString();
+    }
+
+    /// <summary>
+    /// For testing we use a JSON string that represents
+    /// the runtime config that would otherwise be generated
+    /// by the client for use by the runtime. This makes it
+    /// easier to test with different configurations, and allows
+    /// for different formats between database types.
+    /// </summary>
+    /// <param name="dbType"> the database type associated with this config.</param>
+    /// <returns></returns>
+    public static string GetRuntimeConfigJsonString(string dbType)
+    {
+        string magazinesSource = string.Empty;
+        switch (dbType)
+        {
+            case TestCategory.MSSQL:
+            case TestCategory.POSTGRESQL:
+                magazinesSource = "\"foo.magazines\"";
+                break;
+            case TestCategory.MYSQL:
+                magazinesSource = "\"magazines\"";
+                break;
+        }
+
+        return
 @"
 {
   ""$schema"": ""../../project-dab/playground/dab.draft-01.schema.json"",
@@ -590,6 +590,5 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
     }
   }
 }";
-        }
     }
 }

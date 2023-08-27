@@ -10,56 +10,55 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 
-namespace Azure.DataApiBuilder.Service.Tests
+namespace Azure.DataApiBuilder.Service.Tests;
+
+internal static class GraphQLRequestExecutor
 {
-    internal static class GraphQLRequestExecutor
+    public static async Task<JsonElement> PostGraphQLRequestAsync(
+        HttpClient client,
+        RuntimeConfigProvider configProvider,
+        string queryName,
+        string query,
+        Dictionary<string, object> variables = null,
+        string authToken = null,
+        string clientRoleHeader = null)
     {
-        public static async Task<JsonElement> PostGraphQLRequestAsync(
-            HttpClient client,
-            RuntimeConfigProvider configProvider,
-            string queryName,
-            string query,
-            Dictionary<string, object> variables = null,
-            string authToken = null,
-            string clientRoleHeader = null)
-        {
-            object payload = variables == null ?
-                new { query } :
-                new
-                {
-                    query,
-                    variables
-                };
-
-            string graphQLEndpoint = configProvider.GetConfig().Runtime.GraphQL.Path;
-
-            HttpRequestMessage request = new(HttpMethod.Post, graphQLEndpoint)
+        object payload = variables == null ?
+            new { query } :
+            new
             {
-                Content = JsonContent.Create(payload)
+                query,
+                variables
             };
 
-            if (!string.IsNullOrEmpty(authToken))
-            {
-                request.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, authToken);
-            }
+        string graphQLEndpoint = configProvider.GetConfig().Runtime.GraphQL.Path;
 
-            if (!string.IsNullOrEmpty(clientRoleHeader))
-            {
-                request.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, clientRoleHeader);
-            }
+        HttpRequestMessage request = new(HttpMethod.Post, graphQLEndpoint)
+        {
+            Content = JsonContent.Create(payload)
+        };
 
-            HttpResponseMessage response = await client.SendAsync(request);
-            string body = await response.Content.ReadAsStringAsync();
-
-            JsonElement graphQLResult = JsonSerializer.Deserialize<JsonElement>(body);
-
-            if (graphQLResult.TryGetProperty("errors", out JsonElement errors))
-            {
-                // to validate expected errors and error message
-                return errors;
-            }
-
-            return graphQLResult.GetProperty("data").GetProperty(queryName);
+        if (!string.IsNullOrEmpty(authToken))
+        {
+            request.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, authToken);
         }
+
+        if (!string.IsNullOrEmpty(clientRoleHeader))
+        {
+            request.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, clientRoleHeader);
+        }
+
+        HttpResponseMessage response = await client.SendAsync(request);
+        string body = await response.Content.ReadAsStringAsync();
+
+        JsonElement graphQLResult = JsonSerializer.Deserialize<JsonElement>(body);
+
+        if (graphQLResult.TryGetProperty("errors", out JsonElement errors))
+        {
+            // to validate expected errors and error message
+            return errors;
+        }
+
+        return graphQLResult.GetProperty("data").GetProperty(queryName);
     }
 }

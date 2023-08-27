@@ -9,37 +9,36 @@ using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
+namespace Azure.DataApiBuilder.Service.Tests.CosmosTests;
+
+[TestClass, TestCategory(TestCategory.COSMOSDBNOSQL)]
+public class CosmosClientTests : TestBase
 {
-    [TestClass, TestCategory(TestCategory.COSMOSDBNOSQL)]
-    public class CosmosClientTests : TestBase
+    [TestMethod]
+    public void CosmosClientDefaultUserAgent()
     {
-        [TestMethod]
-        public void CosmosClientDefaultUserAgent()
-        {
-            CosmosClient client = _application.Services.GetService<CosmosClientProvider>().Client;
-            // Validate results
-            Assert.AreEqual(client.ClientOptions.ApplicationName, ProductInfo.DEFAULT_APP_NAME);
-        }
+        CosmosClient client = _application.Services.GetService<CosmosClientProvider>().Client;
+        // Validate results
+        Assert.AreEqual(client.ClientOptions.ApplicationName, ProductInfo.DEFAULT_APP_NAME);
+    }
 
-        [TestMethod]
-        public void CosmosClientEnvUserAgent()
-        {
-            string appName = "gql_dab_cosmos";
-            Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, appName);
+    [TestMethod]
+    public void CosmosClientEnvUserAgent()
+    {
+        string appName = "gql_dab_cosmos";
+        Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, appName);
 
-            // We need to create a new application factory to pick up the environment variable
-            WebApplicationFactory<Startup> application = SetupTestApplicationFactory();
+        // We need to create a new application factory to pick up the environment variable
+        WebApplicationFactory<Startup> application = SetupTestApplicationFactory();
 
-            CosmosClient client = application.Services.GetService<CosmosClientProvider>().Client;
-            // Validate results
-            Assert.AreEqual(client.ClientOptions.ApplicationName, appName);
-        }
+        CosmosClient client = application.Services.GetService<CosmosClientProvider>().Client;
+        // Validate results
+        Assert.AreEqual(client.ClientOptions.ApplicationName, appName);
+    }
 
-        [TestCleanup]
-        public void Cleanup()
-        {
-            Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, null);
-        }
+    [TestCleanup]
+    public void Cleanup()
+    {
+        Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, null);
     }
 }

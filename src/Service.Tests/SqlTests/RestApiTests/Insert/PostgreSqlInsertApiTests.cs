@@ -9,17 +9,16 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
-{
+namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert;
 
-    [TestClass, TestCategory(TestCategory.POSTGRESQL)]
-    public class PostgreSqlInsertApiTests : InsertApiTestBase
+[TestClass, TestCategory(TestCategory.POSTGRESQL)]
+public class PostgreSqlInsertApiTests : InsertApiTestBase
+{
+    protected static Dictionary<string, string> _queryMap = new()
     {
-        protected static Dictionary<string, string> _queryMap = new()
         {
-            {
-                "InsertOneTest",
-                @"
+            "InsertOneTest",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT id, title, publisher_id
@@ -27,10 +26,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                         WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @"
                     ) AS subq
                 "
-            },
-            {
-                "InsertOneInSupportedTypes",
-                @"
+        },
+        {
+            "InsertOneInSupportedTypes",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT id as typeid, short_types, int_types, long_types, string_types, single_types,
@@ -39,10 +38,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                         WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @"
                     ) AS subq
                 "
-            },
-            {
-                "InsertOneUniqueCharactersTest",
-                @"
+        },
+        {
+            "InsertOneUniqueCharactersTest",
+            @"
                     SELECT json_agg(to_jsonb(subq)) AS data
                     FROM (
                         SELECT  ""NoteNum"" AS ""┬─┬ノ( º _ ºノ)"", ""DetailAssessmentAndPlanning""
@@ -51,10 +50,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                         WHERE ""NoteNum"" = 2
                     ) AS subq
                 "
-            },
-            {
-                "InsertOneWithMappingTest",
-                @"
+        },
+        {
+            "InsertOneWithMappingTest",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT  ""treeId"", ""species"" AS ""Scientific Name"", ""region""
@@ -63,10 +62,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                         WHERE ""treeId"" = 3
                     ) AS subq
                 "
-            },
-            {
-                "InsertOneInCompositeNonAutoGenPKTest",
-                @"
+        },
+        {
+            "InsertOneInCompositeNonAutoGenPKTest",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
@@ -75,10 +74,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                             AND ""piecesAvailable"" = 0 AND ""piecesRequired"" = 0
                     ) AS subq
                 "
-            },
-            {
-                "InsertOneInCompositeKeyTableTest",
-                @"
+        },
+        {
+            "InsertOneInCompositeKeyTableTest",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT id, content, book_id
@@ -87,10 +86,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                         AND book_id = 1
                     ) AS subq
                 "
-            },
-            {
-                "InsertOneWithNullFieldValue",
-                @"
+        },
+        {
+            "InsertOneWithNullFieldValue",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
@@ -99,10 +98,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                             AND ""piecesAvailable"" is NULL AND ""piecesRequired"" = 1
                     ) AS subq
                 "
-            },
-            {
-                "InsertOneInDefaultTestTable",
-                @"
+        },
+        {
+            "InsertOneInDefaultTestTable",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT id, content, book_id
@@ -110,10 +109,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                         WHERE id = " + (STARTING_ID_FOR_TEST_INSERTS + 1) + @" AND book_id = 2
                     ) AS subq
                 "
-            },
-            {
-                "InsertSqlInjectionQuery1",
-                @"
+        },
+        {
+            "InsertSqlInjectionQuery1",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT id, title, publisher_id
@@ -122,10 +121,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                         AND title = ' UNION SELECT * FROM books/*'
                     ) AS subq
                 "
-            },
-            {
-                "InsertSqlInjectionQuery2",
-                @"
+        },
+        {
+            "InsertSqlInjectionQuery2",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT id, title, publisher_id
@@ -134,10 +133,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                         AND title = '; SELECT * FROM information_schema.tables/*'
                     ) AS subq
                 "
-            },
-            {
-                "InsertSqlInjectionQuery3",
-                @"
+        },
+        {
+            "InsertSqlInjectionQuery3",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT id, title, publisher_id
@@ -146,10 +145,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                         AND title = 'value; SELECT * FROM v$version--'
                     ) AS subq
                 "
-            },
-            {
-                "InsertSqlInjectionQuery4",
-                @"
+        },
+        {
+            "InsertSqlInjectionQuery4",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT id, title, publisher_id
@@ -158,10 +157,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                         AND title = 'id; DROP TABLE books;'
                     ) AS subq
                 "
-            },
-            {
-                "InsertSqlInjectionQuery5",
-                @"
+        },
+        {
+            "InsertSqlInjectionQuery5",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT id, title, publisher_id
@@ -170,10 +169,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                         AND title = ' '' UNION SELECT * FROM books/*'
                     ) AS subq
                 "
-            },
-            {
-                "InsertOneInBooksViewAll",
-                @"
+        },
+        {
+            "InsertOneInBooksViewAll",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT id, title, publisher_id
@@ -181,10 +180,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                         WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @"
                     ) AS subq
                 "
-            },
-            {
-                "InsertOneInStocksViewSelected",
-                @"
+        },
+        {
+            "InsertOneInStocksViewSelected",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable""
@@ -193,117 +192,116 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                         LIMIT 1
                     ) AS subq
                 "
-            },
-        };
+        },
+    };
 
-        [TestMethod]
-        public async Task InsertOneInViewBadRequestTest()
-        {
-            string expectedErrorMessage = $"55000: cannot insert into view \"{_composite_subset_bookPub}\"";
-            await base.InsertOneInViewBadRequestTest(expectedErrorMessage, isExpectedErrorMsgSubstr: true);
-        }
+    [TestMethod]
+    public async Task InsertOneInViewBadRequestTest()
+    {
+        string expectedErrorMessage = $"55000: cannot insert into view \"{_composite_subset_bookPub}\"";
+        await base.InsertOneInViewBadRequestTest(expectedErrorMessage, isExpectedErrorMsgSubstr: true);
+    }
 
-        #region overridden tests
-        /// <inheritdoc/>
-        [TestMethod]
-        public override async Task InsertOneTestViolatingForeignKeyConstraint()
-        {
-            string requestBody = @"
+    #region overridden tests
+    /// <inheritdoc/>
+    [TestMethod]
+    public override async Task InsertOneTestViolatingForeignKeyConstraint()
+    {
+        string requestBody = @"
             {
                 ""title"": ""My New Book"",
                 ""publisher_id"": 12345
             }";
 
-            string expectedErrorMessage = "23503: insert or update on table \"books\" violates foreign key" +
-                    " constraint \"book_publisher_fk\"";
+        string expectedErrorMessage = "23503: insert or update on table \"books\" violates foreign key" +
+                " constraint \"book_publisher_fk\"";
 
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: string.Empty,
-                queryString: string.Empty,
-                entityNameOrPath: _integrationEntityName,
-                sqlQuery: string.Empty,
-                operationType: EntityActionOperation.Insert,
-                requestBody: requestBody,
-                exceptionExpected: true,
-                expectedErrorMessage: expectedErrorMessage,
-                expectedStatusCode: HttpStatusCode.BadRequest,
-                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString(),
-                isExpectedErrorMsgSubstr: true
-            );
-        }
+        await SetupAndRunRestApiTest(
+            primaryKeyRoute: string.Empty,
+            queryString: string.Empty,
+            entityNameOrPath: _integrationEntityName,
+            sqlQuery: string.Empty,
+            operationType: EntityActionOperation.Insert,
+            requestBody: requestBody,
+            exceptionExpected: true,
+            expectedErrorMessage: expectedErrorMessage,
+            expectedStatusCode: HttpStatusCode.BadRequest,
+            expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString(),
+            isExpectedErrorMsgSubstr: true
+        );
+    }
 
-        /// <inheritdoc/>
-        [TestMethod]
-        public override async Task InsertOneTestViolatingUniqueKeyConstraint()
-        {
-            string requestBody = @"
+    /// <inheritdoc/>
+    [TestMethod]
+    public override async Task InsertOneTestViolatingUniqueKeyConstraint()
+    {
+        string requestBody = @"
             {
                 ""categoryid"": 1,
                 ""pieceid"": 1,
                 ""categoryName"": ""SciFi""
             }";
 
-            string expectedErrorMessage = $"23505: duplicate key value violates unique constraint \"{_Composite_NonAutoGenPK_TableName}_pkey\"";
+        string expectedErrorMessage = $"23505: duplicate key value violates unique constraint \"{_Composite_NonAutoGenPK_TableName}_pkey\"";
 
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: string.Empty,
-                queryString: string.Empty,
-                entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
-                sqlQuery: string.Empty,
-                operationType: EntityActionOperation.Insert,
-                requestBody: requestBody,
-                exceptionExpected: true,
-                expectedErrorMessage: expectedErrorMessage,
-                expectedStatusCode: HttpStatusCode.Conflict,
-                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString(),
-                isExpectedErrorMsgSubstr: true
-            );
-        }
+        await SetupAndRunRestApiTest(
+            primaryKeyRoute: string.Empty,
+            queryString: string.Empty,
+            entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+            sqlQuery: string.Empty,
+            operationType: EntityActionOperation.Insert,
+            requestBody: requestBody,
+            exceptionExpected: true,
+            expectedErrorMessage: expectedErrorMessage,
+            expectedStatusCode: HttpStatusCode.Conflict,
+            expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString(),
+            isExpectedErrorMsgSubstr: true
+        );
+    }
 
-        #endregion
+    #endregion
 
-        #region Tests for features yet to be implemented
+    #region Tests for features yet to be implemented
 
-        [TestMethod]
-        [Ignore]
-        public override Task InsertOneFailingDatabasePolicy()
-        {
-            throw new NotImplementedException();
-        }
+    [TestMethod]
+    [Ignore]
+    public override Task InsertOneFailingDatabasePolicy()
+    {
+        throw new NotImplementedException();
+    }
 
-        [TestMethod]
-        [Ignore]
-        public override Task InsertOneInTableWithFieldsInDbPolicyNotPresentInBody()
-        {
-            throw new NotImplementedException();
-        }
-        #endregion
+    [TestMethod]
+    [Ignore]
+    public override Task InsertOneInTableWithFieldsInDbPolicyNotPresentInBody()
+    {
+        throw new NotImplementedException();
+    }
+    #endregion
 
-        #region Test Fixture Setup
+    #region Test Fixture Setup
 
-        /// <summary>
-        /// Sets up test fixture for class, only to be run once per test run, as defined by
-        /// MSTest decorator.
-        /// </summary>
-        /// <param name="context"></param>
-        [ClassInitialize]
-        public static async Task SetupAsync(TestContext context)
-        {
-            DatabaseEngine = TestCategory.POSTGRESQL;
-            await InitializeTestFixture(context);
-        }
+    /// <summary>
+    /// Sets up test fixture for class, only to be run once per test run, as defined by
+    /// MSTest decorator.
+    /// </summary>
+    /// <param name="context"></param>
+    [ClassInitialize]
+    public static async Task SetupAsync(TestContext context)
+    {
+        DatabaseEngine = TestCategory.POSTGRESQL;
+        await InitializeTestFixture(context);
+    }
 
-        #endregion
+    #endregion
 
-        [TestCleanup]
-        public async Task TestCleanup()
-        {
-            await ResetDbStateAsync();
-        }
+    [TestCleanup]
+    public async Task TestCleanup()
+    {
+        await ResetDbStateAsync();
+    }
 
-        public override string GetQuery(string key)
-        {
-            return _queryMap[key];
-        }
+    public override string GetQuery(string key)
+    {
+        return _queryMap[key];
     }
 }

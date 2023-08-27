@@ -5,16 +5,16 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Delete
+namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Delete;
+
+[TestClass, TestCategory(TestCategory.POSTGRESQL)]
+public class PostgreSqlDeleteApiTests : DeleteApiTestBase
 {
-    [TestClass, TestCategory(TestCategory.POSTGRESQL)]
-    public class PostgreSqlDeleteApiTests : DeleteApiTestBase
+    protected static Dictionary<string, string> _queryMap = new()
     {
-        protected static Dictionary<string, string> _queryMap = new()
         {
-            {
-                "DeleteOneTest",
-                @"
+            "DeleteOneTest",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT id
@@ -22,47 +22,46 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Delete
                         WHERE id = 5
                     ) AS subq
                 "
-            }
-        };
-
-        [TestMethod]
-        public async Task DeleteOneInViewBadRequestTest()
-        {
-            string expectedErrorMessage = $"55000: cannot delete from view \"{_composite_subset_bookPub}\"";
-            await base.DeleteOneInViewBadRequestTest(
-                expectedErrorMessage,
-                isExpectedErrorMsgSubstr: true);
         }
+    };
 
-        #region overridden tests
+    [TestMethod]
+    public async Task DeleteOneInViewBadRequestTest()
+    {
+        string expectedErrorMessage = $"55000: cannot delete from view \"{_composite_subset_bookPub}\"";
+        await base.DeleteOneInViewBadRequestTest(
+            expectedErrorMessage,
+            isExpectedErrorMsgSubstr: true);
+    }
 
-        #endregion
+    #region overridden tests
 
-        #region Test Fixture Setup
+    #endregion
 
-        /// <summary>
-        /// Sets up test fixture for class, only to be run once per test run, as defined by
-        /// MSTest decorator.
-        /// </summary>
-        /// <param name="context"></param>
-        [ClassInitialize]
-        public static async Task SetupAsync(TestContext context)
-        {
-            DatabaseEngine = TestCategory.POSTGRESQL;
-            await InitializeTestFixture(context);
-        }
+    #region Test Fixture Setup
 
-        #endregion
+    /// <summary>
+    /// Sets up test fixture for class, only to be run once per test run, as defined by
+    /// MSTest decorator.
+    /// </summary>
+    /// <param name="context"></param>
+    [ClassInitialize]
+    public static async Task SetupAsync(TestContext context)
+    {
+        DatabaseEngine = TestCategory.POSTGRESQL;
+        await InitializeTestFixture(context);
+    }
 
-        [TestCleanup]
-        public async Task TestCleanup()
-        {
-            await ResetDbStateAsync();
-        }
+    #endregion
 
-        public override string GetQuery(string key)
-        {
-            return _queryMap[key];
-        }
+    [TestCleanup]
+    public async Task TestCleanup()
+    {
+        await ResetDbStateAsync();
+    }
+
+    public override string GetQuery(string key)
+    {
+        return _queryMap[key];
     }
 }

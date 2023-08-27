@@ -6,17 +6,17 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
+namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find;
+
+[TestClass, TestCategory(TestCategory.MYSQL)]
+public class MySqlFindApiTests : FindApiTestBase
 {
-    [TestClass, TestCategory(TestCategory.MYSQL)]
-    public class MySqlFindApiTests : FindApiTestBase
+    protected static string DEFAULT_SCHEMA = string.Empty;
+    protected static Dictionary<string, string> _queryMap = new()
     {
-        protected static string DEFAULT_SCHEMA = string.Empty;
-        protected static Dictionary<string, string> _queryMap = new()
         {
-            {
-                "FindByIdTest",
-                @"
+            "FindByIdTest",
+            @"
                   SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
                   FROM (
                       SELECT *
@@ -25,29 +25,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY id asc
                       LIMIT 1
                   ) AS subq"
-            },
-            {
-                "FindEmptyTable",
-                @"
+        },
+        {
+            "FindEmptyTable",
+            @"
                     SELECT JSON_OBJECT('id', id) AS data
                     FROM (
                         SELECT *
                         FROM " + _emptyTableTableName + @"
                     ) AS subq"
-            },
-            {
-                "FindEmptyResultSetWithQueryFilter",
-                @"
+        },
+        {
+            "FindEmptyResultSetWithQueryFilter",
+            @"
                     SELECT JSON_OBJECT('id', id) AS data
                     FROM (
                         SELECT *
                         FROM " + _integrationTableName + @"
                         WHERE 1 != 1
                     ) AS subq"
-            },
-            {
-                "FindOnTableWithUniqueCharacters",
-                @"
+        },
+        {
+            "FindOnTableWithUniqueCharacters",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('┬─┬ノ( º _ ºノ)', NoteNum,
                   '始計', DetailAssessmentAndPlanning, '作戰', WagingWar,
                   '謀攻', StrategicAttack)) AS data
@@ -55,10 +55,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       SELECT *
                       FROM " + _integrationUniqueCharactersTable + @"
                   ) AS subq"
-            },
-            {
-                "FindViewAll",
-                @"
+        },
+        {
+            "FindViewAll",
+            @"
                   SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
                   FROM (
                       SELECT *
@@ -67,10 +67,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY id asc
                       LIMIT 1
                   ) AS subq"
-            },
-            {
-                "FindViewWithKeyAndMapping",
-                @"
+        },
+        {
+            "FindViewWithKeyAndMapping",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('book_id', id)) AS data
                   FROM (
                       SELECT id
@@ -78,10 +78,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY id
                       LIMIT 100
                   ) AS subq"
-            },
-            {
-                "FindViewSelected",
-                @"
+        },
+        {
+            "FindViewSelected",
+            @"
                     SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
                                         'piecesAvailable',piecesAvailable) AS data
                     FROM (
@@ -90,10 +90,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         WHERE categoryid = 2 AND pieceid = 1
                     ) AS subq
                 "
-            },
-            {
-                "FindBooksPubViewComposite",
-                @"
+        },
+        {
+            "FindBooksPubViewComposite",
+            @"
                   SELECT JSON_OBJECT('id', id, 'title', title, 'name', name, 'pub_id', pub_id) AS data
                   FROM (
                       SELECT *
@@ -103,10 +103,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY id asc
                       LIMIT 1
                   ) AS subq"
-            },
-            {
-                "FindTestWithFilterQueryOneGeFilterOnView",
-                @"
+        },
+        {
+            "FindTestWithFilterQueryOneGeFilterOnView",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                   FROM (
                       SELECT *
@@ -114,10 +114,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       WHERE id >= 4
                       ORDER BY id asc
                   ) AS subq"
-            },
-            {
-                "FindByIdTestWithQueryStringFieldsOnView",
-                @"
+        },
+        {
+            "FindByIdTestWithQueryStringFieldsOnView",
+            @"
                   SELECT JSON_OBJECT('id', id, 'title', title) AS data
                   FROM (
                       SELECT *
@@ -126,10 +126,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY id asc
                       LIMIT 1
                   ) AS subq"
-            },
-            {
-                "FindTestWithFilterQueryStringOneEqFilterOnView",
-                @"
+        },
+        {
+            "FindTestWithFilterQueryStringOneEqFilterOnView",
+            @"
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid,
                                         'categoryName', categoryName, 'piecesAvailable',piecesAvailable)) AS data
                     FROM (
@@ -137,10 +137,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         FROM " + _simple_subset_stocks + @"
                         WHERE pieceid = 1
                     ) AS subq"
-            },
-            {
-                "FindTestWithFilterQueryOneNotFilterOnView",
-                @"
+        },
+        {
+            "FindTestWithFilterQueryOneNotFilterOnView",
+            @"
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid,
                                         'categoryName', categoryName, 'piecesAvailable',piecesAvailable)) AS data
                     FROM (
@@ -148,10 +148,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         FROM " + _simple_subset_stocks + @"
                         WHERE NOT(categoryid > 1)
                     ) AS subq"
-            },
-            {
-                "FindTestWithFilterQueryOneLtFilterOnView",
-                @"
+        },
+        {
+            "FindTestWithFilterQueryOneLtFilterOnView",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'pub_id', pub_id, 'name', name)) AS data
                   FROM (
                       SELECT *
@@ -159,10 +159,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       WHERE id < 5
                       ORDER BY id asc
                   ) AS subq"
-            },
-            {
-                "FindTestWithQueryStringOneField",
-                @"
+        },
+        {
+            "FindTestWithQueryStringOneField",
+            @"
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('id', `subq1`.`id`)) AS `data`
                     FROM (
                         SELECT `table0`.`id` AS `id`
@@ -170,10 +170,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         ORDER BY `table0`.`id` asc
                         LIMIT 100
                         ) AS `subq1`"
-            },
-            {
-                "FindTestWithQueryStringAllFields",
-                @"
+        },
+        {
+            "FindTestWithQueryStringAllFields",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                   FROM (
                       SELECT *
@@ -181,10 +181,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY id asc
                       LIMIT 100
                   ) AS subq"
-            },
-            {
-                "FindByIdTestWithQueryStringFields",
-                @"
+        },
+        {
+            "FindByIdTestWithQueryStringFields",
+            @"
                     SELECT JSON_OBJECT('id', id, 'title', title) AS data
                     FROM (
                         SELECT id, title
@@ -194,10 +194,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         LIMIT 1
                     ) AS subq
                 "
-            },
-            {
-                "FindTestWithFilterQueryStringOneEqFilter",
-                @"
+        },
+        {
+            "FindTestWithFilterQueryStringOneEqFilter",
+            @"
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
@@ -206,10 +206,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         ORDER BY id asc
                     ) AS subq
                 "
-            },
-            {
-                "FindTestWithFilterQueryStringValueFirstOneEqFilter",
-                @"
+        },
+        {
+            "FindTestWithFilterQueryStringValueFirstOneEqFilter",
+            @"
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
@@ -218,10 +218,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         ORDER BY id asc
                     ) AS subq
                 "
-            },
-            {
-                "FindTestWithFilterQueryOneGtFilter",
-                @"
+        },
+        {
+            "FindTestWithFilterQueryOneGtFilter",
+            @"
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
@@ -230,10 +230,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         ORDER BY id asc
                     ) AS subq
                 "
-            },
-            {
-                "FindTestWithFilterQueryOneGeFilter",
-                @"
+        },
+        {
+            "FindTestWithFilterQueryOneGeFilter",
+            @"
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
@@ -242,10 +242,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         ORDER BY id asc
                     ) AS subq
                 "
-            },
-            {
-                "FindTestWithFilterQueryOneLtFilter",
-                @"
+        },
+        {
+            "FindTestWithFilterQueryOneLtFilter",
+            @"
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
@@ -254,10 +254,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         ORDER BY id asc
                     ) AS subq
                 "
-            },
-            {
-                "FindTestWithFilterQueryOneLeFilter",
-                @"
+        },
+        {
+            "FindTestWithFilterQueryOneLeFilter",
+            @"
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
@@ -266,10 +266,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         ORDER BY id asc
                     ) AS subq
                 "
-            },
-            {
-                "FindTestWithFilterQueryOneNeFilter",
-                @"
+        },
+        {
+            "FindTestWithFilterQueryOneNeFilter",
+            @"
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
@@ -278,10 +278,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         ORDER BY id asc
                     ) AS subq
                 "
-            },
-            {
-                "FindTestWithFilterQueryOneNotFilter",
-                @"
+        },
+        {
+            "FindTestWithFilterQueryOneNotFilter",
+            @"
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
@@ -290,10 +290,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         ORDER BY id asc
                     ) AS subq
                 "
-            },
-            {
-                "FindTestWithFilterQueryOneRightNullEqFilter",
-                @"
+        },
+        {
+            "FindTestWithFilterQueryOneRightNullEqFilter",
+            @"
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
@@ -302,10 +302,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         ORDER BY id asc
                     ) AS subq
                 "
-            },
-            {
-                "FindTestWithFilterQueryOneLeftNullNeFilter",
-                @"
+        },
+        {
+            "FindTestWithFilterQueryOneLeftNullNeFilter",
+            @"
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
@@ -314,10 +314,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         ORDER BY id asc
                     ) AS subq
                 "
-            },
-            {
-                "FindTestWithFilterQueryStringSingleAndFilter",
-                @"
+        },
+        {
+            "FindTestWithFilterQueryStringSingleAndFilter",
+            @"
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
@@ -326,10 +326,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         ORDER BY id asc
                     ) AS subq
                 "
-            },
-            {
-                "FindTestWithFilterQueryStringSingleOrFilter",
-                @"
+        },
+        {
+            "FindTestWithFilterQueryStringSingleOrFilter",
+            @"
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
@@ -338,10 +338,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         ORDER BY id asc
                     ) AS subq
                 "
-            },
-            {
-                "FindTestWithFilterQueryStringMultipleAndFilters",
-                @"
+        },
+        {
+            "FindTestWithFilterQueryStringMultipleAndFilters",
+            @"
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
@@ -350,10 +350,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         ORDER BY id asc
                     ) AS subq
                 "
-            },
-            {
-                "FindTestWithFilterQueryStringMultipleOrFilters",
-                @"
+        },
+        {
+            "FindTestWithFilterQueryStringMultipleOrFilters",
+            @"
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
@@ -362,10 +362,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         ORDER BY id asc
                     ) AS subq
                 "
-            },
-            {
-                "FindTestWithFilterQueryStringMultipleAndOrFilters",
-                @"
+        },
+        {
+            "FindTestWithFilterQueryStringMultipleAndOrFilters",
+            @"
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
@@ -374,10 +374,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         ORDER BY id asc
                     ) AS subq
                 "
-            },
-            {
-                "FindTestWithFilterQueryStringMultipleNotAndOrFilters",
-                @"
+        },
+        {
+            "FindTestWithFilterQueryStringMultipleNotAndOrFilters",
+            @"
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
@@ -386,10 +386,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         ORDER BY id asc
                     ) AS subq
                 "
-            },
-            {
-                "FindTestWithFilterQueryStringBoolResultFilter",
-                @"
+        },
+        {
+            "FindTestWithFilterQueryStringBoolResultFilter",
+            @"
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                     FROM (
                         SELECT *
@@ -398,10 +398,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         ORDER BY id asc
                     ) AS subq
                 "
-            },
-            {
-                "FindTestWithQueryStringMultipleFields",
-                @"
+        },
+        {
+            "FindTestWithQueryStringMultipleFields",
+            @"
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title)) AS data
                     FROM (
                         SELECT id, title
@@ -410,10 +410,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         LIMIT 100
                     ) AS subq
                 "
-            },
-            {
-                "FindTestWithPrimaryKeyContainingForeignKey",
-                @"
+        },
+        {
+            "FindTestWithPrimaryKeyContainingForeignKey",
+            @"
                     SELECT JSON_OBJECT('id', id, 'book_id', book_id, 'content', content) AS data
                     FROM (
                         SELECT id, book_id, content
@@ -423,10 +423,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         LIMIT 1
                     ) AS subq
                 "
-            },
-            {
-                "FindTestWithFirstSingleKeyPagination",
-                @"
+        },
+        {
+            "FindTestWithFirstSingleKeyPagination",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                   FROM (
                       SELECT *
@@ -434,10 +434,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY id asc
                       LIMIT 1
                   ) AS subq"
-            },
-            {
-                "FindTest_NoQueryParams_PaginationNextLink",
-                @"
+        },
+        {
+            "FindTest_NoQueryParams_PaginationNextLink",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'bkname', bkname)) AS data
                   FROM (
                       SELECT *
@@ -445,10 +445,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY id asc
                       LIMIT 100
                   ) AS subq"
-            },
-            {
-                "FindTest_OrderByNotFirstQueryParam_PaginationNextLink",
-                @"
+        },
+        {
+            "FindTest_OrderByNotFirstQueryParam_PaginationNextLink",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id)) AS data
                   FROM (
                       SELECT *
@@ -456,10 +456,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY id asc
                       LIMIT 100
                   ) AS subq"
-            },
-            {
-                "FindMany_MappedColumn_NoOrderByQueryParameter",
-                @"
+        },
+        {
+            "FindMany_MappedColumn_NoOrderByQueryParameter",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('bkid', id, 'name', bkname)) AS data
                   FROM (
                       SELECT *
@@ -467,10 +467,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY id asc
                       LIMIT 100
                   ) AS subq"
-            },
-            {
-                "FindTestWithFirstMultiKeyPagination",
-                @"
+        },
+        {
+            "FindTestWithFirstMultiKeyPagination",
+            @"
                   SELECT JSON_OBJECT('id', id, 'content', content, 'book_id', book_id) AS data
                   FROM (
                       SELECT *
@@ -478,10 +478,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY book_id asc, id asc
                       LIMIT 1
                   ) AS subq"
-            },
-            {
-                "FindTestWithAfterSingleKeyPagination",
-                @"
+        },
+        {
+            "FindTestWithAfterSingleKeyPagination",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                   FROM (
                       SELECT *
@@ -490,10 +490,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY id asc
                       LIMIT 100
                   ) AS subq"
-            },
-            {
-                "FindTestWithAfterMultiKeyPagination",
-                @"
+        },
+        {
+            "FindTestWithAfterMultiKeyPagination",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'content', content, 'book_id', book_id)) AS data
                   FROM (
                       SELECT *
@@ -502,10 +502,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY book_id asc, id asc
                       LIMIT 100
                   ) AS subq"
-            },
-            {
-                "FindTestWithPaginationVerifSinglePrimaryKeyInAfter",
-                @"
+        },
+        {
+            "FindTestWithPaginationVerifSinglePrimaryKeyInAfter",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                   FROM (
                       SELECT *
@@ -513,10 +513,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY id asc
                       LIMIT 1
                   ) AS subq"
-            },
-            {
-                "FindTestWithPaginationVerifMultiplePrimaryKeysInAfter",
-                @"
+        },
+        {
+            "FindTestWithPaginationVerifMultiplePrimaryKeysInAfter",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'content', content, 'book_id', book_id)) AS data
                   FROM (
                       SELECT *
@@ -524,10 +524,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY book_id asc, id asc
                       LIMIT 1
                   ) AS subq"
-            },
-            {
-                "FindTestWithIntTypeNullValuesOrderByAsc",
-                @"
+        },
+        {
+            "FindTestWithIntTypeNullValuesOrderByAsc",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('typeid', id, 'int_types', int_types)) AS data
                   FROM (
                       SELECT id, int_types
@@ -535,10 +535,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY int_types asc, id asc
                       LIMIT 100
                   ) AS subq"
-            },
-            {
-                "FindTestWithQueryStringAllFieldsOrderByAsc",
-                @"
+        },
+        {
+            "FindTestWithQueryStringAllFieldsOrderByAsc",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                   FROM (
                       SELECT *
@@ -546,10 +546,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY title asc, id asc
                       LIMIT 100
                   ) AS subq"
-            },
-            {
-                "FindTestWithQueryStringAllFieldsMappedEntityOrderByAsc",
-                @"
+        },
+        {
+            "FindTestWithQueryStringAllFieldsMappedEntityOrderByAsc",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'fancyName', species, 'region', region, 'height', height)) AS data
                   FROM (
                       SELECT *
@@ -557,10 +557,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY species asc
                       LIMIT 100
                   ) AS subq"
-            },
-            {
-                "FindTestWithQueryStringSpaceInNamesOrderByAsc",
-                @"
+        },
+        {
+            "FindTestWithQueryStringSpaceInNamesOrderByAsc",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('ID Number', `ID Number`, 'First Name', `First Name`, 'Last Name', `Last Name`)) AS data
                   FROM (
                       SELECT *
@@ -568,10 +568,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY `ID Number` asc
                       LIMIT 100
                   ) AS subq"
-            },
-            {
-                "FindTestWithFirstAndSpacedColumnOrderBy",
-                @"
+        },
+        {
+            "FindTestWithFirstAndSpacedColumnOrderBy",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('ID Number', `ID Number`, 'First Name', `First Name`, 'Last Name', `Last Name`)) AS data
                   FROM (
                       SELECT *
@@ -579,10 +579,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY `Last Name` asc
                       LIMIT 1
                   ) AS subq"
-            },
-            {
-                "FindTestWithQueryStringAllFieldsOrderByDesc",
-                @"
+        },
+        {
+            "FindTestWithQueryStringAllFieldsOrderByDesc",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                   FROM (
                       SELECT *
@@ -590,10 +590,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY publisher_id desc, id asc
                       LIMIT 100
                   ) AS subq"
-            },
-            {
-                "FindTestWithFirstSingleKeyPaginationAndOrderBy",
-                @"
+        },
+        {
+            "FindTestWithFirstSingleKeyPaginationAndOrderBy",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                   FROM (
                       SELECT *
@@ -601,10 +601,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY title asc, id asc
                       LIMIT 1
                   ) AS subq"
-            },
-            {
-                "FindTestVerifyMaintainColumnOrderForOrderBy",
-                @"
+        },
+        {
+            "FindTestVerifyMaintainColumnOrderForOrderBy",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                   FROM (
                       SELECT id, title, publisher_id
@@ -612,10 +612,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY id desc, publisher_id asc
                       LIMIT 100
                   ) AS subq"
-            },
-            {
-                "FindTestVerifyMaintainColumnOrderForOrderByInReverse",
-                @"
+        },
+        {
+            "FindTestVerifyMaintainColumnOrderForOrderByInReverse",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                   FROM (
                       SELECT id, title, publisher_id
@@ -623,10 +623,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY publisher_id asc, id desc
                       LIMIT 100
                   ) AS subq"
-            },
-            {
-                "FindTestWithFirstSingleKeyIncludedInOrderByAndPagination",
-                @"
+        },
+        {
+            "FindTestWithFirstSingleKeyIncludedInOrderByAndPagination",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                   FROM (
                       SELECT *
@@ -634,10 +634,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY id asc
                       LIMIT 1
                   ) AS subq"
-            },
-            {
-                "FindTestWithFirstTwoOrderByAndPagination",
-                @"
+        },
+        {
+            "FindTestWithFirstTwoOrderByAndPagination",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                   FROM (
                       SELECT *
@@ -645,10 +645,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY id asc
                       LIMIT 2
                   ) AS subq"
-            },
-            {
-                "FindTestWithFirstTwoVerifyAfterFormedCorrectlyWithOrderBy",
-                @"
+        },
+        {
+            "FindTestWithFirstTwoVerifyAfterFormedCorrectlyWithOrderBy",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'name', name, 'birthdate', birthdate)) AS data
                   FROM (
                       SELECT *
@@ -656,10 +656,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY birthdate asc, name asc, id desc
                       LIMIT 2
                   ) AS subq"
-            },
-            {
-                "FindTestWithFirstTwoVerifyAfterBreaksTieCorrectlyWithOrderBy",
-                @"
+        },
+        {
+            "FindTestWithFirstTwoVerifyAfterBreaksTieCorrectlyWithOrderBy",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'name', name, 'birthdate', birthdate)) AS data
                   FROM (
                       SELECT *
@@ -669,10 +669,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY birthdate asc, name asc, id asc
                       LIMIT 2
                   ) AS subq"
-            },
-            {
-                "FindTestWithFirstMultiKeyIncludeAllInOrderByAndPagination",
-                @"
+        },
+        {
+            "FindTestWithFirstMultiKeyIncludeAllInOrderByAndPagination",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'content', content, 'book_id', book_id)) AS data
                   FROM (
                       SELECT *
@@ -680,10 +680,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY id desc, book_id asc
                       LIMIT 1
                   ) AS subq"
-            },
-            {
-                "FindTestWithFirstMultiKeyIncludeOneInOrderByAndPagination",
-                @"
+        },
+        {
+            "FindTestWithFirstMultiKeyIncludeOneInOrderByAndPagination",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'content', content, 'book_id', book_id)) AS data
                   FROM (
                       SELECT *
@@ -691,10 +691,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY book_id asc, id asc
                       LIMIT 1
                   ) AS subq"
-            },
-            {
-                "FindTestWithFirstAndMultiColumnOrderBy",
-                @"
+        },
+        {
+            "FindTestWithFirstAndMultiColumnOrderBy",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                   FROM (
                       SELECT *
@@ -702,10 +702,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY publisher_id desc, title desc
                       LIMIT 1
                   ) AS subq"
-            },
-            {
-                "FindTestWithFirstAndTiedColumnOrderBy",
-                @"
+        },
+        {
+            "FindTestWithFirstAndTiedColumnOrderBy",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                   FROM (
                       SELECT *
@@ -713,10 +713,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY publisher_id desc, id asc
                       LIMIT 1
                   ) AS subq"
-            },
-            {
-                "FindTestWithFirstMultiKeyPaginationAndOrderBy",
-                @"
+        },
+        {
+            "FindTestWithFirstMultiKeyPaginationAndOrderBy",
+            @"
                   SELECT JSON_OBJECT('id', id, 'content', content, 'book_id', book_id) AS data
                   FROM (
                       SELECT *
@@ -724,47 +724,47 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY content desc, book_id asc, id asc
                       LIMIT 1
                   ) AS subq"
-            },
-            {
-                "FindTestWithMappedFieldsToBeReturned",
-                @"
+        },
+        {
+            "FindTestWithMappedFieldsToBeReturned",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'Scientific Name', species, 'United State\'s Region', region, 'height', height)) AS data
                   FROM (
                       SELECT *
                       FROM " + _integrationMappingTable + @"
                   ) AS subq"
-            },
-            {
-                "FindTestWithSingleMappedFieldsToBeReturned",
-                @"
+        },
+        {
+            "FindTestWithSingleMappedFieldsToBeReturned",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'Scientific Name', species)) AS data
                   FROM (
                       SELECT treeId, species
                       FROM " + _integrationMappingTable + @"
                   ) AS subq"
-            },
-            {
-                "FindTestWithUnMappedFieldsToBeReturned",
-                @"
+        },
+        {
+            "FindTestWithUnMappedFieldsToBeReturned",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId)) AS data
                   FROM (
                       SELECT treeId
                       FROM " + _integrationMappingTable + @"
                   ) AS subq"
-            },
-            {
-                "FindTestWithDifferentMappedFieldsAndFilter",
-                @"
+        },
+        {
+            "FindTestWithDifferentMappedFieldsAndFilter",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'fancyName', species, 'region', region, 'height', height)) AS data
                   FROM (
                       SELECT *
                       FROM " + _integrationMappingTable + @"
                       WHERE species = 'Tsuga terophylla'
                   ) AS subq"
-            },
-            {
-                "FindTestWithDifferentMappedFieldsAndOrderBy",
-                @"
+        },
+        {
+            "FindTestWithDifferentMappedFieldsAndOrderBy",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'fancyName', species, 'region', region, 'height', height)) AS data
                   FROM (
                       SELECT *
@@ -772,10 +772,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY species asc
                       LIMIT 100
                   ) AS subq"
-            },
-            {
-                "FindTestWithDifferentMappingFirstSingleKeyPaginationAndOrderBy",
-                @"
+        },
+        {
+            "FindTestWithDifferentMappingFirstSingleKeyPaginationAndOrderBy",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'fancyName', species, 'region', region, 'height', height)) AS data
                   FROM (
                       SELECT *
@@ -783,10 +783,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY species asc
                       LIMIT 1
                   ) AS subq"
-            },
-            {
-                "FindTestWithDifferentMappingAfterSingleKeyPaginationAndOrderBy",
-                @"
+        },
+        {
+            "FindTestWithDifferentMappingAfterSingleKeyPaginationAndOrderBy",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'fancyName', species, 'region', region, 'height', height)) AS data
                   FROM (
                       SELECT *
@@ -795,10 +795,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY species asc, treeId asc
                       LIMIT 101
                   ) AS subq"
-            },
-            {
-                "FindManyTestWithDatabasePolicy",
-                @"
+        },
+        {
+            "FindManyTestWithDatabasePolicy",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'name', name)) AS data
                   FROM (
                       SELECT *
@@ -807,10 +807,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY id asc
                       LIMIT 101
                   ) AS subq"
-            },
-            {
-                "FindInAccessibleRowWithDatabasePolicy",
-                @"
+        },
+        {
+            "FindInAccessibleRowWithDatabasePolicy",
+            @"
                   SELECT JSON_OBJECT('id', id, 'name', name) AS data
                   FROM (
                       SELECT *
@@ -819,96 +819,95 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY id asc
                       LIMIT 101
                   ) AS subq"
-            }
-        };
-
-        #region Test Fixture Setup
-
-        /// <summary>
-        /// Sets up test fixture for class, only to be run once per test run, as defined by
-        /// MSTest decorator.
-        /// </summary>
-        /// <param name="context"></param>
-        [ClassInitialize]
-        public static async Task SetupAsync(TestContext context)
-        {
-            DatabaseEngine = TestCategory.MYSQL;
-            await InitializeTestFixture(context);
         }
+    };
 
-        /// <summary>
-        /// Runs after every test to reset the database state
-        /// </summary>
-        [TestCleanup]
-        public async Task TestCleanup()
-        {
-            await ResetDbStateAsync();
-        }
+    #region Test Fixture Setup
 
-        #endregion
+    /// <summary>
+    /// Sets up test fixture for class, only to be run once per test run, as defined by
+    /// MSTest decorator.
+    /// </summary>
+    /// <param name="context"></param>
+    [ClassInitialize]
+    public static async Task SetupAsync(TestContext context)
+    {
+        DatabaseEngine = TestCategory.MYSQL;
+        await InitializeTestFixture(context);
+    }
 
-        public override string GetDefaultSchema()
-        {
-            return string.Empty;
-        }
+    /// <summary>
+    /// Runs after every test to reset the database state
+    /// </summary>
+    [TestCleanup]
+    public async Task TestCleanup()
+    {
+        await ResetDbStateAsync();
+    }
 
-        /// <summary>
-        /// MySql does not a schema so it lacks
-        /// the '.' between schema and table, we
-        /// return empty string here for this reason.
-        /// </summary>
-        /// <returns></returns>
-        public override string GetDefaultSchemaForEdmModel()
-        {
-            return string.Empty;
-        }
+    #endregion
 
-        public override string GetQuery(string key)
-        {
-            return _queryMap[key];
-        }
+    public override string GetDefaultSchema()
+    {
+        return string.Empty;
+    }
 
-        // Pending Stored Procedure Support
-        [TestMethod]
-        [Ignore]
-        public override Task FindManyStoredProcedureTest()
-        {
-            throw new NotImplementedException();
-        }
+    /// <summary>
+    /// MySql does not a schema so it lacks
+    /// the '.' between schema and table, we
+    /// return empty string here for this reason.
+    /// </summary>
+    /// <returns></returns>
+    public override string GetDefaultSchemaForEdmModel()
+    {
+        return string.Empty;
+    }
 
-        [TestMethod]
-        [Ignore]
-        public override Task FindOneStoredProcedureTestUsingParameter()
-        {
-            throw new NotImplementedException();
-        }
+    public override string GetQuery(string key)
+    {
+        return _queryMap[key];
+    }
 
-        [TestMethod]
-        [Ignore]
-        public override Task FindStoredProcedureWithNonEmptyPrimaryKeyRoute()
-        {
-            throw new NotImplementedException();
-        }
+    // Pending Stored Procedure Support
+    [TestMethod]
+    [Ignore]
+    public override Task FindManyStoredProcedureTest()
+    {
+        throw new NotImplementedException();
+    }
 
-        [TestMethod]
-        [Ignore]
-        public override Task FindStoredProcedureWithMissingParameter()
-        {
-            throw new NotImplementedException();
-        }
+    [TestMethod]
+    [Ignore]
+    public override Task FindOneStoredProcedureTestUsingParameter()
+    {
+        throw new NotImplementedException();
+    }
 
-        [TestMethod]
-        [Ignore]
-        public override Task FindStoredProcedureWithNonexistentParameter()
-        {
-            throw new NotImplementedException();
-        }
+    [TestMethod]
+    [Ignore]
+    public override Task FindStoredProcedureWithNonEmptyPrimaryKeyRoute()
+    {
+        throw new NotImplementedException();
+    }
 
-        [TestMethod]
-        [Ignore]
-        public override Task FindApiTestForSPWithRequiredParamsInRequestBody()
-        {
-            throw new NotImplementedException();
-        }
+    [TestMethod]
+    [Ignore]
+    public override Task FindStoredProcedureWithMissingParameter()
+    {
+        throw new NotImplementedException();
+    }
+
+    [TestMethod]
+    [Ignore]
+    public override Task FindStoredProcedureWithNonexistentParameter()
+    {
+        throw new NotImplementedException();
+    }
+
+    [TestMethod]
+    [Ignore]
+    public override Task FindApiTestForSPWithRequiredParamsInRequestBody()
+    {
+        throw new NotImplementedException();
     }
 }

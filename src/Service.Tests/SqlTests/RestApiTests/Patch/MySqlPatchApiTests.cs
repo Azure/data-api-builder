@@ -6,16 +6,16 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
+namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch;
+
+[TestClass, TestCategory(TestCategory.MYSQL)]
+public class MySqlPatchApiTests : PatchApiTestBase
 {
-    [TestClass, TestCategory(TestCategory.MYSQL)]
-    public class MySqlPatchApiTests : PatchApiTestBase
+    protected static Dictionary<string, string> _queryMap = new()
     {
-        protected static Dictionary<string, string> _queryMap = new()
         {
-            {
-                "PatchOne_Insert_NonAutoGenPK_Test",
-                @"SELECT JSON_OBJECT('id', id, 'title', title, 'issue_number', issue_number ) AS data
+            "PatchOne_Insert_NonAutoGenPK_Test",
+            @"SELECT JSON_OBJECT('id', id, 'title', title, 'issue_number', issue_number ) AS data
                     FROM (
                         SELECT id, title, issue_number
                         FROM " + _integration_NonAutoGenPK_TableName + @"
@@ -23,10 +23,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                         AND issue_number = 1234
                     ) as subq
                 "
-            },
-            {
-                "PatchOne_Insert_UniqueCharacters_Test",
-                @"
+        },
+        {
+            "PatchOne_Insert_UniqueCharacters_Test",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('┬─┬ノ( º _ ºノ)', NoteNum,
                   '始計', DetailAssessmentAndPlanning, '作戰', WagingWar,
                   '謀攻', StrategicAttack)) AS data
@@ -36,10 +36,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                       WHERE NoteNum = 2
                   ) AS subq
                 "
-            },
-            {
-                "PatchOne_Insert_Mapping_Test",
-                @"
+        },
+        {
+            "PatchOne_Insert_Mapping_Test",
+            @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'Scientific Name', species,
                     'United State\'s Region', region, 'height', height)) AS data
                   FROM (
@@ -48,10 +48,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                       WHERE treeId = 4
                     ) as subq
                 "
-            },
-            {
-                "PatchOne_Insert_CompositeNonAutoGenPK_Test",
-                @"
+        },
+        {
+            "PatchOne_Insert_CompositeNonAutoGenPK_Test",
+            @"
                     SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
                                         'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
                     FROM (
@@ -61,10 +61,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                         AND piecesRequired = 4
                     ) AS subq
                 "
-            },
-            {
-                "PatchOne_Insert_Empty_Test",
-                @"
+        },
+        {
+            "PatchOne_Insert_Empty_Test",
+            @"
                     SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
                                         'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
                     FROM (
@@ -74,10 +74,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                         AND piecesRequired = 4
                     ) AS subq
                 "
-            },
-            {
-                "PatchOne_Insert_Default_Test",
-                @"
+        },
+        {
+            "PatchOne_Insert_Default_Test",
+            @"
                     SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
                                         'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
                     FROM (
@@ -87,10 +87,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                         AND piecesRequired = 0
                     ) AS subq
                 "
-            },
-            {
-                "PatchOne_Insert_Nulled_Test",
-                @"
+        },
+        {
+            "PatchOne_Insert_Nulled_Test",
+            @"
                     SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
                                         'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
                     FROM (
@@ -100,10 +100,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                         AND piecesRequired = 4
                     ) AS subq
                 "
-            },
-            {
-                "PatchOne_Update_Test",
-                @"
+        },
+        {
+            "PatchOne_Update_Test",
+            @"
                     SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
                     FROM (
                         SELECT id, title, publisher_id
@@ -112,10 +112,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                         AND publisher_id = 2324
                     ) AS subq
                 "
-            },
-            {
-                "PatchOne_Update_IfMatchHeaders_Test",
-                @"
+        },
+        {
+            "PatchOne_Update_IfMatchHeaders_Test",
+            @"
                   SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
                   FROM (
                       SELECT *
@@ -124,10 +124,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                       ORDER BY id asc
                       LIMIT 1
                   ) AS subq"
-            },
-            {
-                "PatchOne_Update_Default_Test",
-                @"
+        },
+        {
+            "PatchOne_Update_Default_Test",
+            @"
                     SELECT JSON_OBJECT('id', id, 'content', content, 'book_id', book_id) AS data
                     FROM (
                         SELECT id, content, book_id
@@ -135,10 +135,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                         WHERE id = 567 AND book_id = 1 AND content = 'That''s a great book'
                     ) AS subq
                 "
-            },
-            {
-                "PatchOne_Update_CompositeNonAutoGenPK_Test",
-                @"
+        },
+        {
+            "PatchOne_Update_CompositeNonAutoGenPK_Test",
+            @"
                     SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
                                         'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
                     FROM (
@@ -148,10 +148,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                         AND piecesRequired = 0
                     ) AS subq
                 "
-            },
-            {
-                "PatchOne_Update_Empty_Test",
-                @"
+        },
+        {
+            "PatchOne_Update_Empty_Test",
+            @"
                     SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
                                         'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
                     FROM (
@@ -161,10 +161,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                         AND piecesRequired = 0
                     ) AS subq
                 "
-            },
-            {
-                "PatchOne_Update_Nulled_Test",
-                @"
+        },
+        {
+            "PatchOne_Update_Nulled_Test",
+            @"
                     SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
                                         'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
                     FROM (
@@ -174,10 +174,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                         AND piecesRequired = 0
                     ) AS subq
                 "
-            },
-            {
-                "PatchOne_Insert_PKAutoGen_Test",
-                @"
+        },
+        {
+            "PatchOne_Insert_PKAutoGen_Test",
+            @"
                     SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
                     FROM (
                         SELECT id, title, publisher_id
@@ -186,88 +186,87 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                         AND publisher_id = 1234
                     ) AS subq
                 "
-            }
-        };
-
-        #region overridden tests
-        [TestMethod]
-        [Ignore]
-        public override Task PatchOneInsertInViewTest()
-        {
-            throw new NotImplementedException();
         }
+    };
 
-        [TestMethod]
-        [Ignore]
-        public override Task PatchOneUpdateViewTest()
-        {
-            throw new NotImplementedException();
-        }
+    #region overridden tests
+    [TestMethod]
+    [Ignore]
+    public override Task PatchOneInsertInViewTest()
+    {
+        throw new NotImplementedException();
+    }
 
-        [TestMethod]
-        [Ignore]
-        public void PatchOneViewBadRequestTest()
-        {
-            throw new NotImplementedException();
-        }
+    [TestMethod]
+    [Ignore]
+    public override Task PatchOneUpdateViewTest()
+    {
+        throw new NotImplementedException();
+    }
 
-        [TestMethod]
-        [Ignore]
-        public override Task PatchOneUpdateWithUnsatisfiedDatabasePolicy()
-        {
-            throw new NotImplementedException();
-        }
+    [TestMethod]
+    [Ignore]
+    public void PatchOneViewBadRequestTest()
+    {
+        throw new NotImplementedException();
+    }
 
-        [TestMethod]
-        [Ignore]
-        public override Task PatchOneInsertWithUnsatisfiedDatabasePolicy()
-        {
-            throw new NotImplementedException();
-        }
+    [TestMethod]
+    [Ignore]
+    public override Task PatchOneUpdateWithUnsatisfiedDatabasePolicy()
+    {
+        throw new NotImplementedException();
+    }
 
-        [TestMethod]
-        [Ignore]
-        public override Task PatchOneUpdateWithDatabasePolicy()
-        {
-            throw new NotImplementedException();
-        }
+    [TestMethod]
+    [Ignore]
+    public override Task PatchOneInsertWithUnsatisfiedDatabasePolicy()
+    {
+        throw new NotImplementedException();
+    }
 
-        [TestMethod]
-        [Ignore]
-        public override Task PatchOneInsertWithDatabasePolicy()
-        {
-            throw new NotImplementedException();
-        }
-        #endregion
+    [TestMethod]
+    [Ignore]
+    public override Task PatchOneUpdateWithDatabasePolicy()
+    {
+        throw new NotImplementedException();
+    }
 
-        #region Test Fixture Setup
+    [TestMethod]
+    [Ignore]
+    public override Task PatchOneInsertWithDatabasePolicy()
+    {
+        throw new NotImplementedException();
+    }
+    #endregion
 
-        /// <summary>
-        /// Sets up test fixture for class, only to be run once per test run, as defined by
-        /// MSTest decorator.
-        /// </summary>
-        /// <param name="context"></param>
-        [ClassInitialize]
-        public static async Task SetupAsync(TestContext context)
-        {
-            DatabaseEngine = TestCategory.MYSQL;
-            await InitializeTestFixture(context);
-        }
+    #region Test Fixture Setup
 
-        /// <summary>
-        /// Runs after every test to reset the database state
-        /// </summary>
-        [TestCleanup]
-        public async Task TestCleanup()
-        {
-            await ResetDbStateAsync();
-        }
+    /// <summary>
+    /// Sets up test fixture for class, only to be run once per test run, as defined by
+    /// MSTest decorator.
+    /// </summary>
+    /// <param name="context"></param>
+    [ClassInitialize]
+    public static async Task SetupAsync(TestContext context)
+    {
+        DatabaseEngine = TestCategory.MYSQL;
+        await InitializeTestFixture(context);
+    }
 
-        #endregion
+    /// <summary>
+    /// Runs after every test to reset the database state
+    /// </summary>
+    [TestCleanup]
+    public async Task TestCleanup()
+    {
+        await ResetDbStateAsync();
+    }
 
-        public override string GetQuery(string key)
-        {
-            return _queryMap[key];
-        }
+    #endregion
+
+    public override string GetQuery(string key)
+    {
+        return _queryMap[key];
     }
 }

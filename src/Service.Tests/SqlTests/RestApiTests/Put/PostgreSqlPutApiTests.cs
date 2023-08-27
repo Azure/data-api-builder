@@ -6,17 +6,16 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
-{
+namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put;
 
-    [TestClass, TestCategory(TestCategory.POSTGRESQL)]
-    public class PostgreSqlPutApiTests : PutApiTestBase
+[TestClass, TestCategory(TestCategory.POSTGRESQL)]
+public class PostgreSqlPutApiTests : PutApiTestBase
+{
+    protected static Dictionary<string, string> _queryMap = new()
     {
-        protected static Dictionary<string, string> _queryMap = new()
         {
-            {
-                "PutOne_Update_Test",
-                @"
+            "PutOne_Update_Test",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT id, title, publisher_id
@@ -25,10 +24,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                             AND publisher_id = 1234
                     ) AS subq
                 "
-            },
-            {
-                "PutOne_Update_IfMatchHeaders_Test",
-                @"
+        },
+        {
+            "PutOne_Update_IfMatchHeaders_Test",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT id, title, publisher_id
@@ -36,10 +35,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                         WHERE id = 1 AND title = 'The Return of the King'
                     ) AS subq
                 "
-            },
-            {
-                "PutOneUpdateWithDatabasePolicy",
-                @"
+        },
+        {
+            "PutOneUpdateWithDatabasePolicy",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
@@ -48,10 +47,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                             AND ""piecesAvailable"" = 4 AND ""piecesRequired"" = 5 AND pieceid != 1
                     ) AS subq
                 "
-            },
-            {
-                "PutOneUpdateAccessibleRowWithDatabasePolicy",
-                @"
+        },
+        {
+            "PutOneUpdateAccessibleRowWithDatabasePolicy",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT id, name
@@ -59,10 +58,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                         WHERE id = 2345 AND name = 'New Publisher' AND id != 1234
                     ) AS subq
                 "
-            },
-            {
-                "PutOne_Update_Default_Test",
-                @"
+        },
+        {
+            "PutOne_Update_Default_Test",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT id, book_id, content
@@ -70,10 +69,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                         WHERE id = 568 AND book_id = 1 AND content ='Good book to read'
                     ) AS subq
                 "
-            },
-            {
-                "PutOne_Update_CompositeNonAutoGenPK_Test",
-                @"
+        },
+        {
+            "PutOne_Update_CompositeNonAutoGenPK_Test",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
@@ -82,10 +81,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                             AND ""piecesAvailable"" = 10 AND ""piecesRequired"" = 5
                     ) AS subq
                 "
-            },
-            {
-                "PutOne_Update_NullOutMissingField_Test",
-                @"
+        },
+        {
+            "PutOne_Update_NullOutMissingField_Test",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
@@ -94,10 +93,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                             AND ""piecesAvailable"" is NULL AND ""piecesRequired"" = 5
                     ) AS subq
                 "
-            },
-            {
-                "PutOne_Update_Empty_Test",
-                @"
+        },
+        {
+            "PutOne_Update_Empty_Test",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
@@ -106,10 +105,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                             AND ""piecesAvailable"" = 2 AND ""piecesRequired"" = 3
                     ) AS subq
                 "
-            },
-            {
-                "PutOne_Update_Nulled_Test",
-                @"
+        },
+        {
+            "PutOne_Update_Nulled_Test",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
@@ -118,10 +117,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                             AND ""piecesAvailable"" is NULL AND ""piecesRequired"" = 4
                     ) AS subq
                 "
-            },
-            {
-                "PutOne_Update_With_Mapping_Test",
-                @"
+        },
+        {
+            "PutOne_Update_With_Mapping_Test",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT  ""treeId"", ""species"" AS ""Scientific Name"", ""region""
@@ -130,10 +129,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                         WHERE ""treeId"" = 1
                     ) AS subq
                 "
-            },
-            {
-                "PutOne_Insert_Test",
-                @"
+        },
+        {
+            "PutOne_Insert_Test",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT id, title, issue_number
@@ -142,10 +141,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                             AND issue_number = 1234
                     ) AS subq
                 "
-            },
-            {
-                "PutOne_Insert_Nullable_Test",
-                @"
+        },
+        {
+            "PutOne_Insert_Nullable_Test",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT id, title, issue_number
@@ -154,16 +153,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                             AND title = 'Times' AND issue_number is NULL
                     ) AS subq
                 "
-            },
-            {
-                "PutOne_Insert_PKAutoGen_Test",
-                $"INSERT INTO { _integrationTableName } " +
-                $"(id, title, publisher_id)" +
-                $"VALUES (1000,'The Hobbit Returns to The Shire',1234)"
-            },
-            {
-                "PutOne_Insert_AutoGenNonPK_Test",
-                @"
+        },
+        {
+            "PutOne_Insert_PKAutoGen_Test",
+            $"INSERT INTO { _integrationTableName } " +
+            $"(id, title, publisher_id)" +
+            $"VALUES (1000,'The Hobbit Returns to The Shire',1234)"
+        },
+        {
+            "PutOne_Insert_AutoGenNonPK_Test",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT id, title, volume, ""categoryName"", series_id
@@ -172,10 +171,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                             AND title = 'Star Trek' AND volume IS NOT NULL
                     ) AS subq
                 "
-            },
-            {
-                "PutOne_Insert_CompositeNonAutoGenPK_Test",
-                @"
+        },
+        {
+            "PutOne_Insert_CompositeNonAutoGenPK_Test",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
@@ -184,10 +183,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                             AND ""piecesAvailable"" = 2 AND ""piecesRequired"" = 1
                     ) AS subq
                 "
-            },
-            {
-                "PutOne_Insert_Default_Test",
-                @"
+        },
+        {
+            "PutOne_Insert_Default_Test",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
@@ -196,10 +195,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                             AND ""piecesAvailable"" = 0 AND ""piecesRequired"" = 0
                     ) AS subq
                 "
-            },
-            {
-                "PutOne_Insert_Empty_Test",
-                @"
+        },
+        {
+            "PutOne_Insert_Empty_Test",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
@@ -208,10 +207,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                             AND ""piecesAvailable"" = 2 AND ""piecesRequired"" = 3
                     ) AS subq
                 "
-            },
-            {
-                "PutOne_Insert_Nulled_Test",
-                @"
+        },
+        {
+            "PutOne_Insert_Nulled_Test",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
@@ -220,10 +219,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                             AND ""piecesAvailable"" is NULL AND ""piecesRequired"" = 4
                     ) AS subq
                 "
-            },
-            {
-                "PutOneInsertInStocksViewSelected",
-                @"
+        },
+        {
+            "PutOneInsertInStocksViewSelected",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable""
@@ -232,10 +231,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                         LIMIT 1
                     ) AS subq
                 "
-            },
-            {
-                "PutOneUpdateStocksViewSelected",
-                @"
+        },
+        {
+            "PutOneUpdateStocksViewSelected",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable""
@@ -244,10 +243,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                         LIMIT 1
                     ) AS subq
                 "
-            },
-            {
-                "UpdateSqlInjectionQuery1",
-                @"
+        },
+        {
+            "UpdateSqlInjectionQuery1",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT id, title, publisher_id
@@ -256,10 +255,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                             AND publisher_id = 1234
                     ) AS subq
                 "
-            },
-            {
-                "UpdateSqlInjectionQuery2",
-                @"
+        },
+        {
+            "UpdateSqlInjectionQuery2",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT id, title, publisher_id
@@ -268,10 +267,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                             AND publisher_id = 1234
                     ) AS subq
                 "
-            },
-            {
-                "UpdateSqlInjectionQuery3",
-                @"
+        },
+        {
+            "UpdateSqlInjectionQuery3",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT id, title, publisher_id
@@ -280,10 +279,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                             AND publisher_id = 1234
                     ) AS subq
                 "
-            },
-            {
-                "UpdateSqlInjectionQuery4",
-                @"
+        },
+        {
+            "UpdateSqlInjectionQuery4",
+            @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT id, title, publisher_id
@@ -292,86 +291,85 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                             AND publisher_id = 1234
                     ) AS subq
                 "
-            }
-        };
-
-        [TestMethod]
-        public async Task PutOneInViewBadRequest()
-        {
-            string expectedErrorMessage = $"55000: cannot update view \"{_composite_subset_bookPub}\"";
-            await base.PutOneInViewBadRequest(
-                expectedErrorMessage,
-                isExpectedErrorMsgSubstr: true);
         }
+    };
 
-        [TestMethod]
-        public async Task PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest()
-        {
-            await base.PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest(
-                isExpectedErrorMsgSubstr: true);
-        }
+    [TestMethod]
+    public async Task PutOneInViewBadRequest()
+    {
+        string expectedErrorMessage = $"55000: cannot update view \"{_composite_subset_bookPub}\"";
+        await base.PutOneInViewBadRequest(
+            expectedErrorMessage,
+            isExpectedErrorMsgSubstr: true);
+    }
 
-        #region Test Fixture Setup
+    [TestMethod]
+    public async Task PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest()
+    {
+        await base.PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest(
+            isExpectedErrorMsgSubstr: true);
+    }
 
-        /// <summary>
-        /// Sets up test fixture for class, only to be run once per test run, as defined by
-        /// MSTest decorator.
-        /// </summary>
-        /// <param name="context"></param>
-        [ClassInitialize]
-        public static async Task SetupAsync(TestContext context)
-        {
-            DatabaseEngine = TestCategory.POSTGRESQL;
-            await InitializeTestFixture(context);
-        }
+    #region Test Fixture Setup
 
-        #endregion
+    /// <summary>
+    /// Sets up test fixture for class, only to be run once per test run, as defined by
+    /// MSTest decorator.
+    /// </summary>
+    /// <param name="context"></param>
+    [ClassInitialize]
+    public static async Task SetupAsync(TestContext context)
+    {
+        DatabaseEngine = TestCategory.POSTGRESQL;
+        await InitializeTestFixture(context);
+    }
 
-        #region overridden tests
+    #endregion
 
-        [TestMethod]
-        [Ignore]
-        public override Task PutOneInsertWithDatabasePolicy()
-        {
-            throw new NotImplementedException();
-        }
+    #region overridden tests
 
-        [TestMethod]
-        [Ignore]
-        public override Task PutOneWithUnsatisfiedDatabasePolicy()
-        {
-            throw new NotImplementedException();
-        }
+    [TestMethod]
+    [Ignore]
+    public override Task PutOneInsertWithDatabasePolicy()
+    {
+        throw new NotImplementedException();
+    }
 
-        [TestMethod]
-        [Ignore]
-        public override Task PutOneInsertInTableWithFieldsInDbPolicyNotPresentInBody()
-        {
-            throw new NotImplementedException();
-        }
-        #endregion
+    [TestMethod]
+    [Ignore]
+    public override Task PutOneWithUnsatisfiedDatabasePolicy()
+    {
+        throw new NotImplementedException();
+    }
 
-        [TestCleanup]
-        public async Task TestCleanup()
-        {
-            await ResetDbStateAsync();
-        }
+    [TestMethod]
+    [Ignore]
+    public override Task PutOneInsertInTableWithFieldsInDbPolicyNotPresentInBody()
+    {
+        throw new NotImplementedException();
+    }
+    #endregion
 
-        public override string GetQuery(string key)
-        {
-            return _queryMap[key];
-        }
+    [TestCleanup]
+    public async Task TestCleanup()
+    {
+        await ResetDbStateAsync();
+    }
 
-        /// <summary>
-        /// We have 1 test that is named
-        /// PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest
-        /// which will have Db specific error messages.
-        /// We return the postgres specific message here.
-        /// </summary>
-        /// <returns></returns>
-        public override string GetUniqueDbErrorMessage()
-        {
-            return "23502: null value in column \"piecesRequired\" of relation \"stocks\" violates not-null constraint";
-        }
+    public override string GetQuery(string key)
+    {
+        return _queryMap[key];
+    }
+
+    /// <summary>
+    /// We have 1 test that is named
+    /// PutOneUpdateNonNullableDefaultFieldMissingFromJsonBodyTest
+    /// which will have Db specific error messages.
+    /// We return the postgres specific message here.
+    /// </summary>
+    /// <returns></returns>
+    public override string GetUniqueDbErrorMessage()
+    {
+        return "23502: null value in column \"piecesRequired\" of relation \"stocks\" violates not-null constraint";
     }
 }

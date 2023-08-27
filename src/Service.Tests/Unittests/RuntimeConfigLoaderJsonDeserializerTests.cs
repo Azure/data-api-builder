@@ -12,106 +12,106 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Azure.DataApiBuilder.Service.Tests.UnitTests
+namespace Azure.DataApiBuilder.Service.Tests.UnitTests;
+
+/// <summary>
+/// Unit tests for the environment variable
+/// parser for the runtime configuration. These
+/// tests verify that we parse the config correctly
+/// when replacing environment variables. Also verify
+/// we throw the right exception when environment
+/// variable names are not found.
+/// </summary>
+[TestClass, TestCategory(TestCategory.MSSQL)]
+public class RuntimeConfigLoaderJsonDeserializerTests
 {
+    #region Positive Tests
+
     /// <summary>
-    /// Unit tests for the environment variable
-    /// parser for the runtime configuration. These
-    /// tests verify that we parse the config correctly
-    /// when replacing environment variables. Also verify
-    /// we throw the right exception when environment
-    /// variable names are not found.
+    /// Test valid cases for parsing the runtime config.
+    /// These cases have strings close to the pattern we
+    /// match when looking to replace parts of the config,
+    /// strings that match said pattern, and other edge
+    /// cases to reveal if the pattern matching is working.
+    /// The pattern we look to match is @env('') where we take
+    /// what is inside of the '', ie: @env('<match>'). The match is then
+    /// used to get the associated environment variable.
     /// </summary>
-    [TestClass, TestCategory(TestCategory.MSSQL)]
-    public class RuntimeConfigLoaderJsonDeserializerTests
+    /// <param name="repKeys">Replacement used as key to get environment variable.</param>
+    /// <param name="repValues">Replacement value.</param>
+    [DataTestMethod]
+    [DataRow(
+        new string[] { "@env(')", "@env()", "@env(')'@env('()", "@env('@env()'", "@@eennvv((''''))" },
+        new string[] { "@env(')", "@env()", "@env(')'@env('()", "@env('@env()'", "@@eennvv((''''))" },
+        true,
+        true,
+        DisplayName = "Replacement strings that won't match.")]
+    [DataRow(
+        new string[] { "@env('envVarName')", "@env(@env('envVarName'))", "@en@env('envVarName')", "@env'()@env'@env('envVarName')')')" },
+        new string[] { "envVarValue", "@env(envVarValue)", "@enenvVarValue", "@env'()@env'envVarValue')')" },
+        false,
+        true,
+        DisplayName = "Replacement strings that match.")]
+    //  since we match strings surrounded by single quotes,
+    //  the following are environment variable names set to the
+    //  associated values:
+    // 'envVarName  -> _envVarName
+    //  envVarName' ->  envVarName_
+    // 'envVarName' -> _envVarName_
+    [DataRow(
+        new string[] { "@env(')", "@env()", "@env('envVarName')", "@env(''envVarName')", "@env('envVarName'')", "@env(''envVarName'')" },
+        new string[] { "@env(')", "@env()", "envVarValue", "_envVarValue", "envVarValue_", "_envVarValue_" },
+        false,
+        true,
+        DisplayName = "Replacement strings with some matches.")]
+    [DataRow(
+        new string[] { "@env('envVarName')", "@env(@env('envVarName'))", "@en@env('envVarName')", "@env'()@env'@env('envVarName')')')" },
+        new string[] { "envVarValue", "@env(envVarValue)", "@enenvVarValue", "@env'()@env'envVarValue')')" },
+        false,
+        false,
+        DisplayName = "Replacement strings that match, but shouldn't be replaced.")]
+    public void CheckConfigEnvParsingTest(
+        string[] repKeys,
+        string[] repValues,
+        bool exceptionThrown,
+        bool replaceEnvVar)
     {
-        #region Positive Tests
-
-        /// <summary>
-        /// Test valid cases for parsing the runtime config.
-        /// These cases have strings close to the pattern we
-        /// match when looking to replace parts of the config,
-        /// strings that match said pattern, and other edge
-        /// cases to reveal if the pattern matching is working.
-        /// The pattern we look to match is @env('') where we take
-        /// what is inside of the '', ie: @env('<match>'). The match is then
-        /// used to get the associated environment variable.
-        /// </summary>
-        /// <param name="repKeys">Replacement used as key to get environment variable.</param>
-        /// <param name="repValues">Replacement value.</param>
-        [DataTestMethod]
-        [DataRow(
-            new string[] { "@env(')", "@env()", "@env(')'@env('()", "@env('@env()'", "@@eennvv((''''))" },
-            new string[] { "@env(')", "@env()", "@env(')'@env('()", "@env('@env()'", "@@eennvv((''''))" },
-            true,
-            true,
-            DisplayName = "Replacement strings that won't match.")]
-        [DataRow(
-            new string[] { "@env('envVarName')", "@env(@env('envVarName'))", "@en@env('envVarName')", "@env'()@env'@env('envVarName')')')" },
-            new string[] { "envVarValue", "@env(envVarValue)", "@enenvVarValue", "@env'()@env'envVarValue')')" },
-            false,
-            true,
-            DisplayName = "Replacement strings that match.")]
-        //  since we match strings surrounded by single quotes,
-        //  the following are environment variable names set to the
-        //  associated values:
-        // 'envVarName  -> _envVarName
-        //  envVarName' ->  envVarName_
-        // 'envVarName' -> _envVarName_
-        [DataRow(
-            new string[] { "@env(')", "@env()", "@env('envVarName')", "@env(''envVarName')", "@env('envVarName'')", "@env(''envVarName'')" },
-            new string[] { "@env(')", "@env()", "envVarValue", "_envVarValue", "envVarValue_", "_envVarValue_" },
-            false,
-            true,
-            DisplayName = "Replacement strings with some matches.")]
-        [DataRow(
-            new string[] { "@env('envVarName')", "@env(@env('envVarName'))", "@en@env('envVarName')", "@env'()@env'@env('envVarName')')')" },
-            new string[] { "envVarValue", "@env(envVarValue)", "@enenvVarValue", "@env'()@env'envVarValue')')" },
-            false,
-            false,
-            DisplayName = "Replacement strings that match, but shouldn't be replaced.")]
-        public void CheckConfigEnvParsingTest(
-            string[] repKeys,
-            string[] repValues,
-            bool exceptionThrown,
-            bool replaceEnvVar)
+        SetEnvVariables();
+        try
         {
-            SetEnvVariables();
-            try
+            RuntimeConfig expectedConfig;
+            if (replaceEnvVar)
             {
-                RuntimeConfig expectedConfig;
-                if (replaceEnvVar)
-                {
-                    Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
-                        GetModifiedJsonString(repValues, @"""mssql"""), out expectedConfig, replaceEnvVar: replaceEnvVar),
-                        "Should read the expected config");
-                }
-                else
-                {
-                    Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
-                        GetModifiedJsonString(repKeys, @"""mssql"""), out expectedConfig, replaceEnvVar: replaceEnvVar),
-                        "Should read the expected config");
-                }
-
                 Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
-                    GetModifiedJsonString(repKeys, @"""@env('enumVarName')"""), out RuntimeConfig actualConfig, replaceEnvVar: replaceEnvVar),
-                    "Should read actual config");
-                Assert.AreEqual(expectedConfig.ToJson(), actualConfig.ToJson());
+                    GetModifiedJsonString(repValues, @"""mssql"""), out expectedConfig, replaceEnvVar: replaceEnvVar),
+                    "Should read the expected config");
             }
-            catch (Exception ex)
+            else
             {
-                Assert.IsTrue(exceptionThrown);
-                Assert.AreEqual("A valid Connection String should be provided.", ex.Message);
+                Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
+                    GetModifiedJsonString(repKeys, @"""mssql"""), out expectedConfig, replaceEnvVar: replaceEnvVar),
+                    "Should read the expected config");
             }
-        }
 
-        /// <summary>
-        /// Method to validate that comments are skipped in config file (and are ignored during deserialization).
-        /// </summary>
-        [TestMethod]
-        public void CheckCommentParsingInConfigFile()
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
+                GetModifiedJsonString(repKeys, @"""@env('enumVarName')"""), out RuntimeConfig actualConfig, replaceEnvVar: replaceEnvVar),
+                "Should read actual config");
+            Assert.AreEqual(expectedConfig.ToJson(), actualConfig.ToJson());
+        }
+        catch (Exception ex)
         {
-            string actualJson = @"{
+            Assert.IsTrue(exceptionThrown);
+            Assert.AreEqual("A valid Connection String should be provided.", ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Method to validate that comments are skipped in config file (and are ignored during deserialization).
+    /// </summary>
+    [TestMethod]
+    public void CheckCommentParsingInConfigFile()
+    {
+        string actualJson = @"{
                                     // Link for latest draft schema.
                                     ""$schema"":""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
                                     ""data-source"": {
@@ -123,97 +123,97 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                                     ""connection-string"": ""Server=tcp:127.0.0.1,1433;Persist Security Info=False;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=False;Connection Timeout=5;""
                                     }
                                 }";
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(actualJson, out RuntimeConfig _), "Should not fail to parse with comments");
-        }
+        Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(actualJson, out RuntimeConfig _), "Should not fail to parse with comments");
+    }
 
-        #endregion Positive Tests
+    #endregion Positive Tests
 
-        #region Negative Tests
+    #region Negative Tests
 
-        /// <summary>
-        /// When we have a match that does not correspond
-        /// to a valid environment variable we throw an exception.
-        /// These tests verify this happens correctly.
-        /// </summary>
-        /// <param name="invalidEnvVarName">A match that is not a valid environment variable name.</param>
-        [DataTestMethod]
-        [DataRow("")]
-        [DataRow("fooBARbaz")]
-        // extra single quote added to environment variable
-        // names to validate we don't match these
-        [DataRow("''envVarName")]
-        [DataRow("''envVarName'")]
-        [DataRow("envVarName''")]
-        [DataRow("''envVarName''")]
-        public void CheckConfigEnvParsingThrowExceptions(string invalidEnvVarName)
-        {
-            string json = @"{ ""foo"" : ""@env('envVarName'), @env('" + invalidEnvVarName + @"')"" }";
-            SetEnvVariables();
-            StringJsonConverterFactory stringConverterFactory = new();
-            JsonSerializerOptions options = new() { PropertyNameCaseInsensitive = true };
-            options.Converters.Add(stringConverterFactory);
-            Assert.ThrowsException<DataApiBuilderException>(() => JsonSerializer.Deserialize<StubJsonType>(json, options));
-        }
+    /// <summary>
+    /// When we have a match that does not correspond
+    /// to a valid environment variable we throw an exception.
+    /// These tests verify this happens correctly.
+    /// </summary>
+    /// <param name="invalidEnvVarName">A match that is not a valid environment variable name.</param>
+    [DataTestMethod]
+    [DataRow("")]
+    [DataRow("fooBARbaz")]
+    // extra single quote added to environment variable
+    // names to validate we don't match these
+    [DataRow("''envVarName")]
+    [DataRow("''envVarName'")]
+    [DataRow("envVarName''")]
+    [DataRow("''envVarName''")]
+    public void CheckConfigEnvParsingThrowExceptions(string invalidEnvVarName)
+    {
+        string json = @"{ ""foo"" : ""@env('envVarName'), @env('" + invalidEnvVarName + @"')"" }";
+        SetEnvVariables();
+        StringJsonConverterFactory stringConverterFactory = new();
+        JsonSerializerOptions options = new() { PropertyNameCaseInsensitive = true };
+        options.Converters.Add(stringConverterFactory);
+        Assert.ThrowsException<DataApiBuilderException>(() => JsonSerializer.Deserialize<StubJsonType>(json, options));
+    }
 
-        [TestMethod("Validates that JSON deserialization failures are gracefully caught.")]
-        public void TestDeserializationFailures()
-        {
-            string configJson = @"
+    [TestMethod("Validates that JSON deserialization failures are gracefully caught.")]
+    public void TestDeserializationFailures()
+    {
+        string configJson = @"
 {
     ""data-source"": {
         ""database-type"": ""notsupporteddb""
      }
 }";
-            Assert.IsFalse(RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig));
-            Assert.IsNull(deserializedConfig);
-        }
+        Assert.IsFalse(RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig));
+        Assert.IsNull(deserializedConfig);
+    }
 
-        [DataRow("", typeof(ArgumentNullException),
-            "Could not determine a configuration file name that exists. (Parameter 'Configuration file name')",
-            DisplayName = "Empty configuration file name.")]
-        [DataRow("NonExistentConfigFile.json", typeof(FileNotFoundException),
-            "Requested configuration file 'NonExistentConfigFile.json' does not exist.",
-            DisplayName = "Non existent configuration file name.")]
-        [TestMethod("Validates that loading of runtime config value can handle failures gracefully.")]
-        public void TestLoadRuntimeConfigFailures(
-            string configFileName,
-            Type exceptionType,
-            string exceptionMessage)
-        {
-            MockFileSystem fileSystem = new();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+    [DataRow("", typeof(ArgumentNullException),
+        "Could not determine a configuration file name that exists. (Parameter 'Configuration file name')",
+        DisplayName = "Empty configuration file name.")]
+    [DataRow("NonExistentConfigFile.json", typeof(FileNotFoundException),
+        "Requested configuration file 'NonExistentConfigFile.json' does not exist.",
+        DisplayName = "Non existent configuration file name.")]
+    [TestMethod("Validates that loading of runtime config value can handle failures gracefully.")]
+    public void TestLoadRuntimeConfigFailures(
+        string configFileName,
+        Type exceptionType,
+        string exceptionMessage)
+    {
+        MockFileSystem fileSystem = new();
+        FileSystemRuntimeConfigLoader loader = new(fileSystem);
 
-            Assert.IsFalse(loader.TryLoadConfig(configFileName, out RuntimeConfig _));
-        }
+        Assert.IsFalse(loader.TryLoadConfig(configFileName, out RuntimeConfig _));
+    }
 
-        #endregion Negative Tests
+    #endregion Negative Tests
 
-        #region Helper Functions
+    #region Helper Functions
 
-        /// <summary>
-        /// Setup some environment variables.
-        /// </summary>
-        private static void SetEnvVariables()
-        {
-            Environment.SetEnvironmentVariable($"envVarName", $"envVarValue");
-            Environment.SetEnvironmentVariable($"'envVarName", $"_envVarValue");
-            Environment.SetEnvironmentVariable($"envVarName'", $"envVarValue_");
-            Environment.SetEnvironmentVariable($"'envVarName'", $"_envVarValue_");
-            Environment.SetEnvironmentVariable($"enumVarName", $"mssql");
-        }
+    /// <summary>
+    /// Setup some environment variables.
+    /// </summary>
+    private static void SetEnvVariables()
+    {
+        Environment.SetEnvironmentVariable($"envVarName", $"envVarValue");
+        Environment.SetEnvironmentVariable($"'envVarName", $"_envVarValue");
+        Environment.SetEnvironmentVariable($"envVarName'", $"envVarValue_");
+        Environment.SetEnvironmentVariable($"'envVarName'", $"_envVarValue_");
+        Environment.SetEnvironmentVariable($"enumVarName", $"mssql");
+    }
 
-        /// <summary>
-        /// Modify the json string with the replacements provided.
-        /// This function cycles through the string array in a circular
-        /// fashion.
-        /// </summary>
-        /// <param name="reps">Replacement strings.</param>
-        /// <param name="enumString">Replacement string to use for a test enum.</param>
-        /// <returns>Json string with replacements.</returns>
-        public static string GetModifiedJsonString(string[] reps, string enumString)
-        {
-            int index = 0;
-            return
+    /// <summary>
+    /// Modify the json string with the replacements provided.
+    /// This function cycles through the string array in a circular
+    /// fashion.
+    /// </summary>
+    /// <param name="reps">Replacement strings.</param>
+    /// <param name="enumString">Replacement string to use for a test enum.</param>
+    /// <returns>Json string with replacements.</returns>
+    public static string GetModifiedJsonString(string[] reps, string enumString)
+    {
+        int index = 0;
+        return
 @"{
   ""$schema"": "".. /../project-dab/playground/dab.draft-01.schema.json"",
   ""versioning"": {
@@ -298,10 +298,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
   }
 }
 ";
-        }
-
-        #endregion Helper Functions
-
-        record StubJsonType(string Foo);
     }
+
+    #endregion Helper Functions
+
+    record StubJsonType(string Foo);
 }

@@ -11,60 +11,59 @@ using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
+namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL;
+
+[TestClass]
+public class GraphQLMutationAuthorizationUnitTests
 {
-    [TestClass]
-    public class GraphQLMutationAuthorizationUnitTests
+    /// <summary>
+    /// Ensures the authorize directive is present on the ObjectTypeDefinition
+    /// with the expected collection of roles resolved from the EntityPermissionsMap.
+    /// </summary>
+    /// <param name="operationType"></param>
+    /// <param name="rolesDefinedInPermissions"></param>
+    /// <param name="expectedAuthorizeDirective"></param>
+    [DataRow(EntityActionOperation.Create, new string[] { }, "",
+        DisplayName = "No Roles -> Expects no objectTypeDefinition created")]
+    [DataRow(EntityActionOperation.Create, new string[] { "role1" }, @"@authorize(roles: [""role1""])",
+        DisplayName = "One Role added to Authorize Directive")]
+    [DataRow(EntityActionOperation.Create, new string[] { "role1", "role2" }, @"@authorize(roles: [""role1"",""role2""])",
+        DisplayName = "Two Roles added to Authorize Directive")]
+    [DataTestMethod]
+    public void AuthorizeDirectiveAddedForMutation(EntityActionOperation operationType, string[] rolesDefinedInPermissions, string expectedAuthorizeDirective)
     {
-        /// <summary>
-        /// Ensures the authorize directive is present on the ObjectTypeDefinition
-        /// with the expected collection of roles resolved from the EntityPermissionsMap.
-        /// </summary>
-        /// <param name="operationType"></param>
-        /// <param name="rolesDefinedInPermissions"></param>
-        /// <param name="expectedAuthorizeDirective"></param>
-        [DataRow(EntityActionOperation.Create, new string[] { }, "",
-            DisplayName = "No Roles -> Expects no objectTypeDefinition created")]
-        [DataRow(EntityActionOperation.Create, new string[] { "role1" }, @"@authorize(roles: [""role1""])",
-            DisplayName = "One Role added to Authorize Directive")]
-        [DataRow(EntityActionOperation.Create, new string[] { "role1", "role2" }, @"@authorize(roles: [""role1"",""role2""])",
-            DisplayName = "Two Roles added to Authorize Directive")]
-        [DataTestMethod]
-        public void AuthorizeDirectiveAddedForMutation(EntityActionOperation operationType, string[] rolesDefinedInPermissions, string expectedAuthorizeDirective)
-        {
-            string gql =
+        string gql =
 @"
 type Foo @model(name: ""Foo""){
     id: ID!
 }
                 ";
 
-            DocumentNode root = Utf8GraphQLParser.Parse(gql);
-            DocumentNode mutationRoot = MutationBuilder.Build(
-                root,
-                DatabaseType.MSSQL,
-                entities: new(new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } }),
-                entityPermissionsMap: GraphQLTestHelpers.CreateStubEntityPermissionsMap(
-                    entityNames: new string[] { "Foo" },
-                    operations: new EntityActionOperation[] { operationType },
-                    roles: rolesDefinedInPermissions)
-                );
+        DocumentNode root = Utf8GraphQLParser.Parse(gql);
+        DocumentNode mutationRoot = MutationBuilder.Build(
+            root,
+            DatabaseType.MSSQL,
+            entities: new(new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } }),
+            entityPermissionsMap: GraphQLTestHelpers.CreateStubEntityPermissionsMap(
+                entityNames: new string[] { "Foo" },
+                operations: new EntityActionOperation[] { operationType },
+                roles: rolesDefinedInPermissions)
+            );
 
-            if (rolesDefinedInPermissions.Length > 0)
+        if (rolesDefinedInPermissions.Length > 0)
+        {
+            Assert.IsTrue(mutationRoot.Definitions.Count() > 0);
+            ObjectTypeDefinitionNode mutation = MutationBuilderTests.GetMutationNode(mutationRoot);
+            // Iterate over the mutations created by MutationBuilder.Build()
+            //
+            foreach (FieldDefinitionNode mutationField in mutation.Fields)
             {
-                Assert.IsTrue(mutationRoot.Definitions.Count() > 0);
-                ObjectTypeDefinitionNode mutation = MutationBuilderTests.GetMutationNode(mutationRoot);
-                // Iterate over the mutations created by MutationBuilder.Build()
-                //
-                foreach (FieldDefinitionNode mutationField in mutation.Fields)
-                {
-                    GraphQLTestHelpers.ValidateAuthorizeDirectivePresence(GraphQLUtils.OBJECT_TYPE_MUTATION, rolesDefinedInPermissions, mutationField);
-                }
+                GraphQLTestHelpers.ValidateAuthorizeDirectivePresence(GraphQLUtils.OBJECT_TYPE_MUTATION, rolesDefinedInPermissions, mutationField);
             }
-            else
-            {
-                Assert.AreEqual(0, mutationRoot.Definitions.Count());
-            }
+        }
+        else
+        {
+            Assert.AreEqual(0, mutationRoot.Definitions.Count());
         }
     }
 }

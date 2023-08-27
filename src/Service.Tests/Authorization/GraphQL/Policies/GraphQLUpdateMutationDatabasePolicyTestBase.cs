@@ -7,28 +7,28 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
+namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL;
+
+/// <summary>
+/// Tests Database Authorization Policies applied to GraphQL Queries
+/// </summary>
+[TestClass]
+public abstract class GraphQLUpdateMutationDatabasePolicyTestBase : SqlTestBase
 {
     /// <summary>
-    /// Tests Database Authorization Policies applied to GraphQL Queries
+    /// Do: Test Authenticated GraphQL Update Mutation which triggers
+    /// policy processing of policy that allows operation.
+    /// Check: Record updated.
     /// </summary>
-    [TestClass]
-    public abstract class GraphQLUpdateMutationDatabasePolicyTestBase : SqlTestBase
+    /// <param name="dbQuery"></param>
+    /// <param name="roleName"></param>
+    /// <param name="isAuthenticated"></param>
+    /// <returns></returns>
+    [TestMethod]
+    public async Task UpdateMutation_Success_Policy(string dbQuery, string roleName, bool isAuthenticated)
     {
-        /// <summary>
-        /// Do: Test Authenticated GraphQL Update Mutation which triggers
-        /// policy processing of policy that allows operation.
-        /// Check: Record updated.
-        /// </summary>
-        /// <param name="dbQuery"></param>
-        /// <param name="roleName"></param>
-        /// <param name="isAuthenticated"></param>
-        /// <returns></returns>
-        [TestMethod]
-        public async Task UpdateMutation_Success_Policy(string dbQuery, string roleName, bool isAuthenticated)
-        {
-            string graphQLMutationName = "updatebook";
-            string graphQLMutation = @"mutation {
+        string graphQLMutationName = "updatebook";
+        string graphQLMutation = @"mutation {
                 updatebook(
                     id: 9
                     item: {
@@ -43,34 +43,34 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             }
             ";
 
-            // Update Book Policy: @item.id eq 9
-            // Test that the update is successful when policy allows operation.
-            // Confirm that one result matches the update request metadata.
-            JsonElement result = await ExecuteGraphQLRequestAsync(
-                graphQLMutation,
-                graphQLMutationName,
-                isAuthenticated: isAuthenticated,
-                clientRoleHeader: roleName);
+        // Update Book Policy: @item.id eq 9
+        // Test that the update is successful when policy allows operation.
+        // Confirm that one result matches the update request metadata.
+        JsonElement result = await ExecuteGraphQLRequestAsync(
+            graphQLMutation,
+            graphQLMutationName,
+            isAuthenticated: isAuthenticated,
+            clientRoleHeader: roleName);
 
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, result.ToString());
-        }
+        string expected = await GetDatabaseResultAsync(dbQuery);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, result.ToString());
+    }
 
-        /// <summary>
-        /// Do: Test Authenticated GraphQL Update Mutation which triggers
-        /// policy processing of policy that prevents mutation operation.
-        /// Check: Record not updated.
-        /// "policy_tester_07"
-        /// </summary>
-        /// <param name="dbQuery"></param>
-        /// <param name="roleName"></param>
-        /// <param name="isAuthenticated"></param>
-        /// <returns></returns>
-        [TestMethod]
-        public async Task UpdateMutation_ErrorMessage_Policy(string dbQuery, string roleName, bool isAuthenticated, string expectedErrorMessage, bool mutationShouldComplete)
-        {
-            string graphQLMutationName = "updateJournal";
-            string graphQLMutation = @"mutation {
+    /// <summary>
+    /// Do: Test Authenticated GraphQL Update Mutation which triggers
+    /// policy processing of policy that prevents mutation operation.
+    /// Check: Record not updated.
+    /// "policy_tester_07"
+    /// </summary>
+    /// <param name="dbQuery"></param>
+    /// <param name="roleName"></param>
+    /// <param name="isAuthenticated"></param>
+    /// <returns></returns>
+    [TestMethod]
+    public async Task UpdateMutation_ErrorMessage_Policy(string dbQuery, string roleName, bool isAuthenticated, string expectedErrorMessage, bool mutationShouldComplete)
+    {
+        string graphQLMutationName = "updateJournal";
+        string graphQLMutation = @"mutation {
                 updateJournal(
                     id: 1
                     item: {
@@ -84,47 +84,47 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             }
             ";
 
-            // Update Book Policy: @item.id ne 9
-            // Test that the update fails due to restrictive update policy.
-            // Confirm that no result matches the update request metadata.
-            JsonElement result = await ExecuteGraphQLRequestAsync(
-                graphQLMutation,
-                graphQLMutationName,
-                isAuthenticated: isAuthenticated,
-                clientRoleHeader: roleName);
+        // Update Book Policy: @item.id ne 9
+        // Test that the update fails due to restrictive update policy.
+        // Confirm that no result matches the update request metadata.
+        JsonElement result = await ExecuteGraphQLRequestAsync(
+            graphQLMutation,
+            graphQLMutationName,
+            isAuthenticated: isAuthenticated,
+            clientRoleHeader: roleName);
 
-            SqlTestHelper.TestForErrorInGraphQLResponse(
-                result.ToString(),
-                message: expectedErrorMessage
-            );
+        SqlTestHelper.TestForErrorInGraphQLResponse(
+            result.ToString(),
+            message: expectedErrorMessage
+        );
 
-            string dbResponse = await GetDatabaseResultAsync(dbQuery);
+        string dbResponse = await GetDatabaseResultAsync(dbQuery);
 
-            if (mutationShouldComplete)
-            {
-                Assert.IsNotNull(dbResponse);
-            }
-            else
-            {
-                Assert.AreEqual(expected: new JsonArray().ToString(), actual: dbResponse);
-            }
-        }
-
-        /// <summary>
-        /// Do: Test Authenticated GraphQL Update Mutation which triggers
-        /// policy processing of policy that prevents mutation operation.
-        /// Check: Record not updated.
-        /// "policy_tester_07"
-        /// </summary>
-        /// <param name="dbQuery"></param>
-        /// <param name="roleName"></param>
-        /// <param name="isAuthenticated"></param>
-        /// <returns></returns>
-        [TestMethod]
-        public async Task UpdateMutation_Anonymous_Policy(string dbQuery, string roleName, bool isAuthenticated, string expectedErrorMessage, bool mutationShouldComplete, int id)
+        if (mutationShouldComplete)
         {
-            string graphQLMutationName = "updateNotebook";
-            string graphQLMutation = @"mutation {
+            Assert.IsNotNull(dbResponse);
+        }
+        else
+        {
+            Assert.AreEqual(expected: new JsonArray().ToString(), actual: dbResponse);
+        }
+    }
+
+    /// <summary>
+    /// Do: Test Authenticated GraphQL Update Mutation which triggers
+    /// policy processing of policy that prevents mutation operation.
+    /// Check: Record not updated.
+    /// "policy_tester_07"
+    /// </summary>
+    /// <param name="dbQuery"></param>
+    /// <param name="roleName"></param>
+    /// <param name="isAuthenticated"></param>
+    /// <returns></returns>
+    [TestMethod]
+    public async Task UpdateMutation_Anonymous_Policy(string dbQuery, string roleName, bool isAuthenticated, string expectedErrorMessage, bool mutationShouldComplete, int id)
+    {
+        string graphQLMutationName = "updateNotebook";
+        string graphQLMutation = @"mutation {
                 updateNotebook(
                     id: " + id + @"
                     item: {
@@ -139,30 +139,29 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             }
             ";
 
-            // Update Book Policy: @item.id ne 9
-            // Test that the update fails due to restrictive update policy.
-            // Confirm that no result matches the update request metadata.
-            JsonElement result = await ExecuteGraphQLRequestAsync(
-                graphQLMutation,
-                graphQLMutationName,
-                isAuthenticated: isAuthenticated,
-                clientRoleHeader: roleName);
+        // Update Book Policy: @item.id ne 9
+        // Test that the update fails due to restrictive update policy.
+        // Confirm that no result matches the update request metadata.
+        JsonElement result = await ExecuteGraphQLRequestAsync(
+            graphQLMutation,
+            graphQLMutationName,
+            isAuthenticated: isAuthenticated,
+            clientRoleHeader: roleName);
 
-            SqlTestHelper.TestForErrorInGraphQLResponse(
-                result.ToString(),
-                message: expectedErrorMessage
-            );
+        SqlTestHelper.TestForErrorInGraphQLResponse(
+            result.ToString(),
+            message: expectedErrorMessage
+        );
 
-            string dbResponse = await GetDatabaseResultAsync(dbQuery);
+        string dbResponse = await GetDatabaseResultAsync(dbQuery);
 
-            if (mutationShouldComplete)
-            {
-                Assert.IsNotNull(dbResponse);
-            }
-            else
-            {
-                Assert.AreEqual(expected: null, actual: dbResponse);
-            }
+        if (mutationShouldComplete)
+        {
+            Assert.IsNotNull(dbResponse);
+        }
+        else
+        {
+            Assert.AreEqual(expected: null, actual: dbResponse);
         }
     }
 }

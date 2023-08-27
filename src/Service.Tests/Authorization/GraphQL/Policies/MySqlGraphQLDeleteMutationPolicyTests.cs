@@ -4,35 +4,35 @@
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL.Policies.Mutation.Delete
+namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL.Policies.Mutation.Delete;
+
+/// <summary>
+/// Tests Database Authorization Policies applied to GraphQL Queries
+/// </summary>
+[TestClass, TestCategory(TestCategory.MYSQL)]
+public class MySqlGraphQLDeleteMutationPolicyTests : GraphQLDeleteMutationDatabasePolicyTestBase
 {
     /// <summary>
-    /// Tests Database Authorization Policies applied to GraphQL Queries
+    /// Set the database engine for the tests
     /// </summary>
-    [TestClass, TestCategory(TestCategory.MYSQL)]
-    public class MySqlGraphQLDeleteMutationPolicyTests : GraphQLDeleteMutationDatabasePolicyTestBase
+    [ClassInitialize]
+    public static async Task SetupAsync(TestContext context)
     {
-        /// <summary>
-        /// Set the database engine for the tests
-        /// </summary>
-        [ClassInitialize]
-        public static async Task SetupAsync(TestContext context)
-        {
-            DatabaseEngine = TestCategory.MYSQL;
-            await InitializeTestFixture(context);
-        }
+        DatabaseEngine = TestCategory.MYSQL;
+        await InitializeTestFixture(context);
+    }
 
-        /// <summary>
-        /// Tests Authenticated GraphQL Delete Mutation which triggers
-        /// policy processing. Tests deleteBook with policy that
-        /// allows/prevents operation.
-        /// - Operation allowed: confirm record deleted.
-        /// - Operation forbidden: confirm record not deleted.
-        /// </summary>
-        [TestMethod]
-        public async Task DeleteMutation_Policy()
-        {
-            string dbQuery = @"
+    /// <summary>
+    /// Tests Authenticated GraphQL Delete Mutation which triggers
+    /// policy processing. Tests deleteBook with policy that
+    /// allows/prevents operation.
+    /// - Operation allowed: confirm record deleted.
+    /// - Operation forbidden: confirm record not deleted.
+    /// </summary>
+    [TestMethod]
+    public async Task DeleteMutation_Policy()
+    {
+        string dbQuery = @"
                   SELECT JSON_OBJECT('id', id, 'title', title ) AS data
                     FROM(
                         SELECT id, title
@@ -41,7 +41,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL.Policies.Muta
                     ) as subq
             ";
 
-            await DeleteMutation_Policy(dbQuery);
-        }
+        await DeleteMutation_Policy(dbQuery);
     }
 }

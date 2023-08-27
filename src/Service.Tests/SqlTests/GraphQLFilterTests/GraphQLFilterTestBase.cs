@@ -8,28 +8,27 @@ using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
+namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests;
+
+[TestClass]
+public abstract class GraphQLFilterTestBase : SqlTestBase
 {
 
-    [TestClass]
-    public abstract class GraphQLFilterTestBase : SqlTestBase
+    #region Test Fixture Setup
+    protected static GraphQLSchemaCreator _graphQLService;
+
+    #endregion
+
+    #region Tests
+
+    /// <summary>
+    /// Tests eq of StringFilterInput
+    /// </summary>
+    [TestMethod]
+    public async Task TestStringFiltersEq()
     {
-
-        #region Test Fixture Setup
-        protected static GraphQLSchemaCreator _graphQLService;
-
-        #endregion
-
-        #region Tests
-
-        /// <summary>
-        /// Tests eq of StringFilterInput
-        /// </summary>
-        [TestMethod]
-        public async Task TestStringFiltersEq()
-        {
-            string graphQLQueryName = "books";
-            string gqlQuery = @"{
+        string graphQLQueryName = "books";
+        string gqlQuery = @"{
                 books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {title: {eq: ""Awesome book""}})
                 {
                     items {
@@ -38,25 +37,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 }
             }";
 
-            string dbQuery = MakeQueryOn(
-                "books",
-                new List<string> { "title" },
-                "title = 'Awesome book'",
-                GetDefaultSchema());
+        string dbQuery = MakeQueryOn(
+            "books",
+            new List<string> { "title" },
+            "title = 'Awesome book'",
+            GetDefaultSchema());
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Tests eq of StringFilterInput when mappings are configured for GraphQL entity.
-        /// </summary>
-        [TestMethod]
-        public async Task TestStringFiltersEqWithMappings(string dbQuery)
-        {
-            string graphQLQueryName = "gQLmappings";
-            string gqlQuery = @"{
+    /// <summary>
+    /// Tests eq of StringFilterInput when mappings are configured for GraphQL entity.
+    /// </summary>
+    [TestMethod]
+    public async Task TestStringFiltersEqWithMappings(string dbQuery)
+    {
+        string graphQLQueryName = "gQLmappings";
+        string gqlQuery = @"{
                 gQLmappings( " + QueryBuilder.FILTER_FIELD_NAME + @" : {column2: {eq: ""Filtered Record""}})
                 {
                     items {
@@ -66,19 +65,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Tests neq of StringFilterInput
-        /// </summary>
-        [TestMethod]
-        public async Task TestStringFiltersNeq()
-        {
-            string graphQLQueryName = "books";
-            string gqlQuery = @"{
+    /// <summary>
+    /// Tests neq of StringFilterInput
+    /// </summary>
+    [TestMethod]
+    public async Task TestStringFiltersNeq()
+    {
+        string graphQLQueryName = "books";
+        string gqlQuery = @"{
                books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {title: {neq: ""Awesome book""}})
                 {
                     items {
@@ -87,25 +86,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 }
             }";
 
-            string dbQuery = MakeQueryOn(
-                "books",
-                new List<string> { "title" },
-                "title != 'Awesome book'",
-                GetDefaultSchema());
+        string dbQuery = MakeQueryOn(
+            "books",
+            new List<string> { "title" },
+            "title != 'Awesome book'",
+            GetDefaultSchema());
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Tests startsWith of StringFilterInput
-        /// </summary>
-        [TestMethod]
-        public async Task TestStringFiltersStartsWith()
-        {
-            string graphQLQueryName = "books";
-            string gqlQuery = @"{
+    /// <summary>
+    /// Tests startsWith of StringFilterInput
+    /// </summary>
+    [TestMethod]
+    public async Task TestStringFiltersStartsWith()
+    {
+        string graphQLQueryName = "books";
+        string gqlQuery = @"{
                 books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {title: {startsWith: ""Awe""}})
                 {
                     items {
@@ -114,25 +113,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 }
             }";
 
-            string dbQuery = MakeQueryOn(
-                "books",
-                new List<string> { "title" },
-                "title LIKE 'Awe%'",
-                GetDefaultSchema());
+        string dbQuery = MakeQueryOn(
+            "books",
+            new List<string> { "title" },
+            "title LIKE 'Awe%'",
+            GetDefaultSchema());
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Tests endsWith of StringFilterInput
-        /// </summary>
-        [TestMethod]
-        public async Task TestStringFiltersEndsWith()
-        {
-            string graphQLQueryName = "books";
-            string gqlQuery = @"{
+    /// <summary>
+    /// Tests endsWith of StringFilterInput
+    /// </summary>
+    [TestMethod]
+    public async Task TestStringFiltersEndsWith()
+    {
+        string graphQLQueryName = "books";
+        string gqlQuery = @"{
                 books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {title: {endsWith: ""book""}})
                 {
                     items {
@@ -141,25 +140,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 }
             }";
 
-            string dbQuery = MakeQueryOn(
-                "books",
-                new List<string> { "title" },
-                "title LIKE '%book'",
-                GetDefaultSchema());
+        string dbQuery = MakeQueryOn(
+            "books",
+            new List<string> { "title" },
+            "title LIKE '%book'",
+            GetDefaultSchema());
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Tests contains of StringFilterInput
-        /// </summary>
-        [TestMethod]
-        public async Task TestStringFiltersContains()
-        {
-            string graphQLQueryName = "books";
-            string gqlQuery = @"{
+    /// <summary>
+    /// Tests contains of StringFilterInput
+    /// </summary>
+    [TestMethod]
+    public async Task TestStringFiltersContains()
+    {
+        string graphQLQueryName = "books";
+        string gqlQuery = @"{
                 books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {title: {contains: ""some""}})
                 {
                     items {
@@ -168,25 +167,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 }
             }";
 
-            string dbQuery = MakeQueryOn(
-                "books",
-                new List<string> { "title" },
-                "title LIKE '%some%'",
-                GetDefaultSchema());
+        string dbQuery = MakeQueryOn(
+            "books",
+            new List<string> { "title" },
+            "title LIKE '%some%'",
+            GetDefaultSchema());
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Tests notContains of StringFilterInput
-        /// </summary>
-        [TestMethod]
-        public async Task TestStringFiltersNotContains()
-        {
-            string graphQLQueryName = "books";
-            string gqlQuery = @"{
+    /// <summary>
+    /// Tests notContains of StringFilterInput
+    /// </summary>
+    [TestMethod]
+    public async Task TestStringFiltersNotContains()
+    {
+        string graphQLQueryName = "books";
+        string gqlQuery = @"{
                 books( " + QueryBuilder.FILTER_FIELD_NAME + @" :{title: {notContains: ""book""}})
                 {
                     items {
@@ -195,25 +194,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 }
             }";
 
-            string dbQuery = MakeQueryOn(
-                "books",
-                new List<string> { "title" },
-                "title NOT LIKE '%book%'",
-                GetDefaultSchema());
+        string dbQuery = MakeQueryOn(
+            "books",
+            new List<string> { "title" },
+            "title NOT LIKE '%book%'",
+            GetDefaultSchema());
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Tests that special characters are escaped in operations involving LIKE
-        /// </summary>
-        [TestMethod]
-        public async Task TestStringFiltersContainsWithSpecialChars()
-        {
-            string graphQLQueryName = "books";
-            string gqlQuery = @"{
+    /// <summary>
+    /// Tests that special characters are escaped in operations involving LIKE
+    /// </summary>
+    [TestMethod]
+    public async Task TestStringFiltersContainsWithSpecialChars()
+    {
+        string graphQLQueryName = "books";
+        string gqlQuery = @"{
                 books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {title: {contains: ""%""}})
                 {
                     items {
@@ -222,18 +221,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
-            SqlTestHelper.PerformTestEqualJsonStrings("[]", actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+        SqlTestHelper.PerformTestEqualJsonStrings("[]", actual.ToString());
+    }
 
-        /// <summary>
-        /// Tests eq of IntFilterInput
-        /// </summary>
-        [TestMethod]
-        public async Task TestIntFiltersEq()
-        {
-            string graphQLQueryName = "books";
-            string gqlQuery = @"{
+    /// <summary>
+    /// Tests eq of IntFilterInput
+    /// </summary>
+    [TestMethod]
+    public async Task TestIntFiltersEq()
+    {
+        string graphQLQueryName = "books";
+        string gqlQuery = @"{
                 books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {id: {eq: 2}})
                 {
                     items {
@@ -242,25 +241,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 }
             }";
 
-            string dbQuery = MakeQueryOn(
-                "books",
-                new List<string> { "id" },
-                @"id = 2",
-                GetDefaultSchema());
+        string dbQuery = MakeQueryOn(
+            "books",
+            new List<string> { "id" },
+            @"id = 2",
+            GetDefaultSchema());
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Tests neq of IntFilterInput
-        /// </summary>
-        [TestMethod]
-        public async Task TestIntFiltersNeq()
-        {
-            string graphQLQueryName = "books";
-            string gqlQuery = @"{
+    /// <summary>
+    /// Tests neq of IntFilterInput
+    /// </summary>
+    [TestMethod]
+    public async Task TestIntFiltersNeq()
+    {
+        string graphQLQueryName = "books";
+        string gqlQuery = @"{
                 books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {id: {neq: 2}})
                 {
                     items {
@@ -269,25 +268,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 }
             }";
 
-            string dbQuery = MakeQueryOn(
-                "books",
-                new List<string> { "id" },
-                @"id != 2",
-                GetDefaultSchema());
+        string dbQuery = MakeQueryOn(
+            "books",
+            new List<string> { "id" },
+            @"id != 2",
+            GetDefaultSchema());
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Tests gt and lt of IntFilterInput
-        /// </summary>
-        [TestMethod]
-        public async Task TestIntFiltersGtLt()
-        {
-            string graphQLQueryName = "books";
-            string gqlQuery = @"{
+    /// <summary>
+    /// Tests gt and lt of IntFilterInput
+    /// </summary>
+    [TestMethod]
+    public async Task TestIntFiltersGtLt()
+    {
+        string graphQLQueryName = "books";
+        string gqlQuery = @"{
                 books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {id: {gt: 2 lt: 4}})
                 {
                     items {
@@ -296,25 +295,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 }
             }";
 
-            string dbQuery = MakeQueryOn(
-                "books",
-                new List<string> { "id" },
-                @"(id > 2 AND id < 4)",
-                GetDefaultSchema());
+        string dbQuery = MakeQueryOn(
+            "books",
+            new List<string> { "id" },
+            @"(id > 2 AND id < 4)",
+            GetDefaultSchema());
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Tests gte and lte of IntFilterInput
-        /// </summary>
-        [TestMethod]
-        public async Task TestIntFiltersGteLte()
-        {
-            string graphQLQueryName = "books";
-            string gqlQuery = @"{
+    /// <summary>
+    /// Tests gte and lte of IntFilterInput
+    /// </summary>
+    [TestMethod]
+    public async Task TestIntFiltersGteLte()
+    {
+        string graphQLQueryName = "books";
+        string gqlQuery = @"{
                 books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {id: {gte: 2 lte: 4}})
                 {
                     items {
@@ -323,32 +322,32 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 }
             }";
 
-            string dbQuery = MakeQueryOn(
-                "books",
-                new List<string> { "id" },
-                @"(id >= 2 AND id <= 4)",
-                GetDefaultSchema());
+        string dbQuery = MakeQueryOn(
+            "books",
+            new List<string> { "id" },
+            @"(id >= 2 AND id <= 4)",
+            GetDefaultSchema());
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Test that:
-        /// - the predicate equivalent of *FilterInput input types is put in parenthesis if the
-        ///   predicate
-        /// - the predicate equivalent of and / or field is put in parenthesis if the predicate
-        ///   contains only one operation
-        /// </summary>
-        /// <remarks>
-        /// one operation predicate: id == 2
-        /// multiple operation predicate: id == 2 AND publisher_id < 3
-        /// </remarks>
-        public async Task TestCreatingParenthesis1()
-        {
-            string graphQLQueryName = "books";
-            string gqlQuery = @"{
+    /// <summary>
+    /// Test that:
+    /// - the predicate equivalent of *FilterInput input types is put in parenthesis if the
+    ///   predicate
+    /// - the predicate equivalent of and / or field is put in parenthesis if the predicate
+    ///   contains only one operation
+    /// </summary>
+    /// <remarks>
+    /// one operation predicate: id == 2
+    /// multiple operation predicate: id == 2 AND publisher_id < 3
+    /// </remarks>
+    public async Task TestCreatingParenthesis1()
+    {
+        string graphQLQueryName = "books";
+        string gqlQuery = @"{
                 books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {
                                     title: {contains: ""book""}
                                     or: [
@@ -364,32 +363,32 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 }
             }";
 
-            string dbQuery = MakeQueryOn(
-                "books",
-                new List<string> { "id", "title" },
-                @"(title LIKE '%book%' AND ((id > 2 AND id < 4) OR id >= 4))",
-                GetDefaultSchema());
+        string dbQuery = MakeQueryOn(
+            "books",
+            new List<string> { "id", "title" },
+            @"(title LIKE '%book%' AND ((id > 2 AND id < 4) OR id >= 4))",
+            GetDefaultSchema());
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Test that:
-        /// - the predicate equivalent of *FilterInput input types is put in parenthesis if the
-        ///   predicate
-        /// - the predicate equivalent of and / or field is put in parenthesis if the predicate
-        ///   contains only one operation
-        /// </summary>
-        /// <remarks>
-        /// one operation predicate: id == 2
-        /// multiple operation predicate: id == 2 AND publisher_id < 3
-        /// </remarks>
-        public async Task TestCreatingParenthesis2()
-        {
-            string graphQLQueryName = "books";
-            string gqlQuery = @"{
+    /// <summary>
+    /// Test that:
+    /// - the predicate equivalent of *FilterInput input types is put in parenthesis if the
+    ///   predicate
+    /// - the predicate equivalent of and / or field is put in parenthesis if the predicate
+    ///   contains only one operation
+    /// </summary>
+    /// <remarks>
+    /// one operation predicate: id == 2
+    /// multiple operation predicate: id == 2 AND publisher_id < 3
+    /// </remarks>
+    public async Task TestCreatingParenthesis2()
+    {
+        string graphQLQueryName = "books";
+        string gqlQuery = @"{
                 books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {
                                     or: [
                                         {id: {gt: 2} and: [{id: {lt: 4}}]},
@@ -404,28 +403,28 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 }
             }";
 
-            string dbQuery = MakeQueryOn(
-                "books",
-                new List<string> { "id", "title" },
-                @"((id > 2 AND id < 4) OR (id >= 4 AND title LIKE '%book%'))",
-                GetDefaultSchema());
+        string dbQuery = MakeQueryOn(
+            "books",
+            new List<string> { "id", "title" },
+            @"((id > 2 AND id < 4) OR (id >= 4 AND title LIKE '%book%'))",
+            GetDefaultSchema());
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
+        string expected = await GetDatabaseResultAsync(dbQuery);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Test that a complicated filter is evaluated as:
-        /// - all non and/or fields of each *FilterInput are AND-ed together and put in parenthesis
-        /// - each *FilterInput inside an and/or team is AND/OR-ed together and put in parenthesis
-        /// - the final predicate is:
-        ///   ((<AND-ed non and/or predicates>) AND (<AND-ed predicates in and filed>) OR <OR-ed predicates in or field>)
-        /// </summart>
-        public async Task TestComplicatedFilter()
-        {
-            string graphQLQueryName = "books";
-            string gqlQuery = @"{
+    /// <summary>
+    /// Test that a complicated filter is evaluated as:
+    /// - all non and/or fields of each *FilterInput are AND-ed together and put in parenthesis
+    /// - each *FilterInput inside an and/or team is AND/OR-ed together and put in parenthesis
+    /// - the final predicate is:
+    ///   ((<AND-ed non and/or predicates>) AND (<AND-ed predicates in and filed>) OR <OR-ed predicates in or field>)
+    /// </summart>
+    public async Task TestComplicatedFilter()
+    {
+        string graphQLQueryName = "books";
+        string gqlQuery = @"{
                 books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {
                                     id: {gte: 2}
                                     title: {notContains: ""book""}
@@ -453,27 +452,27 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 }
             }";
 
-            string dbQuery = MakeQueryOn(
-                "books",
-                new List<string> { "id", "title", "publisher_id" },
-                @"((id >= 2 AND title NOT LIKE '%book%') AND
+        string dbQuery = MakeQueryOn(
+            "books",
+            new List<string> { "id", "title", "publisher_id" },
+            @"((id >= 2 AND title NOT LIKE '%book%') AND
                   (id < 1000 AND title LIKE 'US%') AND
                   (publisher_id < 1500 OR publisher_id > 2000)",
-                GetDefaultSchema());
+            GetDefaultSchema());
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
+        string expected = await GetDatabaseResultAsync(dbQuery);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Test that an empty and evaluates to False
-        /// </summary>
-        [TestMethod]
-        public async Task TestOnlyEmptyAnd()
-        {
-            string graphQLQueryName = "books";
-            string gqlQuery = @"{
+    /// <summary>
+    /// Test that an empty and evaluates to False
+    /// </summary>
+    [TestMethod]
+    public async Task TestOnlyEmptyAnd()
+    {
+        string graphQLQueryName = "books";
+        string gqlQuery = @"{
                 books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {and: []})
                 {
                     items {
@@ -482,18 +481,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
-            SqlTestHelper.PerformTestEqualJsonStrings("[]", actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
+        SqlTestHelper.PerformTestEqualJsonStrings("[]", actual.ToString());
+    }
 
-        /// <summary>
-        /// Test that an empty or evaluates to False
-        /// </summary>
-        [TestMethod]
-        public async Task TestOnlyEmptyOr()
-        {
-            string graphQLQueryName = "books";
-            string gqlQuery = @"{
+    /// <summary>
+    /// Test that an empty or evaluates to False
+    /// </summary>
+    [TestMethod]
+    public async Task TestOnlyEmptyOr()
+    {
+        string graphQLQueryName = "books";
+        string gqlQuery = @"{
                 books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {or: []})
                 {
                     items {
@@ -502,18 +501,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
-            SqlTestHelper.PerformTestEqualJsonStrings("[]", actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
+        SqlTestHelper.PerformTestEqualJsonStrings("[]", actual.ToString());
+    }
 
-        /// <summary>
-        /// Test filtering null integer fields
-        /// </summary>
-        [TestMethod]
-        public async Task TestGetNullIntFields()
-        {
-            string graphQLQueryName = "magazines";
-            string gqlQuery = @"{
+    /// <summary>
+    /// Test filtering null integer fields
+    /// </summary>
+    [TestMethod]
+    public async Task TestGetNullIntFields()
+    {
+        string graphQLQueryName = "magazines";
+        string gqlQuery = @"{
                 magazines( " + QueryBuilder.FILTER_FIELD_NAME + @" : { issue_number: {isNull: true}}) {
                     items {
                         id
@@ -523,25 +522,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                     }
                 }";
 
-            string dbQuery = MakeQueryOn(
-                "magazines",
-                new List<string> { "id", "title", "issue_number" },
-                "issue_number IS NULL",
-                "foo");
+        string dbQuery = MakeQueryOn(
+            "magazines",
+            new List<string> { "id", "title", "issue_number" },
+            "issue_number IS NULL",
+            "foo");
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
+        string expected = await GetDatabaseResultAsync(dbQuery);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Test filtering non null integer fields
-        /// </summary>
-        [TestMethod]
-        public async Task TestGetNonNullIntFields()
-        {
-            string graphQLQueryName = "magazines";
-            string gqlQuery = @"{
+    /// <summary>
+    /// Test filtering non null integer fields
+    /// </summary>
+    [TestMethod]
+    public async Task TestGetNonNullIntFields()
+    {
+        string graphQLQueryName = "magazines";
+        string gqlQuery = @"{
                 magazines( " + QueryBuilder.FILTER_FIELD_NAME + @" : { issue_number: {isNull: false}}) {
                     items {
                         id
@@ -551,25 +550,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 }
             }";
 
-            string dbQuery = MakeQueryOn(
-                "magazines",
-                new List<string> { "id", "title", "issue_number" },
-                "issue_number IS NOT NULL",
-                "foo");
+        string dbQuery = MakeQueryOn(
+            "magazines",
+            new List<string> { "id", "title", "issue_number" },
+            "issue_number IS NOT NULL",
+            "foo");
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
+        string expected = await GetDatabaseResultAsync(dbQuery);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Test filtering null string fields
-        /// </summary>
-        [TestMethod]
-        public async Task TestGetNullStringFields()
-        {
-            string graphQLQueryName = "websiteUsers";
-            string gqlQuery = @"{
+    /// <summary>
+    /// Test filtering null string fields
+    /// </summary>
+    [TestMethod]
+    public async Task TestGetNullStringFields()
+    {
+        string graphQLQueryName = "websiteUsers";
+        string gqlQuery = @"{
                 websiteUsers( " + QueryBuilder.FILTER_FIELD_NAME + @" : {username: {isNull: true}}) {
                     items {
                         id
@@ -578,25 +577,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 }
             }";
 
-            string dbQuery = MakeQueryOn(
-                "website_users",
-                new List<string> { "id", "username" },
-                "username IS NULL",
-                GetDefaultSchema());
+        string dbQuery = MakeQueryOn(
+            "website_users",
+            new List<string> { "id", "username" },
+            "username IS NULL",
+            GetDefaultSchema());
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
+        string expected = await GetDatabaseResultAsync(dbQuery);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Test filtering not null string fields
-        /// </summary>
-        [TestMethod]
-        public async Task TestGetNonNullStringFields()
-        {
-            string graphQLQueryName = "websiteUsers";
-            string gqlQuery = @"{
+    /// <summary>
+    /// Test filtering not null string fields
+    /// </summary>
+    [TestMethod]
+    public async Task TestGetNonNullStringFields()
+    {
+        string graphQLQueryName = "websiteUsers";
+        string gqlQuery = @"{
                 websiteUsers( " + QueryBuilder.FILTER_FIELD_NAME + @" : {username: {isNull: false}}) {
                     items {
                         id
@@ -605,25 +604,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 }
             }";
 
-            string dbQuery = MakeQueryOn(
-                "website_users",
-                new List<string> { "id", "username" },
-                "username IS NOT NULL",
-                GetDefaultSchema());
+        string dbQuery = MakeQueryOn(
+            "website_users",
+            new List<string> { "id", "username" },
+            "username IS NOT NULL",
+            GetDefaultSchema());
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
+        string expected = await GetDatabaseResultAsync(dbQuery);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Passes null to nullable fields and makes sure they are ignored
-        /// </summary>
-        [TestMethod]
-        public async Task TestExplicitNullFieldsAreIgnored()
-        {
-            string graphQLQueryName = "books";
-            string gqlQuery = @"{
+    /// <summary>
+    /// Passes null to nullable fields and makes sure they are ignored
+    /// </summary>
+    [TestMethod]
+    public async Task TestExplicitNullFieldsAreIgnored()
+    {
+        string graphQLQueryName = "books";
+        string gqlQuery = @"{
                 books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {
                                     id: {gte: 2 lte: null}
                                     title: null
@@ -637,24 +636,24 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 }
             }";
 
-            string dbQuery = MakeQueryOn(
-                "books",
-                new List<string> { "id", "title" },
-                @"id >= 2",
-                GetDefaultSchema());
+        string dbQuery = MakeQueryOn(
+            "books",
+            new List<string> { "id", "title" },
+            @"id >= 2",
+            GetDefaultSchema());
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
+        string expected = await GetDatabaseResultAsync(dbQuery);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Passes null to nullable fields and makes sure they are ignored
-        /// </summary>
-        public async Task TestInputObjectWithOnlyNullFieldsEvaluatesToFalse()
-        {
-            string graphQLQueryName = "books";
-            string gqlQuery = @"{
+    /// <summary>
+    /// Passes null to nullable fields and makes sure they are ignored
+    /// </summary>
+    public async Task TestInputObjectWithOnlyNullFieldsEvaluatesToFalse()
+    {
+        string graphQLQueryName = "books";
+        string gqlQuery = @"{
                 getbooks( " + QueryBuilder.FILTER_FIELD_NAME + @" : {id: {lte: null}})
                 {
                     items {
@@ -663,25 +662,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 }
             }";
 
-            string dbQuery = MakeQueryOn(
-                "books",
-                new List<string> { "id" },
-                @"1 != 1",
-                GetDefaultSchema());
+        string dbQuery = MakeQueryOn(
+            "books",
+            new List<string> { "id" },
+            @"1 != 1",
+            GetDefaultSchema());
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+        string expected = await GetDatabaseResultAsync(dbQuery);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Test passing variable to filter input type fields
-        /// </summary>
-        [TestMethod]
-        public async Task TestPassingVariablesToFilter()
-        {
-            string graphQLQueryName = "books";
-            string gqlQuery = @"query($lteValue: Int!, $gteValue: Int!)
+    /// <summary>
+    /// Test passing variable to filter input type fields
+    /// </summary>
+    [TestMethod]
+    public async Task TestPassingVariablesToFilter()
+    {
+        string graphQLQueryName = "books";
+        string gqlQuery = @"query($lteValue: Int!, $gteValue: Int!)
             {
                 books(" + QueryBuilder.FILTER_FIELD_NAME + @": {id: {lte: $lteValue} and: [{id: {gte: $gteValue}}]})
                 {
@@ -691,25 +690,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 }
             }";
 
-            string dbQuery = MakeQueryOn(
-                "books",
-                new List<string> { "id" },
-                @"id <= 4 AND id >= 2",
-                GetDefaultSchema());
+        string dbQuery = MakeQueryOn(
+            "books",
+            new List<string> { "id" },
+            @"id <= 4 AND id >= 2",
+            GetDefaultSchema());
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false, new() { { "lteValue", 4 }, { "gteValue", 2 } });
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false, new() { { "lteValue", 4 }, { "gteValue", 2 } });
+        string expected = await GetDatabaseResultAsync(dbQuery);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Test passing variable to and field
-        /// </summary>
-        [TestMethod]
-        public async Task TestPassingVariablesToAndField()
-        {
-            string graphQLQueryName = "books";
-            string gqlQuery = @"query($and: [bookFilterInput!])
+    /// <summary>
+    /// Test passing variable to and field
+    /// </summary>
+    [TestMethod]
+    public async Task TestPassingVariablesToAndField()
+    {
+        string graphQLQueryName = "books";
+        string gqlQuery = @"query($and: [bookFilterInput!])
             {
                 books(" + QueryBuilder.FILTER_FIELD_NAME + @": {and: $and})
                 {
@@ -719,28 +718,28 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 }
             }";
 
-            string dbQuery = MakeQueryOn(
-                "books",
-                new List<string> { "id" },
-                @"id < 3",
-                GetDefaultSchema());
+        string dbQuery = MakeQueryOn(
+            "books",
+            new List<string> { "id" },
+            @"id < 3",
+            GetDefaultSchema());
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false, new() { { "and", new[] { new { id = new { lt = 3 } } } } });
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false, new() { { "and", new[] { new { id = new { lt = 3 } } } } });
+        string expected = await GetDatabaseResultAsync(dbQuery);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Test Nested Filter for Many-One relationship.
-        /// </summary>
-        [TestMethod]
-        public async Task TestNestedFilterManyOne(string existsPredicate, string roleName, bool expectsError = false, string errorMsgFragment = "")
-        {
-            string graphQLQueryName = "comics";
-            // Gets all the comics that have their series name = 'Foundation'
-            string gqlQuery = @"{
+    /// <summary>
+    /// Test Nested Filter for Many-One relationship.
+    /// </summary>
+    [TestMethod]
+    public async Task TestNestedFilterManyOne(string existsPredicate, string roleName, bool expectsError = false, string errorMsgFragment = "")
+    {
+        string graphQLQueryName = "comics";
+        // Gets all the comics that have their series name = 'Foundation'
+        string gqlQuery = @"{
                 comics (" + QueryBuilder.FILTER_FIELD_NAME + ": {" +
-                    @"myseries: { name: { eq: ""Foundation"" }}})
+                @"myseries: { name: { eq: ""Foundation"" }}})
                     {
                       items {
                         id
@@ -749,41 +748,41 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                     }
                 }";
 
-            string dbQuery = MakeQueryOn(
-                table: "comics",
-                queriedColumns: new List<string> { "id", "title" },
-                existsPredicate,
-                GetDefaultSchema());
+        string dbQuery = MakeQueryOn(
+            table: "comics",
+            queriedColumns: new List<string> { "id", "title" },
+            existsPredicate,
+            GetDefaultSchema());
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(
-                gqlQuery,
-                graphQLQueryName,
-                isAuthenticated: true,
-                clientRoleHeader: roleName,
-                expectsError: expectsError);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(
+            gqlQuery,
+            graphQLQueryName,
+            isAuthenticated: true,
+            clientRoleHeader: roleName,
+            expectsError: expectsError);
 
-            if (expectsError)
-            {
-                SqlTestHelper.TestForErrorInGraphQLResponse(actual.ToString(), message: errorMsgFragment);
-            }
-            else
-            {
-                string expected = await GetDatabaseResultAsync(dbQuery);
-                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-            }
-        }
-
-        /// <summary>
-        /// Test Nested Filter for One-Many relationship
-        /// </summary>
-        [TestMethod]
-        public async Task TestNestedFilterOneMany(string existsPredicate, string roleName, bool expectsError = false, string errorMsgFragment = "")
+        if (expectsError)
         {
-            string graphQLQueryName = "series";
-            // Gets the series that have comics with categoryName containing Tales
-            string gqlQuery = @"{
+            SqlTestHelper.TestForErrorInGraphQLResponse(actual.ToString(), message: errorMsgFragment);
+        }
+        else
+        {
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+    }
+
+    /// <summary>
+    /// Test Nested Filter for One-Many relationship
+    /// </summary>
+    [TestMethod]
+    public async Task TestNestedFilterOneMany(string existsPredicate, string roleName, bool expectsError = false, string errorMsgFragment = "")
+    {
+        string graphQLQueryName = "series";
+        // Gets the series that have comics with categoryName containing Tales
+        string gqlQuery = @"{
                 series (" + QueryBuilder.FILTER_FIELD_NAME +
-                    @": { comics: { categoryName: { contains: ""Tales"" }}} )
+                @": { comics: { categoryName: { contains: ""Tales"" }}} )
                     {
                       items {
                         id
@@ -792,41 +791,41 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                     }
                 }";
 
-            string dbQuery = MakeQueryOn(
-                table: "series",
-                queriedColumns: new List<string> { "id", "name" },
-                existsPredicate,
-                GetDefaultSchema());
+        string dbQuery = MakeQueryOn(
+            table: "series",
+            queriedColumns: new List<string> { "id", "name" },
+            existsPredicate,
+            GetDefaultSchema());
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(
-                gqlQuery,
-                graphQLQueryName,
-                isAuthenticated: true,
-                clientRoleHeader: roleName,
-                expectsError: expectsError);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(
+            gqlQuery,
+            graphQLQueryName,
+            isAuthenticated: true,
+            clientRoleHeader: roleName,
+            expectsError: expectsError);
 
-            if (expectsError)
-            {
-                SqlTestHelper.TestForErrorInGraphQLResponse(actual.ToString(), message: errorMsgFragment);
-            }
-            else
-            {
-                string expected = await GetDatabaseResultAsync(dbQuery);
-                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-            }
-        }
-
-        /// <summary>
-        /// Test Nested Filter for Many-Many relationship
-        /// </summary>
-        [TestMethod]
-        public async Task TestNestedFilterManyMany(string existsPredicate)
+        if (expectsError)
         {
-            string graphQLQueryName = "books";
-            // Gets the books that have been written by Aaron as author
-            string gqlQuery = @"{
+            SqlTestHelper.TestForErrorInGraphQLResponse(actual.ToString(), message: errorMsgFragment);
+        }
+        else
+        {
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+    }
+
+    /// <summary>
+    /// Test Nested Filter for Many-Many relationship
+    /// </summary>
+    [TestMethod]
+    public async Task TestNestedFilterManyMany(string existsPredicate)
+    {
+        string graphQLQueryName = "books";
+        // Gets the books that have been written by Aaron as author
+        string gqlQuery = @"{
                 books (" + QueryBuilder.FILTER_FIELD_NAME +
-                    @": { authors : { name: { eq: ""Aaron""}}} )
+                @": { authors : { name: { eq: ""Aaron""}}} )
                     {
                       items {
                         title
@@ -834,31 +833,31 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                     }
                 }";
 
-            string dbQuery = MakeQueryOn(
-                table: "books",
-                queriedColumns: new List<string> { "title" },
-                existsPredicate,
-                GetDefaultSchema());
+        string dbQuery = MakeQueryOn(
+            table: "books",
+            queriedColumns: new List<string> { "title" },
+            existsPredicate,
+            GetDefaultSchema());
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(
-                gqlQuery,
-                graphQLQueryName,
-                isAuthenticated: true);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-        }
+        JsonElement actual = await ExecuteGraphQLRequestAsync(
+            gqlQuery,
+            graphQLQueryName,
+            isAuthenticated: true);
+        string expected = await GetDatabaseResultAsync(dbQuery);
+        SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+    }
 
-        /// <summary>
-        /// Test a field of the nested filter is null.
-        /// </summary>
-        [TestMethod]
-        public async Task TestNestedFilterFieldIsNull(string existsPredicate, string roleName, bool expectsError = false, string errorMsgFragment = "")
-        {
-            string graphQLQueryName = "stocks";
-            // Gets stocks which have a null price.
-            string gqlQuery = @"{
+    /// <summary>
+    /// Test a field of the nested filter is null.
+    /// </summary>
+    [TestMethod]
+    public async Task TestNestedFilterFieldIsNull(string existsPredicate, string roleName, bool expectsError = false, string errorMsgFragment = "")
+    {
+        string graphQLQueryName = "stocks";
+        // Gets stocks which have a null price.
+        string gqlQuery = @"{
                 stocks (" + QueryBuilder.FILTER_FIELD_NAME +
-                    @": { stocks_price: { price: { isNull: true }}} )
+                @": { stocks_price: { price: { isNull: true }}} )
                     {
                       items {
                         categoryName
@@ -866,44 +865,44 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                     }
                 }";
 
-            string dbQuery = MakeQueryOn(
-                table: "stocks",
-                queriedColumns: new List<string> { "categoryName" },
-                existsPredicate,
-                GetDefaultSchema(),
-                pkColumns: new List<string> { "categoryid", "pieceid" });
+        string dbQuery = MakeQueryOn(
+            table: "stocks",
+            queriedColumns: new List<string> { "categoryName" },
+            existsPredicate,
+            GetDefaultSchema(),
+            pkColumns: new List<string> { "categoryid", "pieceid" });
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(
-                gqlQuery,
-                graphQLQueryName,
-                isAuthenticated: true,
-                clientRoleHeader: roleName,
-                expectsError: expectsError);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(
+            gqlQuery,
+            graphQLQueryName,
+            isAuthenticated: true,
+            clientRoleHeader: roleName,
+            expectsError: expectsError);
 
-            if (expectsError)
-            {
-                SqlTestHelper.TestForErrorInGraphQLResponse(actual.ToString(), message: errorMsgFragment);
-            }
-            else
-            {
-                string expected = await GetDatabaseResultAsync(dbQuery);
-                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-            }
-        }
-
-        /// <summary>
-        /// Tests nested filter having another nested filter.
-        /// </summary>
-        [TestMethod]
-        public async Task TestNestedFilterWithinNestedFilter(string existsPredicate, string roleName, bool expectsError = false, string errorMsgFragment = "")
+        if (expectsError)
         {
-            string graphQLQueryName = "booksNF";
+            SqlTestHelper.TestForErrorInGraphQLResponse(actual.ToString(), message: errorMsgFragment);
+        }
+        else
+        {
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+    }
 
-            // Gets all the books written by Aaron
-            // only if the title of one of his books contains 'Awesome'.
-            string gqlQuery = @"{
+    /// <summary>
+    /// Tests nested filter having another nested filter.
+    /// </summary>
+    [TestMethod]
+    public async Task TestNestedFilterWithinNestedFilter(string existsPredicate, string roleName, bool expectsError = false, string errorMsgFragment = "")
+    {
+        string graphQLQueryName = "booksNF";
+
+        // Gets all the books written by Aaron
+        // only if the title of one of his books contains 'Awesome'.
+        string gqlQuery = @"{
                 booksNF (" + QueryBuilder.FILTER_FIELD_NAME +
-                    @": { authors: {
+                @": { authors: {
                              books: { title: { contains: ""Awesome"" }}
                              name: { eq: ""Aaron"" }
                         }} )
@@ -914,42 +913,42 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                     }
                 }";
 
-            string dbQuery = MakeQueryOn(
-                table: "books",
-                queriedColumns: new List<string> { "title" },
-                existsPredicate,
-                GetDefaultSchema());
+        string dbQuery = MakeQueryOn(
+            table: "books",
+            queriedColumns: new List<string> { "title" },
+            existsPredicate,
+            GetDefaultSchema());
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(
-                gqlQuery,
-                graphQLQueryName,
-                isAuthenticated: true,
-                clientRoleHeader: roleName,
-                expectsError: expectsError);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(
+            gqlQuery,
+            graphQLQueryName,
+            isAuthenticated: true,
+            clientRoleHeader: roleName,
+            expectsError: expectsError);
 
-            if (expectsError)
-            {
-                SqlTestHelper.TestForErrorInGraphQLResponse(actual.ToString(), message: errorMsgFragment);
-            }
-            else
-            {
-                string expected = await GetDatabaseResultAsync(dbQuery);
-                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-            }
-        }
-
-        /// <summary>
-        /// Tests nested filter and an AND clause.
-        /// </summary>
-        [TestMethod]
-        public async Task TestNestedFilterWithAnd(string existsPredicate, string roleName, bool expectsError = false, string errorMsgFragment = "")
+        if (expectsError)
         {
-            string graphQLQueryName = "booksNF";
+            SqlTestHelper.TestForErrorInGraphQLResponse(actual.ToString(), message: errorMsgFragment);
+        }
+        else
+        {
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+    }
 
-            // Gets all the books written by Aniruddh and the publisher is 'Small Town Publisher'.
-            string gqlQuery = @"{
+    /// <summary>
+    /// Tests nested filter and an AND clause.
+    /// </summary>
+    [TestMethod]
+    public async Task TestNestedFilterWithAnd(string existsPredicate, string roleName, bool expectsError = false, string errorMsgFragment = "")
+    {
+        string graphQLQueryName = "booksNF";
+
+        // Gets all the books written by Aniruddh and the publisher is 'Small Town Publisher'.
+        string gqlQuery = @"{
                 booksNF (" + QueryBuilder.FILTER_FIELD_NAME +
-                    @": { publishers: { name: { eq: ""Small Town Publisher"" } }
+                @": { publishers: { name: { eq: ""Small Town Publisher"" } }
                       and: { authors: {name: { eq: ""Aniruddh"" } }
                     }})
                     {
@@ -959,42 +958,42 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                     }
                 }";
 
-            string dbQuery = MakeQueryOn(
-                table: "books",
-                queriedColumns: new List<string> { "title" },
-                existsPredicate,
-                GetDefaultSchema());
+        string dbQuery = MakeQueryOn(
+            table: "books",
+            queriedColumns: new List<string> { "title" },
+            existsPredicate,
+            GetDefaultSchema());
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(
-                gqlQuery,
-                graphQLQueryName,
-                isAuthenticated: true,
-                clientRoleHeader: roleName,
-                expectsError: expectsError);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(
+            gqlQuery,
+            graphQLQueryName,
+            isAuthenticated: true,
+            clientRoleHeader: roleName,
+            expectsError: expectsError);
 
-            if (expectsError)
-            {
-                SqlTestHelper.TestForErrorInGraphQLResponse(actual.ToString(), message: errorMsgFragment);
-            }
-            else
-            {
-                string expected = await GetDatabaseResultAsync(dbQuery);
-                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-            }
-        }
-
-        /// <summary>
-        /// Tests nested filter alongwith an OR clause.
-        /// </summary>
-        [TestMethod]
-        public async Task TestNestedFilterWithOr(string existsPredicate, string roleName, bool expectsError = false, string errorMsgFragment = "")
+        if (expectsError)
         {
-            string graphQLQueryName = "booksNF";
+            SqlTestHelper.TestForErrorInGraphQLResponse(actual.ToString(), message: errorMsgFragment);
+        }
+        else
+        {
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+    }
 
-            // Gets all the books written by Aniruddh OR if their publisher is 'TBD Publishing One'.
-            string gqlQuery = @"{
+    /// <summary>
+    /// Tests nested filter alongwith an OR clause.
+    /// </summary>
+    [TestMethod]
+    public async Task TestNestedFilterWithOr(string existsPredicate, string roleName, bool expectsError = false, string errorMsgFragment = "")
+    {
+        string graphQLQueryName = "booksNF";
+
+        // Gets all the books written by Aniruddh OR if their publisher is 'TBD Publishing One'.
+        string gqlQuery = @"{
                 booksNF (" + QueryBuilder.FILTER_FIELD_NAME +
-                    @": { or: [{
+                @": { or: [{
                         publishers: { name: { eq: ""TBD Publishing One"" } } }
                         { authors : {
                           name: { eq: ""Aniruddh""}}}
@@ -1007,87 +1006,86 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                     }
                 }";
 
-            string dbQuery = MakeQueryOn(
-                table: "books",
-                queriedColumns: new List<string> { "title" },
-                existsPredicate,
-                GetDefaultSchema());
+        string dbQuery = MakeQueryOn(
+            table: "books",
+            queriedColumns: new List<string> { "title" },
+            existsPredicate,
+            GetDefaultSchema());
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(
-                gqlQuery,
-                graphQLQueryName,
-                isAuthenticated: true,
-                clientRoleHeader: roleName,
-                expectsError: expectsError);
+        JsonElement actual = await ExecuteGraphQLRequestAsync(
+            gqlQuery,
+            graphQLQueryName,
+            isAuthenticated: true,
+            clientRoleHeader: roleName,
+            expectsError: expectsError);
 
-            if (expectsError)
-            {
-                SqlTestHelper.TestForErrorInGraphQLResponse(actual.ToString(), message: errorMsgFragment);
-            }
-            else
-            {
-                string expected = await GetDatabaseResultAsync(dbQuery);
-                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-            }
-        }
-
-        #endregion
-
-        protected abstract string GetDefaultSchema();
-
-        /// <summary>
-        /// Formats the default schema so that it can be
-        /// placed right before the identity that it is qualifying
-        /// </summary>
-        protected string GetPreIndentDefaultSchema()
+        if (expectsError)
         {
-            string defaultSchema = GetDefaultSchema();
-            return string.IsNullOrEmpty(defaultSchema) ? string.Empty : defaultSchema + ".";
+            SqlTestHelper.TestForErrorInGraphQLResponse(actual.ToString(), message: errorMsgFragment);
         }
-
-        /// <remarks>
-        /// This function does not escape special characters from column names so those might lead to errors
-        /// </remarks>
-        protected abstract string MakeQueryOn(
-            string table,
-            List<string> queriedColumns,
-            string predicate,
-            string schema = "",
-            List<string> pkColumns = null);
-
-        /// <summary>
-        /// Method used to execute GraphQL requests.
-        /// For list results, returns the JsonElement representative of the property 'items'
-        /// </summary>
-        /// <param name="graphQLQuery"></param>
-        /// <param name="graphQLQueryName"></param>
-        /// <param name="isAuthenticated"></param>
-        /// <param name="variables"></param>
-        /// <param name="clientRoleHeader"></param>
-        /// <returns></returns>
-        protected override async Task<JsonElement> ExecuteGraphQLRequestAsync(
-            string graphQLQuery,
-            string graphQLQueryName,
-            bool isAuthenticated,
-            Dictionary<string, object> variables = null,
-            string clientRoleHeader = null,
-            bool expectsError = false)
+        else
         {
-            JsonElement dataResult = await base.ExecuteGraphQLRequestAsync(
-                graphQLQuery,
-                graphQLQueryName,
-                isAuthenticated,
-                variables,
-                clientRoleHeader);
-
-            if (expectsError)
-            {
-                // ExecuteGraphQLRequestAsync returns the error property when an error is encountered.
-                // Do not further filter the returned property.
-                return dataResult;
-            }
-
-            return dataResult.GetProperty("items");
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
+    }
+
+    #endregion
+
+    protected abstract string GetDefaultSchema();
+
+    /// <summary>
+    /// Formats the default schema so that it can be
+    /// placed right before the identity that it is qualifying
+    /// </summary>
+    protected string GetPreIndentDefaultSchema()
+    {
+        string defaultSchema = GetDefaultSchema();
+        return string.IsNullOrEmpty(defaultSchema) ? string.Empty : defaultSchema + ".";
+    }
+
+    /// <remarks>
+    /// This function does not escape special characters from column names so those might lead to errors
+    /// </remarks>
+    protected abstract string MakeQueryOn(
+        string table,
+        List<string> queriedColumns,
+        string predicate,
+        string schema = "",
+        List<string> pkColumns = null);
+
+    /// <summary>
+    /// Method used to execute GraphQL requests.
+    /// For list results, returns the JsonElement representative of the property 'items'
+    /// </summary>
+    /// <param name="graphQLQuery"></param>
+    /// <param name="graphQLQueryName"></param>
+    /// <param name="isAuthenticated"></param>
+    /// <param name="variables"></param>
+    /// <param name="clientRoleHeader"></param>
+    /// <returns></returns>
+    protected override async Task<JsonElement> ExecuteGraphQLRequestAsync(
+        string graphQLQuery,
+        string graphQLQueryName,
+        bool isAuthenticated,
+        Dictionary<string, object> variables = null,
+        string clientRoleHeader = null,
+        bool expectsError = false)
+    {
+        JsonElement dataResult = await base.ExecuteGraphQLRequestAsync(
+            graphQLQuery,
+            graphQLQueryName,
+            isAuthenticated,
+            variables,
+            clientRoleHeader);
+
+        if (expectsError)
+        {
+            // ExecuteGraphQLRequestAsync returns the error property when an error is encountered.
+            // Do not further filter the returned property.
+            return dataResult;
+        }
+
+        return dataResult.GetProperty("items");
     }
 }

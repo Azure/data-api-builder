@@ -6,61 +6,60 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
+namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests;
+
+[TestClass, TestCategory(TestCategory.POSTGRESQL)]
+public class PostgreSqlGQLFilterTests : GraphQLFilterTestBase
 {
+    protected static string DEFAULT_SCHEMA = "public";
 
-    [TestClass, TestCategory(TestCategory.POSTGRESQL)]
-    public class PostgreSqlGQLFilterTests : GraphQLFilterTestBase
+    /// <summary>
+    /// Set the database engine for the tests
+    /// </summary>
+    [ClassInitialize]
+    public static async Task SetupAsync(TestContext context)
     {
-        protected static string DEFAULT_SCHEMA = "public";
+        DatabaseEngine = TestCategory.POSTGRESQL;
+        await InitializeTestFixture(context);
+    }
 
-        /// <summary>
-        /// Set the database engine for the tests
-        /// </summary>
-        [ClassInitialize]
-        public static async Task SetupAsync(TestContext context)
-        {
-            DatabaseEngine = TestCategory.POSTGRESQL;
-            await InitializeTestFixture(context);
-        }
-
-        /// <summary>
-        /// Test Nested Filter for Many-One relationship.
-        /// </summary>
-        [TestMethod]
-        public async Task TestNestedFilterManyOne()
-        {
-            string existsPredicate = $@"
+    /// <summary>
+    /// Test Nested Filter for Many-One relationship.
+    /// </summary>
+    [TestMethod]
+    public async Task TestNestedFilterManyOne()
+    {
+        string existsPredicate = $@"
                 EXISTS( SELECT 1
                         FROM {GetPreIndentDefaultSchema()}series AS table1
                         WHERE table1.name = 'Foundation'
                         AND table0.series_id = table1.id )";
 
-            await TestNestedFilterManyOne(existsPredicate, roleName: "authenticated");
-        }
+        await TestNestedFilterManyOne(existsPredicate, roleName: "authenticated");
+    }
 
-        /// <summary>
-        /// Test Nested Filter for One-Many relationship
-        /// </summary>
-        [TestMethod]
-        public async Task TestNestedFilterOneMany()
-        {
-            string existsPredicate = $@"
+    /// <summary>
+    /// Test Nested Filter for One-Many relationship
+    /// </summary>
+    [TestMethod]
+    public async Task TestNestedFilterOneMany()
+    {
+        string existsPredicate = $@"
                 EXISTS( SELECT 1
                         FROM {GetPreIndentDefaultSchema()}comics AS table1
                         WHERE table1.title = 'Cinderella'
                         AND table1.series_id = table0.id )";
 
-            await TestNestedFilterOneMany(existsPredicate, roleName: "authenticated");
-        }
+        await TestNestedFilterOneMany(existsPredicate, roleName: "authenticated");
+    }
 
-        /// <summary>
-        /// Test Nested Filter for Many-Many relationship
-        /// </summary>
-        [TestMethod]
-        public async Task TestNestedFilterManyMany()
-        {
-            string existsPredicate = $@"
+    /// <summary>
+    /// Test Nested Filter for Many-Many relationship
+    /// </summary>
+    [TestMethod]
+    public async Task TestNestedFilterManyMany()
+    {
+        string existsPredicate = $@"
                 EXISTS( SELECT 1
                         FROM {GetPreIndentDefaultSchema()}authors AS table1
                         INNER JOIN {GetPreIndentDefaultSchema()}book_author_link AS table3
@@ -68,43 +67,43 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                         WHERE table1.name = 'Aaron'
                         AND table3.author_id = table1.id)";
 
-            await TestNestedFilterManyMany(existsPredicate);
-        }
+        await TestNestedFilterManyMany(existsPredicate);
+    }
 
-        /// <summary>
-        /// Test a field of the nested filter is null.
-        /// </summary>
-        [TestMethod]
-        public async Task TestNestedFilterFieldIsNull()
-        {
-            string existsPredicate = $@"
+    /// <summary>
+    /// Test a field of the nested filter is null.
+    /// </summary>
+    [TestMethod]
+    public async Task TestNestedFilterFieldIsNull()
+    {
+        string existsPredicate = $@"
                 EXISTS( SELECT 1
                         FROM {GetPreIndentDefaultSchema()}stocks_price AS table1
                         WHERE table1.price IS NULL
                         AND table1.categoryid = table0.categoryid
                         AND table1.pieceid = table0.pieceid)";
 
-            await TestNestedFilterFieldIsNull(existsPredicate, roleName: "authenticated");
-        }
+        await TestNestedFilterFieldIsNull(existsPredicate, roleName: "authenticated");
+    }
 
-        /// <summary>
-        /// Tests nested filter having another nested filter.
-        /// </summary>
-        [TestMethod]
-        public async Task TestNestedFilterWithinNestedFilter()
-        {
-            string defaultSchema = GetPreIndentDefaultSchema();
+    /// <summary>
+    /// Tests nested filter having another nested filter.
+    /// </summary>
+    [TestMethod]
+    public async Task TestNestedFilterWithinNestedFilter()
+    {
+        string defaultSchema = GetPreIndentDefaultSchema();
 
-            // Table aliases and param names are created using the same
-            // Counter hence the following intermixed naming:
-            // [table0]: books
-            // [table1]: authors
-            // [table2]: books
-            // [param3]: 'Awesome'
-            // [table4]: book_author_link
-            // [param5]: 'Aaron'
-            // [table6]: book_author_link
-            string existsPredicate = $@"
+        // Table aliases and param names are created using the same
+        // Counter hence the following intermixed naming:
+        // [table0]: books
+        // [table1]: authors
+        // [table2]: books
+        // [param3]: 'Awesome'
+        // [table4]: book_author_link
+        // [param5]: 'Aaron'
+        // [table6]: book_author_link
+        string existsPredicate = $@"
                 EXISTS (SELECT 1 FROM {defaultSchema}authors AS table1
                         INNER JOIN {defaultSchema}book_author_link AS table6
                         ON table6.book_id = table0.id
@@ -115,18 +114,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                                        AND table4.book_id = table2.id)
                                        AND table1.name = 'Aaron') AND table6.author_id = table1.id)";
 
-            await TestNestedFilterWithinNestedFilter(existsPredicate, roleName: "authenticated");
-        }
+        await TestNestedFilterWithinNestedFilter(existsPredicate, roleName: "authenticated");
+    }
 
-        /// <summary>
-        /// Tests nested filter and an AND clause.
-        /// </summary>
-        [TestMethod]
-        public async Task TestNestedFilterWithAnd()
-        {
-            string defaultSchema = GetPreIndentDefaultSchema();
+    /// <summary>
+    /// Tests nested filter and an AND clause.
+    /// </summary>
+    [TestMethod]
+    public async Task TestNestedFilterWithAnd()
+    {
+        string defaultSchema = GetPreIndentDefaultSchema();
 
-            string existsPredicate = $@"
+        string existsPredicate = $@"
                 EXISTS (SELECT 1 FROM {defaultSchema}authors AS table1
                         INNER JOIN {defaultSchema}book_author_link AS table3
                         ON table3.book_id = table0.id
@@ -136,18 +135,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                                     WHERE table4.name = 'Small Town Publisher'
                                     AND table0.publisher_id = table4.id)";
 
-            await TestNestedFilterWithAnd(existsPredicate, roleName: "authenticated");
-        }
+        await TestNestedFilterWithAnd(existsPredicate, roleName: "authenticated");
+    }
 
-        /// <summary>
-        /// Tests nested filter alongwith an OR clause.
-        /// </summary>
-        [TestMethod]
-        public async Task TestNestedFilterWithOr()
-        {
-            string defaultSchema = GetPreIndentDefaultSchema();
+    /// <summary>
+    /// Tests nested filter alongwith an OR clause.
+    /// </summary>
+    [TestMethod]
+    public async Task TestNestedFilterWithOr()
+    {
+        string defaultSchema = GetPreIndentDefaultSchema();
 
-            string existsPredicate = $@"
+        string existsPredicate = $@"
                 EXISTS( SELECT 1 FROM {defaultSchema}publishers AS table1
                     WHERE table1.name = 'TBD Publishing One'
                     AND table0.publisher_id = table1.id)
@@ -157,43 +156,43 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                            WHERE table3.name = 'Aniruddh'
                            AND table5.author_id = table3.id)";
 
-            await TestNestedFilterWithOr(existsPredicate, roleName: "authenticated");
+        await TestNestedFilterWithOr(existsPredicate, roleName: "authenticated");
+    }
+
+    [TestMethod]
+    public async Task TestStringFiltersEqWithMappings()
+    {
+        string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT __column1 AS column1, __column2 AS column2 FROM GQLMappings WHERE __column2 = 'Filtered Record' ORDER BY __column1 asc LIMIT 100) as table0";
+
+        await TestStringFiltersEqWithMappings(postgresQuery);
+    }
+
+    /// <summary>
+    /// Gets the default schema for
+    /// PostgreSql.
+    /// </summary>
+    /// <returns></returns>
+    protected override string GetDefaultSchema()
+    {
+        return DEFAULT_SCHEMA;
+    }
+
+    protected override string MakeQueryOn(
+        string table,
+        List<string> queriedColumns,
+        string predicate,
+        string schema,
+        List<string> pkColumns = null)
+    {
+        if (pkColumns == null)
+        {
+            pkColumns = new() { "id" };
         }
 
-        [TestMethod]
-        public async Task TestStringFiltersEqWithMappings()
-        {
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT __column1 AS column1, __column2 AS column2 FROM GQLMappings WHERE __column2 = 'Filtered Record' ORDER BY __column1 asc LIMIT 100) as table0";
+        string schemaAndTable = $"{schema}.{table}";
+        string orderBy = string.Join(", ", pkColumns.Select(c => $"\"table0\".\"{c}\""));
 
-            await TestStringFiltersEqWithMappings(postgresQuery);
-        }
-
-        /// <summary>
-        /// Gets the default schema for
-        /// PostgreSql.
-        /// </summary>
-        /// <returns></returns>
-        protected override string GetDefaultSchema()
-        {
-            return DEFAULT_SCHEMA;
-        }
-
-        protected override string MakeQueryOn(
-            string table,
-            List<string> queriedColumns,
-            string predicate,
-            string schema,
-            List<string> pkColumns = null)
-        {
-            if (pkColumns == null)
-            {
-                pkColumns = new() { "id" };
-            }
-
-            string schemaAndTable = $"{schema}.{table}";
-            string orderBy = string.Join(", ", pkColumns.Select(c => $"\"table0\".\"{c}\""));
-
-            return @"
+        return @"
                 SELECT COALESCE(jsonb_agg(to_jsonb(subq3)), '[]') AS DATA
                 FROM
                   (SELECT " + string.Join(", ", queriedColumns.Select(c => $"\"{c}\"")) + @"
@@ -202,6 +201,5 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                    ORDER BY " + orderBy + @" asc
                    LIMIT 100) AS subq3
             ";
-        }
     }
 }

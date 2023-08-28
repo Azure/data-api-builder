@@ -85,18 +85,16 @@ public abstract class RuntimeConfigLoader
         }
         catch (JsonException ex)
         {
-            string errorMessage = $"Deserialization of the configuration file failed.\n" +
-                        $"Message:\n {ex.Message}\n" +
-                        $"Stack Trace:\n {ex.StackTrace}";
+            string errorMessage = "Deserialization of the configuration file failed.";
 
+            // logger can be null when called from CLI
             if (logger is null)
             {
-                // logger can be null when called from CLI
-                Console.Error.WriteLine(errorMessage);
+                Console.Error.WriteLine(errorMessage + $"\n" + $"Message:\n {ex.Message}\n" + $"Stack Trace:\n {ex.StackTrace}");
             }
             else
             {
-                logger.LogError(ex, errorMessage);
+                logger.LogError(exception: ex, message: errorMessage);
             }
 
             config = null;

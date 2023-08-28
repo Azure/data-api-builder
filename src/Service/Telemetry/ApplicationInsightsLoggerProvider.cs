@@ -1,8 +1,17 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System;
 using System.Collections.Generic;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
 
+/// <summary>
+/// Provides a logger implementation that sends telemetry to Azure Application Insights.
+/// </summary>
+/// <remarks>
+/// This logger implementation is used to track errors caught by the application.
+/// </remarks>
 public class ApplicationInsightsLoggerProvider : ILoggerProvider
 {
     private readonly TelemetryClient _telemetryClient;
@@ -45,6 +54,7 @@ public class ApplicationInsightsLoggerProvider : ILoggerProvider
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
+            // Whenever ILogger.Log is called for Error, we send an event to Application Insights.
             if (logLevel == LogLevel.Error)
             {
                 _telemetryClient.TrackEvent("ErrorCaught", new Dictionary<string, string>

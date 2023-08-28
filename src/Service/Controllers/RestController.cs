@@ -246,15 +246,21 @@ namespace Azure.DataApiBuilder.Service.Controllers
             }
             catch (DataApiBuilderException ex)
             {
-                _logger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}{ex.Message}");
-                _logger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}{ex.StackTrace}");
+                _logger.LogError(
+                    exception: ex,
+                    message: "{correlationId} Error handling REST request.",
+                    HttpContextExtensions.GetLoggerCorrelationId(HttpContext));
+
                 Response.StatusCode = (int)ex.StatusCode;
                 return ErrorResponse(ex.SubStatusCode.ToString(), ex.Message, ex.StatusCode);
             }
             catch (Exception ex)
             {
-                _logger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}{ex.Message}");
-                _logger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}{ex.StackTrace}");
+                _logger.LogError(
+                    exception: ex,
+                    message: "{correlationId} Internal server error occured during REST request processing.",
+                    HttpContextExtensions.GetLoggerCorrelationId(HttpContext));
+
                 Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                 return ErrorResponse(
                     DataApiBuilderException.SubStatusCodes.UnexpectedError.ToString(),
@@ -277,9 +283,10 @@ namespace Azure.DataApiBuilder.Service.Controllers
             {
                 if (!string.Equals(HttpContext.Request.Headers["If-Match"], "*"))
                 {
-                    throw new DataApiBuilderException(message: "Etags not supported, use '*'",
-                                                   statusCode: HttpStatusCode.BadRequest,
-                                                   subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    throw new DataApiBuilderException(
+                        message: "Etags not supported, use '*'",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
 
                 switch (operation)

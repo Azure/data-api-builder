@@ -262,8 +262,8 @@ create table books_sold
   [book_name] varchar(50),
   [row_version] timestamp,
   [copies_sold] int default 0,
-  [last_sold_on] datetime2(7),
-  [last_sold_on_date] as cast(last_sold_on as date),
+  [last_sold_on] datetime2(7) DEFAULT CURRENT_TIMESTAMP,
+  [last_sold_on_date] as last_sold_on,
 )
 
 ALTER TABLE books

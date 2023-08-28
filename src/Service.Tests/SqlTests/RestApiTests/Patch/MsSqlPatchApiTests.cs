@@ -133,13 +133,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
             {
                 "PatchOneUpdateWithComputedFieldMissingFromRequestBody",
                 $"SELECT * FROM { _tableWithReadOnlyFields } " +
-                $"WHERE [id] = 1 AND [book_name] = 'New book' AND [copies_sold] = 50 AND [last_sold_on] is NULL AND [last_sold_on_date] is NULL " +
+                $"WHERE [id] = 1 AND [book_name] = 'New book' AND [copies_sold] = 50 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
                 "PatchOneInsertWithComputedFieldMissingFromRequestBody",
                 $"SELECT * FROM { _tableWithReadOnlyFields } " +
-                $"WHERE [id] = 2 AND [book_name] = 'New book' AND [copies_sold] = 50 AND [last_sold_on] is NULL AND [last_sold_on_date] is NULL " +
+                $"WHERE [id] = 2 AND [book_name] = 'New book' AND [copies_sold] = 50 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {

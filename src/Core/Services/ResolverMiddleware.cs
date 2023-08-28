@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Globalization;
 using System.Text.Json;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Models;
@@ -9,8 +10,10 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using HotChocolate.Execution;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
+using HotChocolate.Types.NodaTime;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
+using NodaTime.Text;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
 
 namespace Azure.DataApiBuilder.Core.Services
@@ -196,8 +199,9 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 ByteType => byte.Parse(leafJson),
                 SingleType => Single.Parse(leafJson),
-                DateTimeType => DateTimeOffset.Parse(leafJson),
+                DateTimeType => DateTimeOffset.Parse(leafJson, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal),
                 ByteArrayType => Convert.FromBase64String(leafJson),
+                LocalTimeType => LocalTimePattern.ExtendedIso.Parse(leafJson).Value,
                 _ => leafJson
             };
         }
@@ -261,6 +265,8 @@ namespace Azure.DataApiBuilder.Core.Services
                 SINGLE_TYPE => ((FloatValueNode)value).ToSingle(),
                 FLOAT_TYPE => ((FloatValueNode)value).ToDouble(),
                 DECIMAL_TYPE => ((FloatValueNode)value).ToDecimal(),
+                // If we reach here, we can be sure that the value will not be null.
+                UUID_TYPE => Guid.TryParse(value.Value!.ToString(), out Guid guidValue) ? guidValue : value.Value,
                 _ => value.Value
             };
         }

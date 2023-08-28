@@ -334,7 +334,16 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 if (runtimeConfig.Entities.TryGetValue(entityName, out Entity? entity))
                 {
-                    SupportedHttpVerb[] methods = entity.Rest.Methods;
+                    SupportedHttpVerb[] methods;
+                    if (entity.Rest.Methods is not null)
+                    {
+                        methods = entity.Rest.Methods;
+                    }
+                    else
+                    {
+                        methods = (entity.Rest.Enabled) ? new SupportedHttpVerb[] { SupportedHttpVerb.Post } : Array.Empty<SupportedHttpVerb>();
+                    }
+
                     httpVerbs = new(methods);
                     return true;
                 }
@@ -363,6 +372,7 @@ namespace Azure.DataApiBuilder.Core.Services
             // The RuntimeConfigProvider enforces the expectation that the configured REST path starts with a
             // forward slash '/'.
             configuredRestPathBase = configuredRestPathBase.Substring(1);
+
             if (!route.StartsWith(configuredRestPathBase))
             {
                 throw new DataApiBuilderException(
@@ -393,6 +403,20 @@ namespace Azure.DataApiBuilder.Core.Services
 
             configuredRestRoute = null;
             return false;
+        }
+
+        /// <summary>
+        /// Helper method to extract the configured base route
+        /// </summary>
+        public string GetBaseRouteFromConfig()
+        {
+            if (_runtimeConfigProvider.TryGetConfig(out RuntimeConfig? config)
+                && config.Runtime.BaseRoute is not null)
+            {
+                return config.Runtime.BaseRoute;
+            }
+
+            return string.Empty;
         }
 
         /// <summary>

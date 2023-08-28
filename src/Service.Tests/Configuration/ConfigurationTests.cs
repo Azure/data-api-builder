@@ -24,6 +24,7 @@ using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
@@ -444,6 +445,71 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             {
                 Assert.AreEqual(EntitySourceType.Table, deserializedRuntimeConfig.Entities["MyEntity"].Source.Type);
             }
+        }
+
+        /// <summary>
+        /// Checks if the connection string provided in the config is correctly updated for MSSQL.
+        /// If the connection string already contains the `Application Name` property, it should append the DataApiBuilder Application Name to the existing value.
+        /// If not, it should append the property `Application Name` to the connection string.
+        /// </summary>
+        /// <param name="databaseType">database type.</param>
+        /// <param name="providedConnectionString">connection string provided in the config.</param>
+        /// <param name="expectedUpdatedConnectionString">Updated connection string with Application Name.</param>
+        /// <param name="isHostedScenario">If Dab is hosted or OSS.</param>
+        [DataTestMethod]
+        [DataRow(DatabaseType.MSSQL, "Data Source=<>;", "Data Source=<>;Application Name=dab_oss_1.0.0", false, DisplayName = "[MSSQL]:Adding Application Name property to connectionString with dab_oss app name.")]
+        [DataRow(DatabaseType.MySQL, "Something;", "Something;", false, DisplayName = "[MYSQL]:No Change in connectionString without Application name for DAB oss.")]
+        [DataRow(DatabaseType.PostgreSQL, "Something;", "Something;", false, DisplayName = "[PGSQL]:No Change in connectionString without Application name for DAB oss.")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;", "Something;", false, DisplayName = "[COSMOSDB_PGSQL]:No Change in connectionString without Application name for DAB oss.")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;", "Something;", false, DisplayName = "[COSMOSDB_NOSQL]:No Change in connectionString without Application name for DAB oss.")]
+        [DataRow(DatabaseType.MSSQL, "Data Source=<>;Application Name=CustAppName;", "Data Source=<>;Application Name=CustAppName,dab_oss_1.0.0", false, DisplayName = "[MSSQL]:Updating connectionString containing customer Application name with dab_oss app name.")]
+        [DataRow(DatabaseType.MSSQL, "Data Source=<>;Application Name=CustAppName;User ID=<>", "Data Source=<>;User ID=<>;Application Name=CustAppName,dab_oss_1.0.0", false, DisplayName = "[MSSQL2]:Updating connectionString containing customer Application name with dab_oss app name.")]
+        [DataRow(DatabaseType.MySQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[MYSQL]:No Change in connectionString containing customer Application name for DAB oss.")]
+        [DataRow(DatabaseType.PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[PGSQL]:No Change in connectionString containing customer Application name for DAB oss.")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[COSMOSDB_PGSQL]:No Change in connectionString containing customer Application name for DAB oss.")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[COSMOSDB_NOSQL]:No Change in connectionString containg customer Application name for DAB oss.")]
+        [DataRow(DatabaseType.MSSQL, "Data Source=<>;", "Data Source=<>;Application Name=dab_hosted_1.0.0", true, DisplayName = "[MSSQL]:Adding Application Name property to connectionString with dab_hosted app.")]
+        [DataRow(DatabaseType.MySQL, "Something;", "Something;", true, DisplayName = "[MYSQL]:No Change in connectionString without Application name for DAB hosted.")]
+        [DataRow(DatabaseType.PostgreSQL, "Something;", "Something;", true, DisplayName = "[PGSQL]:No Change in connectionString without Application name for DAB hosted.")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;", "Something;", true, DisplayName = "[COSMOSDB_PGSQL]:No Change in connectionString without Application name for DAB hosted.")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;", "Something;", true, DisplayName = "[COSMOSDB_NOSQL]:No Change in connectionString without Application name for DAB hosted.")]
+        [DataRow(DatabaseType.MSSQL, "Data Source=<>;Application Name=CustAppName;", "Data Source=<>;Application Name=CustAppName,dab_hosted_1.0.0", true, DisplayName = "[MSSQL]:Updating connectionString containing customer Application name with dab_hosted app name.")]
+        [DataRow(DatabaseType.MySQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true, DisplayName = "[MYSQL]:No Change in connectionString containing customer Application name for DAB hosted.")]
+        [DataRow(DatabaseType.PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true, DisplayName = "[PGSQL]:No Change in connectionString containing customer Application name for DAB hosted.")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true, DisplayName = "[COSMOSDB_PGSQL]:No Change in connectionString containing customer Application name for DAB hosted.")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true, DisplayName = "[COSMOSDB_NOSQL]:No Change in connectionString containing customer Application name for DAB hosted.")]
+        [DataRow(DatabaseType.MSSQL, "Data Source=<>;App=CustAppName;User ID=<>", "Data Source=<>;User ID=<>;Application Name=CustAppName,dab_oss_1.0.0", false, DisplayName = "[MSSQL]:Updating connectionString containing `App` for customer Application name with dab_oss app name.")]
+        [DataRow(DatabaseType.MySQL, "Something1;App=CustAppName;Something2;", "Something1;App=CustAppName;Something2;", false, DisplayName = "[MySQL]:No updates for `App` preoperty in connectionString for DBs other than MSSQL.")]
+        [DataRow(DatabaseType.MySQL, "username=dabApp;App=CustAppName;Something2;", "username=dabApp;App=CustAppName;Something2;", false, DisplayName = "[MySQL]:No updates for other properties in connectionString containing `App`.")]
+        public void TestConnectionStringIsCorrectlyUpdatedWithApplicationName(
+            DatabaseType databaseType,
+            string providedConnectionString,
+            string expectedUpdatedConnectionString,
+            bool isHostedScenario)
+        {
+            if (isHostedScenario)
+            {
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, "dab_hosted_1.0.0");
+            }
+            else
+            {
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, null);
+            }
+
+            RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(databaseType, providedConnectionString);
+
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
+                runtimeConfig.ToJson(),
+                out RuntimeConfig updatedRuntimeConfig,
+                replaceEnvVar: true));
+
+            string actualUpdatedConnectionString = updatedRuntimeConfig.DataSource.ConnectionString;
+
+            // SourceLink appends the commit ID to the assembly metadata. The application name is extracted from the
+            // assembly metadata. So, the connection string after appending the application name will be of the form
+            // dab_oss_1.0.0+<commit-id> or dab_hosted_1.0.0+<commit-id> depending on oss or hosted scenario respectively.
+            // So, the updated connection string is validated to check if it starts with dab_oss_1.0.0 or dab_hosted_1.0.0.
+            Assert.IsTrue(actualUpdatedConnectionString.StartsWith(expectedUpdatedConnectionString));
         }
 
         [TestMethod("Validates that once the configuration is set, the config controller isn't reachable."), TestCategory(TestCategory.COSMOSDBNOSQL)]
@@ -1332,6 +1398,207 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
+        /// Validates the Location header field returned for a POST request when a 201 response is returned. The idea behind returning
+        /// a Location header is to provide a URL against which a GET request can be performed to fetch the details of the new item.
+        /// Base Route is not configured in the config file used for this test. If base-route is configured, the Location header URL should contain the base-route.
+        /// This test performs a POST request, and in the event that it results in a 201 response, it performs a subsequent GET request
+        /// with the Location header to validate the correctness of the URL.
+        /// </summary>
+        /// <param name="entityType">Type of the entity</param>
+        /// <param name="requestPath">Request path for performing POST API requests on the entity</param>
+        [DataTestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        [DataRow(EntitySourceType.Table, "/api/Book", DisplayName = "Location Header validation - Table, Base Route not configured")]
+        [DataRow(EntitySourceType.StoredProcedure, "/api/GetBooks", DisplayName = "Location Header validation - Stored Procedures, Base Route not configured")]
+        public async Task ValidateLocationHeaderFieldForPostRequests(EntitySourceType entityType, string requestPath)
+        {
+
+            GraphQLRuntimeOptions graphqlOptions = new(Enabled: false);
+            RestRuntimeOptions restRuntimeOptions = new(Enabled: true);
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            RuntimeConfig configuration;
+
+            if (entityType is EntitySourceType.StoredProcedure)
+            {
+                Entity entity = new(Source: new("get_books", EntitySourceType.StoredProcedure, null, null),
+                              Rest: new(new SupportedHttpVerb[] { SupportedHttpVerb.Get, SupportedHttpVerb.Post }),
+                              GraphQL: null,
+                              Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                              Relationships: null,
+                              Mappings: null
+                             );
+
+                string entityName = "GetBooks";
+                configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, entity, entityName);
+            }
+            else
+            {
+                configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions);
+            }
+
+            const string CUSTOM_CONFIG = "custom-config.json";
+            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                HttpMethod httpMethod = SqlTestHelper.ConvertRestMethodToHttpMethod(SupportedHttpVerb.Post);
+                HttpRequestMessage request = new(httpMethod, requestPath);
+                if (entityType is not EntitySourceType.StoredProcedure)
+                {
+                    string requestBody = @"{
+                        ""title"": ""Harry Potter and the Order of Phoenix"",
+                        ""publisher_id"": 1234
+                    }";
+
+                    JsonElement requestBodyElement = JsonDocument.Parse(requestBody).RootElement.Clone();
+                    request = new(httpMethod, requestPath)
+                    {
+                        Content = JsonContent.Create(requestBodyElement)
+                    };
+                }
+
+                HttpResponseMessage response = await client.SendAsync(request);
+
+                // Location header field is expected only when POST request results in the creation of a new item
+                Assert.AreEqual(HttpStatusCode.Created, response.StatusCode);
+
+                string locationHeader = response.Headers.Location.AbsoluteUri;
+
+                // GET request performed using the Location header should be successful.
+                HttpRequestMessage followUpRequest = new(HttpMethod.Get, response.Headers.Location);
+                HttpResponseMessage followUpResponse = await client.SendAsync(followUpRequest);
+                Assert.AreEqual(HttpStatusCode.OK, followUpResponse.StatusCode);
+
+                // Delete the new record created as part of this test
+                if (entityType is EntitySourceType.Table)
+                {
+                    HttpRequestMessage cleanupRequest = new(HttpMethod.Delete, locationHeader);
+                    await client.SendAsync(cleanupRequest);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Validates the Location header field returned for a POST request when it results in a 201 response. The idea behind returning
+        /// a Location header is to provide a URL against which a GET request can be performed to fetch the details of the new item.
+        /// Base Route is configured in the config file used for this test. So, it is expected that the Location header returned will contain the base-route.
+        /// This test performs a POST request, and checks if it results in a 201 response. If so, the test validates the correctness of the Location header in two steps.
+        /// Since base-route has significance only in the SWA-DAB integrated scenario and this test is executed against DAB running independently,
+        /// a subsequent GET request against the Location header will result in an error. So, the correctness of the base-route returned is validated with the help of
+        /// an expected location header value. The correctness of the PK part of the Location string is validated by performing a GET request after stripping off
+        /// the base-route from the Location URL.
+        /// </summary>
+        /// <param name="entityType">Type of the entity</param>
+        /// <param name="requestPath">Request path for performing POST API requests on the entity</param>
+        /// <param name="baseRoute">Configured base route</param>
+        /// <param name="expectedLocationHeader">Expected value for Location field in the response header. Since, the PK of the new record is not known beforehand,
+        /// the expectedLocationHeader excludes the PK. Because of this, the actual location header is validated by checking if it starts with the expectedLocationHeader.</param>
+        [DataTestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        [DataRow(EntitySourceType.Table, "/api/Book", "/data-api", "http://localhost/data-api/api/Book/id/", DisplayName = "Location Header validation - Table, Base Route configured")]
+        [DataRow(EntitySourceType.StoredProcedure, "/api/GetBooks", "/data-api", "http://localhost/data-api/api/GetBooks", DisplayName = "Location Header validation - Stored Procedure, Base Route configured")]
+        public async Task ValidateLocationHeaderWhenBaseRouteIsConfigured(
+            EntitySourceType entityType,
+            string requestPath,
+            string baseRoute,
+            string expectedLocationHeader)
+        {
+            GraphQLRuntimeOptions graphqlOptions = new(Enabled: false);
+            RestRuntimeOptions restRuntimeOptions = new(Enabled: true);
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            RuntimeConfig configuration;
+
+            if (entityType is EntitySourceType.StoredProcedure)
+            {
+                Entity entity = new(Source: new("get_books", EntitySourceType.StoredProcedure, null, null),
+                              Rest: new(new SupportedHttpVerb[] { SupportedHttpVerb.Get, SupportedHttpVerb.Post }),
+                              GraphQL: null,
+                              Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                              Relationships: null,
+                              Mappings: null
+                             );
+
+                string entityName = "GetBooks";
+                configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, entity, entityName);
+            }
+            else
+            {
+                configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions);
+            }
+
+            const string CUSTOM_CONFIG = "custom-config.json";
+
+            AuthenticationOptions AuthenticationOptions = new(Provider: EasyAuthType.StaticWebApps.ToString(), null);
+            HostOptions staticWebAppsHostOptions = new(null, AuthenticationOptions);
+
+            RuntimeOptions runtimeOptions = configuration.Runtime;
+            RuntimeOptions baseRouteEnabledRuntimeOptions = new(runtimeOptions.Rest, runtimeOptions.GraphQL, staticWebAppsHostOptions, "/data-api");
+            RuntimeConfig baseRouteEnabledConfig = configuration with { Runtime = baseRouteEnabledRuntimeOptions };
+            File.WriteAllText(CUSTOM_CONFIG, baseRouteEnabledConfig.ToJson());
+
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                HttpMethod httpMethod = SqlTestHelper.ConvertRestMethodToHttpMethod(SupportedHttpVerb.Post);
+                HttpRequestMessage request = new(httpMethod, requestPath);
+                if (entityType is not EntitySourceType.StoredProcedure)
+                {
+                    string requestBody = @"{
+                        ""title"": ""Harry Potter and the Order of Phoenix"",
+                        ""publisher_id"": 1234
+                    }";
+
+                    JsonElement requestBodyElement = JsonDocument.Parse(requestBody).RootElement.Clone();
+                    request = new(httpMethod, requestPath)
+                    {
+                        Content = JsonContent.Create(requestBodyElement)
+                    };
+                }
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                Assert.AreEqual(HttpStatusCode.Created, response.StatusCode);
+
+                string locationHeader = response.Headers.Location.AbsoluteUri;
+                Assert.IsTrue(locationHeader.StartsWith(expectedLocationHeader));
+
+                // The URL to perform the GET request is constructed by skipping the base-route.
+                // Base Route field is applicable only in SWA-DAB integrated scenario. When DAB engine is run independently, all the
+                // APIs are hosted on /api. But, the returned Location header in this test will contain the configured base-route. So, this needs to be
+                // removed before performing a subsequent GET request.
+                string path = response.Headers.Location.AbsolutePath;
+                string completeUrl = path.Substring(baseRoute.Length);
+
+                HttpRequestMessage followUpRequest = new(HttpMethod.Get, completeUrl);
+                HttpResponseMessage followUpResponse = await client.SendAsync(followUpRequest);
+                Assert.AreEqual(HttpStatusCode.OK, followUpResponse.StatusCode);
+
+                // Delete the new record created as part of this test
+                if (entityType is EntitySourceType.Table)
+                {
+                    HttpRequestMessage cleanupRequest = new(HttpMethod.Delete, completeUrl);
+                    await client.SendAsync(cleanupRequest);
+                }
+
+            }
+        }
+
+        /// <summary>
         /// Engine supports config with some views that do not have keyfields specified in the config for MsSQL.
         /// This Test validates that support. It creates a custom config with a view and no keyfields specified.
         /// It checks both Rest and GraphQL queries are tested to return Success.
@@ -1343,7 +1610,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
             Entity viewEntity = new(
                 Source: new("books_view_all", EntitySourceType.Table, null, null),
-                Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
+                Rest: new(Enabled: true),
                 GraphQL: new("", ""),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,
@@ -1539,7 +1806,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             Entity entity = new(
                 Source: new("graphql_incompatible", EntitySourceType.Table, null, null),
-                Rest: new(Array.Empty<SupportedHttpVerb>(), Enabled: false),
+                Rest: new(Enabled: false),
                 GraphQL: new("graphql_incompatible", "graphql_incompatibles", entityGraphQLEnabled),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,
@@ -1673,7 +1940,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             // file creation function.
             Entity requiredEntity = new(
                 Source: new("books", EntitySourceType.Table, null, null),
-                Rest: new(Array.Empty<SupportedHttpVerb>(), Enabled: false),
+                Rest: new(Enabled: false),
                 GraphQL: new("book", "books"),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,
@@ -1727,7 +1994,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             // Create the entities under test.
             Entity restEnabledEntity = new(
                 Source: new("books", EntitySourceType.Table, null, null),
-                Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
+                Rest: new(Enabled: true),
                 GraphQL: new("", "", false),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,
@@ -1735,7 +2002,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             Entity restDisabledEntity = new(
                 Source: new("publishers", EntitySourceType.Table, null, null),
-                Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS, Enabled: false),
+                Rest: new(Enabled: false),
                 GraphQL: new("publisher", "publishers", true),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,
@@ -2171,7 +2438,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             string sqlFile = new FileSystemRuntimeConfigLoader(fileSystem).GetFileNameForEnvironment(environment, considerOverrides: true);
             string configPayload = File.ReadAllText(sqlFile);
 
-            RuntimeConfigLoader.TryParseConfig(configPayload, out RuntimeConfig runtimeConfig);
+            RuntimeConfigLoader.TryParseConfig(configPayload, out RuntimeConfig runtimeConfig, replaceEnvVar: true);
 
             return runtimeConfig.DataSource.ConnectionString;
         }
@@ -2190,6 +2457,30 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             CosmosClientProvider cosmosClientProvider = server.Services.GetService(typeof(CosmosClientProvider)) as CosmosClientProvider;
             Assert.IsNotNull(cosmosClientProvider);
             Assert.IsNotNull(cosmosClientProvider.Client);
+        }
+
+        /// <summary>
+        /// Create basic runtime config with given DatabaseType and connectionString with no entity.
+        /// </summary>
+        /// <returns></returns>
+        private static RuntimeConfig CreateBasicRuntimeConfigWithNoEntity(
+            DatabaseType dbType = DatabaseType.MSSQL,
+            string connectionString = "")
+        {
+            DataSource dataSource = new(dbType, connectionString, new());
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "testSchema.json",
+                DataSource: dataSource,
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(null, null)
+                ),
+                Entities: new(new Dictionary<string, Entity>())
+            );
+
+            return runtimeConfig;
         }
 
         private bool HandleException<T>(Exception e) where T : Exception

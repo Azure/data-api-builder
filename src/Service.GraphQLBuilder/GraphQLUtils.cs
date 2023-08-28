@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Net;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -11,6 +12,8 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Sql;
 using HotChocolate.Language;
 using HotChocolate.Types;
+using HotChocolate.Types.NodaTime;
+using NodaTime.Text;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
 
 namespace Azure.DataApiBuilder.Service.GraphQLBuilder
@@ -42,6 +45,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             HashSet<string> inBuiltTypes = new()
             {
                 "ID",
+                UUID_TYPE,
                 BYTE_TYPE,
                 SHORT_TYPE,
                 INT_TYPE,
@@ -52,7 +56,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                 STRING_TYPE,
                 BOOLEAN_TYPE,
                 DATETIME_TYPE,
-                BYTEARRAY_TYPE
+                BYTEARRAY_TYPE,
+                LOCALTIME_TYPE
             };
             string name = typeNode.NamedType().Name.Value;
             return inBuiltTypes.Contains(name);
@@ -239,8 +244,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                     SINGLE_TYPE => new(SINGLE_TYPE, new SingleType().ParseValue(float.Parse(defaultValueFromConfig))),
                     FLOAT_TYPE => new(FLOAT_TYPE, new FloatValueNode(double.Parse(defaultValueFromConfig))),
                     DECIMAL_TYPE => new(DECIMAL_TYPE, new FloatValueNode(decimal.Parse(defaultValueFromConfig))),
-                    DATETIME_TYPE => new(DATETIME_TYPE, new DateTimeType().ParseResult(DateTime.Parse(defaultValueFromConfig))),
+                    DATETIME_TYPE => new(DATETIME_TYPE, new DateTimeType().ParseResult(
+                        DateTime.Parse(defaultValueFromConfig, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal))),
                     BYTEARRAY_TYPE => new(BYTEARRAY_TYPE, new ByteArrayType().ParseValue(Convert.FromBase64String(defaultValueFromConfig))),
+                    LOCALTIME_TYPE => new(LOCALTIME_TYPE, new LocalTimeType().ParseResult(LocalTimePattern.ExtendedIso.Parse(defaultValueFromConfig).Value)),
                     _ => throw new NotSupportedException(message: $"The {defaultValueFromConfig} parameter's value type [{paramValueType}] is not supported.")
                 };
 

@@ -8,6 +8,10 @@ using Azure.DataApiBuilder.Service.Exceptions;
 
 namespace Azure.DataApiBuilder.Config.Converters;
 
+/// <summary>
+/// Custom string json converter factory to replace environment variables of the pattern
+/// @env('ENV_NAME') with their value during deserialization.
+/// </summary>
 public class StringJsonConverterFactory : JsonConverterFactory
 {
     public override bool CanConvert(Type typeToConvert)
@@ -44,8 +48,7 @@ public class StringJsonConverterFactory : JsonConverterFactory
             if (reader.TokenType == JsonTokenType.String)
             {
                 string? value = reader.GetString();
-
-                return Regex.Replace(reader.GetString()!, ENV_PATTERN, new MatchEvaluator(ReplaceMatchWithEnvVariable));
+                return Regex.Replace(value!, ENV_PATTERN, new MatchEvaluator(ReplaceMatchWithEnvVariable));
             }
 
             if (reader.TokenType == JsonTokenType.Null)

@@ -89,7 +89,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 else
                 {
                     Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
-                        GetModifiedJsonString(repKeys, @"""@env('enumVarName')"""), out expectedConfig, replaceEnvVar: replaceEnvVar),
+                        GetModifiedJsonString(repKeys, @"""mssql"""), out expectedConfig, replaceEnvVar: replaceEnvVar),
                         "Should read the expected config");
                 }
 
@@ -208,6 +208,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// fashion.
         /// </summary>
         /// <param name="reps">Replacement strings.</param>
+        /// <param name="enumString">Replacement string to use for a test enum.</param>
         /// <returns>Json string with replacements.</returns>
         public static string GetModifiedJsonString(string[] reps, string enumString)
         {

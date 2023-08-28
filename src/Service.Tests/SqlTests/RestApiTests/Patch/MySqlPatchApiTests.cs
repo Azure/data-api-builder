@@ -163,6 +163,30 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 "
             },
             {
+                "PatchOneUpdateWithComputedFieldMissingFromRequestBody",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'book_name', book_name, 'copies_sold', copies_sold,
+                                        'last_sold_on',last_sold_on) AS data
+                    FROM (
+                        SELECT id, book_name, copies_sold, DATE_FORMAT(last_sold_on, '%Y-%m-%dT%H:%i:%s') AS last_sold_on
+                        FROM " + _tableWithReadOnlyFields + @"
+                        WHERE id = 1 AND book_name = 'New book' AND copies_sold = 50
+                    ) AS subq
+                "
+            },
+            {
+                "PatchOneInsertWithComputedFieldMissingFromRequestBody",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'book_name', book_name, 'copies_sold', copies_sold,
+                                        'last_sold_on',last_sold_on) AS data
+                    FROM (
+                        SELECT id, book_name, copies_sold, DATE_FORMAT(last_sold_on, '%Y-%m-%dT%H:%i:%s') AS last_sold_on
+                        FROM " + _tableWithReadOnlyFields + @"
+                        WHERE id = 2 AND book_name = 'New book' AND copies_sold = 50
+                    ) AS subq
+                "
+            },
+            {
                 "PatchOne_Update_Nulled_Test",
                 @"
                     SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
@@ -193,20 +217,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         [TestMethod]
         [Ignore]
         public override Task PatchOneInsertInViewTest()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task PatchOneWithComputedFieldMissingFromRequestBody()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task PatchOneWithComputedFieldInRequestBody()
         {
             throw new NotImplementedException();
         }

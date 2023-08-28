@@ -108,12 +108,14 @@ namespace Azure.DataApiBuilder.Core.AuthenticationHelpers
             // only in the non-hosted scenario.
             if (!_isLateConfigured)
             {
-                string requestAuthStatus = isAuthenticatedRequest ? AuthorizationType.Authenticated.ToString() :
-                    AuthorizationType.Anonymous.ToString();
-                _logger.LogDebug($"{HttpContextExtensions.GetLoggerCorrelationId(httpContext)}" +
-                    $"Request authentication state: {requestAuthStatus}.");
-                _logger.LogDebug($"{HttpContextExtensions.GetLoggerCorrelationId(httpContext)}" +
-                    $"The request will be executed in the context of {clientDefinedRole} role");
+                string requestAuthStatus = isAuthenticatedRequest ? AuthorizationType.Authenticated.ToString() : AuthorizationType.Anonymous.ToString();
+                _logger.LogDebug(
+                    message: "{correlationId} Request authentication state: {requestAuthStatus}.",
+                    HttpContextExtensions.GetLoggerCorrelationId(httpContext),
+                    requestAuthStatus);
+                _logger.LogDebug("{correlationId} The request will be executed in the context of the role: {clientDefinedRole}",
+                    HttpContextExtensions.GetLoggerCorrelationId(httpContext),
+                    clientDefinedRole);
             }
 
             // When the user is not in the clientDefinedRole and the client role header

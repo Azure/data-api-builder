@@ -54,8 +54,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 sleepDurationProvider: (attempt) => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
                 onRetry: (exception, backOffTime) =>
                 {
-                    QueryExecutorLogger.LogError(exception.Message);
-                    QueryExecutorLogger.LogError(exception.StackTrace);
+                    QueryExecutorLogger.LogError(exception: exception, message: "Error during query execution, retrying.");
                 });
         }
 
@@ -84,7 +83,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     if (!ConfigProvider.IsLateConfigured)
                     {
                         string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
-                        QueryExecutorLogger.LogDebug("[{correlationId}] Executing query: {queryText}", correlationId, sqltext);
+                        QueryExecutorLogger.LogDebug("{correlationId} Executing query: {queryText}", correlationId, sqltext);
                     }
 
                     TResult? result = await ExecuteQueryAgainstDbAsync(conn, sqltext, parameters, dataReaderHandler, httpContext, args);
@@ -94,7 +93,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
                         int maxRetries = _maxRetryCount + 1;
                         // This implies that the request got successfully executed during one of retry attempts.
-                        QueryExecutorLogger.LogInformation("[{correlationId}] Request executed successfully in {retryAttempt} attempt of {maxRetries} available attempts.", correlationId, retryAttempt, maxRetries);
+                        QueryExecutorLogger.LogInformation("{correlationId} Request executed successfully in {retryAttempt} attempt of {maxRetries} available attempts.", correlationId, retryAttempt, maxRetries);
                     }
 
                     return result;
@@ -107,8 +106,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     }
                     else
                     {
-                        string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
-                        QueryExecutorLogger.LogError("[{correlationId}] {errorMessage} {stackTrace}", correlationId, e.Message, e.StackTrace);
+                        QueryExecutorLogger.LogError(
+                            exception: e,
+                            message: "{correlationId} Query execution error due to:\n{errorMessage}",
+                            HttpContextExtensions.GetLoggerCorrelationId(httpContext),
+                            e.Message);
 
                         // Throw custom DABException
                         throw DbExceptionParser.Parse(e);
@@ -172,7 +174,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             catch (DbException e)
             {
                 string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
-                QueryExecutorLogger.LogError("[{correlationId}] {errorMessage} {stackTrace}", correlationId, e.Message, e.StackTrace);
+                QueryExecutorLogger.LogError(
+                    exception: e,
+                    message: "{correlationId} Query execution error due to:\n{errorMessage}",
+                    correlationId,
+                    e.Message);
                 throw DbExceptionParser.Parse(e);
             }
         }
@@ -206,7 +212,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
             catch (DbException e)
             {
-                QueryExecutorLogger.LogError("{errorMessage} {stackTrace}", e.Message, e.StackTrace);
+                QueryExecutorLogger.LogError(
+                    exception: e,
+                    message: "Query execution error due to:\n{errorMessage}",
+                    e.Message);
                 throw DbExceptionParser.Parse(e);
             }
         }

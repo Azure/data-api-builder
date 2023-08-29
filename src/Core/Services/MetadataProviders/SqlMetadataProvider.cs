@@ -1011,7 +1011,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
             if (entity is not null && entity.Source.Type is EntitySourceType.Table)
             {
-                // For MySql, database name is equivalent of schema name.
+                // For MySql, database name is equivalent to schema name.
                 string schemaOrDatabaseName = GetDatabaseType() is DatabaseType.MySQL ? GetDatabaseName() : schemaName;
                 await PopulateColumnDefinitionsWithReadOnlyFlag(tableName, schemaOrDatabaseName, sourceDefinition);
             }

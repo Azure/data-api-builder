@@ -168,7 +168,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     SELECT JSON_OBJECT('id', id, 'book_name', book_name, 'copies_sold', copies_sold,
                                         'last_sold_on',last_sold_on) AS data
                     FROM (
-                        SELECT id, book_name, copies_sold, DATE_FORMAT(last_sold_on, '%Y-%m-%dT%H:%i:%s') AS last_sold_on
+                        SELECT id, book_name, copies_sold, DATE_FORMAT(last_sold_on, '%Y-%m-%d %H:%i:%s') AS last_sold_on
                         FROM " + _tableWithReadOnlyFields + @"
                         WHERE id = 1 AND book_name = 'New book' AND copies_sold = 50
                     ) AS subq

@@ -182,7 +182,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 $"ON table0.[publisher_id] = table1.[id] "
             },
             {
-                "InsertOneWithTimestampFieldMissingFromRequestBody",
+                "InsertOneWithRowversionFieldMissingFromRequestBody",
                 $"SELECT * FROM {_tableWithReadOnlyFields } WHERE [id] = 2 AND [book_name] = 'Another Awesome Book' " +
                 $"AND [copies_sold] = 100 AND [last_sold_on] is NULL AND [last_sold_on_date] is NULL " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
@@ -273,13 +273,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         #endregion
 
         /// <summary>
-        /// Test to validate successful execution of a request when a timestamp field is missing from the request body.
+        /// Test to validate successful execution of a request when a rowversion field is missing from the request body.
         /// In such a case, we skip inserting the field. 
         /// </summary>
         [TestMethod]
-        public async Task InsertOneWithTimestampFieldMissingFromRequestBody()
+        public async Task InsertOneWithRowversionFieldMissingFromRequestBody()
         {
-            // Validate successful execution of a POST request when a timestamp field (here 'row_version')
+            // Validate successful execution of a POST request when a rowversion field (here 'row_version')
             // is missing from the request body.
             string requestBody = @"
             {
@@ -294,7 +294,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                     primaryKeyRoute: null,
                     queryString: null,
                     entityNameOrPath: _entityWithReadOnlyFields,
-                    sqlQuery: GetQuery("InsertOneWithTimestampFieldMissingFromRequestBody"),
+                    sqlQuery: GetQuery("InsertOneWithRowversionFieldMissingFromRequestBody"),
                     operationType: EntityActionOperation.Insert,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
@@ -303,13 +303,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         }
 
         /// <summary>
-        /// Test to validate that whenever a timestamp field is included in the request body, we throw a BadRequest exception
-        /// as it is not allowed to provide value (to insert) for a timestamp field.
+        /// Test to validate that whenever a rowversion field is included in the request body, we throw a BadRequest exception
+        /// as it is not allowed to provide value (to insert) for a rowversion field.
         /// </summary>
         [TestMethod]
-        public async Task InsertOneWithTimestampFieldInRequestBody()
+        public async Task InsertOneWithRowversionFieldInRequestBody()
         {
-            // Validate that a BadRequest exception is thrown when a timestamp field (here 'row_version') is included in request body.
+            // Validate that a BadRequest exception is thrown when a rowversion field (here 'row_version') is included in request body.
             string requestBody = @"
             {
                 ""id"": 2,
@@ -327,7 +327,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 operationType: EntityActionOperation.Insert,
                 exceptionExpected: true,
                 requestBody: requestBody,
-                expectedErrorMessage: "Field 'row_version' provided in request body cannot be assigned a value.",
+                expectedErrorMessage: "Field 'row_version' cannot be included in the request body.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );

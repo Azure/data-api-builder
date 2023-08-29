@@ -306,12 +306,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         public virtual async Task PatchOneWithComputedFieldMissingFromRequestBody()
         {
             // Validate successful execution of a PATCH update when a computed field (here 'last_sold_on_date')
-            // is missing from the request body.
+            // is missing from the request body. In such a case we don't try to put NULL value for such a field while performing
+            // the update.
             string requestBody = @"
             {
                 ""book_name"": ""New book"",
-                ""copies_sold"": 50,
-                ""last_sold_on"": null
+                ""copies_sold"": 50
             }";
             string expectedLocationHeader = $"id/1";
 
@@ -326,7 +326,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 );
 
             // Validate successful execution of a PATCH insert when a computed field (here 'last_sold_on_date')
-            // is missing from the request body.
+            // is missing from the request body. In such a case we don't try to put NULL value for such a field while performing
+            // the insert.
             requestBody = @"
             {
                 ""book_name"": ""New book"",
@@ -805,7 +806,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 operationType: EntityActionOperation.UpsertIncremental,
                 exceptionExpected: true,
                 requestBody: requestBody,
-                expectedErrorMessage: "Field 'last_sold_on_date' provided in request body cannot be assigned a value.",
+                expectedErrorMessage: "Field 'last_sold_on_date' cannot be included in the request body.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
@@ -824,7 +825,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 operationType: EntityActionOperation.UpsertIncremental,
                 exceptionExpected: true,
                 requestBody: requestBody,
-                expectedErrorMessage: "Field 'last_sold_on_date' provided in request body cannot be assigned a value.",
+                expectedErrorMessage: "Field 'last_sold_on_date' cannot be included in the request body.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );

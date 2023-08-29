@@ -306,7 +306,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 if (insertRequestCtx.FieldValuePairsInBody.ContainsKey(exposedName!) && column.Value.IsReadOnly)
                 {
                     throw new DataApiBuilderException(
-                            message: $"Field '{exposedName}' provided in request body cannot be assigned a value.",
+                            message: $"Field '{exposedName}' cannot be included in the request body.",
                             statusCode: HttpStatusCode.BadRequest,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
@@ -380,7 +380,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 if (upsertRequestCtx.FieldValuePairsInBody.ContainsKey(exposedName!) && column.Value.IsReadOnly)
                 {
                     throw new DataApiBuilderException(
-                            message: $"Field '{exposedName}' provided in request body cannot be assigned a value.",
+                            message: $"Field '{exposedName}' cannot be included in the request body.",
                             statusCode: HttpStatusCode.BadRequest,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }

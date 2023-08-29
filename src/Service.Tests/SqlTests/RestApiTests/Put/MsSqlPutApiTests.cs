@@ -98,13 +98,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "PutOneUpdateWithTimestampFieldMissingFromRequestBody",
+                "PutOneUpdateWithRowversionFieldMissingFromRequestBody",
                 $"SELECT * FROM {_tableWithReadOnlyFields } WHERE [id] = 1 AND [book_name] = 'Another Awesome Book' " +
                 $"AND [copies_sold] = 100 AND [last_sold_on] is NULL AND [last_sold_on_date] is NULL " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "PutOneInsertWithTimestampFieldMissingFromRequestBody",
+                "PutOneInsertWithRowversionFieldMissingFromRequestBody",
                 $"SELECT * FROM {_tableWithReadOnlyFields } WHERE [id] = 2 AND [book_name] = 'Best seller' " +
                 $"AND [copies_sold] = 100 AND [last_sold_on] is NULL AND [last_sold_on_date] is NULL " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
@@ -259,13 +259,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         }
 
         /// <summary>
-        /// Test to validate successful execution of a request when a Timestamp field is missing from the request body.
-        /// In such a case, we don't attempt to NULL out timestamp field (as per PUT semantics) but instead skip updating/inserting the field. 
+        /// Test to validate successful execution of a request when a rowversion field is missing from the request body.
+        /// In such a case, we don't attempt to NULL out rowversion field (as per PUT semantics) but instead skip updating/inserting the field. 
         /// </summary>
         [TestMethod]
-        public async Task PutOneWithTimestampFieldMissingFromRequestBody()
+        public async Task PutOneWithRowversionFieldMissingFromRequestBody()
         {
-            // Validate successful execution of a PUT update when a timestamp field (here 'row_version')
+            // Validate successful execution of a PUT update when a rowversion field (here 'row_version')
             // is missing from the request body.
             string requestBody = @"
             {
@@ -279,13 +279,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     primaryKeyRoute: expectedLocationHeader,
                     queryString: null,
                     entityNameOrPath: _entityWithReadOnlyFields,
-                    sqlQuery: GetQuery("PutOneUpdateWithTimestampFieldMissingFromRequestBody"),
+                    sqlQuery: GetQuery("PutOneUpdateWithRowversionFieldMissingFromRequestBody"),
                     operationType: EntityActionOperation.Upsert,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
                 );
 
-            // Validate successful execution of a PUT insert when a timestamp field (here 'row_version')
+            // Validate successful execution of a PUT insert when a rowversion field (here 'row_version')
             // is missing from the request body.
             requestBody = @"
             {
@@ -300,7 +300,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     primaryKeyRoute: expectedLocationHeader,
                     queryString: null,
                     entityNameOrPath: _entityWithReadOnlyFields,
-                    sqlQuery: GetQuery("PutOneInsertWithTimestampFieldMissingFromRequestBody"),
+                    sqlQuery: GetQuery("PutOneInsertWithRowversionFieldMissingFromRequestBody"),
                     operationType: EntityActionOperation.Upsert,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
@@ -309,13 +309,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         }
 
         /// <summary>
-        /// Test to validate that whenever a timestamp field is included in the request body, we throw a BadRequest exception
-        /// as it is not allowed to provide value (to insert/update) for a timestamp field.
+        /// Test to validate that whenever a rowversion field is included in the request body, we throw a BadRequest exception
+        /// as it is not allowed to provide value (to insert/update) for a rowversion field.
         /// </summary>
         [TestMethod]
-        public virtual async Task PutOneWithTimestampFieldInRequestBody()
+        public virtual async Task PutOneWithRowversionFieldInRequestBody()
         {
-            // Validate that a BadRequest exception is thrown for a PUT update when a timestamp field (here 'row_version') is included in request body.
+            // Validate that a BadRequest exception is thrown for a PUT update when a rowversion field (here 'row_version') is included in request body.
             string requestBody = @"
             {
                 ""book_name"": ""Another Awesome Book"",
@@ -332,12 +332,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 operationType: EntityActionOperation.Upsert,
                 exceptionExpected: true,
                 requestBody: requestBody,
-                expectedErrorMessage: "Field 'row_version' provided in request body cannot be assigned a value.",
+                expectedErrorMessage: "Field 'row_version' cannot be included in the request body.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
 
-            // Validate that a BadRequest exception is thrown for a PUT insert when a timestamp field (here 'row_version') is included in request body.
+            // Validate that a BadRequest exception is thrown for a PUT insert when a rowversion field (here 'row_version') is included in request body.
             requestBody = @"
             {
                 ""book_name"": ""New book"",
@@ -354,7 +354,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 operationType: EntityActionOperation.Upsert,
                 exceptionExpected: true,
                 requestBody: requestBody,
-                expectedErrorMessage: "Field 'row_version' provided in request body cannot be assigned a value.",
+                expectedErrorMessage: "Field 'row_version' cannot be included in the request body.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );

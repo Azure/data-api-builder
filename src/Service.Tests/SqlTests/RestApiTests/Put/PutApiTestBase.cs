@@ -1010,7 +1010,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 operationType: EntityActionOperation.Upsert,
                 exceptionExpected: true,
                 requestBody: requestBody,
-                expectedErrorMessage: "Field 'last_sold_on_date' provided in request body cannot be assigned a value.",
+                expectedErrorMessage: "Field 'last_sold_on_date' cannot be included in the request body.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
@@ -1029,7 +1029,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 operationType: EntityActionOperation.Upsert,
                 exceptionExpected: true,
                 requestBody: requestBody,
-                expectedErrorMessage: "Field 'last_sold_on_date' provided in request body cannot be assigned a value.",
+                expectedErrorMessage: "Field 'last_sold_on_date' cannot be included in the request body.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );

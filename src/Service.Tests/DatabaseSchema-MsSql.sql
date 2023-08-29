@@ -260,7 +260,7 @@ create table books_sold
 (
   [id] int PRIMARY KEY not null,
   [book_name] varchar(50),
-  [row_version] timestamp,
+  [row_version] rowversion,
   [copies_sold] int default 0,
   [last_sold_on] datetime2(7) DEFAULT CURRENT_TIMESTAMP,
   [last_sold_on_date] as last_sold_on,

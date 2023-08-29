@@ -77,7 +77,10 @@ public abstract class RuntimeConfigLoader
             string updatedConnectionString = config.DataSource.ConnectionString;
 
             // set dataSourceName to default if not provided
-            dataSourceName = dataSourceName ?? config.GetDefaultDataSourceName();
+            if (string.IsNullOrEmpty(dataSourceName))
+            {
+                dataSourceName = config.GetDefaultDataSourceName();
+            }
 
             if (!string.IsNullOrEmpty(connectionString))
             {

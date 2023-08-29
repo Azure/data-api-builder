@@ -63,7 +63,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
             _accessTokensFromConfiguration = runtimeConfigProvider.ManagedIdentityAccessToken;
-            IEnumerable<KeyValuePair<string, DataSource>> mysqldbs = runtimeConfigProvider.GetConfig().DataSourceNameToDataSource.Where(x => x.Value.DatabaseType == DatabaseType.MySQL);
+            IEnumerable<KeyValuePair<string, DataSource>> mysqldbs = runtimeConfigProvider.GetConfig().GetDataSourceNamesToDataSourcesIterator().Where(x => x.Value.DatabaseType == DatabaseType.MySQL);
 
             foreach ((string dataSourceName, DataSource dataSource) in mysqldbs)
             {
@@ -79,7 +79,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     builder.SslMode = MySqlSslMode.VerifyFull;
                 }
 
-                ConnectionStringBuilders.Add(dataSourceName, builder);
+                ConnectionStringBuilders.TryAdd(dataSourceName, builder);
                 _dataSourceAccessTokenUsage[dataSourceName] = ShouldManagedIdentityAccessBeAttempted(builder);
             }
         }
@@ -92,12 +92,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="conn">The supplied connection to modify for managed identity access.</param>
         /// <param name="dataSourceName">Name of datasource for which to set access token. Default dbName taken from config if null</param>
-        public override async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, string? dataSourceName = null)
+        public override async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, string dataSourceName = "")
         {
             // using default datasource name for first db - maintaining backward compatibility for single db scenario.
             if (string.IsNullOrEmpty(dataSourceName))
             {
-                dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
+                dataSourceName = ConfigProvider.GetConfig().GetDefaultDataSourceName();
             }
 
             _dataSourceAccessTokenUsage.TryGetValue(dataSourceName, out bool setAccessToken);

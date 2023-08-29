@@ -49,7 +49,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (string.IsNullOrEmpty(dataSourceName))
             {
-                dataSourceName = _clientProvider._defaultDataSourceName;
+                dataSourceName = _clientProvider.RuntimeConfigProvider.GetConfig().GetDefaultDataSourceName();
             }
 
             CosmosClient? client = _clientProvider.Clients[dataSourceName];

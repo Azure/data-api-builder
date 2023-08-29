@@ -48,18 +48,18 @@ public abstract class RuntimeConfigLoader
     /// <param name="json">JSON that represents the config file.</param>
     /// <param name="config">The parsed config, or null if it parsed unsuccessfully.</param>
     /// <returns>True if the config was parsed, otherwise false.</returns>
+    /// <param name="logger">logger to log messages</param>
+    /// <param name="connectionString">connectionString to add to config if specified</param>
     /// <param name="replaceEnvVar">Whether to replace environment variable with its
     /// value or not while deserializing. By default, no replacement happens.</param>
-    /// <param name="connectionString">connectionString to add to config if specified</param>
     /// <param name="dataSourceName"> datasource name for which to add connection string</param>
     /// <param name="datasourceNameToConnectionString"> dictionary of datasource name to connection string</param>
-    /// <param name="logger">logger to log messages</param>
     public static bool TryParseConfig(string json,
         [NotNullWhen(true)] out RuntimeConfig? config,
         ILogger? logger = null,
         string? connectionString = null,
         bool replaceEnvVar = false,
-        string? dataSourceName = null,
+        string dataSourceName = "",
         Dictionary<string, string>? datasourceNameToConnectionString = null)
     {
         JsonSerializerOptions options = GetSerializationOptions(replaceEnvVar);
@@ -77,7 +77,7 @@ public abstract class RuntimeConfigLoader
             string updatedConnectionString = config.DataSource.ConnectionString;
 
             // set dataSourceName to default if not provided
-            dataSourceName = dataSourceName ?? config.DefaultDataSourceName;
+            dataSourceName = dataSourceName ?? config.GetDefaultDataSourceName();
 
             if (!string.IsNullOrEmpty(connectionString))
             {
@@ -96,28 +96,24 @@ public abstract class RuntimeConfigLoader
             // iterate over dictionary and update runtime config with connection strings.
             foreach ((string dataSourceKey, string connectionValue) in datasourceNameToConnectionString)
             {
-                if (config.DataSourceNameToDataSource.TryGetValue(dataSourceKey, out DataSource? ds))
+                string updatedConnection = connectionValue;
+
+                DataSource ds = config.GetDataSourceFromDataSourceName(dataSourceKey);
+
+                // Add Application Name for telemetry for MsSQL
+                if (ds.DatabaseType is DatabaseType.MSSQL && replaceEnvVar)
                 {
-                    string updatedConnection = connectionValue;
-
-                    // Add Application Name for telemetry for MsSQL
-                    if (ds.DatabaseType is DatabaseType.MSSQL && replaceEnvVar)
-                    {
-                        updatedConnection = GetConnectionStringWithApplicationName(connectionValue);
-                    }
-
-                    ds = ds with { ConnectionString = updatedConnection };
-                    config.DataSourceNameToDataSource[dataSourceKey] = ds;
-
-                    if (string.Equals(dataSourceKey, config.DefaultDataSourceName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        config = config with { DataSource = ds };
-                    }
+                    updatedConnection = GetConnectionStringWithApplicationName(connectionValue);
                 }
-                else
+
+                ds = ds with { ConnectionString = updatedConnection };
+                config.UpdateDataSourceNameToDataSource(dataSourceName, ds);
+
+                if (string.Equals(dataSourceKey, config.GetDefaultDataSourceName(), StringComparison.OrdinalIgnoreCase))
                 {
-                    throw new DataApiBuilderException($"{nameof(dataSourceKey)} could not be found within the config", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
+                    config = config with { DataSource = ds };
                 }
+
             }
         }
         catch (JsonException ex)
@@ -150,12 +146,6 @@ public abstract class RuntimeConfigLoader
     /// By default, no replacement happens.</param>
     public static JsonSerializerOptions GetSerializationOptions(bool replaceEnvVar = false)
     {
-        List<String> propertiesToExcludeForSerialization = new()
-        {
-            nameof(RuntimeConfig.DefaultDataSourceName),
-            nameof(RuntimeConfig.DataSourceNameToDataSource),
-            nameof(RuntimeConfig.EntityNameToDataSourceName)
-        };
 
         JsonSerializerOptions options = new()
         {
@@ -172,7 +162,6 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new EntityGraphQLOptionsConverterFactory(replaceEnvVar));
         options.Converters.Add(new EntityRestOptionsConverterFactory(replaceEnvVar));
         options.Converters.Add(new EntityActionConverterFactory());
-        options.Converters.Add(new RuntimeConfigConditionalConverter(propertiesToExcludeForSerialization));
 
         if (replaceEnvVar)
         {

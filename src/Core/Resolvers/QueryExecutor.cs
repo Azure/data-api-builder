@@ -35,7 +35,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private AsyncRetryPolicy _retryPolicy;
 
         /// <summary>
-        /// Dictionary that stores DbName to its corresponding connection string builder.
+        /// Dictionary that stores dataSourceName to its corresponding connection string builder.
         /// </summary>
         public virtual IDictionary<string, DbConnectionStringBuilder> ConnectionStringBuilders { get; set; }
 
@@ -72,7 +72,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             if (string.IsNullOrEmpty(dataSourceName))
             {
-                dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
+                dataSourceName = ConfigProvider.GetConfig().GetDefaultDataSourceName();
             }
 
             if (!ConnectionStringBuilders.ContainsKey(dataSourceName))
@@ -200,7 +200,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc />
-        public virtual string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, DbConnectionParam> parameters, string? dataSourceName = null)
+        public virtual string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, DbConnectionParam> parameters, string dataSourceName = "")
         {
             return string.Empty;
         }
@@ -213,7 +213,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc />
-        public virtual async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, string? dataSourceName = null)
+        public virtual async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, string dataSourceName = "")
         {
             // no-op in the base class.
             await Task.Yield();

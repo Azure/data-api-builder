@@ -73,7 +73,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                   httpContextAccessor)
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
-            IEnumerable<KeyValuePair<string, DataSource>> mssqldbs = runtimeConfig.DataSourceNameToDataSource.Where(x => x.Value.DatabaseType == DatabaseType.MSSQL);
+            IEnumerable<KeyValuePair<string, DataSource>> mssqldbs = runtimeConfig.GetDataSourceNamesToDataSourcesIterator().Where(x => x.Value.DatabaseType == DatabaseType.MSSQL);
             _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
             _dataSourceToSessionContextUsage = new Dictionary<string, bool>();
             _accessTokensFromConfiguration = runtimeConfigProvider.ManagedIdentityAccessToken;
@@ -88,7 +88,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     builder.TrustServerCertificate = false;
                 }
 
-                ConnectionStringBuilders.Add(dataSourceName, builder);
+                ConnectionStringBuilders.TryAdd(dataSourceName, builder);
                 MsSqlOptions? msSqlOptions = dataSource.GetTypedOptions<MsSqlOptions>();
                 _dataSourceToSessionContextUsage[dataSourceName] = msSqlOptions is null ? false : msSqlOptions.SetSessionContext;
                 _dataSourceAccessTokenUsage[dataSourceName] = ShouldManagedIdentityAccessBeAttempted(builder);
@@ -103,12 +103,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="conn">The supplied connection to modify for managed identity access.</param>
         /// <param name="dataSourceName">Name of datasource for which to set access token. Default dbName taken from config if null</param>
-        public override async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, string? dataSourceName = null)
+        public override async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, string dataSourceName = "")
         {
             // using default datasource name for first db - maintaining backward compatibility for single db scenario.
             if (string.IsNullOrEmpty(dataSourceName))
             {
-                dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
+                dataSourceName = ConfigProvider.GetConfig().GetDefaultDataSourceName();
             }
 
             _dataSourceAccessTokenUsage.TryGetValue(dataSourceName, out bool setAccessToken);
@@ -195,11 +195,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="dataSourceName">Name of datasource for which to set access token. Default dbName taken from config if null</param>
         /// <returns>empty string / query to set session parameters for the connection.</returns>
         /// <seealso cref="https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-set-session-context-transact-sql?view=sql-server-ver16"/>
-        public override string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, DbConnectionParam> parameters, string? dataSourceName = null)
+        public override string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, DbConnectionParam> parameters, string dataSourceName = "")
         {
             if (string.IsNullOrEmpty(dataSourceName))
             {
-                dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
+                dataSourceName = ConfigProvider.GetConfig().GetDefaultDataSourceName();
             }
 
             if (httpContext is null || !_dataSourceToSessionContextUsage[dataSourceName])

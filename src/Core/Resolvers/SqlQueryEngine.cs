@@ -61,7 +61,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="context">HotChocolate Request Pipeline context containing request metadata</param>
         /// <param name="parameters">GraphQL Query Parameters from schema retrieved from ResolverMiddleware.GetParametersFromSchemaAndQueryFields()</param>
-        /// <param name="dataSourceName">Name of datasource for which to set access token. Default dbName taken from config if null</param>
+        /// <param name="dataSourceName">Name of datasource for which to set access token. Default dbName taken from config if empty</param>
         public async Task<Tuple<JsonDocument?, IMetadata?>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> parameters, string dataSourceName = "")
         {
             SqlQueryStructure structure = new(

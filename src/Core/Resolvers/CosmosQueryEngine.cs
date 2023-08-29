@@ -57,6 +57,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // TODO: add support for join query against another container
             // TODO: add support for TOP and Order-by push-down
 
+            if (string.IsNullOrEmpty(dataSourceName))
+            {
+                dataSourceName = _clientProvider.RuntimeConfigProvider.GetConfig().GetDefaultDataSourceName();
+            }
+
             CosmosQueryStructure structure = new(context, parameters, _metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
 
             string requestContinuation = null;
@@ -64,7 +69,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             QueryDefinition querySpec = new(queryString);
             QueryRequestOptions queryRequestOptions = new();
 
-            CosmosClient client = string.IsNullOrEmpty(dataSourceName) ? _clientProvider.Clients[_clientProvider._defaultDataSourceName] : _clientProvider.Clients[dataSourceName];
+            CosmosClient client = string.IsNullOrEmpty(dataSourceName) ? _clientProvider.Clients[dataSourceName] : _clientProvider.Clients[dataSourceName];
             Container container = client.GetDatabase(structure.Database).GetContainer(structure.Container);
             (string idValue, string partitionKeyValue) = await GetIdAndPartitionKey(parameters, container, structure);
 
@@ -146,8 +151,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // TODO: add support for join query against another container
             // TODO: add support for TOP and Order-by push-down
 
+            if (string.IsNullOrEmpty(dataSourceName))
+            {
+                dataSourceName = _clientProvider.RuntimeConfigProvider.GetConfig().GetDefaultDataSourceName();
+            }
+
             CosmosQueryStructure structure = new(context, parameters, _metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
-            CosmosClient client = string.IsNullOrEmpty(dataSourceName) ? _clientProvider.Clients[_clientProvider._defaultDataSourceName] : _clientProvider.Clients[dataSourceName];
+            CosmosClient client = string.IsNullOrEmpty(dataSourceName) ? _clientProvider.Clients[dataSourceName] : _clientProvider.Clients[dataSourceName];
             Container container = client.GetDatabase(structure.Database).GetContainer(structure.Container);
             QueryDefinition querySpec = new(_queryBuilder.Build(structure));
 

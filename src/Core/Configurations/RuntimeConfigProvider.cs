@@ -150,7 +150,7 @@ public class RuntimeConfigProvider
                 _runtimeConfig = HandleCosmosNoSqlConfiguration(schema, _runtimeConfig, _runtimeConfig.DataSource.ConnectionString);
             }
 
-            ManagedIdentityAccessToken[_runtimeConfig.DefaultDataSourceName] = accessToken;
+            ManagedIdentityAccessToken[_runtimeConfig.GetDefaultDataSourceName()] = accessToken;
         }
 
         bool configLoadSucceeded = await InvokeConfigLoadedHandlersAsync();
@@ -191,8 +191,8 @@ public class RuntimeConfigProvider
                 DatabaseType.CosmosDB_NoSQL => HandleCosmosNoSqlConfiguration(graphQLSchema, runtimeConfig, connectionString),
                 _ => runtimeConfig with { DataSource = runtimeConfig.DataSource with { ConnectionString = connectionString } }
             };
-            ManagedIdentityAccessToken[_runtimeConfig.DefaultDataSourceName] = accessToken;
-            _runtimeConfig.DataSourceNameToDataSource[_runtimeConfig.DefaultDataSourceName] = _runtimeConfig.DataSource;
+            ManagedIdentityAccessToken[_runtimeConfig.GetDefaultDataSourceName()] = accessToken;
+            _runtimeConfig.UpdateDataSourceNameToDataSource(_runtimeConfig.GetDefaultDataSourceName(), _runtimeConfig.DataSource);
 
             return await InvokeConfigLoadedHandlersAsync();
         }
@@ -217,11 +217,11 @@ public class RuntimeConfigProvider
         return results.All(x => x);
     }
 
-    private static RuntimeConfig HandleCosmosNoSqlConfiguration(string? schema, RuntimeConfig runtimeConfig, string connectionString, string? dataSourceName = null)
+    private static RuntimeConfig HandleCosmosNoSqlConfiguration(string? schema, RuntimeConfig runtimeConfig, string connectionString, string dataSourceName = "")
     {
         if (string.IsNullOrEmpty(dataSourceName))
         {
-            dataSourceName = runtimeConfig.DefaultDataSourceName;
+            dataSourceName = runtimeConfig.GetDefaultDataSourceName();
         }
 
         DbConnectionStringBuilder dbConnectionStringBuilder = new()
@@ -236,7 +236,7 @@ public class RuntimeConfigProvider
 
         HyphenatedNamingPolicy namingPolicy = new();
 
-        DataSource dataSource = runtimeConfig.DataSourceNameToDataSource[dataSourceName];
+        DataSource dataSource = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName);
 
         Dictionary<string, JsonElement> options;
         if (dataSource.Options is not null)
@@ -264,14 +264,14 @@ public class RuntimeConfigProvider
         // Update the connection string in the datasource with the one that was provided to the controller
         dataSource = dataSource with { Options = options, ConnectionString = connectionString };
 
-        if (dataSourceName == runtimeConfig.DefaultDataSourceName)
+        if (dataSourceName == runtimeConfig.GetDefaultDataSourceName())
         {
             // update default db.
             runtimeConfig = runtimeConfig with { DataSource = dataSource };
         }
 
         // update dictionary
-        runtimeConfig.DataSourceNameToDataSource[dataSourceName] = dataSource;
+        runtimeConfig.UpdateDataSourceNameToDataSource(dataSourceName, dataSource);
 
         return runtimeConfig;
     }

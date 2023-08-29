@@ -25,12 +25,6 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<DataSource>(dataSource => dataSource.ConnectionString);
         // Ignore the JSON schema path as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.Schema);
-        // Ignore the dataSourceNameToDataSource array as its not exposed to customer.
-        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.DataSourceNameToDataSource);
-        // Ignore the EntityNameToDataSourceName array as its not exposed to customer.
-        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.EntityNameToDataSourceName);
-        // Ignore the DefaultDataSourceName array as its not exposed to customer.
-        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.DefaultDataSourceName);
         // Ignore the message as that's not serialized in our config file anyway.
         VerifierSettings.IgnoreMember<DataSource>(dataSource => dataSource.DatabaseTypeNotSupportedMessage);
         // Customise the path where we store snapshots, so they are easier to locate in a PR review.

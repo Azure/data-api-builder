@@ -567,8 +567,8 @@ namespace Azure.DataApiBuilder.Service
                     _logger.LogError("Logs won't be sent to Application Insights as connection string is not set in the runtime config.");
                 }
 
-                TelemetryClient telemetryClient =  app.ApplicationServices.GetRequiredService<TelemetryClient>();
-                
+                TelemetryClient telemetryClient = app.ApplicationServices.GetRequiredService<TelemetryClient>();
+
                 // Update the TelemetryConfiguration object
                 TelemetryConfiguration telemetryConfiguration = telemetryClient.TelemetryConfiguration;
                 telemetryConfiguration.ConnectionString = _applicationInsightsOptions.ConnectionString;

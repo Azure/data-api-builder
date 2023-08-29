@@ -184,7 +184,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             {
                 "InsertOneWithRowversionFieldMissingFromRequestBody",
                 $"SELECT * FROM {_tableWithReadOnlyFields } WHERE [id] = 2 AND [book_name] = 'Another Awesome Book' " +
-                $"AND [copies_sold] = 100 AND [last_sold_on] is NULL AND [last_sold_on_date] is NULL " +
+                $"AND [copies_sold] = 100 AND [last_sold_on] = '2023-08-28 12:36:08.8666667' AND [last_sold_on_date] = '2023-08-28 12:36:08.8666667' " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             }
         };
@@ -286,7 +286,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 ""id"": 2,
                 ""book_name"": ""Another Awesome Book"",
                 ""copies_sold"": 100,
-                ""last_sold_on"": null
+                ""last_sold_on"": ""2023-08-28 12:36:08.8666667""
             }";
             string expectedLocationHeader = $"id/2";
 

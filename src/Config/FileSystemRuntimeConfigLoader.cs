@@ -25,6 +25,8 @@ namespace Azure.DataApiBuilder.Config;
 /// </remarks>
 public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
 {
+    // This stores either the default config name or user provided config.
+    // e.g. dab-config.json
     private string _baseConfigFileName;
 
     private readonly IFileSystem _fileSystem;
@@ -42,13 +44,20 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// </summary>
     public const string DEFAULT_CONFIG_FILE_NAME = $"{CONFIGFILE_NAME}{CONFIG_EXTENSION}";
 
-    public string ConfigFileName => GetFileNameForEnvironment(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), false);
+    /// <summary>
+    /// Stores the config file name actually loaded by the engine.
+    /// It could be the base config file (e.g. dab-config.json), any of its derivatives with
+    /// environment specific suffixes (e.g. dab-config.Development.json) or the user provided
+    /// config file name.
+    /// </summary>
+    public string ConfigFileName { get; internal set; }
 
     public FileSystemRuntimeConfigLoader(IFileSystem fileSystem, string baseConfigFileName = DEFAULT_CONFIG_FILE_NAME, string? connectionString = null)
         : base(connectionString)
     {
         _fileSystem = fileSystem;
         _baseConfigFileName = baseConfigFileName;
+        ConfigFileName = GetFileNameForEnvironment(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), false);
     }
 
     /// <summary>
@@ -251,11 +260,13 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     }
 
     /// <summary>
-    /// Allows the base config file name to be updated. This is commonly done when the CLI is starting up.
+    /// Allows the base config file and the actually loaded config file name(tracked by the property ConfigFileName)
+    /// to be updated. This is commonly done when the CLI is starting up.
     /// </summary>
     /// <param name="fileName"></param>
-    public void UpdateBaseConfigFileName(string fileName)
+    public void UpdateConfigFileName(string fileName)
     {
         _baseConfigFileName = fileName;
+        ConfigFileName = fileName;
     }
 }

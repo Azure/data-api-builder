@@ -24,7 +24,7 @@ using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using HotChocolate.AspNetCore;
 using HotChocolate.Types;
-using Microsoft.ApplicationInsights.AspNetCore.Extensions;
+using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -75,8 +75,9 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton(configProvider);
             services.AddSingleton(configLoader);
 
-            // The following line enables Application Insights telemetry collection.
-            ConfigureApplicationInsightsTelemetry(services, configProvider);
+            // Register a TelemetryClient instance and custom ITelemetryInitializer implementation with the dependency injection
+            services.AddSingleton<TelemetryClient>();
+            services.AddSingleton<ITelemetryInitializer, MyTelemetryInitializer>();
 
             services.AddSingleton(implementationFactory: (serviceProvider) =>
             {
@@ -552,10 +553,9 @@ namespace Azure.DataApiBuilder.Service
         /// Configure Application Insights Telemetry based on the loaded runtime configuration. If Application Insights
         /// is enabled, we can track different events and metrics.
         /// </summary>
-        /// <param name="services">The service collection where authentication services are added.</param>
         /// <param name="runtimeConfigurationProvider">The provider used to load runtime configuration.</param>
         /// <seealso cref="https://docs.microsoft.com/en-us/azure/azure-monitor/app/asp-net-core#enable-application-insights-telemetry-collection"/>
-        private void ConfigureApplicationInsightsTelemetry(IServiceCollection services, RuntimeConfigProvider runtimeConfigurationProvider)
+        private void ConfigureApplicationInsightsTelemetry(IApplicationBuilder app, RuntimeConfigProvider runtimeConfigurationProvider)
         {
             if (runtimeConfigurationProvider.TryGetConfig(out RuntimeConfig? runtimeConfig) && runtimeConfig.Runtime.Telemetry is not null
                 && runtimeConfig.Runtime.Telemetry.ApplicationInsights.Enabled)
@@ -567,12 +567,16 @@ namespace Azure.DataApiBuilder.Service
                     _logger.LogError("Logs won't be sent to Application Insights as connection string is not set in the runtime config.");
                 }
 
-                services.AddApplicationInsightsTelemetry(new ApplicationInsightsServiceOptions
-                {
-                    ConnectionString = _applicationInsightsOptions.ConnectionString
-                });
+                TelemetryClient telemetryClient =  app.ApplicationServices.GetRequiredService<TelemetryClient>();
+                
+                // Update the TelemetryConfiguration object
+                TelemetryConfiguration telemetryConfiguration = telemetryClient.TelemetryConfiguration;
+                telemetryConfiguration.ConnectionString = _applicationInsightsOptions.ConnectionString;
 
-                services.AddSingleton<ITelemetryInitializer, MyTelemetryInitializer>();
+                if (telemetryClient is null)
+                {
+                    _logger.LogError("Telemetry client is not initialized.");
+                }
             }
         }
 
@@ -629,6 +633,9 @@ namespace Azure.DataApiBuilder.Service
 
                 RestService restService =
                     app.ApplicationServices.GetRequiredService<RestService>();
+
+                // Configure Application Insights Telemetry
+                ConfigureApplicationInsightsTelemetry(app, runtimeConfigProvider);
 
                 if (graphQLSchemaCreator is null || restService is null)
                 {

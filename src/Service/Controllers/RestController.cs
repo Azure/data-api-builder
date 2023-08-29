@@ -222,7 +222,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
                     _telemetryClient.TrackEvent("RestRequestReceived", new Dictionary<string, string>
                     {
                         { "RestEntityName", entityName },
-                        { "RestRequestMethod", "GET" },
+                        { "RestRequestMethod", HttpContext.Request.Method },
                         { "RestEntityActionOperation", operationType.ToString() },
                         { "RestRoute", route },
                         { "RestRequestId", HttpContext.TraceIdentifier }

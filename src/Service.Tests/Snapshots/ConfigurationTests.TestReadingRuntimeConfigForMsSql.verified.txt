@@ -2366,18 +2366,11 @@
           Type: Table
         },
         GraphQL: {
-          Singular: BooksSold,
-          Plural: BooksSolds,
+          Singular: books_sold,
+          Plural: books_sold,
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [

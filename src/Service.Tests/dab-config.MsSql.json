@@ -2452,7 +2452,7 @@
         "enabled": true,
         "type": {
           "singular": "books_sold",
-          "plural": "books_solds"
+          "plural": "books_sold"
         }
       },
       "rest": {

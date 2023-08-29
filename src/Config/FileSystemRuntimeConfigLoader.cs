@@ -187,21 +187,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     public bool DoesFileExistInCurrentDirectory(string fileName)
     {
         string currentDir = _fileSystem.Directory.GetCurrentDirectory();
-        // Unable to use ILogger because this code is invoked before LoggerFactory
-        // is instantiated.
-        if (_fileSystem.File.Exists(_fileSystem.Path.Combine(currentDir, fileName)))
-        {
-            // This config file is logged as being found, but may not actually be used!
-            Console.WriteLine($"Found config file: {fileName}.");
-            return true;
-        }
-        else
-        {
-            // Unable to use ILogger because this code is invoked before LoggerFactory
-            // is instantiated.
-            Console.WriteLine($"Unable to find config file: {fileName} does not exist.");
-            return false;
-        }
+        return _fileSystem.File.Exists(_fileSystem.Path.Combine(currentDir, fileName));
     }
 
     /// <summary>

@@ -123,7 +123,8 @@ public class EnvironmentTests
     [TestMethod]
     public void TestStartWithEnvFileIsSuccessful()
     {
-        BootstrapTestEnvironment("CONN_STRING=test_connection_string");
+        string expectedEnvVarName = "CONN_STRING";
+        BootstrapTestEnvironment(expectedEnvVarName + "=test_connection_string", expectedEnvVarName);
 
         // Trying to start the runtime engine
         using Process process = ExecuteDabCommand(
@@ -148,10 +149,11 @@ public class EnvironmentTests
     /// I feel confident that the overarching scenario is covered through other testing
     /// so disabling temporarily while we investigate should be acceptable.
     /// </summary>
-    [TestMethod, Ignore]
+    [TestMethod]
     public async Task FailureToStartEngineWhenEnvVarNamedWrong()
     {
-        BootstrapTestEnvironment("COMM_STRINX=test_connection_string");
+        string expectedEnvVarName = "WRONG_CONN_STRING";
+        BootstrapTestEnvironment("COMM_STRINX=test_connection_string", expectedEnvVarName);
 
         // Trying to start the runtime engine
         using Process process = ExecuteDabCommand(
@@ -160,11 +162,12 @@ public class EnvironmentTests
         );
 
         string? output = await process.StandardError.ReadLineAsync();
-        StringAssert.Contains(output, "Environmental Variable, CONN_STRING, not found.", StringComparison.Ordinal);
+        StringAssert.Contains(output, "Environmental Variable, "
+            + expectedEnvVarName + ", not found.", StringComparison.Ordinal);
         process.Kill();
     }
 
-    private static void BootstrapTestEnvironment(string envFileContents)
+    private static void BootstrapTestEnvironment(string envFileContents, string connStringEnvName)
     {
         // Creating environment variable file
         File.Create(".env").Close();
@@ -174,7 +177,8 @@ public class EnvironmentTests
             File.Delete(TEST_RUNTIME_CONFIG_FILE);
         }
 
-        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql", "--connection-string", "@env('CONN_STRING')" };
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql",
+            "--connection-string", "@env('" + connStringEnvName + "')" };
         Program.Main(initArgs);
     }
 

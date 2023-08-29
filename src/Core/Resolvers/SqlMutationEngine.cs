@@ -253,13 +253,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     {
                         using (JsonDocument jsonDocument = JsonDocument.Parse(resultArray.ToJsonString()))
                         {
-                            return new CreatedResult(location: context.EntityName, OkMutationResponse(jsonDocument.RootElement.Clone()).Value);
+                            // The final location header for stored procedures should be of the form ../api/<SP-Entity-Name>
+                            // Location header is constructed using the base URL, base-route and the set location value.
+                            // Since, SP-Entity-Name is already available in the base URL, location is set as an empty string.
+                            return new CreatedResult(location: string.Empty, OkMutationResponse(jsonDocument.RootElement.Clone()).Value);
                         }
                     }
                     else
                     {   // If no result set returned, just return a 201 Created with empty array instead of array with single null value
                         return new CreatedResult(
-                            location: context.EntityName,
+                            location: string.Empty,
                             value: new
                             {
                                 value = JsonDocument.Parse("[]").RootElement.Clone()

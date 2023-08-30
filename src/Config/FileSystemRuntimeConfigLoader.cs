@@ -25,8 +25,8 @@ namespace Azure.DataApiBuilder.Config;
 /// </remarks>
 public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
 {
-    // This stores either the default config name or user provided config.
-    // e.g. dab-config.json
+    // This stores either the default config name e.g. dab-config.json
+    // or user provided config file.
     private string _baseConfigFileName;
 
     private readonly IFileSystem _fileSystem;

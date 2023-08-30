@@ -78,6 +78,12 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             string json = _fileSystem.File.ReadAllText(path);
             return TryParseConfig(json, out config, connectionString: _connectionString, replaceEnvVar: replaceEnvVar);
         }
+        else
+        {
+            // Unable to use ILogger because this code is invoked before LoggerFactory
+            // is instantiated.
+            Console.WriteLine($"Unable to find config file: {path} does not exist.");
+        }
 
         config = null;
         return false;

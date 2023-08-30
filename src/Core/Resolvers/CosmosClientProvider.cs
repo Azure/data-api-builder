@@ -58,10 +58,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             IEnumerable<KeyValuePair<string, DataSource>> cosmosDb = configuration.GetDataSourceNamesToDataSourcesIterator().Where(x => x.Value.DatabaseType == DatabaseType.CosmosDB_NoSQL);
 
-            foreach (KeyValuePair<string, DataSource> dataSourcePair in cosmosDb)
+            foreach ((string dataSourceName, DataSource dataSource) in cosmosDb)
             {
-                string dataSourceName = dataSourcePair.Key;
-                DataSource dataSource = dataSourcePair.Value;
                 if (!Clients.ContainsKey(dataSourceName))
                 {
                     CosmosClient client;

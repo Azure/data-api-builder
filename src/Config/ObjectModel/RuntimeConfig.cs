@@ -72,7 +72,7 @@ public record RuntimeConfig
     /// Gets the DataSource corresponding to the datasourceName.
     /// </summary>
     /// <param name="dataSourceName">Name of datasource.</param>
-    /// <returns></returns>
+    /// <returns>DataSource object.</returns>
     /// <exception cref="DataApiBuilderException">Not found exception if key is not found.</exception>
     public DataSource GetDataSourceFromDataSourceName(string dataSourceName)
     {
@@ -85,6 +85,7 @@ public record RuntimeConfig
     /// </summary>
     /// <param name="dataSourceName">dataSourceName.</param>
     /// <param name="dataSource">dataSource.</param>
+    /// <returns>True indicating success, False indicating failure.</returns>
     public bool TryAddDataSource(string dataSourceName, DataSource dataSource)
     {
         return _dataSourceNameToDataSource.TryAdd(dataSourceName, dataSource);
@@ -106,16 +107,17 @@ public record RuntimeConfig
     /// Removes the datasource from the DataSourceNameToDataSource dictionary.
     /// </summary>
     /// <param name="dataSourceName">DataSourceName.</param>
+    /// <returns>True indicating success, False indicating failure.</returns>
     public bool RemoveDataSource(string dataSourceName)
     {
         return _dataSourceNameToDataSource.Remove(dataSourceName);
     }
 
     /// <summary>
-    /// Gets datasource from DataSourceNameToDataSource dictionary.
+    /// Gets datasourceName from EntityNameToDatasourceName dictionary.
     /// </summary>
     /// <param name="entityName">entityName</param>
-    /// <returns>DataSource</returns>
+    /// <returns>DataSourceName</returns>
     public string GetDataSourceNameFromEntityName(string entityName)
     {
         CheckEntityNamePresent(entityName);

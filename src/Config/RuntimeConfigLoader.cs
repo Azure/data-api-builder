@@ -226,19 +226,4 @@ public abstract class RuntimeConfigLoader
         // Return the updated connection string.
         return connectionStringBuilder.ConnectionString;
     }
-
-    /// <summary>
-    /// Returns the hyphenated name for the given name.
-    /// </summary>
-    /// <param name="name">name.</param>
-    /// <returns>hyphenatedname.</returns>
-    public static string GenerateHyphenatedName(string name)
-    {
-        if (string.Equals(name, "graphql", StringComparison.OrdinalIgnoreCase))
-        {
-            return name.ToLower();
-        }
-
-        return string.Join("-", Regex.Split(name, @"(?<!^)(?=[A-Z])", RegexOptions.Compiled)).ToLower();
-    }
 }

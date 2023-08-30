@@ -69,7 +69,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             QueryDefinition querySpec = new(queryString);
             QueryRequestOptions queryRequestOptions = new();
 
-            CosmosClient client = string.IsNullOrEmpty(dataSourceName) ? _clientProvider.Clients[dataSourceName] : _clientProvider.Clients[dataSourceName];
+            CosmosClient client = _clientProvider.Clients[dataSourceName];
             Container container = client.GetDatabase(structure.Database).GetContainer(structure.Container);
             (string idValue, string partitionKeyValue) = await GetIdAndPartitionKey(parameters, container, structure);
 
@@ -157,7 +157,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             CosmosQueryStructure structure = new(context, parameters, _metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
-            CosmosClient client = string.IsNullOrEmpty(dataSourceName) ? _clientProvider.Clients[dataSourceName] : _clientProvider.Clients[dataSourceName];
+            CosmosClient client = _clientProvider.Clients[dataSourceName];
             Container container = client.GetDatabase(structure.Database).GetContainer(structure.Container);
             QueryDefinition querySpec = new(_queryBuilder.Build(structure));
 

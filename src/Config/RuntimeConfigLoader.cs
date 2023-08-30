@@ -102,25 +102,6 @@ public abstract class RuntimeConfigLoader
             config = null;
             return false;
         }
-        catch (DataApiBuilderException ex)
-        {
-            string errorMessage = $"Internal exception occurred.\n" +
-                        $"Message:\n {ex.Message}\n" +
-                        $"Stack Trace:\n {ex.StackTrace}";
-
-            if (logger is null)
-            {
-                // logger can be null when called from CLI
-                Console.Error.WriteLine(errorMessage);
-            }
-            else
-            {
-                logger.LogError(ex, errorMessage);
-            }
-
-            config = null;
-            return false;
-        }
 
         return true;
     }

@@ -86,7 +86,7 @@ public record RuntimeConfig
     /// <param name="dataSourceName">dataSourceName.</param>
     /// <param name="dataSource">dataSource.</param>
     /// <returns>True indicating success, False indicating failure.</returns>
-    public bool TryAddDataSource(string dataSourceName, DataSource dataSource)
+    public bool AddDataSource(string dataSourceName, DataSource dataSource)
     {
         return _dataSourceNameToDataSource.TryAdd(dataSourceName, dataSource);
     }
@@ -144,7 +144,7 @@ public record RuntimeConfig
     /// <param name="dataSourceName">DatasourceName.</param>
     /// <returns>True indicating success, False indicating failure.</returns>
     /// <exception cref="DataApiBuilderException">Not found exception if key is not found.</exception>
-    public bool TryAddEntity(string entityName, string dataSourceName)
+    public bool AddEntity(string entityName, string dataSourceName)
     {
         CheckDataSourceNamePresent(dataSourceName);
         return _entityNameToDataSourceName.TryAdd(entityName, dataSourceName);
@@ -200,7 +200,7 @@ public record RuntimeConfig
     {
         if (!_dataSourceNameToDataSource.ContainsKey(dataSourceName))
         {
-            throw new DataApiBuilderException($"{nameof(dataSourceName)} could not be found within the config", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
+            throw new DataApiBuilderException($"{nameof(dataSourceName)}:{dataSourceName} could not be found within the config", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
         }
     }
 

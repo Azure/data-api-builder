@@ -194,6 +194,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // In such a case, we will use a subsequent select query to get the record.
             if (isUpdateTriggerEnabled)
             {
+                updateQuery.Append($"WHERE {predicates};");
                 updateQuery.Append($"SELECT {columnsToBeReturned} FROM {tableName} WHERE {predicates};");
             }
             else

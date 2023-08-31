@@ -148,8 +148,21 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             using JsonDocument? queryJson = await ExecuteAsync(structure);
             // queryJson is null if dbreader had no rows to return
             // If no rows/empty table, return an empty json array
+
             return queryJson is null ? FormatFindResult(JsonDocument.Parse("[]"), context) :
                                        FormatFindResult(queryJson, context);
+        }
+        public async Task<DbResultSet?> ExecuteAsyncAndGetDbResultSet(FindRequestContext context)
+        {
+            SqlQueryStructure structure = new(
+                context,
+                _sqlMetadataProvider,
+                _authorizationResolver,
+                _runtimeConfigProvider,
+                _gQLFilterParser,
+                _httpContextAccessor.HttpContext!);
+
+            return await ExecuteAsyncAndGetDbResultSetResponse(structure);
         }
 
         /// <summary>
@@ -320,6 +333,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     _queryExecutor.GetJsonResultAsync<JsonDocument>,
                     _httpContextAccessor.HttpContext!);
             return jsonDocument;
+        }
+
+        private async Task<DbResultSet?> ExecuteAsyncAndGetDbResultSetResponse(SqlQueryStructure structure)
+        {
+            string queryString = _queryBuilder.Build(structure);
+            DbResultSet? dbResutlSet = await _queryExecutor.ExecuteQueryAsync(
+                    queryString,
+                    structure.Parameters,
+                    _queryExecutor.ExtractResultSetFromDbDataReader,
+                    _httpContextAccessor.HttpContext!);
+
+            return dbResutlSet;
         }
 
         // <summary>

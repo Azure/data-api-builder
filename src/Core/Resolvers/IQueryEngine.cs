@@ -36,6 +36,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         public Task<IActionResult> ExecuteAsync(FindRequestContext context);
 
+        public Task<DbResultSet?> ExecuteAsyncAndGetDbResultSet(FindRequestContext context);
+
         /// <summary>
         /// Given the StoredProcedureRequestContext, obtains the query text and executes it against the backend.
         /// </summary>

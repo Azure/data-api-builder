@@ -108,8 +108,10 @@ public record RuntimeConfig
     /// </summary>
     /// <param name="dataSourceName">DataSourceName.</param>
     /// <returns>True indicating success, False indicating failure.</returns>
+    /// <exception cref="DataApiBuilderException">Not found exception if key is not found.</exception>
     public bool RemoveDataSource(string dataSourceName)
     {
+        CheckDataSourceNamePresent(dataSourceName);
         return _dataSourceNameToDataSource.Remove(dataSourceName);
     }
 
@@ -141,8 +143,10 @@ public record RuntimeConfig
     /// <param name="entityName">EntityName</param>
     /// <param name="dataSourceName">DatasourceName.</param>
     /// <returns>True indicating success, False indicating failure.</returns>
+    /// <exception cref="DataApiBuilderException">Not found exception if key is not found.</exception>
     public bool TryAddEntity(string entityName, string dataSourceName)
     {
+        CheckDataSourceNamePresent(dataSourceName);
         return _entityNameToDataSourceName.TryAdd(entityName, dataSourceName);
     }
 
@@ -163,8 +167,10 @@ public record RuntimeConfig
     /// Removes the entity from the EntityNameToDataSourceName dictionary.
     /// </summary>
     /// <param name="entityName">Name of Entity</param>
+    /// <exception cref="DataApiBuilderException">Not found exception if key is not found.</exception>
     public bool RemoveEntity(string entityName)
     {
+        CheckEntityNamePresent(entityName);
         return _entityNameToDataSourceName.Remove(entityName);
     }
 

@@ -166,8 +166,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<MsSqlQueryExecutor> queryExecutor
                 = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
 
-            queryExecutor.Setup(x => x.ConnectionStringBuilder).Returns(
-                new SqlConnectionStringBuilder(provider.GetConfig().DataSource.ConnectionString));
+            queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());
 
             // Mock the ExecuteQueryAgainstDbAsync to throw a transient exception.
             queryExecutor.Setup(x => x.ExecuteQueryAgainstDbAsync(
@@ -185,7 +184,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 It.IsAny<IDictionary<string, DbConnectionParam>>(),
                 It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
                 It.IsAny<HttpContext>(),
-                It.IsAny<List<string>>())).CallBase();
+                It.IsAny<List<string>>(),
+                It.IsAny<string>())).CallBase();
 
             DataApiBuilderException ex = await Assert.ThrowsExceptionAsync<DataApiBuilderException>(async () =>
             {
@@ -221,8 +221,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<MsSqlQueryExecutor> queryExecutor
                 = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
 
-            queryExecutor.Setup(x => x.ConnectionStringBuilder).Returns(
-                new SqlConnectionStringBuilder(provider.GetConfig().DataSource.ConnectionString));
+            queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());
 
             // Mock the ExecuteQueryAgainstDbAsync to throw a transient exception.
             queryExecutor.SetupSequence(x => x.ExecuteQueryAgainstDbAsync(
@@ -242,7 +241,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 It.IsAny<IDictionary<string, DbConnectionParam>>(),
                 It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
                 It.IsAny<HttpContext>(),
-                It.IsAny<List<string>>())).CallBase();
+                It.IsAny<List<string>>(),
+                It.IsAny<string>())).CallBase();
 
             string sqltext = "SELECT * from books";
 

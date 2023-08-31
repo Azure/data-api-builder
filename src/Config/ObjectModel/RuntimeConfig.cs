@@ -208,7 +208,7 @@ public record RuntimeConfig
     {
         if (!_entityNameToDataSourceName.ContainsKey(entityName))
         {
-            throw new DataApiBuilderException($"{nameof(entityName)} could not be found within the config", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.EntityNotFound);
+            throw new DataApiBuilderException($"{nameof(entityName)}:{entityName} could not be found within the config", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.EntityNotFound);
         }
     }
 }

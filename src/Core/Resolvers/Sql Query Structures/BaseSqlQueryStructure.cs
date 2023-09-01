@@ -352,9 +352,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 if (ApiType is ApiType.GraphQL)
                 {
+                    // To continue supporting 'Z' notation for GraphQL, we parse datetime values as datetimeoffset.
                     return DateTimeOffset.Parse(param, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal);
                 }
 
+                // For other APIs (current REST), we parse the datetime values as it is since we don't need to support 'Z' notation.
                 return DateTime.Parse(param);
             }
 
@@ -370,7 +372,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 "Double" => double.Parse(param),
                 "Decimal" => decimal.Parse(param),
                 "Boolean" => bool.Parse(param),
-                "DateTime" => DateTime.Parse(param),
                 "DateTimeOffset" => DateTimeOffset.Parse(param, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal),
                 "Date" => DateOnly.Parse(param),
                 "Guid" => Guid.Parse(param),

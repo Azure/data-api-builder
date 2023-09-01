@@ -15,6 +15,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 {
     public class BaseQueryStructure
     {
+        /// <summary>
+        /// ApiType is required to correctly parse the params of DateTime types.
+        /// </summary>
         protected ApiType ApiType { get; set; }
 
         /// <summary>
@@ -119,8 +122,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string encodedParamName = GetEncodedParamName(Counter.Next());
             DatabaseType databaseType = MetadataProvider.GetDatabaseType();
             DbType? dbTypeForParam = !string.IsNullOrEmpty(paramName) ? GetUnderlyingSourceDefinition().GetDbTypeForParam(paramName) : null;
-            if (dbTypeForParam is not null && (databaseType is not DatabaseType.MSSQL || dbTypeForParam is not DbType.DateTime && dbTypeForParam is not DbType.DateTime2))
+            if (dbTypeForParam is not null &&
+                (databaseType is not DatabaseType.MSSQL || ApiType is not ApiType.GraphQL || dbTypeForParam is not DbType.DateTime && dbTypeForParam is not DbType.DateTime2))
             {
+                // For GraphQL, we don't populate the DbType for System.DateTime parameters when the backend database is MsSql.
+                // This is because we parse them as System.DateTimeOffset and hence the DbType of the parameters and the parameters' value
+                // fall out of sync.
                 Parameters.Add(encodedParamName, new(value, dbTypeForParam));
             }
             else

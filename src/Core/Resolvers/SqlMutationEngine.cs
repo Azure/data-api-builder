@@ -526,6 +526,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="operationType">The type of mutation operation.
         /// This cannot be Delete, Upsert or UpsertIncremental since those operations have dedicated functions.</param>
         /// <param name="parameters">The parameters of the mutation query.</param>
+        /// <param name="apiType">Type of API (GraphQL/REST).</param>
         /// <param name="context">In the case of GraphQL, the HotChocolate library's middleware context.</param>
         /// <returns>Single row read from DbDataReader.</returns>
         private async Task<DbResultSetRow?>
@@ -533,7 +534,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 string entityName,
                 EntityActionOperation operationType,
                 IDictionary<string, object?> parameters,
-                ApiType apiType = ApiType.REST,
+                ApiType apiType,
                 IMiddlewareContext? context = null)
         {
             string queryString;
@@ -549,7 +550,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             _authorizationResolver,
                             _gQLFilterParser,
                             parameters,
-                            GetHttpContext())
+                            GetHttpContext(),
+                            apiType)
                         : new(
                             context,
                             entityName,

@@ -59,7 +59,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             GQLFilterParser gQLFilterParser,
             IDictionary<string, object?> mutationParams,
             HttpContext httpContext,
-            ApiType apiType = ApiType.REST
+            ApiType apiType
             )
         : base(
               metadataProvider: sqlMetadataProvider,

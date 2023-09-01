@@ -64,6 +64,29 @@ public abstract class RuntimeConfigLoader
             {
                 config = config with { DataSource = config.DataSource with { ConnectionString = connectionString } };
             }
+
+            // Adding default values for the Runtime options if they are absent in the config file
+            // This becomes applicable when the config file is constructed by hand and not generated using CLI
+            // When the config file is generated using CLI, the default values are populated when any of these options are explicitly
+            // configured.
+            if (config.Runtime is not null)
+            {
+                if (config.Runtime.Rest is null)
+                {
+                    config = config with { Runtime = config.Runtime with { Rest = (config.DataSource.DatabaseType is DatabaseType.CosmosDB_NoSQL) ? new RestRuntimeOptions(Enabled: false) : new RestRuntimeOptions(Enabled: false) } };
+                }
+
+                if (config.Runtime.GraphQL is null)
+                {
+                    config = config with { Runtime = config.Runtime with { GraphQL = new GraphQLRuntimeOptions(AllowIntrospection: false) } };
+                }
+
+                if (config.Runtime.Host is null)
+                {
+                    config = config with { Runtime = config.Runtime with { Host = new HostOptions(Cors: null, Authentication: new AuthenticationOptions(Provider: EasyAuthType.StaticWebApps.ToString(), Jwt: null), Mode: HostMode.Production) } };
+                }
+            }
+
         }
         catch (JsonException ex)
         {

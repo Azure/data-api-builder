@@ -65,8 +65,8 @@ public abstract class RuntimeConfigLoader
                 config = config with { DataSource = config.DataSource with { ConnectionString = connectionString } };
             }
 
-            // For Cosmos DB NoSQL database type, DAB CLI v0.8.49 generates a REST property within the Runtime section of the config file. However
-            // v0.7.6 does not generate this property. So, when the config file generated using v0.7.6 is used to start the engine with v0.8.49, the absence
+            // For Cosmos DB NoSQL database type, DAB CLI v0.8.49+ generates a REST property within the Runtime section of the config file. However
+            // v0.7.6- does not generate this property. So, when the config file generated using v0.7.6- is used to start the engine with v0.8.49+, the absence
             // of the REST property causes the engine to throw exceptions. This is the only difference in the way Runtime section of the config file is created
             // between these two versions.
             // To avoid the NullReference Exceptions, the REST property is added when absent in the config file.

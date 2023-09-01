@@ -65,10 +65,13 @@ public abstract class RuntimeConfigLoader
                 config = config with { DataSource = config.DataSource with { ConnectionString = connectionString } };
             }
 
-            // Adding default values for the Runtime options if they are absent in the config file
-            // This becomes applicable when the config file is constructed by hand and not generated using CLI
-            // When the config file is generated using CLI, the default values are populated when any of these options are explicitly
-            // configured.
+            // For Cosmos DB NoSQL database type, DAB CLI v0.8.49 generates a REST property within the Runtime section of the config file. However
+            // v0.7.6 does not generate this property. So, when the config file generated using v0.7.6 is used to start the engine with v0.8.49, the absence
+            // of the REST property causes the engine to throw exceptions. This is the only difference in the way Runtime section of the config file is created
+            // between these two versions.
+            // To avoid the NullReference Exceptions, the REST property is added when absent in the config file.
+            // Other properties within the Runtime section are also populated with default values to account for the cases where
+            // the properties could be removed manually from the config file.
             if (config.Runtime is not null)
             {
                 if (config.Runtime.Rest is null)

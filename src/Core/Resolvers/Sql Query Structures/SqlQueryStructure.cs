@@ -138,7 +138,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 predicates: null,
                 entityName: context.EntityName,
                 counter: new IncrementingInteger(),
-                httpContext: httpContext)
+                httpContext: httpContext,
+                apiType: ApiType.REST)
         {
             IsListQuery = context.IsMany;
             SourceAlias = $"{DatabaseObject.SchemaName}_{DatabaseObject.Name}";
@@ -260,7 +261,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                   gQLFilterParser,
                   predicates: null,
                   entityName: entityName,
-                  counter: counter
+                  counter: counter,
+                  apiType: ApiType.GraphQL
                   )
         {
             _ctx = ctx;
@@ -415,13 +417,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ISqlMetadataProvider metadataProvider,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
+            ApiType apiType,
             List<Predicate>? predicates = null,
             string entityName = "",
             IncrementingInteger? counter = null,
             HttpContext? httpContext = null)
             : base(metadataProvider,
                   authorizationResolver,
-                  gQLFilterParser, predicates,
+                  gQLFilterParser,
+                  apiType,
+                  predicates,
                   entityName,
                   counter,
                   httpContext,

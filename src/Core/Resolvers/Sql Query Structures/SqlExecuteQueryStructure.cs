@@ -4,6 +4,7 @@
 using System.Net;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -31,8 +32,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ISqlMetadataProvider sqlMetadataProvider,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
-            IDictionary<string, object?> requestParams)
-        : base(sqlMetadataProvider, authorizationResolver, gQLFilterParser, entityName: entityName)
+            IDictionary<string, object?> requestParams,
+            ApiType apiType)
+        : base(sqlMetadataProvider, authorizationResolver, gQLFilterParser, entityName: entityName, apiType: apiType)
         {
             StoredProcedureDefinition storedProcedureDefinition = GetUnderlyingStoredProcedureDefinition();
             ProcedureParameters = new();

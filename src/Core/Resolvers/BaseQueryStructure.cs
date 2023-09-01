@@ -1,8 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Data;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
@@ -13,6 +15,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 {
     public class BaseQueryStructure
     {
+        protected ApiType ApiType { get; set; }
+
         /// <summary>
         /// The Entity name associated with this query as appears in the config file.
         /// </summary>
@@ -75,8 +79,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             GQLFilterParser gQLFilterParser,
             List<Predicate>? predicates = null,
             string entityName = "",
-            IncrementingInteger? counter = null)
+            IncrementingInteger? counter = null,
+            ApiType apiType = ApiType.GraphQL)
         {
+            ApiType = apiType;
             Columns = new();
             Parameters = new();
             Predicates = predicates ?? new();
@@ -111,9 +117,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public virtual string MakeDbConnectionParam(object? value, string? paramName = null)
         {
             string encodedParamName = GetEncodedParamName(Counter.Next());
-            if (!string.IsNullOrEmpty(paramName))
+            DatabaseType databaseType = MetadataProvider.GetDatabaseType();
+            DbType? dbTypeForParam = !string.IsNullOrEmpty(paramName) ? GetUnderlyingSourceDefinition().GetDbTypeForParam(paramName) : null;
+            if (dbTypeForParam is not null && (databaseType is not DatabaseType.MSSQL || dbTypeForParam is not DbType.DateTime && dbTypeForParam is not DbType.DateTime2))
             {
-                Parameters.Add(encodedParamName, new(value, GetUnderlyingSourceDefinition().GetDbTypeForParam(paramName)));
+                Parameters.Add(encodedParamName, new(value, dbTypeForParam));
             }
             else
             {

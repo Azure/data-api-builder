@@ -69,6 +69,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
               metadataProvider: sqlMetadataProvider,
               authorizationResolver: authorizationResolver,
               gQLFilterParser: gQLFilterParser,
+              apiType: ApiType.REST,
               entityName: entityName,
               operationType: EntityActionOperation.Upsert,
               httpContext: httpContext)

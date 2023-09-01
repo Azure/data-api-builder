@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Data;
+using System.Globalization;
 using System.Net;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -24,7 +25,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     /// </summary>
     public abstract class BaseSqlQueryStructure : BaseQueryStructure
     {
-
         public Dictionary<string, DbType> ParamToDbTypeMap { get; set; } = new();
 
         /// <summary>
@@ -58,16 +58,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ISqlMetadataProvider metadataProvider,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
+            ApiType apiType,
             List<Predicate>? predicates = null,
             string entityName = "",
             IncrementingInteger? counter = null,
             HttpContext? httpContext = null,
             EntityActionOperation operationType = EntityActionOperation.None
             )
-            : base(metadataProvider, authorizationResolver, gQLFilterParser, predicates, entityName, counter)
+            : base(metadataProvider, authorizationResolver, gQLFilterParser, predicates, entityName, counter, apiType)
         {
             Joins = new();
-
             // For GraphQL read operation, we are deliberately not passing httpContext to this point
             // and hence it will take its default value i.e. null here.
             // For GraphQL read operation, the database policy predicates are added later in the Sql{*}QueryStructure classes.
@@ -346,8 +346,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="systemType"></param>
         /// <returns></returns>
         /// <exception cref="NotSupportedException"></exception>
-        protected static object ParseParamAsSystemType(string param, Type systemType)
+        protected object ParseParamAsSystemType(string param, Type systemType)
         {
+            if (systemType.Name.Equals("DateTime"))
+            {
+                if (ApiType is ApiType.GraphQL)
+                {
+                    return DateTimeOffset.Parse(param, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal);
+                }
+
+                return DateTime.Parse(param);
+            }
+
             return systemType.Name switch
             {
                 "String" => param,
@@ -361,7 +371,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 "Decimal" => decimal.Parse(param),
                 "Boolean" => bool.Parse(param),
                 "DateTime" => DateTime.Parse(param),
-                "DateTimeOffset" => DateTimeOffset.Parse(param),
+                "DateTimeOffset" => DateTimeOffset.Parse(param, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal),
                 "Date" => DateOnly.Parse(param),
                 "Guid" => Guid.Parse(param),
                 "TimeOnly" => TimeOnly.Parse(param),

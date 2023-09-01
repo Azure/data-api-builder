@@ -36,11 +36,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             GQLFilterParser gQLFilterParser,
             IDictionary<string, object?> mutationParams,
             HttpContext httpContext,
+            ApiType apiType,
             bool isIncrementalUpdate)
         : base(
               metadataProvider: sqlMetadataProvider,
               authorizationResolver: authorizationResolver,
               gQLFilterParser: gQLFilterParser,
+              apiType: apiType,
               entityName: entityName,
               httpContext: httpContext,
               operationType: EntityActionOperation.Update)
@@ -100,6 +102,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                   metadataProvider: sqlMetadataProvider,
                   authorizationResolver: authorizationResolver,
                   gQLFilterParser: gQLFilterParser,
+                  apiType: ApiType.GraphQL,
                   entityName: entityName,
                   httpContext: httpContext,
                   operationType: EntityActionOperation.Update)

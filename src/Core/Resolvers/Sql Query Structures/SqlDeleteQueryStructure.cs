@@ -23,11 +23,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
             IDictionary<string, object?> mutationParams,
-            HttpContext httpContext)
+            HttpContext httpContext,
+            ApiType apiType)
         : base(
               metadataProvider: sqlMetadataProvider,
               authorizationResolver: authorizationResolver,
               gQLFilterParser: gQLFilterParser,
+              apiType: apiType,
               entityName: entityName,
               httpContext: httpContext,
               operationType: EntityActionOperation.Delete)

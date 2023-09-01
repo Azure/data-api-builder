@@ -107,7 +107,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         Dictionary<string, object>? resultProperties =
                             await PerformDeleteOperation(
                                 entityName,
-                                parameters);
+                                parameters,
+                                ApiType.GraphQL);
 
                         // If the number of records affected by DELETE were zero,
                         // and yet the result was not null previously, it indicates this DELETE lost
@@ -126,10 +127,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     {
                         DbResultSetRow? mutationResultRow =
                             await PerformMutationOperation(
-                                entityName,
-                                mutationOperation,
-                                parameters,
-                                context);
+                                entityName: entityName,
+                                operationType: mutationOperation,
+                                parameters: parameters,
+                                context: context,
+                                apiType: ApiType.GraphQL);
 
                         if (mutationResultRow is not null && mutationResultRow.Columns.Count > 0
                             && !context.Selection.Type.IsScalarType())
@@ -206,7 +208,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 _sqlMetadataProvider,
                 _authorizationResolver,
                 _gQLFilterParser,
-                context.ResolvedParameters);
+                context.ResolvedParameters,
+                ApiType.REST);
             string queryText = _queryBuilder.Build(executeQueryStructure);
 
             JsonArray? resultArray = null;
@@ -321,7 +324,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     {
                         resultProperties = await PerformDeleteOperation(
                                 context.EntityName,
-                                parameters);
+                                parameters,
+                                ApiType.REST);
                         transactionScope.Complete();
                     }
                 }
@@ -409,9 +413,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     {
                         mutationResultRow =
                                 await PerformMutationOperation(
-                                    context.EntityName,
-                                    context.OperationType,
-                                    parameters);
+                                    entityName: context.EntityName,
+                                    operationType: context.OperationType,
+                                    parameters: parameters,
+                                    apiType: ApiType.REST);
                         transactionScope.Complete();
                     }
                 }
@@ -528,6 +533,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 string entityName,
                 EntityActionOperation operationType,
                 IDictionary<string, object?> parameters,
+                ApiType apiType = ApiType.REST,
                 IMiddlewareContext? context = null)
         {
             string queryString;
@@ -563,6 +569,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         _gQLFilterParser,
                         parameters,
                         GetHttpContext(),
+                        apiType,
                         isIncrementalUpdate: false);
                     queryString = _queryBuilder.Build(updateStructure);
                     queryParameters = updateStructure.Parameters;
@@ -575,6 +582,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         _gQLFilterParser,
                         parameters,
                         GetHttpContext(),
+                        apiType,
                         isIncrementalUpdate: true);
                     queryString = _queryBuilder.Build(updateIncrementalStructure);
                     queryParameters = updateIncrementalStructure.Parameters;
@@ -690,7 +698,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private async Task<Dictionary<string, object>?>
             PerformDeleteOperation(
                 string entityName,
-                IDictionary<string, object?> parameters)
+                IDictionary<string, object?> parameters,
+                ApiType apiType)
         {
             string queryString;
             Dictionary<string, DbConnectionParam> queryParameters;
@@ -700,7 +709,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 _authorizationResolver,
                 _gQLFilterParser,
                 parameters,
-                GetHttpContext());
+                GetHttpContext(),
+                apiType);
             queryString = _queryBuilder.Build(deleteStructure);
             queryParameters = deleteStructure.Parameters;
 

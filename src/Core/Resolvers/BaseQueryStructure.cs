@@ -126,13 +126,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
             else
             {
-                DatabaseType databaseType = MetadataProvider.GetDatabaseType();
                 SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();
-
                 DbType? dbTypeForParam = sourceDefinition.GetDbTypeForParam(paramName);
                 Type systemTypeForParam = sourceDefinition.GetSystemTypeForParam(paramName);
 
-                if (dbTypeForParam is not null && (databaseType is not DatabaseType.MSSQL || ApiType is not ApiType.GraphQL || systemTypeForParam != typeof(DateTime)))
+                if (dbTypeForParam is not null && ApiType is not ApiType.GraphQL && systemTypeForParam != typeof(DateTime))
                 {
                     // For GraphQL, we don't populate the DbType for System.DateTime parameters when the backend database is MsSql.
                     // This is because we parse them as System.DateTimeOffset and hence the DbType of the parameters and the parameters' value

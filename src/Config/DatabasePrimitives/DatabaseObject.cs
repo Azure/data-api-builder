@@ -2,7 +2,9 @@
 // Licensed under the MIT License.
 
 using System.Data;
+using System.Net;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Service.Exceptions;
 
 namespace Azure.DataApiBuilder.Config.DatabasePrimitives;
 
@@ -119,6 +121,21 @@ public class StoredProcedureDefinition : SourceDefinition
 
         return null;
     }
+
+    /// <inheritdoc/>
+    public override Type GetSystemTypeForParam(string paramName)
+    {
+        if (Parameters.TryGetValue(paramName, out ParameterDefinition? paramDefinition))
+        {
+            return paramDefinition.SystemType;
+        }
+
+        throw new DataApiBuilderException(
+            message: "Unexpected parameter name encountered",
+            statusCode: HttpStatusCode.InternalServerError,
+            subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError
+            );
+    }
 }
 
 public class ParameterDefinition
@@ -185,6 +202,28 @@ public class SourceDefinition
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Method to get the system type for:
+    /// 1. column for table/view,
+    /// 2. parameter for stored procedure.
+    /// </summary>
+    /// <param name="paramName">The parameter whose system type is to be determined.
+    /// For table/view paramName refers to the backingColumnName if aliases are used.</param>
+    /// <returns>System type for the parameter.</returns>
+    public virtual Type GetSystemTypeForParam(string paramName)
+    {
+        if (Columns.TryGetValue(paramName, out ColumnDefinition? columnDefinition))
+        {
+            return columnDefinition.SystemType;
+        }
+
+        throw new DataApiBuilderException(
+            message: "Unexpected column name encountered",
+            statusCode: HttpStatusCode.InternalServerError,
+            subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError
+            );
     }
 }
 

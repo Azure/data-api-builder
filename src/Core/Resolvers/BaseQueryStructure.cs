@@ -120,19 +120,29 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public virtual string MakeDbConnectionParam(object? value, string? paramName = null)
         {
             string encodedParamName = GetEncodedParamName(Counter.Next());
-            DatabaseType databaseType = MetadataProvider.GetDatabaseType();
-            DbType? dbTypeForParam = !string.IsNullOrEmpty(paramName) ? GetUnderlyingSourceDefinition().GetDbTypeForParam(paramName) : null;
-            if (dbTypeForParam is not null &&
-                (databaseType is not DatabaseType.MSSQL || ApiType is not ApiType.GraphQL || dbTypeForParam is not DbType.DateTime && dbTypeForParam is not DbType.DateTime2))
+            if (string.IsNullOrEmpty(paramName))
             {
-                // For GraphQL, we don't populate the DbType for System.DateTime parameters when the backend database is MsSql.
-                // This is because we parse them as System.DateTimeOffset and hence the DbType of the parameters and the parameters' value
-                // fall out of sync.
-                Parameters.Add(encodedParamName, new(value, dbTypeForParam));
+                Parameters.Add(encodedParamName, new(value));
             }
             else
             {
-                Parameters.Add(encodedParamName, new(value));
+                DatabaseType databaseType = MetadataProvider.GetDatabaseType();
+                SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();
+
+                DbType? dbTypeForParam = sourceDefinition.GetDbTypeForParam(paramName);
+                Type systemTypeForParam = sourceDefinition.GetSystemTypeForParam(paramName);
+
+                if (dbTypeForParam is not null && (databaseType is not DatabaseType.MSSQL || ApiType is not ApiType.GraphQL || systemTypeForParam != typeof(DateTime)))
+                {
+                    // For GraphQL, we don't populate the DbType for System.DateTime parameters when the backend database is MsSql.
+                    // This is because we parse them as System.DateTimeOffset and hence the DbType of the parameters and the parameters' value
+                    // fall out of sync.
+                    Parameters.Add(encodedParamName, new(value, dbTypeForParam));
+                }
+                else
+                {
+                    Parameters.Add(encodedParamName, new(value));
+                }
             }
 
             return encodedParamName;

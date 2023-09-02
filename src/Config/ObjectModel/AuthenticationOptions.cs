@@ -11,7 +11,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// </param>
 /// <param name="Jwt">Settings enabling validation of the received JWT token.
 /// Required only when Provider is other than EasyAuth.</param>
-public record AuthenticationOptions(string Provider, JwtOptions? Jwt)
+public record AuthenticationOptions(string Provider = nameof(EasyAuthType.StaticWebApps), JwtOptions? Jwt = null)
 {
     public const string SIMULATOR_AUTHENTICATION = "Simulator";
     public const string CLIENT_PRINCIPAL_HEADER = "X-MS-CLIENT-PRINCIPAL";

@@ -27,7 +27,7 @@ public record RuntimeConfig
             new RuntimeOptions(
                 new RestRuntimeOptions(Enabled: DataSource.DatabaseType != DatabaseType.CosmosDB_NoSQL),
                 GraphQL: null, // even though we pass null here, the constructor will take care of initializing with defaults.
-                Host: null); 
+                Host: null);
 
         this.Entities = Entities;
     }

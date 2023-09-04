@@ -58,10 +58,10 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         _fileSystem = fileSystem;
         _baseConfigFileName = baseConfigFileName;
         ConfigFileName = GetFileNameForEnvironment(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), false);
-        Console.WriteLine("fileSystem: " + JsonSerializer.Serialize(fileSystem));
-        Console.WriteLine("baseConfigFileName: " + baseConfigFileName);
-        Console.WriteLine("ConfigFileName: " + ConfigFileName);
-
+        if (string.IsNullOrWhiteSpace(ConfigFileName))
+        {
+            ConfigFileName = baseConfigFileName;
+        }
     }
 
     /// <summary>
@@ -77,7 +77,6 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         [NotNullWhen(true)] out RuntimeConfig? config,
         bool replaceEnvVar = false)
     {
-        Console.WriteLine("FileSystemRuntimeConfigLoader, path: " + path);
         if (_fileSystem.File.Exists(path))
         {
             string json = _fileSystem.File.ReadAllText(path);
@@ -121,7 +120,6 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// <returns></returns>
     public string GetFileNameForEnvironment(string? aspnetEnvironment, bool considerOverrides)
     {
-        Console.WriteLine($"FileSystemRuntimeConfigLoader, aspnetEnvironment: {aspnetEnvironment}");
         string configFileNameWithExtension = string.Empty;
         string?[] environmentPrecedence = new[]
         {
@@ -146,7 +144,6 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             }
         }
 
-        Console.WriteLine($"FileSystemRuntimeConfigLoader, configFileNameWithExtension: {configFileNameWithExtension}");
         return configFileNameWithExtension;
     }
 
@@ -161,10 +158,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// <returns></returns>
     public string GetFileName(string? environmentValue, bool considerOverrides)
     {
-        Console.WriteLine($"FileSystemRuntimeConfigLoader2, _fileSystem: {JsonSerializer.Serialize(_fileSystem)}, environmentValue:{environmentValue}");
-        //string fileNameWithoutExtension = _fileSystem.Path.GetFileNameWithoutExtension(_baseConfigFileName);
-        Console.WriteLine($"FileSystemRuntimeConfigLoader2, directoryName: {_fileSystem.Path.GetDirectoryName(_baseConfigFileName)}, fileNameWithoutExtension1: {_fileSystem.Path.GetFileNameWithoutExtension(_baseConfigFileName)}");
-        string fileNameWithoutExtension = _fileSystem.Path.Combine(_fileSystem.Path.GetDirectoryName(_baseConfigFileName)??string.Empty, _fileSystem.Path.GetFileNameWithoutExtension(_baseConfigFileName));
+        string fileNameWithoutExtension = _fileSystem.Path.Combine(_fileSystem.Path.GetDirectoryName(_baseConfigFileName) ?? string.Empty, _fileSystem.Path.GetFileNameWithoutExtension(_baseConfigFileName));
         string fileExtension = _fileSystem.Path.GetExtension(_baseConfigFileName);
         string configFileName =
             !string.IsNullOrEmpty(environmentValue)
@@ -173,21 +167,16 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         string configFileNameWithExtension = $"{configFileName}{fileExtension}";
         string overriddenConfigFileNameWithExtension = GetOverriddenName(configFileName);
 
-        Console.WriteLine($"FileSystemRuntimeConfigLoader2, fileNameWithoutExtension: {fileNameWithoutExtension}, configFileName: {configFileName}, overriddenConfigFileNameWithExtension: {overriddenConfigFileNameWithExtension}, configFileNameWithExtension: {configFileNameWithExtension}");
-
         if (considerOverrides && DoesFileExistInCurrentDirectory(overriddenConfigFileNameWithExtension))
         {
-            Console.WriteLine("1#");
             return overriddenConfigFileNameWithExtension;
         }
 
         if (DoesFileExistInCurrentDirectory(configFileNameWithExtension))
         {
-            Console.WriteLine("2#");
             return configFileNameWithExtension;
         }
 
-        Console.WriteLine("3#");
         return string.Empty;
     }
 
@@ -208,9 +197,6 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     public bool DoesFileExistInCurrentDirectory(string fileName)
     {
         string currentDir = _fileSystem.Directory.GetCurrentDirectory();
-        Console.WriteLine($"FileSystemRuntimeConfigLoader2, currentDir: {currentDir}");
-        Console.WriteLine($"FileSystemRuntimeConfigLoader2, fileName: {fileName}");
-        Console.WriteLine($"FileSystemRuntimeConfigLoader2, _fileSystem.Path.Combine(currentDir, fileName): {_fileSystem.Path.Combine(currentDir, fileName)}");
         return _fileSystem.File.Exists(_fileSystem.Path.Combine(currentDir, fileName));
     }
 

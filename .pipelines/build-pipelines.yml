@@ -73,13 +73,13 @@ steps:
     feedsToUse: config
     nugetConfigPath: Nuget.config
 
-# - task: DotNetCoreCLI@2
-#   displayName: Check formatting
-#   inputs:
-#     command: custom
-#     custom: format
-#     projects: '$(solution)'
-#     arguments: '--verify-no-changes'
+- task: DotNetCoreCLI@2
+  displayName: Check formatting
+  inputs:
+    command: custom
+    custom: format
+    projects: '$(solution)'
+    arguments: '--verify-no-changes'
 
 # Use dotnet pack command to build the project because we want to generate build output
 # in the correct location that pack command will be using. This build output location
@@ -92,12 +92,12 @@ steps:
     projects: '**/*.sln'
     arguments: '--configuration $(buildConfiguration) -p:Version=$(dabVersion)' 
 
-# - task: DotNetCoreCLI@2
-#   displayName: "Run Unit Tests"
-#   inputs:
-#     command: test
-#     projects: '**/*Tests*.csproj'
-#     arguments: '--filter "TestCategory!=CosmosDb_NoSql&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
+- task: DotNetCoreCLI@2
+  displayName: "Run Unit Tests"
+  inputs:
+    command: test
+    projects: '**/*Tests*.csproj'
+    arguments: '--filter "TestCategory!=CosmosDb_NoSql&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
 
 - task: CmdLine@2
   displayName: 'Set flag to publish Verify *.received files when tests fail'
@@ -188,12 +188,12 @@ steps:
     filePath: $(System.DefaultWorkingDirectory)/scripts/publish.ps1
     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(dabVersion) -Package
 
-# - task: PowerShell@2
-#   displayName: "Smoke Test for DAB CLI"
-#   inputs:
-#     targetType: 'filePath'
-#     filePath: $(System.DefaultWorkingDirectory)/scripts/dab-smoke-test-script.ps1
-#     arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(Agent.OS)  $(dabVersion)
+- task: PowerShell@2
+  displayName: "Smoke Test for DAB CLI"
+  inputs:
+    targetType: 'filePath'
+    filePath: $(System.DefaultWorkingDirectory)/scripts/dab-smoke-test-script.ps1
+    arguments: $(buildConfiguration) $(Build.ArtifactStagingDirectory) $(Agent.OS)  $(dabVersion)
 
 # Sign the binaries that were generated per platform
 - template: templates/code-signing.yml

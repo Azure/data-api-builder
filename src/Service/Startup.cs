@@ -49,6 +49,7 @@ namespace Azure.DataApiBuilder.Service
         public static bool IsLogLevelOverriddenByCli;
 
         public static ApplicationInsightsOptions _applicationInsightsOptions = new();
+        public static TelemetryClient? _telemetryClient;
 
         public const string NO_HTTPS_REDIRECT_FLAG = "--no-https-redirect";
 
@@ -567,16 +568,20 @@ namespace Azure.DataApiBuilder.Service
                     _logger.LogError("Logs won't be sent to Application Insights as connection string is not set in the runtime config.");
                 }
 
-                TelemetryClient telemetryClient = app.ApplicationServices.GetRequiredService<TelemetryClient>();
+                _telemetryClient = app.ApplicationServices.GetRequiredService<TelemetryClient>();
 
                 // Update the TelemetryConfiguration object
-                TelemetryConfiguration telemetryConfiguration = telemetryClient.TelemetryConfiguration;
+                TelemetryConfiguration telemetryConfiguration = _telemetryClient.TelemetryConfiguration;
                 telemetryConfiguration.ConnectionString = _applicationInsightsOptions.ConnectionString;
 
-                if (telemetryClient is null)
+                if (_telemetryClient is null)
                 {
                     _logger.LogError("Telemetry client is not initialized.");
                 }
+
+                // Updating Startup Logger to Log from Startup Class.
+                ILoggerFactory? loggerFactory = Program.GetLoggerFactoryForLogLevel(MinimumLogLevel);
+                _logger = loggerFactory.CreateLogger<Startup>();
             }
         }
 

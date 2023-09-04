@@ -2244,7 +2244,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// Additional pre-processing performed acquire database connection string from a local file.
         /// </summary>
         /// <returns>ConfigurationPostParameters object.</returns>
-        private static JsonContent GetPostStartupConfigParams(string environment, RuntimeConfig runtimeConfig, string configurationEndpoint)
+        public static JsonContent GetPostStartupConfigParams(string environment, RuntimeConfig runtimeConfig, string configurationEndpoint)
         {
             string connectionString = GetConnectionStringFromEnvironmentConfig(environment);
 
@@ -2300,7 +2300,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <param name="httpClient">Client used for request execution.</param>
         /// <returns>ServiceUnavailable if service is not successfully hydrated with config,
         /// else the response code from the REST request</returns>
-        private static async Task<HttpStatusCode> GetRestResponsePostConfigHydration(HttpClient httpClient)
+        public static async Task<HttpStatusCode> GetRestResponsePostConfigHydration(HttpClient httpClient)
         {
             // Retry request RETRY_COUNT times in 1 second increments to allow required services
             // time to instantiate and hydrate permissions.
@@ -2332,7 +2332,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <param name="httpClient">Client used for request execution.</param>
         /// <returns>ServiceUnavailable if service is not successfully hydrated with config,
         /// else the response code from the GRAPHQL request</returns>
-        private static async Task<HttpStatusCode> GetGraphQLResponsePostConfigHydration(HttpClient httpClient)
+        public static async Task<HttpStatusCode> GetGraphQLResponsePostConfigHydration(HttpClient httpClient)
         {
             // Retry request RETRY_COUNT times in 1 second increments to allow required services
             // time to instantiate and hydrate permissions.
@@ -2398,6 +2398,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             { entityName, entity }
         };
+
+            // Adding an entity with only Authorized Access
+            Entity anotherEntity = new(
+                Source: new("publishers", EntitySourceType.Table, null, null),
+                Rest: null,
+                GraphQL: new(Singular: "publisher", Plural: "publishers"),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_AUTHENTICATED) },
+                Relationships: null,
+                Mappings: null
+                );
+            entityMap.Add("Publisher", anotherEntity);
 
             return new(
                 Schema: "IntegrationTestMinimalSchema",

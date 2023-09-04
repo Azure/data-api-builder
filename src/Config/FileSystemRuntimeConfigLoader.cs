@@ -58,6 +58,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         _fileSystem = fileSystem;
         _baseConfigFileName = baseConfigFileName;
         ConfigFileName = GetFileNameForEnvironment(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), false);
+        // if fileName based on environment is empty, then use the default config file name.
         if (string.IsNullOrWhiteSpace(ConfigFileName))
         {
             ConfigFileName = baseConfigFileName;
@@ -158,6 +159,9 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// <returns></returns>
     public string GetFileName(string? environmentValue, bool considerOverrides)
     {
+        // if the baseConfigFileName contains a path, we need to insure that is not lost. for example: baseConfigFileName = "config/dab-config.json"
+        // in this case, we need to get the directory name and the file name without extension and then combine them back. Else, we will lose the path
+        // and the file will be searched in the current directory.
         string fileNameWithoutExtension = _fileSystem.Path.Combine(_fileSystem.Path.GetDirectoryName(_baseConfigFileName) ?? string.Empty, _fileSystem.Path.GetFileNameWithoutExtension(_baseConfigFileName));
         string fileExtension = _fileSystem.Path.GetExtension(_baseConfigFileName);
         string configFileName =

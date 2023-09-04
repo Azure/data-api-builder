@@ -25,7 +25,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     {
         protected DbExceptionParser DbExceptionParser { get; }
         protected ILogger<IQueryExecutor> QueryExecutorLogger { get; }
-        private RuntimeConfigProvider ConfigProvider { get; }
+        protected RuntimeConfigProvider ConfigProvider { get; }
         protected IHttpContextAccessor HttpContextAccessor { get; }
 
         // The maximum number of attempts that can be made to execute the query successfully in addition to the first attempt.
@@ -34,17 +34,19 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         private AsyncRetryPolicy _retryPolicy;
 
-        public virtual DbConnectionStringBuilder ConnectionStringBuilder { get; set; }
+        /// <summary>
+        /// Dictionary that stores dataSourceName to its corresponding connection string builder.
+        /// </summary>
+        public virtual IDictionary<string, DbConnectionStringBuilder> ConnectionStringBuilders { get; set; }
 
         public QueryExecutor(DbExceptionParser dbExceptionParser,
                              ILogger<IQueryExecutor> logger,
-                             DbConnectionStringBuilder connectionStringBuilder,
                              RuntimeConfigProvider configProvider,
                              IHttpContextAccessor httpContextAccessor)
         {
             DbExceptionParser = dbExceptionParser;
             QueryExecutorLogger = logger;
-            ConnectionStringBuilder = connectionStringBuilder;
+            ConnectionStringBuilders = new Dictionary<string, DbConnectionStringBuilder>();
             ConfigProvider = configProvider;
             HttpContextAccessor = httpContextAccessor;
             _retryPolicy = Policy
@@ -65,12 +67,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IDictionary<string, DbConnectionParam> parameters,
             Func<DbDataReader, List<string>?, Task<TResult>>? dataReaderHandler,
             HttpContext? httpContext = null,
-            List<string>? args = null)
+            List<string>? args = null,
+            string dataSourceName = "")
         {
+            if (string.IsNullOrEmpty(dataSourceName))
+            {
+                dataSourceName = ConfigProvider.GetConfig().GetDefaultDataSourceName();
+            }
+
+            if (!ConnectionStringBuilders.ContainsKey(dataSourceName))
+            {
+                throw new DataApiBuilderException("Query execution failed. Could not find datasource to execute query against", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
+            }
+
             int retryAttempt = 0;
             using TConnection conn = new()
             {
-                ConnectionString = ConnectionStringBuilder.ConnectionString,
+                ConnectionString = ConnectionStringBuilders[dataSourceName].ConnectionString,
             };
 
             await SetManagedIdentityAccessTokenIfAnyAsync(conn);
@@ -187,7 +200,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc />
-        public virtual string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, DbConnectionParam> parameters)
+        public virtual string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, DbConnectionParam> parameters, string dataSourceName = "")
         {
             return string.Empty;
         }
@@ -200,7 +213,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc />
-        public virtual async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn)
+        public virtual async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, string dataSourceName = "")
         {
             // no-op in the base class.
             await Task.Yield();

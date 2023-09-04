@@ -173,7 +173,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         string configFileNameWithExtension = $"{configFileName}{fileExtension}";
         string overriddenConfigFileNameWithExtension = GetOverriddenName(configFileName);
 
-        Console.WriteLine($"FileSystemRuntimeConfigLoader2, fileNameWithoutExtension: {fileNameWithoutExtension}, configFileName: {configFileName}, overriddenConfigFileNameWithExtension: {overriddenConfigFileNameWithExtension}");
+        Console.WriteLine($"FileSystemRuntimeConfigLoader2, fileNameWithoutExtension: {fileNameWithoutExtension}, configFileName: {configFileName}, overriddenConfigFileNameWithExtension: {overriddenConfigFileNameWithExtension}, configFileNameWithExtension: {configFileNameWithExtension}");
 
         if (considerOverrides && DoesFileExistInCurrentDirectory(overriddenConfigFileNameWithExtension))
         {
@@ -208,7 +208,9 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     public bool DoesFileExistInCurrentDirectory(string fileName)
     {
         string currentDir = _fileSystem.Directory.GetCurrentDirectory();
-        Console.WriteLine($"FileSystemRuntimeConfigLoader, currentDir: {currentDir}");
+        Console.WriteLine($"FileSystemRuntimeConfigLoader2, currentDir: {currentDir}");
+        Console.WriteLine($"FileSystemRuntimeConfigLoader2, fileName: {fileName}");
+        Console.WriteLine($"FileSystemRuntimeConfigLoader2, _fileSystem.Path.Combine(currentDir, fileName): {_fileSystem.Path.Combine(currentDir, fileName)}");
         return _fileSystem.File.Exists(_fileSystem.Path.Combine(currentDir, fileName));
     }
 

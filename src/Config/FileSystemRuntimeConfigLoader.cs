@@ -162,7 +162,9 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     public string GetFileName(string? environmentValue, bool considerOverrides)
     {
         Console.WriteLine($"FileSystemRuntimeConfigLoader2, _fileSystem: {JsonSerializer.Serialize(_fileSystem)}, environmentValue:{environmentValue}");
-        string fileNameWithoutExtension = _fileSystem.Path.GetFileNameWithoutExtension(_baseConfigFileName);
+        //string fileNameWithoutExtension = _fileSystem.Path.GetFileNameWithoutExtension(_baseConfigFileName);
+        Console.WriteLine($"FileSystemRuntimeConfigLoader2, directoryName: {_fileSystem.Path.GetDirectoryName(_baseConfigFileName)}, fileNameWithoutExtension1: {_fileSystem.Path.GetFileNameWithoutExtension(_baseConfigFileName)}");
+        string fileNameWithoutExtension = _fileSystem.Path.Combine(_fileSystem.Path.GetDirectoryName(_baseConfigFileName)??string.Empty, _fileSystem.Path.GetFileNameWithoutExtension(_baseConfigFileName));
         string fileExtension = _fileSystem.Path.GetExtension(_baseConfigFileName);
         string configFileName =
             !string.IsNullOrEmpty(environmentValue)

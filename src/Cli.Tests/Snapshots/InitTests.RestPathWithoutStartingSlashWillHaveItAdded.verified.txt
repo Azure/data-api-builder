@@ -11,7 +11,7 @@
     Rest: {
       Enabled: true,
       Path: /abc,
-      RequestBodyFlexible: false
+      RequestBodyStrict: true
     },
     GraphQL: {
       Enabled: true,

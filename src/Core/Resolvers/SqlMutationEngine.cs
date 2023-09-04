@@ -848,7 +848,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (_sqlMetadataProvider.TryGetBackingColumn(context.EntityName, pair.Key, out string? _))
                 {
                     // Use TryAdd because there can be primary key fields present in the request body as well
-                    // (in addition to request URL), when we operate in flexible mode for REST.
+                    // (in addition to request URL), when we operate in non-strict mode for REST.
                     // In such a case, the duplicate PK fields in the request body are ignored.
                     parameters.TryAdd(pair.Key, pair.Value);
                 }

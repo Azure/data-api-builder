@@ -80,6 +80,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     {
         if (_fileSystem.File.Exists(path))
         {
+            Console.WriteLine($"Loading config file from {path}.");
             string json = _fileSystem.File.ReadAllText(path);
             return TryParseConfig(json, out config, connectionString: _connectionString, replaceEnvVar: replaceEnvVar);
         }

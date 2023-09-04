@@ -2017,6 +2017,36 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
         }
 
+        /// <summary>
+        /// This test checks that the final config used by runtime engine doesn't lose the directory information
+        /// provided in the base config file path when loading the config based on the environment.
+        /// </summary>
+        /// <param name="addDirectory"></param>
+        /// <param name="environmentValue"></param>
+        /// <param name="baseConfigFilePath"></param>
+        /// <param name="finalConfigFilePath"></param>
+        [DataTestMethod]
+        [DataRow(false, "", "current-dir-dab-config.json", "current-dir-dab-config.json", DisplayName = "Config file in the current directory")]
+        [DataRow(true, "", "test\\diff-dir-dab-config.json", "test\\diff-dir-dab-config.json", DisplayName = "Config file in a different directory")]
+        [DataRow(false, "Test", "current-dir-dab-config.json", "current-dir-dab-config.Test.json", DisplayName = "Config file in the current directory")]
+        [DataRow(true, "Test", "test\\diff-dir-dab-config.json", "test\\diff-dir-dab-config.Test.json", DisplayName = "Config file in a different directory")]
+        public void TestDirectoryInfoIsRetainedInFinalConfig(
+            bool IsDifferentDirectory,
+            string environmentValue,
+            string baseConfigFilePath,
+            string finalConfigFilePath)
+        {
+            MockFileSystem fileSystem = new();
+            if (IsDifferentDirectory)
+            {
+                fileSystem.AddDirectory("test");
+            }
+
+            fileSystem.AddEmptyFile(finalConfigFilePath);
+            FileSystemRuntimeConfigLoader runtimeConfigLoader = new(fileSystem, baseConfigFileName: baseConfigFilePath);
+            Assert.AreEqual(finalConfigFilePath, runtimeConfigLoader.GetFileName(environmentValue: environmentValue, considerOverrides: false));
+        }
+
         private static RuntimeConfigValidator InitializeRuntimeConfigValidator()
         {
             MockFileSystem fileSystem = new();

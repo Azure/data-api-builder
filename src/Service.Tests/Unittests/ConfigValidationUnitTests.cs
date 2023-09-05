@@ -2019,20 +2019,25 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         /// <summary>
         /// This test checks that the final config used by runtime engine doesn't lose the directory information
-        /// provided in the base config file path when loading the config based on the environment.
+        /// if provided in the base config file path when loading the config based on the environment.
         /// </summary>
         /// <param name="addDirectory"></param>
         /// <param name="environmentValue"></param>
         /// <param name="baseConfigFilePath"></param>
         /// <param name="finalConfigFilePath"></param>
         [DataTestMethod]
-        [DataRow(false, "", "current-dir-dab-config.json", "current-dir-dab-config.json", DisplayName = "Config file in the current directory")]
-        [DataRow(true, "", "test\\diff-dir-dab-config.json", "test\\diff-dir-dab-config.json", DisplayName = "Config file in a different directory")]
-        [DataRow(false, "Test", "current-dir-dab-config.json", "current-dir-dab-config.Test.json", DisplayName = "Config file in the current directory")]
-        [DataRow(true, "Test", "test\\diff-dir-dab-config.json", "test\\diff-dir-dab-config.Test.json", DisplayName = "Config file in a different directory")]
+        [DataRow(false, "", false, "current-dir-dab-config.json", "current-dir-dab-config.json", DisplayName = "Config file in the current directory")]
+        [DataRow(true, "", false, "test\\diff-dir-dab-config.json", "test\\diff-dir-dab-config.json", DisplayName = "Config file in a different directory")]
+        [DataRow(false, "Test", false, "current-dir-dab-config.json", "current-dir-dab-config.Test.json", DisplayName = "Config file in the current directory with non-empty environment value")]
+        [DataRow(true, "Test", false, "test\\diff-dir-dab-config.json", "test\\diff-dir-dab-config.Test.json", DisplayName = "Config file in a different directory with non-empty environment value")]
+        [DataRow(false, "", true, "current-dir-dab-config.json", "current-dir-dab-config.json", DisplayName = "Config file in the current directory using absolute path")]
+        [DataRow(true, "", true, "test\\diff-dir-dab-config.json", "test\\diff-dir-dab-config.json", DisplayName = "Config file in a different directory using absolute path")]
+        [DataRow(false, "Test", true, "current-dir-dab-config.json", "current-dir-dab-config.Test.json", DisplayName = "Config file in the current directory with non-empty environment value using absolute path")]
+        [DataRow(true, "Test", true, "test\\diff-dir-dab-config.json", "test\\diff-dir-dab-config.Test.json", DisplayName = "Config file in a different directory with non-empty environment value using absolute path")]
         public void TestDirectoryInfoIsRetainedInFinalConfig(
             bool IsDifferentDirectory,
             string environmentValue,
+            bool isAbsolutePath,
             string baseConfigFilePath,
             string finalConfigFilePath)
         {
@@ -2040,6 +2045,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             if (IsDifferentDirectory)
             {
                 fileSystem.AddDirectory("test");
+            }
+
+            if (isAbsolutePath)
+            {
+                baseConfigFilePath = fileSystem.Path.GetFullPath(baseConfigFilePath);
+                finalConfigFilePath = fileSystem.Path.GetFullPath(finalConfigFilePath);
             }
 
             fileSystem.AddEmptyFile(finalConfigFilePath);

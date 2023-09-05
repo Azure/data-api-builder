@@ -5,6 +5,7 @@ using System;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -53,12 +54,17 @@ namespace Azure.DataApiBuilder.Service.Controllers
                 }
                 else
                 {
-                    _logger.LogError($"Failed to initialize configuration.");
+                    _logger.LogError(
+                        message: "{correlationId} Failed to initialize configuration.",
+                        HttpContextExtensions.GetLoggerCorrelationId(HttpContext));
                 }
             }
             catch (Exception e)
             {
-                _logger.LogError($"Exception during configuration initialization. {e}");
+                _logger.LogError(
+                    exception: e,
+                    message: "{correlationId} Exception during configuration initialization.",
+                    HttpContextExtensions.GetLoggerCorrelationId(HttpContext));
             }
 
             return BadRequest();
@@ -92,12 +98,17 @@ namespace Azure.DataApiBuilder.Service.Controllers
                 }
                 else
                 {
-                    _logger.LogError($"Failed to initialize configuration.");
+                    _logger.LogError(
+                        message: "{correlationId} Failed to initialize configuration.",
+                        HttpContextExtensions.GetLoggerCorrelationId(HttpContext));
                 }
             }
             catch (Exception e)
             {
-                _logger.LogError($"Exception during configuration initialization. {e}");
+                _logger.LogError(
+                    exception: e,
+                    message: "{correlationId} Exception during configuration initialization.",
+                    HttpContextExtensions.GetLoggerCorrelationId(HttpContext));
             }
 
             return BadRequest();
